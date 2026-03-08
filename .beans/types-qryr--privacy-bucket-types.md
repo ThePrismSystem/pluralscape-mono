@@ -11,26 +11,27 @@ blocked_by:
   - types-av6x
 ---
 
-PrivacyBucket, BucketContentTag, KeyGrant, FriendConnection, fail-closed access control
-
 Privacy bucket and access control types. Core to the encryption model.
 
 ## Scope
 
-- `PrivacyBucket`: id (BucketId — opaque UUID), systemId, name, description
+- `PrivacyBucket`: id (BucketId), systemId, name, description, createdAt, updatedAt
 - `BucketContentTag`: entityType (EntityType), entityId, bucketId — maps content to buckets
-- `BucketVisibilityScope`: 'members' | 'custom-fields' | 'fronting-status' | 'custom-fronts' | 'notes' | 'chat' — what a bucket controls visibility of
-- `KeyGrant`: id, bucketId, friendUserId, encryptedBucketKey (Uint8Array), keyVersion (number)
-- `FriendConnection`: id, systemId, friendSystemId, status ('pending' | 'accepted' | 'blocked'), assignedBucketIds, createdAt
+- `BucketVisibilityScope`: 'members' | 'custom-fields' | 'fronting-status' | 'custom-fronts' | 'notes' | 'chat' | 'journal-entries' | 'member-photos' | 'groups'
+- `KeyGrant`: id (KeyGrantId), bucketId, friendUserId, encryptedBucketKey (Uint8Array), keyVersion (number), createdAt, revokedAt (UnixMillis | null)
+- `FriendConnection`: id (FriendConnectionId), systemId, friendSystemId, status ('pending' | 'accepted' | 'blocked' | 'removed'), friendCode (string | null), displayName (string | null), assignedBucketIds (BucketId[]), createdAt, updatedAt
+- `FriendCode`: id, systemId, code (string), createdAt, expiresAt (UnixMillis | null)
 - `BucketAccessCheck`: utility type for checking if content is visible to a friend (intersection logic)
-- Fail-closed semantics: content without bucket tags is invisible to ALL friends (maximum restriction)
+- Fail-closed semantics: content without bucket tags is invisible to ALL friends
 
 ## Acceptance Criteria
 
-- [ ] PrivacyBucket type with opaque UUID id
+- [ ] PrivacyBucket with timestamps
 - [ ] BucketContentTag maps any entity to buckets
-- [ ] KeyGrant includes versioned encrypted key blob
-- [ ] FriendConnection tracks friendship status and bucket assignments
+- [ ] BucketVisibilityScope includes journal-entries, member-photos, groups
+- [ ] KeyGrant with revokedAt for key rotation
+- [ ] FriendConnection with 'removed' status, friendCode, displayName, updatedAt
+- [ ] FriendCode type for friend code exchange
 - [ ] Fail-closed default documented in type JSDoc
 - [ ] Intersection logic type utilities
 - [ ] Unit tests for access check logic
@@ -39,11 +40,3 @@ Privacy bucket and access control types. Core to the encryption model.
 
 - ADR 006 (Privacy Bucket Model)
 - features.md section 4 (Privacy and Social)
-- encryption-research.md section 4.4
-
-## Audit Findings (002)
-
-- FriendConnection missing `friendCode` field for friend code exchange
-- FriendConnection missing `displayName` field
-- `BucketVisibilityScope` incomplete — missing: 'journal-entries', 'member-photos', 'groups' (features.md section 4: friends can view member profiles and member list)
-- Missing `FriendCode` type: id, systemId, code (string), createdAt, expiresAt (nullable)

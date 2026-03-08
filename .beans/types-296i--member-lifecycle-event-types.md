@@ -12,35 +12,35 @@ blocked_by:
   - types-fid9
 ---
 
-Append-only lifecycle events: split, fusion, merge, unmerge, dormancy, discovery, archival
-
-Append-only lifecycle event log types.
+Append-only lifecycle event log types modeled as a discriminated union.
 
 ## Scope
 
-- `LifecycleEvent`: id (EventId), systemId, eventType, timestamp, involvedMemberIds, resultingMemberIds, notes
-- `LifecycleEventType`: 'split' | 'fusion' | 'merge' | 'unmerge' | 'dormancy-start' | 'dormancy-end' | 'discovery' | 'archival'
-- Each event type has specific semantics:
-  - Split: one member → multiple resulting members
-  - Fusion: multiple members → one new member (permanent)
-  - Merge: multiple members → temporary blur (reversible via unmerge)
-  - Dormancy: member becomes inactive (start/end pair)
-  - Discovery: new member found/recognized
-  - Archival: member moved to read-only archive
+`LifecycleEvent` is a discriminated union on `eventType`. Each variant carries type-specific fields:
+
+- `SplitEvent`: eventType 'split', sourceMemberId (MemberId), resultingMemberIds (MemberId[]), timestamp, notes
+- `FusionEvent`: eventType 'fusion', sourceMemberIds (MemberId[]), resultingMemberId (MemberId), timestamp, notes — permanent combination
+- `MergeEvent`: eventType 'merge', memberIds (MemberId[]), timestamp, notes — temporary blurring
+- `UnmergeEvent`: eventType 'unmerge', memberIds (MemberId[]), timestamp, notes — reversal of merge
+- `DormancyStartEvent`: eventType 'dormancy-start', memberId (MemberId), timestamp, notes
+- `DormancyEndEvent`: eventType 'dormancy-end', memberId (MemberId), timestamp, notes
+- `DiscoveryEvent`: eventType 'discovery', memberId (MemberId), timestamp, notes
+- `ArchivalEvent`: eventType 'archival', memberId (MemberId), timestamp, notes
+
+All variants share: id (EventId), systemId, timestamp (UnixMillis), notes (string | null)
+
+Append-only semantics: no update/delete operations.
 
 ## Acceptance Criteria
 
-- [ ] All 8 lifecycle event types defined
-- [ ] Events link involved and resulting members
-- [ ] Append-only semantics (no update/delete operations in type)
-- [ ] Timestamp and notes per event
-- [ ] Split/fusion correctly distinguish permanent vs temporary
-- [ ] Unit tests for event creation helpers
+- [ ] LifecycleEvent as discriminated union on eventType
+- [ ] Split requires sourceMemberId + resultingMemberIds
+- [ ] Fusion requires sourceMemberIds + resultingMemberId
+- [ ] Merge/unmerge require memberIds array
+- [ ] Dormancy/discovery/archival require single memberId
+- [ ] Append-only semantics enforced (no update type operations)
+- [ ] Unit tests for event creation helpers and type narrowing
 
 ## References
 
 - features.md section 6 (Member lifecycle events)
-
-## Audit Findings (002)
-
-- LifecycleEvent should be a discriminated union, not flat eventType field. Split requires resultingMemberIds, dormancy does not. Each variant should have type-specific required/optional fields.

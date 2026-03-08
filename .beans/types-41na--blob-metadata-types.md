@@ -11,34 +11,27 @@ blocked_by:
   - types-av6x
 ---
 
-BlobMetadata type for encrypted media and file attachment tracking
+BlobMetadata type for encrypted media and file attachment tracking.
 
 ## Scope
 
-- `BlobMetadata`: id (BlobId), systemId, storageKey (string — S3 key or filesystem path), contentType (string — MIME type), sizeBytes (number), encryptionKeyRef (master key or bucket key reference), thumbnailBlobId (BlobId | null), uploadedAt (UnixMillis)
+- `BlobMetadata`: id (BlobId), systemId, storageKey (string), contentType (string — MIME type), sizeBytes (number), purpose (BlobPurpose), encryptionTier (1 | 2 — determines decryption key), bucketId (BucketId | null — set when tier=2), thumbnailBlobId (BlobId | null), uploadedAt (UnixMillis)
 - `BlobPurpose`: 'avatar' | 'member-photo' | 'chat-attachment' | 'journal-image' | 'import-archive' | 'safe-mode-media' | 'report-export'
 - `BlobUploadRequest`: contentType, sizeBytes, purpose — for presigned URL generation
 - `BlobDownloadRef`: blobId, storageKey, contentType — for client-side decryption
-- All blob content is T1 encrypted before upload (client-side encryption)
+- All blob content is T1/T2 encrypted before upload (client-side)
 - Thumbnails are separate encrypted blobs generated client-side
-- Storage backend abstracted: S3-compatible or local filesystem (ADR 009)
 
 ## Acceptance Criteria
 
-- [ ] BlobMetadata tracks storage location, size, and content type
-- [ ] All 7 blob purposes defined
+- [ ] BlobMetadata with purpose as actual field
+- [ ] encryptionTier (1 | 2) for key selection
+- [ ] bucketId for T2 blobs
 - [ ] Thumbnail reference for image blobs
-- [ ] Upload/download reference types for client-server flow
-- [ ] Encryption key reference for decryption routing
+- [ ] Upload/download reference types
 - [ ] Unit tests for metadata construction and purpose validation
 
 ## References
 
 - features.md section 16 (Media Storage)
 - ADR 009 (Blob/Media Storage)
-
-## Audit Findings (002)
-
-- BlobMetadata missing `purpose` field on the type itself (BlobPurpose union defined but not included as a field)
-- Missing `encryptionTier` field (1 | 2) for key selection during decryption
-- Missing `bucketId` for T2 blobs (which bucket key was used)

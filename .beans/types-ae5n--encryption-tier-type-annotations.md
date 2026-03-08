@@ -20,40 +20,57 @@ blocked_by:
   - types-av6x
 ---
 
-Encrypted<T>, BucketEncrypted<T>, Plaintext<T> generics, EncryptedBlob, tier map for all domain types
-
-Type-level markers mapping every domain field to its encryption tier.
+Type-level markers mapping every domain field to its encryption tier, plus server/client type variant patterns.
 
 ## Scope
 
-- Utility generic types: `Encrypted<T>` (T1 — zero-knowledge), `BucketEncrypted<T>` (T2 — per-bucket), `Plaintext<T>` (T3 — server-visible)
-- Encryption tier map: record mapping each domain type + field to its tier
-- Reference table (from encryption-research.md section 4.3):
-  - T1: member name/pronouns/description/custom fields/avatar, chat content, note content, fronting comments, innerworld data
-  - T2: bucket-scoped data shared with friends (same data as T1 but encrypted with bucket key when friend-facing)
-  - T3: account info, friend graph, bucket membership, fronting timestamps, webhook metadata
-- `EncryptedBlob`: { ciphertext: Uint8Array, nonce: Uint8Array, tier: 1 | 2, keyVersion?: number }
-- `PlaintextWrapper<T>`: passthrough for T3 data (identity transformation)
+### Wrapper generics
+
+- `Encrypted<T>` (T1 — zero-knowledge): wraps fields the server cannot read
+- `BucketEncrypted<T>` (T2 — per-bucket): wraps fields shared with friends via bucket keys
+- `Plaintext<T>` (T3 — server-visible): passthrough wrapper for explicit tier annotation
+
+### EncryptedBlob
+
+- `EncryptedBlob`: { ciphertext: Uint8Array, nonce: Uint8Array, tier: 1 | 2, algorithm: string (for crypto agility), keyVersion?: number, bucketId?: BucketId (for T2 blobs) }
+
+### EncryptedString branded type
+
+- `EncryptedString`: branded string type to prevent accidentally logging or displaying ciphertext
+
+### Server/Client type variant pattern
+
+Define a convention for distinguishing server-side (encrypted) from client-side (decrypted) representations:
+
+- `ServerMember`: encrypted_data is an EncryptedBlob — what the server stores/returns
+- `ClientMember`: flat decrypted fields (name, pronouns, etc.) — what the client works with
+- `EncryptedMemberData` / `DecryptedMemberData`: the inner data shape before/after decryption
+- Pattern applies to all domain types with encrypted_data columns
+
+### Mapping utility types
+
+- `Decrypt<ServerT, ClientT>`: maps a server type to its client-side equivalent
+- `Encrypt<ClientT, ServerT>`: maps a client type to its server-side equivalent
+
+### Encryption tier map
+
+Record mapping each domain type + field to its tier (from encryption-research.md section 4.3):
+
+- T1: member name/pronouns/description/custom fields/avatar, chat content, note content, fronting comments, innerworld data, lifecycle event details
+- T2: bucket-scoped data shared with friends (same data as T1 but encrypted with bucket key)
+- T3: account info, friend graph, bucket membership, fronting timestamps, webhook metadata, API key scopes, timer enabled flags, blob storage keys
 
 ## Acceptance Criteria
 
 - [ ] Encrypted<T> / BucketEncrypted<T> / Plaintext<T> generic types defined
-- [ ] EncryptedBlob type with ciphertext, nonce, tier marker
-- [ ] Encryption tier map covers ALL domain types from T1.1-T1.9
-- [ ] Each field in each type annotated with its tier
+- [ ] EncryptedBlob with ciphertext, nonce, tier, algorithm, optional bucketId
+- [ ] EncryptedString branded type to prevent logging ciphertext
+- [ ] Server/Client type variant pattern documented with example pair (ServerMember/ClientMember)
+- [ ] Decrypt<ServerT, ClientT> and Encrypt<ClientT, ServerT> mapping utility types
+- [ ] Encryption tier map covers ALL domain types
 - [ ] Type-safe: cannot accidentally pass Encrypted<T> where Plaintext<T> expected
 - [ ] Documentation of tier assignments as code comments
 
 ## References
 
 - encryption-research.md section 4.3 (Data Encryption Model)
-- encryption-research.md section 4.3
-
-## Audit Findings (002)
-
-- Encryption wrappers (Encrypted<T>, BucketEncrypted<T>, Plaintext<T>) are defined but never used by any other types bean — each domain type uses plain strings instead
-- Need to define Server/Client type variants: `ServerMember` (encrypted fields are `EncryptedBlob`) vs `ClientMember` (decrypted plain types)
-- Need `Decrypt<T>` / `Encrypt<T>` mapping utility types for server-to-client transformation
-- Missing `EncryptedString` branded type to prevent accidentally logging/displaying ciphertext
-- Missing tier annotations for: API key data, webhook URLs, timer enabled flags, blob metadata
-- Convention needed: `T | null` for "value absent but field always present" vs `field?: T` for "field may not exist"

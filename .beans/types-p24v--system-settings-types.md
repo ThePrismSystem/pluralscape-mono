@@ -15,15 +15,20 @@ Per-system settings and preferences types.
 
 ## Scope
 
-- `SystemSettings`: systemId, theme (ThemePreference), fontScale (number), defaultBucketId (BucketId | null), notificationPrefs (NotificationPreferences), appLock (AppLockConfig), littlesSafeMode (LittlesSafeModeConfig ref)
+- `SystemSettings`: systemId, theme (ThemePreference), fontScale (number), locale (Locale | null), defaultBucketId (BucketId | null), notificationPrefs (NotificationPreferences), appLock (AppLockConfig), littlesSafeMode (LittlesSafeModeConfig ref), nomenclatureRef (reference to NomenclatureSettings), syncPreferences (SyncPreferences), privacyDefaults (PrivacyDefaults)
 - `ThemePreference`: 'light' | 'dark' | 'high-contrast' | 'system'
-- `AppLockConfig`: pinEnabled (boolean), biometricEnabled (boolean), lockTimeout (number — minutes)
+- `AppLockConfig`: pinEnabled (boolean), biometricEnabled (boolean), lockTimeout (number — in minutes)
 - `NotificationPreferences`: local notification settings (distinct from push notification config)
+- `SyncPreferences`: syncEnabled (boolean), syncOnCellular (boolean)
+- `PrivacyDefaults`: defaultBucketForNewContent (BucketId | null), friendRequestPolicy ('open' | 'code-only')
 
 ## Acceptance Criteria
 
 - [ ] SystemSettings type covering all per-system preferences
-- [ ] Theme, font scale, app lock config
+- [ ] Theme, font scale, locale, app lock config
+- [ ] lockTimeout documented as minutes
+- [ ] nomenclatureRef linking to NomenclatureSettings
+- [ ] syncPreferences and privacyDefaults
 - [ ] Default privacy bucket reference
 - [ ] Unit tests for settings validation
 

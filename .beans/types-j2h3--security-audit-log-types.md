@@ -11,29 +11,23 @@ blocked_by:
   - types-av6x
 ---
 
-AuditLogEntry type for security audit log
+AuditLogEntry type for security audit log.
 
 ## Scope
 
-- `AuditLogEntry`: id, accountId, eventType (AuditEventType), timestamp (UnixMillis), ipAddress (string | null), userAgent (string | null), metadata (record)
+- `AuditLogEntry`: id (AuditLogEntryId), accountId (AccountId), eventType (AuditEventType), timestamp (UnixMillis), ipAddress (string | null), userAgent (string | null), metadata (Record<string, unknown>)
 - `AuditEventType`: 'login-success' | 'login-failed' | 'session-created' | 'session-revoked' | 'password-changed' | 'recovery-key-used' | 'api-key-created' | 'api-key-revoked' | 'data-export' | 'account-purge-requested' | 'device-added' | 'device-removed'
-- All entries are T3 (server-visible plaintext) — needed for security monitoring
+- All entries are T3 (server-visible) — use `Plaintext<T>` wrapper from types-ae5n for explicit tier annotation
 - Append-only: no UPDATE or DELETE operations
-- Retention policy: configurable per deployment (default 90 days for hosted, unlimited for self-hosted)
+- Retention: configurable per deployment
 
 ## Acceptance Criteria
 
-- [ ] AuditLogEntry type with all event types
+- [ ] AuditLogEntry uses Plaintext<T> wrapper from types-ae5n
 - [ ] All 12 audit event types defined
-- [ ] IP address and user agent captured
-- [ ] Metadata field for event-specific details
-- [ ] Append-only semantics enforced at type level (no update operations)
+- [ ] Append-only semantics enforced (no update type operations)
 - [ ] Unit tests for entry creation helpers
 
 ## References
 
 - features.md section 14 (Security audit log)
-
-## Audit Findings (002)
-
-- Should use `Plaintext<T>` wrapper from types-ae5n instead of plain types (all T3 but should be explicit)

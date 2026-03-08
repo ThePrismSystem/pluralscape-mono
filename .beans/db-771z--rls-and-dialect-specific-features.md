@@ -13,12 +13,13 @@ blocked_by:
   - db-i2gl
 ---
 
-Row-level security (PostgreSQL) and dialect feature detection
+Row-level security (PostgreSQL) and dialect feature detection.
 
 ## Scope
 
 - PostgreSQL RLS policies: every query scoped to system_id via row-level security
 - RLS policy: `USING (system_id = current_setting('app.current_system_id'))` on all multi-tenant tables
+- Note: member_photos now has a direct system_id FK for RLS (not just member_id → members → system_id)
 - SQLite: application-level tenant isolation (query builder always includes WHERE system_id = ?)
 - Feature detection utility: `isPostgreSQL()` / `isSQLite()` based on dialect config
 - Document dialect capability matrix (JSONB ops, RLS, arrays, enums — PG only)
@@ -27,6 +28,7 @@ Row-level security (PostgreSQL) and dialect feature detection
 ## Acceptance Criteria
 
 - [ ] RLS policies defined for all tables with system_id
+- [ ] member_photos has direct system_id for RLS policy
 - [ ] RLS policies tested on PostgreSQL
 - [ ] SQLite isolation enforced via query builder wrappers
 - [ ] Feature detection utility exported

@@ -12,27 +12,27 @@ blocked_by:
   - types-fid9
 ---
 
-FrontingSession, Switch, CustomFront, CoFrontState, co-fronting as overlapping sessions
-
 Fronting, switching, and custom front types.
 
 ## Scope
 
-- `FrontingSession`: id, systemId, memberId, startTime (UnixMillis), endTime (UnixMillis | null), comment (string, max 50 chars), customFrontId (nullable — if this is a custom front session)
+- `FrontingSession`: modeled as discriminated union:
+  - `ActiveFrontingSession`: id, systemId, memberId, startTime (UnixMillis), endTime: null, frontingType ('fronting' | 'co-conscious'), comment (string, max 50 chars), customFrontId (nullable), subsystemId (nullable)
+  - `CompletedFrontingSession`: same but endTime: UnixMillis (non-null)
+  - `frontingType`: user-specified, not computed from overlap. Co-conscious (passive awareness) is distinct from co-fronting (active control) and requires explicit input.
 - `Switch`: id, systemId, timestamp, outgoingMemberIds, incomingMemberIds
-- `CustomFront`: id, systemId, name, description, color — abstract cognitive state logged like a member
-- `CoFrontState`: derived type representing currently-fronting members at a point in time (computed, not stored)
-- Co-fronting modeled as overlapping FrontingSessions (not mutually exclusive)
-- `FrontingType`: 'fronting' | 'co-fronting' | 'co-conscious' distinction
-- Subsystem-level fronting: FrontingSession can reference a subsystemId
+- `CustomFront`: id (CustomFrontId), systemId, name, description, color, avatarRef (BlobId | null), archived (boolean), subsystemId (nullable), createdAt, updatedAt — abstract cognitive state logged like a member
+- `CoFrontState`: derived type for currently-fronting members at a point in time (computed, not stored)
+- `FrontingType`: 'fronting' | 'co-conscious'
 
 ## Acceptance Criteria
 
-- [ ] FrontingSession supports overlapping time ranges (co-fronting)
+- [ ] FrontingSession as discriminated union (active vs completed)
+- [ ] frontingType on FrontingSession (user-specified, not computed)
 - [ ] Switch event links outgoing and incoming members
-- [ ] CustomFront type mirrors member-like properties
+- [ ] CustomFront with avatarRef, archived, subsystemId, timestamps
 - [ ] Comment field enforces max 50 character constraint at type level
-- [ ] CoFrontState computed type for "who is fronting right now"
+- [ ] CoFrontState computed type
 - [ ] Subsystem fronting supported via optional subsystemId
 - [ ] Unit tests for type construction and validation
 
@@ -40,9 +40,3 @@ Fronting, switching, and custom front types.
 
 - features.md section 2 (Fronting and Analytics)
 - CLAUDE.md: "fronting" not "presenting", "switch" not "transition"
-
-## Audit Findings (002)
-
-- Missing `frontingType` field on FrontingSession: 'fronting' | 'co-conscious' — co-conscious vs co-fronting CANNOT be computed from overlapping sessions alone, requires explicit user input (passive awareness vs active control)
-- CustomFront missing `avatarRef` and `archived` fields (custom fronts are "logged like members" per features.md)
-- Missing analytics/report types: `FrontingAnalytics`, `FrontingReport`, `DateRangeFilter` for cumulative duration, average session length, chart data (features.md section 2)

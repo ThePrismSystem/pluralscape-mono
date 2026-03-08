@@ -16,35 +16,34 @@ Chat, board, notes, polls, and acknowledgement tables. Implementation is M5 but 
 
 ## Scope
 
-- `channels`: id, system_id, encrypted_data (T1 — name, category)
-- `messages`: id, channel_id (FK), timestamp (T3), encrypted_data (T1 — content, sender proxy id, attachments, mentions)
-- `board_messages`: id, system_id, sort_order, encrypted_data (T1 — content)
-- `notes`: id, system_id, member_id (nullable), encrypted_data (T1 — title, content, background color)
-- `polls`: id, system_id, status ('open'|'closed'), encrypted_data (T1 — title, options)
-- `poll_votes`: poll_id (FK), encrypted_data (T1 — member_id, selected option)
-- `acknowledgements`: id, system_id, confirmed (boolean), confirmed_at (nullable), encrypted_data (T1 — target member, message)
+### Tables
+
+- **`channels`**: id (UUID PK), system_id (FK → systems, NOT NULL), sort_order (integer, T3), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, category/type)
+- **`messages`**: id (UUID PK), channel_id (FK → channels, NOT NULL), timestamp (T3, NOT NULL), edited_at (T3, nullable), archived (boolean, T3, NOT NULL, default false), encrypted_data (T1, NOT NULL — content, sender proxy id, attachments, mentions, reply_to_id)
+- **`board_messages`**: id (UUID PK), system_id (FK → systems, NOT NULL), sort_order (integer, T3), pinned (boolean, T3, NOT NULL, default false), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — content)
+- **`notes`**: id (UUID PK), system_id (FK → systems, NOT NULL), member_id (FK → members, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — title, content, background color)
+- **`polls`**: id (UUID PK), system_id (FK → systems, NOT NULL), status ('open' | 'closed', T3), created_at (T3, NOT NULL, default NOW()), closed_at (T3, nullable), encrypted_data (T1, NOT NULL — title, options)
+- **`poll_votes`**: poll_id (FK → polls, NOT NULL), encrypted_data (T1, NOT NULL — member_id, selected option)
+- **`acknowledgements`**: id (UUID PK), system_id (FK → systems, NOT NULL), confirmed (boolean, T3, NOT NULL, default false), confirmed_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), encrypted_data (T1, NOT NULL — target member, message)
+
+### Indexes
+
+- messages (channel_id, timestamp)
+- channels (system_id)
+- board_messages (system_id)
 
 ## Acceptance Criteria
 
 - [ ] All 7 tables defined for both dialects
-- [ ] Messages indexed on (channel_id, timestamp)
-- [ ] Board messages have sort_order
+- [ ] Messages with edit tracking (edited_at) and soft-delete (archived)
+- [ ] Board messages have sort_order and pinned flag (default false)
+- [ ] Channels have sort_order for drag-and-drop
 - [ ] Notes support member-bound or system-wide (nullable member_id)
-- [ ] Polls track open/closed status in plaintext
+- [ ] Polls with created_at and closed_at
+- [ ] Acknowledgements with created_at and default confirmed = false
+- [ ] created_at/updated_at on channels, board_messages, notes
 - [ ] Migrations for both dialects
 
 ## References
 
 - features.md section 3 (Communication)
-
-## Audit Findings (002)
-
-- Missing `created_at`, `updated_at` on channels
-- Missing `edited_at` on messages for edit tracking
-- Missing `archived`/`deleted` soft-delete on messages
-- Missing `pinned` column on board_messages (matches types-8klm)
-- Missing `created_at`, `updated_at` on board_messages
-- Missing `created_at`, `updated_at` on notes
-- Missing `created_at`, `closed_at` on polls
-- Missing `created_at` on acknowledgements
-- Missing `sort_order` on channels for drag-and-drop

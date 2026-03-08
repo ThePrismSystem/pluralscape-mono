@@ -11,32 +11,26 @@ blocked_by:
   - types-av6x
 ---
 
-WebhookConfig and WebhookDelivery types for user-configurable webhooks
+WebhookConfig and WebhookDelivery types for user-configurable webhooks.
 
 ## Scope
 
-- `WebhookConfig`: id (WebhookId), systemId, url (string), events (WebhookEventType[]), enabled (boolean), apiKeyId (ApiKeyId | null — optional crypto key for encrypted payloads), createdAt
-- `WebhookEventType`: 'switch' | 'fronting-start' | 'fronting-end' | 'member-created' | 'member-updated' | 'message-sent' | 'note-created' | 'poll-closed'
+- `WebhookConfig`: id (WebhookId), systemId, url (string), secret (string — HMAC signing), events (WebhookEventType[]), enabled (boolean), apiKeyId (ApiKeyId | null), createdAt, updatedAt
+- `WebhookEventType`: 'switch' | 'fronting-start' | 'fronting-end' | 'member-created' | 'member-updated' | 'message-sent' | 'note-created' | 'poll-closed' | 'lifecycle-event' | 'timer-check-in' | 'friend-connected' | 'friend-disconnected' | 'api-key-created' | 'api-key-revoked' | 'group-updated'
 - `WebhookDelivery`: id, webhookId, eventType, status ('pending' | 'success' | 'failed'), httpStatus (number | null), attemptCount (number), lastAttemptAt, nextRetryAt (nullable)
-- `WebhookPayload`: { event: WebhookEventType, timestamp: UnixMillis, data: T3 metadata or encrypted T1/T2 blob }
-- Default: T3 metadata payloads (no crypto needed to consume)
-- Optional: encrypted T1/T2 payloads when crypto key assigned
+- `WebhookDeliveryPayload`: discriminated union:
+  - `PlaintextWebhookPayload`: { encrypted: false, event, timestamp, data: T3 metadata }
+  - `EncryptedWebhookPayload`: { encrypted: true, event, timestamp, encryptedData: EncryptedBlob } — when crypto key assigned
 
 ## Acceptance Criteria
 
-- [ ] WebhookConfig with URL, event subscriptions, and optional crypto key
-- [ ] All webhook event types defined
+- [ ] WebhookConfig with secret field for HMAC signing
+- [ ] WebhookEventType covers lifecycle, timer, friend, API key, group events
 - [ ] WebhookDelivery tracks retry state
-- [ ] WebhookPayload distinguishes T3 vs encrypted payloads
-- [ ] Unit tests for config validation (URL format, event list)
+- [ ] WebhookDeliveryPayload as discriminated union (plaintext vs encrypted)
+- [ ] Unit tests for config validation
 
 ## References
 
 - features.md section 9 (Custom webhooks)
 - ADR 013 (API Authentication)
-
-## Audit Findings (002)
-
-- `WebhookEventType` incomplete — missing events for: lifecycle events (split, fusion, etc.), timer check-in responses, friend connection changes, API key operations
-- WebhookConfig missing `secret` field for HMAC signature verification
-- Missing encryption tier annotations

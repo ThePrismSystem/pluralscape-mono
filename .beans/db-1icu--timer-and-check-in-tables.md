@@ -12,28 +12,30 @@ blocked_by:
   - db-i2gl
 ---
 
-Timer configuration and check-in record tables
+Timer configuration and check-in record tables for automated dissociation check-ins.
 
 ## Scope
 
-- `timer_configs`: id, system_id, encrypted_data (T1 — interval_minutes, waking_hours_only, waking_start, waking_end, prompt_text), enabled (boolean — T3, needed for scheduling)
-- `check_in_records`: id, system_id, scheduled_at (T3 — timestamp), responded_at (T3 — nullable timestamp), encrypted_data (T1 — responded_by_member_id), dismissed (boolean — T3)
-- Design: timestamps are T3 (needed for timer scheduling); who responded is T1 (private)
-- Indexes: timer_configs.system_id, check_in_records (system_id, scheduled_at)
+### Tables
+
+- **`timer_configs`**: id (UUID PK), system_id (FK → systems, NOT NULL), enabled (boolean, T3, NOT NULL, default true), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — interval_minutes, waking_hours_only, waking_start, waking_end, prompt_text)
+- **`check_in_records`**: id (UUID PK), system_id (FK → systems, NOT NULL), timer_config_id (FK → timer_configs, NOT NULL — links to triggering config), scheduled_at (T3, NOT NULL), responded_at (T3, nullable), dismissed (boolean, T3, NOT NULL, default false), encrypted_data (T1 — responded_by_member_id)
+
+### Indexes
+
+- timer_configs (system_id)
+- check_in_records (system_id, scheduled_at)
+- check_in_records (timer_config_id)
 
 ## Acceptance Criteria
 
-- [ ] timer_configs table with encrypted config and plaintext enabled flag
-- [ ] check_in_records table with response tracking
-- [ ] Indexes for efficient queries
+- [ ] timer_configs with encrypted config and plaintext enabled flag
+- [ ] check_in_records with timer_config_id FK to triggering config
+- [ ] created_at/updated_at on timer_configs
+- [ ] DEFAULT: enabled = true, dismissed = false
 - [ ] Migrations for both dialects
-- [ ] Integration test: create config and record check-in response
+- [ ] Integration test: create config, record check-in response linked to config
 
 ## References
 
 - features.md section 2 (Automated timers / dissociation check-ins)
-
-## Audit Findings (002)
-
-- Missing `timer_config_id` FK on check_in_records linking to the triggering config
-- Missing `created_at`, `updated_at` on timer_configs

@@ -12,27 +12,35 @@ blocked_by:
   - db-i2gl
 ---
 
-Append-only lifecycle event log table
+Append-only lifecycle event log table for tracking member splits, fusions, merges, dormancy, and other events.
 
 ## Scope
 
-- `lifecycle_events`: id, system_id, event_type (varchar), timestamp, encrypted_data (T1 — involved_member_ids, resulting_member_ids, notes)
-- Append-only: no UPDATE or DELETE operations. Enforce via application layer (no DB-level constraint on SQLite)
-- PostgreSQL: consider using a rule or trigger to prevent updates
-- Index: system_id + timestamp for chronological queries
+### Tables
+
+- **`lifecycle_events`**: id (UUID PK), system_id (FK → systems, NOT NULL), timestamp (T3, NOT NULL), encrypted_data (T1, NOT NULL — event_type, involved_member_ids, resulting_member_ids, notes)
+  - event_type is inside encrypted_data (T1): reveals sensitive system dynamics (splits, fusions, dormancy) that should not be visible to the server
+  - No plaintext event_type column
+
+### Design decisions
+
+- Append-only: no UPDATE or DELETE operations. Enforced via application layer; PostgreSQL rule/trigger optional.
+- event_type moved from plaintext to T1: the server knowing that a split or fusion occurred leaks sensitive information about system dynamics
+
+### Indexes
+
+- lifecycle_events (system_id, timestamp) — chronological queries only
+- No event_type index (field is now encrypted)
 
 ## Acceptance Criteria
 
-- [ ] lifecycle_events table defined
-- [ ] Append-only pattern documented and enforced in application
-- [ ] Index on (system_id, timestamp)
+- [ ] lifecycle_events table with event_type inside encrypted_data
+- [ ] No plaintext event_type column
+- [ ] Append-only pattern enforced in application
+- [ ] Index on (system_id, timestamp) only
 - [ ] Migrations for both dialects
 - [ ] Integration test: insert events and query chronologically
 
 ## References
 
 - features.md section 6 (Member lifecycle events)
-
-## Audit Findings (002)
-
-- `event_type` should be reconsidered as T1 inside encrypted_data — reveals sensitive system dynamics (splits, fusions) to server. Current varchar column leaks this.

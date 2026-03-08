@@ -12,38 +12,30 @@ blocked_by:
   - types-fid9
 ---
 
-Channel, ChatMessage, BoardMessage, Note, Poll, AcknowledgementRequest types
-
-Chat, board, notes, polls, and acknowledgement types. Implementation is M5 but types defined here for completeness.
+Chat, board, notes, polls, and acknowledgement types. Implementation is M5 but types defined here.
 
 ## Scope
 
-- `Channel`: id (ChannelId), systemId, name, category
-- `ChatMessage`: id (MessageId), channelId, senderId (MemberId — proxy), content (rich text), attachments (ref[]), mentions (MemberId[]), timestamp
-- `BoardMessage`: id, systemId, content, sortOrder, pinned (boolean)
-- `Note`: id (NoteId), systemId, memberId (nullable — member-bound or system-wide), title, content (rich text), backgroundColor (hex)
-- `Poll`: id (PollId), systemId, title, options (PollOption[]), status ('open' | 'closed')
+- `Channel`: id (ChannelId), systemId, name, type ('category' | 'channel'), sortOrder (number), createdAt, updatedAt
+- `ChatMessage`: id (MessageId), channelId, senderId (MemberId — proxy), content (rich text), attachments (ref[]), mentions (MemberId[]), replyToId (MessageId | null), timestamp, editedAt (UnixMillis | null)
+- `BoardMessage`: id (BoardMessageId), systemId, content, sortOrder, pinned (boolean), createdAt, updatedAt
+- `Note`: id (NoteId), systemId, memberId (nullable — member-bound or system-wide), title, content (rich text), backgroundColor (hex), createdAt, updatedAt
+- `Poll`: id (PollId), systemId, title, options (PollOption[]), status ('open' | 'closed'), createdAt, closedAt
 - `PollOption`: id, label, voteCount
 - `PollVote`: pollId, memberId, optionId (one vote per member)
-- `AcknowledgementRequest`: id, systemId, targetMemberId, message, confirmed (boolean), confirmedAt
+- `AcknowledgementRequest`: id (AcknowledgementId), systemId, targetMemberId, message, confirmed (boolean), confirmedAt, createdAt
 
 ## Acceptance Criteria
 
 - [ ] All 6 communication entity types defined
-- [ ] ChatMessage supports proxy messaging (sender is a member)
-- [ ] BoardMessage has sort order for drag-and-drop
+- [ ] ChatMessage with editedAt and replyToId
+- [ ] Channel with type ('category' | 'channel') and sortOrder
+- [ ] BoardMessage with BoardMessageId and pinned flag
+- [ ] AcknowledgementRequest with AcknowledgementId and createdAt
 - [ ] Note supports member-bound or system-wide scope
 - [ ] Poll enforces one vote per member at type level
-- [ ] AcknowledgementRequest tracks confirmation state
 - [ ] Rich text represented as string (format TBD in M5)
 
 ## References
 
 - features.md section 3 (Communication)
-
-## Audit Findings (002)
-
-- ChatMessage missing `editedAt` timestamp for edit tracking
-- ChatMessage missing `replyToId` for reply threading
-- Channel missing `sortOrder` for ordering
-- Channel missing `type` field (categories vs channels distinction)

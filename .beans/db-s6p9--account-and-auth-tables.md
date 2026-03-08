@@ -11,23 +11,39 @@ blocked_by:
   - db-9f6f
 ---
 
-Account, authentication key, session, and recovery tables. Needed for crypto key storage.
+Account, authentication key, session, and recovery tables. Foundation for crypto key storage and server-side authentication.
 
 ## Scope
 
-- `accounts`: id (UUID), email_hash (varchar — hashed, not plaintext), created_at (T3)
-- `auth_keys`: id, account_id (FK), encrypted_private_key (bytea — private key encrypted with master key), public_key (bytea — T3, plaintext for key directory), key_type ('encryption'|'signing'), created_at
-- `sessions`: id, account_id (FK), device_info (T3 — encrypted or hashed), created_at, last_active, revoked (boolean)
-- `recovery_keys`: id, account_id (FK), encrypted_master_key (bytea — master key encrypted with recovery key), created_at
-- Indexes: accounts.email_hash (unique), auth_keys.account_id, sessions.account_id
+### Tables
+
+- **`accounts`**: id (UUID PK, NOT NULL), email_hash (varchar, T3, NOT NULL — hashed, not plaintext), email_salt (varchar, T3, NOT NULL — for deterministic email hash verification), password_hash (varchar, T3, NOT NULL — Argon2id hash for server-side auth), created_at (T3, NOT NULL, default NOW()), updated_at (T3)
+- **`auth_keys`**: id (UUID PK), account_id (FK → accounts, NOT NULL), encrypted_private_key (bytea, T1 — private key encrypted with master key), public_key (bytea, T3 — plaintext for key directory), key_type ('encryption' | 'signing', T3), created_at (T3, NOT NULL, default NOW())
+- **`sessions`**: id (UUID PK), account_id (FK → accounts, NOT NULL), device_info (T3 — encrypted or hashed), created_at (T3, NOT NULL, default NOW()), last_active (T3), revoked (boolean, T3, NOT NULL, default false)
+- **`recovery_keys`**: id (UUID PK), account_id (FK → accounts, NOT NULL), encrypted_master_key (bytea, T1 — master key encrypted with recovery key), created_at (T3, NOT NULL, default NOW())
+
+### Cascade rules
+
+- Account deletion → CASCADE: sessions, auth_keys, recovery_keys (GDPR purge path)
+- API keys cascade defined in db-3h1c; audit log cascade defined in db-k9sr
+
+### Indexes
+
+- accounts.email_hash (unique)
+- auth_keys.account_id
+- sessions.account_id
 
 ## Acceptance Criteria
 
-- [ ] accounts table with hashed email (not plaintext)
+- [ ] accounts table with hashed email and Argon2id password hash
+- [ ] email_salt column for deterministic email verification
 - [ ] auth_keys table for encryption and signing keypairs
-- [ ] sessions table with revocation support
+- [ ] sessions table with revocation support (default false)
 - [ ] recovery_keys table for key recovery flow
 - [ ] Unique index on email_hash
+- [ ] NOT NULL on id, email_hash, password_hash, created_at
+- [ ] DEFAULT: created_at = NOW(), sessions.revoked = false
+- [ ] CASCADE on account deletion → sessions, auth_keys, recovery_keys
 - [ ] Migrations for both dialects
 - [ ] Integration test: full account + key + session creation flow
 
@@ -36,10 +52,3 @@ Account, authentication key, session, and recovery tables. Needed for crypto key
 - ADR 006 (Key Hierarchy)
 - ADR 011 (Key Lifecycle and Recovery)
 - ADR 013 (API Authentication)
-
-## Audit Findings (002)
-
-- Missing `password_hash` column (Argon2id) on accounts table for server-side auth verification
-- Missing `email_salt` or hash algorithm indicator
-- Missing `updated_at` on accounts
-- Missing cascade rules: account deletion -> sessions, auth_keys, recovery_keys, api_keys, audit_log

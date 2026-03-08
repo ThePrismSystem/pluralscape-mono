@@ -11,32 +11,39 @@ blocked_by:
   - db-9f6f
 ---
 
-Webhook endpoint configuration and delivery tracking tables
+Webhook endpoint configuration and delivery tracking tables.
 
 ## Scope
 
-- `webhook_configs`: id, system_id, url (varchar — T3, needed for server delivery), events (varchar[] or JSON — T3, needed for event filtering), enabled (boolean — T3), api_key_id (FK nullable — T3), created_at (T3)
-- `webhook_deliveries`: id, webhook_id (FK), event_type (varchar — T3), status ('pending' | 'success' | 'failed' — T3), http_status (integer nullable), attempt_count (integer), last_attempt_at (T3), next_retry_at (T3 nullable), encrypted_data (T1 — request/response body for debugging)
-- Design: webhook URLs and event subscriptions are T3 (server must read them to deliver webhooks)
-- Design: delivery logs include encrypted request/response for user debugging
-- Indexes: webhook_configs (system_id), webhook_deliveries (webhook_id, status)
-- Retry: exponential backoff, max 5 attempts, dead-letter after exhaustion
+### Tables
+
+- **`webhook_configs`**: id (UUID PK), system_id (FK → systems, NOT NULL), url (varchar, T3, NOT NULL), secret (varchar, T3, NOT NULL — HMAC signing secret for signature verification), events (varchar[] or JSON, T3, NOT NULL), enabled (boolean, T3, NOT NULL, default true), api_key_id (FK → api_keys, nullable, T3), created_at (T3, NOT NULL, default NOW()), updated_at (T3)
+- **`webhook_deliveries`**: id (UUID PK), webhook_id (FK → webhook_configs, NOT NULL), event_type (varchar, T3, NOT NULL), status ('pending' | 'success' | 'failed', T3, NOT NULL, default 'pending'), http_status (integer, nullable, T3), attempt_count (integer, NOT NULL, default 0), last_attempt_at (T3), next_retry_at (T3, nullable), encrypted_data (T1 — request/response body for debugging)
+  - CHECK: `attempt_count >= 0`
+  - CHECK: `http_status BETWEEN 100 AND 599` (when not null)
+
+### Design decisions
+
+- Webhook URLs and event subscriptions are T3 (server must deliver webhooks)
+- Delivery logs include encrypted request/response for user debugging
+- Retry: exponential backoff, configurable max attempts, dead-letter after exhaustion
+
+### Indexes
+
+- webhook_configs (system_id)
+- webhook_deliveries (webhook_id, status)
 
 ## Acceptance Criteria
 
-- [ ] webhook_configs table with URL and event subscriptions
-- [ ] webhook_deliveries table with retry tracking
-- [ ] Optional crypto key assignment for encrypted payloads
-- [ ] Indexes for efficient delivery queue queries
+- [ ] webhook_configs with secret for HMAC signing
+- [ ] NOT NULL on url
+- [ ] DEFAULT: enabled = true, attempt_count = 0, status = 'pending'
+- [ ] CHECK: attempt_count >= 0, http_status BETWEEN 100 AND 599
+- [ ] updated_at on webhook_configs
 - [ ] Migrations for both dialects
-- [ ] Integration test: create config, record delivery attempt
+- [ ] Integration test: create config, record delivery with retry
 
 ## References
 
 - features.md section 9 (Custom webhooks)
 - ADR 010 (Background Jobs — webhook delivery)
-
-## Audit Findings (002)
-
-- Missing `secret` column for HMAC webhook signature verification
-- Missing `updated_at` on webhook_configs

@@ -12,38 +12,47 @@ blocked_by:
   - db-i2gl
 ---
 
-Privacy bucket, content tagging, key grant, and friend connection tables
+Privacy bucket, content tagging, key grant, friend connection, friend code, and bucket assignment tables.
 
 ## Scope
 
-- `buckets`: id (UUID), system_id, encrypted_data (T1 — name, description)
-- `bucket_content_tags`: entity_type (varchar), entity_id (UUID), bucket_id (FK) — T3 (server routes by this)
-- `key_grants`: id, bucket_id (FK), friend_user_id, encrypted_key (bytea — T2, bucket key encrypted with friend's public key), key_version (integer)
-- `friend_connections`: id, system_id, friend_system_id, status ('pending'|'accepted'|'blocked'), created_at — T3
-- Indexes: bucket_content_tags (entity_type, entity_id), key_grants (friend_user_id, bucket_id)
+### Tables
+
+- **`buckets`**: id (UUID PK), system_id (FK → systems, NOT NULL), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, description)
+- **`bucket_content_tags`**: entity_type (varchar, NOT NULL), entity_id (UUID, NOT NULL), bucket_id (FK → buckets, NOT NULL) — composite PK: (entity_type, entity_id, bucket_id). T3 (server routes by this).
+- **`key_grants`**: id (UUID PK), bucket_id (FK → buckets, NOT NULL), friend_user_id (UUID, NOT NULL), encrypted_key (bytea, T2 — bucket key encrypted with friend's public key), key_version (integer, NOT NULL), created_at (T3, NOT NULL, default NOW()), revoked_at (T3, nullable — set during key rotation)
+  - Unique: (bucket_id, friend_user_id, key_version)
+- **`friend_connections`**: id (UUID PK), system_id (FK → systems, NOT NULL), friend_system_id (FK → systems, NOT NULL), status ('pending' | 'accepted' | 'blocked', T3), created_at (T3, NOT NULL, default NOW()), updated_at (T3)
+  - Unique: (system_id, friend_system_id)
+  - Both system_id and friend_system_id are FKs to systems (asymmetric: requester vs recipient)
+- **`friend_codes`**: id (UUID PK), system_id (FK → systems, NOT NULL), code (varchar, T3, unique, NOT NULL), created_at (T3, NOT NULL, default NOW()), expires_at (T3, nullable)
+- **`friend_bucket_assignments`**: friend_connection_id (FK → friend_connections, NOT NULL), bucket_id (FK → buckets, NOT NULL) — composite PK
+
+### Cascade rules
+
+- Bucket deletion → CASCADE: bucket_content_tags, key_grants, friend_bucket_assignments
+- System deletion → CASCADE: buckets, friend_connections, friend_codes
+
+### Indexes
+
+- bucket_content_tags (entity_type, entity_id)
+- key_grants (friend_user_id, bucket_id)
+- key_grants (revoked_at)
+- friend_connections (status)
 
 ## Acceptance Criteria
 
-- [ ] buckets table with UUID id
-- [ ] bucket_content_tags with entity polymorphism (type + id)
-- [ ] key_grants with versioned encrypted key blob
-- [ ] friend_connections with status enum
-- [ ] Composite indexes for efficient lookups
+- [ ] buckets table with UUID id and timestamps
+- [ ] bucket_content_tags with composite PK (entity_type, entity_id, bucket_id)
+- [ ] key_grants with versioned encrypted key blob and revoked_at for rotation
+- [ ] friend_connections with status enum and unique (system_id, friend_system_id)
+- [ ] friend_codes table with unique code and optional expiry
+- [ ] friend_bucket_assignments join table for friend-to-bucket mapping
+- [ ] CASCADE rules on bucket and system deletion
 - [ ] Migrations for both dialects
-- [ ] Integration test: full bucket → tag → grant flow
+- [ ] Integration test: full bucket → tag → grant → friend code flow
 
 ## References
 
 - ADR 006 (Privacy Bucket Model)
-- encryption-research.md section 4
-
-## Audit Findings (002)
-
-- Missing `friend_codes` table: system_id (FK), code (varchar unique), created_at, expires_at (nullable) — per features.md section 4
-- Missing `friend_bucket_assignments` join table: friend_connection_id (FK), bucket_id (FK) — backing for assignedBucketIds
-- Missing `updated_at` on friend_connections (status changes: pending -> accepted -> blocked)
-- Missing `created_at` on key_grants, `revoked_at` for key rotation
-- Missing `created_at` on bucket_content_tags
-- Missing `created_at`, `updated_at` on buckets
-- Missing unique constraint on friend_connections (system_id, friend_system_id)
-- Missing unique constraint on key_grants (bucket_id, friend_user_id, key_version)
+- features.md section 4 (Privacy and Social)

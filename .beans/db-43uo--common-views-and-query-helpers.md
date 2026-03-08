@@ -19,18 +19,27 @@ PostgreSQL views and dialect-agnostic query helpers for common access patterns.
 
 ## Scope
 
-- `current_fronters` view: SELECT from fronting_sessions WHERE end_time IS NULL AND system_id = ?
-- `active_api_keys` view: SELECT from api_keys WHERE revoked_at IS NULL AND account_id = ?
-- `pending_friend_requests` view: SELECT from friend_connections WHERE status = 'pending' AND friend_system_id = ?
-- `pending_webhook_retries` view: SELECT from webhook_deliveries WHERE status = 'failed' AND attempt_count < 5 AND next_retry_at <= NOW()
-- `unconfirmed_acknowledgements` view: SELECT from acknowledgements WHERE confirmed = false AND system_id = ?
-- `member_group_summary` view: JOIN group_memberships with groups and members
-- Design: PG views for server-side queries; SQLite uses equivalent named query helpers in application code
-- Note: views involving encrypted_data have limited server-side utility
+### Views (PostgreSQL) / Query helpers (SQLite)
+
+- **`current_fronters`**: `SELECT * FROM fronting_sessions WHERE end_time IS NULL AND system_id = ?`
+- **`current_fronters_with_duration`**: extends current_fronters with `(NOW() - start_time) AS duration`
+- **`active_api_keys`**: `SELECT * FROM api_keys WHERE revoked_at IS NULL AND account_id = ?`
+- **`pending_friend_requests`**: `SELECT * FROM friend_connections WHERE status = 'pending' AND friend_system_id = ?`
+- **`pending_webhook_retries`**: `SELECT * FROM webhook_deliveries WHERE status = 'failed' AND attempt_count < ? AND next_retry_at <= NOW()` — uses configurable threshold parameter, not hardcoded
+- **`unconfirmed_acknowledgements`**: `SELECT * FROM acknowledgements WHERE confirmed = false AND system_id = ?`
+- **`member_group_summary`**: JOIN group_memberships with groups and members
+
+### Design decisions
+
+- PG views for server-side queries; SQLite uses equivalent named query helpers
+- Views involving encrypted_data have limited server-side utility
+- pending_webhook_retries uses a parameter for max attempts, allowing per-deployment configuration
 
 ## Acceptance Criteria
 
-- [ ] All 6 views defined for PostgreSQL
+- [ ] All 7 views/helpers defined for PostgreSQL
+- [ ] current_fronters_with_duration includes computed duration
+- [ ] pending_webhook_retries uses configurable threshold
 - [ ] Equivalent query helper functions for SQLite
 - [ ] Views tested against both dialects
 - [ ] Integration test: verify view results match raw queries

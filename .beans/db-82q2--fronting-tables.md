@@ -12,35 +12,46 @@ blocked_by:
   - db-i2gl
 ---
 
-Fronting session, switch, and custom front tables
+Fronting session, switch, and custom front tables for the fronting engine.
 
 ## Scope
 
-- `fronting_sessions`: id, system_id, start_time (T3 — timestamp), end_time (T3 — nullable timestamp), encrypted_data (T1 — member_id, comment, custom_front_id, subsystem_id)
-- `switches`: id, system_id, timestamp (T3), encrypted_data (T1 — outgoing/incoming member arrays)
-- `custom_fronts`: id, system_id, encrypted_data (T1 — name, description, color)
-- Design: fronting timestamps are T3 (needed for push notification triggers)
-- Design: member_id inside encrypted_data (server doesn't know WHO is fronting, only WHEN)
+### Tables
+
+- **`fronting_sessions`**: id (UUID PK), system_id (FK → systems, NOT NULL), start_time (T3, NOT NULL — needed for push notification triggers), end_time (T3, nullable — NULL means currently active), encrypted_data (T1, NOT NULL — member_id, fronting_type, comment, custom_front_id, subsystem_id, fronting_comments)
+  - `fronting_type`: `'fronting' | 'co-conscious'` inside encrypted_data — user-specified, not computed from overlap. Co-conscious (passive awareness) cannot be inferred from session overlap.
+  - `comment`: custom front status text, max 50 chars (matches SP behavior)
+  - `fronting_comments`: retroactive notes/annotations on the fronting entry
+  - CHECK: `end_time IS NULL OR end_time > start_time`
+- **`switches`**: id (UUID PK), system_id (FK → systems, NOT NULL), timestamp (T3, NOT NULL), encrypted_data (T1, NOT NULL — outgoing/incoming member arrays)
+  - Append-only event log. Switches record the moment of transition; fronting_sessions track duration ranges. Switch events are derived from session start/end transitions.
+- **`custom_fronts`**: id (UUID PK), system_id (FK → systems, NOT NULL), archived (boolean, T3, NOT NULL, default false), archived_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, description, color, avatar_ref)
+
+### Design decisions
+
+- Fronting timestamps are T3 (needed for push notification triggers to friends)
+- member_id inside encrypted_data: server doesn't know WHO is fronting, only WHEN
 - Overlapping sessions supported (no unique constraint on time ranges)
-- FrontingType ('fronting' | 'co-fronting' | 'co-conscious') is computed from overlapping sessions, not stored — no column needed
+- custom_fronts support archival because historical fronting data references them
+
+### Indexes
+
+- fronting_sessions (system_id, start_time)
+- fronting_sessions (system_id, end_time) — for current fronters query
 
 ## Acceptance Criteria
 
-- [ ] fronting_sessions table with nullable end_time for open sessions
-- [ ] switches table linking to timestamp
-- [ ] custom_fronts table
-- [ ] No unique constraint preventing overlapping sessions (co-fronting)
-- [ ] Indexes: system_id + start_time for range queries
-- [ ] Migration for both dialects
-- [ ] Integration test: create overlapping sessions
+- [ ] fronting_sessions with nullable end_time for open sessions
+- [ ] fronting_type stored inside encrypted_data (not computed from overlap)
+- [ ] comment and fronting_comments inside encrypted_data
+- [ ] CHECK: end_time IS NULL OR end_time > start_time
+- [ ] switches table as append-only event log
+- [ ] custom_fronts with archived flag and timestamps
+- [ ] No unique constraint preventing overlapping sessions
+- [ ] Indexes on system_id + start_time and system_id + end_time
+- [ ] Migrations for both dialects
+- [ ] Integration test: create overlapping sessions with co-conscious type
 
 ## References
 
-- features.md section 2 (Fronting)
-- encryption-research.md section 4.3 (fronting encryption tiers)
-
-## Audit Findings (002)
-
-- Co-conscious vs co-fronting CANNOT be computed from overlapping sessions alone — needs explicit `fronting_type` column or flag inside encrypted_data. Co-conscious requires user input (passive awareness vs active control).
-- Missing `created_at`, `updated_at` on custom_fronts table
-- Missing `archived`/`archived_at` on custom_fronts (historical fronting references them)
+- features.md section 2 (Fronting and Analytics)

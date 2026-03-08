@@ -12,26 +12,25 @@ blocked_by:
   - types-fid9
 ---
 
-FieldDefinition, FieldType, FieldValue discriminated union, per-bucket visibility
-
 Custom field definition and value types.
 
 ## Scope
 
-- `FieldDefinition`: id (FieldDefinitionId), systemId, name, fieldType (FieldType), options (for select/multi-select fields)
+- `FieldDefinition`: id (FieldDefinitionId), systemId, name, fieldType (FieldType), options (for select/multi-select), sortOrder (number), description (string | null — help text), required (boolean, default false), createdAt, updatedAt
 - `FieldType`: 'text' | 'number' | 'date' | 'boolean' | 'color' | 'select' | 'multi-select' | 'url'
-- `FieldValue`: id (FieldValueId), fieldDefinitionId, memberId, value (typed union based on fieldType)
+- `FieldValue`: id (FieldValueId), fieldDefinitionId, memberId, value (typed union based on fieldType), createdAt, updatedAt
 - `FieldBucketVisibility`: fieldDefinitionId, bucketId — per-bucket visibility, applied globally (not per-member)
-- No limit on number of custom fields per system
 - `FieldValueUnion`: discriminated union matching FieldType to value type
+- No limit on number of custom fields per system
 
 ## Acceptance Criteria
 
-- [ ] FieldDefinition supports 8 field types
+- [ ] FieldDefinition with sortOrder, description/helpText, required flag
+- [ ] FieldDefinition with timestamps
+- [ ] FieldValue with timestamps
 - [ ] FieldValue correctly unions value type based on FieldType
 - [ ] Select/multi-select fields carry options array
 - [ ] Per-bucket visibility (not per-member)
-- [ ] No arbitrary field count limit
 - [ ] Unit tests for field value type narrowing
 
 ## References

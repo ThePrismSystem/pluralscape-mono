@@ -15,19 +15,23 @@ Domain types for accounts, authentication, sessions, and recovery keys.
 ## Scope
 
 - `Account`: id (AccountId), emailHash (string), passwordHash (string — Argon2id), createdAt, updatedAt
-- `AuthKey`: id, accountId, encryptedPrivateKey (Uint8Array), publicKey (Uint8Array), keyType ('encryption'|'signing'), createdAt
-- `Session`: id (SessionId), accountId, deviceInfo (string — hashed/encrypted), createdAt, lastActive, revoked (boolean)
+- `AuthKey`: id, accountId, encryptedPrivateKey (Uint8Array), publicKey (Uint8Array), keyType ('encryption' | 'signing'), createdAt
+- `Session`: id (SessionId), accountId, deviceInfo (DeviceInfo), createdAt, lastActive, revoked (boolean)
+- `DeviceInfo`: { platform: string, appVersion: string, deviceName: string }
 - `RecoveryKey`: id, accountId, encryptedMasterKey (Uint8Array), createdAt
 - `LoginCredentials`: email (string), password (string) — input type for login
 - `RegistrationInput`: email, password, recoveryKeyBackupConfirmed (boolean)
+- `DeviceTransferRequest`: id, sourceSessionId, targetSessionId, createdAt, expiresAt, status ('pending' | 'approved' | 'expired')
+- `DeviceTransferPayload`: encryptedMasterKey (Uint8Array — encrypted for target device's public key)
 - All account data is T3 (server-visible) except encrypted key material (T1)
 
 ## Acceptance Criteria
 
-- [ ] Account type with hashed email
+- [ ] Account type with passwordHash and updatedAt
 - [ ] AuthKey type for encryption and signing keypairs
-- [ ] Session type with revocation support
+- [ ] Session type with structured DeviceInfo
 - [ ] RecoveryKey type for key recovery
+- [ ] DeviceTransferRequest and DeviceTransferPayload per ADR 011
 - [ ] Login and registration input types
 - [ ] All types exported from package index
 - [ ] Unit tests for type guards

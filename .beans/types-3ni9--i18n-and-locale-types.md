@@ -20,12 +20,19 @@ Internationalization types for locale, translation, RTL support, and date/number
 - `NumberFormatPreference`: locale-specific number formatting options
 - `LocaleConfig`: locale, textDirection, dateFormat, numberFormat
 
+### Encryption tier annotations
+
+- Locale and formatting preferences are T1 (stored in encrypted system settings)
+- Server receives locale as T3 only when needed for server-generated content (see db-va9l)
+- Translation keys and maps are not encrypted (shipped as app bundle assets)
+
 ## Acceptance Criteria
 
 - [ ] Locale type with BCP 47 validation
 - [ ] TranslationKey branded type for compile-time safety
 - [ ] RTL support via TextDirection
 - [ ] Date and number formatting preferences
+- [ ] Encryption tier annotations documented
 - [ ] Unit tests for locale utilities
 
 ## References

@@ -20,26 +20,63 @@ blocking:
   - types-ae5n
 ---
 
-Branded ID system, timestamp types, pagination, Result/Error union, audit metadata for packages/types
-
 Shared utility types and branded ID system for packages/types.
 
 ## Scope
 
-- Branded ID types using opaque string wrappers: `SystemId`, `MemberId`, `GroupId`, `BucketId`, `ChannelId`, `MessageId`, `NoteId`, `PollId`, `RelationshipId`, `SubsystemId`, `FieldDefinitionId`, `FieldValueId`, `SessionId`, `EventId`
-- Timestamp types: `UnixMillis` (number), `ISOTimestamp` (string)
-- Cursor-based pagination types: `PaginationCursor`, `PaginatedResult<T>`
-- Result/Error union: `Result<T, E>` pattern or discriminated union
-- Audit metadata type: `{ createdAt: UnixMillis, updatedAt: UnixMillis, version: number }`
-- Sort direction enum: `asc` | `desc`
-- Entity reference type: `{ entityType: EntityType, entityId: string }`
+### Branded ID types
+
+Opaque string wrappers — not assignable from plain string:
+
+`SystemId`, `MemberId`, `GroupId`, `BucketId`, `ChannelId`, `MessageId`, `NoteId`, `PollId`, `RelationshipId`, `SubsystemId`, `FieldDefinitionId`, `FieldValueId`, `SessionId`, `EventId`, `AccountId`, `BlobId`, `ApiKeyId`, `WebhookId`, `TimerId`, `JournalEntryId`, `WikiPageId`, `SideSystemId`, `LayerId`, `InnerWorldEntityId`, `InnerWorldRegionId`, `AuditLogEntryId`, `BoardMessageId`, `AcknowledgementId`, `CheckInRecordId`, `FriendConnectionId`, `KeyGrantId`
+
+### ID prefix convention
+
+IDs use a prefix convention for human readability: `sys_`, `mem_`, `grp_`, `bkt_`, `ch_`, `msg_`, `note_`, `poll_`, `rel_`, `sub_`, `fld_`, `fv_`, `sess_`, `evt_`, `acct_`, `blob_`, `ak_`, `wh_`, `tmr_`, `je_`, `wp_`, `ss_`, `lyr_`, `iwe_`, `iwr_`, `al_`, `bm_`, `ack_`, `cir_`, `fc_`, `kg_`
+
+### EntityType union
+
+`'system' | 'member' | 'group' | 'bucket' | 'channel' | 'message' | 'note' | 'poll' | 'relationship' | 'subsystem' | 'side-system' | 'layer' | 'journal-entry' | 'wiki-page' | 'custom-front' | 'fronting-session' | 'blob' | 'webhook' | 'timer'`
+
+### Timestamp types
+
+- `UnixMillis` (branded number)
+- `ISOTimestamp` (branded string)
+
+### Pagination types
+
+- `PaginationCursor`, `PaginatedResult<T>` (cursor-based)
+- `OffsetPaginationParams`: { offset: number, limit: number }
+
+### Result/Error types
+
+- `Result<T, E>`: discriminated union for success/error
+- `ApiResponse<T>`: { data: T } | { error: ApiError }
+- `ApiError`: { code: string, message: string, details?: unknown }
+- `ValidationError`: { field: string, message: string, code: string }
+
+### Utility types
+
+- `CreateInput<T>`: Omit<T, 'id' | 'createdAt' | 'updatedAt' | 'version'> for creation
+- `UpdateInput<T>`: Partial<Omit<T, 'id' | 'createdAt'>> for updates
+- `DeepReadonly<T>`: recursive readonly for immutable data (lifecycle events, audit logs)
+- `DateRange`: { start: UnixMillis, end: UnixMillis }
+- `AuditMetadata`: { createdAt: UnixMillis, updatedAt: UnixMillis, version: number }
+- `SortDirection`: 'asc' | 'desc'
+- `EntityReference`: { entityType: EntityType, entityId: string }
 
 ## Acceptance Criteria
 
-- [ ] All ID types are branded (not assignable from plain string)
+- [ ] All 31 branded ID types defined (not assignable from plain string)
 - [ ] ID factory function: `createId<T>(prefix?: string) -> T`
+- [ ] ID prefix convention documented
+- [ ] EntityType union with 19+ entity types
 - [ ] Timestamp helper: `now() -> UnixMillis`
-- [ ] Pagination types support cursor-based and offset-based
+- [ ] Both cursor-based and offset-based pagination types
+- [ ] Result/Error types: ApiResponse, ApiError, ValidationError
+- [ ] CreateInput<T> / UpdateInput<T> utility types
+- [ ] DeepReadonly<T> for immutable data
+- [ ] DateRange utility type
 - [ ] All types exported from package index
 - [ ] No `any` or type assertions
 - [ ] Unit tests for ID creation and type guards
@@ -48,16 +85,3 @@ Shared utility types and branded ID system for packages/types.
 
 - ADR 004 (database ID strategy)
 - CLAUDE.md code quality rules (strict typing)
-
-## Audit Findings (002)
-
-- Missing 17 branded IDs that need to be added: `AccountId`, `BlobId`, `ApiKeyId`, `WebhookId`, `TimerId`, `JournalEntryId`, `WikiPageId`, `SideSystemId`, `LayerId`, `InnerWorldEntityId`, `InnerWorldRegionId`, `AuditLogEntryId`, `BoardMessageId`, `AcknowledgementId`, `CheckInRecordId`, `FriendConnectionId`, `KeyGrantId`
-- Missing `EntityType` union: 'member' | 'group' | 'note' | 'channel' | 'journal-entry' | 'wiki-page' | 'bucket' | 'subsystem' | 'side-system' | 'layer' | etc. (referenced by EntityReference but not defined)
-- Missing `DateRange` utility type: `{ start: UnixMillis, end: UnixMillis }` — used by analytics, reports, exports
-- Missing `OffsetPaginationParams` type (only cursor-based defined)
-- Missing `CreateInput<T>` / `UpdateInput<T>` utility types for API operations (Omit auto-generated fields for creation, Partial for updates)
-- Missing `ApiResponse<T>` / `ApiError` envelope types
-- Missing `ValidationError` per-field validation type
-- Missing `FilterOperator` type for query builders
-- Missing `SortSpec<T>` typed sort specification
-- Missing `DeepReadonly<T>` for immutable data (lifecycle events, audit logs)

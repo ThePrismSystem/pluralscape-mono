@@ -12,30 +12,31 @@ blocked_by:
   - db-i2gl
 ---
 
-Custom field definition, value, and bucket visibility tables
+Custom field definition, value, and bucket visibility tables.
 
 ## Scope
 
-- `field_definitions`: id, system_id, encrypted_data (T1 — name, type, options for select fields)
-- `field_values`: id, field_definition_id (FK), member_id (FK), encrypted_data (T1 — value)
-- `field_bucket_visibility`: field_definition_id (FK), bucket_id (FK) — which buckets can see this field
+### Tables
+
+- **`field_definitions`**: id (UUID PK), system_id (FK → systems, NOT NULL), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, type, options for select fields)
+- **`field_values`**: id (UUID PK), field_definition_id (FK → field_definitions, NOT NULL), member_id (FK → members, NOT NULL), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — value)
+- **`field_bucket_visibility`**: field_definition_id (FK → field_definitions, NOT NULL), bucket_id (FK → buckets, NOT NULL) — composite PK: (field_definition_id, bucket_id)
 - PostgreSQL: options stored as JSONB inside encrypted blob after decryption; SQLite: TEXT with JSON
+
+### Indexes
+
+- field_values (field_definition_id)
+- field_values (member_id)
 
 ## Acceptance Criteria
 
-- [ ] field_definitions table
-- [ ] field_values table with FK to definition and member
-- [ ] field_bucket_visibility join table
+- [ ] field_definitions table with created_at/updated_at
+- [ ] field_values table with timestamps and FK indexes
+- [ ] field_bucket_visibility with composite PK (field_definition_id, bucket_id)
+- [ ] Indexes on field_values (field_definition_id, member_id)
 - [ ] Migrations for both dialects
 - [ ] Integration test: create definition + values + visibility
 
 ## References
 
 - features.md section 1 (Custom fields)
-
-## Audit Findings (002)
-
-- Missing `created_at`, `updated_at` on field_definitions
-- Missing `created_at`, `updated_at` on field_values
-- Missing indexes on field_values (field_definition_id, member_id)
-- Missing unique constraint on field_bucket_visibility (field_definition_id, bucket_id)
