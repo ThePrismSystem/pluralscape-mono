@@ -18,6 +18,15 @@
     "typecheck": {
       "dependsOn": ["^build"]
     },
+    "test": {
+      "cache": false
+    },
+    "test:unit": {
+      "cache": false
+    },
+    "test:integration": {
+      "cache": false
+    },
     "clean": {
       "cache": false
     }

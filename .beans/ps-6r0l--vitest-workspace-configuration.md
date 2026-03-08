@@ -1,11 +1,11 @@
 ---
 # ps-6r0l
 title: Vitest workspace configuration
-status: todo
+status: completed
 type: task
 priority: critical
 created_at: 2026-03-08T13:36:31Z
-updated_at: 2026-03-08T13:36:41Z
+updated_at: 2026-03-08T20:47:34Z
 parent: ps-jvnm
 ---
 
