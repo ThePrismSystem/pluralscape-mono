@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:20Z
-updated_at: 2026-03-08T13:36:09Z
+updated_at: 2026-03-08T14:21:49Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -43,3 +43,12 @@ System structure types for relationships, subsystems, side systems, and layers.
 
 - features.md section 6 (System Structure)
 - ps-qvj0 (system structure research task)
+
+## Audit Findings (002)
+
+- Missing `OriginType` union type definition (referenced by Subsystem.originType but never defined)
+- SideSystem missing `memberIds` or membership relationship link
+- Layer missing `description` field
+- Missing `SideSystemMembership` type (subsystemId exists but no side system equivalent)
+- Missing `LayerMembership` type
+- `LifecycleEvent` should be a discriminated union (D1): split events should require `resultingMemberIds`, dormancy events should not. Each variant should carry type-specific payload fields

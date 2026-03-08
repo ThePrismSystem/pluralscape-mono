@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:23Z
-updated_at: 2026-03-08T13:36:09Z
+updated_at: 2026-03-08T14:21:53Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -40,3 +40,7 @@ Append-only lifecycle event log types.
 ## References
 
 - features.md section 6 (Member lifecycle events)
+
+## Audit Findings (002)
+
+- LifecycleEvent should be a discriminated union, not flat eventType field. Split requires resultingMemberIds, dormancy does not. Each variant should have type-specific required/optional fields.

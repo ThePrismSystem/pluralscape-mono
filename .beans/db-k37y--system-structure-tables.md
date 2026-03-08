@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:59Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:21:18Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -35,3 +35,11 @@ Relationship, subsystem, side system, layer, and membership tables
 ## References
 
 - features.md section 6 (System Structure)
+
+## Audit Findings (002)
+
+- subsystem_memberships has no queryable columns — both IDs are inside encrypted_data, making the table unusable for joins. Needs at minimum a surrogate `id` column and `system_id` FK for RLS
+- Missing `side_system_memberships` join table (M:N for members in side systems)
+- Missing `layer_memberships` join table (M:N for members in layers)
+- Missing `created_at`, `updated_at` on relationships, subsystems, side_systems, layers
+- Missing `created_at`, `updated_at` on innerworld tables (also update db-vfhd)

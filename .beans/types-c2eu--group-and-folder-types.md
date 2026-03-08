@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:13Z
-updated_at: 2026-03-08T13:36:09Z
+updated_at: 2026-03-08T14:21:45Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -35,3 +35,7 @@ Group and folder hierarchy types.
 ## References
 
 - features.md section 1 (Groups/folders)
+
+## Audit Findings (002)
+
+- Group missing `archived` flag (features.md section 1: archival is non-destructive)

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:42Z
-updated_at: 2026-03-08T14:03:42Z
+updated_at: 2026-03-08T14:21:28Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -37,3 +37,7 @@ API key storage with scoped permissions per ADR 013. Distinct from auth_keys (us
 
 - features.md section 9 (Public REST API, hybrid auth model)
 - ADR 013 (API Authentication with E2E Encryption)
+
+## Audit Findings (002)
+
+- Missing indexes on api_keys: revoked_at (active keys filter), key_type (type filter)

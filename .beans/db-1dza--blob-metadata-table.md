@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:44Z
-updated_at: 2026-03-08T14:03:44Z
+updated_at: 2026-03-08T14:21:20Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -36,3 +36,8 @@ Encrypted blob/media metadata tracking table
 
 - features.md section 16 (Media Storage)
 - ADR 009 (Blob/Media Storage)
+
+## Audit Findings (002)
+
+- Missing `encryption_tier` column (1 or 2) for key selection during decryption
+- Missing `bucket_id` column for T2 blobs (which bucket key was used)

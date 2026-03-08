@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:39Z
-updated_at: 2026-03-08T14:03:39Z
+updated_at: 2026-03-08T14:21:27Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -32,3 +32,8 @@ Timer configuration and check-in record tables
 ## References
 
 - features.md section 2 (Automated timers / dissociation check-ins)
+
+## Audit Findings (002)
+
+- Missing `timer_config_id` FK on check_in_records linking to the triggering config
+- Missing `created_at`, `updated_at` on timer_configs

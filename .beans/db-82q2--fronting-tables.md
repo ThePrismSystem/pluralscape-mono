@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:47Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:21:00Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -38,3 +38,9 @@ Fronting session, switch, and custom front tables
 
 - features.md section 2 (Fronting)
 - encryption-research.md section 4.3 (fronting encryption tiers)
+
+## Audit Findings (002)
+
+- Co-conscious vs co-fronting CANNOT be computed from overlapping sessions alone — needs explicit `fronting_type` column or flag inside encrypted_data. Co-conscious requires user input (passive awareness vs active control).
+- Missing `created_at`, `updated_at` on custom_fronts table
+- Missing `archived`/`archived_at` on custom_fronts (historical fronting references them)

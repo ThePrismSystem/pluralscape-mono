@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:32Z
-updated_at: 2026-03-08T14:03:32Z
+updated_at: 2026-03-08T14:22:13Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -34,3 +34,9 @@ WebhookConfig and WebhookDelivery types for user-configurable webhooks
 
 - features.md section 9 (Custom webhooks)
 - ADR 013 (API Authentication)
+
+## Audit Findings (002)
+
+- `WebhookEventType` incomplete — missing events for: lifecycle events (split, fusion, etc.), timer check-in responses, friend connection changes, API key operations
+- WebhookConfig missing `secret` field for HMAC signature verification
+- Missing encryption tier annotations

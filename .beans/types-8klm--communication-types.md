@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:27Z
-updated_at: 2026-03-08T13:36:10Z
+updated_at: 2026-03-08T14:21:42Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -40,3 +40,10 @@ Chat, board, notes, polls, and acknowledgement types. Implementation is M5 but t
 ## References
 
 - features.md section 3 (Communication)
+
+## Audit Findings (002)
+
+- ChatMessage missing `editedAt` timestamp for edit tracking
+- ChatMessage missing `replyToId` for reply threading
+- Channel missing `sortOrder` for ordering
+- Channel missing `type` field (categories vs channels distinction)

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: low
 created_at: 2026-03-08T13:32:34Z
-updated_at: 2026-03-08T13:36:10Z
+updated_at: 2026-03-08T14:21:58Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -37,3 +37,10 @@ Innerworld mapping and 2D canvas positioning types.
 
 - features.md section 6 (Innerworld mapping)
 - Note: visual editor is stretch goal for M8
+
+## Audit Findings (002)
+
+- InnerWorldEntity missing `linkedMemberId` — for entities of type 'member', which member they represent
+- InnerWorldEntity missing `name` and `description` fields on the entity itself
+- Entity type 'region' overlaps with separate InnerWorldRegion type — should use discriminated union where each variant has different required fields
+- Missing entity-to-region assignment relationship

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:41Z
-updated_at: 2026-03-08T14:03:41Z
+updated_at: 2026-03-08T14:21:21Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -35,3 +35,8 @@ Webhook endpoint configuration and delivery tracking tables
 
 - features.md section 9 (Custom webhooks)
 - ADR 010 (Background Jobs — webhook delivery)
+
+## Audit Findings (002)
+
+- Missing `secret` column for HMAC webhook signature verification
+- Missing `updated_at` on webhook_configs

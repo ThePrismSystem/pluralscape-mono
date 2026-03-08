@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:33:04Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:21:06Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -36,3 +36,15 @@ Chat, board, notes, polls, and acknowledgement tables. Implementation is M5 but 
 ## References
 
 - features.md section 3 (Communication)
+
+## Audit Findings (002)
+
+- Missing `created_at`, `updated_at` on channels
+- Missing `edited_at` on messages for edit tracking
+- Missing `archived`/`deleted` soft-delete on messages
+- Missing `pinned` column on board_messages (matches types-8klm)
+- Missing `created_at`, `updated_at` on board_messages
+- Missing `created_at`, `updated_at` on notes
+- Missing `created_at`, `closed_at` on polls
+- Missing `created_at` on acknowledgements
+- Missing `sort_order` on channels for drag-and-drop

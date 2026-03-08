@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:34Z
-updated_at: 2026-03-08T14:03:34Z
+updated_at: 2026-03-08T14:22:06Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -36,3 +36,9 @@ BlobMetadata type for encrypted media and file attachment tracking
 
 - features.md section 16 (Media Storage)
 - ADR 009 (Blob/Media Storage)
+
+## Audit Findings (002)
+
+- BlobMetadata missing `purpose` field on the type itself (BlobPurpose union defined but not included as a field)
+- Missing `encryptionTier` field (1 | 2) for key selection during decryption
+- Missing `bucketId` for T2 blobs (which bucket key was used)

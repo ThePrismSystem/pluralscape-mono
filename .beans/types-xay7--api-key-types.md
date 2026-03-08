@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:32Z
-updated_at: 2026-03-08T14:03:32Z
+updated_at: 2026-03-08T14:22:10Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -37,3 +37,8 @@ API key types for hybrid metadata and crypto key model per ADR 013
 
 - features.md section 9 (Public REST API, hybrid auth model)
 - ADR 013 (API Authentication with E2E Encryption)
+
+## Audit Findings (002)
+
+- `ApiKeyScope` not exhaustive — missing: 'notes:read', 'notes:write', 'journal:read', 'journal:write', 'system-structure:read', 'friends:read', 'friends:write'. Only 10 scopes listed but API has 17+ endpoint categories (features.md section 9)
+- Missing encryption tier annotations on ApiKey fields

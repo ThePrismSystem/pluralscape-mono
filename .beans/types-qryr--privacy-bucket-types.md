@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:16Z
-updated_at: 2026-03-08T13:36:09Z
+updated_at: 2026-03-08T14:21:31Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -40,3 +40,10 @@ Privacy bucket and access control types. Core to the encryption model.
 - ADR 006 (Privacy Bucket Model)
 - features.md section 4 (Privacy and Social)
 - encryption-research.md section 4.4
+
+## Audit Findings (002)
+
+- FriendConnection missing `friendCode` field for friend code exchange
+- FriendConnection missing `displayName` field
+- `BucketVisibilityScope` incomplete — missing: 'journal-entries', 'member-photos', 'groups' (features.md section 4: friends can view member profiles and member list)
+- Missing `FriendCode` type: id, systemId, code (string), createdAt, expiresAt (nullable)

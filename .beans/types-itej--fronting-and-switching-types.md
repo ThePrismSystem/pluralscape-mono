@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:09Z
-updated_at: 2026-03-08T13:36:09Z
+updated_at: 2026-03-08T14:21:27Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -40,3 +40,9 @@ Fronting, switching, and custom front types.
 
 - features.md section 2 (Fronting and Analytics)
 - CLAUDE.md: "fronting" not "presenting", "switch" not "transition"
+
+## Audit Findings (002)
+
+- Missing `frontingType` field on FrontingSession: 'fronting' | 'co-conscious' — co-conscious vs co-fronting CANNOT be computed from overlapping sessions alone, requires explicit user input (passive awareness vs active control)
+- CustomFront missing `avatarRef` and `archived` fields (custom fronts are "logged like members" per features.md)
+- Missing analytics/report types: `FrontingAnalytics`, `FrontingReport`, `DateRangeFilter` for cumulative duration, average session length, chart data (features.md section 2)

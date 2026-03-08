@@ -1,0 +1,33 @@
+---
+# types-3ni9
+title: i18n and locale types
+status: todo
+type: task
+created_at: 2026-03-08T14:24:27Z
+updated_at: 2026-03-08T14:24:27Z
+parent: types-im7i
+---
+
+Internationalization types for locale, translation, RTL support, and date/number formatting.
+
+## Scope
+
+- `Locale`: string branded type (BCP 47 tag, e.g., 'en-US', 'ja-JP')
+- `TranslationKey`: string branded type for type-safe translation lookups
+- `TranslationMap`: Record<TranslationKey, string>
+- `TextDirection`: 'ltr' | 'rtl'
+- `DateFormatPreference`: 'iso' | 'us' | 'eu' | 'relative'
+- `NumberFormatPreference`: locale-specific number formatting options
+- `LocaleConfig`: locale, textDirection, dateFormat, numberFormat
+
+## Acceptance Criteria
+
+- [ ] Locale type with BCP 47 validation
+- [ ] TranslationKey branded type for compile-time safety
+- [ ] RTL support via TextDirection
+- [ ] Date and number formatting preferences
+- [ ] Unit tests for locale utilities
+
+## References
+
+- features.md section 11 (Internationalization)

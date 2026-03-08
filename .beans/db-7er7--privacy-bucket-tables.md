@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:56Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:21:02Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -36,3 +36,14 @@ Privacy bucket, content tagging, key grant, and friend connection tables
 
 - ADR 006 (Privacy Bucket Model)
 - encryption-research.md section 4
+
+## Audit Findings (002)
+
+- Missing `friend_codes` table: system_id (FK), code (varchar unique), created_at, expires_at (nullable) — per features.md section 4
+- Missing `friend_bucket_assignments` join table: friend_connection_id (FK), bucket_id (FK) — backing for assignedBucketIds
+- Missing `updated_at` on friend_connections (status changes: pending -> accepted -> blocked)
+- Missing `created_at` on key_grants, `revoked_at` for key rotation
+- Missing `created_at` on bucket_content_tags
+- Missing `created_at`, `updated_at` on buckets
+- Missing unique constraint on friend_connections (system_id, friend_system_id)
+- Missing unique constraint on key_grants (bucket_id, friend_user_id, key_version)

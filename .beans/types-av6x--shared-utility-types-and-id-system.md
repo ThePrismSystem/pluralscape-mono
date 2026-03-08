@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: critical
 created_at: 2026-03-08T13:31:17Z
-updated_at: 2026-03-08T13:34:42Z
+updated_at: 2026-03-08T14:21:14Z
 parent: types-im7i
 blocking:
   - types-fid9
@@ -48,3 +48,16 @@ Shared utility types and branded ID system for packages/types.
 
 - ADR 004 (database ID strategy)
 - CLAUDE.md code quality rules (strict typing)
+
+## Audit Findings (002)
+
+- Missing 17 branded IDs that need to be added: `AccountId`, `BlobId`, `ApiKeyId`, `WebhookId`, `TimerId`, `JournalEntryId`, `WikiPageId`, `SideSystemId`, `LayerId`, `InnerWorldEntityId`, `InnerWorldRegionId`, `AuditLogEntryId`, `BoardMessageId`, `AcknowledgementId`, `CheckInRecordId`, `FriendConnectionId`, `KeyGrantId`
+- Missing `EntityType` union: 'member' | 'group' | 'note' | 'channel' | 'journal-entry' | 'wiki-page' | 'bucket' | 'subsystem' | 'side-system' | 'layer' | etc. (referenced by EntityReference but not defined)
+- Missing `DateRange` utility type: `{ start: UnixMillis, end: UnixMillis }` — used by analytics, reports, exports
+- Missing `OffsetPaginationParams` type (only cursor-based defined)
+- Missing `CreateInput<T>` / `UpdateInput<T>` utility types for API operations (Omit auto-generated fields for creation, Partial for updates)
+- Missing `ApiResponse<T>` / `ApiError` envelope types
+- Missing `ValidationError` per-field validation type
+- Missing `FilterOperator` type for query builders
+- Missing `SortSpec<T>` typed sort specification
+- Missing `DeepReadonly<T>` for immutable data (lifecycle events, audit logs)

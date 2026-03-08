@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: critical
 created_at: 2026-03-08T13:32:40Z
-updated_at: 2026-03-08T13:35:48Z
+updated_at: 2026-03-08T14:21:32Z
 parent: db-2je4
 blocking:
   - db-i2gl
@@ -56,3 +56,11 @@ Drizzle ORM project setup with PostgreSQL + SQLite dual-dialect support
 ## References
 
 - ADR 004 (Database)
+
+## Audit Findings (002)
+
+- Should define standard audit column patterns (created_at, updated_at, archived_at) as reusable column helpers
+- Should define standard CHECK constraint patterns for both dialects
+- Should define enum/varchar CHECK constraint strategy for cross-dialect enum columns
+- Should define standard DEFAULT values strategy for both dialects
+- Consider defining common view patterns (current_fronters, active_api_keys, etc.)

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:33Z
-updated_at: 2026-03-08T14:03:33Z
+updated_at: 2026-03-08T14:22:19Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -33,3 +33,7 @@ AuditLogEntry type for security audit log
 ## References
 
 - features.md section 14 (Security audit log)
+
+## Audit Findings (002)
+
+- Should use `Plaintext<T>` wrapper from types-ae5n instead of plain types (all T3 but should be explicit)

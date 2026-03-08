@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:33:02Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:21:20Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -32,3 +32,7 @@ Append-only lifecycle event log table
 ## References
 
 - features.md section 6 (Member lifecycle events)
+
+## Audit Findings (002)
+
+- `event_type` should be reconsidered as T1 inside encrypted_data — reveals sensitive system dynamics (splits, fusions) to server. Current varchar column leaks this.

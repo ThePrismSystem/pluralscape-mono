@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:25Z
-updated_at: 2026-03-08T14:03:25Z
+updated_at: 2026-03-08T14:22:16Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -32,3 +32,7 @@ Timer configuration and check-in record types for automated dissociation check-i
 ## References
 
 - features.md section 2 (Automated timers / dissociation check-ins)
+
+## Audit Findings (002)
+
+- TimerConfig missing `promptText` field directly (references CheckInPrompt separately but should include it)

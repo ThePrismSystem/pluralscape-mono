@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:50Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:21:09Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -33,3 +33,10 @@ Group hierarchy and membership tables
 ## References
 
 - features.md section 1 (Groups/folders)
+
+## Audit Findings (002)
+
+- Missing `created_at`, `updated_at` on groups
+- Missing `archived`/`archived_at` on groups (features.md section 1: archival)
+- Missing unique constraint on group_memberships (group_id, member_id)
+- Missing indexes on group_memberships (member_id, group_id)

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:33:22Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:20:45Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -36,3 +36,10 @@ Account, authentication key, session, and recovery tables. Needed for crypto key
 - ADR 006 (Key Hierarchy)
 - ADR 011 (Key Lifecycle and Recovery)
 - ADR 013 (API Authentication)
+
+## Audit Findings (002)
+
+- Missing `password_hash` column (Argon2id) on accounts table for server-side auth verification
+- Missing `email_salt` or hash algorithm indicator
+- Missing `updated_at` on accounts
+- Missing cascade rules: account deletion -> sessions, auth_keys, recovery_keys, api_keys, audit_log

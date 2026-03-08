@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: low
 created_at: 2026-03-08T13:33:19Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:21:19Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -32,3 +32,10 @@ Innerworld spatial mapping tables
 ## References
 
 - features.md section 6 (Innerworld mapping)
+
+## Audit Findings (002)
+
+- Missing entity-to-region assignment (join table or FK linking entities to regions)
+- `gatekeeper_member_id` should be inside encrypted_data (T1), not plaintext — leaks member identity to server
+- `access_type` is acceptable as T3 for routing but document the privacy tradeoff
+- Missing `created_at`, `updated_at` on all innerworld tables

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:40Z
-updated_at: 2026-03-08T14:03:40Z
+updated_at: 2026-03-08T14:21:17Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -33,3 +33,8 @@ Journal page, block, and wiki tables. Implementation is later milestones but sch
 ## References
 
 - features.md section 7 (Journaling)
+
+## Audit Findings (002)
+
+- Missing `archived`/`archived_at` on journal_entries (features.md section 1: archival)
+- Missing `archived`/`archived_at` on wiki_pages

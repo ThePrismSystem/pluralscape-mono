@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:31Z
-updated_at: 2026-03-08T14:03:31Z
+updated_at: 2026-03-08T14:22:02Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -36,3 +36,9 @@ JournalPage, JournalBlock, and WikiPage types for block-based rich text editor
 ## References
 
 - features.md section 7 (Journaling)
+
+## Audit Findings (002)
+
+- JournalEntry missing `tags`/`categories` for organization
+- JournalEntry missing link to fronting session (who was fronting when written)
+- WikiPage missing `archived`/`archivedAt` field

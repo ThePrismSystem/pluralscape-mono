@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:44Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:20:56Z
 parent: db-2je4
 blocking:
   - db-82q2
@@ -46,3 +46,8 @@ Core database tables for systems and members
 ## References
 
 - encryption-research.md section 4.3 (which fields are T1 vs T3)
+
+## Audit Findings (002)
+
+- Missing `version` column on members table for CRDT optimistic locking
+- Missing cascade rules: systems deletion -> all system-owned tables (GDPR purge path)

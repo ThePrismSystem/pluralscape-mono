@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:53Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-08T14:21:08Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -32,3 +32,10 @@ Custom field definition, value, and bucket visibility tables
 ## References
 
 - features.md section 1 (Custom fields)
+
+## Audit Findings (002)
+
+- Missing `created_at`, `updated_at` on field_definitions
+- Missing `created_at`, `updated_at` on field_values
+- Missing indexes on field_values (field_definition_id, member_id)
+- Missing unique constraint on field_bucket_visibility (field_definition_id, bucket_id)

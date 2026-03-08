@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:06Z
-updated_at: 2026-03-08T13:36:09Z
+updated_at: 2026-03-08T14:21:21Z
 parent: types-im7i
 blocking:
   - types-itej
@@ -48,3 +48,11 @@ Core identity types for System and Member entities.
 
 - features.md section 1 (Identity Management)
 - CLAUDE.md terminology: "member" not "alter" in code
+
+## Audit Findings (002)
+
+- Missing `completenessLevel` field on Member type (defined as separate union but not as a field on Member)
+- Missing rich-linking metadata on `description` field (links to members/groups/entities with preview cards per features.md section 1)
+- System type needs `settings` to reference a concrete `SystemSettings` type (not just "ref") covering app lock, notification prefs, nomenclature, littles safe mode config
+- `RoleTag` needs discriminated union pattern: `{ tag: 'protector' } | { tag: 'custom', value: string }` instead of plain string mixing known values with custom
+- Missing `archived` flag on Group type referenced from types-c2eu

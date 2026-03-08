@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:39Z
-updated_at: 2026-03-08T13:36:10Z
+updated_at: 2026-03-08T14:21:39Z
 parent: types-im7i
 blocked_by:
   - types-fid9
@@ -48,3 +48,12 @@ Type-level markers mapping every domain field to its encryption tier.
 
 - encryption-research.md section 4.3 (Data Encryption Model)
 - encryption-research.md section 4.3
+
+## Audit Findings (002)
+
+- Encryption wrappers (Encrypted<T>, BucketEncrypted<T>, Plaintext<T>) are defined but never used by any other types bean — each domain type uses plain strings instead
+- Need to define Server/Client type variants: `ServerMember` (encrypted fields are `EncryptedBlob`) vs `ClientMember` (decrypted plain types)
+- Need `Decrypt<T>` / `Encrypt<T>` mapping utility types for server-to-client transformation
+- Missing `EncryptedString` branded type to prevent accidentally logging/displaying ciphertext
+- Missing tier annotations for: API key data, webhook URLs, timer enabled flags, blob metadata
+- Convention needed: `T | null` for "value absent but field always present" vs `field?: T` for "field may not exist"
