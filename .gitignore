@@ -45,6 +45,9 @@ playwright-report/
 # Private planning docs (not for public repo)
 docs/planning/project-scope.md
 
+# Local audits (not committed unless explicitly requested)
+docs/local-audits/
+
 # Agent config (per-contributor)
 CLAUDE.md
 
