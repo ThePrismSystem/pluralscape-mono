@@ -1,6 +1,6 @@
 # Work Tracking
 
-This project uses [beans](https://github.com/btvnlue/beans), a local-first issue tracker that stores issues as markdown files in `.beans/`. Beans are committed alongside code — no external issue tracker needed.
+This project uses [beans](https://github.com/hmans/beans), a local-first issue tracker that stores issues as markdown files in `.beans/`. Beans are committed alongside code — no external issue tracker needed.
 
 ## Quick Reference
 

@@ -57,6 +57,13 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Innerworld tables ([db-vfhd](../.beans/db-vfhd--innerworld-tables.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Sync metadata tables ([db-xj5n](../.beans/db-xj5n--sync-metadata-tables.md))
 
+### Epic: Database schema documentation ([db-9nf0](../.beans/db-9nf0--database-schema-documentation.md))
+
+> Comprehensive database schema documentation including audit and visual diagrams.
+
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Full database schema audit ([db-0yyh](../.beans/db-0yyh--full-database-schema-audit.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Mermaid ER diagram of database schema ([db-fojn](../.beans/db-fojn--mermaid-er-diagram-of-database-schema.md))
+
 ### Epic: Domain types ([types-im7i](../.beans/types-im7i--domain-types.md))
 
 > packages/types — system, member, fronting, chat, privacy bucket, etc.
