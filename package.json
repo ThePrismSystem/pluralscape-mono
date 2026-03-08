@@ -10,6 +10,12 @@
     "typecheck": "turbo typecheck",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
+    "test": "vitest run",
+    "test:unit": "vitest run --exclude '**/*.integration.{test,spec}.ts'",
+    "test:integration": "vitest run --passWithNoTests 'integration'",
+    "test:coverage": "vitest run --coverage",
+    "test:unit:coverage": "vitest run --exclude '**/*.integration.{test,spec}.ts' --coverage",
+    "test:watch": "vitest",
     "clean": "turbo clean",
     "roadmap": "beans roadmap > docs/roadmap.md",
     "codeql": "bash scripts/codeql/analyze.sh",
@@ -19,17 +25,19 @@
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/prettier-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^10.0.3",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.5.3",
     "turbo": "^2.4.4",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
       "prettier --write",
-      "eslint --fix --max-warnings 0"
+      "eslint --fix --max-warnings 0 --no-warn-ignored"
     ],
     "*.{json,md,yaml,yml}": [
       "prettier --write"

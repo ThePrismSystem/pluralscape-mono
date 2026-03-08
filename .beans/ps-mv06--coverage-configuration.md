@@ -1,11 +1,11 @@
 ---
 # ps-mv06
 title: Coverage configuration
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:36:44Z
-updated_at: 2026-03-08T13:36:58Z
+updated_at: 2026-03-08T20:49:13Z
 parent: ps-jvnm
 blocked_by:
   - ps-6r0l
@@ -43,3 +43,7 @@ Coverage thresholds and CI enforcement
 
 - CLAUDE.md (Coverage targets)
 - CONTRIBUTING.md
+
+## Summary of Changes
+
+Configured v8 coverage provider in root vitest.config.ts with 80% thresholds for lines/functions/branches/statements. Added text, lcov, and html reporters. Added test:coverage and test:unit:coverage scripts. Uncommented and updated CI test-unit job with coverage enforcement and artifact upload.

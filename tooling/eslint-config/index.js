@@ -5,7 +5,14 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["**/dist/**", "**/build/**", "**/node_modules/**", "**/.turbo/**", "**/.expo/**"],
+    ignores: [
+      "**/dist/**",
+      "**/build/**",
+      "**/node_modules/**",
+      "**/.turbo/**",
+      "**/.expo/**",
+      "**/vitest.config.ts",
+    ],
   },
   ...tseslint.configs.strictTypeChecked,
   {
@@ -115,6 +122,20 @@ export default tseslint.config(
 
       // Curly braces required
       curly: "error",
+    },
+  },
+  {
+    files: [
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "**/*.integration.test.ts",
+      "**/*.integration.spec.ts",
+      "**/__tests__/**/*.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-magic-numbers": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
     },
   },
   {
