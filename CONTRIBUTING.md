@@ -6,15 +6,15 @@ We welcome contributions from everyone. This project is community-driven by desi
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feat/your-feature`)
-3. Make your changes
-4. Ensure tests pass
+3. Write tests first, then implement (see [Development Methodology](#development-methodology--tdd) below)
+4. Ensure all tests pass and coverage thresholds are met
 5. Open a pull request against `main`
 
 ## Pull Request Process
 
 - Use the PR template — it includes a review checklist covering privacy, offline behavior, accessibility, and data safety
 - Keep PRs focused — one feature or fix per PR
-- Include tests for new functionality
+- Include tests for new functionality (written before the implementation — see [TDD](#development-methodology--tdd))
 - Update documentation if behavior changes
 - List any deferred work in the "Deferred Items" section of the PR template
 
@@ -34,6 +34,41 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`, `perf`, `ci`
 ## Architecture Decisions
 
 Major technical decisions are documented as ADRs in `docs/adr/`. If your contribution involves a significant architectural choice, please write an ADR using the template at `docs/adr/000-template.md`.
+
+## Development Methodology — TDD
+
+This project follows **Test-Driven Development (TDD)**. All new code should be written test-first.
+
+### The cycle
+
+1. **Red** — Write a test that describes the behavior you want. Run it — it should fail.
+2. **Green** — Write the simplest code that makes the test pass.
+3. **Refactor** — Clean up duplication, improve naming, restructure — while keeping tests green.
+
+### In practice
+
+- **New features**: Start by writing tests for the public API or user-facing behavior. Then build the implementation to satisfy them.
+- **Bug fixes**: First write a test that reproduces the bug. Confirm it fails. Then fix the code and confirm the test passes.
+- **Refactors**: Ensure existing tests cover the code you're changing. If they don't, add tests first, then refactor.
+
+### Why TDD?
+
+Pluralscape handles sensitive personal data (identity, fronting, journaling) with privacy and encryption guarantees. TDD helps us:
+
+- Catch regressions in privacy and encryption logic before they ship
+- Build confidence in offline-first sync behavior through repeatable tests
+- Maintain high coverage naturally, without chasing metrics after the fact
+- Design cleaner APIs by thinking about usage before implementation
+
+### What if I'm not used to TDD?
+
+That's okay — it's a practice, not a gatekeeping requirement. If you're new to TDD:
+
+- Start small: write one test before one function
+- It's fine to spike (prototype without tests) to explore an approach, then delete the spike and rebuild test-first
+- Ask for help in [Discussions](https://github.com/ThePrismSystem/pluralscape-mono/discussions) if you're stuck
+
+PRs without tests for new functionality will be asked to add them. PRs that follow the TDD cycle (test commits before implementation commits) are appreciated but not strictly required — what matters is that tests exist and cover the behavior.
 
 ## Code Standards
 
