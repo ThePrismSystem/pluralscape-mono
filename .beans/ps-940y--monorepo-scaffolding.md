@@ -1,5 +1,5 @@
 ---
-# pluralscape-mono-940y
+# ps-940y
 title: Monorepo scaffolding
 status: completed
 type: task

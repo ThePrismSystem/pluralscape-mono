@@ -42,6 +42,11 @@ All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audit
 | [SQLCipher](https://github.com/nicktimko/sqlcipher)        | Encrypted SQLite                                       | BSD 3-Clause |
 | [Valkey](https://github.com/valkey-io/valkey)              | Pub/sub for real-time horizontal scaling               | BSD 3-Clause |
 | [Bun](https://github.com/oven-sh/bun)                      | JavaScript/TypeScript runtime                          | MIT          |
+| [beans](https://github.com/btvnlue/beans)                  | Local-first issue tracker (stored as markdown)         | MIT          |
+
+## Work Tracking
+
+This project uses **beans** for issue tracking — beans are markdown files stored in `.beans/` and committed with code. See [docs/work-tracking.md](docs/work-tracking.md) for conventions.
 
 ## Architecture Decision Records
 

@@ -1,6 +1,32 @@
 beans:
   path: .beans
-  prefix: pluralscape-mono-
+  prefix: ps-
   id_length: 4
   default_status: todo
   default_type: task
+
+  # Domain prefixes (use --prefix on `beans create`):
+  #
+  #   ps-       Global / cross-cutting (default)
+  #   api-      API server (apps/api)
+  #   mobile-   Mobile app (apps/mobile)
+  #   db-       Database schema & migrations (packages/db)
+  #   crypto-   Encryption layer (packages/crypto)
+  #   sync-     CRDT sync engine (packages/sync)
+  #   types-    Shared types (packages/types)
+  #   client-   API client (packages/api-client)
+  #   infra-    CI/CD, tooling, devops
+  #
+  # Type hierarchy: milestone > epic > feature / task / bug
+  #
+  # Epic conventions:
+  #   - Epics are containers, never worked on directly
+  #   - Create in draft, move to todo once children are defined
+  #   - in-progress when any child is in-progress
+  #   - completed only when all children are completed or scrapped
+  #   - Typically use ps- prefix (epics often span domains)
+  #
+  # Tags for cross-cutting concerns:
+  #   security, encryption, privacy, a11y, offline, performance
+  #
+  # Full guide: docs/work-tracking.md

@@ -1,5 +1,5 @@
 ---
-# pluralscape-mono-m426
+# ps-m426
 title: Add test coverage CI enforcement
 status: todo
 type: task
