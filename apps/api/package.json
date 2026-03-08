@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@types/bun": "^1.2.4",
     "eslint": "^10.0.3",

@@ -1,11 +1,11 @@
 ---
 # ps-7msx
 title: Test factories and fixtures
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:37:01Z
-updated_at: 2026-03-08T13:37:16Z
+updated_at: 2026-03-08T20:55:10Z
 parent: ps-jvnm
 blocked_by:
   - ps-6r0l
@@ -48,3 +48,7 @@ Shared test factories and fixtures for all domain entities
 
 - CLAUDE.md (Test Hygiene)
 - CONTRIBUTING.md
+
+## Summary of Changes
+
+Created tooling/test-utils package with PGlite database helpers, deterministic crypto key generators, and factory stubs for System, Member, FrontingSession, Group, and Bucket entities. Added PGlite integration smoke test in packages/db. Added test-utils as devDependency to db, api, and crypto packages.

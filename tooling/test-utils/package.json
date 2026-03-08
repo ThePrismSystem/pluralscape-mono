@@ -1,0 +1,24 @@
+{
+  "name": "@pluralscape/test-utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./db": "./src/db/index.ts",
+    "./crypto": "./src/crypto/index.ts",
+    "./factories": "./src/factories/index.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.3.15",
+    "drizzle-orm": "^0.39.3"
+  },
+  "devDependencies": {
+    "@pluralscape/tsconfig": "workspace:*",
+    "@types/node": "^22.15.0",
+    "typescript": "^5.7.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

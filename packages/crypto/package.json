@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@types/libsodium-wrappers-sumo": "^0.8.2",
     "eslint": "^10.0.3",

@@ -67,7 +67,7 @@ importers:
         version: 11.12.0(typescript@5.9.3)
       drizzle-orm:
         specifier: ^0.39.3
-        version: 0.39.3(bun-types@1.3.10)(postgres@3.4.8)
+        version: 0.39.3(@electric-sql/pglite@0.3.15)(bun-types@1.3.10)(postgres@3.4.8)
       hono:
         specifier: ^4.7.2
         version: 4.12.5
@@ -81,6 +81,9 @@ importers:
       '@pluralscape/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint-config
+      '@pluralscape/test-utils':
+        specifier: workspace:*
+        version: link:../../tooling/test-utils
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
@@ -192,6 +195,9 @@ importers:
       '@pluralscape/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint-config
+      '@pluralscape/test-utils':
+        specifier: workspace:*
+        version: link:../../tooling/test-utils
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
@@ -209,11 +215,14 @@ importers:
     dependencies:
       drizzle-orm:
         specifier: ^0.39.3
-        version: 0.39.3(bun-types@1.3.10)(postgres@3.4.8)
+        version: 0.39.3(@electric-sql/pglite@0.3.15)(bun-types@1.3.10)(postgres@3.4.8)
     devDependencies:
       '@pluralscape/eslint-config':
         specifier: workspace:*
         version: link:../../tooling/eslint-config
+      '@pluralscape/test-utils':
+        specifier: workspace:*
+        version: link:../../tooling/test-utils
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
@@ -289,6 +298,25 @@ importers:
         version: 8.56.1(eslint@9.39.4)(typescript@5.9.3)
 
   tooling/prettier-config: {}
+
+  tooling/test-utils:
+    dependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.3.15
+        version: 0.3.15
+      drizzle-orm:
+        specifier: ^0.39.3
+        version: 0.39.3(@electric-sql/pglite@0.3.15)(bun-types@1.3.10)(postgres@3.4.8)
+    devDependencies:
+      '@pluralscape/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: ^22.15.0
+        version: 22.19.15
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
 
   tooling/tsconfig: {}
 
@@ -800,6 +828,9 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@electric-sql/pglite@0.3.15':
+    resolution: {integrity: sha512-Cj++n1Mekf9ETfdc16TlDi+cDDQF0W7EcbyRHYOAeZdsAe8M/FJg18itDTSwyHfar2WIezawM9o0EKaRGVKygQ==}
 
   '@emnapi/core@1.8.1':
     resolution: {integrity: sha512-AvT9QFpxK0Zd8J0jopedNm+w/2fIzvtPKPjqyw9jwvBaReTTqPBk9Hixaz7KbjimP+QNz605/XnjFcDAL2pqBg==}
@@ -1660,6 +1691,9 @@ packages:
   '@types/libsodium-wrappers-sumo@0.8.2':
     resolution: {integrity: sha512-uFOBpg/r21hExVlh2ty8YpDfSR+Yy3Jn8XS4+SSjitbhTxdYq+pBz/49XRxyUFe8SzqujHf/Wu0/O4d+FUtNfQ==}
     deprecated: This is a stub types definition. libsodium-wrappers-sumo provides its own type definitions, so you do not need this installed.
+
+  '@types/node@22.19.15':
+    resolution: {integrity: sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg==}
 
   '@types/node@25.3.5':
     resolution: {integrity: sha512-oX8xrhvpiyRCQkG1MFchB09f+cXftgIXb3a7UUa4Y3wpmZPw5tyZGTLWhlESOLq1Rq6oDlc8npVU2/9xiCuXMA==}
@@ -4316,6 +4350,9 @@ packages:
     resolution: {integrity: sha512-LbBDqdIC5s8iROCUjMbW1f5dJQTEFB1+KO9ogbvlb3nm9n4YHa5p4KTvFPWvh2Hs8gZMBuiB1/8+pdfe/tDPug==}
     hasBin: true
 
+  undici-types@6.21.0:
+    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+
   undici-types@7.18.2:
     resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
@@ -5199,6 +5236,8 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
+  '@electric-sql/pglite@0.3.15': {}
+
   '@emnapi/core@1.8.1':
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
@@ -5827,14 +5866,14 @@ snapshots:
     dependencies:
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       jest-mock: 29.7.0
 
   '@jest/fake-timers@29.7.0':
     dependencies:
       '@jest/types': 29.6.3
       '@sinonjs/fake-timers': 10.3.0
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       jest-message-util: 29.7.0
       jest-mock: 29.7.0
       jest-util: 29.7.0
@@ -5868,7 +5907,7 @@ snapshots:
       '@jest/schemas': 29.6.3
       '@types/istanbul-lib-coverage': 2.0.6
       '@types/istanbul-reports': 3.0.4
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       '@types/yargs': 17.0.35
       chalk: 4.1.2
 
@@ -6302,7 +6341,7 @@ snapshots:
 
   '@types/graceful-fs@4.1.9':
     dependencies:
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
 
   '@types/istanbul-lib-coverage@2.0.6': {}
 
@@ -6320,9 +6359,14 @@ snapshots:
     dependencies:
       libsodium-wrappers-sumo: 0.8.2
 
+  '@types/node@22.19.15':
+    dependencies:
+      undici-types: 6.21.0
+
   '@types/node@25.3.5':
     dependencies:
       undici-types: 7.18.2
+    optional: true
 
   '@types/prop-types@15.7.15': {}
 
@@ -6839,7 +6883,7 @@ snapshots:
 
   bun-types@1.3.10:
     dependencies:
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
 
   bytes@3.1.2: {}
 
@@ -6870,7 +6914,7 @@ snapshots:
 
   chrome-launcher@0.15.2:
     dependencies:
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 1.4.2
@@ -6879,7 +6923,7 @@ snapshots:
 
   chromium-edge-launcher@0.2.0:
     dependencies:
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       escape-string-regexp: 4.0.0
       is-wsl: 2.2.0
       lighthouse-logger: 1.4.2
@@ -7057,8 +7101,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.39.3(bun-types@1.3.10)(postgres@3.4.8):
+  drizzle-orm@0.39.3(@electric-sql/pglite@0.3.15)(bun-types@1.3.10)(postgres@3.4.8):
     optionalDependencies:
+      '@electric-sql/pglite': 0.3.15
       bun-types: 1.3.10
       postgres: 3.4.8
 
@@ -7778,7 +7823,7 @@ snapshots:
       '@jest/environment': 29.7.0
       '@jest/fake-timers': 29.7.0
       '@jest/types': 29.6.3
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       jest-mock: 29.7.0
       jest-util: 29.7.0
 
@@ -7788,7 +7833,7 @@ snapshots:
     dependencies:
       '@jest/types': 29.6.3
       '@types/graceful-fs': 4.1.9
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       anymatch: 3.1.3
       fb-watchman: 2.0.2
       graceful-fs: 4.2.11
@@ -7815,7 +7860,7 @@ snapshots:
   jest-mock@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       jest-util: 29.7.0
 
   jest-regex-util@29.6.3: {}
@@ -7823,7 +7868,7 @@ snapshots:
   jest-util@29.7.0:
     dependencies:
       '@jest/types': 29.6.3
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       chalk: 4.1.2
       ci-info: 3.9.0
       graceful-fs: 4.2.11
@@ -7840,7 +7885,7 @@ snapshots:
 
   jest-worker@29.7.0:
     dependencies:
-      '@types/node': 25.3.5
+      '@types/node': 22.19.15
       jest-util: 29.7.0
       merge-stream: 2.0.0
       supports-color: 8.1.1
@@ -9223,7 +9268,10 @@ snapshots:
 
   ua-parser-js@1.0.41: {}
 
-  undici-types@7.18.2: {}
+  undici-types@6.21.0: {}
+
+  undici-types@7.18.2:
+    optional: true
 
   undici@6.23.0: {}
 
