@@ -8,4 +8,4 @@ updated_at: 2026-03-08T12:15:46Z
 parent: ps-vtws
 ---
 
-Recovery key generation, multi-device key transfer (ADR pending)
+Recovery key generation, multi-device key transfer (ADR 011)

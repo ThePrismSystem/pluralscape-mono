@@ -24,7 +24,7 @@ Actionable feature spec for Pluralscape, organized by domain.
 ## 2. Fronting and Analytics
 
 - **Front logging** — single-tap switch, co-fronting as parallel timelines (not mutually exclusive)
-  - Reliable offline-to-online transition (SP's #1 pain point — ~30% of switches fail to register)
+  - Reliable offline-to-online transition
   - Non-compulsive UX: supports flexible/retroactive logging so users don't feel obligated to log immediately
   - Co-fronting vs co-conscious distinction (active control vs passive awareness)
   - Custom front status text per fronting session (max 50 chars, matches SP behavior)
@@ -112,7 +112,7 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
 
 ## 9. API and Integrations
 
-- **Public REST API** — mirrors SP's 21 endpoint categories (ADR 003)
+- **Public REST API** — 17+ endpoint categories (ADR 003)
   - API uses canonical terms (`member`, `system`, `fronting`, `switch`) regardless of per-system nomenclature settings
   - Hybrid auth model with two key types (ADR 013):
     - **Metadata keys** — access tier 3 plaintext data only (timestamps, events, connection status). No crypto needed. For simple integrations like Discord bots.

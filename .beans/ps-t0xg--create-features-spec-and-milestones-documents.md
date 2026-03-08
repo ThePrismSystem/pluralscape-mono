@@ -17,4 +17,4 @@ Synthesize project-scope.md into committable features.md and milestones.md
 - Created docs/planning/features.md (20 feature sections)
 - Created docs/planning/milestones.md (M0-M10 + future + pending ADRs)
 - Updated docs/audits/001-license-compatibility.md (added BullMQ, MinIO)
-- Created 10 milestone beans, 76 epic beans, 4 ADR task beans, 1 follow-up bean (91 total)
+- Created 10 milestone beans, 73 epic beans, 5 ADR task beans, 1 follow-up bean (89 total)

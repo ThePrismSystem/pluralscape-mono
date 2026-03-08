@@ -8,4 +8,4 @@ updated_at: 2026-03-08T12:15:46Z
 parent: ps-vtws
 ---
 
-S3-compatible encrypted media storage, MinIO for self-hosted, local filesystem fallback (ADR pending)
+S3-compatible encrypted media storage, MinIO for self-hosted, local filesystem fallback (ADR 009)
