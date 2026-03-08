@@ -8,6 +8,10 @@
 
 > packages/db — Drizzle schema for PostgreSQL + SQLite, co-designed with CRDT sync requirements
 
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Blob metadata table ([db-1dza](.beans/db-1dza--blob-metadata-table.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Timer and check-in tables ([db-1icu](.beans/db-1icu--timer-and-check-in-tables.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Journal and wiki tables ([db-2e2s](.beans/db-2e2s--journal-and-wiki-tables.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) API key tables ([db-3h1c](.beans/db-3h1c--api-key-tables.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) RLS and dialect-specific features ([db-771z](.beans/db-771z--rls-and-dialect-specific-features.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Privacy bucket tables ([db-7er7](.beans/db-7er7--privacy-bucket-tables.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fronting tables ([db-82q2](.beans/db-82q2--fronting-tables.md))
@@ -16,7 +20,9 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Core tables ([db-i2gl](.beans/db-i2gl--core-tables.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Communication tables ([db-ju0q](.beans/db-ju0q--communication-tables.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) System structure tables ([db-k37y](.beans/db-k37y--system-structure-tables.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Security audit log table ([db-k9sr](.beans/db-k9sr--security-audit-log-table.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Member lifecycle events table ([db-kk2l](.beans/db-kk2l--member-lifecycle-events-table.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Webhook configuration tables ([db-nodl](.beans/db-nodl--webhook-configuration-tables.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Groups and folders tables ([db-puza](.beans/db-puza--groups-and-folders-tables.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Account and auth tables ([db-s6p9](.beans/db-s6p9--account-and-auth-tables.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Custom fields tables ([db-tu5g](.beans/db-tu5g--custom-fields-tables.md))
@@ -29,6 +35,7 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Flesh out system structure types and polyfragmented modeling ([ps-qvj0](.beans/ps-qvj0--flesh-out-system-structure-types-and-polyfragmente.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Custom field types ([types-0jjx](.beans/types-0jjx--custom-field-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Member lifecycle event types ([types-296i](.beans/types-296i--member-lifecycle-event-types.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Blob metadata types ([types-41na](.beans/types-41na--blob-metadata-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Communication types ([types-8klm](.beans/types-8klm--communication-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Encryption tier type annotations ([types-ae5n](.beans/types-ae5n--encryption-tier-type-annotations.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Shared utility types and ID system ([types-av6x](.beans/types-av6x--shared-utility-types-and-id-system.md))
@@ -36,8 +43,14 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Core identity types ([types-fid9](.beans/types-fid9--core-identity-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fronting and switching types ([types-itej](.beans/types-itej--fronting-and-switching-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Innerworld and spatial types ([types-iz5j](.beans/types-iz5j--innerworld-and-spatial-types.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Security audit log types ([types-j2h3](.beans/types-j2h3--security-audit-log-types.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Webhook configuration types ([types-m97b](.beans/types-m97b--webhook-configuration-types.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Timer and check-in types ([types-nsfu](.beans/types-nsfu--timer-and-check-in-types.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Journal and wiki types ([types-puxp](.beans/types-puxp--journal-and-wiki-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Privacy bucket types ([types-qryr](.beans/types-qryr--privacy-bucket-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) System structure and relationship types ([types-rwnq](.beans/types-rwnq--system-structure-and-relationship-types.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) API key types ([types-xay7](.beans/types-xay7--api-key-types.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Timer and check-in types ([types-xmsf](.beans/types-xmsf--timer-and-check-in-types.md))
 
 ### Epic: Encryption layer ([crypto-gd8f](.beans/crypto-gd8f--encryption-layer.md))
 
