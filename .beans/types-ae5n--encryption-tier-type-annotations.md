@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:39Z
-updated_at: 2026-03-08T14:21:39Z
+updated_at: 2026-03-08T19:32:27Z
 parent: types-im7i
 blocked_by:
   - types-fid9
@@ -74,3 +74,7 @@ Record mapping each domain type + field to its tier (from encryption-research.md
 ## References
 
 - encryption-research.md section 4.3 (Data Encryption Model)
+
+## Cross-Bean Adoption
+
+All domain type beans with encrypted data MUST define Server/Client type variant pairs and annotate fields with tier wrappers. Beans needing variants: types-fid9, types-itej, types-8klm, types-puxp, types-rwnq, types-iz5j, types-0jjx, types-c2eu, types-qryr, types-xmsf, types-jawp, types-p24v, types-gey6.

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:44Z
-updated_at: 2026-03-08T14:20:56Z
+updated_at: 2026-03-08T19:24:14Z
 parent: db-2je4
 blocking:
   - db-82q2
@@ -28,9 +28,9 @@ Core database tables for systems and members — the foundational entities all o
 
 ### Tables
 
-- **`systems`**: id (UUID PK, NOT NULL), account_id (FK → accounts, NOT NULL), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1 — name, description, avatar_ref, display_name)
+- **`systems`**: id (UUID PK, NOT NULL), account_id (FK → accounts, NOT NULL), version (integer, T3, NOT NULL, default 1 — for CRDT optimistic locking), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1 — name, description, avatar_ref, display_name)
 - **`members`**: id (UUID PK, NOT NULL), system_id (FK → systems, NOT NULL), completeness_level ('fragment' | 'demi-member' | 'full', T3), version (integer, T3, NOT NULL, default 1 — for CRDT optimistic locking), archived (boolean, T3, NOT NULL, default false), archived_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (bytea/blob, T1, NOT NULL — name, pronouns, description, avatar ref, colors, role tags)
-- **`member_photos`**: id (UUID PK), member_id (FK → members, NOT NULL), system_id (FK → systems, NOT NULL — for RLS policy), sort_order (integer, T3), encrypted_data (T1, NOT NULL — url/caption)
+- **`member_photos`**: id (UUID PK), member_id (FK → members, NOT NULL), system_id (FK → systems, NOT NULL — for RLS policy), sort_order (integer, T3), version (integer, T3, NOT NULL, default 1), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — url/caption)
 
 ### Cascade rules
 
@@ -40,7 +40,7 @@ Core database tables for systems and members — the foundational entities all o
 ### Indexes
 
 - members (system_id), (archived), (created_at)
-- member_photos (member_id), (system_id)
+- member_photos (member_id), (system_id), (member_id, sort_order)
 
 ## Acceptance Criteria
 
@@ -50,6 +50,9 @@ Core database tables for systems and members — the foundational entities all o
 - [ ] member_photos table with system_id FK for RLS
 - [ ] NOT NULL on id, system_id, account_id, encrypted_data, created_at
 - [ ] DEFAULT: archived = false, version = 1
+- [ ] version column on systems for CRDT
+- [ ] member_photos has version, created_at, updated_at
+- [ ] Index on member_photos (member_id, sort_order) for ordered gallery
 - [ ] CASCADE on system deletion → members, member_photos
 - [ ] Migrations for both dialects
 - [ ] Integration test: insert/select with both dialects

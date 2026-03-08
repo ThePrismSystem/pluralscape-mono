@@ -3,8 +3,9 @@
 title: Account and auth types
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-08T14:23:13Z
-updated_at: 2026-03-08T14:23:13Z
+updated_at: 2026-03-08T19:32:27Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -14,7 +15,7 @@ Domain types for accounts, authentication, sessions, and recovery keys.
 
 ## Scope
 
-- `Account`: id (AccountId), emailHash (string), passwordHash (string — Argon2id), createdAt, updatedAt
+- `Account`: id (AccountId), emailHash (string), emailSalt (string — for deterministic email hash verification), passwordHash (string — Argon2id), createdAt, updatedAt
 - `AuthKey`: id, accountId, encryptedPrivateKey (Uint8Array), publicKey (Uint8Array), keyType ('encryption' | 'signing'), createdAt
 - `Session`: id (SessionId), accountId, deviceInfo (DeviceInfo), createdAt, lastActive, revoked (boolean)
 - `DeviceInfo`: { platform: string, appVersion: string, deviceName: string }

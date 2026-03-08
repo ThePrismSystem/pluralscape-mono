@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: critical
 created_at: 2026-03-08T13:31:17Z
-updated_at: 2026-03-08T14:21:14Z
+updated_at: 2026-03-08T19:32:27Z
 parent: types-im7i
 blocking:
   - types-fid9
@@ -28,15 +28,15 @@ Shared utility types and branded ID system for packages/types.
 
 Opaque string wrappers — not assignable from plain string:
 
-`SystemId`, `MemberId`, `GroupId`, `BucketId`, `ChannelId`, `MessageId`, `NoteId`, `PollId`, `RelationshipId`, `SubsystemId`, `FieldDefinitionId`, `FieldValueId`, `SessionId`, `EventId`, `AccountId`, `BlobId`, `ApiKeyId`, `WebhookId`, `TimerId`, `JournalEntryId`, `WikiPageId`, `SideSystemId`, `LayerId`, `InnerWorldEntityId`, `InnerWorldRegionId`, `AuditLogEntryId`, `BoardMessageId`, `AcknowledgementId`, `CheckInRecordId`, `FriendConnectionId`, `KeyGrantId`
+`SystemId`, `MemberId`, `GroupId`, `BucketId`, `ChannelId`, `MessageId`, `NoteId`, `PollId`, `RelationshipId`, `SubsystemId`, `FieldDefinitionId`, `FieldValueId`, `SessionId`, `EventId`, `AccountId`, `BlobId`, `ApiKeyId`, `WebhookId`, `TimerId`, `JournalEntryId`, `WikiPageId`, `SideSystemId`, `LayerId`, `InnerWorldEntityId`, `InnerWorldRegionId`, `AuditLogEntryId`, `BoardMessageId`, `AcknowledgementId`, `CheckInRecordId`, `FriendConnectionId`, `KeyGrantId`, `FrontingSessionId`, `CustomFrontId`, `FriendCodeId`, `PollVoteId`, `DeviceTokenId`, `NotificationConfigId`, `SystemSettingsId`, `PollOptionId`
 
 ### ID prefix convention
 
-IDs use a prefix convention for human readability: `sys_`, `mem_`, `grp_`, `bkt_`, `ch_`, `msg_`, `note_`, `poll_`, `rel_`, `sub_`, `fld_`, `fv_`, `sess_`, `evt_`, `acct_`, `blob_`, `ak_`, `wh_`, `tmr_`, `je_`, `wp_`, `ss_`, `lyr_`, `iwe_`, `iwr_`, `al_`, `bm_`, `ack_`, `cir_`, `fc_`, `kg_`
+IDs use a prefix convention for human readability: `sys_`, `mem_`, `grp_`, `bkt_`, `ch_`, `msg_`, `note_`, `poll_`, `rel_`, `sub_`, `fld_`, `fv_`, `sess_`, `evt_`, `acct_`, `blob_`, `ak_`, `wh_`, `tmr_`, `je_`, `wp_`, `ss_`, `lyr_`, `iwe_`, `iwr_`, `al_`, `bm_`, `ack_`, `cir_`, `fc_`, `kg_`, `fs_`, `cf_`, `frc_`, `pv_`, `dt_`, `nc_`, `sset_`, `po_`
 
 ### EntityType union
 
-`'system' | 'member' | 'group' | 'bucket' | 'channel' | 'message' | 'note' | 'poll' | 'relationship' | 'subsystem' | 'side-system' | 'layer' | 'journal-entry' | 'wiki-page' | 'custom-front' | 'fronting-session' | 'blob' | 'webhook' | 'timer'`
+`'system' | 'member' | 'group' | 'bucket' | 'channel' | 'message' | 'note' | 'poll' | 'relationship' | 'subsystem' | 'side-system' | 'layer' | 'journal-entry' | 'wiki-page' | 'custom-front' | 'fronting-session' | 'blob' | 'webhook' | 'timer' | 'board-message' | 'acknowledgement' | 'innerworld-entity' | 'innerworld-region' | 'field-definition' | 'field-value' | 'api-key' | 'audit-log-entry' | 'check-in-record' | 'friend-connection' | 'key-grant' | 'device-token' | 'poll-vote'`
 
 ### Timestamp types
 
@@ -67,10 +67,10 @@ IDs use a prefix convention for human readability: `sys_`, `mem_`, `grp_`, `bkt_
 
 ## Acceptance Criteria
 
-- [ ] All 31 branded ID types defined (not assignable from plain string)
+- [ ] All 39 branded ID types defined (not assignable from plain string)
 - [ ] ID factory function: `createId<T>(prefix?: string) -> T`
 - [ ] ID prefix convention documented
-- [ ] EntityType union with 19+ entity types
+- [ ] EntityType union with 34 entity types
 - [ ] Timestamp helper: `now() -> UnixMillis`
 - [ ] Both cursor-based and offset-based pagination types
 - [ ] Result/Error types: ApiResponse, ApiError, ValidationError

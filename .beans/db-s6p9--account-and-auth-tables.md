@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:33:22Z
-updated_at: 2026-03-08T14:20:45Z
+updated_at: 2026-03-08T19:32:27Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -19,7 +19,7 @@ Account, authentication key, session, and recovery tables. Foundation for crypto
 
 - **`accounts`**: id (UUID PK, NOT NULL), email_hash (varchar, T3, NOT NULL — hashed, not plaintext), email_salt (varchar, T3, NOT NULL — for deterministic email hash verification), password_hash (varchar, T3, NOT NULL — Argon2id hash for server-side auth), created_at (T3, NOT NULL, default NOW()), updated_at (T3)
 - **`auth_keys`**: id (UUID PK), account_id (FK → accounts, NOT NULL), encrypted_private_key (bytea, T1 — private key encrypted with master key), public_key (bytea, T3 — plaintext for key directory), key_type ('encryption' | 'signing', T3), created_at (T3, NOT NULL, default NOW())
-- **`sessions`**: id (UUID PK), account_id (FK → accounts, NOT NULL), device_info (T3 — encrypted or hashed), created_at (T3, NOT NULL, default NOW()), last_active (T3), revoked (boolean, T3, NOT NULL, default false)
+- **`sessions`**: id (UUID PK), account_id (FK → accounts, NOT NULL), device_info (varchar, T3 — hashed device fingerprint; NOT encrypted since server needs it for session identification), created_at (T3, NOT NULL, default NOW()), last_active (T3), revoked (boolean, T3, NOT NULL, default false)
 - **`recovery_keys`**: id (UUID PK), account_id (FK → accounts, NOT NULL), encrypted_master_key (bytea, T1 — master key encrypted with recovery key), created_at (T3, NOT NULL, default NOW())
 
 ### Cascade rules
@@ -32,6 +32,8 @@ Account, authentication key, session, and recovery tables. Foundation for crypto
 - accounts.email_hash (unique)
 - auth_keys.account_id
 - sessions.account_id
+- sessions (revoked) — for active sessions filter
+- recovery_keys (account_id)
 
 ## Acceptance Criteria
 

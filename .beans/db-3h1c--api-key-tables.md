@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:42Z
-updated_at: 2026-03-08T14:21:28Z
+updated_at: 2026-03-08T19:32:27Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -25,6 +25,11 @@ API key storage with scoped permissions per ADR 013. Distinct from auth_keys (us
 - token_hash stores bcrypt/argon2 hash of the bearer token (plaintext shown once at creation)
 - scopes are T3 (server must evaluate permissions on each request)
 - encrypted_key_material is T1 (only for crypto-type keys)
+- scopes use customType from db-9f6f for varchar[]/JSON portability
+
+### Cascade rules
+
+- Account deletion → CASCADE: api_keys
 
 ### Indexes
 

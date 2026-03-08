@@ -3,8 +3,9 @@
 title: Common views and query helpers
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-08T14:23:27Z
-updated_at: 2026-03-08T14:23:27Z
+updated_at: 2026-03-08T19:32:27Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -28,6 +29,10 @@ PostgreSQL views and dialect-agnostic query helpers for common access patterns.
 - **`pending_webhook_retries`**: `SELECT * FROM webhook_deliveries WHERE status = 'failed' AND attempt_count < ? AND next_retry_at <= NOW()` — uses configurable threshold parameter, not hardcoded
 - **`unconfirmed_acknowledgements`**: `SELECT * FROM acknowledgements WHERE confirmed = false AND system_id = ?`
 - **`member_group_summary`**: JOIN group_memberships with groups and members
+- **`active_friend_connections`**: `SELECT * FROM friend_connections WHERE status = 'accepted' AND system_id = ?`
+- **`active_device_tokens`**: `SELECT * FROM device_tokens WHERE revoked_at IS NULL AND account_id = ?`
+
+Note: `current_fronters_with_duration` uses PG `NOW()`. SQLite equivalent: `(strftime('%s','now') * 1000 - start_time)`
 
 ### Design decisions
 

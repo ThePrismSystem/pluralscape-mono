@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:44Z
-updated_at: 2026-03-08T14:21:20Z
+updated_at: 2026-03-08T19:32:26Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -19,6 +19,8 @@ Encrypted blob/media metadata tracking table for avatars, photos, attachments, a
 
 - **`blob_metadata`**: id (UUID PK), system_id (FK → systems, NOT NULL), storage_key (varchar, T3, NOT NULL — S3 key or filesystem path), content_type (varchar, T3, NOT NULL — MIME type), size_bytes (integer, T3, NOT NULL), encryption_tier (integer, T3, NOT NULL — 1 or 2, determines decryption key), bucket_id (FK → buckets, nullable, T3 — set when encryption_tier=2), purpose (varchar, T3), thumbnail_blob_id (FK → blob_metadata, nullable, T3), uploaded_at (T3, NOT NULL, default NOW())
   - CHECK: `size_bytes > 0`
+  - CHECK: `encryption_tier IN (1, 2)`
+  - CHECK: `encryption_tier = 1 OR bucket_id IS NOT NULL` (T2 blobs must have a bucket)
   - encryption_tier: 1 = encrypted with master key (private), 2 = encrypted with bucket key (shared)
 
 ### Purpose values
@@ -31,6 +33,11 @@ Encrypted blob/media metadata tracking table for avatars, photos, attachments, a
 - All blob content is T1/T2 encrypted client-side before upload
 - Thumbnails are separate encrypted blobs linked via thumbnail_blob_id
 - Self-hosted fallback: storage_key is a local filesystem path when no S3 configured
+
+### Cascade rules
+
+- System deletion → CASCADE: blob_metadata
+- Bucket deletion → SET NULL on bucket_id
 
 ### Indexes
 

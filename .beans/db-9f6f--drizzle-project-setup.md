@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: critical
 created_at: 2026-03-08T13:32:40Z
-updated_at: 2026-03-08T14:21:32Z
+updated_at: 2026-03-08T19:32:27Z
 parent: db-2je4
 blocking:
   - db-i2gl
@@ -72,3 +72,15 @@ Drizzle ORM project setup with PostgreSQL + SQLite dual-dialect support.
 ## References
 
 - ADR 004 (Database)
+
+## Cascade Chain Reference
+
+Complete deletion cascade for GDPR account purge:
+
+1. **Account deletion** → CASCADE: sessions, auth_keys, recovery_keys, api_keys, device_tokens, import_jobs, export_requests, account_purge_requests. audit_log: SET NULL on account_id (retained for compliance).
+2. **Account → System** (via account_id FK) → CASCADE
+3. **System deletion** → CASCADE all system-scoped tables: members → member_photos, groups → group_memberships, buckets → bucket_content_tags/key_grants/friend_bucket_assignments, friend_connections, friend_codes, channels → messages, board_messages, notes, polls → poll_votes, acknowledgements, fronting_sessions, switches, custom_fronts, field_definitions → field_values/field_bucket_visibility, journal_entries, wiki_pages, lifecycle_events, relationships, subsystems → subsystem_memberships, side_systems → side_system_memberships, layers → layer_memberships, innerworld_entities, innerworld_regions, innerworld_canvas, blob_metadata, webhook_configs → webhook_deliveries, timer_configs → check_in_records, safe_mode_content, pk_bridge_state, notification_configs, nomenclature_settings, system_settings
+
+## NULL Semantics
+
+PG treats NULL as unique in UNIQUE indexes by default. SQLite does the same since 3.38.0 but only with NULLS NOT DISTINCT. For nullable unique columns, verify behavior on both dialects.

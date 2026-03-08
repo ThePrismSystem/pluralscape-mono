@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:41Z
-updated_at: 2026-03-08T14:21:21Z
+updated_at: 2026-03-08T19:32:27Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -32,6 +32,12 @@ Webhook endpoint configuration and delivery tracking tables.
 
 - webhook_configs (system_id)
 - webhook_deliveries (webhook_id, status)
+- webhook_deliveries (next_retry_at) — for retry queue polling
+
+### Cascade rules
+
+- System deletion → CASCADE: webhook_configs
+- Webhook config deletion → CASCADE: webhook_deliveries
 
 ## Acceptance Criteria
 
