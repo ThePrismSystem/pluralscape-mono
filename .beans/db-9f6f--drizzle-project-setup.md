@@ -24,8 +24,6 @@ blocking:
 
 Drizzle ORM project setup with PostgreSQL + SQLite dual-dialect support
 
-Drizzle ORM project setup with PostgreSQL + SQLite dual-dialect support.
-
 ## Scope
 
 - packages/db package structure with Drizzle ORM

@@ -37,6 +37,6 @@ Privacy bucket and access control types. Core to the encryption model.
 
 ## References
 
-- ADR 006 section 4 (Privacy Bucket Model)
+- ADR 006 (Privacy Bucket Model)
 - features.md section 4 (Privacy and Social)
 - encryption-research.md section 4.4

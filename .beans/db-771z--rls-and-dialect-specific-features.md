@@ -15,8 +15,6 @@ blocked_by:
 
 Row-level security (PostgreSQL) and dialect feature detection
 
-Row-level security (PostgreSQL) and dialect feature detection.
-
 ## Scope
 
 - PostgreSQL RLS policies: every query scoped to system_id via row-level security

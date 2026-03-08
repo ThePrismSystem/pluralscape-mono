@@ -9,7 +9,7 @@ updated_at: 2026-03-08T13:35:41Z
 parent: sync-xlhb
 ---
 
-Define which CRDT documents each client subscribes to
+Design document: which CRDT documents each client subscribes to. Output is a specification, not code.
 
 ## Scope
 

@@ -9,7 +9,7 @@ updated_at: 2026-03-08T13:35:50Z
 parent: sync-xlhb
 ---
 
-Sync protocol message types and handshake specification
+Design document: sync protocol message types and handshake specification. Output is a specification with TypeScript type definitions, not a full implementation.
 
 ## Scope
 

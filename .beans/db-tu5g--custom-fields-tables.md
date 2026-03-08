@@ -14,8 +14,6 @@ blocked_by:
 
 Custom field definition, value, and bucket visibility tables
 
-Custom field definition, value, and bucket visibility tables.
-
 ## Scope
 
 - `field_definitions`: id, system_id, encrypted_data (T1 — name, type, options for select fields)

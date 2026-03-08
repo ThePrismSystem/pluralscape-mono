@@ -14,8 +14,6 @@ blocked_by:
 
 Group hierarchy and membership tables
 
-Group hierarchy and membership tables.
-
 ## Scope
 
 - `groups`: id, system_id, parent_group_id (nullable FK → groups — self-referential), sort_order, encrypted_data (T1 — name, image, description, color, emoji)

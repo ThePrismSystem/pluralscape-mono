@@ -36,4 +36,4 @@ Identity keypair generation for encryption and signing
 
 ## References
 
-- ADR 006 section 4.2 (Key Hierarchy)
+- ADR 006 (Key Hierarchy)

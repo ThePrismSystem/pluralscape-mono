@@ -33,7 +33,8 @@ High-level encrypt/decrypt helpers for each encryption tier
 - [ ] Batch encrypt/decrypt for arrays
 - [ ] Type safety: cannot pass T1 blob to T2 decrypt
 - [ ] Unit tests for each tier with complex domain objects
+- [ ] Decryption failure handling: wrong key or corrupted data throws typed error (fail-closed, never returns partial/default data)
 
 ## References
 
-- ADR 006 section 4.3
+- encryption-research.md section 4.3 (Data Encryption Model)

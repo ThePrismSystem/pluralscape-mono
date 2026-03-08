@@ -9,7 +9,7 @@ updated_at: 2026-03-08T13:35:31Z
 parent: sync-xlhb
 ---
 
-Conflict detection and resolution rules for concurrent edits
+Design document: conflict detection and resolution rules for concurrent edits. Output is a specification, not code.
 
 ## Scope
 

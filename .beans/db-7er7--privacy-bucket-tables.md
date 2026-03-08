@@ -14,8 +14,6 @@ blocked_by:
 
 Privacy bucket, content tagging, key grant, and friend connection tables
 
-Privacy bucket, content tagging, key grant, and friend connection tables.
-
 ## Scope
 
 - `buckets`: id (UUID), system_id, encrypted_data (T1 — name, description)
@@ -36,5 +34,5 @@ Privacy bucket, content tagging, key grant, and friend connection tables.
 
 ## References
 
-- ADR 006 sections 4.1-4.4
+- ADR 006 (Privacy Bucket Model)
 - encryption-research.md section 4

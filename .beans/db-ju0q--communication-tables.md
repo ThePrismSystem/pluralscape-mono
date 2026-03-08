@@ -12,8 +12,6 @@ blocked_by:
   - db-i2gl
 ---
 
-Chat, board, notes, polls, and acknowledgement tables
-
 Chat, board, notes, polls, and acknowledgement tables. Implementation is M5 but schema defined here for completeness.
 
 ## Scope

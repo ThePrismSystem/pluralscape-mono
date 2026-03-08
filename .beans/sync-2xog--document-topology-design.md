@@ -14,7 +14,7 @@ blocking:
   - sync-jr85
 ---
 
-Design which domain entities map to which Automerge CRDT documents
+Design document: which domain entities map to which Automerge CRDT documents. Output is a specification, not code.
 
 ## Scope
 

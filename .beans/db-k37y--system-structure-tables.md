@@ -14,15 +14,14 @@ blocked_by:
 
 Relationship, subsystem, side system, layer, and membership tables
 
-Relationship, subsystem, side system, layer, and membership tables.
-
 ## Scope
 
-- `relationships`: id, system_id, source_member_id, target_member_id, relationship_type (varchar), bidirectional (boolean), encrypted_data (T1 — custom label, notes)
-- `subsystems`: id, system_id, parent_subsystem_id (nullable FK → subsystems — recursive), architecture_type, encrypted_data (T1 — name, description, origin, has_core, discovery_status)
+- `relationships`: id, system_id, encrypted_data (T1 — source_member_id, target_member_id, relationship_type, bidirectional, custom label, notes)
+- `subsystems`: id, system_id, parent_subsystem_id (nullable FK → subsystems — recursive), encrypted_data (T1 — name, description, origin, has_core, discovery_status, architecture_type)
 - `side_systems`: id, system_id, encrypted_data (T1 — name, description)
-- `layers`: id, system_id, sort_order, access_type, gatekeeper_member_id (nullable), encrypted_data (T1 — name)
-- `subsystem_memberships`: subsystem_id (FK), member_id (FK)
+- `layers`: id, system_id, sort_order, encrypted_data (T1 — name, access_type, gatekeeper_member_id)
+- `subsystem_memberships`: encrypted_data (T1 — subsystem_id, member_id)
+- Privacy note: member_id references are inside encrypted_data (T1) so the server cannot learn system structure. This matches db-82q2's approach where member_id is encrypted ("server doesn't know WHO"). Only system_id and structural IDs (subsystem hierarchy) are plaintext.
 
 ## Acceptance Criteria
 

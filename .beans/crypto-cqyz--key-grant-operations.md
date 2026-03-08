@@ -36,5 +36,5 @@ Asymmetric key grant creation and decryption for Privacy Bucket sharing
 
 ## References
 
-- ADR 006 section 4.4 (Privacy Bucket Access Control Flow)
+- ADR 006 (Privacy Bucket Model)
 - encryption-research.md section 4.1

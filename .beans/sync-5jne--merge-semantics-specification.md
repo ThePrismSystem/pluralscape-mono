@@ -11,7 +11,7 @@ blocking:
   - sync-80bn
 ---
 
-Define merge semantics for each entity type in the domain model
+Design document: merge semantics for each entity type in the domain model. Output is a specification, not code.
 
 ## Scope
 

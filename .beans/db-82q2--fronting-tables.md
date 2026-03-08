@@ -14,8 +14,6 @@ blocked_by:
 
 Fronting session, switch, and custom front tables
 
-Fronting session, switch, and custom front tables.
-
 ## Scope
 
 - `fronting_sessions`: id, system_id, start_time (T3 — timestamp), end_time (T3 — nullable timestamp), encrypted_data (T1 — member_id, comment, custom_front_id, subsystem_id)
@@ -24,6 +22,7 @@ Fronting session, switch, and custom front tables.
 - Design: fronting timestamps are T3 (needed for push notification triggers)
 - Design: member_id inside encrypted_data (server doesn't know WHO is fronting, only WHEN)
 - Overlapping sessions supported (no unique constraint on time ranges)
+- FrontingType ('fronting' | 'co-fronting' | 'co-conscious') is computed from overlapping sessions, not stored — no column needed
 
 ## Acceptance Criteria
 
@@ -38,4 +37,4 @@ Fronting session, switch, and custom front tables.
 ## References
 
 - features.md section 2 (Fronting)
-- ADR 006 section 4.3 (fronting encryption tiers)
+- encryption-research.md section 4.3 (fronting encryption tiers)

@@ -28,7 +28,7 @@ Type-level markers mapping every domain field to its encryption tier.
 
 - Utility generic types: `Encrypted<T>` (T1 — zero-knowledge), `BucketEncrypted<T>` (T2 — per-bucket), `Plaintext<T>` (T3 — server-visible)
 - Encryption tier map: record mapping each domain type + field to its tier
-- Reference table (from ADR 006 section 4.3):
+- Reference table (from encryption-research.md section 4.3):
   - T1: member name/pronouns/description/custom fields/avatar, chat content, note content, fronting comments, innerworld data
   - T2: bucket-scoped data shared with friends (same data as T1 but encrypted with bucket key when friend-facing)
   - T3: account info, friend graph, bucket membership, fronting timestamps, webhook metadata
@@ -46,5 +46,5 @@ Type-level markers mapping every domain field to its encryption tier.
 
 ## References
 
-- ADR 006 section 4.3 (Data Encryption Model)
+- encryption-research.md section 4.3 (Data Encryption Model)
 - encryption-research.md section 4.3

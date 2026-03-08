@@ -10,3 +10,5 @@ parent: types-im7i
 ---
 
 Detail structure types (orbital, compartmentalized, webbed, mixed), polyfragmented system modeling patterns, and UI patterns for managing deep nesting. Research-informed by Pluralpedia and community sources.
+
+Note: this bean uses ps- prefix but is types-domain work (parented under types-im7i). Created before prefix conventions were established.

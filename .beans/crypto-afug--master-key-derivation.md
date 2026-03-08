@@ -40,6 +40,7 @@ Master key derivation from password using Argon2id
 - OWASP recommends 46 MiB / 1 iter minimum
 - 64 MiB / 3 iter is above OWASP minimum for server
 - Tune annually as hardware improves
+- ADR 006 states 256 MiB — needs updating to match these OWASP-informed parameters (64 MiB server, 32 MiB mobile)
 
 ## References
 

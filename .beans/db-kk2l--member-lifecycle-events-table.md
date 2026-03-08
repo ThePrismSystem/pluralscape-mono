@@ -14,8 +14,6 @@ blocked_by:
 
 Append-only lifecycle event log table
 
-Append-only lifecycle event log table.
-
 ## Scope
 
 - `lifecycle_events`: id, system_id, event_type (varchar), timestamp, encrypted_data (T1 — involved_member_ids, resulting_member_ids, notes)

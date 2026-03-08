@@ -24,11 +24,9 @@ blocked_by:
 
 Core database tables for systems and members
 
-Core database tables for systems and members.
-
 ## Scope
 
-- `systems` table: id (UUID), created_at, updated_at
+- `systems` table: id (UUID), account_id (FK → accounts), created_at, updated_at
 - `members` table: id (UUID), system_id (FK → systems), encrypted_data (bytea/blob — T1 encrypted), completeness_level ('fragment'|'demi-member'|'full'), archived (boolean), archived_at (nullable), created_at, updated_at
 - `member_photos` table: id, member_id (FK), encrypted_data (T1 — url/caption), sort_order
 - Indexes: members.system_id, members.archived, members.created_at
@@ -40,11 +38,11 @@ Core database tables for systems and members.
 - [ ] systems table defined for both PG and SQLite
 - [ ] members table with encrypted_data blob column
 - [ ] member_photos table with sort ordering
-- [ ] Foreign key constraints system_id → systems
+- [ ] Foreign key constraints: systems.account_id → accounts, members.system_id → systems
 - [ ] Appropriate indexes on system_id, archived, created_at
 - [ ] Migration generated and tested for both dialects
 - [ ] Insert/select integration test with both dialects
 
 ## References
 
-- ADR 006 section 4.3 (which fields are T1 vs T3)
+- encryption-research.md section 4.3 (which fields are T1 vs T3)

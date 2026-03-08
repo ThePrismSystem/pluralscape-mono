@@ -41,5 +41,5 @@ Per-bucket symmetric key generation, storage, and rotation
 
 ## References
 
-- ADR 006 section 4.1, 4.4
+- ADR 006 (Privacy Bucket Model, Key Hierarchy)
 - encryption-research.md section 4

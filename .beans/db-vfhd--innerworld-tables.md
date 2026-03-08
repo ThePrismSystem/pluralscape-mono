@@ -14,8 +14,6 @@ blocked_by:
 
 Innerworld spatial mapping tables
 
-Innerworld spatial mapping tables.
-
 ## Scope
 
 - `innerworld_entities`: id, system_id, entity_type ('member'|'region'|'landmark'), encrypted_data (T1 — position_x, position_y, name, description, visual properties)
@@ -29,6 +27,7 @@ Innerworld spatial mapping tables.
 - [ ] Gatekeeper assignment
 - [ ] Canvas viewport state (1:1 with system)
 - [ ] Migrations for both dialects
+- [ ] Integration test: create entities, regions, and canvas state
 
 ## References
 

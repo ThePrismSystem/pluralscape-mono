@@ -14,8 +14,6 @@ blocked_by:
 
 Per-system nomenclature preferences table
 
-Per-system nomenclature preferences table.
-
 ## Scope
 
 - `nomenclature_settings`: system_id (FK, PK), encrypted_data (T1 — 8 term category values: collective, individual, fronting, switching, co_presence, internal_space, primary_fronter, structure)

@@ -11,8 +11,6 @@ blocked_by:
   - db-9f6f
 ---
 
-Account, authentication key, session, and recovery tables
-
 Account, authentication key, session, and recovery tables. Needed for crypto key storage.
 
 ## Scope
@@ -35,6 +33,6 @@ Account, authentication key, session, and recovery tables. Needed for crypto key
 
 ## References
 
-- ADR 006 section 4.2 (Key Hierarchy)
+- ADR 006 (Key Hierarchy)
 - ADR 011 (Key Lifecycle and Recovery)
 - ADR 013 (API Authentication)
