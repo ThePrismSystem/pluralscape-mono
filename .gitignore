@@ -32,6 +32,10 @@ bun.lockb
 *.pem
 *.key
 
+# CodeQL
+.codeql-db/
+.codeql-results/
+
 # Testing
 coverage/
 .nyc_output/
