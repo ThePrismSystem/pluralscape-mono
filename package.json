@@ -13,6 +13,8 @@
     "test": "vitest run",
     "test:unit": "vitest run --exclude '**/*.integration.{test,spec}.ts'",
     "test:integration": "vitest run --passWithNoTests 'integration'",
+    "test:coverage": "vitest run --coverage",
+    "test:unit:coverage": "vitest run --exclude '**/*.integration.{test,spec}.ts' --coverage",
     "test:watch": "vitest",
     "clean": "turbo clean",
     "roadmap": "beans roadmap > docs/roadmap.md",
