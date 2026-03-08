@@ -1,8 +1,10 @@
 import { createTestDatabase } from "@pluralscape/test-utils/db";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import type { TestDatabase } from "@pluralscape/test-utils/db";
+
 describe("PGlite smoke test", () => {
-  let testDb: Awaited<ReturnType<typeof createTestDatabase>>;
+  let testDb: TestDatabase;
 
   beforeAll(async () => {
     testDb = await createTestDatabase();

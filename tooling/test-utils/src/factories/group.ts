@@ -1,18 +1,4 @@
-/**
- * Group factory stub.
- *
- * Will be implemented with actual Drizzle schema resolvers when
- * the database schema epic (db-2je4) defines the groups table.
- */
-
-let groupSequence = 0;
-
-export interface GroupFactoryInput {
-  id?: string;
-  systemId?: string;
-  name?: string;
-  createdAt?: Date;
-}
+const UNIQUE_SUFFIX_LENGTH = 8;
 
 export interface GroupFactoryOutput {
   id: string;
@@ -21,16 +7,13 @@ export interface GroupFactoryOutput {
   createdAt: Date;
 }
 
+export type GroupFactoryInput = Partial<GroupFactoryOutput>;
+
 export function buildGroup(overrides: GroupFactoryInput = {}): GroupFactoryOutput {
-  groupSequence += 1;
   return {
     id: overrides.id ?? crypto.randomUUID(),
     systemId: overrides.systemId ?? crypto.randomUUID(),
-    name: overrides.name ?? `Test Group ${String(groupSequence)}`,
+    name: overrides.name ?? `Test Group ${crypto.randomUUID().slice(0, UNIQUE_SUFFIX_LENGTH)}`,
     createdAt: overrides.createdAt ?? new Date(),
   };
-}
-
-export function resetGroupSequence(): void {
-  groupSequence = 0;
 }

@@ -1,5 +1,11 @@
 import type { PGlite, Transaction } from "@electric-sql/pglite";
 
+class RollbackError extends Error {
+  constructor() {
+    super("Transaction rolled back");
+  }
+}
+
 /**
  * Wraps a test callback in a transaction that is always rolled back,
  * ensuring test isolation within a shared PGlite instance.
@@ -20,9 +26,11 @@ export async function withTestTransaction(
   try {
     await client.transaction(async (tx) => {
       await callback(tx);
-      void tx.rollback();
+      throw new RollbackError();
     });
-  } catch {
-    // Transaction rollback throws — this is expected behavior
+  } catch (error: unknown) {
+    if (!(error instanceof RollbackError)) {
+      throw error;
+    }
   }
 }

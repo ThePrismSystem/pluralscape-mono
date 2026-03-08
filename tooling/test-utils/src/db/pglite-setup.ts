@@ -3,21 +3,28 @@ import { drizzle } from "drizzle-orm/pglite";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-interface TestDatabase {
-  db: PgliteDatabase;
+export interface TestDatabase<TSchema extends Record<string, unknown> = Record<string, never>> {
+  db: PgliteDatabase<TSchema>;
   client: PGlite;
   teardown: () => Promise<void>;
 }
 
 /**
  * Creates an in-memory PGlite instance with a Drizzle client for testing.
- * Uses schema push (not migrations) for speed.
  *
  * Call `teardown()` in afterEach/afterAll to clean up.
  */
-export async function createTestDatabase(): Promise<TestDatabase> {
+export async function createTestDatabase<
+  TSchema extends Record<string, unknown> = Record<string, never>,
+>(schema?: TSchema): Promise<TestDatabase<TSchema>> {
   const client = await PGlite.create();
-  const db = drizzle(client);
+  let db: PgliteDatabase<TSchema>;
+  try {
+    db = (schema ? drizzle(client, { schema }) : drizzle(client)) as PgliteDatabase<TSchema>;
+  } catch (error: unknown) {
+    await client.close();
+    throw error;
+  }
 
   return {
     db,

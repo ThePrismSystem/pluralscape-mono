@@ -12,7 +12,6 @@ export default tseslint.config(
       "**/.turbo/**",
       "**/.expo/**",
       "**/vitest.config.ts",
-      "vitest.shared.ts",
     ],
   },
   ...tseslint.configs.strictTypeChecked,

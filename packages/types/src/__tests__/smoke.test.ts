@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import * as types from "../index.js";
+
 describe("smoke test", () => {
-  it("validates test framework is working", () => {
-    expect(true).toBe(true);
+  it("resolves the package module", () => {
+    expect(types).toBeDefined();
   });
 });
