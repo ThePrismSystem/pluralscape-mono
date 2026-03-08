@@ -1,5 +1,5 @@
 ---
-# pluralscape-mono-xcgc
+# ps-xcgc
 title: CI, coverage, lint strictness, gitignore cleanup
 status: completed
 type: task
@@ -19,4 +19,4 @@ Add CI workflow, test coverage docs, zero-warning lint enforcement, remove proje
 - Updated .gitignore for private files
 - Created .github/workflows/ci.yml with lint and typecheck jobs, plus commented stubs for unit/e2e tests
 - Updated project docs with current build commands
-- Created bean pluralscape-mono-m426 for test CI implementation
+- Created bean ps-m426 for test CI implementation

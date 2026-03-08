@@ -50,7 +50,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-  # Stub: enable once vitest is configured (see bean pluralscape-mono-m426)
+  # Stub: enable once vitest is configured (see bean ps-m426)
   # test-unit:
   #   name: Unit Tests
   #   runs-on: ubuntu-latest
@@ -67,7 +67,7 @@ jobs:
   #     - name: Check coverage thresholds
   #       run: pnpm test:unit:coverage
 
-  # Stub: enable once playwright is configured (see bean pluralscape-mono-m426)
+  # Stub: enable once playwright is configured (see bean ps-m426)
   # test-e2e:
   #   name: E2E Tests
   #   runs-on: ubuntu-latest
