@@ -8,17 +8,16 @@ Pluralscape handles deeply sensitive psychiatric and personal data — trauma jo
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Please report vulnerabilities privately via one of:
+Please report vulnerabilities privately through [GitHub's private vulnerability reporting](https://github.com/ThePrismSystem/pluralscape-mono/security/advisories/new). This keeps the report confidential and allows us to coordinate a fix before public disclosure.
 
-- **GitHub Security Advisories**: Use the "Report a vulnerability" button on the Security tab of this repository
-- **Email**: pluralscape@proton.me
-
-Include:
+When filing a report, include:
 
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
 - Suggested fix (if you have one)
+
+You will receive updates directly through the advisory as we investigate and resolve the issue.
 
 ## Response Timeline
 
