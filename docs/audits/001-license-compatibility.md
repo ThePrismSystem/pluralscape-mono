@@ -22,6 +22,10 @@ All dependencies in the accepted tech stack are compatible with AGPL-3.0. One su
 | libsodium             | ISC                           | Yes                 |                                                              |
 | Automerge             | MIT                           | Yes                 | Rust core + WASM bindings both MIT                           |
 | Valkey                | BSD 3-Clause                  | Yes                 | Drop-in Redis replacement, Linux Foundation                  |
+| BullMQ                | MIT                           | Yes                 | Valkey-backed job queue                                      |
+| MinIO                 | AGPL-3.0                      | Yes                 | S3-compatible object storage, same license as Pluralscape    |
+| AWS SDK (S3 client)   | Apache 2.0                    | Yes                 | S3 client library for blob storage                           |
+| ioredis               | MIT                           | Yes                 | Redis/Valkey client, BullMQ transitive dependency            |
 | Node.js               | MIT                           | Yes                 | Fallback runtime                                             |
 
 ## Rejected Dependencies (License Concerns)

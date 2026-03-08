@@ -16,15 +16,20 @@ Read the full [Values](VALUES.md).
 
 ## Tech Stack
 
-| Layer        | Technology                                      | Decision Record                               |
-| ------------ | ----------------------------------------------- | --------------------------------------------- |
-| Frontend     | Expo (React Native) + TypeScript                | [ADR 002](docs/adr/002-frontend-framework.md) |
-| API          | Hono on Bun + tRPC (internal) + REST (public)   | [ADR 003](docs/adr/003-api-framework.md)      |
-| Database     | PostgreSQL + Drizzle ORM / SQLite (self-hosted) | [ADR 004](docs/adr/004-database.md)           |
-| Offline Sync | Custom CRDT (Automerge)                         | [ADR 005](docs/adr/005-offline-sync.md)       |
-| Encryption   | libsodium (E2E, zero-knowledge server)          | [ADR 006](docs/adr/006-encryption.md)         |
-| Real-Time    | WebSockets + SSE + Valkey                       | [ADR 007](docs/adr/007-realtime.md)           |
-| Runtime      | Bun (Node.js fallback)                          | [ADR 008](docs/adr/008-runtime.md)            |
+| Layer        | Technology                                      | Decision Record                                |
+| ------------ | ----------------------------------------------- | ---------------------------------------------- |
+| Frontend     | Expo (React Native) + TypeScript                | [ADR 002](docs/adr/002-frontend-framework.md)  |
+| API          | Hono on Bun + tRPC (internal) + REST (public)   | [ADR 003](docs/adr/003-api-framework.md)       |
+| Database     | PostgreSQL + Drizzle ORM / SQLite (self-hosted) | [ADR 004](docs/adr/004-database.md)            |
+| Offline Sync | Custom CRDT (Automerge)                         | [ADR 005](docs/adr/005-offline-sync.md)        |
+| Encryption   | libsodium (E2E, zero-knowledge server)          | [ADR 006](docs/adr/006-encryption.md)          |
+| Real-Time    | WebSockets + SSE + Valkey                       | [ADR 007](docs/adr/007-realtime.md)            |
+| Runtime      | Bun (Node.js fallback)                          | [ADR 008](docs/adr/008-runtime.md)             |
+| Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md)  |
+| Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)     |
+| Key Recovery | Recovery key + multi-device transfer            | [ADR 011](docs/adr/011-key-recovery.md)        |
+| Self-Hosted  | Minimal (single binary) / Full (Docker Compose) | [ADR 012](docs/adr/012-self-hosted-tiers.md)   |
+| API Auth     | Hybrid metadata + crypto key model              | [ADR 013](docs/adr/013-api-auth-encryption.md) |
 
 All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md).
 
@@ -41,6 +46,8 @@ All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audit
 | [libsodium](https://github.com/jedisct1/libsodium)         | Cryptographic primitives (XChaCha20, X25519, Argon2id) | ISC          |
 | [SQLCipher](https://github.com/nicktimko/sqlcipher)        | Encrypted SQLite                                       | BSD 3-Clause |
 | [Valkey](https://github.com/valkey-io/valkey)              | Pub/sub for real-time horizontal scaling               | BSD 3-Clause |
+| [BullMQ](https://github.com/taskforcesh/bullmq)            | Background job queue (Valkey-backed)                   | MIT          |
+| [MinIO](https://github.com/minio/minio)                    | S3-compatible object storage (self-hosted media)       | AGPL-3.0     |
 | [Bun](https://github.com/oven-sh/bun)                      | JavaScript/TypeScript runtime                          | MIT          |
 | [beans](https://github.com/btvnlue/beans)                  | Local-first issue tracker (stored as markdown)         | MIT          |
 

@@ -1,0 +1,10 @@
+---
+# ps-qvj0
+title: Flesh out system structure types and polyfragmented modeling
+status: todo
+type: task
+created_at: 2026-03-08T12:15:48Z
+updated_at: 2026-03-08T12:15:48Z
+---
+
+Detail structure types (orbital, compartmentalized, webbed, mixed), polyfragmented system modeling patterns, and UI patterns for managing deep nesting. Research-informed by Pluralpedia and community sources.
