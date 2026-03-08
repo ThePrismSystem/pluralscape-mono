@@ -52,6 +52,7 @@
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Shared utility types and ID system ([types-av6x](.beans/types-av6x--shared-utility-types-and-id-system.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Group and folder types ([types-c2eu](.beans/types-c2eu--group-and-folder-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Core identity types ([types-fid9](.beans/types-fid9--core-identity-types.md))
+- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Nomenclature types and defaults ([types-g5oo](.beans/types-g5oo--nomenclature-types-and-defaults.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Push notification types ([types-gey6](.beans/types-gey6--push-notification-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) PluralKit bridge types ([types-gnx5](.beans/types-gnx5--pluralkit-bridge-types.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Fronting and switching types ([types-itej](.beans/types-itej--fronting-and-switching-types.md))
@@ -91,7 +92,6 @@
 > Configurable terminology for 8 term categories, UI-only (canonical API terms), stored per-system
 
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Term resolution utility ([ps-a68h](.beans/ps-a68h--term-resolution-utility.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Nomenclature types and defaults ([types-g5oo](.beans/types-g5oo--nomenclature-types-and-defaults.md))
 
 ### Epic: Sync protocol design ([sync-xlhb](.beans/sync-xlhb--sync-protocol-design.md))
 
