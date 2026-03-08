@@ -1,0 +1,34 @@
+{
+  "name": "@pluralscape/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "start": "bun run dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 .",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/db": "workspace:*",
+    "@pluralscape/sync": "workspace:*",
+    "@pluralscape/types": "workspace:*",
+    "@trpc/server": "^11.0.0-rc.730",
+    "drizzle-orm": "^0.39.3",
+    "hono": "^4.7.2",
+    "postgres": "^3.4.5",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "@types/bun": "^1.2.4",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3"
+  }
+}

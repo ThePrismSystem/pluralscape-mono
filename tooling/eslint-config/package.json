@@ -1,0 +1,22 @@
+{
+  "name": "@pluralscape/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./react-native": "./react-native.js"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.24.1",
+    "@typescript-eslint/parser": "^8.24.1",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-import-x": "^4.6.1",
+    "eslint-plugin-unicorn": "^57.0.0",
+    "typescript-eslint": "^8.24.1"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "extends": "@pluralscape/tsconfig/react-native.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "include": ["app", "src", "../../types"]
+}

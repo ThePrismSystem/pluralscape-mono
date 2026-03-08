@@ -1,0 +1,1 @@
+/* Global ambient type declarations for the Pluralscape monorepo */

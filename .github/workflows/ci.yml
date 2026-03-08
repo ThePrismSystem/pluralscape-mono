@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format
+
+      - name: Lint (zero warnings)
+        run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+  # Stub: enable once vitest is configured (see bean pluralscape-mono-m426)
+  # test-unit:
+  #   name: Unit Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: pnpm/action-setup@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: pnpm
+  #     - run: pnpm install --frozen-lockfile
+  #     - name: Run unit tests
+  #       run: pnpm test:unit
+  #     - name: Check coverage thresholds
+  #       run: pnpm test:unit:coverage
+
+  # Stub: enable once playwright is configured (see bean pluralscape-mono-m426)
+  # test-e2e:
+  #   name: E2E Tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: pnpm/action-setup@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
+  #         cache: pnpm
+  #     - run: pnpm install --frozen-lockfile
+  #     - name: Install Playwright browsers
+  #       run: pnpm exec playwright install --with-deps
+  #     - name: Run E2E tests
+  #       run: pnpm test:e2e

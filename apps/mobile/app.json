@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Pluralscape",
+    "slug": "pluralscape",
+    "version": "0.0.1",
+    "scheme": "pluralscape",
+    "newArchEnabled": true,
+    "platforms": ["ios", "android", "web"],
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    }
+  }
+}

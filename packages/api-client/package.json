@@ -1,0 +1,25 @@
+{
+  "name": "@pluralscape/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.66.9",
+    "@trpc/client": "^11.0.0-rc.730",
+    "@trpc/react-query": "^11.0.0-rc.730"
+  },
+  "devDependencies": {
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 ."
+  }
+}

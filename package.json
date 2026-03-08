@@ -1,0 +1,38 @@
+{
+  "name": "pluralscape-mono",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "lint:fix": "turbo lint:fix",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "clean": "turbo clean",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/prettier-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "eslint": "^9.21.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.3",
+    "turbo": "^2.4.4",
+    "typescript": "^5.7.3"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix --max-warnings 0"
+    ],
+    "*.{json,md,yaml,yml}": [
+      "prettier --write"
+    ]
+  },
+  "prettier": "@pluralscape/prettier-config",
+  "packageManager": "pnpm@9.15.4"
+}

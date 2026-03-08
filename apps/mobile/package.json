@@ -1,0 +1,39 @@
+{
+  "name": "@pluralscape/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "dev:web": "expo start --web",
+    "build": "expo export",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 .",
+    "clean": "rm -rf .expo dist"
+  },
+  "dependencies": {
+    "@pluralscape/api-client": "workspace:*",
+    "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/sync": "workspace:*",
+    "@pluralscape/types": "workspace:*",
+    "@tanstack/react-query": "^5.66.9",
+    "expo": "~52.0.30",
+    "expo-router": "~4.0.17",
+    "expo-status-bar": "~2.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-native": "0.76.7",
+    "react-native-safe-area-context": "^4.14.1",
+    "react-native-screens": "~4.4.0",
+    "react-native-web": "~0.19.13"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.9",
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "@types/react": "^18.3.18",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3"
+  }
+}

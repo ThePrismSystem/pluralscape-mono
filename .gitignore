@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Turbo
+.turbo/
+
+# Expo
+.expo/
+
+# Bun
+bun.lockb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# Private planning docs (not for public repo)
+docs/planning/project-scope.md
+
+# Agent config (per-contributor)
+CLAUDE.md
+
+# Temporary files
+.tmp/
+*.log
+.pnpm-debug.log
+
+# OS
+Thumbs.db

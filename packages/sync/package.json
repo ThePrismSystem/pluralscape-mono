@@ -1,0 +1,23 @@
+{
+  "name": "@pluralscape/sync",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@automerge/automerge": "^2.2.8"
+  },
+  "devDependencies": {
+    "@pluralscape/eslint-config": "workspace:*",
+    "@pluralscape/tsconfig": "workspace:*",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix --max-warnings 0 ."
+  }
+}
