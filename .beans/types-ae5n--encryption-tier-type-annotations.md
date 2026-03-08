@@ -1,0 +1,50 @@
+---
+# types-ae5n
+title: Encryption tier type annotations
+status: todo
+type: task
+priority: high
+created_at: 2026-03-08T13:32:39Z
+updated_at: 2026-03-08T13:36:10Z
+parent: types-im7i
+blocked_by:
+  - types-fid9
+  - types-itej
+  - types-c2eu
+  - types-qryr
+  - types-rwnq
+  - types-296i
+  - types-8klm
+  - types-0jjx
+  - types-iz5j
+  - types-av6x
+---
+
+Encrypted<T>, BucketEncrypted<T>, Plaintext<T> generics, EncryptedBlob, tier map for all domain types
+
+Type-level markers mapping every domain field to its encryption tier.
+
+## Scope
+
+- Utility generic types: `Encrypted<T>` (T1 — zero-knowledge), `BucketEncrypted<T>` (T2 — per-bucket), `Plaintext<T>` (T3 — server-visible)
+- Encryption tier map: record mapping each domain type + field to its tier
+- Reference table (from ADR 006 section 4.3):
+  - T1: member name/pronouns/description/custom fields/avatar, chat content, note content, fronting comments, innerworld data
+  - T2: bucket-scoped data shared with friends (same data as T1 but encrypted with bucket key when friend-facing)
+  - T3: account info, friend graph, bucket membership, fronting timestamps, webhook metadata
+- `EncryptedBlob`: { ciphertext: Uint8Array, nonce: Uint8Array, tier: 1 | 2, keyVersion?: number }
+- `PlaintextWrapper<T>`: passthrough for T3 data (identity transformation)
+
+## Acceptance Criteria
+
+- [ ] Encrypted<T> / BucketEncrypted<T> / Plaintext<T> generic types defined
+- [ ] EncryptedBlob type with ciphertext, nonce, tier marker
+- [ ] Encryption tier map covers ALL domain types from T1.1-T1.9
+- [ ] Each field in each type annotated with its tier
+- [ ] Type-safe: cannot accidentally pass Encrypted<T> where Plaintext<T> expected
+- [ ] Documentation of tier assignments as code comments
+
+## References
+
+- ADR 006 section 4.3 (Data Encryption Model)
+- encryption-research.md section 4.3
