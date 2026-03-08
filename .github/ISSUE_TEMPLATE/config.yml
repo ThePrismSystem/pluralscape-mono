@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature Request
+    url: https://github.com/ThePrismSystem/pluralscape-mono/discussions/categories/feature-requests
+    about: Suggest a feature in the Feature Requests discussion category. Community upvotes help prioritize.
+  - name: Question
+    url: https://github.com/ThePrismSystem/pluralscape-mono/discussions/categories/q-a
+    about: Ask a question in the Q&A discussion category.
+  - name: Security Vulnerability
+    url: https://github.com/ThePrismSystem/pluralscape-mono/security/advisories/new
+    about: Report a security vulnerability privately. Do not open a public issue.

@@ -111,9 +111,9 @@ Coverage is checked in CI on every PR. PRs that drop coverage below thresholds w
 
 Feature prioritization is community-driven. If you have a feature idea:
 
-1. Check existing beans/issues to avoid duplicates
-2. Open a discussion or issue describing the feature and its value to the plural community
-3. Community voting helps prioritize what gets built next
+1. Check existing [Discussions](https://github.com/ThePrismSystem/pluralscape-mono/discussions) and issues to avoid duplicates
+2. Open a thread in the [Feature Requests](https://github.com/ThePrismSystem/pluralscape-mono/discussions/categories/feature-requests) discussion category
+3. Community upvotes help prioritize what gets built next
 
 ## Reporting Issues
 

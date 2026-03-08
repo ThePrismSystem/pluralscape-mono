@@ -11,6 +11,7 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "clean": "turbo clean",
+    "roadmap": "beans roadmap > docs/roadmap.md",
     "prepare": "husky"
   },
   "devDependencies": {
