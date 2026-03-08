@@ -3,9 +3,12 @@
 title: i18n and locale types
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-08T14:24:27Z
-updated_at: 2026-03-08T14:24:27Z
+updated_at: 2026-03-08T19:56:11Z
 parent: types-im7i
+blocked_by:
+  - types-av6x
 ---
 
 Internationalization types for locale, translation, RTL support, and date/number formatting.

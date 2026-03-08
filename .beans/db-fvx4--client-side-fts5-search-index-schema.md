@@ -3,8 +3,9 @@
 title: Client-side FTS5 search index schema
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-08T14:23:17Z
-updated_at: 2026-03-08T14:23:17Z
+updated_at: 2026-03-08T19:56:09Z
 parent: db-2je4
 blocked_by:
   - db-9f6f

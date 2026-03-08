@@ -42,7 +42,7 @@ Note: `current_fronters_with_duration` uses PG `NOW()`. SQLite equivalent: `(str
 
 ## Acceptance Criteria
 
-- [ ] All 7 views/helpers defined for PostgreSQL
+- [ ] All 9 views/helpers defined for PostgreSQL
 - [ ] current_fronters_with_duration includes computed duration
 - [ ] pending_webhook_retries uses configurable threshold
 - [ ] Equivalent query helper functions for SQLite

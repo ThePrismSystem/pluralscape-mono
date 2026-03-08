@@ -3,8 +3,9 @@
 title: Sync and CRDT types
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-08T14:23:58Z
-updated_at: 2026-03-08T14:23:58Z
+updated_at: 2026-03-08T19:56:09Z
 parent: types-im7i
 blocked_by:
   - types-av6x

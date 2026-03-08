@@ -38,3 +38,7 @@ Design document: conflict detection and resolution rules for concurrent edits. O
 
 - ADR 005
 - encryption-research.md section 8.6
+
+## Cross-References
+
+- This specification provides the design input for sync-p1uq (Conflict resolution epic, M3), which will implement these rules in code
