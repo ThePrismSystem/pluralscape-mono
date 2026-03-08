@@ -34,6 +34,11 @@
       "prettier --write"
     ]
   },
+  "pnpm": {
+    "overrides": {
+      "esbuild": ">=0.25.0"
+    }
+  },
   "prettier": "@pluralscape/prettier-config",
   "packageManager": "pnpm@9.15.4"
 }
