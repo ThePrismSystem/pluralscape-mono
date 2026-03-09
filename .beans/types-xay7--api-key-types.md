@@ -1,11 +1,11 @@
 ---
 # types-xay7
 title: API key types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:32Z
-updated_at: 2026-03-08T14:22:10Z
+updated_at: 2026-03-09T06:05:35Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -37,3 +37,7 @@ API key types for hybrid metadata and crypto key model per ADR 013.
 
 - features.md section 9 (Public REST API, hybrid auth model)
 - ADR 013 (API Authentication with E2E Encryption)
+
+## Summary of Changes
+
+Created api-keys.ts with ApiKeyToken (branded), ApiKeyScope (9 scopes), MetadataApiKey, CryptoApiKey, ApiKey (discriminated on keyType), ApiKeyWithSecret. Branch: feat/types-infrastructure.

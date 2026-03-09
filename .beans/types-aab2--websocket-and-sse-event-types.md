@@ -1,11 +1,11 @@
 ---
 # types-aab2
 title: WebSocket and SSE event types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T18:49:51Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T06:05:45Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -43,3 +43,7 @@ All variants share: id (string), timestamp (UnixMillis)
 
 - ADR 007 (Real-time)
 - features.md section 15 (Offline-First and Sync)
+
+## Summary of Changes
+
+Created realtime.ts with SubscriptionId (branded), 6 WebSocket event interfaces, WebSocketEvent (discriminated on type), WebSocketEventType, SSEEvent, RealtimeSubscription, WebSocketConnectionState. Branch: feat/types-infrastructure.

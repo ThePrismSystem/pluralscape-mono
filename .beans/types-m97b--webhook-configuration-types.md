@@ -1,11 +1,11 @@
 ---
 # types-m97b
 title: Webhook configuration types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:32Z
-updated_at: 2026-03-08T14:22:13Z
+updated_at: 2026-03-09T06:05:42Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -34,3 +34,7 @@ WebhookConfig and WebhookDelivery types for user-configurable webhooks.
 
 - features.md section 9 (Custom webhooks)
 - ADR 013 (API Authentication)
+
+## Summary of Changes
+
+Created webhooks.ts with WebhookDeliveryId (branded), WebhookEventType (8 types), WebhookConfig, PlaintextWebhookPayload, EncryptedWebhookPayload, WebhookDeliveryPayload (discriminated on encrypted), WebhookDelivery. Branch: feat/types-infrastructure.

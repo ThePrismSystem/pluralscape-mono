@@ -1,11 +1,11 @@
 ---
 # types-omwn
 title: Background job types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:24:09Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T06:05:37Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -33,3 +33,7 @@ Job queue types for BullMQ and SQLite fallback job processing.
 
 - features.md section 17 (Background Jobs)
 - ADR 010 (Background Jobs)
+
+## Summary of Changes
+
+Created jobs.ts with JobId (branded), JobType (9 types), JobStatus (5 statuses), RetryPolicy, JobResult, JobDefinition. Branch: feat/types-infrastructure.
