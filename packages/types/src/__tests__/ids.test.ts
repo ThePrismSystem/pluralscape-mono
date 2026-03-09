@@ -181,7 +181,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(47);
+    expect(prefixCount).toBe(48);
   });
 });
 
