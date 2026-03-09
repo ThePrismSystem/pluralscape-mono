@@ -32,7 +32,11 @@ import type {
   FieldValueUnion,
   FrontingAnalytics,
   FrontingReport,
+  FrontingReportId,
   FusionEvent,
+  HeadingBlock,
+  HeadingLevel,
+  ImageBlock,
   InnerWorldCanvas,
   InnerWorldEntity,
   InnerWorldRegion,
@@ -40,21 +44,48 @@ import type {
   JournalBlockType,
   JournalEntry,
   LandmarkEntity,
+  ListBlock,
   LifecycleEvent,
   LifecycleEventType,
   MemberEntity,
   MemberFrontingBreakdown,
+  MemberLinkBlock,
   MergeEvent,
   Note,
   Poll,
   PollOption,
   PollVote,
+  ParagraphBlock,
+  QuoteBlock,
+  ServerBoardMessage,
+  ServerChannel,
+  ServerChatMessage,
+  ServerFieldDefinition,
+  ServerFieldValue,
+  ServerInnerWorldEntity,
+  ServerInnerWorldRegion,
+  ServerLifecycleEvent,
   ServerMember,
+  ServerNote,
   SplitEvent,
   TimerConfig,
   UnmergeEvent,
   VisualProperties,
   WikiPage,
+  ArchivedJournalEntry,
+  ArchivedWikiPage,
+  ClientBoardMessage,
+  ClientChannel,
+  ClientChatMessage,
+  ClientFieldDefinition,
+  ClientFieldValue,
+  ClientInnerWorldEntity,
+  ClientInnerWorldRegion,
+  ClientLifecycleEvent,
+  ClientNote,
+  CodeBlock,
+  DividerBlock,
+  EntityLinkBlock,
   ApiError,
   ApiResponse,
   ArchivedCustomFront,
@@ -221,6 +252,24 @@ describe("barrel exports", () => {
     expectTypeOf<EncryptedString>().toExtend<string>();
     expectTypeOf<ServerMember>().toBeObject();
     expectTypeOf<ClientMember>().toBeObject();
+    expectTypeOf<ServerChannel>().toBeObject();
+    expectTypeOf<ClientChannel>().toBeObject();
+    expectTypeOf<ServerChatMessage>().toBeObject();
+    expectTypeOf<ClientChatMessage>().toBeObject();
+    expectTypeOf<ServerBoardMessage>().toBeObject();
+    expectTypeOf<ClientBoardMessage>().toBeObject();
+    expectTypeOf<ServerNote>().toBeObject();
+    expectTypeOf<ClientNote>().toBeObject();
+    expectTypeOf<ServerFieldDefinition>().toBeObject();
+    expectTypeOf<ClientFieldDefinition>().toBeObject();
+    expectTypeOf<ServerFieldValue>().toBeObject();
+    expectTypeOf<ClientFieldValue>().toBeObject();
+    expectTypeOf<ServerInnerWorldEntity>().toBeObject();
+    expectTypeOf<ClientInnerWorldEntity>().toBeObject();
+    expectTypeOf<ServerInnerWorldRegion>().toBeObject();
+    expectTypeOf<ClientInnerWorldRegion>().toBeObject();
+    expectTypeOf<ServerLifecycleEvent>().toBeObject();
+    expectTypeOf<ClientLifecycleEvent>().toBeObject();
     expectTypeOf<DecryptFn<ServerMember, ClientMember>>().toBeFunction();
     expectTypeOf<EncryptFn<ClientMember, ServerMember>>().toBeFunction();
   });
@@ -280,9 +329,21 @@ describe("barrel exports", () => {
   it("exports journal types", () => {
     expectTypeOf<JournalBlockType>().toBeString();
     expectTypeOf<JournalBlock>().toBeObject();
+    expectTypeOf<ParagraphBlock>().toBeObject();
+    expectTypeOf<HeadingBlock>().toBeObject();
+    expectTypeOf<HeadingLevel>().toBeNumber();
+    expectTypeOf<ListBlock>().toBeObject();
+    expectTypeOf<QuoteBlock>().toBeObject();
+    expectTypeOf<CodeBlock>().toBeObject();
+    expectTypeOf<ImageBlock>().toBeObject();
+    expectTypeOf<DividerBlock>().toBeObject();
+    expectTypeOf<MemberLinkBlock>().toBeObject();
+    expectTypeOf<EntityLinkBlock>().toBeObject();
     expectTypeOf<EntityLink>().toBeObject();
     expectTypeOf<JournalEntry>().toBeObject();
+    expectTypeOf<ArchivedJournalEntry>().toBeObject();
     expectTypeOf<WikiPage>().toBeObject();
+    expectTypeOf<ArchivedWikiPage>().toBeObject();
   });
 
   it("exports timer types", () => {
@@ -297,6 +358,7 @@ describe("barrel exports", () => {
     expectTypeOf<MemberFrontingBreakdown>().toBeObject();
     expectTypeOf<FrontingAnalytics>().toBeObject();
     expectTypeOf<FrontingReport>().toBeObject();
+    expectTypeOf<FrontingReportId>().toExtend<string>();
     expectTypeOf<ChartDataset>().toBeObject();
     expectTypeOf<ChartData>().toBeObject();
   });

@@ -50,6 +50,7 @@ export type {
   SyncDocumentId,
   SyncQueueItemId,
   SyncConflictId,
+  FrontingReportId,
   HexColor,
   EntityType,
 } from "./ids.js";
@@ -161,6 +162,24 @@ export type {
   ClientSubsystem,
   ServerRelationship,
   ClientRelationship,
+  ServerChannel,
+  ClientChannel,
+  ServerChatMessage,
+  ClientChatMessage,
+  ServerBoardMessage,
+  ClientBoardMessage,
+  ServerNote,
+  ClientNote,
+  ServerFieldDefinition,
+  ClientFieldDefinition,
+  ServerFieldValue,
+  ClientFieldValue,
+  ServerInnerWorldEntity,
+  ClientInnerWorldEntity,
+  ServerInnerWorldRegion,
+  ClientInnerWorldRegion,
+  ServerLifecycleEvent,
+  ClientLifecycleEvent,
   DecryptFn,
   EncryptFn,
 } from "./encryption.js";
@@ -223,11 +242,23 @@ export type {
 
 // ── Journal ───────────────────────────────────────────────────────
 export type {
+  HeadingLevel,
   JournalBlockType,
   JournalBlock,
+  ParagraphBlock,
+  HeadingBlock,
+  ListBlock,
+  QuoteBlock,
+  CodeBlock,
+  ImageBlock,
+  DividerBlock,
+  MemberLinkBlock,
+  EntityLinkBlock,
   EntityLink,
   JournalEntry,
+  ArchivedJournalEntry,
   WikiPage,
+  ArchivedWikiPage,
 } from "./journal.js";
 
 // ── Timer ─────────────────────────────────────────────────────────
