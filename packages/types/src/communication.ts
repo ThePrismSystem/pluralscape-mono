@@ -9,6 +9,7 @@ import type {
   NoteId,
   PollId,
   PollOptionId,
+  PollVoteId,
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
@@ -20,6 +21,8 @@ export interface Channel extends AuditMetadata {
   readonly systemId: SystemId;
   readonly name: string;
   readonly type: "category" | "channel";
+  /** Parent category ID. Null for categories and uncategorized channels. */
+  readonly parentId: ChannelId | null;
   readonly sortOrder: number;
 }
 
@@ -41,6 +44,7 @@ export interface ChatMessage extends AuditMetadata {
 export interface BoardMessage extends AuditMetadata {
   readonly id: BoardMessageId;
   readonly systemId: SystemId;
+  readonly senderId: MemberId;
   readonly content: string;
   readonly pinned: boolean;
   readonly sortOrder: number;
@@ -67,23 +71,29 @@ export interface PollOption {
 export interface Poll extends AuditMetadata {
   readonly id: PollId;
   readonly systemId: SystemId;
+  readonly createdByMemberId: MemberId;
   readonly title: string;
   readonly options: readonly PollOption[];
   readonly status: "open" | "closed";
   readonly closedAt: UnixMillis | null;
+  readonly allowMultipleVotes: boolean;
+  readonly maxVotesPerMember: number;
 }
 
-/** A vote cast on a poll option (junction type). */
+/** A vote cast on a poll option. */
 export interface PollVote {
+  readonly id: PollVoteId;
   readonly pollId: PollId;
   readonly optionId: PollOptionId;
   readonly memberId: MemberId;
+  readonly votedAt: UnixMillis;
 }
 
 /** A request for a member to acknowledge a message or decision. */
 export interface AcknowledgementRequest extends AuditMetadata {
   readonly id: AcknowledgementId;
   readonly systemId: SystemId;
+  readonly createdByMemberId: MemberId;
   readonly targetMemberId: MemberId;
   readonly message: string;
   readonly confirmed: boolean;

@@ -47,6 +47,14 @@ describe("WebhookEventType", () => {
         case "switch.recorded":
         case "group.created":
         case "group.updated":
+        case "note.created":
+        case "note.updated":
+        case "chat.message-sent":
+        case "poll.created":
+        case "poll.closed":
+        case "acknowledgement.requested":
+        case "lifecycle.event-recorded":
+        case "custom-front.changed":
           return type;
         default: {
           const _exhaustive: never = type;

@@ -40,6 +40,9 @@ describe("JobType", () => {
         case "webhook-deliver":
         case "notification-send":
         case "analytics-compute":
+        case "account-purge":
+        case "bucket-key-rotation":
+        case "report-generate":
           return type;
         default: {
           const _exhaustive: never = type;

@@ -26,6 +26,7 @@ describe("BlobPurpose", () => {
         case "journal-image":
         case "attachment":
         case "export":
+        case "littles-safe-mode":
           return purpose;
         default: {
           const _exhaustive: never = purpose;

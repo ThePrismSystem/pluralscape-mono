@@ -99,7 +99,7 @@ describe("Switch", () => {
   it("has correct field types", () => {
     expectTypeOf<Switch["id"]>().toEqualTypeOf<SwitchId>();
     expectTypeOf<Switch["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<Switch["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<Switch["memberIds"]>().toEqualTypeOf<readonly MemberId[]>();
     expectTypeOf<Switch["timestamp"]>().toEqualTypeOf<UnixMillis>();
   });
 
@@ -108,7 +108,7 @@ describe("Switch", () => {
   });
 
   it("has exact shape", () => {
-    expectTypeOf<keyof Switch>().toEqualTypeOf<"id" | "systemId" | "memberId" | "timestamp">();
+    expectTypeOf<keyof Switch>().toEqualTypeOf<"id" | "systemId" | "memberIds" | "timestamp">();
   });
 });
 

@@ -45,6 +45,7 @@ describe("NotificationEventType", () => {
         case "acknowledgement-requested":
         case "message-received":
         case "sync-conflict":
+        case "friend-switch-alert":
           return type;
         default: {
           const _exhaustive: never = type;

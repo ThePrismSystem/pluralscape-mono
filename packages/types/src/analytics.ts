@@ -59,3 +59,20 @@ export interface ChartData {
   readonly labels: readonly string[];
   readonly datasets: readonly ChartDataset[];
 }
+
+/** A pair of members who have co-fronted together. */
+export interface CoFrontingPair {
+  readonly memberA: MemberId;
+  readonly memberB: MemberId;
+  readonly totalDuration: Duration;
+  readonly sessionCount: number;
+  readonly percentageOfTotal: number;
+}
+
+/** Co-fronting analytics for a system over a time range. */
+export interface CoFrontingAnalytics {
+  readonly systemId: SystemId;
+  readonly dateRange: DateRange;
+  readonly coFrontingPercentage: number;
+  readonly pairs: readonly CoFrontingPair[];
+}

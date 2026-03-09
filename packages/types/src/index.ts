@@ -188,6 +188,26 @@ export type {
   ClientInnerWorldRegion,
   ServerLifecycleEvent,
   ClientLifecycleEvent,
+  ServerCustomFront,
+  ClientCustomFront,
+  ServerJournalEntry,
+  ClientJournalEntry,
+  ServerWikiPage,
+  ClientWikiPage,
+  ServerMemberPhoto,
+  ClientMemberPhoto,
+  ServerPoll,
+  ClientPoll,
+  ServerAcknowledgementRequest,
+  ClientAcknowledgementRequest,
+  ServerSideSystem,
+  ClientSideSystem,
+  ServerLayer,
+  ClientLayer,
+  ServerTimerConfig,
+  ClientTimerConfig,
+  ServerAuditLogEntry,
+  ClientAuditLogEntry,
   DecryptFn,
   EncryptFn,
 } from "./encryption.js";
@@ -262,6 +282,7 @@ export type {
   ReportFormat,
   AccountPurgeRequest,
   MemberReport,
+  SystemOverviewReport,
 } from "./import-export.js";
 
 // ── API keys ──────────────────────────────────────────────────
@@ -299,6 +320,7 @@ export type {
   NotificationEventType,
   NotificationConfig,
   NotificationPayload,
+  FriendNotificationPreference,
 } from "./notifications.js";
 
 // ── Realtime ──────────────────────────────────────────────────
@@ -394,6 +416,8 @@ export type {
   FrontingReport,
   ChartDataset,
   ChartData,
+  CoFrontingPair,
+  CoFrontingAnalytics,
 } from "./analytics.js";
 
 // ── Innerworld ────────────────────────────────────────────────────

@@ -313,6 +313,11 @@ describe("ExportSection", () => {
         case "notes":
         case "chat":
         case "board-messages":
+        case "privacy-buckets":
+        case "system-structure":
+        case "settings":
+        case "polls":
+        case "lifecycle-events":
           return section;
         default: {
           const _exhaustive: never = section;

@@ -5,7 +5,10 @@ import type { UnixMillis } from "./timestamps.js";
 /** The category of audit event. */
 export type AuditEventType =
   | "auth.login"
+  | "auth.login-failed"
   | "auth.logout"
+  | "auth.password-changed"
+  | "auth.recovery-key-used"
   | "auth.key-created"
   | "auth.key-revoked"
   | "data.export"

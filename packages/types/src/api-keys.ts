@@ -1,4 +1,4 @@
-import type { ApiKeyId, Brand, SystemId } from "./ids.js";
+import type { ApiKeyId, Brand, BucketId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -47,6 +47,8 @@ export interface CryptoApiKey extends AuditMetadata {
   readonly lastUsedAt: UnixMillis | null;
   readonly revoked: boolean;
   readonly publicKey: Uint8Array;
+  /** Restrict key to specific privacy buckets. Null = all buckets the scopes permit. */
+  readonly scopedBucketIds: readonly BucketId[] | null;
 }
 
 /** Discriminated union of API key types. */

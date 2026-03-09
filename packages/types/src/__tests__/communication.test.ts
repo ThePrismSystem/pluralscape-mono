@@ -21,6 +21,7 @@ import type {
   NoteId,
   PollId,
   PollOptionId,
+  PollVoteId,
   SystemId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -121,13 +122,17 @@ describe("PollVote", () => {
   });
 
   it("has exactly the expected keys", () => {
-    expectTypeOf<keyof PollVote>().toEqualTypeOf<"pollId" | "optionId" | "memberId">();
+    expectTypeOf<keyof PollVote>().toEqualTypeOf<
+      "id" | "pollId" | "optionId" | "memberId" | "votedAt"
+    >();
   });
 
   it("has correct field types", () => {
+    expectTypeOf<PollVote["id"]>().toEqualTypeOf<PollVoteId>();
     expectTypeOf<PollVote["pollId"]>().toEqualTypeOf<PollId>();
     expectTypeOf<PollVote["optionId"]>().toEqualTypeOf<PollOptionId>();
     expectTypeOf<PollVote["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<PollVote["votedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });
 
