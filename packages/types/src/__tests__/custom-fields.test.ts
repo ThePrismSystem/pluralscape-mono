@@ -7,7 +7,7 @@ import type {
   FieldValue,
   FieldValueUnion,
 } from "../custom-fields.js";
-import type { BucketId, FieldDefinitionId, FieldValueId, SystemId } from "../ids.js";
+import type { BucketId, FieldDefinitionId, FieldValueId, MemberId, SystemId } from "../ids.js";
 import type { AuditMetadata } from "../utility.js";
 
 describe("FieldType", () => {
@@ -16,6 +16,7 @@ describe("FieldType", () => {
     assertType<FieldType>("number");
     assertType<FieldType>("boolean");
     assertType<FieldType>("date");
+    assertType<FieldType>("color");
     assertType<FieldType>("select");
     assertType<FieldType>("multi-select");
     assertType<FieldType>("url");
@@ -23,7 +24,7 @@ describe("FieldType", () => {
 
   it("rejects invalid field types", () => {
     // @ts-expect-error invalid field type
-    assertType<FieldType>("color");
+    assertType<FieldType>("textarea");
   });
 
   it("is exhaustive in a switch", () => {
@@ -33,6 +34,7 @@ describe("FieldType", () => {
         case "number":
         case "boolean":
         case "date":
+        case "color":
         case "select":
         case "multi-select":
         case "url":
@@ -49,8 +51,8 @@ describe("FieldType", () => {
 
 describe("FieldBucketVisibility", () => {
   it("has correct field types", () => {
-    expectTypeOf<FieldBucketVisibility["bucketId"]>().toEqualTypeOf<BucketId | null>();
-    expectTypeOf<FieldBucketVisibility["visible"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<FieldBucketVisibility["fieldDefinitionId"]>().toEqualTypeOf<FieldDefinitionId>();
+    expectTypeOf<FieldBucketVisibility["bucketId"]>().toEqualTypeOf<BucketId>();
   });
 });
 
@@ -63,8 +65,9 @@ describe("FieldDefinition", () => {
     expectTypeOf<FieldDefinition["id"]>().toEqualTypeOf<FieldDefinitionId>();
     expectTypeOf<FieldDefinition["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<FieldDefinition["name"]>().toBeString();
+    expectTypeOf<FieldDefinition["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<FieldDefinition["fieldType"]>().toEqualTypeOf<FieldType>();
-    expectTypeOf<FieldDefinition["selectOptions"]>().toEqualTypeOf<readonly string[] | null>();
+    expectTypeOf<FieldDefinition["options"]>().toEqualTypeOf<readonly string[] | null>();
     expectTypeOf<FieldDefinition["required"]>().toEqualTypeOf<boolean>();
     expectTypeOf<FieldDefinition["sortOrder"]>().toEqualTypeOf<number>();
   });
@@ -77,10 +80,9 @@ describe("FieldValue", () => {
 
   it("has correct field types", () => {
     expectTypeOf<FieldValue["id"]>().toEqualTypeOf<FieldValueId>();
-    expectTypeOf<FieldValue["definitionId"]>().toEqualTypeOf<FieldDefinitionId>();
-    expectTypeOf<FieldValue["entityId"]>().toBeString();
+    expectTypeOf<FieldValue["fieldDefinitionId"]>().toEqualTypeOf<FieldDefinitionId>();
+    expectTypeOf<FieldValue["memberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<FieldValue["value"]>().toEqualTypeOf<FieldValueUnion>();
-    expectTypeOf<FieldValue["visibility"]>().toEqualTypeOf<FieldBucketVisibility>();
   });
 });
 
@@ -98,6 +100,9 @@ describe("FieldValueUnion", () => {
           expectTypeOf(v.value).toBeBoolean();
           return v.value;
         case "date":
+          expectTypeOf(v.value).toBeString();
+          return v.value;
+        case "color":
           expectTypeOf(v.value).toBeString();
           return v.value;
         case "select":
