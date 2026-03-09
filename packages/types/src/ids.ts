@@ -56,6 +56,9 @@ export type DeviceTransferRequestId = Brand<string, "DeviceTransferRequestId">;
 export type SyncDocumentId = Brand<string, "SyncDocumentId">;
 export type SyncQueueItemId = Brand<string, "SyncQueueItemId">;
 export type SyncConflictId = Brand<string, "SyncConflictId">;
+export type JobId = Brand<string, "JobId">;
+export type SubscriptionId = Brand<string, "SubscriptionId">;
+export type WebhookDeliveryId = Brand<string, "WebhookDeliveryId">;
 export type FrontingReportId = Brand<string, "FrontingReportId">;
 export type HexColor = Brand<string, "HexColor">;
 
@@ -109,6 +112,9 @@ export const ID_PREFIXES = {
   syncDocument: "sdoc_",
   syncQueueItem: "sqi_",
   syncConflict: "scon_",
+  job: "job_",
+  subscription: "rsub_",
+  webhookDelivery: "wd_",
   frontingReport: "fr_",
 } as const;
 
@@ -162,4 +168,7 @@ export type EntityType =
   | "sync-document"
   | "sync-queue-item"
   | "sync-conflict"
+  | "job"
+  | "subscription"
+  | "webhook-delivery"
   | "fronting-report";

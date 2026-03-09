@@ -13,6 +13,7 @@ import type {
   EncryptedString,
   EncryptFn,
   EncryptionAlgorithm,
+  Plaintext,
   ServerFrontingSession,
   ServerGroup,
   ServerMember,
@@ -71,6 +72,16 @@ describe("EncryptedString", () => {
 
   it("is assignable to plain string (intersection subtype)", () => {
     expectTypeOf<EncryptedString>().toExtend<string>();
+  });
+});
+
+describe("Plaintext<T>", () => {
+  it("is assignable to plain T (intersection subtype)", () => {
+    expectTypeOf<Plaintext<string>>().toExtend<string>();
+  });
+
+  it("is not assignable from plain T", () => {
+    expectTypeOf<string>().not.toExtend<Plaintext<string>>();
   });
 });
 

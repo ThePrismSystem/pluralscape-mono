@@ -36,6 +36,11 @@ export type BucketEncrypted<T> = T & { readonly [__encTier]: 2 };
 // T3 is plaintext — no wrapper needed. Fields at T3 appear as plain types
 // in server-side interfaces (see tier map at bottom of file).
 
+declare const __plaintext: unique symbol;
+
+/** Marks a value as having been decrypted — used to track provenance in audit logs. */
+export type Plaintext<T> = T & { readonly [__plaintext]: true };
+
 // ── EncryptionAlgorithm ────────────────────────────────────────
 
 /** Supported encryption algorithms for EncryptedBlob. */
@@ -328,3 +333,15 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // InnerWorldEntity: T1 (name/linkedMemberId, description, visual) | T3 (positionX/Y, regionId, entityType)
 // InnerWorldRegion: T1 (name, description, boundaryData, visual) | T3 (parentRegionId, accessType, gatekeeperMemberId)
 // LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
+//
+// ApiKey: T3 (all fields — server metadata, no user content)
+// AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
+// BlobMetadata: T3 (all fields — metadata only, blob content encrypted at storage layer)
+// JobDefinition: T3 (all fields — server-internal job metadata)
+// DeviceToken: T1 (token) | T3 (platform, lastActiveAt)
+// NotificationConfig: T3 (all fields — user preferences, no sensitive content)
+// NotificationPayload: T1 (title, body, data) | T3 (eventType, systemId)
+// WebhookConfig: T1 (secret via EncryptedString) | T3 (url, eventTypes, enabled)
+// WebhookDelivery: T1 (payload when encrypted) | T3 (eventType, statusCode, deliveredAt, success)
+// RealtimeSubscription: T3 (all fields — subscription metadata)
+// SearchQuery/SearchResult: client-only types, not persisted server-side

@@ -1,11 +1,11 @@
 ---
 # types-p1hp
 title: Search types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:24Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T06:05:46Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -34,3 +34,7 @@ Full-text search types for client-side FTS5 search over decrypted data.
 ## References
 
 - features.md section 8 (Search)
+
+## Summary of Changes
+
+Created search.ts with SearchIndex (branded), SearchableEntityType (6 types), SearchQuery, SearchResultItem<T> (generic), SearchResult<T> (generic). Branch: feat/types-infrastructure.

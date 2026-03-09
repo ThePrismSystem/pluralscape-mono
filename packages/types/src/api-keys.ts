@@ -1,0 +1,59 @@
+import type { ApiKeyId, Brand, SystemId } from "./ids.js";
+import type { UnixMillis } from "./timestamps.js";
+import type { AuditMetadata } from "./utility.js";
+
+/** A branded API key token — prevents accidental logging. */
+export type ApiKeyToken = Brand<string, "ApiKeyToken">;
+
+/** Scopes an API key can be granted. */
+export type ApiKeyScope =
+  | "read:members"
+  | "write:members"
+  | "read:fronting"
+  | "write:fronting"
+  | "read:groups"
+  | "write:groups"
+  | "read:system"
+  | "write:system"
+  | "read:webhooks"
+  | "write:webhooks"
+  | "read:audit-log"
+  | "read:blobs"
+  | "write:blobs"
+  | "read:notifications"
+  | "write:notifications"
+  | "full";
+
+/** A metadata-only API key (no crypto key material). */
+export interface MetadataApiKey extends AuditMetadata {
+  readonly id: ApiKeyId;
+  readonly systemId: SystemId;
+  readonly keyType: "metadata";
+  readonly name: string;
+  readonly scopes: readonly ApiKeyScope[];
+  readonly expiresAt: UnixMillis | null;
+  readonly lastUsedAt: UnixMillis | null;
+  readonly revoked: boolean;
+}
+
+/** A crypto-capable API key (carries key material for E2E operations). */
+export interface CryptoApiKey extends AuditMetadata {
+  readonly id: ApiKeyId;
+  readonly systemId: SystemId;
+  readonly keyType: "crypto";
+  readonly name: string;
+  readonly scopes: readonly ApiKeyScope[];
+  readonly expiresAt: UnixMillis | null;
+  readonly lastUsedAt: UnixMillis | null;
+  readonly revoked: boolean;
+  readonly publicKey: Uint8Array;
+}
+
+/** Discriminated union of API key types. */
+export type ApiKey = MetadataApiKey | CryptoApiKey;
+
+/** An API key with its secret token — only returned at creation time. */
+export interface ApiKeyWithSecret {
+  readonly key: ApiKey;
+  readonly token: ApiKeyToken;
+}

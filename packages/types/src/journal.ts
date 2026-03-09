@@ -24,7 +24,7 @@ export interface ParagraphBlock extends JournalBlockBase {
 }
 
 /** Valid heading levels (1-6, matching HTML h1-h6). */
- 
+
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** A heading with level 1-6. */
