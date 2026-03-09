@@ -5,14 +5,55 @@ import { createId, ID_PREFIXES, now, toISO } from "../index.js";
 import type {
   Account,
   ActiveFrontingSession,
+  ApiKey,
+  ApiKeyScope,
+  ApiKeyToken,
+  ApiKeyWithSecret,
+  AuditEventType,
+  AuditLogEntry,
+  BlobDownloadRef,
+  BlobMetadata,
+  BlobPurpose,
+  BlobUploadRequest,
   ClientMember,
+  CryptoApiKey,
   DecryptFn,
+  DeviceToken,
   Encrypted,
   EncryptedBlob,
   EncryptedString,
+  EncryptedWebhookPayload,
   EncryptFn,
   EncryptionAlgorithm,
+  JobDefinition,
+  JobId,
+  JobResult,
+  JobStatus,
+  JobType,
+  MetadataApiKey,
+  NotificationConfig,
+  NotificationEventType,
+  NotificationPayload,
+  Plaintext,
+  PlaintextWebhookPayload,
+  RealtimeSubscription,
+  RetryPolicy,
+  SearchableEntityType,
+  SearchIndex,
+  SearchQuery,
+  SearchResult,
+  SearchResultItem,
   ServerMember,
+  SSEEvent,
+  SubscriptionId,
+  WebhookConfig,
+  WebhookDelivery,
+  WebhookDeliveryId,
+  WebhookDeliveryPayload,
+  WebhookEventType,
+  WebSocketConnectionState,
+  WebSocketEvent,
+  WebSocketEventType,
   ApiError,
   ApiResponse,
   ArchivedCustomFront,
@@ -174,6 +215,7 @@ describe("barrel exports", () => {
 
   it("exports encryption types", () => {
     expectTypeOf<Encrypted<string>>().toExtend<string>();
+    expectTypeOf<Plaintext<string>>().toExtend<string>();
     expectTypeOf<EncryptionAlgorithm>().toBeString();
     expectTypeOf<EncryptedBlob>().toBeObject();
     expectTypeOf<EncryptedString>().toExtend<string>();
@@ -203,6 +245,70 @@ describe("barrel exports", () => {
     expectTypeOf<GroupMembership>().toBeObject();
     expectTypeOf<GroupTree>().toBeObject();
     expectTypeOf<GroupMoveOperation>().toBeObject();
+  });
+
+  it("exports api key types", () => {
+    expectTypeOf<ApiKeyToken>().toExtend<string>();
+    expectTypeOf<ApiKeyScope>().toBeString();
+    expectTypeOf<MetadataApiKey>().toBeObject();
+    expectTypeOf<CryptoApiKey>().toBeObject();
+    expectTypeOf<ApiKey>().toBeObject();
+    expectTypeOf<ApiKeyWithSecret>().toBeObject();
+  });
+
+  it("exports job types", () => {
+    expectTypeOf<JobId>().toExtend<string>();
+    expectTypeOf<JobType>().toBeString();
+    expectTypeOf<JobStatus>().toBeString();
+    expectTypeOf<RetryPolicy>().toBeObject();
+    expectTypeOf<JobResult>().toBeObject();
+    expectTypeOf<JobDefinition>().toBeObject();
+  });
+
+  it("exports blob types", () => {
+    expectTypeOf<BlobPurpose>().toBeString();
+    expectTypeOf<BlobMetadata>().toBeObject();
+    expectTypeOf<BlobUploadRequest>().toBeObject();
+    expectTypeOf<BlobDownloadRef>().toBeObject();
+  });
+
+  it("exports audit log types", () => {
+    expectTypeOf<AuditEventType>().toBeString();
+    expectTypeOf<AuditLogEntry>().toBeObject();
+  });
+
+  it("exports webhook types", () => {
+    expectTypeOf<WebhookDeliveryId>().toExtend<string>();
+    expectTypeOf<WebhookEventType>().toBeString();
+    expectTypeOf<WebhookConfig>().toBeObject();
+    expectTypeOf<PlaintextWebhookPayload>().toBeObject();
+    expectTypeOf<EncryptedWebhookPayload>().toBeObject();
+    expectTypeOf<WebhookDeliveryPayload>().toBeObject();
+    expectTypeOf<WebhookDelivery>().toBeObject();
+  });
+
+  it("exports notification types", () => {
+    expectTypeOf<DeviceToken>().toBeObject();
+    expectTypeOf<NotificationEventType>().toBeString();
+    expectTypeOf<NotificationConfig>().toBeObject();
+    expectTypeOf<NotificationPayload>().toBeObject();
+  });
+
+  it("exports realtime types", () => {
+    expectTypeOf<SubscriptionId>().toExtend<string>();
+    expectTypeOf<WebSocketEvent>().toBeObject();
+    expectTypeOf<WebSocketEventType>().toBeString();
+    expectTypeOf<SSEEvent>().toBeObject();
+    expectTypeOf<RealtimeSubscription>().toBeObject();
+    expectTypeOf<WebSocketConnectionState>().toBeString();
+  });
+
+  it("exports search types", () => {
+    expectTypeOf<SearchIndex>().toExtend<string>();
+    expectTypeOf<SearchableEntityType>().toBeString();
+    expectTypeOf<SearchQuery>().toBeObject();
+    expectTypeOf<SearchResultItem<string>>().toBeObject();
+    expectTypeOf<SearchResult<string>>().toBeObject();
   });
 
   it("exports generic utility types", () => {

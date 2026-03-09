@@ -28,6 +28,11 @@ export type BucketEncrypted<T> = T & { readonly [__encTier]: 2 };
 // T3 is plaintext — no wrapper needed. Fields at T3 appear as plain types
 // in server-side interfaces (see tier map at bottom of file).
 
+declare const __plaintext: unique symbol;
+
+/** Marks a value as having been decrypted — used to track provenance in audit logs. */
+export type Plaintext<T> = T & { readonly [__plaintext]: true };
+
 // ── EncryptionAlgorithm ────────────────────────────────────────
 
 /** Supported encryption algorithms for EncryptedBlob. */

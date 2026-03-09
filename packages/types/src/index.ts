@@ -148,6 +148,7 @@ export type {
 export type {
   Encrypted,
   BucketEncrypted,
+  Plaintext,
   EncryptionAlgorithm,
   EncryptedBlob,
   EncryptedString,
@@ -185,6 +186,69 @@ export type {
   GroupTree,
   GroupMoveOperation,
 } from "./groups.js";
+
+// ── API keys ──────────────────────────────────────────────────
+export type {
+  ApiKeyToken,
+  ApiKeyScope,
+  MetadataApiKey,
+  CryptoApiKey,
+  ApiKey,
+  ApiKeyWithSecret,
+} from "./api-keys.js";
+
+// ── Jobs ──────────────────────────────────────────────────────
+export type { JobId, JobType, JobStatus, RetryPolicy, JobResult, JobDefinition } from "./jobs.js";
+
+// ── Blob ──────────────────────────────────────────────────────
+export type { BlobPurpose, BlobMetadata, BlobUploadRequest, BlobDownloadRef } from "./blob.js";
+
+// ── Audit log ─────────────────────────────────────────────────
+export type { AuditEventType, AuditLogEntry } from "./audit-log.js";
+
+// ── Webhooks ──────────────────────────────────────────────────
+export type {
+  WebhookDeliveryId,
+  WebhookEventType,
+  WebhookConfig,
+  PlaintextWebhookPayload,
+  EncryptedWebhookPayload,
+  WebhookDeliveryPayload,
+  WebhookDelivery,
+} from "./webhooks.js";
+
+// ── Notifications ─────────────────────────────────────────────
+export type {
+  DeviceToken,
+  NotificationEventType,
+  NotificationConfig,
+  NotificationPayload,
+} from "./notifications.js";
+
+// ── Realtime ──────────────────────────────────────────────────
+export type {
+  SubscriptionId,
+  FrontingChangedEvent,
+  MemberUpdatedEvent,
+  SyncStateChangedEvent,
+  MessageReceivedEvent,
+  PresenceHeartbeatEvent,
+  ConnectionErrorEvent,
+  WebSocketEvent,
+  WebSocketEventType,
+  SSEEvent,
+  RealtimeSubscription,
+  WebSocketConnectionState,
+} from "./realtime.js";
+
+// ── Search ────────────────────────────────────────────────────
+export type {
+  SearchIndex,
+  SearchableEntityType,
+  SearchQuery,
+  SearchResultItem,
+  SearchResult,
+} from "./search.js";
 
 // ── Runtime utilities ──────────────────────────────────────────────
 export { createId, now, toISO } from "./runtime.js";
