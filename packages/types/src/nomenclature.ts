@@ -92,18 +92,9 @@ export const DEFAULT_TERM_PRESETS: readonly TermPreset[] = [
 
 /** Creates default nomenclature settings using the default term for each category. */
 export function createDefaultNomenclatureSettings(): NomenclatureSettings {
-  return {
-    collective: "System",
-    individual: "Member",
-    fronting: "Fronting",
-    switching: "Switch",
-    "co-presence": "Co-fronting",
-    "internal-space": "Headspace",
-    "primary-fronter": "Host",
-    structure: "System Structure",
-    dormancy: "Dormancy",
-    body: "Body",
-    amnesia: "Amnesia",
-    saturation: "Saturation",
-  };
+  const settings = {} as Record<TermCategory, string>;
+  for (const preset of DEFAULT_TERM_PRESETS) {
+    settings[preset.category] = preset.default;
+  }
+  return settings;
 }

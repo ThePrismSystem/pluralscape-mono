@@ -172,7 +172,7 @@ describe("InnerWorldRegion", () => {
     expectTypeOf<InnerWorldRegion["parentRegionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
     expectTypeOf<InnerWorldRegion["visual"]>().toEqualTypeOf<VisualProperties>();
     expectTypeOf<InnerWorldRegion["accessType"]>().toEqualTypeOf<"open" | "gatekept">();
-    expectTypeOf<InnerWorldRegion["gatekeeperMemberId"]>().toEqualTypeOf<MemberId | null>();
+    expectTypeOf<InnerWorldRegion["gatekeeperMemberIds"]>().toEqualTypeOf<readonly MemberId[]>();
   });
 });
 

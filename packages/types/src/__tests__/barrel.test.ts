@@ -230,6 +230,8 @@ import type {
   ArchivedGroup,
   ArchivedMember,
   ArchitectureType,
+  KnownArchitectureType,
+  StructureVisualProps,
   AuditMetadata,
   AuthKey,
   AuthKeyId,
@@ -407,7 +409,9 @@ describe("barrel exports", () => {
   it("exports structure types", () => {
     expectTypeOf<RelationshipType>().toBeString();
     expectTypeOf<Relationship>().toBeObject();
-    expectTypeOf<ArchitectureType>().toBeString();
+    expectTypeOf<ArchitectureType>().toBeObject();
+    expectTypeOf<KnownArchitectureType>().toBeString();
+    expectTypeOf<StructureVisualProps>().toBeObject();
     expectTypeOf<OriginType>().toBeString();
     expectTypeOf<DiscoveryStatus>().toBeString();
     expectTypeOf<LayerAccessType>().toBeString();

@@ -82,7 +82,7 @@ export interface InnerWorldRegion extends AuditMetadata {
   readonly visual: VisualProperties;
   readonly boundaryData: readonly { readonly x: number; readonly y: number }[];
   readonly accessType: "open" | "gatekept";
-  readonly gatekeeperMemberId: MemberId | null;
+  readonly gatekeeperMemberIds: readonly MemberId[];
 }
 
 /** The viewport state for the innerworld canvas. */

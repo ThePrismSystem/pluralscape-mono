@@ -174,16 +174,12 @@ describe("FrontingComment", () => {
     expectTypeOf<FrontingComment["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<FrontingComment["memberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<FrontingComment["content"]>().toBeString();
+  });
+
+  it("extends AuditMetadata", () => {
+    expectTypeOf<FrontingComment>().toExtend<AuditMetadata>();
     expectTypeOf<FrontingComment["createdAt"]>().toEqualTypeOf<UnixMillis>();
-  });
-
-  it("has exact shape", () => {
-    expectTypeOf<keyof FrontingComment>().toEqualTypeOf<
-      "id" | "frontingSessionId" | "systemId" | "memberId" | "content" | "createdAt"
-    >();
-  });
-
-  it("does not extend AuditMetadata", () => {
-    expectTypeOf<FrontingComment>().not.toExtend<AuditMetadata>();
+    expectTypeOf<FrontingComment["updatedAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<FrontingComment["version"]>().toEqualTypeOf<number>();
   });
 });

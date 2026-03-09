@@ -180,24 +180,34 @@ describe("Tag", () => {
     expectTypeOf(handleTag).toBeFunction();
   });
 
-  it("covers all 17 known tags", () => {
-    assertType<KnownTag>("protector");
-    assertType<KnownTag>("gatekeeper");
-    assertType<KnownTag>("caretaker");
-    assertType<KnownTag>("little");
-    assertType<KnownTag>("age-slider");
-    assertType<KnownTag>("trauma-holder");
-    assertType<KnownTag>("host");
-    assertType<KnownTag>("persecutor");
-    assertType<KnownTag>("mediator");
-    assertType<KnownTag>("anp");
-    assertType<KnownTag>("memory-holder");
-    assertType<KnownTag>("symptom-holder");
-    assertType<KnownTag>("middle");
-    assertType<KnownTag>("introject");
-    assertType<KnownTag>("fictive");
-    assertType<KnownTag>("factive");
-    assertType<KnownTag>("non-human");
+  it("is exhaustive over KnownTag in a switch", () => {
+    function handleKnown(tag: KnownTag): string {
+      switch (tag) {
+        case "protector":
+        case "gatekeeper":
+        case "caretaker":
+        case "little":
+        case "age-slider":
+        case "trauma-holder":
+        case "host":
+        case "persecutor":
+        case "mediator":
+        case "anp":
+        case "memory-holder":
+        case "symptom-holder":
+        case "middle":
+        case "introject":
+        case "fictive":
+        case "factive":
+        case "non-human":
+          return tag;
+        default: {
+          const _exhaustive: never = tag;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleKnown).toBeFunction();
   });
 
   it("rejects invalid known tags", () => {

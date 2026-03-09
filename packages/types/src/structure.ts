@@ -37,16 +37,20 @@ export interface Relationship {
   readonly createdAt: UnixMillis;
 }
 
-/** High-level architectural pattern of a system's internal structure. */
-export type ArchitectureType =
+/** Well-known architectural patterns for a system's internal structure. */
+export type KnownArchitectureType =
   | "orbital"
   | "spectrum"
   | "median"
   | "age-sliding"
   | "webbed"
   | "unknown"
-  | "fluid"
-  | "custom";
+  | "fluid";
+
+/** Architecture type — either a well-known pattern or a user-defined custom type. */
+export type ArchitectureType =
+  | { readonly kind: "known"; readonly type: KnownArchitectureType }
+  | { readonly kind: "custom"; readonly value: string };
 
 /** How a member or the system itself originated. */
 export type OriginType =
@@ -71,8 +75,15 @@ export interface SystemProfile {
 /** Whether a layer is freely accessible or requires a gatekeeper. */
 export type LayerAccessType = "open" | "gatekept";
 
+/** Shared visual properties for structure entities (subsystems, side systems, layers). */
+export interface StructureVisualProps {
+  readonly color: HexColor | null;
+  readonly imageSource: ImageSource | null;
+  readonly emoji: string | null;
+}
+
 /** A nested group within a system — can contain other subsystems recursively. */
-export interface Subsystem extends AuditMetadata {
+export interface Subsystem extends AuditMetadata, StructureVisualProps {
   readonly id: SubsystemId;
   readonly systemId: SystemId;
   readonly name: string;
@@ -81,43 +92,34 @@ export interface Subsystem extends AuditMetadata {
   readonly architectureType: ArchitectureType | null;
   readonly hasCore: boolean;
   readonly discoveryStatus: DiscoveryStatus;
-  readonly color: HexColor | null;
-  readonly imageSource: ImageSource | null;
-  readonly emoji: string | null;
 }
 
 /** A parallel group that exists alongside the main system — not nested. */
-export interface SideSystem extends AuditMetadata {
+export interface SideSystem extends AuditMetadata, StructureVisualProps {
   readonly id: SideSystemId;
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
-  readonly color: HexColor | null;
-  readonly imageSource: ImageSource | null;
-  readonly emoji: string | null;
 }
 
 /** Shared fields for all layer variants. */
-interface LayerBase extends AuditMetadata {
+interface LayerBase extends AuditMetadata, StructureVisualProps {
   readonly id: LayerId;
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
-  readonly color: HexColor | null;
-  readonly imageSource: ImageSource | null;
-  readonly emoji: string | null;
 }
 
 /** A freely accessible layer with no gatekeeper. */
 export interface OpenLayer extends LayerBase {
   readonly accessType: "open";
-  readonly gatekeeperMemberId: null;
+  readonly gatekeeperMemberIds: readonly [];
 }
 
-/** A gatekept layer requiring a specific member to grant access, or null if none assigned. */
+/** A gatekept layer — zero or more members can be assigned as gatekeepers. */
 export interface GatekeptLayer extends LayerBase {
   readonly accessType: "gatekept";
-  readonly gatekeeperMemberId: MemberId | null;
+  readonly gatekeeperMemberIds: readonly MemberId[];
 }
 
 /** A distinct layer or region within the system's internal landscape. */

@@ -35,6 +35,7 @@ import type {
   MessageId,
   NoteId,
   PollId,
+  PollOptionId,
   PollVoteId,
   RelationshipId,
   SideSystemId,
@@ -147,12 +148,11 @@ export type ClientFrontingSession = FrontingSession;
  * T1 encrypted: content
  * T3 plaintext: frontingSessionId, memberId
  */
-export interface ServerFrontingComment {
+export interface ServerFrontingComment extends AuditMetadata {
   readonly id: FrontingCommentId;
   readonly frontingSessionId: FrontingSessionId;
   readonly systemId: SystemId;
   readonly memberId: MemberId;
-  readonly createdAt: UnixMillis;
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -161,7 +161,7 @@ export type ClientFrontingComment = FrontingComment;
 
 /**
  * Server-side group representation.
- * T1 encrypted: name, description, imageRef, color, emoji
+ * T1 encrypted: name, description, imageSource, color, emoji
  * T3 plaintext: sortOrder, archived, parentGroupId
  */
 export interface ServerGroup extends AuditMetadata {
@@ -345,7 +345,7 @@ export interface ServerInnerWorldRegion extends AuditMetadata {
   readonly systemId: SystemId;
   readonly parentRegionId: InnerWorldRegionId | null;
   readonly accessType: "open" | "gatekept";
-  readonly gatekeeperMemberId: MemberId | null;
+  readonly gatekeeperMemberIds: readonly MemberId[];
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -475,7 +475,7 @@ export type ClientPoll = Poll;
 export interface ServerPollVote {
   readonly id: PollVoteId;
   readonly pollId: PollId;
-  readonly optionId: import("./ids.js").PollOptionId | null;
+  readonly optionId: PollOptionId | null;
   readonly voter: EntityReference<"member" | "subsystem" | "side-system" | "layer">;
   readonly isVeto: boolean;
   readonly votedAt: UnixMillis;
@@ -525,13 +525,13 @@ export type ClientSideSystem = SideSystem;
 /**
  * Server-side layer representation.
  * T1 encrypted: name, description, color, imageSource, emoji
- * T3 plaintext: accessType, gatekeeperMemberId
+ * T3 plaintext: accessType, gatekeeperMemberIds
  */
 export interface ServerLayer extends AuditMetadata {
   readonly id: LayerId;
   readonly systemId: SystemId;
   readonly accessType: "open" | "gatekept";
-  readonly gatekeeperMemberId: MemberId | null;
+  readonly gatekeeperMemberIds: readonly MemberId[];
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -592,8 +592,8 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 //
 // Member: T1 (name, pronouns, description, tags, colors, avatarSource, saturationLevel, suppressFriendFrontNotification, boardMessageNotificationOnFront) | T3 (archived)
 // FrontingSession: T1 (comment, positionality) | T3 (timestamps, memberId, frontingType, customFrontId, linkedStructure)
-// FrontingComment: T1 (content) | T3 (frontingSessionId, memberId)
-// Group: T1 (name, description, imageRef, color, emoji) | T3 (sortOrder, archived, parentGroupId)
+// FrontingComment: T1 (content) | T3 (frontingSessionId, memberId) — extends AuditMetadata
+// Group: T1 (name, description, imageSource, color, emoji) | T3 (sortOrder, archived, parentGroupId)
 // Subsystem: T1 (name, description, color, imageSource, emoji) | T3 (parentSubsystemId, architectureType, hasCore, discoveryStatus)
 // Relationship: T1 (label) | T3 (type, sourceMemberId, targetMemberId, bidirectional)
 // Channel: T1 (name) | T3 (type, parentId, sortOrder)
@@ -603,7 +603,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // FieldDefinition: T1 (name, description, options) | T3 (fieldType, required, sortOrder)
 // FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId)
 // InnerWorldEntity: T1 (linked entity refs, description, visual) | T3 (positionX/Y, regionId, entityType)
-// InnerWorldRegion: T1 (name, description, boundaryData, visual) | T3 (parentRegionId, accessType, gatekeeperMemberId)
+// InnerWorldRegion: T1 (name, description, boundaryData, visual) | T3 (parentRegionId, accessType, gatekeeperMemberIds)
 // LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
 // CustomFront: T1 (name, description, color, emoji) | T3 (archived)
 // JournalEntry: T1 (title, blocks, tags, linkedEntities) | T3 (author, frontingSessionId, archived)
@@ -613,7 +613,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // PollVote: T1 (comment) | T3 (pollId, optionId, voter, isVeto, votedAt)
 // AcknowledgementRequest: T1 (message) | T3 (createdByMemberId, targetMemberId, confirmed, confirmedAt)
 // SideSystem: T1 (name, description, color, imageSource, emoji) | T3 (none)
-// Layer: T1 (name, description, color, imageSource, emoji) | T3 (accessType, gatekeeperMemberId)
+// Layer: T1 (name, description, color, imageSource, emoji) | T3 (accessType, gatekeeperMemberIds)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
 // AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
 //

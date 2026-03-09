@@ -8,6 +8,7 @@ import type {
   ChatMessage,
   Note,
   Poll,
+  PollVote,
 } from "../communication.js";
 import type {
   BucketEncrypted,
@@ -65,12 +66,25 @@ import type {
   ServerSideSystem,
   ServerSubsystem,
   ServerTimerConfig,
+  ServerFrontingComment,
+  ClientFrontingComment,
+  ServerPollVote,
+  ClientPollVote,
   ServerWikiPage,
 } from "../encryption.js";
-import type { CustomFront, FrontingSession } from "../fronting.js";
+import type { CustomFront, FrontingComment, FrontingSession } from "../fronting.js";
 import type { Group } from "../groups.js";
 import type { Member, MemberPhoto } from "../identity.js";
-import type { BucketId, MemberId } from "../ids.js";
+import type {
+  BucketId,
+  FrontingCommentId,
+  FrontingSessionId,
+  MemberId,
+  PollId,
+  PollOptionId,
+  PollVoteId,
+  SystemId,
+} from "../ids.js";
 import type { JournalEntry, WikiPage } from "../journal.js";
 import type { LifecycleEvent } from "../lifecycle.js";
 import type { Layer, Relationship, SideSystem, Subsystem } from "../structure.js";
@@ -240,7 +254,7 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerLayer>().toBeObject();
     expectTypeOf<ServerLayer["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<ServerLayer["accessType"]>().toEqualTypeOf<"open" | "gatekept">();
-    expectTypeOf<ServerLayer["gatekeeperMemberId"]>().toEqualTypeOf<MemberId | null>();
+    expectTypeOf<ServerLayer["gatekeeperMemberIds"]>().toEqualTypeOf<readonly MemberId[]>();
     expectTypeOf<ClientLayer>().toEqualTypeOf<Layer>();
   });
 
@@ -260,6 +274,26 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerAuditLogEntry["ipAddress"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ServerAuditLogEntry["userAgent"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ClientAuditLogEntry>().toEqualTypeOf<AuditLogEntry>();
+  });
+
+  it("fronting comment pair", () => {
+    expectTypeOf<ServerFrontingComment>().toBeObject();
+    expectTypeOf<ServerFrontingComment["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
+    expectTypeOf<ServerFrontingComment["id"]>().toEqualTypeOf<FrontingCommentId>();
+    expectTypeOf<ServerFrontingComment["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
+    expectTypeOf<ServerFrontingComment["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<ServerFrontingComment["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<ClientFrontingComment>().toEqualTypeOf<FrontingComment>();
+  });
+
+  it("poll vote pair", () => {
+    expectTypeOf<ServerPollVote>().toBeObject();
+    expectTypeOf<ServerPollVote["encryptedData"]>().toEqualTypeOf<EncryptedBlob | null>();
+    expectTypeOf<ServerPollVote["id"]>().toEqualTypeOf<PollVoteId>();
+    expectTypeOf<ServerPollVote["pollId"]>().toEqualTypeOf<PollId>();
+    expectTypeOf<ServerPollVote["optionId"]>().toEqualTypeOf<PollOptionId | null>();
+    expectTypeOf<ServerPollVote["isVeto"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<ClientPollVote>().toEqualTypeOf<PollVote>();
   });
 
   it("channel pair", () => {

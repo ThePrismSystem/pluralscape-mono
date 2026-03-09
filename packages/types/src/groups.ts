@@ -1,4 +1,5 @@
-import type { BlobId, GroupId, HexColor, MemberId, SystemId } from "./ids.js";
+import type { GroupId, HexColor, MemberId, SystemId } from "./ids.js";
+import type { ImageSource } from "./image-source.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -9,7 +10,7 @@ export interface Group extends AuditMetadata {
   readonly name: string;
   readonly description: string | null;
   readonly parentGroupId: GroupId | null;
-  readonly imageRef: BlobId | null;
+  readonly imageSource: ImageSource | null;
   readonly color: HexColor | null;
   readonly emoji: string | null;
   readonly sortOrder: number;

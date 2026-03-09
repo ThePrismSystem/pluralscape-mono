@@ -14,6 +14,7 @@ import type {
   ArchitectureType,
   DiscoveryStatus,
   GatekeptLayer,
+  KnownArchitectureType,
   Layer,
   LayerAccessType,
   LayerMembership,
@@ -24,6 +25,7 @@ import type {
   SideSystem,
   SideSystemLayerLink,
   SideSystemMembership,
+  StructureVisualProps,
   Subsystem,
   SubsystemLayerLink,
   SubsystemMembership,
@@ -107,18 +109,13 @@ describe("Relationship", () => {
 });
 
 describe("ArchitectureType", () => {
-  it("is exhaustive in a switch", () => {
+  it("discriminates on kind field", () => {
     function handleType(type: ArchitectureType): string {
-      switch (type) {
-        case "orbital":
-        case "spectrum":
-        case "median":
-        case "age-sliding":
-        case "webbed":
-        case "unknown":
-        case "fluid":
+      switch (type.kind) {
+        case "known":
+          return type.type;
         case "custom":
-          return type;
+          return type.value;
         default: {
           const _exhaustive: never = type;
           return _exhaustive;
@@ -128,9 +125,44 @@ describe("ArchitectureType", () => {
     expectTypeOf(handleType).toBeFunction();
   });
 
-  it("rejects invalid values", () => {
+  it("is exhaustive over KnownArchitectureType in a switch", () => {
+    function handleKnown(type: KnownArchitectureType): string {
+      switch (type) {
+        case "orbital":
+        case "spectrum":
+        case "median":
+        case "age-sliding":
+        case "webbed":
+        case "unknown":
+        case "fluid":
+          return type;
+        default: {
+          const _exhaustive: never = type;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleKnown).toBeFunction();
+  });
+
+  it("accepts known architecture types", () => {
+    assertType<ArchitectureType>({
+      kind: "known" as const,
+      type: "orbital" as KnownArchitectureType,
+    });
+    assertType<ArchitectureType>({
+      kind: "known" as const,
+      type: "spectrum" as KnownArchitectureType,
+    });
+  });
+
+  it("accepts custom architecture types", () => {
+    assertType<ArchitectureType>({ kind: "custom" as const, value: "radial" });
+  });
+
+  it("rejects invalid known values", () => {
     // @ts-expect-error invalid architecture type
-    assertType<ArchitectureType>("layered");
+    assertType<KnownArchitectureType>("layered");
   });
 });
 
@@ -224,9 +256,25 @@ describe("LayerAccessType", () => {
   });
 });
 
+describe("StructureVisualProps", () => {
+  it("has exactly the expected keys", () => {
+    expectTypeOf<keyof StructureVisualProps>().toEqualTypeOf<"color" | "imageSource" | "emoji">();
+  });
+
+  it("has correct nullable field types", () => {
+    expectTypeOf<StructureVisualProps["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<StructureVisualProps["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<StructureVisualProps["emoji"]>().toEqualTypeOf<string | null>();
+  });
+});
+
 describe("Subsystem", () => {
   it("extends AuditMetadata", () => {
     expectTypeOf<Subsystem>().toExtend<AuditMetadata>();
+  });
+
+  it("extends StructureVisualProps", () => {
+    expectTypeOf<Subsystem>().toExtend<StructureVisualProps>();
   });
 
   it("has correct field types", () => {
@@ -252,6 +300,10 @@ describe("SideSystem", () => {
     expectTypeOf<SideSystem>().toExtend<AuditMetadata>();
   });
 
+  it("extends StructureVisualProps", () => {
+    expectTypeOf<SideSystem>().toExtend<StructureVisualProps>();
+  });
+
   it("has correct field types", () => {
     expectTypeOf<SideSystem["id"]>().toEqualTypeOf<SideSystemId>();
     expectTypeOf<SideSystem["systemId"]>().toEqualTypeOf<SystemId>();
@@ -273,10 +325,10 @@ describe("Layer", () => {
     function handleLayer(layer: Layer): void {
       if (layer.accessType === "open") {
         expectTypeOf(layer).toEqualTypeOf<OpenLayer>();
-        expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<null>();
+        expectTypeOf(layer.gatekeeperMemberIds).toEqualTypeOf<readonly []>();
       } else {
         expectTypeOf(layer).toEqualTypeOf<GatekeptLayer>();
-        expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<MemberId | null>();
+        expectTypeOf(layer.gatekeeperMemberIds).toEqualTypeOf<readonly MemberId[]>();
       }
     }
     expectTypeOf(handleLayer).toBeFunction();

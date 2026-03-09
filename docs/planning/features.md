@@ -91,7 +91,7 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
   - Layers (vertically stacked divisions with differing access rules, optionally gatekept)
   - Subsystem metadata: architecture type (orbital, spectrum, median, age-sliding, webbed, unknown, fluid, custom), has-core flag, discovery status (fully mapped vs still discovering)
   - Subsystems, side systems, and layers have visual properties: color, image source, and emoji
-  - Gatekept layers have an optional gatekeeper member (nullable)
+  - Gatekept layers have zero or more gatekeeper members (empty array if unassigned, multiple gatekeepers supported)
   - Cross-structure junctions: subsystem-layer links, subsystem-side-system links, side-system-layer links
   - Members belong to any level of nested structure
   - Subsystems/side systems can front independently (replaces SP workaround of custom fronts for "someone in subsystem X is fronting")
@@ -181,9 +181,9 @@ Nomenclature is a **UI display-layer concern only**. The API, database schema, a
   - **Internal space**: "Headspace" / "Innerworld" / custom
   - **Primary fronter**: "Host" / "Primary fronter" / "Main fronter" / custom (sensitive — "host" implies hierarchy)
   - **Structure**: "System Structure" / "Topology" / "Map" / custom
-  - **Dormancy**: "Dormancy" / "Inactivity" / "Sleep" / custom
-  - **Body**: "Body" / "Vessel" / "Meatsuit" / custom
-  - **Amnesia**: "Amnesia" / "Memory gaps" / "Blackouts" / custom
+  - **Dormancy**: "Dormancy" / "Resting" / "Inactive" / custom
+  - **Body**: "Body" / "Physical form" / "Vessel" / custom
+  - **Amnesia**: "Amnesia" / "Memory gap" / "Blackout" / custom
   - **Saturation**: "Saturation" / "Completeness" / "Elaboration" / custom
 - Stored per-system (each system chooses their own terms)
 

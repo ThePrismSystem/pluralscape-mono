@@ -130,7 +130,9 @@ export type {
 export type {
   RelationshipType,
   Relationship,
+  KnownArchitectureType,
   ArchitectureType,
+  StructureVisualProps,
   OriginType,
   DiscoveryStatus,
   SystemProfile,
