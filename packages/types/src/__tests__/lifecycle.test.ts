@@ -44,16 +44,14 @@ describe("FusionEvent", () => {
 describe("MergeEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<MergeEvent["eventType"]>().toEqualTypeOf<"merge">();
-    expectTypeOf<MergeEvent["sourceMemberIds"]>().toEqualTypeOf<readonly MemberId[]>();
-    expectTypeOf<MergeEvent["resultMemberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<MergeEvent["memberIds"]>().toEqualTypeOf<readonly MemberId[]>();
   });
 });
 
 describe("UnmergeEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<UnmergeEvent["eventType"]>().toEqualTypeOf<"unmerge">();
-    expectTypeOf<UnmergeEvent["sourceMemberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<UnmergeEvent["resultMemberIds"]>().toEqualTypeOf<readonly MemberId[]>();
+    expectTypeOf<UnmergeEvent["memberIds"]>().toEqualTypeOf<readonly MemberId[]>();
   });
 });
 
@@ -61,6 +59,7 @@ describe("DormancyStartEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<DormancyStartEvent["eventType"]>().toEqualTypeOf<"dormancy-start">();
     expectTypeOf<DormancyStartEvent["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<DormancyStartEvent["relatedEventId"]>().toEqualTypeOf<EventId | null>();
   });
 });
 
@@ -68,6 +67,7 @@ describe("DormancyEndEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<DormancyEndEvent["eventType"]>().toEqualTypeOf<"dormancy-end">();
     expectTypeOf<DormancyEndEvent["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<DormancyEndEvent["relatedEventId"]>().toEqualTypeOf<EventId | null>();
   });
 });
 
@@ -97,10 +97,10 @@ describe("LifecycleEvent discriminated union", () => {
           return event.resultMemberId;
         case "merge":
           expectTypeOf(event).toEqualTypeOf<MergeEvent>();
-          return event.resultMemberId;
+          return event.memberIds.join(",");
         case "unmerge":
           expectTypeOf(event).toEqualTypeOf<UnmergeEvent>();
-          return event.sourceMemberId;
+          return event.memberIds.join(",");
         case "dormancy-start":
           expectTypeOf(event).toEqualTypeOf<DormancyStartEvent>();
           return event.memberId;
