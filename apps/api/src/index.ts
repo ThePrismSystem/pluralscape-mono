@@ -18,5 +18,4 @@ Bun.serve({
   fetch: app.fetch,
 });
 
-// eslint-disable-next-line no-console -- startup log is intentional
-console.log(`Pluralscape API listening on port ${String(port)}`);
+console.info(`Pluralscape API listening on port ${String(port)}`);

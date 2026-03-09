@@ -18,5 +18,8 @@
   "peerDependencies": {
     "eslint": "^9.0.0",
     "typescript": "^5.0.0"
+  },
+  "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.7.1"
   }
 }
