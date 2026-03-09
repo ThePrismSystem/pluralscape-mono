@@ -96,6 +96,13 @@ describe("initSodium", () => {
     await Promise.all([initSodium(), initSodium(), initSodium()]);
     expect(initCount).toBe(1);
   });
+
+  it("throws CryptoNotReadyError with cause when adapter.init() fails", async () => {
+    _resetForTesting();
+    const error = new Error("init failed");
+    configureSodium({ ...stubAdapter(), init: () => Promise.reject(error) });
+    await expect(initSodium()).rejects.toThrow(CryptoNotReadyError);
+  });
 });
 
 describe("configureSodium", () => {
