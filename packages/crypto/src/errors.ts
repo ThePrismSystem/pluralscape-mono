@@ -2,8 +2,11 @@
 export class CryptoNotReadyError extends Error {
   override readonly name = "CryptoNotReadyError" as const;
 
-  constructor() {
-    super("Sodium is not initialized. Call initSodium() first.");
+  constructor(
+    message = "Sodium is not initialized. Call initSodium() first.",
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
   }
 }
 
@@ -11,9 +14,17 @@ export class CryptoNotReadyError extends Error {
 export class DecryptionFailedError extends Error {
   override readonly name = "DecryptionFailedError" as const;
 
-  constructor(message = "Decryption failed: ciphertext is invalid or key is wrong.") {
-    super(message);
+  constructor(
+    message = "Decryption failed: ciphertext is invalid or key is wrong.",
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
   }
+}
+
+/** Thrown when a cryptographic input has an invalid size or format. */
+export class InvalidInputError extends Error {
+  override readonly name = "InvalidInputError" as const;
 }
 
 /** Thrown when `configureSodium()` is called after initialization. */

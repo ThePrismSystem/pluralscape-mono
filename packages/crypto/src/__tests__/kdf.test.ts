@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
-import { KDF_KEY_BYTES } from "../constants.js";
+import { KDF_BYTES_MAX, KDF_BYTES_MIN, KDF_KEY_BYTES } from "../constants.js";
+import { InvalidInputError } from "../errors.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";
 
@@ -82,5 +83,33 @@ describe("kdfKeygen", () => {
     const a = adapter.kdfKeygen();
     const b = adapter.kdfKeygen();
     expect(a).not.toEqual(b);
+  });
+});
+
+describe("KDF input validation", () => {
+  it("throws InvalidInputError for context shorter than 8 chars", () => {
+    const masterKey = adapter.kdfKeygen();
+    expect(() => adapter.kdfDeriveFromKey(32, 1, "short", masterKey)).toThrow(InvalidInputError);
+  });
+
+  it("throws InvalidInputError for context longer than 8 chars", () => {
+    const masterKey = adapter.kdfKeygen();
+    expect(() => adapter.kdfDeriveFromKey(32, 1, "toolongctx", masterKey)).toThrow(
+      InvalidInputError,
+    );
+  });
+
+  it("throws InvalidInputError for subkey length below KDF_BYTES_MIN", () => {
+    const masterKey = adapter.kdfKeygen();
+    expect(() => adapter.kdfDeriveFromKey(KDF_BYTES_MIN - 1, 1, "testctx!", masterKey)).toThrow(
+      InvalidInputError,
+    );
+  });
+
+  it("throws InvalidInputError for subkey length above KDF_BYTES_MAX", () => {
+    const masterKey = adapter.kdfKeygen();
+    expect(() => adapter.kdfDeriveFromKey(KDF_BYTES_MAX + 1, 1, "testctx!", masterKey)).toThrow(
+      InvalidInputError,
+    );
   });
 });

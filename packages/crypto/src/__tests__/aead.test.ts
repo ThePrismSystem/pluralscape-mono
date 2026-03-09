@@ -99,6 +99,29 @@ describe("AEAD encrypt/decrypt", () => {
     const { nonce } = adapter.aeadEncrypt(toBytes("x"), null, key);
     expect(nonce.length).toBe(AEAD_NONCE_BYTES);
   });
+
+  it("encrypts and decrypts empty plaintext", () => {
+    const key = adapter.aeadKeygen();
+    const plaintext = new Uint8Array(0);
+
+    const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
+    const decrypted = adapter.aeadDecrypt(ciphertext, nonce, null, key);
+
+    expect(decrypted.length).toBe(0);
+  });
+
+  it("fails with wrong nonce", () => {
+    const key = adapter.aeadKeygen();
+    const plaintext = toBytes("nonce test");
+
+    const { ciphertext } = adapter.aeadEncrypt(plaintext, null, key);
+    // Use the nonce from a different encryption — correctly typed but wrong value
+    const { nonce: wrongNonce } = adapter.aeadEncrypt(toBytes("x"), null, key);
+
+    expect(() => adapter.aeadDecrypt(ciphertext, wrongNonce, null, key)).toThrow(
+      DecryptionFailedError,
+    );
+  });
 });
 
 describe("aeadKeygen", () => {

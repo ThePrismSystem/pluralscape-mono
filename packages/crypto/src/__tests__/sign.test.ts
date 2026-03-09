@@ -58,6 +58,18 @@ describe("Ed25519 sign/verify", () => {
     const signature = adapter.signDetached(toBytes("x"), kp.secretKey);
     expect(signature.length).toBe(SIGN_BYTES);
   });
+
+  it("returns false for flipped signature bytes", () => {
+    const kp = adapter.signKeypair();
+    const message = toBytes("flip test");
+    const signature = adapter.signDetached(message, kp.secretKey);
+
+    // Mutate in-place to keep branded type
+    signature[0] = (signature[0] ?? 0) ^ 0xff;
+
+    const valid = adapter.signVerifyDetached(signature, message, kp.publicKey);
+    expect(valid).toBe(false);
+  });
 });
 
 describe("signKeypair", () => {

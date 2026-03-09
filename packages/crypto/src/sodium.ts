@@ -4,6 +4,7 @@ import type { SodiumAdapter } from "./adapter/interface.js";
 
 let adapter: SodiumAdapter | null = null;
 let initialized = false;
+let initPromise: Promise<void> | null = null;
 
 /**
  * Set a custom adapter (e.g., ReactNativeSodiumAdapter) before initialization.
@@ -19,19 +20,41 @@ export function configureSodium(custom: SodiumAdapter): void {
 /**
  * Initialize the sodium adapter. Idempotent — safe to call multiple times.
  * If no adapter was configured via `configureSodium()`, defaults to WasmSodiumAdapter.
+ * Concurrent calls share the same initialization promise (no double-init).
  */
 export async function initSodium(): Promise<void> {
   if (initialized) {
     return;
   }
 
-  if (adapter === null) {
-    const { WasmSodiumAdapter } = await import("./adapter/wasm-adapter.js");
-    adapter = new WasmSodiumAdapter();
+  if (initPromise !== null) {
+    return initPromise;
   }
 
-  await adapter.init();
-  initialized = true;
+  initPromise = (async () => {
+    if (adapter === null) {
+      const { WasmSodiumAdapter } = await import("./adapter/wasm-adapter.js");
+      adapter = new WasmSodiumAdapter();
+    }
+    try {
+      // TS loses narrowing of module-level vars across await in closures,
+      // but adapter is guaranteed non-null after the above block
+      await adapter.init();
+    } catch (error) {
+      throw new CryptoNotReadyError(
+        "Failed to initialize sodium adapter. If running in React Native, " +
+          "call configureSodium(new ReactNativeSodiumAdapter()) before initSodium().",
+        { cause: error },
+      );
+    }
+    initialized = true;
+  })();
+
+  try {
+    await initPromise;
+  } finally {
+    initPromise = null;
+  }
 }
 
 /**
@@ -57,4 +80,5 @@ export function isReady(): boolean {
 export function _resetForTesting(): void {
   adapter = null;
   initialized = false;
+  initPromise = null;
 }

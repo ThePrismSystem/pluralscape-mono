@@ -4,6 +4,7 @@ import {
   AlreadyInitializedError,
   CryptoNotReadyError,
   DecryptionFailedError,
+  InvalidInputError,
   UnsupportedOperationError,
 } from "../errors.js";
 
@@ -22,6 +23,11 @@ describe("CryptoNotReadyError", () => {
     const error = new CryptoNotReadyError();
     expect(error.message).toContain("initSodium()");
   });
+
+  it("accepts a custom message", () => {
+    const error = new CryptoNotReadyError("custom init failure");
+    expect(error.message).toBe("custom init failure");
+  });
 });
 
 describe("DecryptionFailedError", () => {
@@ -38,6 +44,29 @@ describe("DecryptionFailedError", () => {
   it("accepts a custom message", () => {
     const error = new DecryptionFailedError("custom reason");
     expect(error.message).toBe("custom reason");
+  });
+
+  it("propagates cause via ErrorOptions", () => {
+    const original = new Error("libsodium internal error");
+    const error = new DecryptionFailedError(undefined, { cause: original });
+    expect(error.cause).toBe(original);
+  });
+});
+
+describe("InvalidInputError", () => {
+  it("has the correct name property", () => {
+    const error = new InvalidInputError("bad input");
+    expect(error.name).toBe("InvalidInputError");
+  });
+
+  it("is an instance of Error", () => {
+    const error = new InvalidInputError("bad input");
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  it("contains the provided message", () => {
+    const error = new InvalidInputError("key must be 32 bytes");
+    expect(error.message).toBe("key must be 32 bytes");
   });
 });
 

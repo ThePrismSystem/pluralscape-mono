@@ -22,6 +22,7 @@ import {
   SIGN_PUBLIC_KEY_BYTES,
   SIGN_SECRET_KEY_BYTES,
   SIGN_SEED_BYTES,
+  SODIUM_CONSTANTS,
 } from "../constants.js";
 
 describe("AEAD constants", () => {
@@ -115,5 +116,11 @@ describe("KDF constants", () => {
 
   it("maximum sub-key is 64 bytes", () => {
     expect(KDF_BYTES_MAX).toBe(64);
+  });
+});
+
+describe("SODIUM_CONSTANTS", () => {
+  it("is frozen", () => {
+    expect(Object.isFrozen(SODIUM_CONSTANTS)).toBe(true);
   });
 });

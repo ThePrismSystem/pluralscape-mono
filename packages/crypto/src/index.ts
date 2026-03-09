@@ -1,7 +1,22 @@
 // @pluralscape/crypto — libsodium encryption layer
 
 // ── Types ───────────────────────────────────────────────────────────
-export type { AeadResult, CryptoKeypair } from "./types.js";
+export type {
+  AeadKey,
+  AeadNonce,
+  AeadResult,
+  BoxKeypair,
+  BoxNonce,
+  BoxPublicKey,
+  BoxSecretKey,
+  CryptoKeypair,
+  KdfMasterKey,
+  PwhashSalt,
+  Signature,
+  SignKeypair,
+  SignPublicKey,
+  SignSecretKey,
+} from "./types.js";
 export type { SodiumAdapter, SodiumConstants } from "./adapter/interface.js";
 
 // ── Errors ──────────────────────────────────────────────────────────
@@ -9,6 +24,7 @@ export {
   AlreadyInitializedError,
   CryptoNotReadyError,
   DecryptionFailedError,
+  InvalidInputError,
   UnsupportedOperationError,
 } from "./errors.js";
 
@@ -35,11 +51,8 @@ export {
   SIGN_PUBLIC_KEY_BYTES,
   SIGN_SECRET_KEY_BYTES,
   SIGN_SEED_BYTES,
+  SODIUM_CONSTANTS,
 } from "./constants.js";
 
 // ── Sodium lifecycle ────────────────────────────────────────────────
 export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
-
-// ── Adapters ────────────────────────────────────────────────────────
-export { WasmSodiumAdapter } from "./adapter/wasm-adapter.js";
-export { ReactNativeSodiumAdapter } from "./adapter/react-native-adapter.js";

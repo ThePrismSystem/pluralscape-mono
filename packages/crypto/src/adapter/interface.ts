@@ -1,42 +1,24 @@
-import type { AeadResult, CryptoKeypair } from "../types.js";
+import type { SODIUM_CONSTANTS } from "../constants.js";
+import type {
+  AeadKey,
+  AeadNonce,
+  AeadResult,
+  BoxKeypair,
+  BoxNonce,
+  BoxPublicKey,
+  BoxSecretKey,
+  KdfMasterKey,
+  Signature,
+  SignKeypair,
+  SignPublicKey,
+  SignSecretKey,
+} from "../types.js";
 
-/**
- * Constant values exposed by a sodium adapter.
- * Must match the libsodium C library specifications.
- */
-export interface SodiumConstants {
-  readonly AEAD_KEY_BYTES: number;
-  readonly AEAD_NONCE_BYTES: number;
-  readonly AEAD_TAG_BYTES: number;
-
-  readonly BOX_PUBLIC_KEY_BYTES: number;
-  readonly BOX_SECRET_KEY_BYTES: number;
-  readonly BOX_NONCE_BYTES: number;
-  readonly BOX_MAC_BYTES: number;
-  readonly BOX_SEED_BYTES: number;
-
-  readonly SIGN_PUBLIC_KEY_BYTES: number;
-  readonly SIGN_SECRET_KEY_BYTES: number;
-  readonly SIGN_BYTES: number;
-  readonly SIGN_SEED_BYTES: number;
-
-  readonly PWHASH_SALT_BYTES: number;
-  readonly PWHASH_OPSLIMIT_INTERACTIVE: number;
-  readonly PWHASH_MEMLIMIT_INTERACTIVE: number;
-  readonly PWHASH_OPSLIMIT_MODERATE: number;
-  readonly PWHASH_MEMLIMIT_MODERATE: number;
-
-  readonly KDF_KEY_BYTES: number;
-  readonly KDF_CONTEXT_BYTES: number;
-  readonly KDF_BYTES_MIN: number;
-  readonly KDF_BYTES_MAX: number;
-}
+/** Constant values exposed by a sodium adapter. */
+export type SodiumConstants = typeof SODIUM_CONSTANTS;
 
 /**
  * Platform-agnostic interface for libsodium operations.
- *
- * Mirrors libsodium's native parameter signatures. Higher-level ergonomic
- * wrappers (auto-nonce generation, branded types) are downstream tasks.
  *
  * Implementations:
  * - WasmSodiumAdapter: libsodium-wrappers-sumo (Bun/Node/Web)
@@ -52,66 +34,65 @@ export interface SodiumAdapter {
   /** Constant values from the underlying library. */
   readonly constants: SodiumConstants;
 
+  /** Whether the adapter uses cryptographically secure memzero. */
+  readonly supportsSecureMemzero: boolean;
+
   // ── AEAD (XChaCha20-Poly1305 IETF) ────────────────────────────────
 
   /** Encrypt plaintext with AEAD. Generates a random nonce. */
-  aeadEncrypt(
-    plaintext: Uint8Array,
-    additionalData: Uint8Array | null,
-    key: Uint8Array,
-  ): AeadResult;
+  aeadEncrypt(plaintext: Uint8Array, additionalData: Uint8Array | null, key: AeadKey): AeadResult;
 
   /** Decrypt AEAD ciphertext. Throws DecryptionFailedError on failure. */
   aeadDecrypt(
     ciphertext: Uint8Array,
-    nonce: Uint8Array,
+    nonce: AeadNonce,
     additionalData: Uint8Array | null,
-    key: Uint8Array,
+    key: AeadKey,
   ): Uint8Array;
 
   /** Generate a random AEAD key. */
-  aeadKeygen(): Uint8Array;
+  aeadKeygen(): AeadKey;
 
   // ── Box (X25519 + XSalsa20-Poly1305) ──────────────────────────────
 
   /** Generate a random X25519 keypair. */
-  boxKeypair(): CryptoKeypair;
+  boxKeypair(): BoxKeypair;
 
   /** Derive an X25519 keypair from a 32-byte seed. */
-  boxSeedKeypair(seed: Uint8Array): CryptoKeypair;
+  boxSeedKeypair(seed: Uint8Array): BoxKeypair;
 
   /** Encrypt a message for a recipient using their public key. */
   boxEasy(
     plaintext: Uint8Array,
-    nonce: Uint8Array,
-    recipientPublicKey: Uint8Array,
-    senderSecretKey: Uint8Array,
+    nonce: BoxNonce,
+    recipientPublicKey: BoxPublicKey,
+    senderSecretKey: BoxSecretKey,
   ): Uint8Array;
 
   /** Decrypt a box ciphertext. Throws DecryptionFailedError on failure. */
   boxOpenEasy(
     ciphertext: Uint8Array,
-    nonce: Uint8Array,
-    senderPublicKey: Uint8Array,
-    recipientSecretKey: Uint8Array,
+    nonce: BoxNonce,
+    senderPublicKey: BoxPublicKey,
+    recipientSecretKey: BoxSecretKey,
   ): Uint8Array;
 
   // ── Sign (Ed25519) ────────────────────────────────────────────────
 
   /** Generate a random Ed25519 keypair. */
-  signKeypair(): CryptoKeypair;
+  signKeypair(): SignKeypair;
 
   /**
    * Derive an Ed25519 keypair from a 32-byte seed.
    * Not available on React Native — throws UnsupportedOperationError.
    */
-  signSeedKeypair(seed: Uint8Array): CryptoKeypair;
+  signSeedKeypair(seed: Uint8Array): SignKeypair;
 
   /** Create a detached Ed25519 signature. */
-  signDetached(message: Uint8Array, secretKey: Uint8Array): Uint8Array;
+  signDetached(message: Uint8Array, secretKey: SignSecretKey): Signature;
 
   /** Verify a detached Ed25519 signature. Returns true if valid. */
-  signVerifyDetached(signature: Uint8Array, message: Uint8Array, publicKey: Uint8Array): boolean;
+  signVerifyDetached(signature: Signature, message: Uint8Array, publicKey: SignPublicKey): boolean;
 
   // ── Password Hashing (Argon2id) ───────────────────────────────────
 
@@ -131,11 +112,11 @@ export interface SodiumAdapter {
     subkeyLength: number,
     subkeyId: number,
     context: string,
-    masterKey: Uint8Array,
+    masterKey: KdfMasterKey,
   ): Uint8Array;
 
   /** Generate a random KDF master key. */
-  kdfKeygen(): Uint8Array;
+  kdfKeygen(): KdfMasterKey;
 
   // ── Random ────────────────────────────────────────────────────────
 

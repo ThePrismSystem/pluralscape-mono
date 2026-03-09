@@ -10,32 +10,42 @@
  *
  * @see https://github.com/nicolo-ribaudo/react-native-libsodium
  */
+import { AEAD_NONCE_BYTES, SODIUM_CONSTANTS } from "../constants.js";
 import {
-  AEAD_KEY_BYTES,
-  AEAD_NONCE_BYTES,
-  AEAD_TAG_BYTES,
-  BOX_MAC_BYTES,
-  BOX_NONCE_BYTES,
-  BOX_PUBLIC_KEY_BYTES,
-  BOX_SECRET_KEY_BYTES,
-  BOX_SEED_BYTES,
-  KDF_BYTES_MAX,
-  KDF_BYTES_MIN,
-  KDF_CONTEXT_BYTES,
-  KDF_KEY_BYTES,
-  PWHASH_MEMLIMIT_INTERACTIVE,
-  PWHASH_MEMLIMIT_MODERATE,
-  PWHASH_OPSLIMIT_INTERACTIVE,
-  PWHASH_OPSLIMIT_MODERATE,
-  PWHASH_SALT_BYTES,
-  SIGN_BYTES,
-  SIGN_PUBLIC_KEY_BYTES,
-  SIGN_SECRET_KEY_BYTES,
-  SIGN_SEED_BYTES,
-} from "../constants.js";
-import { DecryptionFailedError, UnsupportedOperationError } from "../errors.js";
+  CryptoNotReadyError,
+  DecryptionFailedError,
+  UnsupportedOperationError,
+} from "../errors.js";
+import {
+  assertAeadKey,
+  assertAeadNonce,
+  assertBoxNonce,
+  assertBoxPublicKey,
+  assertBoxSecretKey,
+  assertBoxSeed,
+  assertKdfContext,
+  assertKdfMasterKey,
+  assertKdfSubkeyLength,
+  assertPwhashSalt,
+  assertSignPublicKey,
+  assertSignSecretKey,
+  assertSignature,
+} from "../validation.js";
 
-import type { AeadResult, CryptoKeypair } from "../types.js";
+import type {
+  AeadKey,
+  AeadNonce,
+  AeadResult,
+  BoxKeypair,
+  BoxNonce,
+  BoxPublicKey,
+  BoxSecretKey,
+  KdfMasterKey,
+  Signature,
+  SignKeypair,
+  SignPublicKey,
+  SignSecretKey,
+} from "../types.js";
 import type { SodiumAdapter, SodiumConstants } from "./interface.js";
 
 // react-native-libsodium is a peer dependency — only available in RN environments
@@ -44,29 +54,8 @@ type RNSodium = typeof import("react-native-libsodium");
 export class ReactNativeSodiumAdapter implements SodiumAdapter {
   private sodium: RNSodium | null = null;
 
-  readonly constants: SodiumConstants = {
-    AEAD_KEY_BYTES,
-    AEAD_NONCE_BYTES,
-    AEAD_TAG_BYTES,
-    BOX_PUBLIC_KEY_BYTES,
-    BOX_SECRET_KEY_BYTES,
-    BOX_NONCE_BYTES,
-    BOX_MAC_BYTES,
-    BOX_SEED_BYTES,
-    SIGN_PUBLIC_KEY_BYTES,
-    SIGN_SECRET_KEY_BYTES,
-    SIGN_BYTES,
-    SIGN_SEED_BYTES,
-    PWHASH_SALT_BYTES,
-    PWHASH_OPSLIMIT_INTERACTIVE,
-    PWHASH_MEMLIMIT_INTERACTIVE,
-    PWHASH_OPSLIMIT_MODERATE,
-    PWHASH_MEMLIMIT_MODERATE,
-    KDF_KEY_BYTES,
-    KDF_CONTEXT_BYTES,
-    KDF_BYTES_MIN,
-    KDF_BYTES_MAX,
-  };
+  readonly constants: SodiumConstants = SODIUM_CONSTANTS;
+  readonly supportsSecureMemzero = false;
 
   async init(): Promise<void> {
     if (this.sodium !== null) {
@@ -86,23 +75,20 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
 
   private lib(): RNSodium {
     if (this.sodium === null) {
-      throw new Error("ReactNativeSodiumAdapter not initialized. Call init() first.");
+      throw new CryptoNotReadyError("ReactNativeSodiumAdapter not initialized. Call init() first.");
     }
     return this.sodium;
   }
 
   // ── AEAD ──────────────────────────────────────────────────────────
 
-  aeadEncrypt(
-    plaintext: Uint8Array,
-    additionalData: Uint8Array | null,
-    key: Uint8Array,
-  ): AeadResult {
+  aeadEncrypt(plaintext: Uint8Array, additionalData: Uint8Array | null, key: AeadKey): AeadResult {
+    assertAeadKey(key);
     const sodium = this.lib();
-    const nonce = sodium.randombytes_buf(AEAD_NONCE_BYTES);
+    const nonce = sodium.randombytes_buf(AEAD_NONCE_BYTES) as AeadNonce;
     const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
       plaintext,
-      additionalData ?? "",
+      additionalData,
       null,
       nonce,
       key,
@@ -112,73 +98,82 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
 
   aeadDecrypt(
     ciphertext: Uint8Array,
-    nonce: Uint8Array,
+    nonce: AeadNonce,
     additionalData: Uint8Array | null,
-    key: Uint8Array,
+    key: AeadKey,
   ): Uint8Array {
+    assertAeadNonce(nonce);
+    assertAeadKey(key);
     const sodium = this.lib();
     try {
       return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
         null,
         ciphertext,
-        additionalData ?? "",
+        additionalData,
         nonce,
         key,
       );
-    } catch {
-      throw new DecryptionFailedError();
+    } catch (error) {
+      throw new DecryptionFailedError(undefined, { cause: error });
     }
   }
 
-  aeadKeygen(): Uint8Array {
+  aeadKeygen(): AeadKey {
     const sodium = this.lib();
-    return sodium.crypto_aead_xchacha20poly1305_ietf_keygen();
+    return sodium.crypto_aead_xchacha20poly1305_ietf_keygen() as AeadKey;
   }
 
   // ── Box ───────────────────────────────────────────────────────────
 
-  boxKeypair(): CryptoKeypair {
+  boxKeypair(): BoxKeypair {
     const sodium = this.lib();
     const kp = sodium.crypto_box_keypair();
-    return { publicKey: kp.publicKey, secretKey: kp.privateKey };
+    return { publicKey: kp.publicKey as BoxPublicKey, secretKey: kp.privateKey as BoxSecretKey };
   }
 
-  boxSeedKeypair(seed: Uint8Array): CryptoKeypair {
+  boxSeedKeypair(seed: Uint8Array): BoxKeypair {
+    assertBoxSeed(seed);
     const sodium = this.lib();
     const kp = sodium.crypto_box_seed_keypair(seed);
-    return { publicKey: kp.publicKey, secretKey: kp.privateKey };
+    return { publicKey: kp.publicKey as BoxPublicKey, secretKey: kp.privateKey as BoxSecretKey };
   }
 
   boxEasy(
     plaintext: Uint8Array,
-    nonce: Uint8Array,
-    recipientPublicKey: Uint8Array,
-    senderSecretKey: Uint8Array,
+    nonce: BoxNonce,
+    recipientPublicKey: BoxPublicKey,
+    senderSecretKey: BoxSecretKey,
   ): Uint8Array {
+    assertBoxNonce(nonce);
+    assertBoxPublicKey(recipientPublicKey);
+    assertBoxSecretKey(senderSecretKey);
     const sodium = this.lib();
     return sodium.crypto_box_easy(plaintext, nonce, recipientPublicKey, senderSecretKey);
   }
 
   boxOpenEasy(
     ciphertext: Uint8Array,
-    nonce: Uint8Array,
-    senderPublicKey: Uint8Array,
-    recipientSecretKey: Uint8Array,
+    nonce: BoxNonce,
+    senderPublicKey: BoxPublicKey,
+    recipientSecretKey: BoxSecretKey,
   ): Uint8Array {
+    assertBoxNonce(nonce);
+    assertBoxPublicKey(senderPublicKey);
+    assertBoxSecretKey(recipientSecretKey);
     const sodium = this.lib();
     try {
       return sodium.crypto_box_open_easy(ciphertext, nonce, senderPublicKey, recipientSecretKey);
-    } catch {
-      throw new DecryptionFailedError();
+    } catch (error) {
+      throw new DecryptionFailedError(undefined, { cause: error });
     }
   }
 
   // ── Sign ──────────────────────────────────────────────────────────
 
-  signKeypair(): CryptoKeypair {
+  signKeypair(): SignKeypair {
     const sodium = this.lib();
     const kp = sodium.crypto_sign_keypair();
-    return { publicKey: kp.publicKey, secretKey: kp.privateKey };
+    return { publicKey: kp.publicKey as SignPublicKey, secretKey: kp.privateKey as SignSecretKey };
   }
 
   /**
@@ -186,18 +181,25 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
    * crypto_sign_seed_keypair. Use KDF to derive seed material and store the
    * full keypair instead.
    */
-  signSeedKeypair(): CryptoKeypair {
+  signSeedKeypair(): SignKeypair {
     throw new UnsupportedOperationError("signSeedKeypair", "react-native");
   }
 
-  signDetached(message: Uint8Array, secretKey: Uint8Array): Uint8Array {
+  signDetached(message: Uint8Array, secretKey: SignSecretKey): Signature {
+    assertSignSecretKey(secretKey);
     const sodium = this.lib();
-    return sodium.crypto_sign_detached(message, secretKey);
+    return sodium.crypto_sign_detached(message, secretKey) as Signature;
   }
 
-  signVerifyDetached(signature: Uint8Array, message: Uint8Array, publicKey: Uint8Array): boolean {
+  signVerifyDetached(signature: Signature, message: Uint8Array, publicKey: SignPublicKey): boolean {
+    assertSignature(signature);
+    assertSignPublicKey(publicKey);
     const sodium = this.lib();
-    return sodium.crypto_sign_verify_detached(signature, message, publicKey);
+    try {
+      return sodium.crypto_sign_verify_detached(signature, message, publicKey);
+    } catch {
+      return false;
+    }
   }
 
   // ── Pwhash ────────────────────────────────────────────────────────
@@ -209,6 +211,7 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
     opsLimit: number,
     memLimit: number,
   ): Uint8Array {
+    assertPwhashSalt(salt);
     const sodium = this.lib();
     return sodium.crypto_pwhash(
       keyLength,
@@ -226,15 +229,18 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
     subkeyLength: number,
     subkeyId: number,
     context: string,
-    masterKey: Uint8Array,
+    masterKey: KdfMasterKey,
   ): Uint8Array {
+    assertKdfSubkeyLength(subkeyLength);
+    assertKdfContext(context);
+    assertKdfMasterKey(masterKey);
     const sodium = this.lib();
     return sodium.crypto_kdf_derive_from_key(subkeyLength, subkeyId, context, masterKey);
   }
 
-  kdfKeygen(): Uint8Array {
+  kdfKeygen(): KdfMasterKey {
     const sodium = this.lib();
-    return sodium.crypto_kdf_keygen();
+    return sodium.crypto_kdf_keygen() as KdfMasterKey;
   }
 
   // ── Random ────────────────────────────────────────────────────────

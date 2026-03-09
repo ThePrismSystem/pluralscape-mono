@@ -10,6 +10,7 @@ import {
 import { DecryptionFailedError } from "../errors.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";
+import type { BoxNonce } from "../types.js";
 
 let adapter: SodiumAdapter;
 
@@ -19,6 +20,10 @@ function toBytes(s: string): Uint8Array {
 
 function fromBytes(b: Uint8Array): string {
   return String.fromCharCode(...b);
+}
+
+function randomNonce(): BoxNonce {
+  return adapter.randomBytes(BOX_NONCE_BYTES) as BoxNonce;
 }
 
 beforeAll(async () => {
@@ -34,7 +39,7 @@ describe("crypto_box roundtrip", () => {
   it("encrypts and decrypts between two keypairs", () => {
     const alice = adapter.boxKeypair();
     const bob = adapter.boxKeypair();
-    const nonce = adapter.randomBytes(BOX_NONCE_BYTES);
+    const nonce = randomNonce();
     const plaintext = toBytes("hello bob");
 
     const ciphertext = adapter.boxEasy(plaintext, nonce, bob.publicKey, alice.secretKey);
@@ -47,7 +52,7 @@ describe("crypto_box roundtrip", () => {
     const alice = adapter.boxKeypair();
     const bob = adapter.boxKeypair();
     const eve = adapter.boxKeypair();
-    const nonce = adapter.randomBytes(BOX_NONCE_BYTES);
+    const nonce = randomNonce();
     const plaintext = toBytes("not for eve");
 
     const ciphertext = adapter.boxEasy(plaintext, nonce, bob.publicKey, alice.secretKey);
@@ -61,7 +66,7 @@ describe("crypto_box roundtrip", () => {
     const alice = adapter.boxKeypair();
     const bob = adapter.boxKeypair();
     const eve = adapter.boxKeypair();
-    const nonce = adapter.randomBytes(BOX_NONCE_BYTES);
+    const nonce = randomNonce();
     const plaintext = toBytes("impersonation attempt");
 
     const ciphertext = adapter.boxEasy(plaintext, nonce, bob.publicKey, alice.secretKey);
@@ -74,12 +79,27 @@ describe("crypto_box roundtrip", () => {
   it("produces ciphertext with MAC overhead", () => {
     const alice = adapter.boxKeypair();
     const bob = adapter.boxKeypair();
-    const nonce = adapter.randomBytes(BOX_NONCE_BYTES);
+    const nonce = randomNonce();
     const plaintext = toBytes("measure");
 
     const ciphertext = adapter.boxEasy(plaintext, nonce, bob.publicKey, alice.secretKey);
 
     expect(ciphertext.length).toBe(plaintext.length + BOX_MAC_BYTES);
+  });
+
+  it("detects tampered ciphertext", () => {
+    const alice = adapter.boxKeypair();
+    const bob = adapter.boxKeypair();
+    const nonce = randomNonce();
+    const plaintext = toBytes("tamper test");
+
+    const ciphertext = adapter.boxEasy(plaintext, nonce, bob.publicKey, alice.secretKey);
+    const tampered = new Uint8Array(ciphertext);
+    tampered[0] = (tampered[0] ?? 0) ^ 0xff;
+
+    expect(() => adapter.boxOpenEasy(tampered, nonce, alice.publicKey, bob.secretKey)).toThrow(
+      DecryptionFailedError,
+    );
   });
 });
 

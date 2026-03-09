@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { SODIUM_CONSTANTS } from "../constants.js";
 import { AlreadyInitializedError, CryptoNotReadyError } from "../errors.js";
 import { _resetForTesting, configureSodium, getSodium, initSodium, isReady } from "../sodium.js";
 
@@ -12,29 +13,8 @@ function stubAdapter(overrides: Partial<SodiumAdapter> = {}): SodiumAdapter {
   return {
     init: () => Promise.resolve(),
     isReady: () => true,
-    constants: {
-      AEAD_KEY_BYTES: 0,
-      AEAD_NONCE_BYTES: 0,
-      AEAD_TAG_BYTES: 0,
-      BOX_PUBLIC_KEY_BYTES: 0,
-      BOX_SECRET_KEY_BYTES: 0,
-      BOX_NONCE_BYTES: 0,
-      BOX_MAC_BYTES: 0,
-      BOX_SEED_BYTES: 0,
-      SIGN_PUBLIC_KEY_BYTES: 0,
-      SIGN_SECRET_KEY_BYTES: 0,
-      SIGN_BYTES: 0,
-      SIGN_SEED_BYTES: 0,
-      PWHASH_SALT_BYTES: 0,
-      PWHASH_OPSLIMIT_INTERACTIVE: 0,
-      PWHASH_MEMLIMIT_INTERACTIVE: 0,
-      PWHASH_OPSLIMIT_MODERATE: 0,
-      PWHASH_MEMLIMIT_MODERATE: 0,
-      KDF_KEY_BYTES: 0,
-      KDF_CONTEXT_BYTES: 0,
-      KDF_BYTES_MIN: 0,
-      KDF_BYTES_MAX: 0,
-    },
+    constants: SODIUM_CONSTANTS,
+    supportsSecureMemzero: true,
     aeadEncrypt: noop,
     aeadDecrypt: noop,
     aeadKeygen: noop,
@@ -94,6 +74,27 @@ describe("initSodium", () => {
     await initSodium();
     const sodium = getSodium();
     expect(sodium.constants.AEAD_KEY_BYTES).toBe(32);
+  });
+
+  it("concurrent initSodium() calls resolve safely", async () => {
+    const results = await Promise.all([initSodium(), initSodium(), initSodium()]);
+    expect(results).toHaveLength(3);
+    expect(isReady()).toBe(true);
+  });
+
+  it("adapter.init() called only once with concurrent calls", async () => {
+    let initCount = 0;
+    const mock = stubAdapter({
+      init: async () => {
+        initCount++;
+        // Simulate async work — yield microtask
+        await Promise.resolve();
+      },
+    });
+    configureSodium(mock);
+
+    await Promise.all([initSodium(), initSodium(), initSodium()]);
+    expect(initCount).toBe(1);
   });
 });
 
