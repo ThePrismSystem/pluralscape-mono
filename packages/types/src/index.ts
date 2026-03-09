@@ -44,6 +44,7 @@ export type {
   PollOptionId,
   MemberPhotoId,
   SwitchId,
+  HexColor,
   EntityType,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
@@ -88,6 +89,7 @@ export type {
   FrontingSession,
   Switch,
   CustomFront,
+  ArchivedCustomFront,
   CoFrontState,
 } from "./fronting.js";
 
@@ -114,10 +116,18 @@ export type {
   Subsystem,
   SideSystem,
   Layer,
+  OpenLayer,
+  GatekeptLayer,
   SubsystemMembership,
   SideSystemMembership,
   LayerMembership,
 } from "./structure.js";
 
 // ── Groups ─────────────────────────────────────────────────────────
-export type { Group, GroupMembership, GroupTree, GroupMoveOperation } from "./groups.js";
+export type {
+  Group,
+  ArchivedGroup,
+  GroupMembership,
+  GroupTree,
+  GroupMoveOperation,
+} from "./groups.js";

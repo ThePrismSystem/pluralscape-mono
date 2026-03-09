@@ -50,6 +50,7 @@ export type SystemSettingsId = Brand<string, "SystemSettingsId">;
 export type PollOptionId = Brand<string, "PollOptionId">;
 export type MemberPhotoId = Brand<string, "MemberPhotoId">;
 export type SwitchId = Brand<string, "SwitchId">;
+export type HexColor = Brand<string, "HexColor">;
 
 // ── ID prefix convention ────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import type { BlobId, GroupId, MemberId, SystemId } from "./ids.js";
+import type { BlobId, GroupId, HexColor, MemberId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -10,12 +10,17 @@ export interface Group extends AuditMetadata {
   readonly description: string | null;
   readonly parentGroupId: GroupId | null;
   readonly imageRef: BlobId | null;
-  readonly color: string | null;
+  readonly color: HexColor | null;
   readonly emoji: string | null;
   readonly sortOrder: number;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
+  readonly archived: false;
 }
+
+/** An archived group — preserves all data with archive metadata. */
+export type ArchivedGroup = Omit<Group, "archived"> & {
+  readonly archived: true;
+  readonly archivedAt: UnixMillis;
+};
 
 /** Junction linking a member to a group. */
 export interface GroupMembership {

@@ -1,7 +1,13 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { Group, GroupMembership, GroupMoveOperation, GroupTree } from "../groups.js";
-import type { BlobId, GroupId, MemberId, SystemId } from "../ids.js";
+import type {
+  ArchivedGroup,
+  Group,
+  GroupMembership,
+  GroupMoveOperation,
+  GroupTree,
+} from "../groups.js";
+import type { BlobId, GroupId, HexColor, MemberId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 
@@ -17,14 +23,29 @@ describe("Group", () => {
     expectTypeOf<Group["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Group["parentGroupId"]>().toEqualTypeOf<GroupId | null>();
     expectTypeOf<Group["imageRef"]>().toEqualTypeOf<BlobId | null>();
-    expectTypeOf<Group["color"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Group["color"]>().toEqualTypeOf<HexColor | null>();
     expectTypeOf<Group["emoji"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Group["sortOrder"]>().toEqualTypeOf<number>();
   });
 
-  it("has archived as boolean and nullable archivedAt", () => {
-    expectTypeOf<Group["archived"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<Group["archivedAt"]>().toEqualTypeOf<UnixMillis | null>();
+  it("has archived as false literal", () => {
+    expectTypeOf<Group["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedGroup", () => {
+  it("has all Group fields except archived", () => {
+    expectTypeOf<ArchivedGroup["id"]>().toEqualTypeOf<GroupId>();
+    expectTypeOf<ArchivedGroup["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<ArchivedGroup["name"]>().toBeString();
+  });
+
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedGroup["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedGroup["archivedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });
 
@@ -53,5 +74,11 @@ describe("GroupMoveOperation", () => {
 
   it("has nullable targetParentGroupId", () => {
     expectTypeOf<GroupMoveOperation["targetParentGroupId"]>().toEqualTypeOf<GroupId | null>();
+  });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof GroupMoveOperation>().toEqualTypeOf<
+      "sourceGroupId" | "targetParentGroupId"
+    >();
   });
 });

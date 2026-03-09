@@ -23,6 +23,7 @@ import type {
   FriendConnectionId,
   FrontingSessionId,
   GroupId,
+  HexColor,
   InnerWorldEntityId,
   InnerWorldRegionId,
   JournalEntryId,
@@ -129,6 +130,23 @@ describe("branded ID types", () => {
     expectTypeOf<PollOptionId>().toExtend<string>();
     expectTypeOf<MemberPhotoId>().toExtend<string>();
     expectTypeOf<SwitchId>().toExtend<string>();
+    expectTypeOf<HexColor>().toExtend<string>();
+  });
+});
+
+describe("HexColor", () => {
+  it("is a branded string", () => {
+    expectTypeOf<HexColor>().toExtend<string>();
+  });
+
+  it("is not assignable from plain string", () => {
+    // @ts-expect-error plain string not assignable to branded HexColor
+    assertType<HexColor>("#ff0000");
+  });
+
+  it("is not interchangeable with other branded types", () => {
+    // @ts-expect-error HexColor not assignable to SystemId
+    expectTypeOf<HexColor>().toEqualTypeOf<SystemId>();
   });
 });
 

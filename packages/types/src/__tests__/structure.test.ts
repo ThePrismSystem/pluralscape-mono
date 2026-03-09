@@ -11,9 +11,11 @@ import type {
 import type {
   ArchitectureType,
   DiscoveryStatus,
+  GatekeptLayer,
   Layer,
   LayerAccessType,
   LayerMembership,
+  OpenLayer,
   OriginType,
   Relationship,
   RelationshipType,
@@ -80,7 +82,21 @@ describe("Relationship", () => {
     expectTypeOf<Relationship["targetMemberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<Relationship["type"]>().toEqualTypeOf<RelationshipType>();
     expectTypeOf<Relationship["label"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Relationship["bidirectional"]>().toEqualTypeOf<boolean>();
     expectTypeOf<Relationship["createdAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof Relationship>().toEqualTypeOf<
+      | "id"
+      | "systemId"
+      | "sourceMemberId"
+      | "targetMemberId"
+      | "type"
+      | "label"
+      | "bidirectional"
+      | "createdAt"
+    >();
   });
 });
 
@@ -100,6 +116,11 @@ describe("ArchitectureType", () => {
       }
     }
     expectTypeOf(handleType).toBeFunction();
+  });
+
+  it("rejects invalid values", () => {
+    // @ts-expect-error invalid architecture type
+    assertType<ArchitectureType>("layered");
   });
 });
 
@@ -122,6 +143,11 @@ describe("OriginType", () => {
     }
     expectTypeOf(handleType).toBeFunction();
   });
+
+  it("rejects invalid values", () => {
+    // @ts-expect-error invalid origin type
+    assertType<OriginType>("iatrogenic");
+  });
 });
 
 describe("DiscoveryStatus", () => {
@@ -140,6 +166,11 @@ describe("DiscoveryStatus", () => {
     }
     expectTypeOf(handleStatus).toBeFunction();
   });
+
+  it("rejects invalid values", () => {
+    // @ts-expect-error invalid discovery status
+    assertType<DiscoveryStatus>("in-progress");
+  });
 });
 
 describe("LayerAccessType", () => {
@@ -156,6 +187,11 @@ describe("LayerAccessType", () => {
       }
     }
     expectTypeOf(handleType).toBeFunction();
+  });
+
+  it("rejects invalid values", () => {
+    // @ts-expect-error invalid access type
+    assertType<LayerAccessType>("restricted");
   });
 });
 
@@ -190,20 +226,30 @@ describe("SideSystem", () => {
 });
 
 describe("Layer", () => {
-  it("extends AuditMetadata", () => {
-    expectTypeOf<Layer>().toExtend<AuditMetadata>();
+  it("both variants extend AuditMetadata", () => {
+    expectTypeOf<OpenLayer>().toExtend<AuditMetadata>();
+    expectTypeOf<GatekeptLayer>().toExtend<AuditMetadata>();
   });
 
-  it("has correct field types", () => {
+  it("discriminates on accessType", () => {
+    function handleLayer(layer: Layer): void {
+      if (layer.accessType === "open") {
+        expectTypeOf(layer).toEqualTypeOf<OpenLayer>();
+        expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<null>();
+      } else {
+        expectTypeOf(layer).toEqualTypeOf<GatekeptLayer>();
+        expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<MemberId>();
+      }
+    }
+    expectTypeOf(handleLayer).toBeFunction();
+  });
+
+  it("has correct shared field types", () => {
     expectTypeOf<Layer["id"]>().toEqualTypeOf<LayerId>();
     expectTypeOf<Layer["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<Layer["name"]>().toBeString();
     expectTypeOf<Layer["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Layer["accessType"]>().toEqualTypeOf<LayerAccessType>();
-  });
-
-  it("has nullable gatekeeperMemberId", () => {
-    expectTypeOf<Layer["gatekeeperMemberId"]>().toEqualTypeOf<MemberId | null>();
   });
 });
 

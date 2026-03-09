@@ -31,6 +31,7 @@ export interface Relationship {
   readonly type: RelationshipType;
   /** User-defined label — only meaningful when type is "custom". */
   readonly label: string | null;
+  readonly bidirectional: boolean;
   readonly createdAt: UnixMillis;
 }
 
@@ -69,15 +70,28 @@ export interface SideSystem extends AuditMetadata {
   readonly description: string | null;
 }
 
-/** A distinct layer or region within the system's internal landscape. */
-export interface Layer extends AuditMetadata {
+/** Shared fields for all layer variants. */
+interface LayerBase extends AuditMetadata {
   readonly id: LayerId;
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
-  readonly accessType: LayerAccessType;
-  readonly gatekeeperMemberId: MemberId | null;
 }
+
+/** A freely accessible layer with no gatekeeper. */
+export interface OpenLayer extends LayerBase {
+  readonly accessType: "open";
+  readonly gatekeeperMemberId: null;
+}
+
+/** A gatekept layer requiring a specific member to grant access. */
+export interface GatekeptLayer extends LayerBase {
+  readonly accessType: "gatekept";
+  readonly gatekeeperMemberId: MemberId;
+}
+
+/** A distinct layer or region within the system's internal landscape. */
+export type Layer = OpenLayer | GatekeptLayer;
 
 /** Junction linking a member to a subsystem. */
 export interface SubsystemMembership {

@@ -1,4 +1,11 @@
-import type { BucketId, FriendCodeId, FriendConnectionId, KeyGrantId, SystemId } from "./ids.js";
+import type {
+  BucketId,
+  EntityType,
+  FriendCodeId,
+  FriendConnectionId,
+  KeyGrantId,
+  SystemId,
+} from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -18,7 +25,7 @@ export interface PrivacyBucket extends AuditMetadata {
  * bucket tags for the relevant scope, the entity is invisible.
  */
 export interface BucketContentTag {
-  readonly entityType: string;
+  readonly entityType: EntityType;
   readonly entityId: string;
   readonly bucketId: BucketId;
 }
@@ -43,6 +50,7 @@ export interface KeyGrant {
   readonly id: KeyGrantId;
   readonly bucketId: BucketId;
   readonly friendUserId: SystemId;
+  /** Encrypted symmetric key for the bucket. Serialized to base64 at API transport boundaries. */
   readonly encryptedBucketKey: Uint8Array;
   readonly createdAt: UnixMillis;
   readonly revokedAt: UnixMillis | null;

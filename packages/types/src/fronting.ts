@@ -1,6 +1,7 @@
 import type {
   CustomFrontId,
   FrontingSessionId,
+  HexColor,
   MemberId,
   SubsystemId,
   SwitchId,
@@ -57,11 +58,16 @@ export interface CustomFront extends AuditMetadata {
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
-  readonly color: string | null;
+  readonly color: HexColor | null;
   readonly emoji: string | null;
-  readonly archived: boolean;
-  readonly archivedAt: UnixMillis | null;
+  readonly archived: false;
 }
+
+/** An archived custom front — preserves all data with archive metadata. */
+export type ArchivedCustomFront = Omit<CustomFront, "archived"> & {
+  readonly archived: true;
+  readonly archivedAt: UnixMillis;
+};
 
 /** Computed snapshot of the current co-fronting state. Not persisted. */
 export interface CoFrontState {

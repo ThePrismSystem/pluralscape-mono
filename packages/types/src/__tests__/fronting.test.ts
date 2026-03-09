@@ -2,6 +2,7 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
   ActiveFrontingSession,
+  ArchivedCustomFront,
   CoFrontState,
   CompletedFrontingSession,
   CustomFront,
@@ -12,6 +13,7 @@ import type {
 import type {
   CustomFrontId,
   FrontingSessionId,
+  HexColor,
   MemberId,
   SubsystemId,
   SwitchId,
@@ -72,6 +74,18 @@ describe("FrontingSession", () => {
     expectTypeOf<ActiveFrontingSession["subsystemId"]>().toEqualTypeOf<SubsystemId | null>();
   });
 
+  it("CompletedFrontingSession has individual field types", () => {
+    expectTypeOf<CompletedFrontingSession["id"]>().toEqualTypeOf<FrontingSessionId>();
+    expectTypeOf<CompletedFrontingSession["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<CompletedFrontingSession["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<CompletedFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<CompletedFrontingSession["endTime"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<CompletedFrontingSession["frontingType"]>().toEqualTypeOf<FrontingType>();
+    expectTypeOf<CompletedFrontingSession["comment"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<CompletedFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
+    expectTypeOf<CompletedFrontingSession["subsystemId"]>().toEqualTypeOf<SubsystemId | null>();
+  });
+
   it("ActiveFrontingSession extends AuditMetadata", () => {
     expectTypeOf<ActiveFrontingSession>().toExtend<AuditMetadata>();
   });
@@ -92,6 +106,10 @@ describe("Switch", () => {
   it("does not extend AuditMetadata", () => {
     expectTypeOf<Switch>().not.toExtend<AuditMetadata>();
   });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof Switch>().toEqualTypeOf<"id" | "systemId" | "memberId" | "timestamp">();
+  });
 });
 
 describe("CustomFront", () => {
@@ -104,16 +122,28 @@ describe("CustomFront", () => {
     expectTypeOf<CustomFront["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<CustomFront["name"]>().toBeString();
     expectTypeOf<CustomFront["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<CustomFront["color"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<CustomFront["color"]>().toEqualTypeOf<HexColor | null>();
     expectTypeOf<CustomFront["emoji"]>().toEqualTypeOf<string | null>();
   });
 
-  it("has archived as boolean (not literal)", () => {
-    expectTypeOf<CustomFront["archived"]>().toEqualTypeOf<boolean>();
+  it("has archived as false literal", () => {
+    expectTypeOf<CustomFront["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedCustomFront", () => {
+  it("has all CustomFront fields except archived", () => {
+    expectTypeOf<ArchivedCustomFront["id"]>().toEqualTypeOf<CustomFrontId>();
+    expectTypeOf<ArchivedCustomFront["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<ArchivedCustomFront["name"]>().toBeString();
   });
 
-  it("has nullable archivedAt", () => {
-    expectTypeOf<CustomFront["archivedAt"]>().toEqualTypeOf<UnixMillis | null>();
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedCustomFront["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedCustomFront["archivedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });
 
@@ -123,5 +153,9 @@ describe("CoFrontState", () => {
     expectTypeOf<CoFrontState["activeSessions"]>().toEqualTypeOf<
       readonly ActiveFrontingSession[]
     >();
+  });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof CoFrontState>().toEqualTypeOf<"timestamp" | "activeSessions">();
   });
 });
