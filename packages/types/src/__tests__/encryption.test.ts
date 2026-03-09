@@ -12,7 +12,7 @@ import type {
   EncryptedBlob,
   EncryptedString,
   EncryptFn,
-  Plaintext,
+  EncryptionAlgorithm,
   ServerFrontingSession,
   ServerGroup,
   ServerMember,
@@ -53,19 +53,12 @@ describe("BucketEncrypted<T>", () => {
   });
 });
 
-describe("Plaintext<T>", () => {
-  it("IS assignable to plain T (identity type)", () => {
-    type PS = Plaintext<string>;
-    expectTypeOf<PS>().toEqualTypeOf<string>();
-  });
-});
-
 describe("EncryptedBlob", () => {
   it("has expected fields", () => {
     expectTypeOf<EncryptedBlob["ciphertext"]>().toEqualTypeOf<Uint8Array>();
     expectTypeOf<EncryptedBlob["nonce"]>().toEqualTypeOf<Uint8Array>();
     expectTypeOf<EncryptedBlob["tier"]>().toEqualTypeOf<1 | 2>();
-    expectTypeOf<EncryptedBlob["algorithm"]>().toEqualTypeOf<string>();
+    expectTypeOf<EncryptedBlob["algorithm"]>().toEqualTypeOf<EncryptionAlgorithm>();
     expectTypeOf<EncryptedBlob["keyVersion"]>().toEqualTypeOf<number | null>();
     expectTypeOf<EncryptedBlob["bucketId"]>().toEqualTypeOf<BucketId | null>();
   });

@@ -27,9 +27,9 @@ export async function createDatabase(config: DatabaseConfig): Promise<DatabaseCl
 export async function createDatabase(config: DatabaseConfig): Promise<DatabaseClient> {
   switch (config.dialect) {
     case "pg": {
-      const { PGlite } = await import("@electric-sql/pglite");
-      const { drizzle } = await import("drizzle-orm/pglite");
-      const client = await PGlite.create(config.connectionString);
+      const postgres = (await import("postgres")).default;
+      const { drizzle } = await import("drizzle-orm/postgres-js");
+      const client = postgres(config.connectionString);
       return { dialect: "pg", db: drizzle(client) };
     }
     case "sqlite": {
@@ -57,8 +57,11 @@ export async function createDatabaseFromEnv(): Promise<DatabaseClient> {
       return createDatabase({ dialect: "pg", connectionString });
     }
     case "sqlite": {
-      const filename = process.env["DATABASE_PATH"] ?? "pluralscape.db";
-      return createDatabase({ dialect: "sqlite", filename });
+      const filename = process.env["DATABASE_PATH"];
+      if (!filename) {
+        console.warn("DATABASE_PATH not set, defaulting to 'pluralscape.db'");
+      }
+      return createDatabase({ dialect: "sqlite", filename: filename ?? "pluralscape.db" });
     }
   }
 }

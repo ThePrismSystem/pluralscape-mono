@@ -23,6 +23,27 @@ describe("pgTimestamp mapping", () => {
     const ms = Date.now();
     expect(timestampFromDriver(timestampToDriver(ms))).toBe(ms);
   });
+
+  it("accepts negative timestamps (dates before epoch)", () => {
+    const ms = -1000;
+    expect(timestampFromDriver(timestampToDriver(ms))).toBe(ms);
+  });
+
+  it("throws on NaN", () => {
+    expect(() => timestampToDriver(NaN)).toThrow("not a finite number");
+  });
+
+  it("throws on Infinity", () => {
+    expect(() => timestampToDriver(Infinity)).toThrow("not a finite number");
+  });
+
+  it("throws on -Infinity", () => {
+    expect(() => timestampToDriver(-Infinity)).toThrow("not a finite number");
+  });
+
+  it("throws on unparseable date string", () => {
+    expect(() => timestampFromDriver("not-a-date")).toThrow("could not be parsed");
+  });
 });
 
 describe("pgBinary mapping", () => {
@@ -61,5 +82,15 @@ describe("pgJsonb mapping", () => {
   it("round-trips nested objects", () => {
     const input = { nested: { array: [1, 2, 3] } };
     expect(jsonFromDriver(jsonToDriver(input))).toEqual(input);
+  });
+
+  it("throws with context on malformed JSON", () => {
+    expect(() => jsonFromDriver("{invalid")).toThrow(
+      'Failed to parse JSON from database: "{invalid"',
+    );
+  });
+
+  it("throws on empty string", () => {
+    expect(() => jsonFromDriver("")).toThrow("Failed to parse JSON from database");
   });
 });

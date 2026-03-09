@@ -25,8 +25,13 @@ export type Encrypted<T> = T & { readonly [__encTier]: 1 };
 /** T2 per-bucket: wrapped value is encrypted with a bucket key for friend sharing. */
 export type BucketEncrypted<T> = T & { readonly [__encTier]: 2 };
 
-/** T3 passthrough: identity type for explicit tier annotation. No wrapping. */
-export type Plaintext<T> = T;
+// T3 is plaintext — no wrapper needed. Fields at T3 appear as plain types
+// in server-side interfaces (see tier map at bottom of file).
+
+// ── EncryptionAlgorithm ────────────────────────────────────────
+
+/** Supported encryption algorithms for EncryptedBlob. */
+export type EncryptionAlgorithm = "xchacha20-poly1305";
 
 // ── EncryptedBlob ──────────────────────────────────────────────
 
@@ -35,7 +40,7 @@ export interface EncryptedBlob {
   readonly ciphertext: Uint8Array;
   readonly nonce: Uint8Array;
   readonly tier: 1 | 2;
-  readonly algorithm: string;
+  readonly algorithm: EncryptionAlgorithm;
   readonly keyVersion: number | null;
   /** Present for T2 blobs — identifies which bucket key was used. */
   readonly bucketId: BucketId | null;
@@ -124,6 +129,9 @@ export type ClientSubsystem = Subsystem;
  * Server-side relationship representation.
  * T1 encrypted: label
  * T3 plaintext: type, sourceMemberId, targetMemberId, bidirectional
+ *
+ * Intentionally omits AuditMetadata — relationships are immutable entities
+ * that are only created or deleted, never updated. Only createdAt is tracked.
  */
 export interface ServerRelationship {
   readonly id: RelationshipId;

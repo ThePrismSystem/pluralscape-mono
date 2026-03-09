@@ -21,6 +21,7 @@ export interface SyncDocument {
   readonly id: SyncDocumentId;
   readonly systemId: SystemId;
   readonly entityType: EntityType;
+  /** Plain string rather than branded ID — the referenced entity type varies by entityType. */
   readonly entityId: string;
   readonly automergeHeads: Uint8Array;
   readonly lastSyncedAt: UnixMillis;
@@ -32,6 +33,7 @@ export interface SyncQueueItem {
   readonly id: SyncQueueItemId;
   readonly systemId: SystemId;
   readonly entityType: EntityType;
+  /** Plain string rather than branded ID — the referenced entity type varies by entityType. */
   readonly entityId: string;
   readonly operation: SyncOperation;
   readonly changeData: Uint8Array;
@@ -44,6 +46,7 @@ export interface SyncConflict {
   readonly id: SyncConflictId;
   readonly systemId: SystemId;
   readonly entityType: EntityType;
+  /** Plain string rather than branded ID — the referenced entity type varies by entityType. */
   readonly entityId: string;
   readonly localVersion: number;
   readonly remoteVersion: number;

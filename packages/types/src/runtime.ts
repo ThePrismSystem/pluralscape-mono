@@ -1,7 +1,13 @@
 import type { ISOTimestamp, UnixMillis } from "./timestamps.js";
 
-/** Creates a prefixed UUID as a branded string. Cast result at call site for specific ID types. */
+/** Creates a prefixed UUID as a branded string. Prefix must be non-empty and end with `_`. */
 export function createId(prefix: string): string {
+  if (prefix === "") {
+    throw new Error("ID prefix must not be empty");
+  }
+  if (!prefix.endsWith("_")) {
+    throw new Error(`ID prefix must end with '_', got "${prefix}"`);
+  }
   return `${prefix}${crypto.randomUUID()}`;
 }
 

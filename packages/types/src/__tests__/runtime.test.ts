@@ -28,6 +28,14 @@ describe("createId", () => {
     const id = createId("sys_") as SystemId;
     expectTypeOf(id).toEqualTypeOf<SystemId>();
   });
+
+  it("throws on empty prefix", () => {
+    expect(() => createId("")).toThrow("ID prefix must not be empty");
+  });
+
+  it("throws on prefix without trailing underscore", () => {
+    expect(() => createId("sys")).toThrow("ID prefix must end with '_'");
+  });
 });
 
 describe("now", () => {

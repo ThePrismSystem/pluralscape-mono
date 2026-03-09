@@ -1,15 +1,24 @@
 import { customType } from "drizzle-orm/pg-core";
 
+const JSON_PREVIEW_LENGTH = 100;
+
 // ── Mapping functions (exported for independent testing) ───────
 
 /** Converts UnixMillis to ISO string for PG timestamptz storage. */
 export function timestampToDriver(ms: number): string {
+  if (!Number.isFinite(ms)) {
+    throw new Error(`Invalid timestamp: ${String(ms)} is not a finite number`);
+  }
   return new Date(ms).toISOString();
 }
 
 /** Converts PG timestamptz string back to UnixMillis. */
 export function timestampFromDriver(val: string): number {
-  return Date.parse(val);
+  const ms = Date.parse(val);
+  if (Number.isNaN(ms)) {
+    throw new Error(`Invalid timestamp string: "${val}" could not be parsed`);
+  }
+  return ms;
 }
 
 /** Converts Uint8Array to Buffer for PG bytea storage. */
@@ -29,7 +38,13 @@ export function jsonToDriver(val: unknown): string {
 
 /** Parses JSON string from storage. */
 export function jsonFromDriver(val: string): unknown {
-  return JSON.parse(val) as unknown;
+  try {
+    return JSON.parse(val) as unknown;
+  } catch (error) {
+    const preview =
+      val.length > JSON_PREVIEW_LENGTH ? `${val.slice(0, JSON_PREVIEW_LENGTH)}…` : val;
+    throw new Error(`Failed to parse JSON from database: "${preview}"`, { cause: error });
+  }
 }
 
 // ── Custom column types ────────────────────────────────────────

@@ -1,14 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createDatabase } from "../client/factory.js";
+import { createDatabase, createDatabaseFromEnv } from "../client/factory.js";
 
 describe("createDatabase", () => {
-  it("returns a PG client when given pg config", async () => {
-    const client = await createDatabase({ dialect: "pg", connectionString: "" });
-    expect(client.dialect).toBe("pg");
-    expect(client.db).toBeDefined();
-  });
-
   it("returns a SQLite client when given sqlite config", async () => {
     const client = await createDatabase({ dialect: "sqlite", filename: ":memory:" });
     expect(client.dialect).toBe("sqlite");
@@ -37,12 +31,29 @@ describe("createDatabaseFromEnv", () => {
     } else {
       process.env["DATABASE_PATH"] = originalPath;
     }
+    vi.restoreAllMocks();
   });
 
   it("throws when DATABASE_URL is missing for pg dialect", async () => {
     process.env["DB_DIALECT"] = "pg";
     delete process.env["DATABASE_URL"];
-    const { createDatabaseFromEnv } = await import("../client/factory.js");
     await expect(createDatabaseFromEnv()).rejects.toThrow("DATABASE_URL");
+  });
+
+  it("creates SQLite client with explicit DATABASE_PATH", async () => {
+    process.env["DB_DIALECT"] = "sqlite";
+    process.env["DATABASE_PATH"] = ":memory:";
+    const client = await createDatabaseFromEnv();
+    expect(client.dialect).toBe("sqlite");
+    expect(client.db).toBeDefined();
+  });
+
+  it("warns and defaults when DATABASE_PATH is not set", async () => {
+    process.env["DB_DIALECT"] = "sqlite";
+    delete process.env["DATABASE_PATH"];
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const client = await createDatabaseFromEnv();
+    expect(client.dialect).toBe("sqlite");
+    expect(warnSpy).toHaveBeenCalledWith("DATABASE_PATH not set, defaulting to 'pluralscape.db'");
   });
 });

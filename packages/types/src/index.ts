@@ -148,7 +148,7 @@ export type {
 export type {
   Encrypted,
   BucketEncrypted,
-  Plaintext,
+  EncryptionAlgorithm,
   EncryptedBlob,
   EncryptedString,
   ServerMember,
@@ -185,3 +185,6 @@ export type {
   GroupTree,
   GroupMoveOperation,
 } from "./groups.js";
+
+// ── Runtime utilities ──────────────────────────────────────────────
+export { createId, now, toISO } from "./runtime.js";

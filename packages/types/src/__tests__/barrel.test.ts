@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import { ID_PREFIXES } from "../index.js";
+import { createId, ID_PREFIXES, now, toISO } from "../index.js";
 
 import type {
   Account,
@@ -11,6 +11,7 @@ import type {
   EncryptedBlob,
   EncryptedString,
   EncryptFn,
+  EncryptionAlgorithm,
   ServerMember,
   ApiError,
   ApiResponse,
@@ -50,6 +51,7 @@ import type {
   GroupMoveOperation,
   GroupTree,
   HexColor,
+  ISOTimestamp,
   KeyGrant,
   Layer,
   LayerAccessType,
@@ -90,6 +92,7 @@ import type {
   SwitchId,
   System,
   SystemId,
+  UnixMillis,
   UpdateInput,
   ValidationError,
 } from "../index.js";
@@ -171,6 +174,7 @@ describe("barrel exports", () => {
 
   it("exports encryption types", () => {
     expectTypeOf<Encrypted<string>>().toExtend<string>();
+    expectTypeOf<EncryptionAlgorithm>().toBeString();
     expectTypeOf<EncryptedBlob>().toBeObject();
     expectTypeOf<EncryptedString>().toExtend<string>();
     expectTypeOf<ServerMember>().toBeObject();
@@ -227,5 +231,13 @@ describe("barrel exports", () => {
   it("exports ID_PREFIXES runtime value", () => {
     expectTypeOf(ID_PREFIXES).toBeObject();
     expectTypeOf(ID_PREFIXES.system).toEqualTypeOf<"sys_">();
+  });
+
+  it("exports runtime utilities", () => {
+    expectTypeOf(createId).toBeFunction();
+    expectTypeOf(now).toBeFunction();
+    expectTypeOf(toISO).toBeFunction();
+    expectTypeOf(now()).toEqualTypeOf<UnixMillis>();
+    expectTypeOf(toISO(now())).toEqualTypeOf<ISOTimestamp>();
   });
 });

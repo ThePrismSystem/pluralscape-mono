@@ -1,14 +1,22 @@
 import { customType } from "drizzle-orm/sqlite-core";
 
+const JSON_PREVIEW_LENGTH = 100;
+
 // ── Mapping functions (exported for independent testing) ───────
 
 /** SQLite timestamp: passthrough (integer to integer). */
 export function timestampToDriver(ms: number): number {
+  if (!Number.isFinite(ms)) {
+    throw new Error(`Invalid timestamp: ${String(ms)} is not a finite number`);
+  }
   return ms;
 }
 
 /** SQLite timestamp: passthrough (integer to integer). */
 export function timestampFromDriver(val: number): number {
+  if (!Number.isFinite(val)) {
+    throw new Error(`Invalid timestamp: ${String(val)} is not a finite number`);
+  }
   return val;
 }
 
@@ -19,7 +27,13 @@ export function jsonToDriver(val: unknown): string {
 
 /** SQLite JSON: parse from text storage. */
 export function jsonFromDriver(val: string): unknown {
-  return JSON.parse(val) as unknown;
+  try {
+    return JSON.parse(val) as unknown;
+  } catch (error) {
+    const preview =
+      val.length > JSON_PREVIEW_LENGTH ? `${val.slice(0, JSON_PREVIEW_LENGTH)}…` : val;
+    throw new Error(`Failed to parse JSON from database: "${preview}"`, { cause: error });
+  }
 }
 
 // ── Custom column types ────────────────────────────────────────

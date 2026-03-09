@@ -36,7 +36,8 @@ describe("PG systems schema", () => {
 
   it("inserts and retrieves a system with all columns", async () => {
     const now = Date.now();
-    const id = "sys_test-001";
+    const id = `sys_${crypto.randomUUID()}`;
+    const settingsId = `sset_${crypto.randomUUID()}`;
 
     await db.insert(systems).values({
       id,
@@ -44,7 +45,7 @@ describe("PG systems schema", () => {
       displayName: "Test Display",
       description: "A test system",
       avatarRef: "blob_avatar-001",
-      settingsId: "sset_test-001",
+      settingsId,
       createdAt: now,
       updatedAt: now,
       version: 1,
@@ -60,18 +61,19 @@ describe("PG systems schema", () => {
     expect(row?.displayName).toBe("Test Display");
     expect(row?.description).toBe("A test system");
     expect(row?.avatarRef).toBe("blob_avatar-001");
-    expect(row?.settingsId).toBe("sset_test-001");
+    expect(row?.settingsId).toBe(settingsId);
     expect(row?.version).toBe(1);
   });
 
   it("round-trips timestamp values correctly", async () => {
     const now = 1704067200000; // 2024-01-01T00:00:00.000Z
-    const id = "sys_test-002";
+    const id = `sys_${crypto.randomUUID()}`;
+    const settingsId = `sset_${crypto.randomUUID()}`;
 
     await db.insert(systems).values({
       id,
       name: "Timestamp Test",
-      settingsId: "sset_test-002",
+      settingsId,
       createdAt: now,
       updatedAt: now,
     });
@@ -83,12 +85,13 @@ describe("PG systems schema", () => {
 
   it("handles nullable columns correctly", async () => {
     const now = Date.now();
-    const id = "sys_test-003";
+    const id = `sys_${crypto.randomUUID()}`;
+    const settingsId = `sset_${crypto.randomUUID()}`;
 
     await db.insert(systems).values({
       id,
       name: "Nullable Test",
-      settingsId: "sset_test-003",
+      settingsId,
       createdAt: now,
       updatedAt: now,
     });
@@ -97,5 +100,22 @@ describe("PG systems schema", () => {
     expect(rows[0]?.displayName).toBeNull();
     expect(rows[0]?.description).toBeNull();
     expect(rows[0]?.avatarRef).toBeNull();
+  });
+
+  it("defaults version to 1 when not specified", async () => {
+    const now = Date.now();
+    const id = `sys_${crypto.randomUUID()}`;
+    const settingsId = `sset_${crypto.randomUUID()}`;
+
+    await db.insert(systems).values({
+      id,
+      name: "Version Default Test",
+      settingsId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const rows = await db.select().from(systems).where(eq(systems.id, id));
+    expect(rows[0]?.version).toBe(1);
   });
 });

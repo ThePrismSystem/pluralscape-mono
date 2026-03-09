@@ -1,10 +1,10 @@
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-/** A PG database client wrapping PGlite or postgres.js. */
+/** A PG database client wrapping postgres.js. */
 export interface PgDatabaseClient {
   readonly dialect: "pg";
-  readonly db: PgliteDatabase;
+  readonly db: PostgresJsDatabase;
 }
 
 /** A SQLite database client wrapping better-sqlite3. */
