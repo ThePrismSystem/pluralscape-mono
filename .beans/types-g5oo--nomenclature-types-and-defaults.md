@@ -1,11 +1,11 @@
 ---
 # types-g5oo
 title: Nomenclature types and defaults
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:35:42Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T06:05:13Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -43,3 +43,7 @@ Type definitions and default presets for the nomenclature system
 ## References
 
 - features.md section 12 (Configurable Nomenclature)
+
+## Summary of Changes
+
+Created nomenclature.ts with TermCategory, CanonicalTerm, NomenclatureSettings, TermPreset types plus DEFAULT_TERM_PRESETS and createDefaultNomenclatureSettings() runtime exports. Branch: feat/types-settings-and-config.
