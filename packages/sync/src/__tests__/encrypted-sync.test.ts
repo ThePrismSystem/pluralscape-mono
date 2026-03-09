@@ -128,4 +128,20 @@ describe("encryptSnapshot / decryptSnapshot", () => {
     expect(decryptSnapshot(envelope1, keys.encryptionKey, sodium)).toEqual(snapshot);
     expect(decryptSnapshot(envelope2, keys.encryptionKey, sodium)).toEqual(snapshot);
   });
+
+  it("1.10 — decryptSnapshot throws SignatureVerificationError when ciphertext is tampered", () => {
+    const snapshot = testBytes(64);
+    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium);
+    const tampered = { ...envelope, ciphertext: flipFirstByte(envelope.ciphertext) };
+    expect(() => decryptSnapshot(tampered, keys.encryptionKey, sodium)).toThrow(
+      SignatureVerificationError,
+    );
+  });
+
+  it("1.11 — decryptSnapshot throws with wrong encryption key", () => {
+    const snapshot = testBytes(64);
+    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium);
+    const wrongKey = sodium.aeadKeygen();
+    expect(() => decryptSnapshot(envelope, wrongKey, sodium)).toThrow();
+  });
 });

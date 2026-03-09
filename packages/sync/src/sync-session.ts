@@ -16,6 +16,7 @@ interface SyncSessionConfig<T> {
   keys: DocumentKeys;
   documentId: string;
   sodium: SodiumAdapter;
+  lastSyncedSeq?: number;
 }
 
 export class EncryptedSyncSession<T> {
@@ -23,14 +24,14 @@ export class EncryptedSyncSession<T> {
   private readonly keys: DocumentKeys;
   readonly documentId: string;
   private readonly sodium: SodiumAdapter;
-  private lastSeenSeq: number;
+  private lastSyncedSeq_: number;
 
   constructor(config: SyncSessionConfig<T>) {
     this.doc = config.doc;
     this.keys = config.keys;
     this.documentId = config.documentId;
     this.sodium = config.sodium;
-    this.lastSeenSeq = 0;
+    this.lastSyncedSeq_ = config.lastSyncedSeq ?? 0;
   }
 
   get document(): Automerge.Doc<T> {
@@ -38,7 +39,7 @@ export class EncryptedSyncSession<T> {
   }
 
   get lastSyncedSeq(): number {
-    return this.lastSeenSeq;
+    return this.lastSyncedSeq_;
   }
 
   change(fn: (doc: T) => void): Omit<EncryptedChangeEnvelope, "seq"> {
@@ -51,14 +52,23 @@ export class EncryptedSyncSession<T> {
   }
 
   applyEncryptedChanges(envelopes: readonly EncryptedChangeEnvelope[]): void {
-    for (const envelope of envelopes) {
-      if (envelope.seq <= this.lastSeenSeq) {
-        continue;
+    const sorted = [...envelopes].sort((a, b) => a.seq - b.seq);
+    const savedDoc = this.doc;
+    const savedSeq = this.lastSyncedSeq_;
+    try {
+      for (const envelope of sorted) {
+        if (envelope.seq <= this.lastSyncedSeq_) {
+          continue;
+        }
+        const changeBytes = decryptChange(envelope, this.keys.encryptionKey, this.sodium);
+        const [newDoc] = Automerge.applyChanges(this.doc, [changeBytes]);
+        this.doc = newDoc;
+        this.lastSyncedSeq_ = envelope.seq;
       }
-      const changeBytes = decryptChange(envelope, this.keys.encryptionKey, this.sodium);
-      const [newDoc] = Automerge.applyChanges(this.doc, [changeBytes]);
-      this.doc = newDoc;
-      this.lastSeenSeq = envelope.seq;
+    } catch (error) {
+      this.doc = savedDoc;
+      this.lastSyncedSeq_ = savedSeq;
+      throw error;
     }
   }
 
@@ -71,6 +81,7 @@ export class EncryptedSyncSession<T> {
     envelope: EncryptedSnapshotEnvelope,
     keys: DocumentKeys,
     sodium: SodiumAdapter,
+    lastSyncedSeq?: number,
   ): EncryptedSyncSession<T> {
     const savedBytes = decryptSnapshot(envelope, keys.encryptionKey, sodium);
     const doc = Automerge.load<T>(savedBytes);
@@ -79,6 +90,7 @@ export class EncryptedSyncSession<T> {
       keys,
       documentId: envelope.documentId,
       sodium,
+      lastSyncedSeq,
     });
   }
 }
@@ -87,16 +99,10 @@ export function syncThroughRelay<T>(
   sessions: readonly EncryptedSyncSession<T>[],
   relay: EncryptedRelay,
 ): void {
-  // Keep syncing until no new changes are produced
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const session of sessions) {
-      const envelopes = relay.getEnvelopesSince(session.documentId, session.lastSyncedSeq);
-      if (envelopes.length > 0) {
-        session.applyEncryptedChanges(envelopes);
-        changed = true;
-      }
+  for (const session of sessions) {
+    const envelopes = relay.getEnvelopesSince(session.documentId, session.lastSyncedSeq);
+    if (envelopes.length > 0) {
+      session.applyEncryptedChanges(envelopes);
     }
   }
 }

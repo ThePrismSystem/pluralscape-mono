@@ -1,18 +1,9 @@
-import type {
-  AeadKey,
-  AeadNonce,
-  Signature,
-  SignKeypair,
-  SignPublicKey,
-  SignSecretKey,
-} from "@pluralscape/crypto";
+import type { AeadKey, SignKeypair, SignPublicKey } from "@pluralscape/crypto";
+import type { AeadNonce, Signature } from "@pluralscape/crypto";
 
 export interface DocumentKeys {
   readonly encryptionKey: AeadKey;
-  readonly signingKeys: {
-    readonly publicKey: SignPublicKey;
-    readonly secretKey: SignSecretKey;
-  };
+  readonly signingKeys: SignKeypair;
 }
 
 export interface EncryptedChangeEnvelope {
@@ -32,11 +23,3 @@ export interface EncryptedSnapshotEnvelope {
   readonly documentId: string;
   readonly snapshotVersion: number;
 }
-
-export interface MemberProfile {
-  name: string;
-  pronouns: string;
-  description: string;
-}
-
-export type { AeadKey, AeadNonce, Signature, SignKeypair, SignPublicKey, SignSecretKey };

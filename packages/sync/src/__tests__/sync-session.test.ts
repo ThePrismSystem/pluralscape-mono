@@ -5,8 +5,14 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
-import type { DocumentKeys, MemberProfile } from "../types.js";
+import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+
+interface MemberProfile {
+  name: string;
+  pronouns: string;
+  description: string;
+}
 
 type DocSchema = { members: MemberProfile[] };
 
@@ -184,24 +190,25 @@ describe("EncryptedSyncSession — full integration", () => {
     expect(sessionA1.document.members[0]?.name).toBe(sessionA2.document.members[0]?.name);
   });
 
-  it("3.6 — applying the same encrypted change twice is idempotent", () => {
+  it("3.6 — applying the same encrypted envelopes twice is idempotent via seq-skip", () => {
     const sessionA = makeSession(base, sharedKeys);
     const sessionB = makeSession(base, sharedKeys);
 
-    sessionA.change((doc) => {
+    const envelope = sessionA.change((doc) => {
       doc.members.push({ name: "Duplicate", pronouns: "they/them", description: "test" });
     });
+    const seq = relay.submit(envelope);
 
-    const rawChange = Automerge.getLastLocalChange(sessionA.document);
-    expect(rawChange).toBeDefined();
-    if (!rawChange) return;
+    const envelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    sessionB.applyEncryptedChanges(envelopes);
+    expect(sessionB.document.members).toHaveLength(1);
+    expect(sessionB.lastSyncedSeq).toBe(seq);
 
-    const [afterFirst] = Automerge.applyChanges(sessionB.document, [rawChange]);
-    expect(afterFirst.members).toHaveLength(1);
-
-    const [afterSecond] = Automerge.applyChanges(afterFirst, [rawChange]);
-    expect(afterSecond.members).toHaveLength(1);
-    expect(afterSecond.members[0]?.name).toBe("Duplicate");
+    // Apply same envelopes again — should be idempotent
+    sessionB.applyEncryptedChanges(envelopes);
+    expect(sessionB.document.members).toHaveLength(1);
+    expect(sessionB.document.members[0]?.name).toBe("Duplicate");
+    expect(sessionB.lastSyncedSeq).toBe(seq);
   });
 
   it("3.7 — snapshot roundtrip preserves document state through encryption", () => {
@@ -286,5 +293,80 @@ describe("EncryptedSyncSession — full integration", () => {
 
     expect(resultA).toBe(resultB);
     expect(resultB).toBe(resultC);
+  });
+
+  it("3.10 — mid-batch decryption failure rolls back doc and lastSyncedSeq", () => {
+    const sessionA = makeSession(base, sharedKeys);
+    const sessionB = makeSession(base, sharedKeys);
+
+    // First envelope: valid
+    const env1 = sessionA.change((doc) => {
+      doc.members.push({ name: "Valid", pronouns: "they/them", description: "ok" });
+    });
+    const seq1 = relay.submit(env1);
+
+    // Second envelope: corrupted ciphertext (will fail signature check)
+    const env2 = sessionA.change((doc) => {
+      firstMember(doc).name = "Updated";
+    });
+    const seq2 = relay.submit(env2);
+
+    const envelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    // Corrupt the second envelope's ciphertext
+    const corrupted = envelopes.map((e) => {
+      if (e.seq === seq2) {
+        const badCiphertext = new Uint8Array(e.ciphertext);
+        badCiphertext[0] = (badCiphertext[0] ?? 0) ^ 0xff;
+        return { ...e, ciphertext: badCiphertext };
+      }
+      return e;
+    });
+
+    // Apply first envelope successfully
+    sessionB.applyEncryptedChanges(envelopes.filter((e) => e.seq === seq1));
+    expect(sessionB.document.members).toHaveLength(1);
+    expect(sessionB.lastSyncedSeq).toBe(seq1);
+
+    // Now try to apply the full batch starting from seq 0 (includes corrupted)
+    // But since seq1 is already applied, it will skip it and fail on seq2
+    const docBefore = sessionB.document;
+    const seqBefore = sessionB.lastSyncedSeq;
+
+    expect(() => {
+      sessionB.applyEncryptedChanges(corrupted);
+    }).toThrow();
+
+    // Doc and seq should be rolled back to pre-batch state
+    expect(sessionB.document).toBe(docBefore);
+    expect(sessionB.lastSyncedSeq).toBe(seqBefore);
+  });
+
+  it("3.11 — relay rejects snapshot version downgrade or equal version", () => {
+    const sessionA = makeSession(base, sharedKeys);
+
+    sessionA.change((doc) => {
+      doc.members.push({ name: "Snap", pronouns: "they/them", description: "v2" });
+    });
+
+    const snapshotV2 = sessionA.createSnapshot(2);
+    relay.submitSnapshot(snapshotV2);
+
+    // Attempt to submit version 1 (downgrade)
+    const snapshotV1 = sessionA.createSnapshot(1);
+    expect(() => {
+      relay.submitSnapshot(snapshotV1);
+    }).toThrow(/not newer than current version/);
+
+    // Attempt to submit same version 2 (equal)
+    const snapshotV2Again = sessionA.createSnapshot(2);
+    expect(() => {
+      relay.submitSnapshot(snapshotV2Again);
+    }).toThrow(/not newer than current version/);
+
+    // Version 3 should succeed
+    const snapshotV3 = sessionA.createSnapshot(3);
+    expect(() => {
+      relay.submitSnapshot(snapshotV3);
+    }).not.toThrow();
   });
 });

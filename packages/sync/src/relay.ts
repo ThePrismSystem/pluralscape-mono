@@ -33,6 +33,12 @@ export class EncryptedRelay {
   }
 
   submitSnapshot(envelope: EncryptedSnapshotEnvelope): void {
+    const existing = this.snapshots.get(envelope.documentId);
+    if (existing && existing.snapshotVersion >= envelope.snapshotVersion) {
+      throw new Error(
+        `Snapshot version ${String(envelope.snapshotVersion)} is not newer than current version ${String(existing.snapshotVersion)}`,
+      );
+    }
     this.snapshots.set(envelope.documentId, envelope);
   }
 
@@ -46,7 +52,7 @@ export class EncryptedRelay {
       return undefined;
     }
     return {
-      envelopes,
+      envelopes: [...envelopes],
       snapshot: this.snapshots.get(documentId) ?? null,
     };
   }

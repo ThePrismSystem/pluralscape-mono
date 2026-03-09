@@ -4,28 +4,16 @@ import type { AeadKey, SodiumAdapter } from "@pluralscape/crypto";
 export class SignatureVerificationError extends Error {
   override readonly name = "SignatureVerificationError" as const;
 
-  constructor(message = "Envelope signature verification failed.") {
-    super(message);
+  constructor(message = "Envelope signature verification failed.", options?: ErrorOptions) {
+    super(message, options);
   }
 }
 
-const BYTE_MASK = 0xff;
 const VERSION_BYTES = 8;
-
-function stringToBytes(str: string): Uint8Array {
-  const bytes = new Uint8Array(str.length);
-  for (let i = 0; i < str.length; i++) {
-    bytes[i] = str.charCodeAt(i) & BYTE_MASK;
-  }
-  return bytes;
-}
-
-function buildChangeAD(documentId: string): Uint8Array {
-  return stringToBytes(documentId);
-}
+const encoder = new TextEncoder();
 
 function buildSnapshotAD(documentId: string, snapshotVersion: number): Uint8Array {
-  const docIdBytes = stringToBytes(documentId);
+  const docIdBytes = encoder.encode(documentId);
   const versionBytes = new Uint8Array(VERSION_BYTES);
   const view = new DataView(versionBytes.buffer);
   view.setBigUint64(0, BigInt(snapshotVersion), false); // big-endian
@@ -41,7 +29,7 @@ export function encryptChange(
   keys: DocumentKeys,
   sodium: SodiumAdapter,
 ): Omit<EncryptedChangeEnvelope, "seq"> {
-  const ad = buildChangeAD(documentId);
+  const ad = encoder.encode(documentId);
   const { ciphertext, nonce } = sodium.aeadEncrypt(change, ad, keys.encryptionKey);
   const signature = sodium.signDetached(ciphertext, keys.signingKeys.secretKey);
 
@@ -68,7 +56,7 @@ export function decryptChange(
     throw new SignatureVerificationError();
   }
 
-  const ad = buildChangeAD(envelope.documentId);
+  const ad = encoder.encode(envelope.documentId);
   return sodium.aeadDecrypt(envelope.ciphertext, envelope.nonce, ad, encryptionKey);
 }
 
