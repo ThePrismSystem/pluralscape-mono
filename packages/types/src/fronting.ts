@@ -26,6 +26,8 @@ export interface ActiveFrontingSession extends AuditMetadata {
   readonly customFrontId: CustomFrontId | null;
   /** Reference to a linked structure entity (subsystem, side system, or layer). */
   readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+  /** Free-text description of fronting positionality (e.g. close vs far, height). */
+  readonly positionality: string | null;
 }
 
 /** A fronting session that has ended. */
@@ -41,6 +43,8 @@ export interface CompletedFrontingSession extends AuditMetadata {
   readonly customFrontId: CustomFrontId | null;
   /** Reference to a linked structure entity (subsystem, side system, or layer). */
   readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+  /** Free-text description of fronting positionality (e.g. close vs far, height). */
+  readonly positionality: string | null;
 }
 
 /** A comment on a fronting session — unlimited length, multiple per session. */

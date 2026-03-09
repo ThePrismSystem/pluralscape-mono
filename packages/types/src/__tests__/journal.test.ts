@@ -29,7 +29,7 @@ import type {
   WikiPage,
 } from "../journal.js";
 import type { UnixMillis } from "../timestamps.js";
-import type { AuditMetadata } from "../utility.js";
+import type { AuditMetadata, EntityReference } from "../utility.js";
 
 describe("JournalBlockType", () => {
   it("accepts all 9 block types", () => {
@@ -171,7 +171,9 @@ describe("JournalEntry", () => {
   it("has correct field types", () => {
     expectTypeOf<JournalEntry["id"]>().toEqualTypeOf<JournalEntryId>();
     expectTypeOf<JournalEntry["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<JournalEntry["authorMemberId"]>().toEqualTypeOf<MemberId | null>();
+    expectTypeOf<JournalEntry["author"]>().toEqualTypeOf<EntityReference<
+      "member" | "subsystem" | "side-system" | "layer"
+    > | null>();
     expectTypeOf<JournalEntry["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId | null>();
     expectTypeOf<JournalEntry["title"]>().toBeString();
     expectTypeOf<JournalEntry["blocks"]>().toEqualTypeOf<readonly JournalBlock[]>();

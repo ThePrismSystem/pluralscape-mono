@@ -32,6 +32,7 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Custom front status text per fronting session (max 50 chars, matches SP behavior)
   - Fronting comments: multiple timestamped comments per fronting session (unlimited length), stored as separate `FrontingComment` entities linked to the session
   - Sessions can link to a structure entity (subsystem, side system, or layer) via `linkedStructure` — replaces the old subsystem-only field with a polymorphic `EntityReference`
+  - Positionality: free-text field describing fronting position (e.g. close vs far, height, depth)
   - Subsystem-level fronting (subsystems can front independently of the parent system)
 - **Historical editing** — retroactive entries, timestamp adjustment, comments on entries
 - **Timeline visualization** — multi-lane display, color-coded per member, co-fronting overlap visible
@@ -117,6 +118,7 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
 
 - **Block-based rich-text editor** — nested, structured content blocks
 - **Hyperlinked pages** — member names auto-link to profiles
+- **Polymorphic authorship** — journal entries can be authored by members or structure entities (subsystems, side systems, layers)
 - **Internal wiki** — system lore, term definitions, trauma timelines
 - Replaces basic Notes for power users (Notes remain for simple use)
 

@@ -75,6 +75,7 @@ describe("FrontingSession", () => {
     expectTypeOf<ActiveFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
       "subsystem" | "side-system" | "layer"
     > | null>();
+    expectTypeOf<ActiveFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
   });
 
   it("CompletedFrontingSession has individual field types", () => {
@@ -89,6 +90,7 @@ describe("FrontingSession", () => {
     expectTypeOf<CompletedFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
       "subsystem" | "side-system" | "layer"
     > | null>();
+    expectTypeOf<CompletedFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
   });
 
   it("ActiveFrontingSession extends AuditMetadata", () => {

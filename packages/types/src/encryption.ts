@@ -124,7 +124,7 @@ export type ClientMember = import("./identity.js").Member;
 
 /**
  * Server-side fronting session representation.
- * T1 encrypted: comment
+ * T1 encrypted: comment, positionality
  * T3 plaintext: timestamps, memberId, frontingType, customFrontId, linkedStructure
  */
 export interface ServerFrontingSession extends AuditMetadata {
@@ -392,12 +392,12 @@ export type ClientCustomFront = CustomFront;
 /**
  * Server-side journal entry representation.
  * T1 encrypted: title, blocks, tags, linkedEntities
- * T3 plaintext: authorMemberId, frontingSessionId, archived
+ * T3 plaintext: author, frontingSessionId, archived
  */
 export interface ServerJournalEntry extends AuditMetadata {
   readonly id: JournalEntryId;
   readonly systemId: SystemId;
-  readonly authorMemberId: MemberId | null;
+  readonly author: EntityReference<"member" | "subsystem" | "side-system" | "layer"> | null;
   readonly frontingSessionId: FrontingSessionId | null;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
@@ -591,7 +591,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // ── Tier map ───────────────────────────────────────────────────
 //
 // Member: T1 (name, pronouns, description, tags, colors, avatarSource, saturationLevel, suppressFriendFrontNotification, boardMessageNotificationOnFront) | T3 (archived)
-// FrontingSession: T1 (comment) | T3 (timestamps, memberId, frontingType, customFrontId, linkedStructure)
+// FrontingSession: T1 (comment, positionality) | T3 (timestamps, memberId, frontingType, customFrontId, linkedStructure)
 // FrontingComment: T1 (content) | T3 (frontingSessionId, memberId)
 // Group: T1 (name, description, imageRef, color, emoji) | T3 (sortOrder, archived, parentGroupId)
 // Subsystem: T1 (name, description, color, imageSource, emoji) | T3 (parentSubsystemId, architectureType, hasCore, discoveryStatus)
@@ -606,7 +606,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // InnerWorldRegion: T1 (name, description, boundaryData, visual) | T3 (parentRegionId, accessType, gatekeeperMemberId)
 // LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
 // CustomFront: T1 (name, description, color, emoji) | T3 (archived)
-// JournalEntry: T1 (title, blocks, tags, linkedEntities) | T3 (authorMemberId, frontingSessionId, archived)
+// JournalEntry: T1 (title, blocks, tags, linkedEntities) | T3 (author, frontingSessionId, archived)
 // WikiPage: T1 (title, slug, blocks, tags, linkedEntities, linkedFromPages) | T3 (archived)
 // MemberPhoto: T1 (imageSource, caption) | T3 (memberId, sortOrder)
 // Poll: T1 (title, options, description) | T3 (createdByMemberId, kind, status, closedAt, endsAt, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto)
