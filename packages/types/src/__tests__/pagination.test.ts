@@ -29,11 +29,27 @@ describe("PaginatedResult", () => {
     type Result = PaginatedResult<string>;
     expectTypeOf<Result["totalCount"]>().toEqualTypeOf<number | null>();
   });
+
+  it("rejects mutation of readonly fields", () => {
+    const result: PaginatedResult<string> = {
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    } as PaginatedResult<string>;
+    // @ts-expect-error readonly property
+    result.hasMore = true;
+  });
 });
 
 describe("OffsetPaginationParams", () => {
   it("has offset and limit fields", () => {
     expectTypeOf<OffsetPaginationParams["offset"]>().toEqualTypeOf<number>();
     expectTypeOf<OffsetPaginationParams["limit"]>().toEqualTypeOf<number>();
+  });
+
+  it("rejects string for offset", () => {
+    // @ts-expect-error string not assignable to number
+    assertType<OffsetPaginationParams>({ offset: "0", limit: 10 });
   });
 });

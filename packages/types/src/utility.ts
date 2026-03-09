@@ -4,17 +4,28 @@ import type { UnixMillis } from "./timestamps.js";
 /** Input for creating an entity — strips server-assigned fields. */
 export type CreateInput<T> = Omit<T, "id" | "createdAt" | "updatedAt" | "version">;
 
-/** Input for updating an entity — strips immutable fields, makes rest partial. */
-export type UpdateInput<T> = Partial<Omit<T, "id" | "createdAt">>;
+/** Input for updating an entity — strips server-assigned fields, makes rest partial. */
+export type UpdateInput<T> = Partial<Omit<T, "id" | "createdAt" | "updatedAt" | "version">>;
 
 /** Recursively makes all properties `readonly`. */
 export type DeepReadonly<T> = T extends readonly (infer U)[]
   ? readonly DeepReadonly<U>[]
-  : T extends object
-    ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
-    : T;
+  : T extends Map<infer K, infer V>
+    ? ReadonlyMap<DeepReadonly<K>, DeepReadonly<V>>
+    : T extends Set<infer U>
+      ? ReadonlySet<DeepReadonly<U>>
+      : T extends Date
+        ? Date
+        : T extends (...args: never[]) => unknown
+          ? T
+          : T extends object
+            ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+            : T;
 
-/** A time range bounded by two Unix timestamps. */
+/**
+ * A time range bounded by two Unix timestamps.
+ * Invariant: `start` must be <= `end`.
+ */
 export interface DateRange {
   readonly start: UnixMillis;
   readonly end: UnixMillis;
@@ -30,8 +41,13 @@ export interface AuditMetadata {
 /** Sort direction for queries. */
 export type SortDirection = "asc" | "desc";
 
-/** A generic reference to any entity by type and ID. */
-export interface EntityReference {
-  readonly entityType: EntityType;
+/**
+ * A generic reference to any entity by type and ID.
+ *
+ * `entityId` is a plain `string` because a full EntityType→BrandedId
+ * mapping is deferred to runtime utils.
+ */
+export interface EntityReference<T extends EntityType = EntityType> {
+  readonly entityType: T;
   readonly entityId: string;
 }

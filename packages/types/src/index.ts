@@ -42,6 +42,7 @@ export type {
   NotificationConfigId,
   SystemSettingsId,
   PollOptionId,
+  MemberPhotoId,
   EntityType,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";

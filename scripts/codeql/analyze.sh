@@ -10,7 +10,7 @@ fi
 DB_DIR=".codeql-db"
 RESULTS_DIR=".codeql-results"
 
-rm -rf "$DB_DIR" "$RESULTS_DIR"
+rm -rf coverage "$DB_DIR" "$RESULTS_DIR"
 mkdir -p "$DB_DIR" "$RESULTS_DIR"
 
 echo "=== JavaScript/TypeScript analysis ==="

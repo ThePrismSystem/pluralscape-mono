@@ -1,4 +1,4 @@
-import { assertType, describe, expectTypeOf, it } from "vitest";
+import { assertType, describe, expect, expectTypeOf, it } from "vitest";
 
 import { ID_PREFIXES } from "../ids.js";
 
@@ -9,6 +9,7 @@ import type {
   AuditLogEntryId,
   BlobId,
   BoardMessageId,
+  Brand,
   BucketId,
   ChannelId,
   CheckInRecordId,
@@ -28,6 +29,7 @@ import type {
   KeyGrantId,
   LayerId,
   MemberId,
+  MemberPhotoId,
   MessageId,
   NoteId,
   NotificationConfigId,
@@ -45,6 +47,15 @@ import type {
   WikiPageId,
 } from "../ids.js";
 
+describe("Brand generic", () => {
+  it("works with non-string base types", () => {
+    type NumericBrand = Brand<number, "Foo">;
+    expectTypeOf<NumericBrand>().toExtend<number>();
+    // @ts-expect-error plain number not assignable to branded type
+    assertType<NumericBrand>(42);
+  });
+});
+
 describe("branded ID types", () => {
   it("are not assignable from plain string", () => {
     // @ts-expect-error plain string not assignable to branded SystemId
@@ -61,11 +72,21 @@ describe("branded ID types", () => {
     expectTypeOf<TestSystemId>().toEqualTypeOf<GroupId>();
   });
 
+  it("BlobId and ApiKeyId are not interchangeable", () => {
+    // @ts-expect-error BlobId not assignable to ApiKeyId
+    expectTypeOf<BlobId>().toEqualTypeOf<ApiKeyId>();
+  });
+
+  it("FrontingSessionId and CustomFrontId are not interchangeable", () => {
+    // @ts-expect-error FrontingSessionId not assignable to CustomFrontId
+    expectTypeOf<FrontingSessionId>().toEqualTypeOf<CustomFrontId>();
+  });
+
   it("are assignable to string", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 39 branded ID types as string-based", () => {
+  it("defines all 40 branded ID types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -105,6 +126,7 @@ describe("branded ID types", () => {
     expectTypeOf<NotificationConfigId>().toExtend<string>();
     expectTypeOf<SystemSettingsId>().toExtend<string>();
     expectTypeOf<PollOptionId>().toExtend<string>();
+    expectTypeOf<MemberPhotoId>().toExtend<string>();
   });
 });
 
@@ -117,6 +139,17 @@ describe("ID_PREFIXES", () => {
 
   it("is a readonly const object", () => {
     expectTypeOf(ID_PREFIXES).toExtend<Readonly<Record<string, string>>>();
+  });
+
+  it("has all unique prefix values", () => {
+    const values = Object.values(ID_PREFIXES);
+    const unique = new Set(values);
+    expect(unique.size).toBe(values.length);
+  });
+
+  it("has the same number of entries as EntityType members", () => {
+    const prefixCount = Object.keys(ID_PREFIXES).length;
+    expect(prefixCount).toBe(40);
   });
 });
 
@@ -175,6 +208,14 @@ describe("EntityType", () => {
         case "key-grant":
         case "device-token":
         case "poll-vote":
+        case "session":
+        case "event":
+        case "account":
+        case "friend-code":
+        case "notification-config":
+        case "system-settings":
+        case "poll-option":
+        case "member-photo":
           return type;
         default: {
           const _exhaustive: never = type;

@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: critical
 created_at: 2026-03-08T13:31:17Z
-updated_at: 2026-03-08T23:47:20Z
+updated_at: 2026-03-09T00:14:58Z
 parent: types-im7i
 blocking:
   - types-fid9
@@ -97,3 +97,15 @@ Implemented all shared utility types and branded ID system in packages/types/src
 - utility.ts: CreateInput<T>, UpdateInput<T>, DeepReadonly<T>, DateRange, AuditMetadata, SortDirection, EntityReference
 
 Runtime helpers (createId, now) deferred to follow-up bean for runtime utils package.
+
+## Post-Review Fixes
+
+- Added MemberPhotoId branded type and mp\_ prefix (40 total)
+- Added 8 missing EntityType members (session, event, account, friend-code, notification-config, system-settings, poll-option, member-photo)
+- UpdateInput now strips updatedAt and version (matching CreateInput)
+- DeepReadonly guards for Map, Set, Date, and Function
+- EntityReference made generic: EntityReference<T extends EntityType = EntityType>
+- DateRange JSDoc documents start <= end invariant
+- ID_PREFIXES uniqueness and count alignment tests
+- Brand generic test with non-string base type
+- Additional non-interchangeability spot checks

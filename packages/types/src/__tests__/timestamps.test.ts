@@ -23,3 +23,15 @@ describe("ISOTimestamp", () => {
     expectTypeOf<ISOTimestamp>().toExtend<string>();
   });
 });
+
+describe("cross-type non-interchangeability", () => {
+  it("UnixMillis is not assignable to ISOTimestamp", () => {
+    // @ts-expect-error UnixMillis not assignable to ISOTimestamp
+    expectTypeOf<UnixMillis>().toEqualTypeOf<ISOTimestamp>();
+  });
+
+  it("ISOTimestamp is not assignable to UnixMillis", () => {
+    // @ts-expect-error ISOTimestamp not assignable to UnixMillis
+    expectTypeOf<ISOTimestamp>().toEqualTypeOf<UnixMillis>();
+  });
+});

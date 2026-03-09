@@ -48,6 +48,7 @@ export type DeviceTokenId = Brand<string, "DeviceTokenId">;
 export type NotificationConfigId = Brand<string, "NotificationConfigId">;
 export type SystemSettingsId = Brand<string, "SystemSettingsId">;
 export type PollOptionId = Brand<string, "PollOptionId">;
+export type MemberPhotoId = Brand<string, "MemberPhotoId">;
 
 // ── ID prefix convention ────────────────────────────────────────────
 
@@ -91,6 +92,7 @@ export const ID_PREFIXES = {
   notificationConfig: "nc_",
   systemSettings: "sset_",
   pollOption: "po_",
+  memberPhoto: "mp_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -127,4 +129,12 @@ export type EntityType =
   | "friend-connection"
   | "key-grant"
   | "device-token"
-  | "poll-vote";
+  | "poll-vote"
+  | "session"
+  | "event"
+  | "account"
+  | "friend-code"
+  | "notification-config"
+  | "system-settings"
+  | "poll-option"
+  | "member-photo";

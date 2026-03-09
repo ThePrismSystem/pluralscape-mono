@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:32:06Z
-updated_at: 2026-03-08T23:47:31Z
+updated_at: 2026-03-09T00:15:02Z
 parent: types-im7i
 blocking:
   - types-itej
@@ -59,3 +59,14 @@ Implemented core identity types in packages/types/src/identity.ts:
 - MemberPhoto: multi-photo gallery with sort order
 - ArchivedMember: extends Member with archived flag and timestamp
 - MemberListItem: lightweight projection for list views
+
+## Post-Review Fixes
+
+- RoleTag redesigned with explicit kind discriminant: { kind: 'known', tag: KnownRoleTag } | { kind: 'custom', value: string }
+- Member now extends AuditMetadata (removes inline audit fields)
+- Member has archived: false literal field
+- System now extends AuditMetadata (removes inline audit fields)
+- ArchivedMember changed from interface extends to type alias with Omit (archived: false -> true)
+- MemberPhoto.id changed from BlobId to MemberPhotoId
+- MemberPhoto.ref renamed to blobRef
+- Composition and barrel export tests added

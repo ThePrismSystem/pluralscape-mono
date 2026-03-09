@@ -10,8 +10,9 @@ import type {
   RoleTag,
   System,
 } from "../identity.js";
-import type { BlobId, MemberId, SystemId, SystemSettingsId } from "../ids.js";
+import type { BlobId, MemberId, MemberPhotoId, SystemId, SystemSettingsId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { AuditMetadata } from "../utility.js";
 
 describe("System", () => {
   it("requires SystemId for id field", () => {
@@ -32,7 +33,8 @@ describe("System", () => {
     expectTypeOf<System["settingsId"]>().toEqualTypeOf<SystemSettingsId>();
   });
 
-  it("has audit timestamps", () => {
+  it("extends AuditMetadata", () => {
+    expectTypeOf<System>().toExtend<AuditMetadata>();
     expectTypeOf<System["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<System["updatedAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<System["version"]>().toEqualTypeOf<number>();
@@ -70,6 +72,17 @@ describe("Member", () => {
     expectTypeOf<Member["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Member["avatarRef"]>().toEqualTypeOf<BlobId | null>();
   });
+
+  it("extends AuditMetadata", () => {
+    expectTypeOf<Member>().toExtend<AuditMetadata>();
+    expectTypeOf<Member["createdAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<Member["updatedAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<Member["version"]>().toEqualTypeOf<number>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<Member["archived"]>().toEqualTypeOf<false>();
+  });
 });
 
 describe("CompletenessLevel", () => {
@@ -104,20 +117,23 @@ describe("CompletenessLevel", () => {
 });
 
 describe("RoleTag", () => {
-  it("accepts known role tags", () => {
-    assertType<RoleTag>({ tag: "protector" as KnownRoleTag });
-    assertType<RoleTag>({ tag: "host" as KnownRoleTag });
+  it("accepts known role tags with kind discriminant", () => {
+    assertType<RoleTag>({ kind: "known" as const, tag: "protector" as KnownRoleTag });
+    assertType<RoleTag>({ kind: "known" as const, tag: "host" as KnownRoleTag });
   });
 
   it("accepts custom role tags with value", () => {
-    assertType<RoleTag>({ tag: "custom", value: "helper" });
+    assertType<RoleTag>({ kind: "custom" as const, value: "helper" });
   });
 
-  it("discriminates on tag field", () => {
-    function handleTag(roleTag: RoleTag): void {
-      if (roleTag.tag === "custom") {
+  it("discriminates on kind field", () => {
+    function handleTag(roleTag: RoleTag): string {
+      if (roleTag.kind === "custom") {
         expectTypeOf(roleTag.value).toBeString();
+        return roleTag.value;
       }
+      expectTypeOf(roleTag.tag).toEqualTypeOf<KnownRoleTag>();
+      return roleTag.tag;
     }
     expectTypeOf(handleTag).toBeFunction();
   });
@@ -138,15 +154,24 @@ describe("RoleTag", () => {
     // @ts-expect-error invalid role tag
     assertType<KnownRoleTag>("invalid");
   });
+
+  it("rejects custom tag without value", () => {
+    // @ts-expect-error missing value on custom tag
+    assertType<RoleTag>({ kind: "custom" as const });
+  });
 });
 
 describe("MemberPhoto", () => {
+  it("has id as MemberPhotoId", () => {
+    expectTypeOf<MemberPhoto["id"]>().toEqualTypeOf<MemberPhotoId>();
+  });
+
   it("has memberId as MemberId", () => {
     expectTypeOf<MemberPhoto["memberId"]>().toEqualTypeOf<MemberId>();
   });
 
-  it("has ref as BlobId", () => {
-    expectTypeOf<MemberPhoto["ref"]>().toEqualTypeOf<BlobId>();
+  it("has blobRef as BlobId", () => {
+    expectTypeOf<MemberPhoto["blobRef"]>().toEqualTypeOf<BlobId>();
   });
 
   it("has sortOrder and nullable caption", () => {
@@ -156,10 +181,11 @@ describe("MemberPhoto", () => {
 });
 
 describe("ArchivedMember", () => {
-  it("extends Member fields", () => {
+  it("has all Member fields except archived", () => {
     expectTypeOf<ArchivedMember["id"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<ArchivedMember["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<ArchivedMember["name"]>().toBeString();
+    expectTypeOf<ArchivedMember["completenessLevel"]>().toEqualTypeOf<CompletenessLevel>();
   });
 
   it("has archived as true literal", () => {

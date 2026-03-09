@@ -25,6 +25,12 @@ describe("Result", () => {
     const r = { ok: false as const, error: "fail" };
     assertType<R>(r);
   });
+
+  it("rejects mutation of readonly fields", () => {
+    const r: Result<string, string> = { ok: true as const, value: "v" } as Result<string, string>;
+    // @ts-expect-error readonly property
+    r.ok = false;
+  });
 });
 
 describe("ApiResponse", () => {
@@ -37,6 +43,14 @@ describe("ApiResponse", () => {
       }
     }
     expectTypeOf(handleResponse).toBeFunction();
+  });
+
+  it("rejects both data and error non-null", () => {
+    // @ts-expect-error cannot have both data and error non-null
+    assertType<ApiResponse<string>>({
+      data: "ok",
+      error: { code: "ERR", message: "fail", details: null },
+    });
   });
 });
 
@@ -56,5 +70,10 @@ describe("ValidationError", () => {
     expectTypeOf<ValidationError["field"]>().toBeString();
     expectTypeOf<ValidationError["message"]>().toBeString();
     expectTypeOf<ValidationError["code"]>().toBeString();
+  });
+
+  it("rejects missing required fields", () => {
+    // @ts-expect-error missing code field
+    assertType<ValidationError>({ field: "name", message: "required" });
   });
 });
