@@ -53,6 +53,16 @@ describe("AppLockConfig", () => {
     expectTypeOf<AppLockConfig["lockTimeout"]>().toEqualTypeOf<number>();
     expectTypeOf<AppLockConfig["backgroundGraceSeconds"]>().toEqualTypeOf<number>();
   });
+
+  it("can construct a structurally complete literal", () => {
+    const config: AppLockConfig = {
+      pinEnabled: true,
+      biometricEnabled: true,
+      lockTimeout: 5,
+      backgroundGraceSeconds: 60,
+    };
+    expectTypeOf(config).toEqualTypeOf<AppLockConfig>();
+  });
 });
 
 describe("NotificationPreferences", () => {

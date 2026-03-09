@@ -6,22 +6,27 @@ Prerequisite reading: ADR 006 (encryption architecture), ADR 011 (key recovery),
 
 ## Key Inventory
 
-| Key               | Type            | Size     | Storage                                          | Sensitivity |
-| ----------------- | --------------- | -------- | ------------------------------------------------ | ----------- |
-| MasterKey         | `KdfMasterKey`  | 32B      | expo-secure-store + in-memory                    | Critical    |
-| Identity Sign Key | `SignSecretKey` | 64B      | In-memory only (derived from MasterKey via KDF)  | Critical    |
-| Identity Enc Key  | `BoxSecretKey`  | 32B      | In-memory only (derived from MasterKey via KDF)  | Critical    |
-| Bucket Keys       | `AeadKey`       | 32B each | In-memory LRU cache (max 64)                     | High        |
-| Device Auth Key   | per-device      | 32B      | expo-secure-store (no biometric gate)            | Medium      |
-| SQLCipher DB Key  | derived         | 32B      | Passed to SQLCipher, JS copy cleared immediately | Critical    |
+| Key               | Type            | Size     | Storage                                                              | Sensitivity |
+| ----------------- | --------------- | -------- | -------------------------------------------------------------------- | ----------- |
+| MasterKey         | `KdfMasterKey`  | 32B      | expo-secure-store + in-memory                                        | Critical    |
+| Identity Sign Key | `SignSecretKey` | 64B      | In-memory only (derived from MasterKey via KDF)                      | Critical    |
+| Identity Enc Key  | `BoxSecretKey`  | 32B      | In-memory only (derived from MasterKey via KDF)                      | Critical    |
+| Bucket Keys       | `AeadKey`       | 32B each | In-memory LRU cache (max 64 buckets, up to 128 keys during rotation) | High        |
+| Device Auth Key   | per-device      | 32B      | expo-secure-store (no biometric gate)                                | Medium      |
+| SQLCipher DB Key  | derived         | 32B      | Passed to SQLCipher, JS copy cleared immediately                     | Critical    |
 
 All key types are defined in `packages/crypto/src/types.ts`. Derivation uses the BLAKE2B-based KDF specified in ADR 006 addendum.
+
+The bucket key LRU cache tracks `(bucketId, keyVersion)` tuples. During key rotation (ADR 014), a bucket may have two active keys simultaneously. The cache uses rotation-aware eviction: keys involved in an active rotation are pinned and cannot be evicted until the rotation completes or fails.
 
 ## MasterKey Derivation Events
 
 The MasterKey is derived from the user's password exactly **once** during initial login. After that, it is retrieved from secure storage. There are only 4 scenarios where MasterKey derivation or recovery occurs:
 
 1. **Initial login** — `Argon2id(password, salt)` with mobile parameters (32 MiB memory, 2 iterations — reduced from the desktop 256 MiB/3 iterations to accommodate mobile RAM constraints). Store result in expo-secure-store.
+
+**Mobile parameter justification**: the 32 MiB / 2 iteration parameters (`PWHASH_MEMLIMIT_MOBILE` / `PWHASH_OPSLIMIT_MOBILE`) target the OWASP Mobile minimum while avoiding OOM kills on low-end devices (2–4 GB RAM). The desktop `PWHASH_MEMLIMIT_INTERACTIVE` (64 MiB) was rejected after testing showed OOM on devices with <3 GB available memory. The desktop `PWHASH_MEMLIMIT_MODERATE` (256 MiB) is infeasible on any current mobile device. These constants are defined in `packages/crypto/src/constants.ts`.
+
 2. **Cold start with biometric** — Retrieve from expo-secure-store via biometric prompt. No derivation.
 3. **Password change** — Re-wrap the same MasterKey under a new password-derived key. Update expo-secure-store entry. The MasterKey itself does not change.
 4. **Recovery key restore** — Decrypt the MasterKey backup blob using the recovery key (ADR 011, Path 1). Set a new password, store in expo-secure-store.
@@ -83,7 +88,6 @@ When transitioning to `locked` state, keys are cleared in a specific order — d
 3. Clear identity keypairs (memzero sign and box secret keys)
 4. Clear MasterKey (memzero)
 5. Set state to `locked`
-6. Present lock screen overlay (prevents iOS app switcher from showing sensitive content)
 
 ## Timing Configuration
 
@@ -94,6 +98,10 @@ When transitioning to `locked` state, keys are cleared in a specific order — d
 
 ### Security Presets
 
+```typescript
+type SecurityPresetLevel = "convenience" | "standard" | "paranoid";
+```
+
 | Level              | Lock Timeout | Background Grace                      | Biometric |
 | ------------------ | ------------ | ------------------------------------- | --------- |
 | Convenience        | 30 min       | 5 min                                 | Optional  |
@@ -101,6 +109,15 @@ When transitioning to `locked` state, keys are cleared in a specific order — d
 | Paranoid           | 1 min        | 0 sec (immediate clear on background) | Required  |
 
 Presets are UX shortcuts that set the individual values. Users can also configure each value independently.
+
+### Privacy Overlay
+
+The privacy overlay prevents the iOS app switcher from displaying sensitive content. It is managed independently from key clearing:
+
+- **Presented** on `onBackground()` (when the app enters the grace period) — immediately, before any timer logic.
+- **Dismissed** on `onForeground()` — after the app returns to foreground and the grace timer is cancelled.
+- The overlay remains visible through the lock transition if the grace timer expires while backgrounded.
+- On Android, `FLAG_SECURE` on the root activity serves the same purpose and is set unconditionally while the app holds key material.
 
 ## The Memzero Problem
 
@@ -119,9 +136,11 @@ Presets are UX shortcuts that set the individual values. Users can also configur
    }
    ```
 
-3. **JS fallback**: overwrite with `crypto.getRandomValues(buffer)` (side-effectful — the RNG call defeats dead-store elimination) then `buffer.fill(0)`. This is stronger than `fill(0)` alone.
+   The `NativeMemzero` implementation lives in `packages/crypto/src/adapter/` alongside `react-native-adapter.ts`.
 
-4. **Buffer reuse pool**: pre-allocated buffers for key operations reduce GC copy surface. Buffers are drawn from the pool, used, zeroed, and returned — reducing the number of copies the GC might scatter across the heap.
+3. **JS fallback**: overwrite with `ExpoCrypto.getRandomValues(buffer)` (side-effectful — the RNG call defeats dead-store elimination) then `buffer.fill(0)`. This is stronger than `fill(0)` alone. `expo-crypto` wraps the platform-native CSPRNG (`SecRandomCopyBytes` on iOS, `SecureRandom` on Android).
+
+4. **Buffer reuse pool** _(deferred — pending profiling data)_: pre-allocated buffers for key operations would reduce GC copy surface. Buffers drawn from a pool, used, zeroed, and returned would reduce the number of copies the GC might scatter across the heap. This optimization is deferred until profiling on target devices demonstrates measurable GC-related key exposure.
 
 5. **Documented residual risk**: on platforms without native memzero, freed GC memory may contain key material until overwritten by subsequent allocations. Mitigated by:
    - Device full-disk encryption (FDE) on both iOS and Android
@@ -156,14 +175,7 @@ Log the advisory acknowledgment to the audit trail (`device.security.jailbreak_w
 
 Add `backgroundGraceSeconds` to support the grace period between background and key clearing:
 
-```typescript
-interface AppLockConfig {
-  readonly pinEnabled: boolean;
-  readonly biometricEnabled: boolean;
-  readonly lockTimeout: number; // minutes
-  readonly backgroundGraceSeconds: number; // 0 = immediate clear on background
-}
-```
+See `AppLockConfig` in `packages/types/src/settings.ts` for the canonical definition.
 
 ## Interface Definitions
 
@@ -172,9 +184,11 @@ interface AppLockConfig {
 Primary interface for managing key state on mobile. Implementations coordinate with expo-secure-store, the app state machine, and the crypto adapter.
 
 ```typescript
+type KeyLifecycleState = "terminated" | "locked" | "unlocked" | "grace";
+
 interface KeyLifecycleManager {
   /** Current lifecycle state. */
-  readonly state: "terminated" | "locked" | "unlocked" | "grace";
+  readonly state: KeyLifecycleState;
 
   /** Derive MasterKey from password + salt, store in secure storage, transition to unlocked. */
   unlockWithPassword(password: string, salt: Uint8Array): Promise<void>;
@@ -182,8 +196,8 @@ interface KeyLifecycleManager {
   /** Retrieve MasterKey from secure storage via biometric, transition to unlocked. */
   unlockWithBiometric(): Promise<void>;
 
-  /** Clear all keys from memory, transition to locked. */
-  lock(): void;
+  /** Clear all keys from memory, transition to locked. Async to allow SQLCipher connection close. */
+  lock(): Promise<void>;
 
   /** Clear all keys from memory AND delete secure storage entries. */
   logout(): Promise<void>;
@@ -204,7 +218,7 @@ interface KeyLifecycleManager {
   getIdentityKeys(): { sign: SignKeypair; box: BoxKeypair };
 
   /** Get or derive a bucket key. Throws KeysLockedError if locked. */
-  getBucketKey(bucketId: string, encryptedKey: Uint8Array): AeadKey;
+  getBucketKey(bucketId: BucketId, encryptedKey: Uint8Array, keyVersion: number): AeadKey;
 }
 ```
 
@@ -216,10 +230,10 @@ class KeysLockedError extends Error {
   readonly name = "KeysLockedError";
 }
 
-/** Thrown when expo-secure-store operations fail. */
+/** Thrown when expo-secure-store operations fail. Uses ES2022 ErrorOptions for cause propagation. */
 class KeyStorageFailedError extends Error {
   readonly name = "KeyStorageFailedError";
-  readonly cause: unknown;
+  constructor(message: string, options: ErrorOptions);
 }
 
 /** Thrown when biometric authentication fails after max retries. */
@@ -228,6 +242,8 @@ class BiometricFailedError extends Error {
   readonly retriesExhausted: boolean;
 }
 ```
+
+All error classes use the `override readonly name` pattern for `instanceof`-free narrowing, matching the convention in `packages/crypto/src/errors.ts`.
 
 ## Cross-References
 

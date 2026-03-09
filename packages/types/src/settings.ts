@@ -11,9 +11,9 @@ export type ThemePreference = "light" | "dark" | "high-contrast" | "system";
 export interface AppLockConfig {
   readonly pinEnabled: boolean;
   readonly biometricEnabled: boolean;
-  /** Lock timeout in minutes. */
+  /** Lock timeout in minutes. @range 1-30 */
   readonly lockTimeout: number;
-  /** Seconds to keep keys in memory after app backgrounds. 0 = immediate clear. */
+  /** Seconds to keep keys in memory after app backgrounds. 0 = immediate clear. @range 0-300 */
   readonly backgroundGraceSeconds: number;
 }
 

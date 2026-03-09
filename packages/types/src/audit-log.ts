@@ -18,7 +18,12 @@ export type AuditEventType =
   | "member.created"
   | "member.archived"
   | "sharing.granted"
-  | "sharing.revoked";
+  | "sharing.revoked"
+  | "bucket.key_rotation.initiated"
+  | "bucket.key_rotation.chunk_completed"
+  | "bucket.key_rotation.completed"
+  | "bucket.key_rotation.failed"
+  | "device.security.jailbreak_warning_shown";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

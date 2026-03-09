@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   AlreadyInitializedError,
+  BiometricFailedError,
   CryptoNotReadyError,
   DecryptionFailedError,
   InvalidInputError,
+  KeysLockedError,
+  KeyStorageFailedError,
   UnsupportedOperationError,
 } from "../errors.js";
 
@@ -92,5 +95,64 @@ describe("UnsupportedOperationError", () => {
     const error = new UnsupportedOperationError("signSeedKeypair", "react-native");
     expect(error.message).toContain("signSeedKeypair");
     expect(error.message).toContain("react-native");
+  });
+});
+
+describe("KeysLockedError", () => {
+  it("has the correct name property", () => {
+    const error = new KeysLockedError();
+    expect(error.name).toBe("KeysLockedError");
+  });
+
+  it("is an instance of Error", () => {
+    const error = new KeysLockedError();
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  it("has a default message", () => {
+    const error = new KeysLockedError();
+    expect(error.message).toContain("locked");
+  });
+});
+
+describe("KeyStorageFailedError", () => {
+  it("has the correct name property", () => {
+    const original = new Error("store unavailable");
+    const error = new KeyStorageFailedError("Secure store write failed", { cause: original });
+    expect(error.name).toBe("KeyStorageFailedError");
+  });
+
+  it("is an instance of Error", () => {
+    const original = new Error("store unavailable");
+    const error = new KeyStorageFailedError("Secure store write failed", { cause: original });
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  it("propagates cause via ErrorOptions", () => {
+    const original = new Error("store unavailable");
+    const error = new KeyStorageFailedError("Secure store write failed", { cause: original });
+    expect(error.cause).toBe(original);
+  });
+});
+
+describe("BiometricFailedError", () => {
+  it("has the correct name property", () => {
+    const error = new BiometricFailedError(true);
+    expect(error.name).toBe("BiometricFailedError");
+  });
+
+  it("is an instance of Error", () => {
+    const error = new BiometricFailedError(false);
+    expect(error).toBeInstanceOf(Error);
+  });
+
+  it("reports retries exhausted when true", () => {
+    const error = new BiometricFailedError(true);
+    expect(error.retriesExhausted).toBe(true);
+  });
+
+  it("reports retries not exhausted when false", () => {
+    const error = new BiometricFailedError(false);
+    expect(error.retriesExhausted).toBe(false);
   });
 });

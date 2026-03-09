@@ -62,6 +62,12 @@ export const PWHASH_OPSLIMIT_MODERATE = 3;
 /** Moderate memory limit in bytes (256 MB). */
 export const PWHASH_MEMLIMIT_MODERATE = 268435456;
 
+/** Mobile ops limit (for memory-constrained devices). */
+export const PWHASH_OPSLIMIT_MOBILE = 2;
+
+/** Mobile memory limit in bytes (32 MiB — OWASP Mobile minimum). */
+export const PWHASH_MEMLIMIT_MOBILE = 33554432;
+
 // ── KDF (BLAKE2B) ───────────────────────────────────────────────────
 
 /** KDF key size in bytes. */
@@ -95,6 +101,8 @@ export const SODIUM_CONSTANTS = Object.freeze({
   PWHASH_MEMLIMIT_INTERACTIVE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_MEMLIMIT_MODERATE,
+  PWHASH_OPSLIMIT_MOBILE,
+  PWHASH_MEMLIMIT_MOBILE,
   KDF_KEY_BYTES,
   KDF_CONTEXT_BYTES,
   KDF_BYTES_MIN,
