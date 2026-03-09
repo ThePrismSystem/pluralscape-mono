@@ -56,6 +56,7 @@ export type DeviceTransferRequestId = Brand<string, "DeviceTransferRequestId">;
 export type SyncDocumentId = Brand<string, "SyncDocumentId">;
 export type SyncQueueItemId = Brand<string, "SyncQueueItemId">;
 export type SyncConflictId = Brand<string, "SyncConflictId">;
+export type FrontingReportId = Brand<string, "FrontingReportId">;
 export type HexColor = Brand<string, "HexColor">;
 
 // ── ID prefix convention ────────────────────────────────────────────
@@ -108,6 +109,7 @@ export const ID_PREFIXES = {
   syncDocument: "sdoc_",
   syncQueueItem: "sqi_",
   syncConflict: "scon_",
+  frontingReport: "fr_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -159,4 +161,5 @@ export type EntityType =
   | "device-transfer-request"
   | "sync-document"
   | "sync-queue-item"
-  | "sync-conflict";
+  | "sync-conflict"
+  | "fronting-report";

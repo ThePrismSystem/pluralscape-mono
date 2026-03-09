@@ -255,6 +255,7 @@ describe("EntityType", () => {
         case "sync-document":
         case "sync-queue-item":
         case "sync-conflict":
+        case "fronting-report":
           return type;
         default: {
           const _exhaustive: never = type;
