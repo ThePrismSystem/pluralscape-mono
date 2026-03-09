@@ -4,6 +4,7 @@ import { createId, ID_PREFIXES, now, toISO } from "../index.js";
 
 import type {
   Account,
+  AccountPurgeRequest,
   ActiveFrontingSession,
   ClientMember,
   DecryptFn,
@@ -12,6 +13,28 @@ import type {
   EncryptedString,
   EncryptFn,
   EncryptionAlgorithm,
+  ExportFormat,
+  ExportManifest,
+  ImportError,
+  ImportJob,
+  ImportJobStatus,
+  ImportProgress,
+  ImportSource,
+  MemberReport,
+  PKBridgeConfig,
+  PKEntityMapping,
+  PKImportGroup,
+  PKImportMember,
+  PKImportPayload,
+  PKImportSwitch,
+  PKSyncDirection,
+  PKSyncError,
+  PKSyncState,
+  PKSyncStatus,
+  SPImportFrontingSession,
+  SPImportGroup,
+  SPImportMember,
+  SPImportPayload,
   ServerMember,
   ApiError,
   ApiResponse,
@@ -231,6 +254,35 @@ describe("barrel exports", () => {
   it("exports ID_PREFIXES runtime value", () => {
     expectTypeOf(ID_PREFIXES).toBeObject();
     expectTypeOf(ID_PREFIXES.system).toEqualTypeOf<"sys_">();
+  });
+
+  it("exports PK bridge types", () => {
+    expectTypeOf<PKSyncDirection>().toBeString();
+    expectTypeOf<PKSyncStatus>().toBeString();
+    expectTypeOf<PKBridgeConfig>().toBeObject();
+    expectTypeOf<PKEntityMapping>().toBeObject();
+    expectTypeOf<PKSyncState>().toBeObject();
+    expectTypeOf<PKSyncError>().toBeObject();
+  });
+
+  it("exports import/export types", () => {
+    expectTypeOf<SPImportMember>().toBeObject();
+    expectTypeOf<SPImportGroup>().toBeObject();
+    expectTypeOf<SPImportFrontingSession>().toBeObject();
+    expectTypeOf<SPImportPayload>().toBeObject();
+    expectTypeOf<PKImportMember>().toBeObject();
+    expectTypeOf<PKImportGroup>().toBeObject();
+    expectTypeOf<PKImportSwitch>().toBeObject();
+    expectTypeOf<PKImportPayload>().toBeObject();
+    expectTypeOf<ImportSource>().toBeString();
+    expectTypeOf<ImportJobStatus>().toBeString();
+    expectTypeOf<ImportProgress>().toBeObject();
+    expectTypeOf<ImportError>().toBeObject();
+    expectTypeOf<ImportJob>().toBeObject();
+    expectTypeOf<ExportFormat>().toBeString();
+    expectTypeOf<ExportManifest>().toBeObject();
+    expectTypeOf<AccountPurgeRequest>().toBeObject();
+    expectTypeOf<MemberReport>().toBeObject();
   });
 
   it("exports runtime utilities", () => {

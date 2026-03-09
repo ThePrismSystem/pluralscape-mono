@@ -186,5 +186,36 @@ export type {
   GroupMoveOperation,
 } from "./groups.js";
 
+// ── PK Bridge ────────────────────────────────────────────────────
+export type {
+  PKSyncDirection,
+  PKSyncStatus,
+  PKBridgeConfig,
+  PKEntityMapping,
+  PKSyncState,
+  PKSyncError,
+} from "./pk-bridge.js";
+
+// ── Import/Export ────────────────────────────────────────────────
+export type {
+  SPImportMember,
+  SPImportGroup,
+  SPImportFrontingSession,
+  SPImportPayload,
+  PKImportMember,
+  PKImportGroup,
+  PKImportSwitch,
+  PKImportPayload,
+  ImportSource,
+  ImportJobStatus,
+  ImportProgress,
+  ImportError,
+  ImportJob,
+  ExportFormat,
+  ExportManifest,
+  AccountPurgeRequest,
+  MemberReport,
+} from "./import-export.js";
+
 // ── Runtime utilities ──────────────────────────────────────────────
 export { createId, now, toISO } from "./runtime.js";
