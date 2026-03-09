@@ -35,7 +35,6 @@ import type {
   FusionEvent,
   InnerWorldCanvas,
   InnerWorldEntity,
-  InnerWorldEntityData,
   InnerWorldRegion,
   JournalBlock,
   JournalBlockType,
@@ -306,7 +305,6 @@ describe("barrel exports", () => {
     expectTypeOf<VisualProperties>().toBeObject();
     expectTypeOf<MemberEntity>().toBeObject();
     expectTypeOf<LandmarkEntity>().toBeObject();
-    expectTypeOf<InnerWorldEntityData>().toBeObject();
     expectTypeOf<InnerWorldEntity>().toBeObject();
     expectTypeOf<InnerWorldRegion>().toBeObject();
     expectTypeOf<InnerWorldCanvas>().toBeObject();

@@ -250,7 +250,6 @@ export type {
   VisualProperties,
   MemberEntity,
   LandmarkEntity,
-  InnerWorldEntityData,
   InnerWorldEntity,
   InnerWorldRegion,
   InnerWorldCanvas,

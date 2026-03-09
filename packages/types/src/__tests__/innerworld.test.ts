@@ -1,10 +1,15 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { InnerWorldEntityId, InnerWorldRegionId, MemberId, SystemId } from "../ids.js";
+import type {
+  HexColor,
+  InnerWorldEntityId,
+  InnerWorldRegionId,
+  MemberId,
+  SystemId,
+} from "../ids.js";
 import type {
   InnerWorldCanvas,
   InnerWorldEntity,
-  InnerWorldEntityData,
   InnerWorldRegion,
   LandmarkEntity,
   MemberEntity,
@@ -14,7 +19,7 @@ import type { AuditMetadata } from "../utility.js";
 
 describe("VisualProperties", () => {
   it("has all nullable fields", () => {
-    expectTypeOf<VisualProperties["color"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<VisualProperties["color"]>().toEqualTypeOf<HexColor | null>();
     expectTypeOf<VisualProperties["icon"]>().toEqualTypeOf<string | null>();
     expectTypeOf<VisualProperties["size"]>().toEqualTypeOf<number | null>();
     expectTypeOf<VisualProperties["opacity"]>().toEqualTypeOf<number | null>();
@@ -22,31 +27,30 @@ describe("VisualProperties", () => {
 });
 
 describe("MemberEntity", () => {
+  it("extends AuditMetadata", () => {
+    expectTypeOf<MemberEntity>().toExtend<AuditMetadata>();
+  });
+
   it("has correct discriminator and fields", () => {
-    expectTypeOf<MemberEntity["kind"]>().toEqualTypeOf<"member">();
-    expectTypeOf<MemberEntity["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<MemberEntity["entityType"]>().toEqualTypeOf<"member">();
+    expectTypeOf<MemberEntity["linkedMemberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<MemberEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
+    expectTypeOf<MemberEntity["positionX"]>().toEqualTypeOf<number>();
+    expectTypeOf<MemberEntity["positionY"]>().toEqualTypeOf<number>();
+    expectTypeOf<MemberEntity["visual"]>().toEqualTypeOf<VisualProperties>();
+    expectTypeOf<MemberEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
   });
 });
 
 describe("LandmarkEntity", () => {
-  it("has correct discriminator and fields", () => {
-    expectTypeOf<LandmarkEntity["kind"]>().toEqualTypeOf<"landmark">();
-    expectTypeOf<LandmarkEntity["label"]>().toBeString();
-    expectTypeOf<LandmarkEntity["description"]>().toEqualTypeOf<string | null>();
+  it("extends AuditMetadata", () => {
+    expectTypeOf<LandmarkEntity>().toExtend<AuditMetadata>();
   });
-});
 
-describe("InnerWorldEntityData", () => {
-  it("discriminates on kind", () => {
-    function handleData(data: InnerWorldEntityData): string {
-      if (data.kind === "member") {
-        expectTypeOf(data).toEqualTypeOf<MemberEntity>();
-        return data.memberId;
-      }
-      expectTypeOf(data).toEqualTypeOf<LandmarkEntity>();
-      return data.label;
-    }
-    expectTypeOf(handleData).toBeFunction();
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<LandmarkEntity["entityType"]>().toEqualTypeOf<"landmark">();
+    expectTypeOf<LandmarkEntity["name"]>().toBeString();
+    expectTypeOf<LandmarkEntity["description"]>().toEqualTypeOf<string | null>();
   });
 });
 
@@ -55,15 +59,31 @@ describe("InnerWorldEntity", () => {
     expectTypeOf<InnerWorldEntity>().toExtend<AuditMetadata>();
   });
 
-  it("has correct field types", () => {
+  it("discriminates on entityType", () => {
+    function handleEntity(entity: InnerWorldEntity): string {
+      switch (entity.entityType) {
+        case "member":
+          expectTypeOf(entity).toEqualTypeOf<MemberEntity>();
+          return entity.linkedMemberId;
+        case "landmark":
+          expectTypeOf(entity).toEqualTypeOf<LandmarkEntity>();
+          return entity.name;
+        default: {
+          const _exhaustive: never = entity;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleEntity).toBeFunction();
+  });
+
+  it("has shared base fields", () => {
     expectTypeOf<InnerWorldEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
     expectTypeOf<InnerWorldEntity["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<InnerWorldEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
-    expectTypeOf<InnerWorldEntity["name"]>().toBeString();
-    expectTypeOf<InnerWorldEntity["data"]>().toEqualTypeOf<InnerWorldEntityData>();
     expectTypeOf<InnerWorldEntity["visual"]>().toEqualTypeOf<VisualProperties>();
-    expectTypeOf<InnerWorldEntity["x"]>().toEqualTypeOf<number>();
-    expectTypeOf<InnerWorldEntity["y"]>().toEqualTypeOf<number>();
+    expectTypeOf<InnerWorldEntity["positionX"]>().toEqualTypeOf<number>();
+    expectTypeOf<InnerWorldEntity["positionY"]>().toEqualTypeOf<number>();
   });
 });
 
@@ -79,13 +99,20 @@ describe("InnerWorldRegion", () => {
     expectTypeOf<InnerWorldRegion["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<InnerWorldRegion["parentRegionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
     expectTypeOf<InnerWorldRegion["visual"]>().toEqualTypeOf<VisualProperties>();
+    expectTypeOf<InnerWorldRegion["accessType"]>().toEqualTypeOf<"open" | "gatekept">();
+    expectTypeOf<InnerWorldRegion["gatekeeperMemberId"]>().toEqualTypeOf<MemberId | null>();
   });
 });
 
 describe("InnerWorldCanvas", () => {
   it("has correct field types", () => {
     expectTypeOf<InnerWorldCanvas["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<InnerWorldCanvas["entities"]>().toEqualTypeOf<readonly InnerWorldEntity[]>();
-    expectTypeOf<InnerWorldCanvas["regions"]>().toEqualTypeOf<readonly InnerWorldRegion[]>();
+    expectTypeOf<InnerWorldCanvas["viewportX"]>().toEqualTypeOf<number>();
+    expectTypeOf<InnerWorldCanvas["viewportY"]>().toEqualTypeOf<number>();
+    expectTypeOf<InnerWorldCanvas["zoom"]>().toEqualTypeOf<number>();
+    expectTypeOf<InnerWorldCanvas["dimensions"]>().toEqualTypeOf<{
+      readonly width: number;
+      readonly height: number;
+    }>();
   });
 });
