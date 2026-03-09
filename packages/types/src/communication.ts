@@ -13,7 +13,7 @@ import type {
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { AuditMetadata, EntityReference } from "./utility.js";
 
 /** A communication channel or category within a system. */
 export interface Channel extends AuditMetadata {
@@ -65,7 +65,12 @@ export interface PollOption {
   readonly id: PollOptionId;
   readonly label: string;
   readonly voteCount: number;
+  readonly color: HexColor | null;
+  readonly emoji: string | null;
 }
+
+/** The kind of poll — standard yes/no-style or custom option set. */
+export type PollKind = "standard" | "custom";
 
 /** A poll for system-internal decision making. */
 export interface Poll extends AuditMetadata {
@@ -73,21 +78,28 @@ export interface Poll extends AuditMetadata {
   readonly systemId: SystemId;
   readonly createdByMemberId: MemberId;
   readonly title: string;
+  readonly description: string | null;
+  readonly kind: PollKind;
   readonly options: readonly PollOption[];
   readonly status: "open" | "closed";
   readonly closedAt: UnixMillis | null;
+  readonly endsAt: UnixMillis | null;
   /** Whether members can vote for multiple options. When false, maxVotesPerMember should be 1. */
   readonly allowMultipleVotes: boolean;
   /** Maximum votes a single member may cast. Must be >= 1. */
   readonly maxVotesPerMember: number;
+  readonly allowAbstain: boolean;
+  readonly allowVeto: boolean;
 }
 
-/** A vote cast on a poll option. */
+/** A vote cast on a poll option. Null optionId indicates abstain. */
 export interface PollVote {
   readonly id: PollVoteId;
   readonly pollId: PollId;
-  readonly optionId: PollOptionId;
-  readonly memberId: MemberId;
+  readonly optionId: PollOptionId | null;
+  readonly voter: EntityReference<"member" | "subsystem" | "side-system" | "layer">;
+  readonly comment: string | null;
+  readonly isVeto: boolean;
   readonly votedAt: UnixMillis;
 }
 

@@ -1,16 +1,19 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { EventId, MemberId, SystemId } from "../ids.js";
+import type { EventId, MemberId, SubsystemId, SystemId } from "../ids.js";
 import type {
   ArchivalEvent,
   DiscoveryEvent,
   DormancyEndEvent,
   DormancyStartEvent,
+  FormChangeEvent,
   FusionEvent,
   LifecycleEvent,
   LifecycleEventType,
   MergeEvent,
+  NameChangeEvent,
   SplitEvent,
+  SubsystemFormationEvent,
   UnmergeEvent,
 } from "../lifecycle.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -85,6 +88,32 @@ describe("ArchivalEvent", () => {
   });
 });
 
+describe("SubsystemFormationEvent", () => {
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<SubsystemFormationEvent["eventType"]>().toEqualTypeOf<"subsystem-formation">();
+    expectTypeOf<SubsystemFormationEvent["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<SubsystemFormationEvent["resultSubsystemId"]>().toEqualTypeOf<SubsystemId>();
+  });
+});
+
+describe("FormChangeEvent", () => {
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<FormChangeEvent["eventType"]>().toEqualTypeOf<"form-change">();
+    expectTypeOf<FormChangeEvent["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<FormChangeEvent["previousForm"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<FormChangeEvent["newForm"]>().toEqualTypeOf<string | null>();
+  });
+});
+
+describe("NameChangeEvent", () => {
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<NameChangeEvent["eventType"]>().toEqualTypeOf<"name-change">();
+    expectTypeOf<NameChangeEvent["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<NameChangeEvent["previousName"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<NameChangeEvent["newName"]>().toEqualTypeOf<string>();
+  });
+});
+
 describe("LifecycleEvent discriminated union", () => {
   it("discriminates on eventType", () => {
     function handleEvent(event: LifecycleEvent): string {
@@ -113,6 +142,15 @@ describe("LifecycleEvent discriminated union", () => {
         case "archival":
           expectTypeOf(event).toEqualTypeOf<ArchivalEvent>();
           return event.memberId;
+        case "subsystem-formation":
+          expectTypeOf(event).toEqualTypeOf<SubsystemFormationEvent>();
+          return event.resultSubsystemId;
+        case "form-change":
+          expectTypeOf(event).toEqualTypeOf<FormChangeEvent>();
+          return event.memberId;
+        case "name-change":
+          expectTypeOf(event).toEqualTypeOf<NameChangeEvent>();
+          return event.newName;
         default: {
           const _exhaustive: never = event;
           return _exhaustive;
@@ -133,6 +171,9 @@ describe("LifecycleEventType", () => {
     assertType<LifecycleEventType>("dormancy-end");
     assertType<LifecycleEventType>("discovery");
     assertType<LifecycleEventType>("archival");
+    assertType<LifecycleEventType>("subsystem-formation");
+    assertType<LifecycleEventType>("form-change");
+    assertType<LifecycleEventType>("name-change");
   });
 
   it("rejects invalid types", () => {

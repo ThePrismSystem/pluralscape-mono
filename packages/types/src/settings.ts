@@ -52,5 +52,6 @@ export interface SystemSettings extends AuditMetadata {
   readonly privacyDefaults: PrivacyDefaults;
   readonly littlesSafeMode: LittlesSafeModeConfig;
   readonly nomenclature: NomenclatureSettings;
+  readonly saturationLevelsEnabled: boolean;
   readonly onboardingComplete: boolean;
 }

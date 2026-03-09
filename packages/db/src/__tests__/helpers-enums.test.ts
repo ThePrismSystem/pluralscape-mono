@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AUTH_KEY_TYPES,
   BUCKET_VISIBILITY_SCOPES,
-  COMPLETENESS_LEVELS,
+  KNOWN_SATURATION_LEVELS,
   DEVICE_TRANSFER_STATUSES,
   FRIEND_CONNECTION_STATUSES,
   FRONTING_TYPES,
@@ -14,8 +14,13 @@ import {
 } from "../helpers/enums.js";
 
 describe("enum arrays", () => {
-  it("COMPLETENESS_LEVELS matches CompletenessLevel union", () => {
-    expect(COMPLETENESS_LEVELS).toEqual(["fragment", "demi-member", "full"]);
+  it("KNOWN_SATURATION_LEVELS matches KnownSaturationLevel union", () => {
+    expect(KNOWN_SATURATION_LEVELS).toEqual([
+      "fragment",
+      "functional-fragment",
+      "partially-elaborated",
+      "highly-elaborated",
+    ]);
   });
 
   it("FRONTING_TYPES matches FrontingType union", () => {
@@ -59,7 +64,7 @@ describe("enum arrays", () => {
   });
 
   it("all arrays have correct element counts", () => {
-    expect(COMPLETENESS_LEVELS).toHaveLength(3);
+    expect(KNOWN_SATURATION_LEVELS).toHaveLength(4);
     expect(FRONTING_TYPES).toHaveLength(2);
     expect(RELATIONSHIP_TYPES).toHaveLength(10);
     expect(LAYER_ACCESS_TYPES).toHaveLength(2);

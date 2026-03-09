@@ -1,11 +1,5 @@
-import type {
-  BlobId,
-  HexColor,
-  MemberId,
-  MemberPhotoId,
-  SystemId,
-  SystemSettingsId,
-} from "./ids.js";
+import type { HexColor, MemberId, MemberPhotoId, SystemId, SystemSettingsId } from "./ids.js";
+import type { ImageSource } from "./image-source.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -15,18 +9,27 @@ export interface System extends AuditMetadata {
   readonly name: string;
   readonly displayName: string | null;
   readonly description: string | null;
-  readonly avatarRef: BlobId | null;
+  readonly avatarSource: ImageSource | null;
   readonly settingsId: SystemSettingsId;
 }
 
-/** How fully formed a member is within the system. */
-export type CompletenessLevel = "fragment" | "demi-member" | "full";
+/** Well-known saturation levels describing how elaborated a member is within the system. */
+export type KnownSaturationLevel =
+  | "fragment"
+  | "functional-fragment"
+  | "partially-elaborated"
+  | "highly-elaborated";
+
+/** How elaborated a member is — either a well-known level or a user-defined custom level. */
+export type SaturationLevel =
+  | { readonly kind: "known"; readonly level: KnownSaturationLevel }
+  | { readonly kind: "custom"; readonly value: string };
 
 /**
- * Well-known role tags recognized by the application.
+ * Well-known tags recognized by the application.
  * These have special semantics (e.g. "little" triggers Littles Safe Mode).
  */
-export type KnownRoleTag =
+export type KnownTag =
   | "protector"
   | "gatekeeper"
   | "caretaker"
@@ -35,11 +38,19 @@ export type KnownRoleTag =
   | "trauma-holder"
   | "host"
   | "persecutor"
-  | "mediator";
+  | "mediator"
+  | "anp"
+  | "memory-holder"
+  | "symptom-holder"
+  | "middle"
+  | "introject"
+  | "fictive"
+  | "factive"
+  | "non-human";
 
-/** A role tag — either a well-known tag or a user-defined custom tag. */
-export type RoleTag =
-  | { readonly kind: "known"; readonly tag: KnownRoleTag }
+/** A tag — either a well-known tag or a user-defined custom tag. */
+export type Tag =
+  | { readonly kind: "known"; readonly tag: KnownTag }
   | { readonly kind: "custom"; readonly value: string };
 
 /** A member (headmate) within a plural system. */
@@ -49,10 +60,14 @@ export interface Member extends AuditMetadata {
   readonly name: string;
   readonly pronouns: readonly string[];
   readonly description: string | null;
-  readonly avatarRef: BlobId | null;
+  readonly avatarSource: ImageSource | null;
   readonly colors: readonly HexColor[];
-  readonly completenessLevel: CompletenessLevel;
-  readonly roleTags: readonly RoleTag[];
+  readonly saturationLevel: SaturationLevel;
+  readonly tags: readonly Tag[];
+  /** When true, friends are not notified when this member starts fronting. */
+  readonly suppressFriendFrontNotification: boolean;
+  /** When true, a board message is posted when this member starts fronting. */
+  readonly boardMessageNotificationOnFront: boolean;
   readonly archived: false;
 }
 
@@ -60,7 +75,7 @@ export interface Member extends AuditMetadata {
 export interface MemberPhoto {
   readonly id: MemberPhotoId;
   readonly memberId: MemberId;
-  readonly blobRef: BlobId;
+  readonly imageSource: ImageSource;
   readonly sortOrder: number;
   readonly caption: string | null;
 }
@@ -75,7 +90,7 @@ export type ArchivedMember = Omit<Member, "archived"> & {
 export interface MemberListItem {
   readonly id: MemberId;
   readonly name: string;
-  readonly avatarRef: BlobId | null;
+  readonly avatarSource: ImageSource | null;
   readonly colors: readonly HexColor[];
   readonly archived: boolean;
 }

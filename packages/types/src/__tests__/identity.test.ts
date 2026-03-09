@@ -2,22 +2,17 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
   ArchivedMember,
-  CompletenessLevel,
-  KnownRoleTag,
+  KnownSaturationLevel,
+  KnownTag,
   Member,
   MemberListItem,
   MemberPhoto,
-  RoleTag,
+  SaturationLevel,
   System,
+  Tag,
 } from "../identity.js";
-import type {
-  BlobId,
-  HexColor,
-  MemberId,
-  MemberPhotoId,
-  SystemId,
-  SystemSettingsId,
-} from "../ids.js";
+import type { HexColor, MemberId, MemberPhotoId, SystemId, SystemSettingsId } from "../ids.js";
+import type { ImageSource } from "../image-source.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 
@@ -33,7 +28,7 @@ describe("System", () => {
   it("has nullable fields", () => {
     expectTypeOf<System["displayName"]>().toEqualTypeOf<string | null>();
     expectTypeOf<System["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<System["avatarRef"]>().toEqualTypeOf<BlobId | null>();
+    expectTypeOf<System["avatarSource"]>().toEqualTypeOf<ImageSource | null>();
   });
 
   it("has settingsId referencing SystemSettingsId", () => {
@@ -67,17 +62,22 @@ describe("Member", () => {
     expectTypeOf<Member["colors"]>().toEqualTypeOf<readonly HexColor[]>();
   });
 
-  it("has completenessLevel field", () => {
-    expectTypeOf<Member["completenessLevel"]>().toEqualTypeOf<CompletenessLevel>();
+  it("has saturationLevel field", () => {
+    expectTypeOf<Member["saturationLevel"]>().toEqualTypeOf<SaturationLevel>();
   });
 
-  it("has roleTags array", () => {
-    expectTypeOf<Member["roleTags"]>().toEqualTypeOf<readonly RoleTag[]>();
+  it("has tags array", () => {
+    expectTypeOf<Member["tags"]>().toEqualTypeOf<readonly Tag[]>();
   });
 
   it("has nullable fields", () => {
     expectTypeOf<Member["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<Member["avatarRef"]>().toEqualTypeOf<BlobId | null>();
+    expectTypeOf<Member["avatarSource"]>().toEqualTypeOf<ImageSource | null>();
+  });
+
+  it("has notification boolean fields", () => {
+    expectTypeOf<Member["suppressFriendFrontNotification"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<Member["boardMessageNotificationOnFront"]>().toEqualTypeOf<boolean>();
   });
 
   it("extends AuditMetadata", () => {
@@ -92,27 +92,42 @@ describe("Member", () => {
   });
 });
 
-describe("CompletenessLevel", () => {
-  it("accepts valid levels", () => {
-    assertType<CompletenessLevel>("fragment");
-    assertType<CompletenessLevel>("demi-member");
-    assertType<CompletenessLevel>("full");
+describe("SaturationLevel", () => {
+  it("accepts known saturation levels", () => {
+    assertType<SaturationLevel>({
+      kind: "known" as const,
+      level: "fragment" as KnownSaturationLevel,
+    });
+    assertType<SaturationLevel>({
+      kind: "known" as const,
+      level: "functional-fragment" as KnownSaturationLevel,
+    });
+    assertType<SaturationLevel>({
+      kind: "known" as const,
+      level: "partially-elaborated" as KnownSaturationLevel,
+    });
+    assertType<SaturationLevel>({
+      kind: "known" as const,
+      level: "highly-elaborated" as KnownSaturationLevel,
+    });
   });
 
-  it("rejects invalid levels", () => {
-    // @ts-expect-error invalid completeness level
-    assertType<CompletenessLevel>("partial");
+  it("accepts custom saturation levels", () => {
+    assertType<SaturationLevel>({ kind: "custom" as const, value: "emerging" });
   });
 
-  it("is exhaustive in a switch", () => {
-    function handleLevel(level: CompletenessLevel): string {
-      switch (level) {
-        case "fragment":
-          return "fragment";
-        case "demi-member":
-          return "demi-member";
-        case "full":
-          return "full";
+  it("rejects invalid known levels", () => {
+    // @ts-expect-error invalid known saturation level
+    assertType<KnownSaturationLevel>("partial");
+  });
+
+  it("discriminates on kind field", () => {
+    function handleLevel(level: SaturationLevel): string {
+      switch (level.kind) {
+        case "known":
+          return level.level;
+        case "custom":
+          return level.value;
         default: {
           const _exhaustive: never = level;
           return _exhaustive;
@@ -121,50 +136,88 @@ describe("CompletenessLevel", () => {
     }
     expectTypeOf(handleLevel).toBeFunction();
   });
+
+  it("is exhaustive over KnownSaturationLevel in a switch", () => {
+    function handleKnown(level: KnownSaturationLevel): string {
+      switch (level) {
+        case "fragment":
+          return "fragment";
+        case "functional-fragment":
+          return "functional-fragment";
+        case "partially-elaborated":
+          return "partially-elaborated";
+        case "highly-elaborated":
+          return "highly-elaborated";
+        default: {
+          const _exhaustive: never = level;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleKnown).toBeFunction();
+  });
 });
 
-describe("RoleTag", () => {
-  it("accepts known role tags with kind discriminant", () => {
-    assertType<RoleTag>({ kind: "known" as const, tag: "protector" as KnownRoleTag });
-    assertType<RoleTag>({ kind: "known" as const, tag: "host" as KnownRoleTag });
+describe("Tag", () => {
+  it("accepts known tags with kind discriminant", () => {
+    assertType<Tag>({ kind: "known" as const, tag: "protector" as KnownTag });
+    assertType<Tag>({ kind: "known" as const, tag: "host" as KnownTag });
   });
 
-  it("accepts custom role tags with value", () => {
-    assertType<RoleTag>({ kind: "custom" as const, value: "helper" });
+  it("accepts custom tags with value", () => {
+    assertType<Tag>({ kind: "custom" as const, value: "helper" });
   });
 
   it("discriminates on kind field", () => {
-    function handleTag(roleTag: RoleTag): string {
-      if (roleTag.kind === "custom") {
-        expectTypeOf(roleTag.value).toBeString();
-        return roleTag.value;
+    function handleTag(tag: Tag): string {
+      if (tag.kind === "custom") {
+        expectTypeOf(tag.value).toBeString();
+        return tag.value;
       }
-      expectTypeOf(roleTag.tag).toEqualTypeOf<KnownRoleTag>();
-      return roleTag.tag;
+      expectTypeOf(tag.tag).toEqualTypeOf<KnownTag>();
+      return tag.tag;
     }
     expectTypeOf(handleTag).toBeFunction();
   });
 
-  it("covers all 9 known role tags", () => {
-    assertType<KnownRoleTag>("protector");
-    assertType<KnownRoleTag>("gatekeeper");
-    assertType<KnownRoleTag>("caretaker");
-    assertType<KnownRoleTag>("little");
-    assertType<KnownRoleTag>("age-slider");
-    assertType<KnownRoleTag>("trauma-holder");
-    assertType<KnownRoleTag>("host");
-    assertType<KnownRoleTag>("persecutor");
-    assertType<KnownRoleTag>("mediator");
+  it("is exhaustive over KnownTag in a switch", () => {
+    function handleKnown(tag: KnownTag): string {
+      switch (tag) {
+        case "protector":
+        case "gatekeeper":
+        case "caretaker":
+        case "little":
+        case "age-slider":
+        case "trauma-holder":
+        case "host":
+        case "persecutor":
+        case "mediator":
+        case "anp":
+        case "memory-holder":
+        case "symptom-holder":
+        case "middle":
+        case "introject":
+        case "fictive":
+        case "factive":
+        case "non-human":
+          return tag;
+        default: {
+          const _exhaustive: never = tag;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleKnown).toBeFunction();
   });
 
   it("rejects invalid known tags", () => {
-    // @ts-expect-error invalid role tag
-    assertType<KnownRoleTag>("invalid");
+    // @ts-expect-error invalid tag
+    assertType<KnownTag>("invalid");
   });
 
   it("rejects custom tag without value", () => {
     // @ts-expect-error missing value on custom tag
-    assertType<RoleTag>({ kind: "custom" as const });
+    assertType<Tag>({ kind: "custom" as const });
   });
 });
 
@@ -177,8 +230,8 @@ describe("MemberPhoto", () => {
     expectTypeOf<MemberPhoto["memberId"]>().toEqualTypeOf<MemberId>();
   });
 
-  it("has blobRef as BlobId", () => {
-    expectTypeOf<MemberPhoto["blobRef"]>().toEqualTypeOf<BlobId>();
+  it("has imageSource as ImageSource", () => {
+    expectTypeOf<MemberPhoto["imageSource"]>().toEqualTypeOf<ImageSource>();
   });
 
   it("has sortOrder and nullable caption", () => {
@@ -192,7 +245,7 @@ describe("ArchivedMember", () => {
     expectTypeOf<ArchivedMember["id"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<ArchivedMember["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<ArchivedMember["name"]>().toBeString();
-    expectTypeOf<ArchivedMember["completenessLevel"]>().toEqualTypeOf<CompletenessLevel>();
+    expectTypeOf<ArchivedMember["saturationLevel"]>().toEqualTypeOf<SaturationLevel>();
   });
 
   it("has archived as true literal", () => {
@@ -208,7 +261,7 @@ describe("MemberListItem", () => {
   it("has lightweight projection fields", () => {
     expectTypeOf<MemberListItem["id"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<MemberListItem["name"]>().toBeString();
-    expectTypeOf<MemberListItem["avatarRef"]>().toEqualTypeOf<BlobId | null>();
+    expectTypeOf<MemberListItem["avatarSource"]>().toEqualTypeOf<ImageSource | null>();
     expectTypeOf<MemberListItem["colors"]>().toEqualTypeOf<readonly HexColor[]>();
     expectTypeOf<MemberListItem["archived"]>().toEqualTypeOf<boolean>();
   });

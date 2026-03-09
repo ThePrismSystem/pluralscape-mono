@@ -7,7 +7,11 @@ export type TermCategory =
   | "co-presence"
   | "internal-space"
   | "primary-fronter"
-  | "structure";
+  | "structure"
+  | "dormancy"
+  | "body"
+  | "amnesia"
+  | "saturation";
 
 /** A well-known canonical term and its default display value. */
 export interface CanonicalTerm {
@@ -51,7 +55,7 @@ export const DEFAULT_TERM_PRESETS: readonly TermPreset[] = [
   },
   {
     category: "internal-space",
-    presets: ["Headspace", "Innerworld", "Wonderland"],
+    presets: ["Headspace", "Innerworld"],
     default: "Headspace",
   },
   {
@@ -64,18 +68,33 @@ export const DEFAULT_TERM_PRESETS: readonly TermPreset[] = [
     presets: ["System Structure", "Topology", "Map"],
     default: "System Structure",
   },
+  {
+    category: "dormancy",
+    presets: ["Dormancy", "Resting", "Inactive"],
+    default: "Dormancy",
+  },
+  {
+    category: "body",
+    presets: ["Body", "Physical form", "Vessel"],
+    default: "Body",
+  },
+  {
+    category: "amnesia",
+    presets: ["Amnesia", "Memory gap", "Blackout"],
+    default: "Amnesia",
+  },
+  {
+    category: "saturation",
+    presets: ["Saturation", "Elaboration", "Completeness"],
+    default: "Saturation",
+  },
 ];
 
 /** Creates default nomenclature settings using the default term for each category. */
 export function createDefaultNomenclatureSettings(): NomenclatureSettings {
-  return {
-    collective: "System",
-    individual: "Member",
-    fronting: "Fronting",
-    switching: "Switch",
-    "co-presence": "Co-fronting",
-    "internal-space": "Headspace",
-    "primary-fronter": "Host",
-    structure: "System Structure",
-  };
+  const settings = {} as Record<TermCategory, string>;
+  for (const preset of DEFAULT_TERM_PRESETS) {
+    settings[preset.category] = preset.default;
+  }
+  return settings;
 }

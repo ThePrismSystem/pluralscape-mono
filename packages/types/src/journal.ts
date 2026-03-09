@@ -8,7 +8,7 @@ import type {
   WikiPageId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { AuditMetadata, EntityReference } from "./utility.js";
 
 // ── Journal Block types (discriminated union) ──────────────────────
 
@@ -107,11 +107,11 @@ export interface EntityLink {
 
 // ── Journal entries ────────────────────────────────────────────────
 
-/** A journal entry authored by a member. */
+/** A journal entry authored by a member or structure entity. */
 export interface JournalEntry extends AuditMetadata {
   readonly id: JournalEntryId;
   readonly systemId: SystemId;
-  readonly authorMemberId: MemberId | null;
+  readonly author: EntityReference<"member" | "subsystem" | "side-system" | "layer"> | null;
   readonly frontingSessionId: FrontingSessionId | null;
   readonly title: string;
   readonly blocks: readonly JournalBlock[];

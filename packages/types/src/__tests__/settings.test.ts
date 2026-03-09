@@ -142,6 +142,10 @@ describe("SystemSettings", () => {
     expectTypeOf<SystemSettings["nomenclature"]>().toEqualTypeOf<NomenclatureSettings>();
   });
 
+  it("has saturationLevelsEnabled boolean", () => {
+    expectTypeOf<SystemSettings["saturationLevelsEnabled"]>().toEqualTypeOf<boolean>();
+  });
+
   it("has onboardingComplete boolean", () => {
     expectTypeOf<SystemSettings["onboardingComplete"]>().toEqualTypeOf<boolean>();
   });

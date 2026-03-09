@@ -19,6 +19,10 @@ describe("TermCategory", () => {
     assertType<TermCategory>("internal-space");
     assertType<TermCategory>("primary-fronter");
     assertType<TermCategory>("structure");
+    assertType<TermCategory>("dormancy");
+    assertType<TermCategory>("body");
+    assertType<TermCategory>("amnesia");
+    assertType<TermCategory>("saturation");
   });
 
   it("rejects invalid categories", () => {
@@ -37,6 +41,10 @@ describe("TermCategory", () => {
         case "internal-space":
         case "primary-fronter":
         case "structure":
+        case "dormancy":
+        case "body":
+        case "amnesia":
+        case "saturation":
           return category;
         default: {
           const _exhaustive: never = category;
@@ -61,7 +69,7 @@ describe("NomenclatureSettings", () => {
     expectTypeOf<NomenclatureSettings>().toEqualTypeOf<Readonly<Record<TermCategory, string>>>();
   });
 
-  it("requires all 8 categories", () => {
+  it("requires all 12 categories", () => {
     expectTypeOf<NomenclatureSettings["collective"]>().toEqualTypeOf<string>();
     expectTypeOf<NomenclatureSettings["individual"]>().toEqualTypeOf<string>();
     expectTypeOf<NomenclatureSettings["fronting"]>().toEqualTypeOf<string>();
@@ -70,6 +78,10 @@ describe("NomenclatureSettings", () => {
     expectTypeOf<NomenclatureSettings["internal-space"]>().toEqualTypeOf<string>();
     expectTypeOf<NomenclatureSettings["primary-fronter"]>().toEqualTypeOf<string>();
     expectTypeOf<NomenclatureSettings["structure"]>().toEqualTypeOf<string>();
+    expectTypeOf<NomenclatureSettings["dormancy"]>().toEqualTypeOf<string>();
+    expectTypeOf<NomenclatureSettings["body"]>().toEqualTypeOf<string>();
+    expectTypeOf<NomenclatureSettings["amnesia"]>().toEqualTypeOf<string>();
+    expectTypeOf<NomenclatureSettings["saturation"]>().toEqualTypeOf<string>();
   });
 });
 
@@ -87,7 +99,7 @@ describe("DEFAULT_TERM_PRESETS", () => {
   });
 
   it("contains one preset per category", () => {
-    expect(DEFAULT_TERM_PRESETS).toHaveLength(8);
+    expect(DEFAULT_TERM_PRESETS).toHaveLength(12);
     const categories = DEFAULT_TERM_PRESETS.map((p) => p.category);
     expect(categories).toContain("collective");
     expect(categories).toContain("individual");
@@ -97,6 +109,10 @@ describe("DEFAULT_TERM_PRESETS", () => {
     expect(categories).toContain("internal-space");
     expect(categories).toContain("primary-fronter");
     expect(categories).toContain("structure");
+    expect(categories).toContain("dormancy");
+    expect(categories).toContain("body");
+    expect(categories).toContain("amnesia");
+    expect(categories).toContain("saturation");
   });
 
   it("has non-empty preset arrays", () => {
@@ -123,5 +139,9 @@ describe("createDefaultNomenclatureSettings", () => {
     expect(settings["internal-space"]).toBe("Headspace");
     expect(settings["primary-fronter"]).toBe("Host");
     expect(settings.structure).toBe("System Structure");
+    expect(settings.dormancy).toBe("Dormancy");
+    expect(settings.body).toBe("Body");
+    expect(settings.amnesia).toBe("Amnesia");
+    expect(settings.saturation).toBe("Saturation");
   });
 });

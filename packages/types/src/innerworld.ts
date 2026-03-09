@@ -2,9 +2,13 @@ import type {
   HexColor,
   InnerWorldEntityId,
   InnerWorldRegionId,
+  LayerId,
   MemberId,
+  SideSystemId,
+  SubsystemId,
   SystemId,
 } from "./ids.js";
+import type { ImageSource } from "./image-source.js";
 import type { AuditMetadata } from "./utility.js";
 
 /** Visual styling properties for innerworld entities. */
@@ -13,6 +17,8 @@ export interface VisualProperties {
   readonly icon: string | null;
   readonly size: number | null;
   readonly opacity: number | null;
+  readonly imageSource: ImageSource | null;
+  readonly externalUrl: string | null;
 }
 
 // ── Entity types (discriminated union) ─────────────────────────────
@@ -40,8 +46,31 @@ export interface LandmarkEntity extends InnerWorldEntityBase {
   readonly description: string | null;
 }
 
+/** An innerworld entity representing a subsystem. */
+export interface SubsystemEntity extends InnerWorldEntityBase {
+  readonly entityType: "subsystem";
+  readonly linkedSubsystemId: SubsystemId;
+}
+
+/** An innerworld entity representing a side system. */
+export interface SideSystemEntity extends InnerWorldEntityBase {
+  readonly entityType: "side-system";
+  readonly linkedSideSystemId: SideSystemId;
+}
+
+/** An innerworld entity representing a layer. */
+export interface LayerEntity extends InnerWorldEntityBase {
+  readonly entityType: "layer";
+  readonly linkedLayerId: LayerId;
+}
+
 /** All innerworld entity variants — discriminated on entityType. */
-export type InnerWorldEntity = MemberEntity | LandmarkEntity;
+export type InnerWorldEntity =
+  | MemberEntity
+  | LandmarkEntity
+  | SubsystemEntity
+  | SideSystemEntity
+  | LayerEntity;
 
 /** A region or area within the innerworld. */
 export interface InnerWorldRegion extends AuditMetadata {
@@ -53,7 +82,7 @@ export interface InnerWorldRegion extends AuditMetadata {
   readonly visual: VisualProperties;
   readonly boundaryData: readonly { readonly x: number; readonly y: number }[];
   readonly accessType: "open" | "gatekept";
-  readonly gatekeeperMemberId: MemberId | null;
+  readonly gatekeeperMemberIds: readonly MemberId[];
 }
 
 /** The viewport state for the innerworld canvas. */

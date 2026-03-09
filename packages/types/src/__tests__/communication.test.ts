@@ -25,7 +25,7 @@ import type {
   SystemId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
-import type { AuditMetadata } from "../utility.js";
+import type { AuditMetadata, EntityReference } from "../utility.js";
 
 describe("Channel", () => {
   it("extends AuditMetadata", () => {
@@ -93,13 +93,17 @@ describe("Note", () => {
 
 describe("PollOption", () => {
   it("has exactly the expected keys", () => {
-    expectTypeOf<keyof PollOption>().toEqualTypeOf<"id" | "label" | "voteCount">();
+    expectTypeOf<keyof PollOption>().toEqualTypeOf<
+      "id" | "label" | "voteCount" | "color" | "emoji"
+    >();
   });
 
   it("has correct field types", () => {
     expectTypeOf<PollOption["id"]>().toEqualTypeOf<PollOptionId>();
     expectTypeOf<PollOption["label"]>().toBeString();
     expectTypeOf<PollOption["voteCount"]>().toEqualTypeOf<number>();
+    expectTypeOf<PollOption["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<PollOption["emoji"]>().toEqualTypeOf<string | null>();
   });
 });
 
@@ -113,11 +117,16 @@ describe("Poll", () => {
     expectTypeOf<Poll["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<Poll["createdByMemberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<Poll["title"]>().toBeString();
+    expectTypeOf<Poll["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Poll["kind"]>().toEqualTypeOf<"standard" | "custom">();
     expectTypeOf<Poll["options"]>().toEqualTypeOf<readonly PollOption[]>();
     expectTypeOf<Poll["status"]>().toEqualTypeOf<"open" | "closed">();
     expectTypeOf<Poll["closedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<Poll["endsAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<Poll["allowMultipleVotes"]>().toEqualTypeOf<boolean>();
     expectTypeOf<Poll["maxVotesPerMember"]>().toEqualTypeOf<number>();
+    expectTypeOf<Poll["allowAbstain"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<Poll["allowVeto"]>().toEqualTypeOf<boolean>();
   });
 });
 
@@ -128,15 +137,19 @@ describe("PollVote", () => {
 
   it("has exactly the expected keys", () => {
     expectTypeOf<keyof PollVote>().toEqualTypeOf<
-      "id" | "pollId" | "optionId" | "memberId" | "votedAt"
+      "id" | "pollId" | "optionId" | "voter" | "comment" | "isVeto" | "votedAt"
     >();
   });
 
   it("has correct field types", () => {
     expectTypeOf<PollVote["id"]>().toEqualTypeOf<PollVoteId>();
     expectTypeOf<PollVote["pollId"]>().toEqualTypeOf<PollId>();
-    expectTypeOf<PollVote["optionId"]>().toEqualTypeOf<PollOptionId>();
-    expectTypeOf<PollVote["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<PollVote["optionId"]>().toEqualTypeOf<PollOptionId | null>();
+    expectTypeOf<PollVote["voter"]>().toEqualTypeOf<
+      EntityReference<"member" | "subsystem" | "side-system" | "layer">
+    >();
+    expectTypeOf<PollVote["comment"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<PollVote["isVeto"]>().toEqualTypeOf<boolean>();
     expectTypeOf<PollVote["votedAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });

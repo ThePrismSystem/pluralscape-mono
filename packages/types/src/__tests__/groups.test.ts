@@ -7,7 +7,8 @@ import type {
   GroupMoveOperation,
   GroupTree,
 } from "../groups.js";
-import type { BlobId, GroupId, HexColor, MemberId, SystemId } from "../ids.js";
+import type { GroupId, HexColor, MemberId, SystemId } from "../ids.js";
+import type { ImageSource } from "../image-source.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 
@@ -22,7 +23,7 @@ describe("Group", () => {
     expectTypeOf<Group["name"]>().toBeString();
     expectTypeOf<Group["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Group["parentGroupId"]>().toEqualTypeOf<GroupId | null>();
-    expectTypeOf<Group["imageRef"]>().toEqualTypeOf<BlobId | null>();
+    expectTypeOf<Group["imageSource"]>().toEqualTypeOf<ImageSource | null>();
     expectTypeOf<Group["color"]>().toEqualTypeOf<HexColor | null>();
     expectTypeOf<Group["emoji"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Group["sortOrder"]>().toEqualTypeOf<number>();

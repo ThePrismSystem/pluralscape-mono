@@ -4,22 +4,31 @@ import type {
   HexColor,
   InnerWorldEntityId,
   InnerWorldRegionId,
+  LayerId,
   MemberId,
+  SideSystemId,
+  SubsystemId,
   SystemId,
 } from "../ids.js";
+import type { ImageSource } from "../image-source.js";
 import type {
   InnerWorldCanvas,
   InnerWorldEntity,
   InnerWorldRegion,
   LandmarkEntity,
+  LayerEntity,
   MemberEntity,
+  SideSystemEntity,
+  SubsystemEntity,
   VisualProperties,
 } from "../innerworld.js";
 import type { AuditMetadata } from "../utility.js";
 
 describe("VisualProperties", () => {
   it("has exactly the expected keys", () => {
-    expectTypeOf<keyof VisualProperties>().toEqualTypeOf<"color" | "icon" | "size" | "opacity">();
+    expectTypeOf<keyof VisualProperties>().toEqualTypeOf<
+      "color" | "icon" | "size" | "opacity" | "imageSource" | "externalUrl"
+    >();
   });
 
   it("has all nullable fields", () => {
@@ -27,6 +36,8 @@ describe("VisualProperties", () => {
     expectTypeOf<VisualProperties["icon"]>().toEqualTypeOf<string | null>();
     expectTypeOf<VisualProperties["size"]>().toEqualTypeOf<number | null>();
     expectTypeOf<VisualProperties["opacity"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<VisualProperties["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<VisualProperties["externalUrl"]>().toEqualTypeOf<string | null>();
   });
 });
 
@@ -58,6 +69,54 @@ describe("LandmarkEntity", () => {
   });
 });
 
+describe("SubsystemEntity", () => {
+  it("extends AuditMetadata", () => {
+    expectTypeOf<SubsystemEntity>().toExtend<AuditMetadata>();
+  });
+
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<SubsystemEntity["entityType"]>().toEqualTypeOf<"subsystem">();
+    expectTypeOf<SubsystemEntity["linkedSubsystemId"]>().toEqualTypeOf<SubsystemId>();
+    expectTypeOf<SubsystemEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
+    expectTypeOf<SubsystemEntity["positionX"]>().toEqualTypeOf<number>();
+    expectTypeOf<SubsystemEntity["positionY"]>().toEqualTypeOf<number>();
+    expectTypeOf<SubsystemEntity["visual"]>().toEqualTypeOf<VisualProperties>();
+    expectTypeOf<SubsystemEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
+  });
+});
+
+describe("SideSystemEntity", () => {
+  it("extends AuditMetadata", () => {
+    expectTypeOf<SideSystemEntity>().toExtend<AuditMetadata>();
+  });
+
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<SideSystemEntity["entityType"]>().toEqualTypeOf<"side-system">();
+    expectTypeOf<SideSystemEntity["linkedSideSystemId"]>().toEqualTypeOf<SideSystemId>();
+    expectTypeOf<SideSystemEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
+    expectTypeOf<SideSystemEntity["positionX"]>().toEqualTypeOf<number>();
+    expectTypeOf<SideSystemEntity["positionY"]>().toEqualTypeOf<number>();
+    expectTypeOf<SideSystemEntity["visual"]>().toEqualTypeOf<VisualProperties>();
+    expectTypeOf<SideSystemEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
+  });
+});
+
+describe("LayerEntity", () => {
+  it("extends AuditMetadata", () => {
+    expectTypeOf<LayerEntity>().toExtend<AuditMetadata>();
+  });
+
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<LayerEntity["entityType"]>().toEqualTypeOf<"layer">();
+    expectTypeOf<LayerEntity["linkedLayerId"]>().toEqualTypeOf<LayerId>();
+    expectTypeOf<LayerEntity["id"]>().toEqualTypeOf<InnerWorldEntityId>();
+    expectTypeOf<LayerEntity["positionX"]>().toEqualTypeOf<number>();
+    expectTypeOf<LayerEntity["positionY"]>().toEqualTypeOf<number>();
+    expectTypeOf<LayerEntity["visual"]>().toEqualTypeOf<VisualProperties>();
+    expectTypeOf<LayerEntity["regionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
+  });
+});
+
 describe("InnerWorldEntity", () => {
   it("extends AuditMetadata", () => {
     expectTypeOf<InnerWorldEntity>().toExtend<AuditMetadata>();
@@ -72,6 +131,15 @@ describe("InnerWorldEntity", () => {
         case "landmark":
           expectTypeOf(entity).toEqualTypeOf<LandmarkEntity>();
           return entity.name;
+        case "subsystem":
+          expectTypeOf(entity).toEqualTypeOf<SubsystemEntity>();
+          return entity.linkedSubsystemId;
+        case "side-system":
+          expectTypeOf(entity).toEqualTypeOf<SideSystemEntity>();
+          return entity.linkedSideSystemId;
+        case "layer":
+          expectTypeOf(entity).toEqualTypeOf<LayerEntity>();
+          return entity.linkedLayerId;
         default: {
           const _exhaustive: never = entity;
           return _exhaustive;
@@ -104,7 +172,7 @@ describe("InnerWorldRegion", () => {
     expectTypeOf<InnerWorldRegion["parentRegionId"]>().toEqualTypeOf<InnerWorldRegionId | null>();
     expectTypeOf<InnerWorldRegion["visual"]>().toEqualTypeOf<VisualProperties>();
     expectTypeOf<InnerWorldRegion["accessType"]>().toEqualTypeOf<"open" | "gatekept">();
-    expectTypeOf<InnerWorldRegion["gatekeeperMemberId"]>().toEqualTypeOf<MemberId | null>();
+    expectTypeOf<InnerWorldRegion["gatekeeperMemberIds"]>().toEqualTypeOf<readonly MemberId[]>();
   });
 });
 

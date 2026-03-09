@@ -1,3 +1,4 @@
+import eslintCommentsPlugin from "@eslint-community/eslint-plugin-eslint-comments/configs";
 import eslintConfigPrettier from "eslint-config-prettier";
 import importPlugin from "eslint-plugin-import-x";
 import unicornPlugin from "eslint-plugin-unicorn";
@@ -22,12 +23,16 @@ export default tseslint.config(
       },
     },
   },
+  eslintCommentsPlugin.recommended,
   {
     plugins: {
       "import-x": importPlugin,
       unicorn: unicornPlugin,
     },
     rules: {
+      // Ban all eslint-disable comments — fix the violation, don't suppress it
+      "@eslint-community/eslint-comments/no-use": "error",
+
       // No `as any`
       "@typescript-eslint/no-explicit-any": "error",
 
@@ -55,9 +60,6 @@ export default tseslint.config(
         },
       ],
 
-      // No eslint-disable without specific rule
-      "unicorn/no-abusive-eslint-disable": "error",
-
       // No non-null assertion
       "@typescript-eslint/no-non-null-assertion": "error",
 
@@ -71,7 +73,7 @@ export default tseslint.config(
       "no-empty": "error",
 
       // No console.log in production
-      "no-console": ["error", { allow: ["warn", "error"] }],
+      "no-console": ["error", { allow: ["info", "warn", "error"] }],
 
       // Explicit return types on exports
       "@typescript-eslint/explicit-module-boundary-types": "error",

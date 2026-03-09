@@ -15,6 +15,7 @@ import type {
   FriendCode,
   FriendConnection,
   FriendConnectionStatus,
+  FriendVisibilitySettings,
   KeyGrant,
   PrivacyBucket,
 } from "../privacy.js";
@@ -132,6 +133,22 @@ describe("FriendConnection", () => {
     expectTypeOf<FriendConnection["friendSystemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<FriendConnection["status"]>().toEqualTypeOf<FriendConnectionStatus>();
     expectTypeOf<FriendConnection["assignedBucketIds"]>().toEqualTypeOf<readonly BucketId[]>();
+    expectTypeOf<FriendConnection["visibility"]>().toEqualTypeOf<FriendVisibilitySettings>();
+  });
+});
+
+describe("FriendVisibilitySettings", () => {
+  it("has correct field types", () => {
+    expectTypeOf<FriendVisibilitySettings["showMembers"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<FriendVisibilitySettings["showGroups"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<FriendVisibilitySettings["showStructure"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<FriendVisibilitySettings["allowFrontingNotifications"]>().toEqualTypeOf<boolean>();
+  });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof FriendVisibilitySettings>().toEqualTypeOf<
+      "showMembers" | "showGroups" | "showStructure" | "allowFrontingNotifications"
+    >();
   });
 });
 

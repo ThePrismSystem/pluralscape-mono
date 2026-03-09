@@ -58,6 +58,7 @@ export type {
   WebhookDeliveryId,
   FrontingReportId,
   FriendNotificationPreferenceId,
+  FrontingCommentId,
   HexColor,
   EntityType,
 } from "./ids.js";
@@ -83,13 +84,17 @@ export type {
   EntityReference,
 } from "./utility.js";
 
+// ── Image source ────────────────────────────────────────────────────
+export type { ImageSource } from "./image-source.js";
+
 // ── Identity ────────────────────────────────────────────────────────
 export type {
   System,
   Member,
-  CompletenessLevel,
-  KnownRoleTag,
-  RoleTag,
+  KnownSaturationLevel,
+  SaturationLevel,
+  KnownTag,
+  Tag,
   MemberPhoto,
   ArchivedMember,
   MemberListItem,
@@ -101,6 +106,7 @@ export type {
   ActiveFrontingSession,
   CompletedFrontingSession,
   FrontingSession,
+  FrontingComment,
   Switch,
   CustomFront,
   ArchivedCustomFront,
@@ -114,6 +120,7 @@ export type {
   BucketVisibilityScope,
   KeyGrant,
   FriendConnectionStatus,
+  FriendVisibilitySettings,
   FriendConnection,
   FriendCode,
   BucketAccessCheck,
@@ -123,7 +130,9 @@ export type {
 export type {
   RelationshipType,
   Relationship,
+  KnownArchitectureType,
   ArchitectureType,
+  StructureVisualProps,
   OriginType,
   DiscoveryStatus,
   SystemProfile,
@@ -136,6 +145,9 @@ export type {
   SubsystemMembership,
   SideSystemMembership,
   LayerMembership,
+  SubsystemLayerLink,
+  SubsystemSideSystemLink,
+  SideSystemLayerLink,
 } from "./structure.js";
 
 // ── Auth ──────────────────────────────────────────────────────
@@ -207,6 +219,10 @@ export type {
   ClientLayer,
   ServerTimerConfig,
   ClientTimerConfig,
+  ServerFrontingComment,
+  ClientFrontingComment,
+  ServerPollVote,
+  ClientPollVote,
   ServerAuditLogEntry,
   ClientAuditLogEntry,
   DecryptFn,
@@ -356,6 +372,7 @@ export type {
   BoardMessage,
   Note,
   PollOption,
+  PollKind,
   Poll,
   PollVote,
   AcknowledgementRequest,
@@ -371,6 +388,9 @@ export type {
   DormancyEndEvent,
   DiscoveryEvent,
   ArchivalEvent,
+  SubsystemFormationEvent,
+  FormChangeEvent,
+  NameChangeEvent,
   LifecycleEvent,
   LifecycleEventType,
 } from "./lifecycle.js";
@@ -427,6 +447,9 @@ export type {
   VisualProperties,
   MemberEntity,
   LandmarkEntity,
+  SubsystemEntity,
+  SideSystemEntity,
+  LayerEntity,
   InnerWorldEntity,
   InnerWorldRegion,
   InnerWorldCanvas,

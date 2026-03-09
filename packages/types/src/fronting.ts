@@ -1,44 +1,51 @@
 import type {
   CustomFrontId,
+  FrontingCommentId,
   FrontingSessionId,
   HexColor,
   MemberId,
-  SubsystemId,
   SwitchId,
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { AuditMetadata, EntityReference } from "./utility.js";
 
 /** Whether a member is fully fronting or co-conscious. */
 export type FrontingType = "fronting" | "co-conscious";
 
-/** A fronting session that is still active (no end time). */
-export interface ActiveFrontingSession extends AuditMetadata {
+/** Shared fields for all fronting session variants. */
+interface FrontingSessionBase extends AuditMetadata {
   readonly id: FrontingSessionId;
   readonly systemId: SystemId;
   readonly memberId: MemberId;
   readonly startTime: UnixMillis;
-  readonly endTime: null;
   readonly frontingType: FrontingType;
-  /** Free-text comment on this session. Max 50 characters (runtime enforced). */
+  /** Free-text status comment on this session. Max 50 characters (runtime enforced). SP-compatible. */
   readonly comment: string | null;
   readonly customFrontId: CustomFrontId | null;
-  readonly subsystemId: SubsystemId | null;
+  /** Reference to a linked structure entity (subsystem, side system, or layer). */
+  readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+  /** Free-text description of fronting positionality (e.g. close vs far, height). */
+  readonly positionality: string | null;
+}
+
+/** A fronting session that is still active (no end time). */
+export interface ActiveFrontingSession extends FrontingSessionBase {
+  readonly endTime: null;
 }
 
 /** A fronting session that has ended. */
-export interface CompletedFrontingSession extends AuditMetadata {
-  readonly id: FrontingSessionId;
+export interface CompletedFrontingSession extends FrontingSessionBase {
+  readonly endTime: UnixMillis;
+}
+
+/** A comment on a fronting session — unlimited length, multiple per session. */
+export interface FrontingComment extends AuditMetadata {
+  readonly id: FrontingCommentId;
+  readonly frontingSessionId: FrontingSessionId;
   readonly systemId: SystemId;
   readonly memberId: MemberId;
-  readonly startTime: UnixMillis;
-  readonly endTime: UnixMillis;
-  readonly frontingType: FrontingType;
-  /** Free-text comment on this session. Max 50 characters (runtime enforced). */
-  readonly comment: string | null;
-  readonly customFrontId: CustomFrontId | null;
-  readonly subsystemId: SubsystemId | null;
+  readonly content: string;
 }
 
 /** A fronting session — discriminated on `endTime` (null = active). */

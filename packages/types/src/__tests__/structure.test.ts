@@ -1,6 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
+  HexColor,
   LayerId,
   MemberId,
   RelationshipId,
@@ -8,10 +9,12 @@ import type {
   SubsystemId,
   SystemId,
 } from "../ids.js";
+import type { ImageSource } from "../image-source.js";
 import type {
   ArchitectureType,
   DiscoveryStatus,
   GatekeptLayer,
+  KnownArchitectureType,
   Layer,
   LayerAccessType,
   LayerMembership,
@@ -20,9 +23,13 @@ import type {
   Relationship,
   RelationshipType,
   SideSystem,
+  SideSystemLayerLink,
   SideSystemMembership,
+  StructureVisualProps,
   Subsystem,
+  SubsystemLayerLink,
   SubsystemMembership,
+  SubsystemSideSystemLink,
   SystemProfile,
 } from "../structure.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -102,14 +109,13 @@ describe("Relationship", () => {
 });
 
 describe("ArchitectureType", () => {
-  it("is exhaustive in a switch", () => {
+  it("discriminates on kind field", () => {
     function handleType(type: ArchitectureType): string {
-      switch (type) {
-        case "orbital":
-        case "compartmentalized":
-        case "webbed":
-        case "mixed":
-          return type;
+      switch (type.kind) {
+        case "known":
+          return type.type;
+        case "custom":
+          return type.value;
         default: {
           const _exhaustive: never = type;
           return _exhaustive;
@@ -119,9 +125,44 @@ describe("ArchitectureType", () => {
     expectTypeOf(handleType).toBeFunction();
   });
 
-  it("rejects invalid values", () => {
+  it("is exhaustive over KnownArchitectureType in a switch", () => {
+    function handleKnown(type: KnownArchitectureType): string {
+      switch (type) {
+        case "orbital":
+        case "spectrum":
+        case "median":
+        case "age-sliding":
+        case "webbed":
+        case "unknown":
+        case "fluid":
+          return type;
+        default: {
+          const _exhaustive: never = type;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleKnown).toBeFunction();
+  });
+
+  it("accepts known architecture types", () => {
+    assertType<ArchitectureType>({
+      kind: "known" as const,
+      type: "orbital" as KnownArchitectureType,
+    });
+    assertType<ArchitectureType>({
+      kind: "known" as const,
+      type: "spectrum" as KnownArchitectureType,
+    });
+  });
+
+  it("accepts custom architecture types", () => {
+    assertType<ArchitectureType>({ kind: "custom" as const, value: "radial" });
+  });
+
+  it("rejects invalid known values", () => {
     // @ts-expect-error invalid architecture type
-    assertType<ArchitectureType>("layered");
+    assertType<KnownArchitectureType>("layered");
   });
 });
 
@@ -215,9 +256,25 @@ describe("LayerAccessType", () => {
   });
 });
 
+describe("StructureVisualProps", () => {
+  it("has exactly the expected keys", () => {
+    expectTypeOf<keyof StructureVisualProps>().toEqualTypeOf<"color" | "imageSource" | "emoji">();
+  });
+
+  it("has correct nullable field types", () => {
+    expectTypeOf<StructureVisualProps["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<StructureVisualProps["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<StructureVisualProps["emoji"]>().toEqualTypeOf<string | null>();
+  });
+});
+
 describe("Subsystem", () => {
   it("extends AuditMetadata", () => {
     expectTypeOf<Subsystem>().toExtend<AuditMetadata>();
+  });
+
+  it("extends StructureVisualProps", () => {
+    expectTypeOf<Subsystem>().toExtend<StructureVisualProps>();
   });
 
   it("has correct field types", () => {
@@ -226,9 +283,11 @@ describe("Subsystem", () => {
     expectTypeOf<Subsystem["name"]>().toBeString();
     expectTypeOf<Subsystem["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Subsystem["architectureType"]>().toEqualTypeOf<ArchitectureType | null>();
-    expectTypeOf<Subsystem["originType"]>().toEqualTypeOf<OriginType | null>();
     expectTypeOf<Subsystem["hasCore"]>().toEqualTypeOf<boolean>();
     expectTypeOf<Subsystem["discoveryStatus"]>().toEqualTypeOf<DiscoveryStatus>();
+    expectTypeOf<Subsystem["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<Subsystem["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<Subsystem["emoji"]>().toEqualTypeOf<string | null>();
   });
 
   it("has recursive parentSubsystemId", () => {
@@ -241,11 +300,18 @@ describe("SideSystem", () => {
     expectTypeOf<SideSystem>().toExtend<AuditMetadata>();
   });
 
+  it("extends StructureVisualProps", () => {
+    expectTypeOf<SideSystem>().toExtend<StructureVisualProps>();
+  });
+
   it("has correct field types", () => {
     expectTypeOf<SideSystem["id"]>().toEqualTypeOf<SideSystemId>();
     expectTypeOf<SideSystem["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<SideSystem["name"]>().toBeString();
     expectTypeOf<SideSystem["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SideSystem["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<SideSystem["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<SideSystem["emoji"]>().toEqualTypeOf<string | null>();
   });
 });
 
@@ -259,10 +325,10 @@ describe("Layer", () => {
     function handleLayer(layer: Layer): void {
       if (layer.accessType === "open") {
         expectTypeOf(layer).toEqualTypeOf<OpenLayer>();
-        expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<null>();
+        expectTypeOf(layer.gatekeeperMemberIds).toEqualTypeOf<readonly []>();
       } else {
         expectTypeOf(layer).toEqualTypeOf<GatekeptLayer>();
-        expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<MemberId>();
+        expectTypeOf(layer.gatekeeperMemberIds).toEqualTypeOf<readonly MemberId[]>();
       }
     }
     expectTypeOf(handleLayer).toBeFunction();
@@ -274,6 +340,9 @@ describe("Layer", () => {
     expectTypeOf<Layer["name"]>().toBeString();
     expectTypeOf<Layer["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Layer["accessType"]>().toEqualTypeOf<LayerAccessType>();
+    expectTypeOf<Layer["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<Layer["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<Layer["emoji"]>().toEqualTypeOf<string | null>();
   });
 });
 
@@ -298,5 +367,29 @@ describe("LayerMembership", () => {
     expectTypeOf<LayerMembership["layerId"]>().toEqualTypeOf<LayerId>();
     expectTypeOf<LayerMembership["memberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<keyof LayerMembership>().toEqualTypeOf<"layerId" | "memberId">();
+  });
+});
+
+describe("SubsystemLayerLink", () => {
+  it("has exactly subsystemId and layerId", () => {
+    expectTypeOf<SubsystemLayerLink["subsystemId"]>().toEqualTypeOf<SubsystemId>();
+    expectTypeOf<SubsystemLayerLink["layerId"]>().toEqualTypeOf<LayerId>();
+    expectTypeOf<keyof SubsystemLayerLink>().toEqualTypeOf<"subsystemId" | "layerId">();
+  });
+});
+
+describe("SubsystemSideSystemLink", () => {
+  it("has exactly subsystemId and sideSystemId", () => {
+    expectTypeOf<SubsystemSideSystemLink["subsystemId"]>().toEqualTypeOf<SubsystemId>();
+    expectTypeOf<SubsystemSideSystemLink["sideSystemId"]>().toEqualTypeOf<SideSystemId>();
+    expectTypeOf<keyof SubsystemSideSystemLink>().toEqualTypeOf<"subsystemId" | "sideSystemId">();
+  });
+});
+
+describe("SideSystemLayerLink", () => {
+  it("has exactly sideSystemId and layerId", () => {
+    expectTypeOf<SideSystemLayerLink["sideSystemId"]>().toEqualTypeOf<SideSystemId>();
+    expectTypeOf<SideSystemLayerLink["layerId"]>().toEqualTypeOf<LayerId>();
+    expectTypeOf<keyof SideSystemLayerLink>().toEqualTypeOf<"sideSystemId" | "layerId">();
   });
 });

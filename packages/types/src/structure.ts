@@ -1,4 +1,5 @@
 import type {
+  HexColor,
   LayerId,
   MemberId,
   RelationshipId,
@@ -6,6 +7,7 @@ import type {
   SubsystemId,
   SystemId,
 } from "./ids.js";
+import type { ImageSource } from "./image-source.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -35,8 +37,20 @@ export interface Relationship {
   readonly createdAt: UnixMillis;
 }
 
-/** High-level architectural pattern of a system's internal structure. */
-export type ArchitectureType = "orbital" | "compartmentalized" | "webbed" | "mixed";
+/** Well-known architectural patterns for a system's internal structure. */
+export type KnownArchitectureType =
+  | "orbital"
+  | "spectrum"
+  | "median"
+  | "age-sliding"
+  | "webbed"
+  | "unknown"
+  | "fluid";
+
+/** Architecture type — either a well-known pattern or a user-defined custom type. */
+export type ArchitectureType =
+  | { readonly kind: "known"; readonly type: KnownArchitectureType }
+  | { readonly kind: "custom"; readonly value: string };
 
 /** How a member or the system itself originated. */
 export type OriginType =
@@ -61,21 +75,27 @@ export interface SystemProfile {
 /** Whether a layer is freely accessible or requires a gatekeeper. */
 export type LayerAccessType = "open" | "gatekept";
 
+/** Shared visual properties for structure entities (subsystems, side systems, layers). */
+export interface StructureVisualProps {
+  readonly color: HexColor | null;
+  readonly imageSource: ImageSource | null;
+  readonly emoji: string | null;
+}
+
 /** A nested group within a system — can contain other subsystems recursively. */
-export interface Subsystem extends AuditMetadata {
+export interface Subsystem extends AuditMetadata, StructureVisualProps {
   readonly id: SubsystemId;
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
   readonly parentSubsystemId: SubsystemId | null;
   readonly architectureType: ArchitectureType | null;
-  readonly originType: OriginType | null;
   readonly hasCore: boolean;
   readonly discoveryStatus: DiscoveryStatus;
 }
 
 /** A parallel group that exists alongside the main system — not nested. */
-export interface SideSystem extends AuditMetadata {
+export interface SideSystem extends AuditMetadata, StructureVisualProps {
   readonly id: SideSystemId;
   readonly systemId: SystemId;
   readonly name: string;
@@ -83,7 +103,7 @@ export interface SideSystem extends AuditMetadata {
 }
 
 /** Shared fields for all layer variants. */
-interface LayerBase extends AuditMetadata {
+interface LayerBase extends AuditMetadata, StructureVisualProps {
   readonly id: LayerId;
   readonly systemId: SystemId;
   readonly name: string;
@@ -93,13 +113,13 @@ interface LayerBase extends AuditMetadata {
 /** A freely accessible layer with no gatekeeper. */
 export interface OpenLayer extends LayerBase {
   readonly accessType: "open";
-  readonly gatekeeperMemberId: null;
+  readonly gatekeeperMemberIds: readonly [];
 }
 
-/** A gatekept layer requiring a specific member to grant access. */
+/** A gatekept layer — zero or more members can be assigned as gatekeepers. */
 export interface GatekeptLayer extends LayerBase {
   readonly accessType: "gatekept";
-  readonly gatekeeperMemberId: MemberId;
+  readonly gatekeeperMemberIds: readonly MemberId[];
 }
 
 /** A distinct layer or region within the system's internal landscape. */
@@ -121,4 +141,22 @@ export interface SideSystemMembership {
 export interface LayerMembership {
   readonly layerId: LayerId;
   readonly memberId: MemberId;
+}
+
+/** Junction linking a subsystem to a layer. */
+export interface SubsystemLayerLink {
+  readonly subsystemId: SubsystemId;
+  readonly layerId: LayerId;
+}
+
+/** Junction linking a subsystem to a side system. */
+export interface SubsystemSideSystemLink {
+  readonly subsystemId: SubsystemId;
+  readonly sideSystemId: SideSystemId;
+}
+
+/** Junction linking a side system to a layer. */
+export interface SideSystemLayerLink {
+  readonly sideSystemId: SideSystemId;
+  readonly layerId: LayerId;
 }
