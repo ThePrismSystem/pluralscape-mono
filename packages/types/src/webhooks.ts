@@ -1,9 +1,7 @@
-import type { Brand, SystemId, WebhookId } from "./ids.js";
+import type { EncryptedString } from "./encryption.js";
+import type { SystemId, WebhookDeliveryId, WebhookId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
-
-/** A branded webhook delivery ID. */
-export type WebhookDeliveryId = Brand<string, "WebhookDeliveryId">;
 
 /** Events that can trigger a webhook. */
 export type WebhookEventType =
@@ -21,7 +19,7 @@ export interface WebhookConfig extends AuditMetadata {
   readonly id: WebhookId;
   readonly systemId: SystemId;
   readonly url: string;
-  readonly secret: string;
+  readonly secret: EncryptedString;
   readonly eventTypes: readonly WebhookEventType[];
   readonly enabled: boolean;
 }
@@ -44,6 +42,7 @@ export type WebhookDeliveryPayload = PlaintextWebhookPayload | EncryptedWebhookP
 /** A record of a webhook delivery attempt. */
 export interface WebhookDelivery {
   readonly id: WebhookDeliveryId;
+  readonly systemId: SystemId;
   readonly webhookId: WebhookId;
   readonly eventType: WebhookEventType;
   readonly payload: WebhookDeliveryPayload;

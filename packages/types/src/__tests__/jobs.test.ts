@@ -1,6 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { JobDefinition, JobId, JobResult, JobStatus, JobType, RetryPolicy } from "../jobs.js";
+import type { JobId, SystemId } from "../ids.js";
+import type { JobDefinition, JobResult, JobStatus, JobType, RetryPolicy } from "../jobs.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("JobId", () => {
@@ -63,6 +64,24 @@ describe("JobStatus", () => {
     // @ts-expect-error invalid status
     assertType<JobStatus>("queued");
   });
+
+  it("is exhaustive in a switch", () => {
+    function handleStatus(status: JobStatus): string {
+      switch (status) {
+        case "pending":
+        case "running":
+        case "completed":
+        case "failed":
+        case "cancelled":
+          return status;
+        default: {
+          const _exhaustive: never = status;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleStatus).toBeFunction();
+  });
 });
 
 describe("RetryPolicy", () => {
@@ -70,6 +89,7 @@ describe("RetryPolicy", () => {
     expectTypeOf<RetryPolicy["maxRetries"]>().toEqualTypeOf<number>();
     expectTypeOf<RetryPolicy["backoffMs"]>().toEqualTypeOf<number>();
     expectTypeOf<RetryPolicy["backoffMultiplier"]>().toEqualTypeOf<number>();
+    expectTypeOf<RetryPolicy["maxBackoffMs"]>().toEqualTypeOf<number>();
   });
 });
 
@@ -84,6 +104,7 @@ describe("JobResult", () => {
 describe("JobDefinition", () => {
   it("has correct field types", () => {
     expectTypeOf<JobDefinition["id"]>().toEqualTypeOf<JobId>();
+    expectTypeOf<JobDefinition["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<JobDefinition["type"]>().toEqualTypeOf<JobType>();
     expectTypeOf<JobDefinition["status"]>().toEqualTypeOf<JobStatus>();
     expectTypeOf<JobDefinition["payload"]>().toEqualTypeOf<Readonly<Record<string, unknown>>>();

@@ -15,27 +15,39 @@ import type {
   BlobMetadata,
   BlobPurpose,
   BlobUploadRequest,
+  BucketEncrypted,
+  ClientFrontingSession,
+  ClientGroup,
   ClientMember,
+  ClientRelationship,
+  ClientSubsystem,
+  ConnectionErrorEvent,
   CryptoApiKey,
   DecryptFn,
   DeviceToken,
+  DeviceTokenId,
   Encrypted,
   EncryptedBlob,
   EncryptedString,
   EncryptedWebhookPayload,
   EncryptFn,
   EncryptionAlgorithm,
+  FrontingChangedEvent,
   JobDefinition,
   JobId,
   JobResult,
   JobStatus,
   JobType,
+  MemberUpdatedEvent,
+  MessageReceivedEvent,
   MetadataApiKey,
   NotificationConfig,
+  NotificationConfigId,
   NotificationEventType,
   NotificationPayload,
   Plaintext,
   PlaintextWebhookPayload,
+  PresenceHeartbeatEvent,
   RealtimeSubscription,
   RetryPolicy,
   SearchableEntityType,
@@ -43,8 +55,13 @@ import type {
   SearchQuery,
   SearchResult,
   SearchResultItem,
+  ServerFrontingSession,
+  ServerGroup,
   ServerMember,
+  ServerRelationship,
+  ServerSubsystem,
   SSEEvent,
+  SyncStateChangedEvent,
   SubscriptionId,
   WebhookConfig,
   WebhookDelivery,
@@ -215,12 +232,21 @@ describe("barrel exports", () => {
 
   it("exports encryption types", () => {
     expectTypeOf<Encrypted<string>>().toExtend<string>();
+    expectTypeOf<BucketEncrypted<string>>().toExtend<string>();
     expectTypeOf<Plaintext<string>>().toExtend<string>();
     expectTypeOf<EncryptionAlgorithm>().toBeString();
     expectTypeOf<EncryptedBlob>().toBeObject();
     expectTypeOf<EncryptedString>().toExtend<string>();
     expectTypeOf<ServerMember>().toBeObject();
     expectTypeOf<ClientMember>().toBeObject();
+    expectTypeOf<ServerFrontingSession>().toBeObject();
+    expectTypeOf<ClientFrontingSession>().toBeObject();
+    expectTypeOf<ServerGroup>().toBeObject();
+    expectTypeOf<ClientGroup>().toBeObject();
+    expectTypeOf<ServerSubsystem>().toBeObject();
+    expectTypeOf<ClientSubsystem>().toBeObject();
+    expectTypeOf<ServerRelationship>().toBeObject();
+    expectTypeOf<ClientRelationship>().toBeObject();
     expectTypeOf<DecryptFn<ServerMember, ClientMember>>().toBeFunction();
     expectTypeOf<EncryptFn<ClientMember, ServerMember>>().toBeFunction();
   });
@@ -256,8 +282,15 @@ describe("barrel exports", () => {
     expectTypeOf<ApiKeyWithSecret>().toBeObject();
   });
 
-  it("exports job types", () => {
+  it("exports infrastructure ID types", () => {
+    expectTypeOf<DeviceTokenId>().toExtend<string>();
+    expectTypeOf<NotificationConfigId>().toExtend<string>();
     expectTypeOf<JobId>().toExtend<string>();
+    expectTypeOf<SubscriptionId>().toExtend<string>();
+    expectTypeOf<WebhookDeliveryId>().toExtend<string>();
+  });
+
+  it("exports job types", () => {
     expectTypeOf<JobType>().toBeString();
     expectTypeOf<JobStatus>().toBeString();
     expectTypeOf<RetryPolicy>().toBeObject();
@@ -295,7 +328,12 @@ describe("barrel exports", () => {
   });
 
   it("exports realtime types", () => {
-    expectTypeOf<SubscriptionId>().toExtend<string>();
+    expectTypeOf<FrontingChangedEvent>().toBeObject();
+    expectTypeOf<MemberUpdatedEvent>().toBeObject();
+    expectTypeOf<SyncStateChangedEvent>().toBeObject();
+    expectTypeOf<MessageReceivedEvent>().toBeObject();
+    expectTypeOf<PresenceHeartbeatEvent>().toBeObject();
+    expectTypeOf<ConnectionErrorEvent>().toBeObject();
     expectTypeOf<WebSocketEvent>().toBeObject();
     expectTypeOf<WebSocketEventType>().toBeString();
     expectTypeOf<SSEEvent>().toBeObject();

@@ -17,6 +17,24 @@ describe("BlobPurpose", () => {
     // @ts-expect-error invalid purpose
     assertType<BlobPurpose>("video");
   });
+
+  it("is exhaustive in a switch", () => {
+    function handlePurpose(purpose: BlobPurpose): string {
+      switch (purpose) {
+        case "avatar":
+        case "member-photo":
+        case "journal-image":
+        case "attachment":
+        case "export":
+          return purpose;
+        default: {
+          const _exhaustive: never = purpose;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handlePurpose).toBeFunction();
+  });
 });
 
 describe("BlobMetadata", () => {

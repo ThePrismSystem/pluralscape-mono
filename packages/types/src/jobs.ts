@@ -1,8 +1,5 @@
-import type { Brand } from "./ids.js";
+import type { JobId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-
-/** A branded job ID. */
-export type JobId = Brand<string, "JobId">;
 
 /** The kind of background job. */
 export type JobType =
@@ -24,6 +21,7 @@ export interface RetryPolicy {
   readonly maxRetries: number;
   readonly backoffMs: number;
   readonly backoffMultiplier: number;
+  readonly maxBackoffMs: number;
 }
 
 /** Result of a completed or failed job. */
@@ -36,6 +34,7 @@ export interface JobResult {
 /** A background job definition. */
 export interface JobDefinition {
   readonly id: JobId;
+  readonly systemId: SystemId;
   readonly type: JobType;
   readonly status: JobStatus;
   readonly payload: Readonly<Record<string, unknown>>;

@@ -168,6 +168,18 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // Subsystem: T1 (name, description) | T3 (parentSubsystemId)
 // Relationship: T1 (label) | T3 (type, sourceMemberId, targetMemberId, bidirectional)
 //
+// ApiKey: T3 (all fields — server metadata, no user content)
+// AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
+// BlobMetadata: T3 (all fields — metadata only, blob content encrypted at storage layer)
+// JobDefinition: T3 (all fields — server-internal job metadata)
+// DeviceToken: T1 (token) | T3 (platform, lastActiveAt)
+// NotificationConfig: T3 (all fields — user preferences, no sensitive content)
+// NotificationPayload: T1 (title, body, data) | T3 (eventType, systemId)
+// WebhookConfig: T1 (secret via EncryptedString) | T3 (url, eventTypes, enabled)
+// WebhookDelivery: T1 (payload when encrypted) | T3 (eventType, statusCode, deliveredAt, success)
+// RealtimeSubscription: T3 (all fields — subscription metadata)
+// SearchQuery/SearchResult: client-only types, not persisted server-side
+//
 // TODO: Add communication types when types-8klm is completed
 // TODO: Add custom field types when types-0jjx is completed
 // TODO: Add innerworld types when types-iz5j is completed

@@ -1,6 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { SystemId, WebhookId } from "../ids.js";
+import type { EncryptedString } from "../encryption.js";
+import type { SystemId, WebhookDeliveryId, WebhookId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 import type {
@@ -8,7 +9,6 @@ import type {
   PlaintextWebhookPayload,
   WebhookConfig,
   WebhookDelivery,
-  WebhookDeliveryId,
   WebhookDeliveryPayload,
   WebhookEventType,
 } from "../webhooks.js";
@@ -67,7 +67,7 @@ describe("WebhookConfig", () => {
     expectTypeOf<WebhookConfig["id"]>().toEqualTypeOf<WebhookId>();
     expectTypeOf<WebhookConfig["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<WebhookConfig["url"]>().toBeString();
-    expectTypeOf<WebhookConfig["secret"]>().toBeString();
+    expectTypeOf<WebhookConfig["secret"]>().toEqualTypeOf<EncryptedString>();
     expectTypeOf<WebhookConfig["eventTypes"]>().toEqualTypeOf<readonly WebhookEventType[]>();
     expectTypeOf<WebhookConfig["enabled"]>().toEqualTypeOf<boolean>();
   });
@@ -90,6 +90,7 @@ describe("WebhookDeliveryPayload", () => {
 describe("WebhookDelivery", () => {
   it("has correct field types", () => {
     expectTypeOf<WebhookDelivery["id"]>().toEqualTypeOf<WebhookDeliveryId>();
+    expectTypeOf<WebhookDelivery["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<WebhookDelivery["webhookId"]>().toEqualTypeOf<WebhookId>();
     expectTypeOf<WebhookDelivery["eventType"]>().toEqualTypeOf<WebhookEventType>();
     expectTypeOf<WebhookDelivery["payload"]>().toEqualTypeOf<WebhookDeliveryPayload>();

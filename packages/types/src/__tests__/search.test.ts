@@ -83,4 +83,17 @@ describe("SearchResult", () => {
     expectTypeOf<Result["totalCount"]>().toEqualTypeOf<number>();
     expectTypeOf<Result["items"]>().toEqualTypeOf<readonly SearchResultItem<{ name: string }>[]>();
   });
+
+  it("generic constraint preserves type parameter across item and result", () => {
+    type NumberItem = SearchResultItem<number>;
+    expectTypeOf<NumberItem["data"]>().toEqualTypeOf<number>();
+
+    type NumberResult = SearchResult<number>;
+    expectTypeOf<NumberResult["items"]>().toEqualTypeOf<readonly SearchResultItem<number>[]>();
+  });
+
+  it("different type parameters produce incompatible types", () => {
+    // @ts-expect-error SearchResultItem<string> not assignable to SearchResultItem<number>
+    expectTypeOf<SearchResultItem<string>>().toEqualTypeOf<SearchResultItem<number>>();
+  });
 });

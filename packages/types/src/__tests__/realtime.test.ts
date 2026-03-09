@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { SystemId } from "../ids.js";
+import type { SubscriptionId, SystemId } from "../ids.js";
 import type {
   ConnectionErrorEvent,
   FrontingChangedEvent,
@@ -9,7 +9,6 @@ import type {
   PresenceHeartbeatEvent,
   RealtimeSubscription,
   SSEEvent,
-  SubscriptionId,
   SyncStateChangedEvent,
   WebSocketConnectionState,
   WebSocketEvent,
@@ -86,7 +85,7 @@ describe("WebSocketEventType", () => {
 
 describe("SSEEvent", () => {
   it("has correct field types", () => {
-    expectTypeOf<SSEEvent["event"]>().toBeString();
+    expectTypeOf<SSEEvent["event"]>().toEqualTypeOf<WebSocketEventType>();
     expectTypeOf<SSEEvent["data"]>().toBeString();
     expectTypeOf<SSEEvent["id"]>().toEqualTypeOf<string | null>();
     expectTypeOf<SSEEvent["retry"]>().toEqualTypeOf<number | null>();
@@ -115,5 +114,22 @@ describe("WebSocketConnectionState", () => {
   it("rejects invalid states", () => {
     // @ts-expect-error invalid state
     assertType<WebSocketConnectionState>("error");
+  });
+
+  it("is exhaustive in a switch", () => {
+    function handleState(state: WebSocketConnectionState): string {
+      switch (state) {
+        case "connecting":
+        case "connected":
+        case "disconnected":
+        case "reconnecting":
+          return state;
+        default: {
+          const _exhaustive: never = state;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleState).toBeFunction();
   });
 });

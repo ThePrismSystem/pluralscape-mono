@@ -1,3 +1,4 @@
+import type { EncryptedString } from "./encryption.js";
 import type { DeviceTokenId, NotificationConfigId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
@@ -7,7 +8,7 @@ export interface DeviceToken extends AuditMetadata {
   readonly id: DeviceTokenId;
   readonly systemId: SystemId;
   readonly platform: "ios" | "android" | "web";
-  readonly token: string;
+  readonly token: EncryptedString;
   readonly lastActiveAt: UnixMillis;
 }
 
@@ -30,6 +31,7 @@ export interface NotificationConfig extends AuditMetadata {
 
 /** A notification payload ready for delivery. */
 export interface NotificationPayload {
+  readonly systemId: SystemId;
   readonly eventType: NotificationEventType;
   readonly title: string;
   readonly body: string;

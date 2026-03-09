@@ -15,6 +15,13 @@ export type ApiKeyScope =
   | "write:groups"
   | "read:system"
   | "write:system"
+  | "read:webhooks"
+  | "write:webhooks"
+  | "read:audit-log"
+  | "read:blobs"
+  | "write:blobs"
+  | "read:notifications"
+  | "write:notifications"
   | "full";
 
 /** A metadata-only API key (no crypto key material). */

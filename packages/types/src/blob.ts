@@ -4,7 +4,12 @@ import type { UnixMillis } from "./timestamps.js";
 /** The intended purpose of a blob. */
 export type BlobPurpose = "avatar" | "member-photo" | "journal-image" | "attachment" | "export";
 
-/** Metadata about a stored blob. */
+/**
+ * Metadata about a stored blob.
+ *
+ * Intentionally omits AuditMetadata -- blobs are immutable after upload.
+ * They are only created or deleted, never updated. Only uploadedAt is tracked.
+ */
 export interface BlobMetadata {
   readonly id: BlobId;
   readonly systemId: SystemId;

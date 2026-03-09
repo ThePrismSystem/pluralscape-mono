@@ -1,5 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import type { EncryptedString } from "../encryption.js";
 import type { DeviceTokenId, NotificationConfigId, SystemId } from "../ids.js";
 import type {
   DeviceToken,
@@ -19,7 +20,7 @@ describe("DeviceToken", () => {
     expectTypeOf<DeviceToken["id"]>().toEqualTypeOf<DeviceTokenId>();
     expectTypeOf<DeviceToken["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<DeviceToken["platform"]>().toEqualTypeOf<"ios" | "android" | "web">();
-    expectTypeOf<DeviceToken["token"]>().toBeString();
+    expectTypeOf<DeviceToken["token"]>().toEqualTypeOf<EncryptedString>();
     expectTypeOf<DeviceToken["lastActiveAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });
@@ -71,6 +72,7 @@ describe("NotificationConfig", () => {
 
 describe("NotificationPayload", () => {
   it("has correct field types", () => {
+    expectTypeOf<NotificationPayload["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<NotificationPayload["eventType"]>().toEqualTypeOf<NotificationEventType>();
     expectTypeOf<NotificationPayload["title"]>().toBeString();
     expectTypeOf<NotificationPayload["body"]>().toBeString();
@@ -78,5 +80,23 @@ describe("NotificationPayload", () => {
       Record<string, string>
     > | null>();
     expectTypeOf<NotificationPayload["createdAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+});
+
+describe("DeviceToken platform", () => {
+  it("is exhaustive in a switch", () => {
+    function handlePlatform(platform: DeviceToken["platform"]): string {
+      switch (platform) {
+        case "ios":
+        case "android":
+        case "web":
+          return platform;
+        default: {
+          const _exhaustive: never = platform;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handlePlatform).toBeFunction();
   });
 });

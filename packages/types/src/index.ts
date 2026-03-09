@@ -50,6 +50,9 @@ export type {
   SyncDocumentId,
   SyncQueueItemId,
   SyncConflictId,
+  JobId,
+  SubscriptionId,
+  WebhookDeliveryId,
   HexColor,
   EntityType,
 } from "./ids.js";
@@ -198,7 +201,7 @@ export type {
 } from "./api-keys.js";
 
 // ── Jobs ──────────────────────────────────────────────────────
-export type { JobId, JobType, JobStatus, RetryPolicy, JobResult, JobDefinition } from "./jobs.js";
+export type { JobType, JobStatus, RetryPolicy, JobResult, JobDefinition } from "./jobs.js";
 
 // ── Blob ──────────────────────────────────────────────────────
 export type { BlobPurpose, BlobMetadata, BlobUploadRequest, BlobDownloadRef } from "./blob.js";
@@ -208,7 +211,6 @@ export type { AuditEventType, AuditLogEntry } from "./audit-log.js";
 
 // ── Webhooks ──────────────────────────────────────────────────
 export type {
-  WebhookDeliveryId,
   WebhookEventType,
   WebhookConfig,
   PlaintextWebhookPayload,
@@ -227,7 +229,6 @@ export type {
 
 // ── Realtime ──────────────────────────────────────────────────
 export type {
-  SubscriptionId,
   FrontingChangedEvent,
   MemberUpdatedEvent,
   SyncStateChangedEvent,

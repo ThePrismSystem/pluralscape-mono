@@ -2,7 +2,7 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { AuditEventType, AuditLogEntry } from "../audit-log.js";
 import type { Plaintext } from "../encryption.js";
-import type { AuditLogEntryId, SystemId } from "../ids.js";
+import type { AccountId, ApiKeyId, AuditLogEntryId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("AuditEventType", () => {
@@ -50,11 +50,32 @@ describe("AuditLogEntry", () => {
     expectTypeOf<AuditLogEntry["id"]>().toEqualTypeOf<AuditLogEntryId>();
     expectTypeOf<AuditLogEntry["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<AuditLogEntry["eventType"]>().toEqualTypeOf<AuditEventType>();
-    expectTypeOf<AuditLogEntry["timestamp"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<AuditLogEntry["actorId"]>().toBeString();
+    expectTypeOf<AuditLogEntry["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<AuditLogEntry["detail"]>().toEqualTypeOf<Plaintext<string> | null>();
     expectTypeOf<AuditLogEntry["ipAddress"]>().toEqualTypeOf<string | null>();
     expectTypeOf<AuditLogEntry["userAgent"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("actor is a discriminated union", () => {
+    type Actor = AuditLogEntry["actor"];
+    function handleActor(actor: Actor): string {
+      switch (actor.kind) {
+        case "account":
+          expectTypeOf(actor.id).toEqualTypeOf<AccountId>();
+          return actor.id;
+        case "api-key":
+          expectTypeOf(actor.id).toEqualTypeOf<ApiKeyId>();
+          return actor.id;
+        case "system":
+          expectTypeOf(actor.id).toEqualTypeOf<SystemId>();
+          return actor.id;
+        default: {
+          const _exhaustive: never = actor;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleActor).toBeFunction();
   });
 
   it("detail uses Plaintext branded type", () => {

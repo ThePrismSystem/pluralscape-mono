@@ -46,6 +46,13 @@ describe("ApiKeyScope", () => {
         case "write:groups":
         case "read:system":
         case "write:system":
+        case "read:webhooks":
+        case "write:webhooks":
+        case "read:audit-log":
+        case "read:blobs":
+        case "write:blobs":
+        case "read:notifications":
+        case "write:notifications":
         case "full":
           return scope;
         default: {

@@ -48,6 +48,9 @@ import type {
   SyncDocumentId,
   SyncQueueItemId,
   SyncConflictId,
+  JobId,
+  SubscriptionId,
+  WebhookDeliveryId,
   SystemId,
   SystemSettingsId,
   TimerId,
@@ -94,7 +97,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 41 branded ID types as string-based", () => {
+  it("defines all 44 branded ID types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -142,6 +145,9 @@ describe("branded ID types", () => {
     expectTypeOf<SyncDocumentId>().toExtend<string>();
     expectTypeOf<SyncQueueItemId>().toExtend<string>();
     expectTypeOf<SyncConflictId>().toExtend<string>();
+    expectTypeOf<JobId>().toExtend<string>();
+    expectTypeOf<SubscriptionId>().toExtend<string>();
+    expectTypeOf<WebhookDeliveryId>().toExtend<string>();
     expectTypeOf<HexColor>().toExtend<string>();
   });
 });
@@ -181,7 +187,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(47);
+    expect(prefixCount).toBe(50);
   });
 });
 
@@ -255,6 +261,9 @@ describe("EntityType", () => {
         case "sync-document":
         case "sync-queue-item":
         case "sync-conflict":
+        case "job":
+        case "subscription":
+        case "webhook-delivery":
           return type;
         default: {
           const _exhaustive: never = type;
