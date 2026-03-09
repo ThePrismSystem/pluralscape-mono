@@ -1,4 +1,5 @@
 import type {
+  HexColor,
   LayerId,
   MemberId,
   RelationshipId,
@@ -6,6 +7,7 @@ import type {
   SubsystemId,
   SystemId,
 } from "./ids.js";
+import type { ImageSource } from "./image-source.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -36,7 +38,15 @@ export interface Relationship {
 }
 
 /** High-level architectural pattern of a system's internal structure. */
-export type ArchitectureType = "orbital" | "compartmentalized" | "webbed" | "mixed";
+export type ArchitectureType =
+  | "orbital"
+  | "spectrum"
+  | "median"
+  | "age-sliding"
+  | "webbed"
+  | "unknown"
+  | "fluid"
+  | "custom";
 
 /** How a member or the system itself originated. */
 export type OriginType =
@@ -69,9 +79,11 @@ export interface Subsystem extends AuditMetadata {
   readonly description: string | null;
   readonly parentSubsystemId: SubsystemId | null;
   readonly architectureType: ArchitectureType | null;
-  readonly originType: OriginType | null;
   readonly hasCore: boolean;
   readonly discoveryStatus: DiscoveryStatus;
+  readonly color: HexColor | null;
+  readonly imageSource: ImageSource | null;
+  readonly emoji: string | null;
 }
 
 /** A parallel group that exists alongside the main system — not nested. */
@@ -80,6 +92,9 @@ export interface SideSystem extends AuditMetadata {
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
+  readonly color: HexColor | null;
+  readonly imageSource: ImageSource | null;
+  readonly emoji: string | null;
 }
 
 /** Shared fields for all layer variants. */
@@ -88,6 +103,9 @@ interface LayerBase extends AuditMetadata {
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
+  readonly color: HexColor | null;
+  readonly imageSource: ImageSource | null;
+  readonly emoji: string | null;
 }
 
 /** A freely accessible layer with no gatekeeper. */
@@ -96,10 +114,10 @@ export interface OpenLayer extends LayerBase {
   readonly gatekeeperMemberId: null;
 }
 
-/** A gatekept layer requiring a specific member to grant access. */
+/** A gatekept layer requiring a specific member to grant access, or null if none assigned. */
 export interface GatekeptLayer extends LayerBase {
   readonly accessType: "gatekept";
-  readonly gatekeeperMemberId: MemberId;
+  readonly gatekeeperMemberId: MemberId | null;
 }
 
 /** A distinct layer or region within the system's internal landscape. */
@@ -121,4 +139,22 @@ export interface SideSystemMembership {
 export interface LayerMembership {
   readonly layerId: LayerId;
   readonly memberId: MemberId;
+}
+
+/** Junction linking a subsystem to a layer. */
+export interface SubsystemLayerLink {
+  readonly subsystemId: SubsystemId;
+  readonly layerId: LayerId;
+}
+
+/** Junction linking a subsystem to a side system. */
+export interface SubsystemSideSystemLink {
+  readonly subsystemId: SubsystemId;
+  readonly sideSystemId: SideSystemId;
+}
+
+/** Junction linking a side system to a layer. */
+export interface SideSystemLayerLink {
+  readonly sideSystemId: SideSystemId;
+  readonly layerId: LayerId;
 }

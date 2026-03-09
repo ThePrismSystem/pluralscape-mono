@@ -4,7 +4,7 @@
  * Used in both PG and SQLite table definitions.
  */
 
-import type { CompletenessLevel } from "@pluralscape/types";
+import type { KnownSaturationLevel } from "@pluralscape/types";
 import type { FrontingType } from "@pluralscape/types";
 import type { RelationshipType } from "@pluralscape/types";
 import type { LayerAccessType } from "@pluralscape/types";
@@ -15,11 +15,12 @@ import type { DeviceTransferStatus } from "@pluralscape/types";
 import type { SyncOperation } from "@pluralscape/types";
 import type { SyncResolution } from "@pluralscape/types";
 
-export const COMPLETENESS_LEVELS = [
+export const KNOWN_SATURATION_LEVELS = [
   "fragment",
-  "demi-member",
-  "full",
-] as const satisfies readonly CompletenessLevel[];
+  "functional-fragment",
+  "partially-elaborated",
+  "highly-elaborated",
+] as const satisfies readonly KnownSaturationLevel[];
 export const FRONTING_TYPES = [
   "fronting",
   "co-conscious",

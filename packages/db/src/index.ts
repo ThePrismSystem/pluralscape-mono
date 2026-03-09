@@ -11,7 +11,7 @@ export type { DatabaseClient, PgDatabaseClient, SqliteDatabaseClient } from "./c
 
 // ── Helpers ────────────────────────────────────────────────────
 export {
-  COMPLETENESS_LEVELS,
+  KNOWN_SATURATION_LEVELS,
   FRONTING_TYPES,
   RELATIONSHIP_TYPES,
   LAYER_ACCESS_TYPES,

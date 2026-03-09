@@ -1,4 +1,4 @@
-import type { EventId, MemberId, SystemId } from "./ids.js";
+import type { EventId, MemberId, SubsystemId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /**
@@ -67,6 +67,29 @@ export interface ArchivalEvent extends LifecycleEventBase {
   readonly memberId: MemberId;
 }
 
+/** A subsystem forms from a member or group of members. */
+export interface SubsystemFormationEvent extends LifecycleEventBase {
+  readonly eventType: "subsystem-formation";
+  readonly memberId: MemberId;
+  readonly resultSubsystemId: SubsystemId;
+}
+
+/** A member's form changes (e.g. age, appearance, species). */
+export interface FormChangeEvent extends LifecycleEventBase {
+  readonly eventType: "form-change";
+  readonly memberId: MemberId;
+  readonly previousForm: string | null;
+  readonly newForm: string | null;
+}
+
+/** A member's name changes. */
+export interface NameChangeEvent extends LifecycleEventBase {
+  readonly eventType: "name-change";
+  readonly memberId: MemberId;
+  readonly previousName: string | null;
+  readonly newName: string;
+}
+
 /** All possible lifecycle events — discriminated on eventType. */
 export type LifecycleEvent =
   | SplitEvent
@@ -76,7 +99,10 @@ export type LifecycleEvent =
   | DormancyStartEvent
   | DormancyEndEvent
   | DiscoveryEvent
-  | ArchivalEvent;
+  | ArchivalEvent
+  | SubsystemFormationEvent
+  | FormChangeEvent
+  | NameChangeEvent;
 
 /** The set of valid lifecycle event type strings. */
 export type LifecycleEventType = LifecycleEvent["eventType"];

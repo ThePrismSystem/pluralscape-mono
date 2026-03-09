@@ -6,21 +6,22 @@ import type {
   CoFrontState,
   CompletedFrontingSession,
   CustomFront,
+  FrontingComment,
   FrontingSession,
   FrontingType,
   Switch,
 } from "../fronting.js";
 import type {
   CustomFrontId,
+  FrontingCommentId,
   FrontingSessionId,
   HexColor,
   MemberId,
-  SubsystemId,
   SwitchId,
   SystemId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
-import type { AuditMetadata } from "../utility.js";
+import type { AuditMetadata, EntityReference } from "../utility.js";
 
 describe("FrontingType", () => {
   it("accepts valid values", () => {
@@ -71,7 +72,9 @@ describe("FrontingSession", () => {
     expectTypeOf<ActiveFrontingSession["frontingType"]>().toEqualTypeOf<FrontingType>();
     expectTypeOf<ActiveFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ActiveFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
-    expectTypeOf<ActiveFrontingSession["subsystemId"]>().toEqualTypeOf<SubsystemId | null>();
+    expectTypeOf<ActiveFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
+      "subsystem" | "side-system" | "layer"
+    > | null>();
   });
 
   it("CompletedFrontingSession has individual field types", () => {
@@ -83,7 +86,9 @@ describe("FrontingSession", () => {
     expectTypeOf<CompletedFrontingSession["frontingType"]>().toEqualTypeOf<FrontingType>();
     expectTypeOf<CompletedFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<CompletedFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
-    expectTypeOf<CompletedFrontingSession["subsystemId"]>().toEqualTypeOf<SubsystemId | null>();
+    expectTypeOf<CompletedFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
+      "subsystem" | "side-system" | "layer"
+    > | null>();
   });
 
   it("ActiveFrontingSession extends AuditMetadata", () => {
@@ -157,5 +162,26 @@ describe("CoFrontState", () => {
 
   it("has exact shape", () => {
     expectTypeOf<keyof CoFrontState>().toEqualTypeOf<"timestamp" | "activeSessions">();
+  });
+});
+
+describe("FrontingComment", () => {
+  it("has correct field types", () => {
+    expectTypeOf<FrontingComment["id"]>().toEqualTypeOf<FrontingCommentId>();
+    expectTypeOf<FrontingComment["frontingSessionId"]>().toEqualTypeOf<FrontingSessionId>();
+    expectTypeOf<FrontingComment["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FrontingComment["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<FrontingComment["content"]>().toBeString();
+    expectTypeOf<FrontingComment["createdAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof FrontingComment>().toEqualTypeOf<
+      "id" | "frontingSessionId" | "systemId" | "memberId" | "content" | "createdAt"
+    >();
+  });
+
+  it("does not extend AuditMetadata", () => {
+    expectTypeOf<FrontingComment>().not.toExtend<AuditMetadata>();
   });
 });

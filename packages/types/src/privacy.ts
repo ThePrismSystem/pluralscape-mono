@@ -59,6 +59,14 @@ export interface KeyGrant {
 /** Status of a friend connection between two systems. */
 export type FriendConnectionStatus = "pending" | "accepted" | "blocked" | "removed";
 
+/** Per-friend visibility toggles — controls what a friend can see beyond bucket access. */
+export interface FriendVisibilitySettings {
+  readonly showMembers: boolean;
+  readonly showGroups: boolean;
+  readonly showStructure: boolean;
+  readonly allowFrontingNotifications: boolean;
+}
+
 /** A mutable friend connection between two systems. */
 export interface FriendConnection extends AuditMetadata {
   readonly id: FriendConnectionId;
@@ -66,6 +74,7 @@ export interface FriendConnection extends AuditMetadata {
   readonly friendSystemId: SystemId;
   readonly status: FriendConnectionStatus;
   readonly assignedBucketIds: readonly BucketId[];
+  readonly visibility: FriendVisibilitySettings;
 }
 
 /** An immutable, optionally expiring friend code used to initiate connections. */

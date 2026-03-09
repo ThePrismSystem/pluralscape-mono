@@ -9,8 +9,10 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Touching a link shows a preview card with option to navigate to that entity
   - Multiple colors per member (for theming)
   - Multi-photo gallery per member (swipeable, not just a single avatar)
-  - Completeness level: fragment (minimal data, nullable fields), demi-member, or full member
-  - Role tags (protector, gatekeeper, caretaker, little, age-slider, trauma holder, etc.)
+  - Image sources are polymorphic: internal blob reference or external URL (`ImageSource` discriminated union)
+  - Saturation level: how elaborated a member is within the system — 4 known levels (fragment, functional-fragment, partially-elaborated, highly-elaborated) or a custom user-defined level. Discriminated union with `kind` field. Optionally enabled per-system via `saturationLevelsEnabled` setting.
+  - Tags: well-known tags (protector, gatekeeper, caretaker, little, age-slider, trauma-holder, host, persecutor, mediator, anp, memory-holder, symptom-holder, middle, introject, fictive, factive, non-human) or custom user-defined tags. Discriminated union with `kind` field.
+  - Per-member notification settings: suppress friend front notification, auto-post board message on front
 - **Image editing** — built-in crop and resize when uploading avatars or gallery photos (no external tool needed)
 - **Custom fields** — unlimited user-defined fields per member
 - **Group membership display** — member profiles show all groups they belong to, with links to view each group
@@ -28,6 +30,8 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Non-compulsive UX: supports flexible/retroactive logging so users don't feel obligated to log immediately
   - Co-fronting vs co-conscious distinction (active control vs passive awareness)
   - Custom front status text per fronting session (max 50 chars, matches SP behavior)
+  - Fronting comments: multiple timestamped comments per fronting session (unlimited length), stored as separate `FrontingComment` entities linked to the session
+  - Sessions can link to a structure entity (subsystem, side system, or layer) via `linkedStructure` — replaces the old subsystem-only field with a polymorphic `EntityReference`
   - Subsystem-level fronting (subsystems can front independently of the parent system)
 - **Historical editing** — retroactive entries, timestamp adjustment, comments on entries
 - **Timeline visualization** — multi-lane display, color-coded per member, co-fronting overlap visible
@@ -40,7 +44,12 @@ Actionable feature spec for Pluralscape, organized by domain.
 - **System chat** — proxy messaging, channels/categories, rich text, @mentions, rapid proxy switching
 - **Board messages** — persistent noticeboard, drag-and-drop reorder, immune to chat scroll
 - **Private notes** — member-bound or system-wide, rich text, custom background colors
-- **Polls** — multiple choice, one vote per member, consensus analytics
+- **Polls** — multiple choice with consensus analytics
+  - Poll kinds: standard or custom
+  - Optional description, end date, abstain option, and veto option
+  - Options can have color and emoji
+  - Voters can be members, subsystems, side systems, or layers (polymorphic `EntityReference`)
+  - Votes support optional comment and veto flag; null option = abstain
 - **Mandatory acknowledgement routing** — targeted alerts that persist until a specific member confirms
 
 Note: polls and acknowledgements are cooperative guardrails within a system, not cryptographically enforced. Members share one account — the app facilitates trust-based internal coordination, not identity verification.
@@ -57,6 +66,7 @@ Note: polls and acknowledgements are cooperative guardrails within a system, not
   - Member list and member profiles
   - Custom fields (controlled per-bucket — e.g., one friend sees a custom field, another does not)
   - Search within visible data (friend's client pulls bucket-permitted data locally for search)
+- **Per-friend visibility settings** — granular toggles per friend connection: show members, show groups, show structure, allow fronting notifications (`FriendVisibilitySettings`)
 - **Push notifications** — configurable switch alerts to friends
 
 ## 5. Inter-System Messaging (future)
@@ -78,7 +88,10 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
   - Recursive tree model (no hard depth limit) — subsystems within subsystems within subsystems
   - Side systems (parallel groups, not nested inside a member)
   - Layers (vertically stacked divisions with differing access rules, optionally gatekept)
-  - Subsystem metadata: architecture type (orbital, compartmentalized, webbed, mixed), origin type, has-core flag, discovery status (fully mapped vs still discovering)
+  - Subsystem metadata: architecture type (orbital, spectrum, median, age-sliding, webbed, unknown, fluid, custom), has-core flag, discovery status (fully mapped vs still discovering)
+  - Subsystems, side systems, and layers have visual properties: color, image source, and emoji
+  - Gatekept layers have an optional gatekeeper member (nullable)
+  - Cross-structure junctions: subsystem-layer links, subsystem-side-system links, side-system-layer links
   - Members belong to any level of nested structure
   - Subsystems/side systems can front independently (replaces SP workaround of custom fronts for "someone in subsystem X is fronting")
 - **Member lifecycle events** — append-only log tracking:
@@ -87,10 +100,15 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
   - Merge (temporary blurring between members) and unmerge
   - Dormancy start/end
   - Discovery and archival
+  - Subsystem formation (member joins or creates a subsystem)
+  - Form change (tracking appearance/form shifts)
+  - Name change (tracking previous and new names)
   - Each event links the involved members and resulting members
 - **Innerworld mapping** — spatial positioning on 2D canvas
   - Layers/regions with access rules (open vs gatekept)
   - Gatekeeper member assignment per region
+  - Entity types: member, landmark, subsystem, side system, layer — each with visual properties (color, shape, image source, external URL)
+  - Structure entities link back to their corresponding subsystem/side-system/layer
 - **Visual structure editor** — pan/zoom canvas, drag-and-drop, connecting lines
   - Data model and relationship management UI are day-one requirements
   - Visual canvas is stretch goal but targeted for day-one
@@ -158,9 +176,13 @@ Nomenclature is a **UI display-layer concern only**. The API, database schema, a
   - **Fronting**: "Fronting" / "In front" / "Driving" / "Piloting" / custom
   - **Switching**: "Switch" / "Shift" / custom
   - **Co-presence**: "Co-fronting" / "Co-conscious" / "Co-driving" / custom
-  - **Internal space**: "Headspace" / "Innerworld" / "Wonderland" / custom
+  - **Internal space**: "Headspace" / "Innerworld" / custom
   - **Primary fronter**: "Host" / "Primary fronter" / "Main fronter" / custom (sensitive — "host" implies hierarchy)
   - **Structure**: "System Structure" / "Topology" / "Map" / custom
+  - **Dormancy**: "Dormancy" / "Inactivity" / "Sleep" / custom
+  - **Body**: "Body" / "Vessel" / "Meatsuit" / custom
+  - **Amnesia**: "Amnesia" / "Memory gaps" / "Blackouts" / custom
+  - **Saturation**: "Saturation" / "Completeness" / "Elaboration" / custom
 - Stored per-system (each system chooses their own terms)
 
 ## 13. Accessibility and UX

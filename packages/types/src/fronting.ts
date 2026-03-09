@@ -1,14 +1,14 @@
 import type {
   CustomFrontId,
+  FrontingCommentId,
   FrontingSessionId,
   HexColor,
   MemberId,
-  SubsystemId,
   SwitchId,
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { AuditMetadata, EntityReference } from "./utility.js";
 
 /** Whether a member is fully fronting or co-conscious. */
 export type FrontingType = "fronting" | "co-conscious";
@@ -21,10 +21,11 @@ export interface ActiveFrontingSession extends AuditMetadata {
   readonly startTime: UnixMillis;
   readonly endTime: null;
   readonly frontingType: FrontingType;
-  /** Free-text comment on this session. Max 50 characters (runtime enforced). */
+  /** Free-text status comment on this session. Max 50 characters (runtime enforced). SP-compatible. */
   readonly comment: string | null;
   readonly customFrontId: CustomFrontId | null;
-  readonly subsystemId: SubsystemId | null;
+  /** Reference to a linked structure entity (subsystem, side system, or layer). */
+  readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
 }
 
 /** A fronting session that has ended. */
@@ -35,10 +36,21 @@ export interface CompletedFrontingSession extends AuditMetadata {
   readonly startTime: UnixMillis;
   readonly endTime: UnixMillis;
   readonly frontingType: FrontingType;
-  /** Free-text comment on this session. Max 50 characters (runtime enforced). */
+  /** Free-text status comment on this session. Max 50 characters (runtime enforced). SP-compatible. */
   readonly comment: string | null;
   readonly customFrontId: CustomFrontId | null;
-  readonly subsystemId: SubsystemId | null;
+  /** Reference to a linked structure entity (subsystem, side system, or layer). */
+  readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+}
+
+/** A comment on a fronting session — unlimited length, multiple per session. */
+export interface FrontingComment {
+  readonly id: FrontingCommentId;
+  readonly frontingSessionId: FrontingSessionId;
+  readonly systemId: SystemId;
+  readonly memberId: MemberId;
+  readonly content: string;
+  readonly createdAt: UnixMillis;
 }
 
 /** A fronting session — discriminated on `endTime` (null = active). */

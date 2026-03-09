@@ -67,6 +67,7 @@ import type {
   FieldType,
   FieldValue,
   FieldValueUnion,
+  FormChangeEvent,
   FrontingAnalytics,
   FrontingChangedEvent,
   FrontingReport,
@@ -99,6 +100,7 @@ import type {
   ListBlock,
   MemberEntity,
   MemberFrontingBreakdown,
+  MemberListItem,
   MemberLinkBlock,
   MemberReport,
   SystemOverviewReport,
@@ -132,6 +134,7 @@ import type {
   Plaintext,
   PlaintextWebhookPayload,
   Poll,
+  PollKind,
   PollOption,
   PollVote,
   PresenceHeartbeatEvent,
@@ -225,6 +228,7 @@ import type {
   ApiResponse,
   ArchivedCustomFront,
   ArchivedGroup,
+  ArchivedMember,
   ArchitectureType,
   AuditMetadata,
   AuthKey,
@@ -258,6 +262,9 @@ import type {
   FriendNotificationEventType,
   FriendNotificationPreference,
   FriendNotificationPreferenceId,
+  FriendVisibilitySettings,
+  FrontingComment,
+  FrontingCommentId,
   FrontingSession,
   FrontingType,
   GatekeptLayer,
@@ -266,10 +273,14 @@ import type {
   GroupMoveOperation,
   GroupTree,
   HexColor,
+  ImageSource,
   ISOTimestamp,
   KeyGrant,
+  KnownSaturationLevel,
+  KnownTag,
   Layer,
   LayerAccessType,
+  LayerEntity,
   LayerMembership,
   LittlesSafeModeConfig,
   Locale,
@@ -278,6 +289,7 @@ import type {
   Member,
   MemberId,
   MemberPhotoId,
+  NameChangeEvent,
   NomenclatureSettings,
   NotificationPreferences,
   NumberFormatPreference,
@@ -309,13 +321,24 @@ import type {
   FriendRequestPolicy,
   RelationshipType,
   Result,
-  RoleTag,
+  Tag,
+  SaturationLevel,
+  ServerFrontingComment,
+  ClientFrontingComment,
+  ServerPollVote,
+  ClientPollVote,
   Session,
   SideSystem,
+  SideSystemEntity,
+  SideSystemLayerLink,
   SideSystemMembership,
   SortDirection,
   Subsystem,
+  SubsystemEntity,
+  SubsystemFormationEvent,
+  SubsystemLayerLink,
   SubsystemMembership,
+  SubsystemSideSystemLink,
   Switch,
   SwitchId,
   System,
@@ -342,7 +365,13 @@ describe("barrel exports", () => {
     expectTypeOf<EntityType>().toExtend<string>();
     expectTypeOf<System>().toBeObject();
     expectTypeOf<Member>().toBeObject();
-    expectTypeOf<RoleTag>().toBeObject();
+    expectTypeOf<ArchivedMember>().toBeObject();
+    expectTypeOf<MemberListItem>().toBeObject();
+    expectTypeOf<ImageSource>().toBeObject();
+    expectTypeOf<KnownSaturationLevel>().toBeString();
+    expectTypeOf<SaturationLevel>().toBeObject();
+    expectTypeOf<KnownTag>().toBeString();
+    expectTypeOf<Tag>().toBeObject();
     expectTypeOf<SortDirection>().toBeString();
     expectTypeOf<AuditMetadata>().toBeObject();
     expectTypeOf<EntityReference>().toBeObject();
@@ -359,6 +388,8 @@ describe("barrel exports", () => {
     expectTypeOf<CustomFront>().toBeObject();
     expectTypeOf<ArchivedCustomFront>().toBeObject();
     expectTypeOf<CoFrontState>().toBeObject();
+    expectTypeOf<FrontingComment>().toBeObject();
+    expectTypeOf<FrontingCommentId>().toExtend<string>();
   });
 
   it("exports privacy types", () => {
@@ -370,6 +401,7 @@ describe("barrel exports", () => {
     expectTypeOf<FriendConnection>().toBeObject();
     expectTypeOf<FriendCode>().toBeObject();
     expectTypeOf<BucketAccessCheck>().toBeObject();
+    expectTypeOf<FriendVisibilitySettings>().toBeObject();
   });
 
   it("exports structure types", () => {
@@ -387,6 +419,9 @@ describe("barrel exports", () => {
     expectTypeOf<SubsystemMembership>().toBeObject();
     expectTypeOf<SideSystemMembership>().toBeObject();
     expectTypeOf<LayerMembership>().toBeObject();
+    expectTypeOf<SubsystemLayerLink>().toBeObject();
+    expectTypeOf<SubsystemSideSystemLink>().toBeObject();
+    expectTypeOf<SideSystemLayerLink>().toBeObject();
   });
 
   it("exports auth types", () => {
@@ -470,6 +505,10 @@ describe("barrel exports", () => {
     expectTypeOf<ClientLayer>().toBeObject();
     expectTypeOf<ClientTimerConfig>().toBeObject();
     expectTypeOf<ClientAuditLogEntry>().toBeObject();
+    expectTypeOf<ServerFrontingComment>().toBeObject();
+    expectTypeOf<ClientFrontingComment>().toBeObject();
+    expectTypeOf<ServerPollVote>().toBeObject();
+    expectTypeOf<ClientPollVote>().toBeObject();
     expectTypeOf<DecryptFn<ServerMember, ClientMember>>().toBeFunction();
     expectTypeOf<EncryptFn<ClientMember, ServerMember>>().toBeFunction();
   });
@@ -583,6 +622,7 @@ describe("barrel exports", () => {
     expectTypeOf<Note>().toBeObject();
     expectTypeOf<PollOption>().toBeObject();
     expectTypeOf<Poll>().toBeObject();
+    expectTypeOf<PollKind>().toBeString();
     expectTypeOf<PollVote>().toBeObject();
     expectTypeOf<AcknowledgementRequest>().toBeObject();
   });
@@ -596,6 +636,9 @@ describe("barrel exports", () => {
     expectTypeOf<ArchivalEvent>().toBeObject();
     expectTypeOf<LifecycleEvent>().toBeObject();
     expectTypeOf<LifecycleEventType>().toBeString();
+    expectTypeOf<SubsystemFormationEvent>().toBeObject();
+    expectTypeOf<FormChangeEvent>().toBeObject();
+    expectTypeOf<NameChangeEvent>().toBeObject();
   });
 
   it("exports custom field types", () => {
@@ -652,6 +695,9 @@ describe("barrel exports", () => {
     expectTypeOf<InnerWorldEntity>().toBeObject();
     expectTypeOf<InnerWorldRegion>().toBeObject();
     expectTypeOf<InnerWorldCanvas>().toBeObject();
+    expectTypeOf<SubsystemEntity>().toBeObject();
+    expectTypeOf<SideSystemEntity>().toBeObject();
+    expectTypeOf<LayerEntity>().toBeObject();
   });
 
   it("exports structure profile types", () => {

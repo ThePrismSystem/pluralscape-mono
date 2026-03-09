@@ -1,6 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
+  HexColor,
   LayerId,
   MemberId,
   RelationshipId,
@@ -8,6 +9,7 @@ import type {
   SubsystemId,
   SystemId,
 } from "../ids.js";
+import type { ImageSource } from "../image-source.js";
 import type {
   ArchitectureType,
   DiscoveryStatus,
@@ -20,9 +22,12 @@ import type {
   Relationship,
   RelationshipType,
   SideSystem,
+  SideSystemLayerLink,
   SideSystemMembership,
   Subsystem,
+  SubsystemLayerLink,
   SubsystemMembership,
+  SubsystemSideSystemLink,
   SystemProfile,
 } from "../structure.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -106,9 +111,13 @@ describe("ArchitectureType", () => {
     function handleType(type: ArchitectureType): string {
       switch (type) {
         case "orbital":
-        case "compartmentalized":
+        case "spectrum":
+        case "median":
+        case "age-sliding":
         case "webbed":
-        case "mixed":
+        case "unknown":
+        case "fluid":
+        case "custom":
           return type;
         default: {
           const _exhaustive: never = type;
@@ -226,9 +235,11 @@ describe("Subsystem", () => {
     expectTypeOf<Subsystem["name"]>().toBeString();
     expectTypeOf<Subsystem["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Subsystem["architectureType"]>().toEqualTypeOf<ArchitectureType | null>();
-    expectTypeOf<Subsystem["originType"]>().toEqualTypeOf<OriginType | null>();
     expectTypeOf<Subsystem["hasCore"]>().toEqualTypeOf<boolean>();
     expectTypeOf<Subsystem["discoveryStatus"]>().toEqualTypeOf<DiscoveryStatus>();
+    expectTypeOf<Subsystem["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<Subsystem["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<Subsystem["emoji"]>().toEqualTypeOf<string | null>();
   });
 
   it("has recursive parentSubsystemId", () => {
@@ -246,6 +257,9 @@ describe("SideSystem", () => {
     expectTypeOf<SideSystem["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<SideSystem["name"]>().toBeString();
     expectTypeOf<SideSystem["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SideSystem["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<SideSystem["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<SideSystem["emoji"]>().toEqualTypeOf<string | null>();
   });
 });
 
@@ -262,7 +276,7 @@ describe("Layer", () => {
         expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<null>();
       } else {
         expectTypeOf(layer).toEqualTypeOf<GatekeptLayer>();
-        expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<MemberId>();
+        expectTypeOf(layer.gatekeeperMemberId).toEqualTypeOf<MemberId | null>();
       }
     }
     expectTypeOf(handleLayer).toBeFunction();
@@ -274,6 +288,9 @@ describe("Layer", () => {
     expectTypeOf<Layer["name"]>().toBeString();
     expectTypeOf<Layer["description"]>().toEqualTypeOf<string | null>();
     expectTypeOf<Layer["accessType"]>().toEqualTypeOf<LayerAccessType>();
+    expectTypeOf<Layer["color"]>().toEqualTypeOf<HexColor | null>();
+    expectTypeOf<Layer["imageSource"]>().toEqualTypeOf<ImageSource | null>();
+    expectTypeOf<Layer["emoji"]>().toEqualTypeOf<string | null>();
   });
 });
 
@@ -298,5 +315,29 @@ describe("LayerMembership", () => {
     expectTypeOf<LayerMembership["layerId"]>().toEqualTypeOf<LayerId>();
     expectTypeOf<LayerMembership["memberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<keyof LayerMembership>().toEqualTypeOf<"layerId" | "memberId">();
+  });
+});
+
+describe("SubsystemLayerLink", () => {
+  it("has exactly subsystemId and layerId", () => {
+    expectTypeOf<SubsystemLayerLink["subsystemId"]>().toEqualTypeOf<SubsystemId>();
+    expectTypeOf<SubsystemLayerLink["layerId"]>().toEqualTypeOf<LayerId>();
+    expectTypeOf<keyof SubsystemLayerLink>().toEqualTypeOf<"subsystemId" | "layerId">();
+  });
+});
+
+describe("SubsystemSideSystemLink", () => {
+  it("has exactly subsystemId and sideSystemId", () => {
+    expectTypeOf<SubsystemSideSystemLink["subsystemId"]>().toEqualTypeOf<SubsystemId>();
+    expectTypeOf<SubsystemSideSystemLink["sideSystemId"]>().toEqualTypeOf<SideSystemId>();
+    expectTypeOf<keyof SubsystemSideSystemLink>().toEqualTypeOf<"subsystemId" | "sideSystemId">();
+  });
+});
+
+describe("SideSystemLayerLink", () => {
+  it("has exactly sideSystemId and layerId", () => {
+    expectTypeOf<SideSystemLayerLink["sideSystemId"]>().toEqualTypeOf<SideSystemId>();
+    expectTypeOf<SideSystemLayerLink["layerId"]>().toEqualTypeOf<LayerId>();
+    expectTypeOf<keyof SideSystemLayerLink>().toEqualTypeOf<"sideSystemId" | "layerId">();
   });
 });

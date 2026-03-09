@@ -69,8 +69,8 @@ import type {
 } from "../encryption.js";
 import type { CustomFront, FrontingSession } from "../fronting.js";
 import type { Group } from "../groups.js";
-import type { CompletenessLevel, Member, MemberPhoto } from "../identity.js";
-import type { BlobId, BucketId, MemberId } from "../ids.js";
+import type { Member, MemberPhoto } from "../identity.js";
+import type { BucketId, MemberId } from "../ids.js";
 import type { JournalEntry, WikiPage } from "../journal.js";
 import type { LifecycleEvent } from "../lifecycle.js";
 import type { Layer, Relationship, SideSystem, Subsystem } from "../structure.js";
@@ -141,7 +141,6 @@ describe("ServerMember", () => {
   });
 
   it("has T3 plaintext fields", () => {
-    expectTypeOf<ServerMember["completenessLevel"]>().toEqualTypeOf<CompletenessLevel>();
     expectTypeOf<ServerMember["archived"]>().toEqualTypeOf<boolean>();
   });
 
@@ -204,9 +203,8 @@ describe("Server/Client pairs exist for completed domains", () => {
 
   it("member photo pair", () => {
     expectTypeOf<ServerMemberPhoto>().toBeObject();
-    expectTypeOf<ServerMemberPhoto["encryptedData"]>().toEqualTypeOf<EncryptedBlob | null>();
+    expectTypeOf<ServerMemberPhoto["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<ServerMemberPhoto["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<ServerMemberPhoto["blobRef"]>().toEqualTypeOf<BlobId>();
     expectTypeOf<ServerMemberPhoto["sortOrder"]>().toEqualTypeOf<number>();
     expectTypeOf<ClientMemberPhoto>().toEqualTypeOf<MemberPhoto>();
   });
