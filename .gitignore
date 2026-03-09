@@ -36,6 +36,9 @@ bun.lockb
 .codeql-db/
 .codeql-results/
 
+# Databases
+*.db
+
 # Testing
 coverage/
 .nyc_output/
@@ -57,4 +60,3 @@ CLAUDE.md
 .pnpm-debug.log
 
 # OS
-Thumbs.db
