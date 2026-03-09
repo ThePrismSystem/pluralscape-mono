@@ -1,11 +1,11 @@
 ---
 # types-fid9
 title: Core identity types
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:32:06Z
-updated_at: 2026-03-08T14:21:21Z
+updated_at: 2026-03-09T00:15:02Z
 parent: types-im7i
 blocking:
   - types-itej
@@ -34,16 +34,39 @@ Core identity types for System and Member entities.
 
 ## Acceptance Criteria
 
-- [ ] System type with avatarRef, displayName, settingsId
-- [ ] Member type with completenessLevel as actual field
-- [ ] CompletenessLevel union type with exhaustive handling
-- [ ] RoleTag as discriminated union: known tags vs custom with value
-- [ ] MemberPhoto type for multi-photo gallery (ordered collection)
-- [ ] Separate Member and MemberListItem types (full vs projection)
-- [ ] All fields documented with JSDoc comments
-- [ ] Unit tests for type guards and creation helpers
+- [x] System type with avatarRef, displayName, settingsId
+- [x] Member type with completenessLevel as actual field
+- [x] CompletenessLevel union type with exhaustive handling
+- [x] RoleTag as discriminated union: known tags vs custom with value
+- [x] MemberPhoto type for multi-photo gallery (ordered collection)
+- [x] Separate Member and MemberListItem types (full vs projection)
+- [x] All types documented with JSDoc comments
+- [x] Type-level tests for all identity types (27 tests)
 
 ## References
 
 - features.md section 1 (Identity Management)
 - CLAUDE.md terminology: "member" not "alter" in code
+
+## Summary of Changes
+
+Implemented core identity types in packages/types/src/identity.ts:
+
+- System: id, name, displayName, description, avatarRef, settingsId, audit fields
+- Member: id, systemId, name, pronouns, description, avatarRef, colors, completenessLevel, roleTags, audit fields
+- CompletenessLevel: fragment | demi-member | full
+- RoleTag: discriminated union with 9 KnownRoleTags + custom
+- MemberPhoto: multi-photo gallery with sort order
+- ArchivedMember: extends Member with archived flag and timestamp
+- MemberListItem: lightweight projection for list views
+
+## Post-Review Fixes
+
+- RoleTag redesigned with explicit kind discriminant: { kind: 'known', tag: KnownRoleTag } | { kind: 'custom', value: string }
+- Member now extends AuditMetadata (removes inline audit fields)
+- Member has archived: false literal field
+- System now extends AuditMetadata (removes inline audit fields)
+- ArchivedMember changed from interface extends to type alias with Omit (archived: false -> true)
+- MemberPhoto.id changed from BlobId to MemberPhotoId
+- MemberPhoto.ref renamed to blobRef
+- Composition and barrel export tests added

@@ -1,0 +1,6 @@
+name: "Pluralscape CodeQL config"
+paths-ignore:
+  - coverage
+  - "**/coverage/**"
+  - .codeql-db
+  - .codeql-results
