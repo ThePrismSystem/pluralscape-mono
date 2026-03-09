@@ -15,3 +15,12 @@
 declare const crypto: {
   randomUUID(): `${string}-${string}-${string}-${string}-${string}`;
 };
+
+/** TextEncoder/TextDecoder — available in Node 11+, Bun, and React Native. */
+declare class TextEncoder {
+  encode(input?: string): Uint8Array;
+}
+
+declare class TextDecoder {
+  decode(input?: BufferSource): string;
+}
