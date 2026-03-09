@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import { AEAD_NONCE_BYTES } from "../constants.js";
-import { DecryptionFailedError } from "../errors.js";
+import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 import { _resetForTesting, configureSodium, initSodium, getSodium } from "../sodium.js";
 import {
   encrypt,
@@ -120,6 +120,28 @@ describe("encryptJSON/decryptJSON", () => {
     const result = decryptJSON(payload, key);
     expect(result).toEqual(data);
   });
+
+  it("wrong key throws DecryptionFailedError", () => {
+    const wrongKey = getSodium().aeadKeygen();
+    const payload = encryptJSON({ data: true }, key);
+    expect(() => decryptJSON(payload, wrongKey)).toThrow(DecryptionFailedError);
+  });
+
+  it("non-JSON plaintext throws DecryptionFailedError with SyntaxError cause", () => {
+    // Encrypt raw non-JSON text, then try to decrypt as JSON
+    const notJson = encoder.encode("this is not json");
+    const payload = encrypt(notJson, key);
+    const error = (() => {
+      try {
+        decryptJSON(payload, key);
+        return null;
+      } catch (e: unknown) {
+        return e;
+      }
+    })();
+    expect(error).toBeInstanceOf(DecryptionFailedError);
+    expect((error as DecryptionFailedError).cause).toBeInstanceOf(SyntaxError);
+  });
 });
 
 describe("encryptStream/decryptStream", () => {
@@ -202,6 +224,56 @@ describe("encryptStream/decryptStream", () => {
 
     expect(() =>
       decryptStream({ chunks: tamperedChunks, totalLength: payload.totalLength }, key),
+    ).toThrow(DecryptionFailedError);
+  });
+
+  it("wrong key throws DecryptionFailedError", () => {
+    const wrongKey = getSodium().aeadKeygen();
+    const plaintext = encoder.encode("stream wrong key");
+    const payload = encryptStream(plaintext, key, 64);
+    expect(() => decryptStream(payload, wrongKey)).toThrow(DecryptionFailedError);
+  });
+
+  it("tampered totalLength throws DecryptionFailedError", () => {
+    const plaintext = encoder.encode("length check");
+    const payload = encryptStream(plaintext, key, 64);
+    // Tamper with totalLength — chunks decrypt fine but length won't match
+    expect(() =>
+      decryptStream({ chunks: payload.chunks, totalLength: payload.totalLength + 1 }, key),
+    ).toThrow(DecryptionFailedError);
+  });
+
+  it("chunkSize = 0 throws InvalidInputError", () => {
+    const plaintext = encoder.encode("zero chunk");
+    expect(() => encryptStream(plaintext, key, 0)).toThrow(InvalidInputError);
+  });
+
+  it("negative chunkSize throws InvalidInputError", () => {
+    const plaintext = encoder.encode("negative chunk");
+    expect(() => encryptStream(plaintext, key, -1)).toThrow(InvalidInputError);
+  });
+
+  it("roundtrips empty input", () => {
+    const plaintext = new Uint8Array(0);
+    const payload = encryptStream(plaintext, key, 64);
+    const decrypted = decryptStream(payload, key);
+    expect(decrypted.length).toBe(0);
+  });
+
+  it("duplicated chunks fail decryption (AAD mismatch)", () => {
+    const chunkSize = 50;
+    const plaintext = new Uint8Array(150);
+    plaintext.set(adapter.randomBytes(plaintext.length));
+    const payload = encryptStream(plaintext, key, chunkSize);
+
+    // Replace last chunk with a duplicate of the first — AAD chunk count changes
+    const duplicated = [
+      ...payload.chunks.slice(0, 2),
+      payload.chunks[0],
+    ] as readonly EncryptedPayload[];
+
+    expect(() =>
+      decryptStream({ chunks: duplicated, totalLength: payload.totalLength }, key),
     ).toThrow(DecryptionFailedError);
   });
 });

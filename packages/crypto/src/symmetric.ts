@@ -1,4 +1,4 @@
-import { DecryptionFailedError } from "./errors.js";
+import { DecryptionFailedError, InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 
 import type { AeadKey, AeadNonce } from "./types.js";
@@ -39,7 +39,11 @@ export function encryptJSON(data: unknown, key: AeadKey, aad?: Uint8Array): Encr
 /** Decrypt an EncryptedPayload and parse as JSON. */
 export function decryptJSON(payload: EncryptedPayload, key: AeadKey, aad?: Uint8Array): unknown {
   const plaintext = decrypt(payload, key, aad);
-  return JSON.parse(new TextDecoder().decode(plaintext)) as unknown;
+  try {
+    return JSON.parse(new TextDecoder().decode(plaintext)) as unknown;
+  } catch (error: unknown) {
+    throw new DecryptionFailedError("Decrypted payload is not valid JSON.", { cause: error });
+  }
 }
 
 /** Size of the chunk AAD: two uint32 values (index + total). */
@@ -53,7 +57,7 @@ const CHUNK_AAD_TOTAL_OFFSET = 4;
  */
 function buildChunkAad(chunkIndex: number, totalChunks: number): Uint8Array {
   const aad = new Uint8Array(CHUNK_AAD_BYTES);
-  const view = new DataView(aad.buffer);
+  const view = new DataView(aad.buffer, aad.byteOffset, aad.byteLength);
   view.setUint32(0, chunkIndex, true);
   view.setUint32(CHUNK_AAD_TOTAL_OFFSET, totalChunks, true);
   return aad;
@@ -68,6 +72,9 @@ export function encryptStream(
   key: AeadKey,
   chunkSize: number = DEFAULT_CHUNK_SIZE,
 ): StreamEncryptedPayload {
+  if (chunkSize <= 0) {
+    throw new InvalidInputError("Chunk size must be a positive integer.");
+  }
   const totalChunks = Math.max(1, Math.ceil(plaintext.length / chunkSize));
   const chunks: EncryptedPayload[] = [];
 
@@ -98,8 +105,10 @@ export function decryptStream(payload: StreamEncryptedPayload, key: AeadKey): Ui
     const aad = buildChunkAad(i, totalChunks);
     try {
       parts.push(decrypt(chunk, key, aad));
-    } catch {
-      throw new DecryptionFailedError("Stream decryption failed at chunk " + String(i) + ".");
+    } catch (error: unknown) {
+      throw new DecryptionFailedError("Stream decryption failed at chunk " + String(i) + ".", {
+        cause: error,
+      });
     }
   }
 
@@ -110,6 +119,16 @@ export function decryptStream(payload: StreamEncryptedPayload, key: AeadKey): Ui
   for (const part of parts) {
     result.set(part, offset);
     offset += part.length;
+  }
+
+  if (result.length !== payload.totalLength) {
+    throw new DecryptionFailedError(
+      "Decrypted stream length mismatch: expected " +
+        String(payload.totalLength) +
+        " bytes, got " +
+        String(result.length) +
+        ".",
+    );
   }
 
   return result;

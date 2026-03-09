@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import {
@@ -15,7 +15,7 @@ import {
   serializePublicKey,
 } from "../identity.js";
 import { deriveMasterKey, generateSalt } from "../master-key.js";
-import { _resetForTesting, configureSodium, initSodium } from "../sodium.js";
+import { _resetForTesting, configureSodium, getSodium, initSodium } from "../sodium.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";
 import type { KdfMasterKey } from "../types.js";
@@ -112,6 +112,15 @@ describe("generateIdentityKeypair", () => {
 
     expect(valid).toBe(true);
   });
+
+  it("calls memzero for seeds after keypair generation", () => {
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    generateIdentityKeypair(masterKey);
+    // Two seeds (encSeed + signSeed) should be zeroed
+    expect(memzeroSpy).toHaveBeenCalledTimes(2);
+    memzeroSpy.mockRestore();
+  });
 });
 
 describe("encryptPrivateKey/decryptPrivateKey", () => {
@@ -134,6 +143,19 @@ describe("encryptPrivateKey/decryptPrivateKey", () => {
     const encrypted = encryptPrivateKey(identity.encryption.secretKey, masterKey);
     expect(() => decryptPrivateKey(encrypted, masterKey2)).toThrow(DecryptionFailedError);
   });
+
+  it("calls memzero for derived key even when decryption throws", () => {
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    const identity = generateIdentityKeypair(masterKey);
+    const encrypted = encryptPrivateKey(identity.encryption.secretKey, masterKey);
+
+    memzeroSpy.mockClear();
+    expect(() => decryptPrivateKey(encrypted, masterKey2)).toThrow(DecryptionFailedError);
+    // derivedKey should still be zeroed via finally block
+    expect(memzeroSpy).toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+  });
 });
 
 describe("serializePublicKey", () => {
@@ -155,5 +177,20 @@ describe("serializePublicKey", () => {
 
     expect(typeof serialized).toBe("string");
     expect(serialized).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it("round-trips: same key always serializes to the same string", () => {
+    const identity = generateIdentityKeypair(masterKey);
+    const s1 = serializePublicKey(identity.encryption.publicKey);
+    const s2 = serializePublicKey(identity.encryption.publicKey);
+    expect(s1).toBe(s2);
+    // 32-byte key → ceil(32 * 4 / 3) = 43 base64url chars (no padding)
+    expect(s1.length).toBe(43);
+  });
+
+  it("known test vector: 32 zero bytes", () => {
+    const zeroKey = new Uint8Array(32);
+    const serialized = serializePublicKey(zeroKey as import("../types.js").BoxPublicKey);
+    expect(serialized).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 });

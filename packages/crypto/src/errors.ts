@@ -25,6 +25,9 @@ export class DecryptionFailedError extends Error {
 /** Thrown when a cryptographic input has an invalid size or format. */
 export class InvalidInputError extends Error {
   override readonly name = "InvalidInputError" as const;
+  constructor(message = "Invalid cryptographic input.", options?: ErrorOptions) {
+    super(message, options);
+  }
 }
 
 /** Thrown when `configureSodium()` is called after initialization. */

@@ -6,6 +6,7 @@ import {
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_SALT_BYTES,
 } from "./constants.js";
+import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 
 import type { KdfMasterKey, PwhashSalt } from "./types.js";
@@ -23,6 +24,8 @@ interface ProfileParams {
 }
 
 const PROFILE_PARAMS: Readonly<Record<PwhashProfile, ProfileParams>> = {
+  // Server: 3 iterations + 64 MiB (not 256 MiB) to avoid OOM on constrained deployments.
+  // Higher iteration count compensates for the reduced memory parameter.
   server: { opsLimit: PWHASH_OPSLIMIT_MODERATE, memLimit: PWHASH_MEMLIMIT_INTERACTIVE },
   mobile: { opsLimit: PWHASH_OPSLIMIT_MOBILE, memLimit: PWHASH_MEMLIMIT_MOBILE },
 };
@@ -37,11 +40,18 @@ export function deriveMasterKey(
   salt: PwhashSalt,
   profile: PwhashProfile,
 ): Promise<KdfMasterKey> {
+  if (password.length === 0) {
+    throw new InvalidInputError("Password must not be empty.");
+  }
   const adapter = getSodium();
   const passwordBytes = new TextEncoder().encode(password);
-  const { opsLimit, memLimit } = PROFILE_PARAMS[profile];
-  const derived = adapter.pwhash(KDF_KEY_BYTES, passwordBytes, salt, opsLimit, memLimit);
-  return Promise.resolve(derived as KdfMasterKey);
+  try {
+    const { opsLimit, memLimit } = PROFILE_PARAMS[profile];
+    const derived = adapter.pwhash(KDF_KEY_BYTES, passwordBytes, salt, opsLimit, memLimit);
+    return Promise.resolve(derived as KdfMasterKey);
+  } finally {
+    adapter.memzero(passwordBytes);
+  }
 }
 
 /** Generate a random 16-byte salt for password hashing. */

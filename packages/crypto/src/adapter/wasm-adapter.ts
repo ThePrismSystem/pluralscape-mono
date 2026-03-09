@@ -180,8 +180,13 @@ export class WasmSodiumAdapter implements SodiumAdapter {
     const sodium = this.lib();
     try {
       return sodium.crypto_sign_verify_detached(signature, message, publicKey);
-    } catch {
-      return false;
+    } catch (error: unknown) {
+      // After input validation, libsodium throws Error for invalid signatures.
+      // Rethrow non-Error exceptions to avoid swallowing system failures.
+      if (error instanceof Error) {
+        return false;
+      }
+      throw error;
     }
   }
 

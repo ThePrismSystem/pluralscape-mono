@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import { KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "../constants.js";
+import { InvalidInputError } from "../errors.js";
 import { deriveMasterKey, generateSalt } from "../master-key.js";
 import { _resetForTesting, configureSodium, initSodium } from "../sodium.js";
 
@@ -56,8 +57,12 @@ describe("deriveMasterKey", () => {
     const start = Date.now();
     await deriveMasterKey("benchmark", salt, "mobile");
     const elapsed = Date.now() - start;
-    // Just verify it completes — no assertion on timing (CI machines vary)
-    expect(elapsed).toBeGreaterThanOrEqual(0);
+    // Derivation should take measurable time due to Argon2id
+    expect(elapsed).toBeGreaterThan(0);
+  });
+
+  it("rejects empty password with InvalidInputError", () => {
+    expect(() => deriveMasterKey("", salt, "server")).toThrow(InvalidInputError);
   });
 });
 

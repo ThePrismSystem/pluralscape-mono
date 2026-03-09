@@ -48,13 +48,14 @@ export function generateIdentityKeypair(masterKey: KdfMasterKey): IdentityKeypai
   );
   const signSeed = adapter.kdfDeriveFromKey(KDF_KEY_BYTES, SUBKEY_SIGNING, KDF_CONTEXT, masterKey);
 
-  const encryption = adapter.boxSeedKeypair(encSeed);
-  const signing = adapter.signSeedKeypair(signSeed);
-
-  adapter.memzero(encSeed);
-  adapter.memzero(signSeed);
-
-  return { encryption, signing };
+  try {
+    const encryption = adapter.boxSeedKeypair(encSeed);
+    const signing = adapter.signSeedKeypair(signSeed);
+    return { encryption, signing };
+  } finally {
+    adapter.memzero(encSeed);
+    adapter.memzero(signSeed);
+  }
 }
 
 /**
@@ -72,9 +73,12 @@ export function encryptPrivateKey(
     KDF_CONTEXT,
     masterKey,
   );
-  const result = encrypt(privateKey, derivedKey as AeadKey);
-  adapter.memzero(derivedKey);
-  return { ciphertext: result.ciphertext, nonce: result.nonce };
+  try {
+    const result = encrypt(privateKey, derivedKey as AeadKey);
+    return { ciphertext: result.ciphertext, nonce: result.nonce };
+  } finally {
+    adapter.memzero(derivedKey);
+  }
 }
 
 /** Decrypt a private key blob using the master key. */
@@ -86,12 +90,11 @@ export function decryptPrivateKey(blob: EncryptedPrivateKey, masterKey: KdfMaste
     KDF_CONTEXT,
     masterKey,
   );
-  const plaintext = decrypt(
-    { ciphertext: blob.ciphertext, nonce: blob.nonce },
-    derivedKey as AeadKey,
-  );
-  adapter.memzero(derivedKey);
-  return plaintext;
+  try {
+    return decrypt({ ciphertext: blob.ciphertext, nonce: blob.nonce }, derivedKey as AeadKey);
+  } finally {
+    adapter.memzero(derivedKey);
+  }
 }
 
 // Base64url alphabet (RFC 4648 section 5)
