@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:42Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T23:01:29Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -18,7 +18,7 @@ API key storage with scoped permissions per ADR 013. Distinct from auth_keys (us
 
 ### Tables
 
-- **`api_keys`**: id (UUID PK), account_id (FK → accounts, NOT NULL), name (varchar, T3, NOT NULL), key_type ('metadata' | 'crypto', T3, NOT NULL), token_hash (varchar, T3, NOT NULL), scopes (varchar[] or JSON, T3, NOT NULL), encrypted_key_material (bytea, nullable — only for crypto keys, T1), created_at (T3, NOT NULL, default NOW()), last_used_at (T3, nullable), revoked_at (T3, nullable)
+- **`api_keys`**: id (UUID PK), account_id (FK → accounts, NOT NULL), system_id (FK → systems, NOT NULL), name (varchar, T3, NOT NULL), key_type ('metadata' | 'crypto', T3, NOT NULL), token_hash (varchar, T3, NOT NULL), scopes (varchar[] or JSON, T3, NOT NULL), encrypted_key_material (bytea, nullable — only for crypto keys, T1), created_at (T3, NOT NULL, default NOW()), last_used_at (T3, nullable), revoked_at (T3, nullable), expires_at (T3, nullable), scoped_bucket_ids (varchar[] or JSON, T3, nullable — restrict key to specific buckets)
 
 ### Design decisions
 
@@ -48,6 +48,9 @@ API key storage with scoped permissions per ADR 013. Distinct from auth_keys (us
 - [ ] Unique index on token_hash
 - [ ] Indexes on revoked_at and key_type
 - [ ] Migrations for both dialects
+- [ ] system_id FK for tenant isolation
+- [ ] expires_at for key expiration
+- [ ] scoped_bucket_ids for bucket-scoped access control
 - [ ] Integration test: create both key types, verify token hash lookup
 
 ## References

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:27Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T23:03:10Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -52,3 +52,9 @@ Note: `current_fronters_with_duration` uses PG `NOW()`. SQLite equivalent: `(str
 ## References
 
 - Audit 002 findings (section F)
+
+### Additional views (from audit)
+
+- **`current_fronting_comments`**: `SELECT fc.* FROM fronting_comments fc JOIN fronting_sessions fs ON fc.session_id = fs.id WHERE fs.end_time IS NULL AND fs.system_id = ?`
+- **`active_device_transfers`**: `SELECT * FROM device_transfer_requests WHERE status = 'pending' AND expires_at > NOW() AND account_id = ?`
+- **`structure_cross_links`**: UNION view of subsystem_layer_links, subsystem_side_system_links, side_system_layer_links for unified structure relationship queries

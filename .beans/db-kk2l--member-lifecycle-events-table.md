@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:33:02Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T23:00:43Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -18,7 +18,7 @@ Append-only lifecycle event log table for tracking member splits, fusions, merge
 
 ### Tables
 
-- **`lifecycle_events`**: id (UUID PK, NOT NULL), system_id (FK → systems, NOT NULL), timestamp (T3, NOT NULL), encrypted_data (T1, NOT NULL — event_type, involved_member_ids, resulting_member_ids, notes)
+- **`lifecycle_events`**: id (UUID PK, NOT NULL), system_id (FK → systems, NOT NULL), occurred_at (T3, NOT NULL — when the event actually happened), recorded_at (T3, NOT NULL, default NOW() — when it was logged), encrypted_data (T1, NOT NULL — event_type, involved_member_ids, resulting_member_ids, notes)
   - event_type is inside encrypted_data (T1): reveals sensitive system dynamics (splits, fusions, dormancy) that should not be visible to the server
   - No plaintext event_type column
 
@@ -29,7 +29,8 @@ Append-only lifecycle event log table for tracking member splits, fusions, merge
 
 ### Indexes
 
-- lifecycle_events (system_id, timestamp) — chronological queries only
+- lifecycle_events (system_id, occurred_at) — chronological queries
+- lifecycle_events (system_id, recorded_at) — for sync ordering
 - No event_type index (field is now encrypted)
 
 ## Acceptance Criteria
@@ -37,7 +38,8 @@ Append-only lifecycle event log table for tracking member splits, fusions, merge
 - [ ] lifecycle_events table with event_type inside encrypted_data
 - [ ] No plaintext event_type column
 - [ ] Append-only pattern enforced in application
-- [ ] Index on (system_id, timestamp) only
+- [ ] occurred_at and recorded_at split timestamps
+- [ ] Index on (system_id, occurred_at) and (system_id, recorded_at)
 - [ ] Migrations for both dialects
 - [ ] Integration test: insert events and query chronologically
 

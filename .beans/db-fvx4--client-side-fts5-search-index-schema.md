@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:17Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T23:03:14Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -16,7 +16,7 @@ FTS5 virtual table definitions for client-side full-text search over decrypted d
 ## Scope
 
 - `search_index`: FTS5 virtual table on SQLite (client-side only) indexing decrypted content
-- Indexed entity types: members (name, pronouns, description), custom fields (name, value), groups (name, description), notes (title, content), journal entries (title, block text), chat messages (content), board messages (content), wiki pages (title, block text), system structure entities (subsystem/side system/layer names)
+- Indexed entity types: members (name, pronouns, description), custom fields (name, value), groups (name, description), notes (title, content), journal entries (title, block text), chat messages (content), board messages (content), wiki pages (title, block text), channels (name), system structure entities (subsystems, side systems, layers — names and descriptions)
 - Design: runs client-side only — server cannot search encrypted data
 - Design: index rebuilt on each decryption session or incrementally updated
 - Design: entity-type column for filter-by-type queries

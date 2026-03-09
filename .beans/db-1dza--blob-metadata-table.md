@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:44Z
-updated_at: 2026-03-08T19:32:26Z
+updated_at: 2026-03-09T23:01:25Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -17,7 +17,7 @@ Encrypted blob/media metadata tracking table for avatars, photos, attachments, a
 
 ### Tables
 
-- **`blob_metadata`**: id (UUID PK), system_id (FK → systems, NOT NULL), storage_key (varchar, T3, NOT NULL — S3 key or filesystem path), content_type (varchar, T3, NOT NULL — MIME type), size_bytes (integer, T3, NOT NULL), encryption_tier (integer, T3, NOT NULL — 1 or 2, determines decryption key), bucket_id (FK → buckets, nullable, T3 — set when encryption_tier=2), purpose (varchar, T3), thumbnail_blob_id (FK → blob_metadata, nullable, T3), uploaded_at (T3, NOT NULL, default NOW())
+- **`blob_metadata`**: id (UUID PK), system_id (FK → systems, NOT NULL), storage_key (varchar, T3, NOT NULL — S3 key or filesystem path), content_type (varchar, T3, NOT NULL — MIME type), size_bytes (integer, T3, NOT NULL), encryption_tier (integer, T3, NOT NULL — 1 or 2, determines decryption key), bucket_id (FK → buckets, nullable, T3 — set when encryption_tier=2), purpose (varchar, T3), thumbnail_blob_id (FK → blob_metadata, nullable, T3), checksum (varchar, T3, nullable — SHA-256 hash for integrity verification), uploaded_at (T3, NOT NULL, default NOW())
   - CHECK: `size_bytes > 0`
   - CHECK: `encryption_tier IN (1, 2)`
   - CHECK: `encryption_tier = 1 OR bucket_id IS NOT NULL` (T2 blobs must have a bucket)
@@ -25,7 +25,7 @@ Encrypted blob/media metadata tracking table for avatars, photos, attachments, a
 
 ### Purpose values
 
-'avatar', 'member-photo', 'chat-attachment', 'journal-image', 'import-archive', 'safe-mode-media', 'report-export'
+'avatar', 'member-photo', 'gallery-photo', 'chat-attachment', 'journal-image', 'wiki-image', 'import-archive', 'export-archive', 'safe-mode-media'
 
 ### Design decisions
 
@@ -50,7 +50,8 @@ Encrypted blob/media metadata tracking table for avatars, photos, attachments, a
 - [ ] bucket_id FK for T2 blobs (nullable, set when tier=2)
 - [ ] NOT NULL on storage_key, content_type, size_bytes, encryption_tier
 - [ ] CHECK: size_bytes > 0
-- [ ] All 7 purpose values supported
+- [ ] All 9 purpose values supported (aligned with BlobPurpose type)
+- [ ] checksum column for integrity verification
 - [ ] Thumbnail reference linking via self-FK
 - [ ] Unique index on storage_key
 - [ ] Migrations for both dialects

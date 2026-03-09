@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:40Z
-updated_at: 2026-03-08T19:32:26Z
+updated_at: 2026-03-09T23:00:27Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -18,8 +18,8 @@ Journal page, block, and wiki tables. Implementation is later milestones but sch
 
 ### Tables
 
-- **`journal_entries`**: id (UUID PK), system_id (FK → systems, NOT NULL), version (integer, T3, NOT NULL, default 1), archived (boolean, T3, NOT NULL, default false), archived_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — title, blocks JSON, author_member_id)
-- **`wiki_pages`**: id (UUID PK), system_id (FK → systems, NOT NULL), slug (varchar, T3, NOT NULL — URL-safe for routing), version (integer, T3, NOT NULL, default 1), archived (boolean, T3, NOT NULL, default false), archived_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — title, blocks JSON, linked_page_ids)
+- **`journal_entries`**: id (UUID PK), system_id (FK → systems, NOT NULL), version (integer, T3, NOT NULL, default 1), archived (boolean, T3, NOT NULL, default false), archived_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — title, blocks JSON, author (EntityReference), frontingSessionId, tags[], linkedEntities[])
+- **`wiki_pages`**: id (UUID PK), system_id (FK → systems, NOT NULL), slug (varchar, T3, NOT NULL — URL-safe for routing), version (integer, T3, NOT NULL, default 1), archived (boolean, T3, NOT NULL, default false), archived_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — title, blocks JSON, linked_page_ids, tags[], linkedEntities[])
 
 ### Design decisions
 
@@ -45,6 +45,8 @@ Journal page, block, and wiki tables. Implementation is later milestones but sch
 - [ ] archived/archived_at on both tables
 - [ ] Unique index on (system_id, slug) for wiki pages
 - [ ] Migrations for both dialects
+- [ ] journal_entries: author as EntityReference, frontingSessionId, tags, linkedEntities in encrypted_data
+- [ ] wiki_pages: tags, linkedEntities in encrypted_data
 - [ ] Integration test: create journal entry and wiki page, test archival
 
 ## References

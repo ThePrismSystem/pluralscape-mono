@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:22:58Z
-updated_at: 2026-03-08T19:32:26Z
+updated_at: 2026-03-09T23:01:02Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -18,7 +18,7 @@ General per-system settings and preferences table (distinct from nomenclature_se
 
 ### Tables
 
-- **`system_settings`**: system_id (FK → systems, PK — 1:1), version (integer, T3, NOT NULL, default 1), locale (varchar, T3, nullable — BCP 47 tag for server-side localization), pin_hash (varchar, T3, nullable — Argon2id hash for app lock), biometric_enabled (boolean, T3, NOT NULL, default false), littles_safe_mode_enabled (boolean, T3, NOT NULL, default false), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — dark mode, font scaling, default privacy bucket, notification prefs, sync preferences, privacy defaults, other UI prefs)
+- **`system_settings`**: system_id (FK → systems, PK — 1:1), version (integer, T3, NOT NULL, default 1), locale (varchar, T3, nullable — BCP 47 tag for server-side localization), pin_hash (varchar, T3, nullable — Argon2id hash for app lock), biometric_enabled (boolean, T3, NOT NULL, default false), littles_safe_mode_enabled (boolean, T3, NOT NULL, default false), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — darkMode, fontScaling, defaultPrivacyBucketId, syncPreferences, privacyDefaults, onboardingComplete, saturationLevelsEnabled, autoEndFrontingSessions, frontingHistoryRetentionDays, defaultFrontingPositionality, timeFormat, dateFormat, weekStartDay, enabledFeatures)
 
 ### Design decisions
 
@@ -33,6 +33,7 @@ General per-system settings and preferences table (distinct from nomenclature_se
 - [ ] locale column for user locale preference
 - [ ] PIN hash stored server-side for app lock
 - [ ] Littles safe mode flag as T3
+- [ ] All settings fields explicitly enumerated in encrypted_data (onboardingComplete, saturationLevelsEnabled, etc.)
 - [ ] Encrypted preferences blob for private settings
 - [ ] Migrations for both dialects
 - [ ] Integration test: set and retrieve settings

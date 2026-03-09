@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:43Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T23:01:12Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -18,8 +18,8 @@ Append-only security audit log table for tracking authentication events and sens
 
 ### Tables
 
-- **`audit_log`**: id (UUID PK, NOT NULL), account_id (FK → accounts, ON DELETE SET NULL — logs survive deletion for compliance), event_type (varchar, T3, NOT NULL), timestamp (T3, NOT NULL), ip_address (varchar, T3, nullable), user_agent (varchar, T3, nullable), metadata (T3, NOT NULL — event-specific details)
-  - metadata type: JSONB on PostgreSQL, TEXT-as-JSON on SQLite (via Drizzle customType)
+- **`audit_log`**: id (UUID PK, NOT NULL), account_id (FK → accounts, ON DELETE SET NULL — logs survive deletion for compliance), system_id (FK → systems, ON DELETE SET NULL, nullable — for system-scoped events), event_type (varchar, T3, NOT NULL), timestamp (T3, NOT NULL), ip_address (varchar, T3, nullable), user_agent (varchar, T3, nullable), actor (T3, NOT NULL — structured: { type: 'user'|'system'|'api_key', id: UUID, deviceId?: UUID }), detail (T3, NOT NULL — event-specific details as JSONB/JSON)
+  - actor and detail types: JSONB on PostgreSQL, TEXT-as-JSON on SQLite (via Drizzle customType)
 - All fields T3 (server-visible) — audit logs are for security monitoring
 - Append-only: no UPDATE or DELETE; enforced via application layer
 
@@ -30,6 +30,7 @@ login-success, login-failed, session-created, session-revoked, password-changed,
 ### Indexes
 
 - audit_log (account_id, timestamp)
+- audit_log (system_id, timestamp) — for system-scoped queries
 - audit_log (event_type)
 
 ### Retention
@@ -39,7 +40,9 @@ Configurable per deployment (default 90 days hosted, unlimited self-hosted)
 ## Acceptance Criteria
 
 - [ ] audit_log table with all event types supported
-- [ ] metadata as JSONB (PG) / TEXT-as-JSON (SQLite) via Drizzle customType
+- [ ] system_id column (nullable, ON DELETE SET NULL)
+- [ ] actor as structured JSONB (type, id, deviceId)
+- [ ] detail (renamed from metadata) as JSONB (PG) / TEXT-as-JSON (SQLite) via Drizzle customType
 - [ ] Append-only pattern enforced in application
 - [ ] IP address and user agent captured
 - [ ] Indexes on (account_id, timestamp) and event_type

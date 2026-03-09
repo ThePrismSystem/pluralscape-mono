@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T14:22:38Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T23:02:54Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -15,7 +15,7 @@ Simple job queue table for SQLite-backed minimal self-hosted tier (single-worker
 
 ## Scope
 
-- `jobs`: id (integer PK AUTOINCREMENT), type (varchar, T3, NOT NULL), payload (text, T3 — JSON), status ('pending'|'processing'|'completed'|'failed', T3, NOT NULL, default 'pending'), attempts (integer, T3, NOT NULL, default 0), max_attempts (integer, T3, NOT NULL, default 5)
+- `jobs`: id (integer PK AUTOINCREMENT), system_id (FK → systems, nullable — null for system-wide jobs), type (varchar, T3, NOT NULL), payload (text, T3 — JSON), status ('pending'|'processing'|'completed'|'failed', T3, NOT NULL, default 'pending'), attempts (integer, T3, NOT NULL, default 0), max_attempts (integer, T3, NOT NULL, default 5)
   - CHECK: `attempts >= 0`
   - CHECK: `attempts <= max_attempts`
   - All columns T3 (server manages job queue), next_retry_at (timestamp nullable), error (text nullable), created_at, started_at (nullable), completed_at (nullable)
@@ -27,6 +27,7 @@ Simple job queue table for SQLite-backed minimal self-hosted tier (single-worker
 ## Acceptance Criteria
 
 - [ ] jobs table with retry tracking
+- [ ] system_id for tenant isolation (nullable for system-wide jobs)
 - [ ] Idempotency key support
 - [ ] Indexes for efficient queue polling
 - [ ] SQLite migration only (not PG)

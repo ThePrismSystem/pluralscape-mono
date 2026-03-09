@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:44Z
-updated_at: 2026-03-08T19:24:14Z
+updated_at: 2026-03-09T22:59:51Z
 parent: db-2je4
 blocking:
   - db-82q2
@@ -29,7 +29,7 @@ Core database tables for systems and members — the foundational entities all o
 ### Tables
 
 - **`systems`**: id (UUID PK, NOT NULL), account_id (FK → accounts, NOT NULL), version (integer, T3, NOT NULL, default 1 — for CRDT optimistic locking), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1 — name, description, avatar_ref, display_name)
-- **`members`**: id (UUID PK, NOT NULL), system_id (FK → systems, NOT NULL), completeness_level ('fragment' | 'demi-member' | 'full', T3), version (integer, T3, NOT NULL, default 1 — for CRDT optimistic locking), archived (boolean, T3, NOT NULL, default false), archived_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (bytea/blob, T1, NOT NULL — name, pronouns, description, avatar ref, colors, role tags)
+- **`members`**: id (UUID PK, NOT NULL), system_id (FK → systems, NOT NULL), saturation_level ('full' | 'semi' | 'fragment' | 'blur' | 'undetermined', T3), version (integer, T3, NOT NULL, default 1 — for CRDT optimistic locking), archived (boolean, T3, NOT NULL, default false), archived_at (T3, nullable), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (bytea/blob, T1, NOT NULL — name, pronouns, description, avatar ref, colors, role tags, suppressFriendFrontNotification, boardMessageNotificationOnFront)
 - **`member_photos`**: id (UUID PK), member_id (FK → members, NOT NULL), system_id (FK → systems, NOT NULL — for RLS policy), sort_order (integer, T3), version (integer, T3, NOT NULL, default 1), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — url/caption)
 
 ### Cascade rules

@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:33:22Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T23:00:06Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -17,7 +17,7 @@ Account, authentication key, session, and recovery tables. Foundation for crypto
 
 ### Tables
 
-- **`accounts`**: id (UUID PK, NOT NULL), email_hash (varchar, T3, NOT NULL — hashed, not plaintext), email_salt (varchar, T3, NOT NULL — for deterministic email hash verification), password_hash (varchar, T3, NOT NULL — Argon2id hash for server-side auth), created_at (T3, NOT NULL, default NOW()), updated_at (T3)
+- **`accounts`**: id (UUID PK, NOT NULL), version (integer, T3, NOT NULL, default 1), email_hash (varchar, T3, NOT NULL — hashed, not plaintext), email_salt (varchar, T3, NOT NULL — for deterministic email hash verification), password_hash (varchar, T3, NOT NULL — Argon2id hash for server-side auth), created_at (T3, NOT NULL, default NOW()), updated_at (T3)
 - **`auth_keys`**: id (UUID PK), account_id (FK → accounts, NOT NULL), encrypted_private_key (bytea, T1 — private key encrypted with master key), public_key (bytea, T3 — plaintext for key directory), key_type ('encryption' | 'signing', T3), created_at (T3, NOT NULL, default NOW())
 - **`sessions`**: id (UUID PK), account_id (FK → accounts, NOT NULL), device_info (varchar, T3 — hashed device fingerprint; NOT encrypted since server needs it for session identification), created_at (T3, NOT NULL, default NOW()), last_active (T3), revoked (boolean, T3, NOT NULL, default false)
 - **`recovery_keys`**: id (UUID PK), account_id (FK → accounts, NOT NULL), encrypted_master_key (bytea, T1 — master key encrypted with recovery key), created_at (T3, NOT NULL, default NOW())
@@ -47,6 +47,8 @@ Account, authentication key, session, and recovery tables. Foundation for crypto
 - [ ] DEFAULT: created_at = NOW(), sessions.revoked = false
 - [ ] CASCADE on account deletion → sessions, auth_keys, recovery_keys
 - [ ] Migrations for both dialects
+- [ ] version column on accounts for CRDT
+- [ ] device_transfer_requests table with expiry and status tracking
 - [ ] Integration test: full account + key + session creation flow
 
 ## References
@@ -54,3 +56,10 @@ Account, authentication key, session, and recovery tables. Foundation for crypto
 - ADR 006 (Key Hierarchy)
 - ADR 011 (Key Lifecycle and Recovery)
 - ADR 013 (API Authentication)
+
+### Additional tables (from audit C7)
+
+- **`device_transfer_requests`**: id (UUID PK), account_id (FK → accounts, NOT NULL), source_device_id (UUID, T3, NOT NULL), target_device_id (UUID, T3, NOT NULL), status ('pending' | 'accepted' | 'rejected' | 'expired' | 'completed', T3, NOT NULL, default 'pending'), encrypted_key_bundle (bytea, T1, nullable — encrypted master key material for transfer), created_at (T3, NOT NULL, default NOW()), expires_at (T3, NOT NULL), completed_at (T3, nullable)
+  - CHECK: `expires_at > created_at`
+  - Account deletion → CASCADE: device_transfer_requests
+  - Index: device_transfer_requests (account_id, status)
