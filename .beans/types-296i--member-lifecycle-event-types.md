@@ -1,11 +1,11 @@
 ---
 # types-296i
 title: Member lifecycle event types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:23Z
-updated_at: 2026-03-08T14:21:53Z
+updated_at: 2026-03-09T06:05:21Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -44,3 +44,7 @@ Append-only semantics: no update/delete operations.
 ## References
 
 - features.md section 6 (Member lifecycle events)
+
+## Summary of Changes
+
+Created lifecycle.ts with LifecycleEvent discriminated union on eventType (8 variants: split, fusion, merge, unmerge, dormancy-start/end, discovery, archival). Branch: feat/types-domain-features.

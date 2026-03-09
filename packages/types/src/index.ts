@@ -50,6 +50,7 @@ export type {
   SyncDocumentId,
   SyncQueueItemId,
   SyncConflictId,
+  FrontingReportId,
   HexColor,
   EntityType,
 } from "./ids.js";
@@ -162,6 +163,24 @@ export type {
   ClientSubsystem,
   ServerRelationship,
   ClientRelationship,
+  ServerChannel,
+  ClientChannel,
+  ServerChatMessage,
+  ClientChatMessage,
+  ServerBoardMessage,
+  ClientBoardMessage,
+  ServerNote,
+  ClientNote,
+  ServerFieldDefinition,
+  ClientFieldDefinition,
+  ServerFieldValue,
+  ClientFieldValue,
+  ServerInnerWorldEntity,
+  ClientInnerWorldEntity,
+  ServerInnerWorldRegion,
+  ClientInnerWorldRegion,
+  ServerLifecycleEvent,
+  ClientLifecycleEvent,
   DecryptFn,
   EncryptFn,
 } from "./encryption.js";
@@ -186,6 +205,87 @@ export type {
   GroupTree,
   GroupMoveOperation,
 } from "./groups.js";
+
+// ── Communication ─────────────────────────────────────────────────
+export type {
+  Channel,
+  ChatMessage,
+  BoardMessage,
+  Note,
+  PollOption,
+  Poll,
+  PollVote,
+  AcknowledgementRequest,
+} from "./communication.js";
+
+// ── Lifecycle ─────────────────────────────────────────────────────
+export type {
+  SplitEvent,
+  FusionEvent,
+  MergeEvent,
+  UnmergeEvent,
+  DormancyStartEvent,
+  DormancyEndEvent,
+  DiscoveryEvent,
+  ArchivalEvent,
+  LifecycleEvent,
+  LifecycleEventType,
+} from "./lifecycle.js";
+
+// ── Custom fields ─────────────────────────────────────────────────
+export type {
+  FieldType,
+  FieldBucketVisibility,
+  FieldDefinition,
+  FieldValue,
+  FieldValueUnion,
+} from "./custom-fields.js";
+
+// ── Journal ───────────────────────────────────────────────────────
+export type {
+  HeadingLevel,
+  JournalBlockType,
+  JournalBlock,
+  ParagraphBlock,
+  HeadingBlock,
+  ListBlock,
+  QuoteBlock,
+  CodeBlock,
+  ImageBlock,
+  DividerBlock,
+  MemberLinkBlock,
+  EntityLinkBlock,
+  EntityLink,
+  JournalEntry,
+  ArchivedJournalEntry,
+  WikiPage,
+  ArchivedWikiPage,
+} from "./journal.js";
+
+// ── Timer ─────────────────────────────────────────────────────────
+export type { TimerConfig, CheckInRecord } from "./timer.js";
+
+// ── Analytics ─────────────────────────────────────────────────────
+export type {
+  Duration,
+  DateRangePreset,
+  DateRangeFilter,
+  MemberFrontingBreakdown,
+  FrontingAnalytics,
+  FrontingReport,
+  ChartDataset,
+  ChartData,
+} from "./analytics.js";
+
+// ── Innerworld ────────────────────────────────────────────────────
+export type {
+  VisualProperties,
+  MemberEntity,
+  LandmarkEntity,
+  InnerWorldEntity,
+  InnerWorldRegion,
+  InnerWorldCanvas,
+} from "./innerworld.js";
 
 // ── Littles Safe Mode ─────────────────────────────────────────────
 export type {

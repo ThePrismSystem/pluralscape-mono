@@ -11,17 +11,90 @@ import {
 
 import type {
   Account,
+  AcknowledgementRequest,
   ActiveFrontingSession,
   AppLockConfig,
+  ArchivalEvent,
+  BoardMessage,
   BucketId,
+  Channel,
+  ChartData,
+  ChartDataset,
+  ChatMessage,
+  CheckInRecord,
   ClientMember,
+  DateRangeFilter,
+  DateRangePreset,
   DecryptFn,
+  DiscoveryEvent,
+  Duration,
   Encrypted,
   EncryptedBlob,
   EncryptedString,
   EncryptFn,
   EncryptionAlgorithm,
+  EntityLink,
+  FieldBucketVisibility,
+  FieldDefinition,
+  FieldType,
+  FieldValue,
+  FieldValueUnion,
+  FrontingAnalytics,
+  FrontingReport,
+  FrontingReportId,
+  FusionEvent,
+  HeadingBlock,
+  HeadingLevel,
+  ImageBlock,
+  InnerWorldCanvas,
+  InnerWorldEntity,
+  InnerWorldRegion,
+  JournalBlock,
+  JournalBlockType,
+  JournalEntry,
+  LandmarkEntity,
+  ListBlock,
+  LifecycleEvent,
+  LifecycleEventType,
+  MemberEntity,
+  MemberFrontingBreakdown,
+  MemberLinkBlock,
+  MergeEvent,
+  Note,
+  Poll,
+  PollOption,
+  PollVote,
+  ParagraphBlock,
+  QuoteBlock,
+  ServerBoardMessage,
+  ServerChannel,
+  ServerChatMessage,
+  ServerFieldDefinition,
+  ServerFieldValue,
+  ServerInnerWorldEntity,
+  ServerInnerWorldRegion,
+  ServerLifecycleEvent,
   ServerMember,
+  ServerNote,
+  SplitEvent,
+  TimerConfig,
+  UnmergeEvent,
+  VisualProperties,
+  WikiPage,
+  ArchivedJournalEntry,
+  ArchivedWikiPage,
+  ClientBoardMessage,
+  ClientChannel,
+  ClientChatMessage,
+  ClientFieldDefinition,
+  ClientFieldValue,
+  ClientInnerWorldEntity,
+  ClientInnerWorldRegion,
+  ClientLifecycleEvent,
+  ClientNote,
+  CodeBlock,
+  DividerBlock,
+  EntityLinkBlock,
   ApiError,
   ApiResponse,
   ArchivedCustomFront,
@@ -209,6 +282,24 @@ describe("barrel exports", () => {
     expectTypeOf<EncryptedString>().toExtend<string>();
     expectTypeOf<ServerMember>().toBeObject();
     expectTypeOf<ClientMember>().toBeObject();
+    expectTypeOf<ServerChannel>().toBeObject();
+    expectTypeOf<ClientChannel>().toBeObject();
+    expectTypeOf<ServerChatMessage>().toBeObject();
+    expectTypeOf<ClientChatMessage>().toBeObject();
+    expectTypeOf<ServerBoardMessage>().toBeObject();
+    expectTypeOf<ClientBoardMessage>().toBeObject();
+    expectTypeOf<ServerNote>().toBeObject();
+    expectTypeOf<ClientNote>().toBeObject();
+    expectTypeOf<ServerFieldDefinition>().toBeObject();
+    expectTypeOf<ClientFieldDefinition>().toBeObject();
+    expectTypeOf<ServerFieldValue>().toBeObject();
+    expectTypeOf<ClientFieldValue>().toBeObject();
+    expectTypeOf<ServerInnerWorldEntity>().toBeObject();
+    expectTypeOf<ClientInnerWorldEntity>().toBeObject();
+    expectTypeOf<ServerInnerWorldRegion>().toBeObject();
+    expectTypeOf<ClientInnerWorldRegion>().toBeObject();
+    expectTypeOf<ServerLifecycleEvent>().toBeObject();
+    expectTypeOf<ClientLifecycleEvent>().toBeObject();
     expectTypeOf<DecryptFn<ServerMember, ClientMember>>().toBeFunction();
     expectTypeOf<EncryptFn<ClientMember, ServerMember>>().toBeFunction();
   });
@@ -233,6 +324,82 @@ describe("barrel exports", () => {
     expectTypeOf<GroupMembership>().toBeObject();
     expectTypeOf<GroupTree>().toBeObject();
     expectTypeOf<GroupMoveOperation>().toBeObject();
+  });
+
+  it("exports communication types", () => {
+    expectTypeOf<Channel>().toBeObject();
+    expectTypeOf<ChatMessage>().toBeObject();
+    expectTypeOf<BoardMessage>().toBeObject();
+    expectTypeOf<Note>().toBeObject();
+    expectTypeOf<PollOption>().toBeObject();
+    expectTypeOf<Poll>().toBeObject();
+    expectTypeOf<PollVote>().toBeObject();
+    expectTypeOf<AcknowledgementRequest>().toBeObject();
+  });
+
+  it("exports lifecycle types", () => {
+    expectTypeOf<SplitEvent>().toBeObject();
+    expectTypeOf<FusionEvent>().toBeObject();
+    expectTypeOf<MergeEvent>().toBeObject();
+    expectTypeOf<UnmergeEvent>().toBeObject();
+    expectTypeOf<DiscoveryEvent>().toBeObject();
+    expectTypeOf<ArchivalEvent>().toBeObject();
+    expectTypeOf<LifecycleEvent>().toBeObject();
+    expectTypeOf<LifecycleEventType>().toBeString();
+  });
+
+  it("exports custom field types", () => {
+    expectTypeOf<FieldType>().toBeString();
+    expectTypeOf<FieldBucketVisibility>().toBeObject();
+    expectTypeOf<FieldDefinition>().toBeObject();
+    expectTypeOf<FieldValue>().toBeObject();
+    expectTypeOf<FieldValueUnion>().toBeObject();
+  });
+
+  it("exports journal types", () => {
+    expectTypeOf<JournalBlockType>().toBeString();
+    expectTypeOf<JournalBlock>().toBeObject();
+    expectTypeOf<ParagraphBlock>().toBeObject();
+    expectTypeOf<HeadingBlock>().toBeObject();
+    expectTypeOf<HeadingLevel>().toBeNumber();
+    expectTypeOf<ListBlock>().toBeObject();
+    expectTypeOf<QuoteBlock>().toBeObject();
+    expectTypeOf<CodeBlock>().toBeObject();
+    expectTypeOf<ImageBlock>().toBeObject();
+    expectTypeOf<DividerBlock>().toBeObject();
+    expectTypeOf<MemberLinkBlock>().toBeObject();
+    expectTypeOf<EntityLinkBlock>().toBeObject();
+    expectTypeOf<EntityLink>().toBeObject();
+    expectTypeOf<JournalEntry>().toBeObject();
+    expectTypeOf<ArchivedJournalEntry>().toBeObject();
+    expectTypeOf<WikiPage>().toBeObject();
+    expectTypeOf<ArchivedWikiPage>().toBeObject();
+  });
+
+  it("exports timer types", () => {
+    expectTypeOf<TimerConfig>().toBeObject();
+    expectTypeOf<CheckInRecord>().toBeObject();
+  });
+
+  it("exports analytics types", () => {
+    expectTypeOf<Duration>().toExtend<number>();
+    expectTypeOf<DateRangePreset>().toBeString();
+    expectTypeOf<DateRangeFilter>().toBeObject();
+    expectTypeOf<MemberFrontingBreakdown>().toBeObject();
+    expectTypeOf<FrontingAnalytics>().toBeObject();
+    expectTypeOf<FrontingReport>().toBeObject();
+    expectTypeOf<FrontingReportId>().toExtend<string>();
+    expectTypeOf<ChartDataset>().toBeObject();
+    expectTypeOf<ChartData>().toBeObject();
+  });
+
+  it("exports innerworld types", () => {
+    expectTypeOf<VisualProperties>().toBeObject();
+    expectTypeOf<MemberEntity>().toBeObject();
+    expectTypeOf<LandmarkEntity>().toBeObject();
+    expectTypeOf<InnerWorldEntity>().toBeObject();
+    expectTypeOf<InnerWorldRegion>().toBeObject();
+    expectTypeOf<InnerWorldCanvas>().toBeObject();
   });
 
   it("exports structure profile types", () => {
