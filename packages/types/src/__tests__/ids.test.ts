@@ -187,7 +187,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(50);
+    expect(prefixCount).toBe(51);
   });
 });
 
@@ -264,6 +264,7 @@ describe("EntityType", () => {
         case "job":
         case "subscription":
         case "webhook-delivery":
+        case "fronting-report":
           return type;
         default: {
           const _exhaustive: never = type;

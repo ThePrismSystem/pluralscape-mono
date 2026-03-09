@@ -1,16 +1,24 @@
+import type { Channel, ChatMessage, BoardMessage, Note } from "./communication.js";
+import type { FieldDefinition, FieldValue } from "./custom-fields.js";
 import type { FrontingSession, FrontingType } from "./fronting.js";
 import type { Group } from "./groups.js";
 import type { CompletenessLevel } from "./identity.js";
 import type {
   BucketId,
+  ChannelId,
   CustomFrontId,
+  EventId,
   FrontingSessionId,
   GroupId,
+  InnerWorldEntityId,
+  InnerWorldRegionId,
   MemberId,
   RelationshipId,
   SubsystemId,
   SystemId,
 } from "./ids.js";
+import type { InnerWorldEntity, InnerWorldRegion } from "./innerworld.js";
+import type { LifecycleEvent } from "./lifecycle.js";
 import type { RelationshipType, Relationship, Subsystem } from "./structure.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
@@ -152,6 +160,155 @@ export interface ServerRelationship {
 /** Client-side relationship — flat decrypted fields. */
 export type ClientRelationship = Relationship;
 
+// ── Communication ──────────────────────────────────────────────
+
+/**
+ * Server-side channel representation.
+ * T1 encrypted: name
+ */
+export interface ServerChannel extends AuditMetadata {
+  readonly id: ChannelId;
+  readonly systemId: SystemId;
+  readonly type: "category" | "channel";
+  readonly sortOrder: number;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side channel — flat decrypted fields. */
+export type ClientChannel = Channel;
+
+/**
+ * Server-side chat message representation.
+ * T1 encrypted: content, attachments
+ */
+export interface ServerChatMessage extends AuditMetadata {
+  readonly id: import("./ids.js").MessageId;
+  readonly channelId: ChannelId;
+  readonly systemId: SystemId;
+  readonly senderId: MemberId;
+  readonly replyToId: import("./ids.js").MessageId | null;
+  readonly timestamp: UnixMillis;
+  readonly editedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side chat message — flat decrypted fields. */
+export type ClientChatMessage = ChatMessage;
+
+/**
+ * Server-side board message representation.
+ * T1 encrypted: content
+ */
+export interface ServerBoardMessage extends AuditMetadata {
+  readonly id: import("./ids.js").BoardMessageId;
+  readonly systemId: SystemId;
+  readonly pinned: boolean;
+  readonly sortOrder: number;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side board message — flat decrypted fields. */
+export type ClientBoardMessage = BoardMessage;
+
+/**
+ * Server-side note representation.
+ * T1 encrypted: title, content, backgroundColor
+ */
+export interface ServerNote extends AuditMetadata {
+  readonly id: import("./ids.js").NoteId;
+  readonly systemId: SystemId;
+  readonly memberId: MemberId | null;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side note — flat decrypted fields. */
+export type ClientNote = Note;
+
+// ── Custom fields ──────────────────────────────────────────────
+
+/**
+ * Server-side field definition representation.
+ * T1 encrypted: name, description, options
+ */
+export interface ServerFieldDefinition extends AuditMetadata {
+  readonly id: import("./ids.js").FieldDefinitionId;
+  readonly systemId: SystemId;
+  readonly fieldType: import("./custom-fields.js").FieldType;
+  readonly required: boolean;
+  readonly sortOrder: number;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side field definition — flat decrypted fields. */
+export type ClientFieldDefinition = FieldDefinition;
+
+/**
+ * Server-side field value representation.
+ * T1 encrypted: value
+ */
+export interface ServerFieldValue extends AuditMetadata {
+  readonly id: import("./ids.js").FieldValueId;
+  readonly fieldDefinitionId: import("./ids.js").FieldDefinitionId;
+  readonly memberId: MemberId;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side field value — flat decrypted fields. */
+export type ClientFieldValue = FieldValue;
+
+// ── Innerworld ─────────────────────────────────────────────────
+
+/**
+ * Server-side innerworld entity representation.
+ * T1 encrypted: name/linkedMemberId, description, visual
+ */
+export interface ServerInnerWorldEntity extends AuditMetadata {
+  readonly id: InnerWorldEntityId;
+  readonly systemId: SystemId;
+  readonly positionX: number;
+  readonly positionY: number;
+  readonly regionId: InnerWorldRegionId | null;
+  readonly entityType: "member" | "landmark";
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side innerworld entity — flat decrypted fields. */
+export type ClientInnerWorldEntity = InnerWorldEntity;
+
+/**
+ * Server-side innerworld region representation.
+ * T1 encrypted: name, description, boundaryData, visual
+ */
+export interface ServerInnerWorldRegion extends AuditMetadata {
+  readonly id: InnerWorldRegionId;
+  readonly systemId: SystemId;
+  readonly parentRegionId: InnerWorldRegionId | null;
+  readonly accessType: "open" | "gatekept";
+  readonly gatekeeperMemberId: MemberId | null;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side innerworld region — flat decrypted fields. */
+export type ClientInnerWorldRegion = InnerWorldRegion;
+
+// ── Lifecycle ──────────────────────────────────────────────────
+
+/**
+ * Server-side lifecycle event representation.
+ * T1 encrypted: notes
+ */
+export interface ServerLifecycleEvent {
+  readonly id: EventId;
+  readonly systemId: SystemId;
+  readonly eventType: import("./lifecycle.js").LifecycleEventType;
+  readonly occurredAt: UnixMillis;
+  readonly recordedAt: UnixMillis;
+  readonly encryptedData: EncryptedBlob | null;
+}
+
+/** Client-side lifecycle event — flat decrypted fields. */
+export type ClientLifecycleEvent = LifecycleEvent;
+
 // ── Mapping utility types ──────────────────────────────────────
 
 /** Maps a server type to its client-side equivalent via decryption. */
@@ -160,13 +317,22 @@ export type DecryptFn<ServerT, ClientT> = (server: ServerT, masterKey: Uint8Arra
 /** Maps a client type to its server-side equivalent via encryption. */
 export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Array) => ServerT;
 
-// ── Tier map (partial — completed types only) ──────────────────
+// ── Tier map ───────────────────────────────────────────────────
 //
 // Member: T1 (name, pronouns, description, roleTags, colors, avatarRef) | T3 (completenessLevel, archived)
 // FrontingSession: T1 (comment) | T3 (timestamps, memberId, frontingType, customFrontId, subsystemId)
 // Group: T1 (name, description, imageRef, color, emoji) | T3 (sortOrder, archived, parentGroupId)
 // Subsystem: T1 (name, description) | T3 (parentSubsystemId)
 // Relationship: T1 (label) | T3 (type, sourceMemberId, targetMemberId, bidirectional)
+// Channel: T1 (name) | T3 (type, sortOrder)
+// ChatMessage: T1 (content, attachments) | T3 (senderId, channelId, replyToId, timestamp, editedAt)
+// BoardMessage: T1 (content) | T3 (pinned, sortOrder)
+// Note: T1 (title, content, backgroundColor) | T3 (memberId)
+// FieldDefinition: T1 (name, description, options) | T3 (fieldType, required, sortOrder)
+// FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId)
+// InnerWorldEntity: T1 (name/linkedMemberId, description, visual) | T3 (positionX/Y, regionId, entityType)
+// InnerWorldRegion: T1 (name, description, boundaryData, visual) | T3 (parentRegionId, accessType, gatekeeperMemberId)
+// LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
 //
 // ApiKey: T3 (all fields — server metadata, no user content)
 // AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
@@ -179,8 +345,3 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // WebhookDelivery: T1 (payload when encrypted) | T3 (eventType, statusCode, deliveredAt, success)
 // RealtimeSubscription: T3 (all fields — subscription metadata)
 // SearchQuery/SearchResult: client-only types, not persisted server-side
-//
-// TODO: Add communication types when types-8klm is completed
-// TODO: Add custom field types when types-0jjx is completed
-// TODO: Add innerworld types when types-iz5j is completed
-// TODO: Add lifecycle event types when types-296i is completed

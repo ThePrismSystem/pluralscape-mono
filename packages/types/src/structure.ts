@@ -50,6 +50,13 @@ export type OriginType =
 /** How much of the system has been discovered or mapped. */
 export type DiscoveryStatus = "fully-mapped" | "partially-mapped" | "unknown";
 
+/** A system's self-described structural profile. */
+export interface SystemProfile {
+  readonly architecture: ArchitectureType | null;
+  readonly origin: OriginType | null;
+  readonly discoveryStatus: DiscoveryStatus;
+}
+
 /** Whether a layer is freely accessible or requires a gatekeeper. */
 export type LayerAccessType = "open" | "gatekept";
 

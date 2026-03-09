@@ -38,6 +38,9 @@ bun.lockb
 
 # Databases
 *.db
+*.db-shm
+*.db-wal
+*.db-journal
 
 # Testing
 coverage/

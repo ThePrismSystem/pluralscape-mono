@@ -53,6 +53,7 @@ export type {
   JobId,
   SubscriptionId,
   WebhookDeliveryId,
+  FrontingReportId,
   HexColor,
   EntityType,
 } from "./ids.js";
@@ -121,6 +122,7 @@ export type {
   ArchitectureType,
   OriginType,
   DiscoveryStatus,
+  SystemProfile,
   LayerAccessType,
   Subsystem,
   SideSystem,
@@ -165,6 +167,24 @@ export type {
   ClientSubsystem,
   ServerRelationship,
   ClientRelationship,
+  ServerChannel,
+  ClientChannel,
+  ServerChatMessage,
+  ClientChatMessage,
+  ServerBoardMessage,
+  ClientBoardMessage,
+  ServerNote,
+  ClientNote,
+  ServerFieldDefinition,
+  ClientFieldDefinition,
+  ServerFieldValue,
+  ClientFieldValue,
+  ServerInnerWorldEntity,
+  ClientInnerWorldEntity,
+  ServerInnerWorldRegion,
+  ClientInnerWorldRegion,
+  ServerLifecycleEvent,
+  ClientLifecycleEvent,
   DecryptFn,
   EncryptFn,
 } from "./encryption.js";
@@ -250,6 +270,125 @@ export type {
   SearchResultItem,
   SearchResult,
 } from "./search.js";
+
+// ── Communication ─────────────────────────────────────────────────
+export type {
+  Channel,
+  ChatMessage,
+  BoardMessage,
+  Note,
+  PollOption,
+  Poll,
+  PollVote,
+  AcknowledgementRequest,
+} from "./communication.js";
+
+// ── Lifecycle ─────────────────────────────────────────────────────
+export type {
+  SplitEvent,
+  FusionEvent,
+  MergeEvent,
+  UnmergeEvent,
+  DormancyStartEvent,
+  DormancyEndEvent,
+  DiscoveryEvent,
+  ArchivalEvent,
+  LifecycleEvent,
+  LifecycleEventType,
+} from "./lifecycle.js";
+
+// ── Custom fields ─────────────────────────────────────────────────
+export type {
+  FieldType,
+  FieldBucketVisibility,
+  FieldDefinition,
+  FieldValue,
+  FieldValueUnion,
+} from "./custom-fields.js";
+
+// ── Journal ───────────────────────────────────────────────────────
+export type {
+  HeadingLevel,
+  JournalBlockType,
+  JournalBlock,
+  ParagraphBlock,
+  HeadingBlock,
+  ListBlock,
+  QuoteBlock,
+  CodeBlock,
+  ImageBlock,
+  DividerBlock,
+  MemberLinkBlock,
+  EntityLinkBlock,
+  EntityLink,
+  JournalEntry,
+  ArchivedJournalEntry,
+  WikiPage,
+  ArchivedWikiPage,
+} from "./journal.js";
+
+// ── Timer ─────────────────────────────────────────────────────────
+export type { TimerConfig, CheckInRecord } from "./timer.js";
+
+// ── Analytics ─────────────────────────────────────────────────────
+export type {
+  Duration,
+  DateRangePreset,
+  DateRangeFilter,
+  MemberFrontingBreakdown,
+  FrontingAnalytics,
+  FrontingReport,
+  ChartDataset,
+  ChartData,
+} from "./analytics.js";
+
+// ── Innerworld ────────────────────────────────────────────────────
+export type {
+  VisualProperties,
+  MemberEntity,
+  LandmarkEntity,
+  InnerWorldEntity,
+  InnerWorldRegion,
+  InnerWorldCanvas,
+} from "./innerworld.js";
+
+// ── Littles Safe Mode ─────────────────────────────────────────────
+export type {
+  SafeModeUIFlags,
+  SafeModeContentItem,
+  LittlesSafeModeConfig,
+} from "./littles-safe-mode.js";
+
+// ── Nomenclature ──────────────────────────────────────────────────
+export type {
+  TermCategory,
+  CanonicalTerm,
+  NomenclatureSettings,
+  TermPreset,
+} from "./nomenclature.js";
+export { DEFAULT_TERM_PRESETS, createDefaultNomenclatureSettings } from "./nomenclature.js";
+
+// ── i18n ──────────────────────────────────────────────────────────
+export type {
+  Locale,
+  TranslationKey,
+  TranslationMap,
+  TextDirection,
+  DateFormatPreference,
+  NumberFormatPreference,
+  LocaleConfig,
+} from "./i18n.js";
+
+// ── Settings ──────────────────────────────────────────────────────
+export type {
+  ThemePreference,
+  AppLockConfig,
+  NotificationPreferences,
+  SyncPreferences,
+  FriendRequestPolicy,
+  PrivacyDefaults,
+  SystemSettings,
+} from "./settings.js";
 
 // ── Runtime utilities ──────────────────────────────────────────────
 export { createId, now, toISO } from "./runtime.js";

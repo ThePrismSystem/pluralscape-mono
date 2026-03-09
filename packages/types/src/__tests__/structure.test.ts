@@ -23,6 +23,7 @@ import type {
   SideSystemMembership,
   Subsystem,
   SubsystemMembership,
+  SystemProfile,
 } from "../structure.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
@@ -170,6 +171,21 @@ describe("DiscoveryStatus", () => {
   it("rejects invalid values", () => {
     // @ts-expect-error invalid discovery status
     assertType<DiscoveryStatus>("in-progress");
+  });
+});
+
+describe("SystemProfile", () => {
+  it("has nullable architecture and origin", () => {
+    expectTypeOf<SystemProfile["architecture"]>().toEqualTypeOf<ArchitectureType | null>();
+    expectTypeOf<SystemProfile["origin"]>().toEqualTypeOf<OriginType | null>();
+  });
+
+  it("has required discoveryStatus", () => {
+    expectTypeOf<SystemProfile["discoveryStatus"]>().toEqualTypeOf<DiscoveryStatus>();
+  });
+
+  it("does not extend AuditMetadata", () => {
+    expectTypeOf<SystemProfile>().not.toExtend<AuditMetadata>();
   });
 });
 

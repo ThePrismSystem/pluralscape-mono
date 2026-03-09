@@ -1,11 +1,11 @@
 ---
 # types-jawp
 title: Littles Safe Mode config types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:24:18Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T06:29:52Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -29,3 +29,7 @@ Configuration and content types for Littles Safe Mode simplified UI.
 ## References
 
 - features.md section 13 (Littles Safe Mode)
+
+## Summary of Changes
+
+Created littles-safe-mode.ts with SafeModeUIFlags (largeButtons, iconDriven, noDeletion, noSettings, noAnalytics), SafeModeContentItem (id, systemId, contentType, url, blobRef, title, description, sortOrder), and LittlesSafeModeConfig (enabled, allowedContentIds, simplifiedUIFlags). Branch: feat/types-settings-and-config.

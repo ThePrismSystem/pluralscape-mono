@@ -1,21 +1,38 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import { createId, ID_PREFIXES, now, toISO } from "../index.js";
+import {
+  createDefaultNomenclatureSettings,
+  createId,
+  DEFAULT_TERM_PRESETS,
+  ID_PREFIXES,
+  now,
+  toISO,
+} from "../index.js";
 
 import type {
   Account,
+  AcknowledgementRequest,
   ActiveFrontingSession,
   ApiKey,
   ApiKeyScope,
   ApiKeyToken,
   ApiKeyWithSecret,
+  AppLockConfig,
+  ArchivalEvent,
   AuditEventType,
   AuditLogEntry,
   BlobDownloadRef,
   BlobMetadata,
   BlobPurpose,
   BlobUploadRequest,
+  BoardMessage,
   BucketEncrypted,
+  BucketId,
+  Channel,
+  ChartData,
+  ChartDataset,
+  ChatMessage,
+  CheckInRecord,
   ClientFrontingSession,
   ClientGroup,
   ClientMember,
@@ -23,31 +40,68 @@ import type {
   ClientSubsystem,
   ConnectionErrorEvent,
   CryptoApiKey,
+  DateRangeFilter,
+  DateRangePreset,
   DecryptFn,
   DeviceToken,
   DeviceTokenId,
+  DiscoveryEvent,
+  Duration,
   Encrypted,
   EncryptedBlob,
   EncryptedString,
   EncryptedWebhookPayload,
   EncryptFn,
   EncryptionAlgorithm,
+  EntityLink,
+  FieldBucketVisibility,
+  FieldDefinition,
+  FieldType,
+  FieldValue,
+  FieldValueUnion,
+  FrontingAnalytics,
   FrontingChangedEvent,
+  FrontingReport,
+  FrontingReportId,
+  FusionEvent,
+  HeadingBlock,
+  HeadingLevel,
+  ImageBlock,
+  InnerWorldCanvas,
+  InnerWorldEntity,
+  InnerWorldRegion,
   JobDefinition,
   JobId,
   JobResult,
   JobStatus,
   JobType,
+  JournalBlock,
+  JournalBlockType,
+  JournalEntry,
+  LandmarkEntity,
+  LifecycleEvent,
+  LifecycleEventType,
+  ListBlock,
+  MemberEntity,
+  MemberFrontingBreakdown,
+  MemberLinkBlock,
   MemberUpdatedEvent,
+  MergeEvent,
   MessageReceivedEvent,
   MetadataApiKey,
+  Note,
   NotificationConfig,
   NotificationConfigId,
   NotificationEventType,
   NotificationPayload,
+  ParagraphBlock,
   Plaintext,
   PlaintextWebhookPayload,
+  Poll,
+  PollOption,
+  PollVote,
   PresenceHeartbeatEvent,
+  QuoteBlock,
   RealtimeSubscription,
   RetryPolicy,
   SearchableEntityType,
@@ -55,14 +109,27 @@ import type {
   SearchQuery,
   SearchResult,
   SearchResultItem,
+  ServerBoardMessage,
+  ServerChannel,
+  ServerChatMessage,
+  ServerFieldDefinition,
+  ServerFieldValue,
   ServerFrontingSession,
   ServerGroup,
+  ServerInnerWorldEntity,
+  ServerInnerWorldRegion,
+  ServerLifecycleEvent,
   ServerMember,
+  ServerNote,
   ServerRelationship,
   ServerSubsystem,
+  SplitEvent,
   SSEEvent,
-  SyncStateChangedEvent,
   SubscriptionId,
+  SyncStateChangedEvent,
+  TimerConfig,
+  UnmergeEvent,
+  VisualProperties,
   WebhookConfig,
   WebhookDelivery,
   WebhookDeliveryId,
@@ -71,6 +138,21 @@ import type {
   WebSocketConnectionState,
   WebSocketEvent,
   WebSocketEventType,
+  WikiPage,
+  ArchivedJournalEntry,
+  ArchivedWikiPage,
+  ClientBoardMessage,
+  ClientChannel,
+  ClientChatMessage,
+  ClientFieldDefinition,
+  ClientFieldValue,
+  ClientInnerWorldEntity,
+  ClientInnerWorldRegion,
+  ClientLifecycleEvent,
+  ClientNote,
+  CodeBlock,
+  DividerBlock,
+  EntityLinkBlock,
   ApiError,
   ApiResponse,
   ArchivedCustomFront,
@@ -84,10 +166,12 @@ import type {
   BucketAccessCheck,
   BucketContentTag,
   BucketVisibilityScope,
+  CanonicalTerm,
   CoFrontState,
   CompletedFrontingSession,
   CreateInput,
   CustomFront,
+  DateFormatPreference,
   DateRange,
   DeepReadonly,
   DeviceInfo,
@@ -114,18 +198,27 @@ import type {
   Layer,
   LayerAccessType,
   LayerMembership,
+  LittlesSafeModeConfig,
+  Locale,
+  LocaleConfig,
   LoginCredentials,
   Member,
   MemberId,
   MemberPhotoId,
+  NomenclatureSettings,
+  NotificationPreferences,
+  NumberFormatPreference,
   OpenLayer,
   OriginType,
   PaginatedResult,
   PrivacyBucket,
+  PrivacyDefaults,
   RecoveryKey,
   RecoveryKeyId,
   RegistrationInput,
   Relationship,
+  SafeModeContentItem,
+  SafeModeUIFlags,
   SyncConflict,
   SyncConflictId,
   SyncDocument,
@@ -137,6 +230,10 @@ import type {
   SyncQueueItemId,
   SyncResolution,
   SyncState,
+  SyncPreferences,
+  SystemProfile,
+  SystemSettings,
+  FriendRequestPolicy,
   RelationshipType,
   Result,
   RoleTag,
@@ -150,6 +247,12 @@ import type {
   SwitchId,
   System,
   SystemId,
+  TermCategory,
+  TermPreset,
+  TextDirection,
+  ThemePreference,
+  TranslationKey,
+  TranslationMap,
   UnixMillis,
   UpdateInput,
   ValidationError,
@@ -247,6 +350,24 @@ describe("barrel exports", () => {
     expectTypeOf<ClientSubsystem>().toBeObject();
     expectTypeOf<ServerRelationship>().toBeObject();
     expectTypeOf<ClientRelationship>().toBeObject();
+    expectTypeOf<ServerChannel>().toBeObject();
+    expectTypeOf<ClientChannel>().toBeObject();
+    expectTypeOf<ServerChatMessage>().toBeObject();
+    expectTypeOf<ClientChatMessage>().toBeObject();
+    expectTypeOf<ServerBoardMessage>().toBeObject();
+    expectTypeOf<ClientBoardMessage>().toBeObject();
+    expectTypeOf<ServerNote>().toBeObject();
+    expectTypeOf<ClientNote>().toBeObject();
+    expectTypeOf<ServerFieldDefinition>().toBeObject();
+    expectTypeOf<ClientFieldDefinition>().toBeObject();
+    expectTypeOf<ServerFieldValue>().toBeObject();
+    expectTypeOf<ClientFieldValue>().toBeObject();
+    expectTypeOf<ServerInnerWorldEntity>().toBeObject();
+    expectTypeOf<ClientInnerWorldEntity>().toBeObject();
+    expectTypeOf<ServerInnerWorldRegion>().toBeObject();
+    expectTypeOf<ClientInnerWorldRegion>().toBeObject();
+    expectTypeOf<ServerLifecycleEvent>().toBeObject();
+    expectTypeOf<ClientLifecycleEvent>().toBeObject();
     expectTypeOf<DecryptFn<ServerMember, ClientMember>>().toBeFunction();
     expectTypeOf<EncryptFn<ClientMember, ServerMember>>().toBeFunction();
   });
@@ -347,6 +468,123 @@ describe("barrel exports", () => {
     expectTypeOf<SearchQuery>().toBeObject();
     expectTypeOf<SearchResultItem<string>>().toBeObject();
     expectTypeOf<SearchResult<string>>().toBeObject();
+  });
+
+  it("exports communication types", () => {
+    expectTypeOf<Channel>().toBeObject();
+    expectTypeOf<ChatMessage>().toBeObject();
+    expectTypeOf<BoardMessage>().toBeObject();
+    expectTypeOf<Note>().toBeObject();
+    expectTypeOf<PollOption>().toBeObject();
+    expectTypeOf<Poll>().toBeObject();
+    expectTypeOf<PollVote>().toBeObject();
+    expectTypeOf<AcknowledgementRequest>().toBeObject();
+  });
+
+  it("exports lifecycle types", () => {
+    expectTypeOf<SplitEvent>().toBeObject();
+    expectTypeOf<FusionEvent>().toBeObject();
+    expectTypeOf<MergeEvent>().toBeObject();
+    expectTypeOf<UnmergeEvent>().toBeObject();
+    expectTypeOf<DiscoveryEvent>().toBeObject();
+    expectTypeOf<ArchivalEvent>().toBeObject();
+    expectTypeOf<LifecycleEvent>().toBeObject();
+    expectTypeOf<LifecycleEventType>().toBeString();
+  });
+
+  it("exports custom field types", () => {
+    expectTypeOf<FieldType>().toBeString();
+    expectTypeOf<FieldBucketVisibility>().toBeObject();
+    expectTypeOf<FieldDefinition>().toBeObject();
+    expectTypeOf<FieldValue>().toBeObject();
+    expectTypeOf<FieldValueUnion>().toBeObject();
+  });
+
+  it("exports journal types", () => {
+    expectTypeOf<JournalBlockType>().toBeString();
+    expectTypeOf<JournalBlock>().toBeObject();
+    expectTypeOf<ParagraphBlock>().toBeObject();
+    expectTypeOf<HeadingBlock>().toBeObject();
+    expectTypeOf<HeadingLevel>().toBeNumber();
+    expectTypeOf<ListBlock>().toBeObject();
+    expectTypeOf<QuoteBlock>().toBeObject();
+    expectTypeOf<CodeBlock>().toBeObject();
+    expectTypeOf<ImageBlock>().toBeObject();
+    expectTypeOf<DividerBlock>().toBeObject();
+    expectTypeOf<MemberLinkBlock>().toBeObject();
+    expectTypeOf<EntityLinkBlock>().toBeObject();
+    expectTypeOf<EntityLink>().toBeObject();
+    expectTypeOf<JournalEntry>().toBeObject();
+    expectTypeOf<ArchivedJournalEntry>().toBeObject();
+    expectTypeOf<WikiPage>().toBeObject();
+    expectTypeOf<ArchivedWikiPage>().toBeObject();
+  });
+
+  it("exports timer types", () => {
+    expectTypeOf<TimerConfig>().toBeObject();
+    expectTypeOf<CheckInRecord>().toBeObject();
+  });
+
+  it("exports analytics types", () => {
+    expectTypeOf<Duration>().toExtend<number>();
+    expectTypeOf<DateRangePreset>().toBeString();
+    expectTypeOf<DateRangeFilter>().toBeObject();
+    expectTypeOf<MemberFrontingBreakdown>().toBeObject();
+    expectTypeOf<FrontingAnalytics>().toBeObject();
+    expectTypeOf<FrontingReport>().toBeObject();
+    expectTypeOf<FrontingReportId>().toExtend<string>();
+    expectTypeOf<ChartDataset>().toBeObject();
+    expectTypeOf<ChartData>().toBeObject();
+  });
+
+  it("exports innerworld types", () => {
+    expectTypeOf<VisualProperties>().toBeObject();
+    expectTypeOf<MemberEntity>().toBeObject();
+    expectTypeOf<LandmarkEntity>().toBeObject();
+    expectTypeOf<InnerWorldEntity>().toBeObject();
+    expectTypeOf<InnerWorldRegion>().toBeObject();
+    expectTypeOf<InnerWorldCanvas>().toBeObject();
+  });
+
+  it("exports structure profile types", () => {
+    expectTypeOf<SystemProfile>().toBeObject();
+  });
+
+  it("exports littles safe mode types", () => {
+    expectTypeOf<SafeModeUIFlags>().toBeObject();
+    expectTypeOf<SafeModeContentItem>().toBeObject();
+    expectTypeOf<LittlesSafeModeConfig>().toBeObject();
+  });
+
+  it("exports nomenclature types and runtime values", () => {
+    expectTypeOf<TermCategory>().toBeString();
+    expectTypeOf<CanonicalTerm>().toBeObject();
+    expectTypeOf<NomenclatureSettings>().toBeObject();
+    expectTypeOf<TermPreset>().toBeObject();
+    expectTypeOf(DEFAULT_TERM_PRESETS).toExtend<readonly TermPreset[]>();
+    expectTypeOf(createDefaultNomenclatureSettings).toBeFunction();
+  });
+
+  it("exports i18n types", () => {
+    expectTypeOf<Locale>().toExtend<string>();
+    expectTypeOf<TranslationKey>().toExtend<string>();
+    expectTypeOf<TranslationMap>().toBeObject();
+    expectTypeOf<TextDirection>().toBeString();
+    expectTypeOf<DateFormatPreference>().toBeString();
+    expectTypeOf<NumberFormatPreference>().toBeString();
+    expectTypeOf<LocaleConfig>().toBeObject();
+  });
+
+  it("exports settings types", () => {
+    expectTypeOf<ThemePreference>().toBeString();
+    expectTypeOf<AppLockConfig>().toBeObject();
+    expectTypeOf<NotificationPreferences>().toBeObject();
+    expectTypeOf<SyncPreferences>().toBeObject();
+    expectTypeOf<FriendRequestPolicy>().toBeString();
+    expectTypeOf<PrivacyDefaults>().toBeObject();
+    expectTypeOf<SystemSettings>().toBeObject();
+    expectTypeOf<SystemSettings["fontScale"]>().toEqualTypeOf<number>();
+    expectTypeOf<SystemSettings["defaultBucketId"]>().toEqualTypeOf<BucketId | null>();
   });
 
   it("exports generic utility types", () => {

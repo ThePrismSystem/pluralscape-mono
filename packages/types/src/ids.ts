@@ -59,6 +59,7 @@ export type SyncConflictId = Brand<string, "SyncConflictId">;
 export type JobId = Brand<string, "JobId">;
 export type SubscriptionId = Brand<string, "SubscriptionId">;
 export type WebhookDeliveryId = Brand<string, "WebhookDeliveryId">;
+export type FrontingReportId = Brand<string, "FrontingReportId">;
 export type HexColor = Brand<string, "HexColor">;
 
 // ── ID prefix convention ────────────────────────────────────────────
@@ -114,6 +115,7 @@ export const ID_PREFIXES = {
   job: "job_",
   subscription: "rsub_",
   webhookDelivery: "wd_",
+  frontingReport: "fr_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -168,4 +170,5 @@ export type EntityType =
   | "sync-conflict"
   | "job"
   | "subscription"
-  | "webhook-delivery";
+  | "webhook-delivery"
+  | "fronting-report";
