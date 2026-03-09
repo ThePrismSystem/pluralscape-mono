@@ -1,11 +1,11 @@
 ---
 # types-lzek
 title: Import and export types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:40Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T08:22:33Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -40,3 +40,46 @@ Types for Simply Plural import, PluralKit import, JSON/CSV export, and data dele
 ## References
 
 - features.md section 10 (Data Portability)
+
+## Summary of Changes
+
+Implemented in `packages/types/src/import-export.ts` on branch `feat/types-interop`:
+
+**Import payloads (external shapes, plain IDs):**
+
+- `SPImportMember`, `SPImportGroup`, `SPImportFrontingSession`, `SPImportPayload` — Pluralscape export format
+- `PKImportMember`, `PKImportGroup`, `PKImportSwitch`, `PKImportPayload` — PluralKit export format
+
+**Import job tracking:**
+
+- `ImportSource`: `"pluralscape" | "pluralkit"`
+- `ImportJobStatus`: 5-state lifecycle
+- `ImportProgress`, `ImportError`, `ImportJob`
+
+**Export:**
+
+- `ExportFormat`: `"json" | "csv"`
+- `ExportManifest`: download metadata with expiry
+
+**Account management:**
+
+- `AccountPurgeRequest`: purge scheduling with confirmation
+- `MemberReport`: downloadable member data report
+
+Test file: `import-export.test.ts` (17 tests). SP payloads use `number` timestamps, PK payloads use `string` timestamps (matching their respective export formats).
+
+## PR #39 Review Fixes
+
+- Added 3 branded IDs: ImportJobId, PKBridgeConfigId, AccountPurgeRequestId
+- Fixed SP import JSDoc from 'Pluralscape' to 'Simply Plural'
+- Added SPImportMember.avatarUrl, removed SPImportPayload.version
+- Added 9 new SP import sub-types: CustomField, CustomFieldValue, Note, ChatMessage, BoardMessage, Poll, Timer, PrivacyBucket, Friend
+- Expanded SPImportPayload with all new collection fields
+- Added PKProxyTag, PKImportMember.avatar_url and proxy_tags
+- ImportSource now 'simply-plural' | 'pluralkit' | 'pluralscape'
+- Added ImportEntityType typed union, ImportError.entityType uses it
+- ImportJob.id now ImportJobId, startedAt now UnixMillis | null
+- ExportManifest now extends DownloadableReport, uses ExportSection[] instead of boolean flags
+- AccountPurgeRequest now has id (AccountPurgeRequestId), status (AccountPurgeStatus), confirmedAt, completedAt
+- MemberReport now extends DownloadableReport, uses MemberId, BucketId, ReportFormat
+- Tests rewritten with exhaustive switch coverage for all new union types

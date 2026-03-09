@@ -50,6 +50,9 @@ export type {
   SyncDocumentId,
   SyncQueueItemId,
   SyncConflictId,
+  ImportJobId,
+  PKBridgeConfigId,
+  AccountPurgeRequestId,
   JobId,
   SubscriptionId,
   WebhookDeliveryId,
@@ -209,6 +212,57 @@ export type {
   GroupTree,
   GroupMoveOperation,
 } from "./groups.js";
+
+// ── PK Bridge ────────────────────────────────────────────────────
+export type {
+  PKSyncDirection,
+  PKSyncStatus,
+  PKSyncableEntityType,
+  PKSyncErrorCode,
+  PKBridgeConfig,
+  PKMemberMapping,
+  PKGroupMapping,
+  PKSwitchMapping,
+  PKEntityMapping,
+  PKSyncState,
+  PKSyncError,
+} from "./pk-bridge.js";
+
+// ── Import/Export ────────────────────────────────────────────────
+export type {
+  SPImportMember,
+  SPImportGroup,
+  SPImportFrontingSession,
+  SPImportCustomField,
+  SPImportCustomFieldValue,
+  SPImportNote,
+  SPImportChatMessage,
+  SPImportBoardMessage,
+  SPImportPoll,
+  SPImportTimer,
+  SPImportPrivacyBucket,
+  SPImportFriend,
+  SPImportPayload,
+  PKProxyTag,
+  PKImportMember,
+  PKImportGroup,
+  PKImportSwitch,
+  PKImportPayload,
+  ImportSource,
+  ImportEntityType,
+  ImportJobStatus,
+  ImportProgress,
+  ImportError,
+  ImportJob,
+  ExportFormat,
+  ExportSection,
+  DownloadableReport,
+  ExportManifest,
+  AccountPurgeStatus,
+  ReportFormat,
+  AccountPurgeRequest,
+  MemberReport,
+} from "./import-export.js";
 
 // ── API keys ──────────────────────────────────────────────────
 export type {

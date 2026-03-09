@@ -48,6 +48,9 @@ import type {
   SyncDocumentId,
   SyncQueueItemId,
   SyncConflictId,
+  ImportJobId,
+  PKBridgeConfigId,
+  AccountPurgeRequestId,
   JobId,
   SubscriptionId,
   WebhookDeliveryId,
@@ -145,6 +148,9 @@ describe("branded ID types", () => {
     expectTypeOf<SyncDocumentId>().toExtend<string>();
     expectTypeOf<SyncQueueItemId>().toExtend<string>();
     expectTypeOf<SyncConflictId>().toExtend<string>();
+    expectTypeOf<ImportJobId>().toExtend<string>();
+    expectTypeOf<PKBridgeConfigId>().toExtend<string>();
+    expectTypeOf<AccountPurgeRequestId>().toExtend<string>();
     expectTypeOf<JobId>().toExtend<string>();
     expectTypeOf<SubscriptionId>().toExtend<string>();
     expectTypeOf<WebhookDeliveryId>().toExtend<string>();
@@ -187,7 +193,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(51);
+    expect(prefixCount).toBe(54);
   });
 });
 
@@ -261,6 +267,9 @@ describe("EntityType", () => {
         case "sync-document":
         case "sync-queue-item":
         case "sync-conflict":
+        case "import-job":
+        case "pk-bridge-config":
+        case "account-purge-request":
         case "job":
         case "subscription":
         case "webhook-delivery":
