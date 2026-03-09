@@ -1,4 +1,4 @@
-import type { SystemId } from "./ids.js";
+import type { AccountPurgeRequestId, BucketId, ImportJobId, MemberId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 // ── Import/Export types ─────────────────────────────────────────────
@@ -6,19 +6,20 @@ import type { UnixMillis } from "./timestamps.js";
 // Import payloads use plain string IDs and number timestamps
 // (external format shapes, not internal branded types).
 
-// ── Import payloads (external shapes) ───────────────────────────────
+// ── Simply Plural import payloads ───────────────────────────────────
 
-/** A member as represented in a Pluralscape export file. */
+/** A member as represented in a Simply Plural export file. */
 export interface SPImportMember {
   readonly id: string;
   readonly name: string;
   readonly pronouns: string | null;
   readonly description: string | null;
   readonly colors: readonly string[];
+  readonly avatarUrl: string | null;
   readonly createdAt: number;
 }
 
-/** A group as represented in a Pluralscape export file. */
+/** A group as represented in a Simply Plural export file. */
 export interface SPImportGroup {
   readonly id: string;
   readonly name: string;
@@ -26,20 +27,107 @@ export interface SPImportGroup {
   readonly memberIds: readonly string[];
 }
 
-/** A fronting session as represented in a Pluralscape export file. */
+/** A fronting session as represented in a Simply Plural export file. */
 export interface SPImportFrontingSession {
   readonly memberId: string;
   readonly startedAt: number;
   readonly endedAt: number | null;
 }
 
-/** Full Pluralscape import payload (external format). */
+/** A custom field definition from a Simply Plural export. */
+export interface SPImportCustomField {
+  readonly id: string;
+  readonly name: string;
+  readonly order: number;
+  readonly type: string;
+}
+
+/** A custom field value from a Simply Plural export. */
+export interface SPImportCustomFieldValue {
+  readonly fieldId: string;
+  readonly memberId: string;
+  readonly value: string;
+}
+
+/** A note from a Simply Plural export. */
+export interface SPImportNote {
+  readonly id: string;
+  readonly title: string;
+  readonly content: string;
+  readonly memberId: string | null;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+}
+
+/** A chat message from a Simply Plural export. */
+export interface SPImportChatMessage {
+  readonly id: string;
+  readonly senderId: string;
+  readonly content: string;
+  readonly createdAt: number;
+}
+
+/** A board message from a Simply Plural export. */
+export interface SPImportBoardMessage {
+  readonly id: string;
+  readonly authorId: string;
+  readonly content: string;
+  readonly createdAt: number;
+}
+
+/** A poll from a Simply Plural export. */
+export interface SPImportPoll {
+  readonly id: string;
+  readonly title: string;
+  readonly options: readonly string[];
+  readonly createdAt: number;
+}
+
+/** A timer from a Simply Plural export. */
+export interface SPImportTimer {
+  readonly id: string;
+  readonly name: string;
+  readonly duration: number;
+  readonly createdAt: number;
+}
+
+/** A privacy bucket from a Simply Plural export. */
+export interface SPImportPrivacyBucket {
+  readonly id: string;
+  readonly name: string;
+  readonly memberIds: readonly string[];
+}
+
+/** A friend connection from a Simply Plural export. */
+export interface SPImportFriend {
+  readonly id: string;
+  readonly friendSystemId: string;
+  readonly addedAt: number;
+}
+
+/** Full Simply Plural import payload (raw MongoDB dump format). */
 export interface SPImportPayload {
-  readonly version: number;
   readonly exportedAt: number;
   readonly members: readonly SPImportMember[];
   readonly groups: readonly SPImportGroup[];
   readonly frontingHistory: readonly SPImportFrontingSession[];
+  readonly customFields: readonly SPImportCustomField[];
+  readonly customFieldValues: readonly SPImportCustomFieldValue[];
+  readonly notes: readonly SPImportNote[];
+  readonly chatMessages: readonly SPImportChatMessage[];
+  readonly boardMessages: readonly SPImportBoardMessage[];
+  readonly polls: readonly SPImportPoll[];
+  readonly timers: readonly SPImportTimer[];
+  readonly privacyBuckets: readonly SPImportPrivacyBucket[];
+  readonly friends: readonly SPImportFriend[];
+}
+
+// ── PluralKit import payloads ───────────────────────────────────────
+
+/** A proxy tag from a PluralKit export. */
+export interface PKProxyTag {
+  readonly prefix: string | null;
+  readonly suffix: string | null;
 }
 
 /** A member as represented in a PluralKit export file. */
@@ -50,6 +138,8 @@ export interface PKImportMember {
   readonly pronouns: string | null;
   readonly description: string | null;
   readonly color: string | null;
+  readonly avatar_url: string | null;
+  readonly proxy_tags: readonly PKProxyTag[];
   readonly created: string;
 }
 
@@ -80,10 +170,26 @@ export interface PKImportPayload {
 // ── Import job tracking ─────────────────────────────────────────────
 
 /** Source format for an import job. */
-export type ImportSource = "pluralscape" | "pluralkit";
+export type ImportSource = "simply-plural" | "pluralkit" | "pluralscape";
 
 /** Status of an import job. */
 export type ImportJobStatus = "pending" | "validating" | "importing" | "completed" | "failed";
+
+/** Entity type for import error tracking. */
+export type ImportEntityType =
+  | "member"
+  | "group"
+  | "fronting-session"
+  | "switch"
+  | "custom-field"
+  | "note"
+  | "chat-message"
+  | "board-message"
+  | "poll"
+  | "timer"
+  | "privacy-bucket"
+  | "friend"
+  | "unknown";
 
 /** Progress of an import job. */
 export interface ImportProgress {
@@ -95,7 +201,7 @@ export interface ImportProgress {
 
 /** An error that occurred during import. */
 export interface ImportError {
-  readonly entityType: string;
+  readonly entityType: ImportEntityType;
   readonly entityId: string | null;
   readonly message: string;
   readonly fatal: boolean;
@@ -103,12 +209,12 @@ export interface ImportError {
 
 /** An import job. */
 export interface ImportJob {
-  readonly id: string;
+  readonly id: ImportJobId;
   readonly systemId: SystemId;
   readonly source: ImportSource;
   readonly status: ImportJobStatus;
   readonly progress: ImportProgress;
-  readonly startedAt: UnixMillis;
+  readonly startedAt: UnixMillis | null;
   readonly completedAt: UnixMillis | null;
 }
 
@@ -117,37 +223,56 @@ export interface ImportJob {
 /** Format for an export manifest. */
 export type ExportFormat = "json" | "csv";
 
-/** Manifest describing an export package. */
-export interface ExportManifest {
-  readonly systemId: SystemId;
-  readonly format: ExportFormat;
-  readonly includeMembers: boolean;
-  readonly includeGroups: boolean;
-  readonly includeFrontingHistory: boolean;
-  readonly includeJournal: boolean;
+/** Sections that can be included in an export. */
+export type ExportSection =
+  | "members"
+  | "groups"
+  | "fronting-history"
+  | "journal"
+  | "custom-fields"
+  | "notes"
+  | "chat"
+  | "board-messages";
+
+/** Base type for downloadable report artifacts. */
+export interface DownloadableReport {
   readonly generatedAt: UnixMillis;
   readonly sizeBytes: number;
   readonly downloadUrl: string;
   readonly expiresAt: UnixMillis;
+}
+
+/** Manifest describing an export package. */
+export interface ExportManifest extends DownloadableReport {
+  readonly systemId: SystemId;
+  readonly format: ExportFormat;
+  readonly sections: readonly ExportSection[];
 }
 
 // ── Account management ──────────────────────────────────────────────
 
+/** Status of an account purge request. */
+export type AccountPurgeStatus = "pending" | "confirmed" | "processing" | "completed" | "cancelled";
+
+/** Format for member reports. */
+export type ReportFormat = "html" | "pdf";
+
 /** Request to purge an entire account and all associated data. */
 export interface AccountPurgeRequest {
+  readonly id: AccountPurgeRequestId;
   readonly systemId: SystemId;
+  readonly status: AccountPurgeStatus;
   readonly confirmationPhrase: string;
   readonly requestedAt: UnixMillis;
+  readonly confirmedAt: UnixMillis | null;
   readonly scheduledPurgeAt: UnixMillis;
-  readonly cancelled: boolean;
+  readonly completedAt: UnixMillis | null;
 }
 
 /** A downloadable report of a single member's data. */
-export interface MemberReport {
+export interface MemberReport extends DownloadableReport {
   readonly systemId: SystemId;
-  readonly memberId: string;
-  readonly generatedAt: UnixMillis;
-  readonly sizeBytes: number;
-  readonly downloadUrl: string;
-  readonly expiresAt: UnixMillis;
+  readonly memberId: MemberId;
+  readonly bucketId: BucketId;
+  readonly format: ReportFormat;
 }

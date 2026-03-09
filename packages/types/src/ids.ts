@@ -56,6 +56,9 @@ export type DeviceTransferRequestId = Brand<string, "DeviceTransferRequestId">;
 export type SyncDocumentId = Brand<string, "SyncDocumentId">;
 export type SyncQueueItemId = Brand<string, "SyncQueueItemId">;
 export type SyncConflictId = Brand<string, "SyncConflictId">;
+export type ImportJobId = Brand<string, "ImportJobId">;
+export type PKBridgeConfigId = Brand<string, "PKBridgeConfigId">;
+export type AccountPurgeRequestId = Brand<string, "AccountPurgeRequestId">;
 export type HexColor = Brand<string, "HexColor">;
 
 // ── ID prefix convention ────────────────────────────────────────────
@@ -108,6 +111,9 @@ export const ID_PREFIXES = {
   syncDocument: "sdoc_",
   syncQueueItem: "sqi_",
   syncConflict: "scon_",
+  importJob: "ij_",
+  pkBridgeConfig: "pkb_",
+  accountPurgeRequest: "apr_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -159,4 +165,7 @@ export type EntityType =
   | "device-transfer-request"
   | "sync-document"
   | "sync-queue-item"
-  | "sync-conflict";
+  | "sync-conflict"
+  | "import-job"
+  | "pk-bridge-config"
+  | "account-purge-request";

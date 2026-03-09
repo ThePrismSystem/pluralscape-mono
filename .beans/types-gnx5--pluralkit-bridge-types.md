@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T18:49:48Z
-updated_at: 2026-03-09T06:04:09Z
+updated_at: 2026-03-09T08:22:19Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -47,3 +47,12 @@ Implemented in `packages/types/src/pk-bridge.ts` on branch `feat/types-interop`:
 - `PKSyncError`: sync error with code, message, retryability
 
 Test file: `pk-bridge.test.ts` (10 tests). All fields use plain string IDs (not branded) since PK uses its own ID format.
+
+## PR #39 Review Fixes
+
+- PKBridgeConfig now extends AuditMetadata (adds version, removes explicit createdAt/updatedAt)
+- PKBridgeConfig uses PKBridgeConfigId and EncryptedString for pkToken
+- PKEntityMapping refactored to discriminated union (PKMemberMapping | PKGroupMapping | PKSwitchMapping)
+- Added PKSyncableEntityType and PKSyncErrorCode typed unions
+- PKSyncError.code now typed as PKSyncErrorCode instead of string
+- Tests rewritten for discriminated union narrowing and exhaustive switch coverage

@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:40Z
-updated_at: 2026-03-09T06:04:17Z
+updated_at: 2026-03-09T08:22:33Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -67,3 +67,19 @@ Implemented in `packages/types/src/import-export.ts` on branch `feat/types-inter
 - `MemberReport`: downloadable member data report
 
 Test file: `import-export.test.ts` (17 tests). SP payloads use `number` timestamps, PK payloads use `string` timestamps (matching their respective export formats).
+
+## PR #39 Review Fixes
+
+- Added 3 branded IDs: ImportJobId, PKBridgeConfigId, AccountPurgeRequestId
+- Fixed SP import JSDoc from 'Pluralscape' to 'Simply Plural'
+- Added SPImportMember.avatarUrl, removed SPImportPayload.version
+- Added 9 new SP import sub-types: CustomField, CustomFieldValue, Note, ChatMessage, BoardMessage, Poll, Timer, PrivacyBucket, Friend
+- Expanded SPImportPayload with all new collection fields
+- Added PKProxyTag, PKImportMember.avatar_url and proxy_tags
+- ImportSource now 'simply-plural' | 'pluralkit' | 'pluralscape'
+- Added ImportEntityType typed union, ImportError.entityType uses it
+- ImportJob.id now ImportJobId, startedAt now UnixMillis | null
+- ExportManifest now extends DownloadableReport, uses ExportSection[] instead of boolean flags
+- AccountPurgeRequest now has id (AccountPurgeRequestId), status (AccountPurgeStatus), confirmedAt, completedAt
+- MemberReport now extends DownloadableReport, uses MemberId, BucketId, ReportFormat
+- Tests rewritten with exhaustive switch coverage for all new union types

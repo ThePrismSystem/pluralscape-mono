@@ -5,9 +5,12 @@ import { createId, ID_PREFIXES, now, toISO } from "../index.js";
 import type {
   Account,
   AccountPurgeRequest,
+  AccountPurgeRequestId,
+  AccountPurgeStatus,
   ActiveFrontingSession,
   ClientMember,
   DecryptFn,
+  DownloadableReport,
   Encrypted,
   EncryptedBlob,
   EncryptedString,
@@ -15,26 +18,46 @@ import type {
   EncryptionAlgorithm,
   ExportFormat,
   ExportManifest,
+  ExportSection,
+  ImportEntityType,
   ImportError,
   ImportJob,
+  ImportJobId,
   ImportJobStatus,
   ImportProgress,
   ImportSource,
   MemberReport,
   PKBridgeConfig,
+  PKBridgeConfigId,
   PKEntityMapping,
+  PKGroupMapping,
   PKImportGroup,
   PKImportMember,
   PKImportPayload,
   PKImportSwitch,
+  PKMemberMapping,
+  PKProxyTag,
+  PKSwitchMapping,
+  PKSyncableEntityType,
   PKSyncDirection,
   PKSyncError,
+  PKSyncErrorCode,
   PKSyncState,
   PKSyncStatus,
+  ReportFormat,
+  SPImportBoardMessage,
+  SPImportChatMessage,
+  SPImportCustomField,
+  SPImportCustomFieldValue,
+  SPImportFriend,
   SPImportFrontingSession,
   SPImportGroup,
   SPImportMember,
+  SPImportNote,
   SPImportPayload,
+  SPImportPoll,
+  SPImportPrivacyBucket,
+  SPImportTimer,
   ServerMember,
   ApiError,
   ApiResponse,
@@ -259,7 +282,13 @@ describe("barrel exports", () => {
   it("exports PK bridge types", () => {
     expectTypeOf<PKSyncDirection>().toBeString();
     expectTypeOf<PKSyncStatus>().toBeString();
+    expectTypeOf<PKSyncableEntityType>().toBeString();
+    expectTypeOf<PKSyncErrorCode>().toBeString();
+    expectTypeOf<PKBridgeConfigId>().toExtend<string>();
     expectTypeOf<PKBridgeConfig>().toBeObject();
+    expectTypeOf<PKMemberMapping>().toBeObject();
+    expectTypeOf<PKGroupMapping>().toBeObject();
+    expectTypeOf<PKSwitchMapping>().toBeObject();
     expectTypeOf<PKEntityMapping>().toBeObject();
     expectTypeOf<PKSyncState>().toBeObject();
     expectTypeOf<PKSyncError>().toBeObject();
@@ -269,18 +298,35 @@ describe("barrel exports", () => {
     expectTypeOf<SPImportMember>().toBeObject();
     expectTypeOf<SPImportGroup>().toBeObject();
     expectTypeOf<SPImportFrontingSession>().toBeObject();
+    expectTypeOf<SPImportCustomField>().toBeObject();
+    expectTypeOf<SPImportCustomFieldValue>().toBeObject();
+    expectTypeOf<SPImportNote>().toBeObject();
+    expectTypeOf<SPImportChatMessage>().toBeObject();
+    expectTypeOf<SPImportBoardMessage>().toBeObject();
+    expectTypeOf<SPImportPoll>().toBeObject();
+    expectTypeOf<SPImportTimer>().toBeObject();
+    expectTypeOf<SPImportPrivacyBucket>().toBeObject();
+    expectTypeOf<SPImportFriend>().toBeObject();
     expectTypeOf<SPImportPayload>().toBeObject();
+    expectTypeOf<PKProxyTag>().toBeObject();
     expectTypeOf<PKImportMember>().toBeObject();
     expectTypeOf<PKImportGroup>().toBeObject();
     expectTypeOf<PKImportSwitch>().toBeObject();
     expectTypeOf<PKImportPayload>().toBeObject();
     expectTypeOf<ImportSource>().toBeString();
+    expectTypeOf<ImportEntityType>().toBeString();
+    expectTypeOf<ImportJobId>().toExtend<string>();
     expectTypeOf<ImportJobStatus>().toBeString();
     expectTypeOf<ImportProgress>().toBeObject();
     expectTypeOf<ImportError>().toBeObject();
     expectTypeOf<ImportJob>().toBeObject();
     expectTypeOf<ExportFormat>().toBeString();
+    expectTypeOf<ExportSection>().toBeString();
+    expectTypeOf<DownloadableReport>().toBeObject();
     expectTypeOf<ExportManifest>().toBeObject();
+    expectTypeOf<AccountPurgeRequestId>().toExtend<string>();
+    expectTypeOf<AccountPurgeStatus>().toBeString();
+    expectTypeOf<ReportFormat>().toBeString();
     expectTypeOf<AccountPurgeRequest>().toBeObject();
     expectTypeOf<MemberReport>().toBeObject();
   });
