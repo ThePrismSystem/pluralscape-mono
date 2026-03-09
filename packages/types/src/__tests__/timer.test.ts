@@ -13,11 +13,12 @@ describe("TimerConfig", () => {
   it("has correct field types", () => {
     expectTypeOf<TimerConfig["id"]>().toEqualTypeOf<TimerId>();
     expectTypeOf<TimerConfig["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<TimerConfig["name"]>().toBeString();
-    expectTypeOf<TimerConfig["description"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<TimerConfig["intervalSeconds"]>().toEqualTypeOf<number>();
+    expectTypeOf<TimerConfig["intervalMinutes"]>().toEqualTypeOf<number>();
+    expectTypeOf<TimerConfig["wakingHoursOnly"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<TimerConfig["wakingStart"]>().toBeString();
+    expectTypeOf<TimerConfig["wakingEnd"]>().toBeString();
+    expectTypeOf<TimerConfig["promptText"]>().toBeString();
     expectTypeOf<TimerConfig["enabled"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<TimerConfig["lastTriggeredAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 });
 
@@ -28,11 +29,11 @@ describe("CheckInRecord", () => {
 
   it("has correct field types", () => {
     expectTypeOf<CheckInRecord["id"]>().toEqualTypeOf<CheckInRecordId>();
-    expectTypeOf<CheckInRecord["timerId"]>().toEqualTypeOf<TimerId>();
+    expectTypeOf<CheckInRecord["timerConfigId"]>().toEqualTypeOf<TimerId>();
     expectTypeOf<CheckInRecord["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<CheckInRecord["scheduledAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<CheckInRecord["respondedByMemberId"]>().toEqualTypeOf<MemberId | null>();
-    expectTypeOf<CheckInRecord["response"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<CheckInRecord["triggeredAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<CheckInRecord["respondedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<CheckInRecord["dismissed"]>().toEqualTypeOf<boolean>();
   });
 });
