@@ -1,4 +1,11 @@
-import type { BlobId, MemberId, MemberPhotoId, SystemId, SystemSettingsId } from "./ids.js";
+import type {
+  BlobId,
+  HexColor,
+  MemberId,
+  MemberPhotoId,
+  SystemId,
+  SystemSettingsId,
+} from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -43,7 +50,7 @@ export interface Member extends AuditMetadata {
   readonly pronouns: readonly string[];
   readonly description: string | null;
   readonly avatarRef: BlobId | null;
-  readonly colors: readonly string[];
+  readonly colors: readonly HexColor[];
   readonly completenessLevel: CompletenessLevel;
   readonly roleTags: readonly RoleTag[];
   readonly archived: false;
@@ -69,6 +76,6 @@ export interface MemberListItem {
   readonly id: MemberId;
   readonly name: string;
   readonly avatarRef: BlobId | null;
-  readonly colors: readonly string[];
+  readonly colors: readonly HexColor[];
   readonly archived: boolean;
 }
