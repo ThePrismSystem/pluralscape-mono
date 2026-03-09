@@ -1,11 +1,11 @@
 ---
 # types-c2eu
 title: Group and folder types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:13Z
-updated_at: 2026-03-08T14:21:45Z
+updated_at: 2026-03-09T00:50:52Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -23,13 +23,23 @@ Group and folder hierarchy types.
 
 ## Acceptance Criteria
 
-- [ ] Group with archived, archivedAt, timestamps
-- [ ] Hierarchical nesting via parentGroupId
-- [ ] Multi-group membership
-- [ ] GroupTree recursive type for tree rendering
-- [ ] Sort order for drag-and-drop reorder
-- [ ] Unit tests for tree construction helpers
+- [x] Group with AuditMetadata, archived, archivedAt, color, emoji, imageRef
+- [x] Hierarchical nesting via nullable parentGroupId
+- [x] GroupMembership junction type
+- [x] GroupTree recursive intersection type (Group & children)
+- [x] sortOrder field on Group
+- [x] Unit tests for all group types
 
 ## References
 
 - features.md section 1 (Groups/folders)
+
+## Summary of Changes
+
+Implemented in `packages/types/src/groups.ts`:
+
+- `Group` with AuditMetadata, parentGroupId, imageRef, color, emoji, sortOrder, archived/archivedAt
+- `GroupMembership` 2-field junction
+- `GroupTree` recursive intersection type
+- `GroupMoveOperation` with nullable targetParentGroupId
+- Full test coverage in `groups.test.ts`

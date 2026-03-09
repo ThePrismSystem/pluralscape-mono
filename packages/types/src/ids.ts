@@ -49,6 +49,7 @@ export type NotificationConfigId = Brand<string, "NotificationConfigId">;
 export type SystemSettingsId = Brand<string, "SystemSettingsId">;
 export type PollOptionId = Brand<string, "PollOptionId">;
 export type MemberPhotoId = Brand<string, "MemberPhotoId">;
+export type SwitchId = Brand<string, "SwitchId">;
 
 // ── ID prefix convention ────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ export const ID_PREFIXES = {
   systemSettings: "sset_",
   pollOption: "po_",
   memberPhoto: "mp_",
+  switch: "sw_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -137,4 +139,5 @@ export type EntityType =
   | "notification-config"
   | "system-settings"
   | "poll-option"
-  | "member-photo";
+  | "member-photo"
+  | "switch";

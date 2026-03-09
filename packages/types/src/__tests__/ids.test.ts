@@ -40,6 +40,7 @@ import type {
   SessionId,
   SideSystemId,
   SubsystemId,
+  SwitchId,
   SystemId,
   SystemSettingsId,
   TimerId,
@@ -86,7 +87,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 40 branded ID types as string-based", () => {
+  it("defines all 41 branded ID types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -127,6 +128,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemSettingsId>().toExtend<string>();
     expectTypeOf<PollOptionId>().toExtend<string>();
     expectTypeOf<MemberPhotoId>().toExtend<string>();
+    expectTypeOf<SwitchId>().toExtend<string>();
   });
 });
 
@@ -149,7 +151,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(40);
+    expect(prefixCount).toBe(41);
   });
 });
 
@@ -216,6 +218,7 @@ describe("EntityType", () => {
         case "system-settings":
         case "poll-option":
         case "member-photo":
+        case "switch":
           return type;
         default: {
           const _exhaustive: never = type;
