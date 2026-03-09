@@ -1,11 +1,11 @@
 ---
 # types-0jjx
 title: Custom field types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:29Z
-updated_at: 2026-03-08T13:36:10Z
+updated_at: 2026-03-09T06:05:24Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -36,3 +36,7 @@ Custom field definition and value types.
 ## References
 
 - features.md section 1 (Custom fields)
+
+## Summary of Changes
+
+Created custom-fields.ts with FieldType (7 variants), FieldBucketVisibility, FieldDefinition, FieldValue, FieldValueUnion discriminated on fieldType. Branch: feat/types-domain-features.

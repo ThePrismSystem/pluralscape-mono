@@ -59,6 +59,10 @@ export type SyncConflictId = Brand<string, "SyncConflictId">;
 export type ImportJobId = Brand<string, "ImportJobId">;
 export type PKBridgeConfigId = Brand<string, "PKBridgeConfigId">;
 export type AccountPurgeRequestId = Brand<string, "AccountPurgeRequestId">;
+export type JobId = Brand<string, "JobId">;
+export type SubscriptionId = Brand<string, "SubscriptionId">;
+export type WebhookDeliveryId = Brand<string, "WebhookDeliveryId">;
+export type FrontingReportId = Brand<string, "FrontingReportId">;
 export type HexColor = Brand<string, "HexColor">;
 
 // ── ID prefix convention ────────────────────────────────────────────
@@ -114,6 +118,10 @@ export const ID_PREFIXES = {
   importJob: "ij_",
   pkBridgeConfig: "pkb_",
   accountPurgeRequest: "apr_",
+  job: "job_",
+  subscription: "rsub_",
+  webhookDelivery: "wd_",
+  frontingReport: "fr_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -168,4 +176,8 @@ export type EntityType =
   | "sync-conflict"
   | "import-job"
   | "pk-bridge-config"
-  | "account-purge-request";
+  | "account-purge-request"
+  | "job"
+  | "subscription"
+  | "webhook-delivery"
+  | "fronting-report";

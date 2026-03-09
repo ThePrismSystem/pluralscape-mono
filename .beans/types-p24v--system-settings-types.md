@@ -1,11 +1,11 @@
 ---
 # types-p24v
 title: System settings types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:25:15Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T06:30:02Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -37,3 +37,7 @@ Per-system settings and preferences types.
 
 - features.md section 13 (Accessibility and UX)
 - features.md section 14 (PIN code / biometric lock)
+
+## Summary of Changes
+
+Created settings.ts with SystemSettings (extends AuditMetadata, includes fontScale, defaultBucketId, locale as nullable), ThemePreference (light/dark/high-contrast/system), AppLockConfig (pinEnabled, biometricEnabled, lockTimeout in minutes), NotificationPreferences, SyncPreferences (syncEnabled, syncOnCellular), FriendRequestPolicy, PrivacyDefaults (defaultBucketForNewContent as BucketId|null, friendRequestPolicy). Branch: feat/types-settings-and-config.

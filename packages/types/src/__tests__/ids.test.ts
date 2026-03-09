@@ -51,6 +51,9 @@ import type {
   ImportJobId,
   PKBridgeConfigId,
   AccountPurgeRequestId,
+  JobId,
+  SubscriptionId,
+  WebhookDeliveryId,
   SystemId,
   SystemSettingsId,
   TimerId,
@@ -148,6 +151,9 @@ describe("branded ID types", () => {
     expectTypeOf<ImportJobId>().toExtend<string>();
     expectTypeOf<PKBridgeConfigId>().toExtend<string>();
     expectTypeOf<AccountPurgeRequestId>().toExtend<string>();
+    expectTypeOf<JobId>().toExtend<string>();
+    expectTypeOf<SubscriptionId>().toExtend<string>();
+    expectTypeOf<WebhookDeliveryId>().toExtend<string>();
     expectTypeOf<HexColor>().toExtend<string>();
   });
 });
@@ -187,7 +193,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(50);
+    expect(prefixCount).toBe(54);
   });
 });
 
@@ -264,6 +270,10 @@ describe("EntityType", () => {
         case "import-job":
         case "pk-bridge-config":
         case "account-purge-request":
+        case "job":
+        case "subscription":
+        case "webhook-delivery":
+        case "fronting-report":
           return type;
         default: {
           const _exhaustive: never = type;

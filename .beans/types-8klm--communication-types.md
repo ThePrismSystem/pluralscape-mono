@@ -1,11 +1,11 @@
 ---
 # types-8klm
 title: Communication types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:27Z
-updated_at: 2026-03-08T14:21:42Z
+updated_at: 2026-03-09T06:05:20Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -39,3 +39,7 @@ Chat, board, notes, polls, and acknowledgement types. Implementation is M5 but t
 ## References
 
 - features.md section 3 (Communication)
+
+## Summary of Changes
+
+Created communication.ts with Channel, ChatMessage, BoardMessage, Note, PollOption, Poll, PollVote, AcknowledgementRequest. Branch: feat/types-domain-features.

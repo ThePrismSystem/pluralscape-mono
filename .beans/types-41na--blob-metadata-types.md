@@ -1,11 +1,11 @@
 ---
 # types-41na
 title: Blob metadata types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:34Z
-updated_at: 2026-03-08T14:22:06Z
+updated_at: 2026-03-09T06:05:38Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -35,3 +35,7 @@ BlobMetadata type for encrypted media and file attachment tracking.
 
 - features.md section 16 (Media Storage)
 - ADR 009 (Blob/Media Storage)
+
+## Summary of Changes
+
+Created blob.ts with BlobPurpose (5 purposes), BlobMetadata, BlobUploadRequest, BlobDownloadRef. Branch: feat/types-infrastructure.

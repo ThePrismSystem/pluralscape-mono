@@ -1,11 +1,11 @@
 ---
 # types-gey6
 title: Push notification types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:50Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T06:05:43Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -32,3 +32,7 @@ Push notification configuration, delivery, and device token types.
 
 - features.md section 4 (Push notifications)
 - ADR 010 (Background Jobs — push notification fan-out)
+
+## Summary of Changes
+
+Created notifications.ts with DeviceToken (platform union), NotificationEventType (5 types), NotificationConfig, NotificationPayload. Branch: feat/types-infrastructure.
