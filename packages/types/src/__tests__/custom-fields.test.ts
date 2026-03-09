@@ -50,6 +50,10 @@ describe("FieldType", () => {
 });
 
 describe("FieldBucketVisibility", () => {
+  it("has exactly the expected keys", () => {
+    expectTypeOf<keyof FieldBucketVisibility>().toEqualTypeOf<"fieldDefinitionId" | "bucketId">();
+  });
+
   it("has correct field types", () => {
     expectTypeOf<FieldBucketVisibility["fieldDefinitionId"]>().toEqualTypeOf<FieldDefinitionId>();
     expectTypeOf<FieldBucketVisibility["bucketId"]>().toEqualTypeOf<BucketId>();

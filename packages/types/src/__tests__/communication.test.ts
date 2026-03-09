@@ -89,6 +89,10 @@ describe("Note", () => {
 });
 
 describe("PollOption", () => {
+  it("has exactly the expected keys", () => {
+    expectTypeOf<keyof PollOption>().toEqualTypeOf<"id" | "label" | "voteCount">();
+  });
+
   it("has correct field types", () => {
     expectTypeOf<PollOption["id"]>().toEqualTypeOf<PollOptionId>();
     expectTypeOf<PollOption["label"]>().toBeString();
@@ -114,6 +118,10 @@ describe("Poll", () => {
 describe("PollVote", () => {
   it("does not extend AuditMetadata", () => {
     expectTypeOf<PollVote>().not.toExtend<AuditMetadata>();
+  });
+
+  it("has exactly the expected keys", () => {
+    expectTypeOf<keyof PollVote>().toEqualTypeOf<"pollId" | "optionId" | "memberId">();
   });
 
   it("has correct field types", () => {

@@ -152,6 +152,10 @@ describe("EntityLinkBlock", () => {
 });
 
 describe("EntityLink", () => {
+  it("has exactly the expected keys", () => {
+    expectTypeOf<keyof EntityLink>().toEqualTypeOf<"entityType" | "entityId" | "displayText">();
+  });
+
   it("has correct field types", () => {
     expectTypeOf<EntityLink["entityType"]>().toEqualTypeOf<EntityType>();
     expectTypeOf<EntityLink["entityId"]>().toBeString();

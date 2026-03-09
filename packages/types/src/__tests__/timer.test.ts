@@ -27,6 +27,21 @@ describe("CheckInRecord", () => {
     expectTypeOf<CheckInRecord>().toExtend<AuditMetadata>();
   });
 
+  it("has exactly the expected keys", () => {
+    expectTypeOf<keyof CheckInRecord>().toEqualTypeOf<
+      | "id"
+      | "timerConfigId"
+      | "systemId"
+      | "scheduledAt"
+      | "respondedByMemberId"
+      | "respondedAt"
+      | "dismissed"
+      | "createdAt"
+      | "updatedAt"
+      | "version"
+    >();
+  });
+
   it("has correct field types", () => {
     expectTypeOf<CheckInRecord["id"]>().toEqualTypeOf<CheckInRecordId>();
     expectTypeOf<CheckInRecord["timerConfigId"]>().toEqualTypeOf<TimerId>();

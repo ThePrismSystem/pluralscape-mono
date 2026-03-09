@@ -18,6 +18,10 @@ import type {
 import type { AuditMetadata } from "../utility.js";
 
 describe("VisualProperties", () => {
+  it("has exactly the expected keys", () => {
+    expectTypeOf<keyof VisualProperties>().toEqualTypeOf<"color" | "icon" | "size" | "opacity">();
+  });
+
   it("has all nullable fields", () => {
     expectTypeOf<VisualProperties["color"]>().toEqualTypeOf<HexColor | null>();
     expectTypeOf<VisualProperties["icon"]>().toEqualTypeOf<string | null>();
