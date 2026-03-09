@@ -51,6 +51,7 @@ describe("AppLockConfig", () => {
     expectTypeOf<AppLockConfig["pinEnabled"]>().toEqualTypeOf<boolean>();
     expectTypeOf<AppLockConfig["biometricEnabled"]>().toEqualTypeOf<boolean>();
     expectTypeOf<AppLockConfig["lockTimeout"]>().toEqualTypeOf<number>();
+    expectTypeOf<AppLockConfig["backgroundGraceSeconds"]>().toEqualTypeOf<number>();
   });
 });
 

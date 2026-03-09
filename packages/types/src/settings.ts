@@ -13,6 +13,8 @@ export interface AppLockConfig {
   readonly biometricEnabled: boolean;
   /** Lock timeout in minutes. */
   readonly lockTimeout: number;
+  /** Seconds to keep keys in memory after app backgrounds. 0 = immediate clear. */
+  readonly backgroundGraceSeconds: number;
 }
 
 /** Notification preference toggles. */
