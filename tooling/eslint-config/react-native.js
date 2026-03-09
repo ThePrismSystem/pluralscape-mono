@@ -14,7 +14,7 @@ export default [
     },
   },
   {
-    files: ["babel.config.js", "metro.config.js"],
+    files: ["babel.config.cjs", "metro.config.cjs"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/no-unsafe-call": "off",

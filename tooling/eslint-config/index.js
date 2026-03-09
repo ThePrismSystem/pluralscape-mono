@@ -46,13 +46,12 @@ export default tseslint.config(
         },
       ],
 
-      // No @ts-ignore, allow @ts-expect-error with description
+      // No @ts-ignore or @ts-expect-error
       "@typescript-eslint/ban-ts-comment": [
         "error",
         {
           "ts-ignore": true,
-          "ts-expect-error": "allow-with-description",
-          minimumDescriptionLength: 10,
+          "ts-expect-error": true,
         },
       ],
 
@@ -136,10 +135,18 @@ export default tseslint.config(
       "@typescript-eslint/no-magic-numbers": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/ban-ts-comment": [
+        "error",
+        {
+          "ts-ignore": true,
+          "ts-expect-error": "allow-with-description",
+          minimumDescriptionLength: 10,
+        },
+      ],
     },
   },
   {
-    files: ["**/*.js"],
+    files: ["**/*.js", "**/*.cjs"],
     ...tseslint.configs.disableTypeChecked,
     rules: {
       ...tseslint.configs.disableTypeChecked.rules,

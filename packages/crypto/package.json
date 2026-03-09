@@ -4,10 +4,20 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./wasm": "./src/adapter/wasm-adapter.ts",
+    "./react-native": "./src/adapter/react-native-adapter.ts"
   },
   "dependencies": {
     "libsodium-wrappers-sumo": "^0.8.2"
+  },
+  "peerDependencies": {
+    "react-native-libsodium": ">=0.7.0"
+  },
+  "peerDependenciesMeta": {
+    "react-native-libsodium": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",

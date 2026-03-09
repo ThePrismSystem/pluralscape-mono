@@ -1,11 +1,11 @@
 ---
 # sync-2xog
 title: Document topology design
-status: todo
+status: completed
 type: task
 priority: critical
 created_at: 2026-03-08T13:34:47Z
-updated_at: 2026-03-08T13:36:21Z
+updated_at: 2026-03-09T03:33:12Z
 parent: sync-xlhb
 blocking:
   - sync-pl87
@@ -33,12 +33,12 @@ Design document: which domain entities map to which Automerge CRDT documents. Ou
 
 ## Acceptance Criteria
 
-- [ ] Document topology specified with entity-to-document mapping
-- [ ] Size projections for small (10 members), medium (50), large (500+) systems
-- [ ] Encryption key boundaries align with document boundaries
-- [ ] Partial replication strategy follows from topology
-- [ ] Written as specification document in packages/sync/docs/
-- [ ] Review: topology supports all M1 entity types
+- [x] Document topology specified with entity-to-document mapping
+- [x] Size projections for small (10 members), medium (50), large (500+) systems
+- [x] Encryption key boundaries align with document boundaries
+- [x] Partial replication strategy follows from topology
+- [x] Written as specification document in packages/sync/docs/
+- [x] Review: topology supports all M1 entity types
 
 ## Research Notes
 
@@ -49,3 +49,7 @@ Design document: which domain entities map to which Automerge CRDT documents. Ou
 ## References
 
 - ADR 005 (Offline-First Sync)
+
+## Summary of Changes
+
+Created `packages/sync/docs/document-topology.md` — a comprehensive specification covering 6 document types (system-core, fronting, chat, journal, privacy-config, bucket), complete entity-to-document mapping for all 48 entity types in ids.ts, size projections at three system scales, time-based splitting strategy, manifest-based document discovery, partial replication profiles, and downstream task interface documentation.
