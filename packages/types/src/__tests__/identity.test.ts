@@ -10,7 +10,14 @@ import type {
   RoleTag,
   System,
 } from "../identity.js";
-import type { BlobId, MemberId, MemberPhotoId, SystemId, SystemSettingsId } from "../ids.js";
+import type {
+  BlobId,
+  HexColor,
+  MemberId,
+  MemberPhotoId,
+  SystemId,
+  SystemSettingsId,
+} from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 
@@ -56,8 +63,8 @@ describe("Member", () => {
     expectTypeOf<Member["pronouns"]>().toEqualTypeOf<readonly string[]>();
   });
 
-  it("has colors as readonly string array", () => {
-    expectTypeOf<Member["colors"]>().toEqualTypeOf<readonly string[]>();
+  it("has colors as readonly HexColor array", () => {
+    expectTypeOf<Member["colors"]>().toEqualTypeOf<readonly HexColor[]>();
   });
 
   it("has completenessLevel field", () => {
@@ -202,7 +209,7 @@ describe("MemberListItem", () => {
     expectTypeOf<MemberListItem["id"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<MemberListItem["name"]>().toBeString();
     expectTypeOf<MemberListItem["avatarRef"]>().toEqualTypeOf<BlobId | null>();
-    expectTypeOf<MemberListItem["colors"]>().toEqualTypeOf<readonly string[]>();
+    expectTypeOf<MemberListItem["colors"]>().toEqualTypeOf<readonly HexColor[]>();
     expectTypeOf<MemberListItem["archived"]>().toEqualTypeOf<boolean>();
   });
 });

@@ -118,6 +118,7 @@ export type {
   ArchitectureType,
   OriginType,
   DiscoveryStatus,
+  SystemProfile,
   LayerAccessType,
   Subsystem,
   SideSystem,
@@ -185,6 +186,44 @@ export type {
   GroupTree,
   GroupMoveOperation,
 } from "./groups.js";
+
+// ── Littles Safe Mode ─────────────────────────────────────────────
+export type {
+  SafeModeUIFlags,
+  SafeModeContentItem,
+  LittlesSafeModeConfig,
+} from "./littles-safe-mode.js";
+
+// ── Nomenclature ──────────────────────────────────────────────────
+export type {
+  TermCategory,
+  CanonicalTerm,
+  NomenclatureSettings,
+  TermPreset,
+} from "./nomenclature.js";
+export { DEFAULT_TERM_PRESETS, createDefaultNomenclatureSettings } from "./nomenclature.js";
+
+// ── i18n ──────────────────────────────────────────────────────────
+export type {
+  Locale,
+  TranslationKey,
+  TranslationMap,
+  TextDirection,
+  DateFormatPreference,
+  NumberFormatPreference,
+  LocaleConfig,
+} from "./i18n.js";
+
+// ── Settings ──────────────────────────────────────────────────────
+export type {
+  ThemePreference,
+  AppLockConfig,
+  NotificationPreferences,
+  SyncPreferences,
+  FriendRequestPolicy,
+  PrivacyDefaults,
+  SystemSettings,
+} from "./settings.js";
 
 // ── Runtime utilities ──────────────────────────────────────────────
 export { createId, now, toISO } from "./runtime.js";

@@ -1,10 +1,19 @@
 import { describe, expectTypeOf, it } from "vitest";
 
-import { createId, ID_PREFIXES, now, toISO } from "../index.js";
+import {
+  createDefaultNomenclatureSettings,
+  createId,
+  DEFAULT_TERM_PRESETS,
+  ID_PREFIXES,
+  now,
+  toISO,
+} from "../index.js";
 
 import type {
   Account,
   ActiveFrontingSession,
+  AppLockConfig,
+  BucketId,
   ClientMember,
   DecryptFn,
   Encrypted,
@@ -26,10 +35,12 @@ import type {
   BucketAccessCheck,
   BucketContentTag,
   BucketVisibilityScope,
+  CanonicalTerm,
   CoFrontState,
   CompletedFrontingSession,
   CreateInput,
   CustomFront,
+  DateFormatPreference,
   DateRange,
   DeepReadonly,
   DeviceInfo,
@@ -56,18 +67,27 @@ import type {
   Layer,
   LayerAccessType,
   LayerMembership,
+  LittlesSafeModeConfig,
+  Locale,
+  LocaleConfig,
   LoginCredentials,
   Member,
   MemberId,
   MemberPhotoId,
+  NomenclatureSettings,
+  NotificationPreferences,
+  NumberFormatPreference,
   OpenLayer,
   OriginType,
   PaginatedResult,
   PrivacyBucket,
+  PrivacyDefaults,
   RecoveryKey,
   RecoveryKeyId,
   RegistrationInput,
   Relationship,
+  SafeModeContentItem,
+  SafeModeUIFlags,
   SyncConflict,
   SyncConflictId,
   SyncDocument,
@@ -79,6 +99,10 @@ import type {
   SyncQueueItemId,
   SyncResolution,
   SyncState,
+  SyncPreferences,
+  SystemProfile,
+  SystemSettings,
+  FriendRequestPolicy,
   RelationshipType,
   Result,
   RoleTag,
@@ -92,6 +116,12 @@ import type {
   SwitchId,
   System,
   SystemId,
+  TermCategory,
+  TermPreset,
+  TextDirection,
+  ThemePreference,
+  TranslationKey,
+  TranslationMap,
   UnixMillis,
   UpdateInput,
   ValidationError,
@@ -203,6 +233,47 @@ describe("barrel exports", () => {
     expectTypeOf<GroupMembership>().toBeObject();
     expectTypeOf<GroupTree>().toBeObject();
     expectTypeOf<GroupMoveOperation>().toBeObject();
+  });
+
+  it("exports structure profile types", () => {
+    expectTypeOf<SystemProfile>().toBeObject();
+  });
+
+  it("exports littles safe mode types", () => {
+    expectTypeOf<SafeModeUIFlags>().toBeObject();
+    expectTypeOf<SafeModeContentItem>().toBeObject();
+    expectTypeOf<LittlesSafeModeConfig>().toBeObject();
+  });
+
+  it("exports nomenclature types and runtime values", () => {
+    expectTypeOf<TermCategory>().toBeString();
+    expectTypeOf<CanonicalTerm>().toBeObject();
+    expectTypeOf<NomenclatureSettings>().toBeObject();
+    expectTypeOf<TermPreset>().toBeObject();
+    expectTypeOf(DEFAULT_TERM_PRESETS).toExtend<readonly TermPreset[]>();
+    expectTypeOf(createDefaultNomenclatureSettings).toBeFunction();
+  });
+
+  it("exports i18n types", () => {
+    expectTypeOf<Locale>().toExtend<string>();
+    expectTypeOf<TranslationKey>().toExtend<string>();
+    expectTypeOf<TranslationMap>().toBeObject();
+    expectTypeOf<TextDirection>().toBeString();
+    expectTypeOf<DateFormatPreference>().toBeString();
+    expectTypeOf<NumberFormatPreference>().toBeString();
+    expectTypeOf<LocaleConfig>().toBeObject();
+  });
+
+  it("exports settings types", () => {
+    expectTypeOf<ThemePreference>().toBeString();
+    expectTypeOf<AppLockConfig>().toBeObject();
+    expectTypeOf<NotificationPreferences>().toBeObject();
+    expectTypeOf<SyncPreferences>().toBeObject();
+    expectTypeOf<FriendRequestPolicy>().toBeString();
+    expectTypeOf<PrivacyDefaults>().toBeObject();
+    expectTypeOf<SystemSettings>().toBeObject();
+    expectTypeOf<SystemSettings["fontScale"]>().toEqualTypeOf<number>();
+    expectTypeOf<SystemSettings["defaultBucketId"]>().toEqualTypeOf<BucketId | null>();
   });
 
   it("exports generic utility types", () => {
