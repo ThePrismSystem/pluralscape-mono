@@ -71,6 +71,17 @@ describe("InvalidInputError", () => {
     const error = new InvalidInputError("key must be 32 bytes");
     expect(error.message).toBe("key must be 32 bytes");
   });
+
+  it("has a default message", () => {
+    const error = new InvalidInputError();
+    expect(error.message).toContain("Invalid");
+  });
+
+  it("propagates cause via ErrorOptions", () => {
+    const original = new TypeError("bad length");
+    const error = new InvalidInputError("wrong size", { cause: original });
+    expect(error.cause).toBe(original);
+  });
 });
 
 describe("AlreadyInitializedError", () => {

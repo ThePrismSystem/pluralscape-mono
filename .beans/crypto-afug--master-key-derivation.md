@@ -1,11 +1,11 @@
 ---
 # crypto-afug
 title: Master key derivation
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:33:55Z
-updated_at: 2026-03-08T13:35:42Z
+updated_at: 2026-03-09T22:00:18Z
 parent: crypto-gd8f
 blocked_by:
   - crypto-d2tj
@@ -46,3 +46,5 @@ Master key derivation from password using Argon2id
 
 - ADR 006 (Argon2id parameters)
 - encryption-research.md section 4.2
+
+## Summary of Changes\n\nImplemented `packages/crypto/src/master-key.ts`:\n- `deriveMasterKey(password, salt, profile)` — Argon2id key derivation with server/mobile profiles\n- `generateSalt()` — random 16-byte salt generation\n- `PwhashProfile` type for profile selection\n- 8 tests covering determinism, uniqueness, and benchmarking

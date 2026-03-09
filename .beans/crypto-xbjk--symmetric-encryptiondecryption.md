@@ -1,11 +1,11 @@
 ---
 # crypto-xbjk
 title: Symmetric encryption/decryption
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:33:59Z
-updated_at: 2026-03-08T13:35:42Z
+updated_at: 2026-03-09T22:00:18Z
 parent: crypto-gd8f
 blocked_by:
   - crypto-d2tj
@@ -36,3 +36,5 @@ Core symmetric encryption using XChaCha20-Poly1305
 ## References
 
 - ADR 006 (XChaCha20-Poly1305)
+
+## Summary of Changes\n\nImplemented `packages/crypto/src/symmetric.ts`:\n- `encrypt/decrypt` — XChaCha20-Poly1305 AEAD with AAD support\n- `encryptJSON/decryptJSON` — JSON serialization helpers\n- `encryptStream/decryptStream` — chunked AEAD with reorder/truncation protection via chunk-index AAD\n- `EncryptedPayload` and `StreamEncryptedPayload` types\n- 16 tests covering roundtrips, tamper detection, streaming edge cases

@@ -1,11 +1,11 @@
 ---
 # crypto-l3hj
 title: Identity keypair generation
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:33:57Z
-updated_at: 2026-03-08T13:35:44Z
+updated_at: 2026-03-09T22:00:18Z
 parent: crypto-gd8f
 blocked_by:
   - crypto-afug
@@ -37,3 +37,5 @@ Identity keypair generation for encryption and signing
 ## References
 
 - ADR 006 (Key Hierarchy)
+
+## Summary of Changes\n\nImplemented `packages/crypto/src/identity.ts`:\n- `generateIdentityKeypair(masterKey)` — deterministic X25519 + Ed25519 from KDF sub-keys\n- `encryptPrivateKey/decryptPrivateKey` — private key storage encryption via derived sub-key\n- `serializePublicKey` — base64url encoding for server storage\n- Seeds memzeroed after use; WASM-only (RN handled by KeyLifecycleManager)\n- 12 tests covering determinism, key sizes, roundtrips, and functional verification

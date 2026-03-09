@@ -67,3 +67,27 @@ export {
 
 // ── Sodium lifecycle ────────────────────────────────────────────────
 export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
+
+// ── Master key ──────────────────────────────────────────────────────
+export type { PwhashProfile } from "./master-key.js";
+export { deriveMasterKey, generateSalt } from "./master-key.js";
+
+// ── Symmetric encryption ────────────────────────────────────────────
+export type { EncryptedPayload, StreamEncryptedPayload } from "./symmetric.js";
+export {
+  decrypt,
+  decryptJSON,
+  decryptStream,
+  encrypt,
+  encryptJSON,
+  encryptStream,
+} from "./symmetric.js";
+
+// ── Identity keypairs ───────────────────────────────────────────────
+export type { EncryptedPrivateKey, IdentityKeypair } from "./identity.js";
+export {
+  decryptPrivateKey,
+  encryptPrivateKey,
+  generateIdentityKeypair,
+  serializePublicKey,
+} from "./identity.js";
