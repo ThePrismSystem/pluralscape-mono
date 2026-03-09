@@ -1,25 +1,29 @@
-import type { EntityType } from "./ids.js";
+import type { BlobId, SystemId } from "./ids.js";
 
 /** Feature flags controlling UI simplification in Littles Safe Mode. */
 export interface SafeModeUIFlags {
-  readonly hideAnalytics: boolean;
-  readonly hideJournal: boolean;
-  readonly hideInnerworld: boolean;
-  readonly hideCustomFields: boolean;
-  readonly simplifiedNavigation: boolean;
-  readonly largerTouchTargets: boolean;
+  readonly largeButtons: boolean;
+  readonly iconDriven: boolean;
+  readonly noDeletion: boolean;
+  readonly noSettings: boolean;
+  readonly noAnalytics: boolean;
 }
 
-/** A content item that may be shown or hidden in safe mode. */
+/** A content item for Littles Safe Mode — links, videos, or media. */
 export interface SafeModeContentItem {
-  readonly entityType: EntityType;
-  readonly label: string;
-  readonly visible: boolean;
+  readonly id: string;
+  readonly systemId: SystemId;
+  readonly contentType: "link" | "video" | "media";
+  readonly url: string | null;
+  readonly blobRef: BlobId | null;
+  readonly title: string;
+  readonly description: string;
+  readonly sortOrder: number;
 }
 
 /** Configuration for Littles Safe Mode — simplified UI for littles. */
 export interface LittlesSafeModeConfig {
   readonly enabled: boolean;
-  readonly uiFlags: SafeModeUIFlags;
-  readonly hiddenContent: readonly SafeModeContentItem[];
+  readonly allowedContentIds: readonly string[];
+  readonly simplifiedUIFlags: SafeModeUIFlags;
 }

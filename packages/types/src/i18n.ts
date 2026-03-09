@@ -7,13 +7,13 @@ export type Locale = Brand<string, "Locale">;
 export type TranslationKey = Brand<string, "TranslationKey">;
 
 /** A mapping from translation keys to localized strings. */
-export type TranslationMap = Readonly<Record<string, string>>;
+export type TranslationMap = Readonly<Record<TranslationKey, string>>;
 
 /** Text direction for a locale. */
 export type TextDirection = "ltr" | "rtl";
 
 /** User preference for date formatting. */
-export type DateFormatPreference = "system" | "iso" | "locale";
+export type DateFormatPreference = "iso" | "us" | "eu" | "relative";
 
 /** User preference for number formatting. */
 export type NumberFormatPreference = "system" | "locale";

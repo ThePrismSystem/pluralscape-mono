@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:24:27Z
-updated_at: 2026-03-09T06:05:14Z
+updated_at: 2026-03-09T06:30:04Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -44,4 +44,4 @@ Internationalization types for locale, translation, RTL support, and date/number
 
 ## Summary of Changes
 
-Created i18n.ts with Locale (branded), TranslationKey (branded), TranslationMap, TextDirection, DateFormatPreference, NumberFormatPreference, LocaleConfig. Branch: feat/types-settings-and-config.
+Created i18n.ts with Locale (branded), TranslationKey (branded), TranslationMap (keyed by TranslationKey), TextDirection, DateFormatPreference (iso/us/eu/relative), NumberFormatPreference, LocaleConfig. Branch: feat/types-settings-and-config.

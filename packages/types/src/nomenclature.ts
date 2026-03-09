@@ -1,5 +1,13 @@
 /** Categories of terminology that can be customized. */
-export type TermCategory = "identity" | "fronting" | "structure" | "communication" | "privacy";
+export type TermCategory =
+  | "collective"
+  | "individual"
+  | "fronting"
+  | "switching"
+  | "co-presence"
+  | "internal-space"
+  | "primary-fronter"
+  | "structure";
 
 /** A well-known canonical term and its default display value. */
 export interface CanonicalTerm {
@@ -8,47 +16,66 @@ export interface CanonicalTerm {
   readonly defaultValue: string;
 }
 
-/** A user's override for a specific term. */
-export interface NomenclatureSettings {
-  readonly preset: string;
-  readonly overrides: Readonly<Record<string, string>>;
-}
+/** Per-system nomenclature settings — one selected term per category. */
+export type NomenclatureSettings = Readonly<Record<TermCategory, string>>;
 
-/** A named set of term overrides (e.g. "clinical", "community", "custom"). */
+/** A set of preset options for a single term category. */
 export interface TermPreset {
-  readonly name: string;
-  readonly label: string;
-  readonly terms: Readonly<Record<string, string>>;
+  readonly category: TermCategory;
+  readonly presets: readonly string[];
+  readonly default: string;
 }
 
-/** Built-in term presets. */
+/** Built-in term presets per category. */
 export const DEFAULT_TERM_PRESETS: readonly TermPreset[] = [
   {
-    name: "community",
-    label: "Community",
-    terms: {
-      member: "member",
-      system: "system",
-      fronting: "fronting",
-      switch: "switch",
-    },
+    category: "collective",
+    presets: ["System", "Collective", "Household", "Crew", "Group"],
+    default: "System",
   },
   {
-    name: "clinical",
-    label: "Clinical",
-    terms: {
-      member: "alter",
-      system: "system",
-      fronting: "presenting",
-      switch: "transition",
-    },
+    category: "individual",
+    presets: ["Member", "Alter", "Headmate", "Part", "Insider", "Facet", "Aspect"],
+    default: "Member",
   },
-] as const;
+  {
+    category: "fronting",
+    presets: ["Fronting", "In front", "Driving", "Piloting"],
+    default: "Fronting",
+  },
+  { category: "switching", presets: ["Switch", "Shift"], default: "Switch" },
+  {
+    category: "co-presence",
+    presets: ["Co-fronting", "Co-conscious", "Co-driving"],
+    default: "Co-fronting",
+  },
+  {
+    category: "internal-space",
+    presets: ["Headspace", "Innerworld", "Wonderland"],
+    default: "Headspace",
+  },
+  {
+    category: "primary-fronter",
+    presets: ["Host", "Primary fronter", "Main fronter"],
+    default: "Host",
+  },
+  {
+    category: "structure",
+    presets: ["System Structure", "Topology", "Map"],
+    default: "System Structure",
+  },
+];
 
-/** Creates default nomenclature settings using the community preset. */
+/** Creates default nomenclature settings using the default term for each category. */
 export function createDefaultNomenclatureSettings(): NomenclatureSettings {
   return {
-    preset: "community",
-    overrides: {},
+    collective: "System",
+    individual: "Member",
+    fronting: "Fronting",
+    switching: "Switch",
+    "co-presence": "Co-fronting",
+    "internal-space": "Headspace",
+    "primary-fronter": "Host",
+    structure: "System Structure",
   };
 }

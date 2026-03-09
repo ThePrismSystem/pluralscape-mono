@@ -19,6 +19,11 @@ describe("Locale", () => {
   it("extends string", () => {
     expectTypeOf<Locale>().toExtend<string>();
   });
+
+  it("is not assignable to TranslationKey", () => {
+    // @ts-expect-error different brand
+    assertType<TranslationKey>({} as Locale);
+  });
 });
 
 describe("TranslationKey", () => {
@@ -30,11 +35,16 @@ describe("TranslationKey", () => {
   it("extends string", () => {
     expectTypeOf<TranslationKey>().toExtend<string>();
   });
+
+  it("is not assignable to Locale", () => {
+    // @ts-expect-error different brand
+    assertType<Locale>({} as TranslationKey);
+  });
 });
 
 describe("TranslationMap", () => {
-  it("is a readonly record of string to string", () => {
-    expectTypeOf<TranslationMap>().toEqualTypeOf<Readonly<Record<string, string>>>();
+  it("is a readonly record keyed by TranslationKey", () => {
+    expectTypeOf<TranslationMap>().toEqualTypeOf<Readonly<Record<TranslationKey, string>>>();
   });
 });
 
@@ -48,18 +58,51 @@ describe("TextDirection", () => {
     // @ts-expect-error invalid direction
     assertType<TextDirection>("auto");
   });
+
+  it("is exhaustive in a switch", () => {
+    function handleDirection(dir: TextDirection): string {
+      switch (dir) {
+        case "ltr":
+        case "rtl":
+          return dir;
+        default: {
+          const _exhaustive: never = dir;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleDirection).toBeFunction();
+  });
 });
 
 describe("DateFormatPreference", () => {
   it("accepts valid preferences", () => {
-    assertType<DateFormatPreference>("system");
     assertType<DateFormatPreference>("iso");
-    assertType<DateFormatPreference>("locale");
+    assertType<DateFormatPreference>("us");
+    assertType<DateFormatPreference>("eu");
+    assertType<DateFormatPreference>("relative");
   });
 
   it("rejects invalid preferences", () => {
     // @ts-expect-error invalid preference
-    assertType<DateFormatPreference>("custom");
+    assertType<DateFormatPreference>("system");
+  });
+
+  it("is exhaustive in a switch", () => {
+    function handleFormat(fmt: DateFormatPreference): string {
+      switch (fmt) {
+        case "iso":
+        case "us":
+        case "eu":
+        case "relative":
+          return fmt;
+        default: {
+          const _exhaustive: never = fmt;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleFormat).toBeFunction();
   });
 });
 
@@ -72,6 +115,21 @@ describe("NumberFormatPreference", () => {
   it("rejects invalid preferences", () => {
     // @ts-expect-error invalid preference
     assertType<NumberFormatPreference>("custom");
+  });
+
+  it("is exhaustive in a switch", () => {
+    function handleFormat(fmt: NumberFormatPreference): string {
+      switch (fmt) {
+        case "system":
+        case "locale":
+          return fmt;
+        default: {
+          const _exhaustive: never = fmt;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleFormat).toBeFunction();
   });
 });
 

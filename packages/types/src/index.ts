@@ -220,6 +220,7 @@ export type {
   AppLockConfig,
   NotificationPreferences,
   SyncPreferences,
+  FriendRequestPolicy,
   PrivacyDefaults,
   SystemSettings,
 } from "./settings.js";

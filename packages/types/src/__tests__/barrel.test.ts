@@ -13,6 +13,7 @@ import type {
   Account,
   ActiveFrontingSession,
   AppLockConfig,
+  BucketId,
   ClientMember,
   DecryptFn,
   Encrypted,
@@ -101,6 +102,7 @@ import type {
   SyncPreferences,
   SystemProfile,
   SystemSettings,
+  FriendRequestPolicy,
   RelationshipType,
   Result,
   RoleTag,
@@ -267,8 +269,11 @@ describe("barrel exports", () => {
     expectTypeOf<AppLockConfig>().toBeObject();
     expectTypeOf<NotificationPreferences>().toBeObject();
     expectTypeOf<SyncPreferences>().toBeObject();
+    expectTypeOf<FriendRequestPolicy>().toBeString();
     expectTypeOf<PrivacyDefaults>().toBeObject();
     expectTypeOf<SystemSettings>().toBeObject();
+    expectTypeOf<SystemSettings["fontScale"]>().toEqualTypeOf<number>();
+    expectTypeOf<SystemSettings["defaultBucketId"]>().toEqualTypeOf<BucketId | null>();
   });
 
   it("exports generic utility types", () => {

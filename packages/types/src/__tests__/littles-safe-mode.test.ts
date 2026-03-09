@@ -1,6 +1,6 @@
-import { describe, expectTypeOf, it } from "vitest";
+import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { EntityType } from "../ids.js";
+import type { BlobId, SystemId } from "../ids.js";
 import type {
   LittlesSafeModeConfig,
   SafeModeContentItem,
@@ -9,20 +9,35 @@ import type {
 
 describe("SafeModeUIFlags", () => {
   it("has all boolean flag fields", () => {
-    expectTypeOf<SafeModeUIFlags["hideAnalytics"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<SafeModeUIFlags["hideJournal"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<SafeModeUIFlags["hideInnerworld"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<SafeModeUIFlags["hideCustomFields"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<SafeModeUIFlags["simplifiedNavigation"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<SafeModeUIFlags["largerTouchTargets"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<SafeModeUIFlags["largeButtons"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<SafeModeUIFlags["iconDriven"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<SafeModeUIFlags["noDeletion"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<SafeModeUIFlags["noSettings"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<SafeModeUIFlags["noAnalytics"]>().toEqualTypeOf<boolean>();
   });
 });
 
 describe("SafeModeContentItem", () => {
   it("has correct field types", () => {
-    expectTypeOf<SafeModeContentItem["entityType"]>().toEqualTypeOf<EntityType>();
-    expectTypeOf<SafeModeContentItem["label"]>().toBeString();
-    expectTypeOf<SafeModeContentItem["visible"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<SafeModeContentItem["id"]>().toEqualTypeOf<string>();
+    expectTypeOf<SafeModeContentItem["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<SafeModeContentItem["contentType"]>().toEqualTypeOf<"link" | "video" | "media">();
+    expectTypeOf<SafeModeContentItem["url"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SafeModeContentItem["blobRef"]>().toEqualTypeOf<BlobId | null>();
+    expectTypeOf<SafeModeContentItem["title"]>().toEqualTypeOf<string>();
+    expectTypeOf<SafeModeContentItem["description"]>().toEqualTypeOf<string>();
+    expectTypeOf<SafeModeContentItem["sortOrder"]>().toEqualTypeOf<number>();
+  });
+
+  it("accepts valid content types", () => {
+    assertType<SafeModeContentItem["contentType"]>("link");
+    assertType<SafeModeContentItem["contentType"]>("video");
+    assertType<SafeModeContentItem["contentType"]>("media");
+  });
+
+  it("rejects invalid content types", () => {
+    // @ts-expect-error invalid content type
+    assertType<SafeModeContentItem["contentType"]>("image");
   });
 });
 
@@ -31,13 +46,11 @@ describe("LittlesSafeModeConfig", () => {
     expectTypeOf<LittlesSafeModeConfig["enabled"]>().toEqualTypeOf<boolean>();
   });
 
-  it("has uiFlags as SafeModeUIFlags", () => {
-    expectTypeOf<LittlesSafeModeConfig["uiFlags"]>().toEqualTypeOf<SafeModeUIFlags>();
+  it("has allowedContentIds as readonly string array", () => {
+    expectTypeOf<LittlesSafeModeConfig["allowedContentIds"]>().toEqualTypeOf<readonly string[]>();
   });
 
-  it("has hiddenContent as readonly array", () => {
-    expectTypeOf<LittlesSafeModeConfig["hiddenContent"]>().toEqualTypeOf<
-      readonly SafeModeContentItem[]
-    >();
+  it("has simplifiedUIFlags as SafeModeUIFlags", () => {
+    expectTypeOf<LittlesSafeModeConfig["simplifiedUIFlags"]>().toEqualTypeOf<SafeModeUIFlags>();
   });
 });

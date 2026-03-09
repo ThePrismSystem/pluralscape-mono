@@ -5,7 +5,7 @@ status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:35:42Z
-updated_at: 2026-03-09T06:05:13Z
+updated_at: 2026-03-09T06:29:56Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -46,4 +46,4 @@ Type definitions and default presets for the nomenclature system
 
 ## Summary of Changes
 
-Created nomenclature.ts with TermCategory, CanonicalTerm, NomenclatureSettings, TermPreset types plus DEFAULT_TERM_PRESETS and createDefaultNomenclatureSettings() runtime exports. Branch: feat/types-settings-and-config.
+Created nomenclature.ts with TermCategory (8 categories: collective, individual, fronting, switching, co-presence, internal-space, primary-fronter, structure), CanonicalTerm, NomenclatureSettings (Record<TermCategory, string>), TermPreset (per-category presets with defaults), DEFAULT_TERM_PRESETS (8 preset entries), and createDefaultNomenclatureSettings(). Branch: feat/types-settings-and-config.
