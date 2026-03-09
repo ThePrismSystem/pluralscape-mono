@@ -1,11 +1,11 @@
 ---
 # types-puxp
 title: Journal and wiki types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:31Z
-updated_at: 2026-03-08T14:22:02Z
+updated_at: 2026-03-09T06:05:24Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -42,3 +42,7 @@ JournalPage, JournalBlock, and WikiPage types for block-based rich text editor.
 ## References
 
 - features.md section 7 (Journaling)
+
+## Summary of Changes
+
+Created journal.ts with JournalBlockType (9 variants), JournalBlock (recursive children), EntityLink, JournalEntry, WikiPage. Branch: feat/types-domain-features.

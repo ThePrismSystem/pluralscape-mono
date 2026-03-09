@@ -1,11 +1,11 @@
 ---
 # types-2xfo
 title: Fronting analytics and reporting types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T18:49:46Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T06:05:28Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -37,3 +37,7 @@ Types for fronting analytics, report generation, and date range filtering.
 ## References
 
 - features.md section 2 (Fronting and Analytics)
+
+## Summary of Changes
+
+Created analytics.ts with Duration (branded number), DateRangePreset, DateRangeFilter, MemberFrontingBreakdown, FrontingAnalytics, FrontingReport, ChartDataset, ChartData. Branch: feat/types-domain-features.

@@ -1,11 +1,11 @@
 ---
 # types-iz5j
 title: Innerworld and spatial types
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-08T13:32:34Z
-updated_at: 2026-03-08T14:21:58Z
+updated_at: 2026-03-09T06:05:29Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -40,3 +40,7 @@ All variants share: id (InnerWorldEntityId), systemId
 ## References
 
 - features.md section 6 (Innerworld mapping)
+
+## Summary of Changes
+
+Created innerworld.ts with VisualProperties, MemberEntity, LandmarkEntity, InnerWorldEntityData (discriminated on kind), InnerWorldEntity, InnerWorldRegion, InnerWorldCanvas. Branch: feat/types-domain-features.
