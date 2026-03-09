@@ -4,15 +4,58 @@ import { createId, ID_PREFIXES, now, toISO } from "../index.js";
 
 import type {
   Account,
+  AcknowledgementRequest,
   ActiveFrontingSession,
+  ArchivalEvent,
+  BoardMessage,
+  Channel,
+  ChartData,
+  ChartDataset,
+  ChatMessage,
+  CheckInRecord,
   ClientMember,
+  DateRangeFilter,
+  DateRangePreset,
   DecryptFn,
+  DiscoveryEvent,
+  Duration,
   Encrypted,
   EncryptedBlob,
   EncryptedString,
   EncryptFn,
   EncryptionAlgorithm,
+  EntityLink,
+  FieldBucketVisibility,
+  FieldDefinition,
+  FieldType,
+  FieldValue,
+  FieldValueUnion,
+  FrontingAnalytics,
+  FrontingReport,
+  FusionEvent,
+  InnerWorldCanvas,
+  InnerWorldEntity,
+  InnerWorldEntityData,
+  InnerWorldRegion,
+  JournalBlock,
+  JournalBlockType,
+  JournalEntry,
+  LandmarkEntity,
+  LifecycleEvent,
+  LifecycleEventType,
+  MemberEntity,
+  MemberFrontingBreakdown,
+  MergeEvent,
+  Note,
+  Poll,
+  PollOption,
+  PollVote,
   ServerMember,
+  SplitEvent,
+  TimerConfig,
+  UnmergeEvent,
+  VisualProperties,
+  WikiPage,
   ApiError,
   ApiResponse,
   ArchivedCustomFront,
@@ -203,6 +246,70 @@ describe("barrel exports", () => {
     expectTypeOf<GroupMembership>().toBeObject();
     expectTypeOf<GroupTree>().toBeObject();
     expectTypeOf<GroupMoveOperation>().toBeObject();
+  });
+
+  it("exports communication types", () => {
+    expectTypeOf<Channel>().toBeObject();
+    expectTypeOf<ChatMessage>().toBeObject();
+    expectTypeOf<BoardMessage>().toBeObject();
+    expectTypeOf<Note>().toBeObject();
+    expectTypeOf<PollOption>().toBeObject();
+    expectTypeOf<Poll>().toBeObject();
+    expectTypeOf<PollVote>().toBeObject();
+    expectTypeOf<AcknowledgementRequest>().toBeObject();
+  });
+
+  it("exports lifecycle types", () => {
+    expectTypeOf<SplitEvent>().toBeObject();
+    expectTypeOf<FusionEvent>().toBeObject();
+    expectTypeOf<MergeEvent>().toBeObject();
+    expectTypeOf<UnmergeEvent>().toBeObject();
+    expectTypeOf<DiscoveryEvent>().toBeObject();
+    expectTypeOf<ArchivalEvent>().toBeObject();
+    expectTypeOf<LifecycleEvent>().toBeObject();
+    expectTypeOf<LifecycleEventType>().toBeString();
+  });
+
+  it("exports custom field types", () => {
+    expectTypeOf<FieldType>().toBeString();
+    expectTypeOf<FieldBucketVisibility>().toBeObject();
+    expectTypeOf<FieldDefinition>().toBeObject();
+    expectTypeOf<FieldValue>().toBeObject();
+    expectTypeOf<FieldValueUnion>().toBeObject();
+  });
+
+  it("exports journal types", () => {
+    expectTypeOf<JournalBlockType>().toBeString();
+    expectTypeOf<JournalBlock>().toBeObject();
+    expectTypeOf<EntityLink>().toBeObject();
+    expectTypeOf<JournalEntry>().toBeObject();
+    expectTypeOf<WikiPage>().toBeObject();
+  });
+
+  it("exports timer types", () => {
+    expectTypeOf<TimerConfig>().toBeObject();
+    expectTypeOf<CheckInRecord>().toBeObject();
+  });
+
+  it("exports analytics types", () => {
+    expectTypeOf<Duration>().toExtend<number>();
+    expectTypeOf<DateRangePreset>().toBeString();
+    expectTypeOf<DateRangeFilter>().toBeObject();
+    expectTypeOf<MemberFrontingBreakdown>().toBeObject();
+    expectTypeOf<FrontingAnalytics>().toBeObject();
+    expectTypeOf<FrontingReport>().toBeObject();
+    expectTypeOf<ChartDataset>().toBeObject();
+    expectTypeOf<ChartData>().toBeObject();
+  });
+
+  it("exports innerworld types", () => {
+    expectTypeOf<VisualProperties>().toBeObject();
+    expectTypeOf<MemberEntity>().toBeObject();
+    expectTypeOf<LandmarkEntity>().toBeObject();
+    expectTypeOf<InnerWorldEntityData>().toBeObject();
+    expectTypeOf<InnerWorldEntity>().toBeObject();
+    expectTypeOf<InnerWorldRegion>().toBeObject();
+    expectTypeOf<InnerWorldCanvas>().toBeObject();
   });
 
   it("exports generic utility types", () => {

@@ -1,0 +1,120 @@
+import { assertType, describe, expectTypeOf, it } from "vitest";
+
+import type {
+  FieldBucketVisibility,
+  FieldDefinition,
+  FieldType,
+  FieldValue,
+  FieldValueUnion,
+} from "../custom-fields.js";
+import type { BucketId, FieldDefinitionId, FieldValueId, SystemId } from "../ids.js";
+import type { AuditMetadata } from "../utility.js";
+
+describe("FieldType", () => {
+  it("accepts valid field types", () => {
+    assertType<FieldType>("text");
+    assertType<FieldType>("number");
+    assertType<FieldType>("boolean");
+    assertType<FieldType>("date");
+    assertType<FieldType>("select");
+    assertType<FieldType>("multi-select");
+    assertType<FieldType>("url");
+  });
+
+  it("rejects invalid field types", () => {
+    // @ts-expect-error invalid field type
+    assertType<FieldType>("color");
+  });
+
+  it("is exhaustive in a switch", () => {
+    function handleType(type: FieldType): string {
+      switch (type) {
+        case "text":
+        case "number":
+        case "boolean":
+        case "date":
+        case "select":
+        case "multi-select":
+        case "url":
+          return type;
+        default: {
+          const _exhaustive: never = type;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleType).toBeFunction();
+  });
+});
+
+describe("FieldBucketVisibility", () => {
+  it("has correct field types", () => {
+    expectTypeOf<FieldBucketVisibility["bucketId"]>().toEqualTypeOf<BucketId | null>();
+    expectTypeOf<FieldBucketVisibility["visible"]>().toEqualTypeOf<boolean>();
+  });
+});
+
+describe("FieldDefinition", () => {
+  it("extends AuditMetadata", () => {
+    expectTypeOf<FieldDefinition>().toExtend<AuditMetadata>();
+  });
+
+  it("has correct field types", () => {
+    expectTypeOf<FieldDefinition["id"]>().toEqualTypeOf<FieldDefinitionId>();
+    expectTypeOf<FieldDefinition["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FieldDefinition["name"]>().toBeString();
+    expectTypeOf<FieldDefinition["fieldType"]>().toEqualTypeOf<FieldType>();
+    expectTypeOf<FieldDefinition["selectOptions"]>().toEqualTypeOf<readonly string[] | null>();
+    expectTypeOf<FieldDefinition["required"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<FieldDefinition["sortOrder"]>().toEqualTypeOf<number>();
+  });
+});
+
+describe("FieldValue", () => {
+  it("extends AuditMetadata", () => {
+    expectTypeOf<FieldValue>().toExtend<AuditMetadata>();
+  });
+
+  it("has correct field types", () => {
+    expectTypeOf<FieldValue["id"]>().toEqualTypeOf<FieldValueId>();
+    expectTypeOf<FieldValue["definitionId"]>().toEqualTypeOf<FieldDefinitionId>();
+    expectTypeOf<FieldValue["entityId"]>().toBeString();
+    expectTypeOf<FieldValue["value"]>().toEqualTypeOf<FieldValueUnion>();
+    expectTypeOf<FieldValue["visibility"]>().toEqualTypeOf<FieldBucketVisibility>();
+  });
+});
+
+describe("FieldValueUnion", () => {
+  it("discriminates on fieldType", () => {
+    function handleValue(v: FieldValueUnion): unknown {
+      switch (v.fieldType) {
+        case "text":
+          expectTypeOf(v.value).toBeString();
+          return v.value;
+        case "number":
+          expectTypeOf(v.value).toBeNumber();
+          return v.value;
+        case "boolean":
+          expectTypeOf(v.value).toBeBoolean();
+          return v.value;
+        case "date":
+          expectTypeOf(v.value).toBeString();
+          return v.value;
+        case "select":
+          expectTypeOf(v.value).toBeString();
+          return v.value;
+        case "multi-select":
+          expectTypeOf(v.value).toEqualTypeOf<readonly string[]>();
+          return v.value;
+        case "url":
+          expectTypeOf(v.value).toBeString();
+          return v.value;
+        default: {
+          const _exhaustive: never = v;
+          return _exhaustive;
+        }
+      }
+    }
+    expectTypeOf(handleValue).toBeFunction();
+  });
+});

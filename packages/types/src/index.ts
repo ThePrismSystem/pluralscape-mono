@@ -186,5 +186,75 @@ export type {
   GroupMoveOperation,
 } from "./groups.js";
 
+// ── Communication ─────────────────────────────────────────────────
+export type {
+  Channel,
+  ChatMessage,
+  BoardMessage,
+  Note,
+  PollOption,
+  Poll,
+  PollVote,
+  AcknowledgementRequest,
+} from "./communication.js";
+
+// ── Lifecycle ─────────────────────────────────────────────────────
+export type {
+  SplitEvent,
+  FusionEvent,
+  MergeEvent,
+  UnmergeEvent,
+  DormancyStartEvent,
+  DormancyEndEvent,
+  DiscoveryEvent,
+  ArchivalEvent,
+  LifecycleEvent,
+  LifecycleEventType,
+} from "./lifecycle.js";
+
+// ── Custom fields ─────────────────────────────────────────────────
+export type {
+  FieldType,
+  FieldBucketVisibility,
+  FieldDefinition,
+  FieldValue,
+  FieldValueUnion,
+} from "./custom-fields.js";
+
+// ── Journal ───────────────────────────────────────────────────────
+export type {
+  JournalBlockType,
+  JournalBlock,
+  EntityLink,
+  JournalEntry,
+  WikiPage,
+} from "./journal.js";
+
+// ── Timer ─────────────────────────────────────────────────────────
+export type { TimerConfig, CheckInRecord } from "./timer.js";
+
+// ── Analytics ─────────────────────────────────────────────────────
+export type {
+  Duration,
+  DateRangePreset,
+  DateRangeFilter,
+  MemberFrontingBreakdown,
+  FrontingAnalytics,
+  FrontingReport,
+  ChartDataset,
+  ChartData,
+} from "./analytics.js";
+
+// ── Innerworld ────────────────────────────────────────────────────
+export type {
+  VisualProperties,
+  MemberEntity,
+  LandmarkEntity,
+  InnerWorldEntityData,
+  InnerWorldEntity,
+  InnerWorldRegion,
+  InnerWorldCanvas,
+} from "./innerworld.js";
+
 // ── Runtime utilities ──────────────────────────────────────────────
 export { createId, now, toISO } from "./runtime.js";
