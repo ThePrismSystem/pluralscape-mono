@@ -1,11 +1,11 @@
 ---
 # types-lzek
 title: Import and export types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:40Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T06:04:17Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -40,3 +40,30 @@ Types for Simply Plural import, PluralKit import, JSON/CSV export, and data dele
 ## References
 
 - features.md section 10 (Data Portability)
+
+## Summary of Changes
+
+Implemented in `packages/types/src/import-export.ts` on branch `feat/types-interop`:
+
+**Import payloads (external shapes, plain IDs):**
+
+- `SPImportMember`, `SPImportGroup`, `SPImportFrontingSession`, `SPImportPayload` — Pluralscape export format
+- `PKImportMember`, `PKImportGroup`, `PKImportSwitch`, `PKImportPayload` — PluralKit export format
+
+**Import job tracking:**
+
+- `ImportSource`: `"pluralscape" | "pluralkit"`
+- `ImportJobStatus`: 5-state lifecycle
+- `ImportProgress`, `ImportError`, `ImportJob`
+
+**Export:**
+
+- `ExportFormat`: `"json" | "csv"`
+- `ExportManifest`: download metadata with expiry
+
+**Account management:**
+
+- `AccountPurgeRequest`: purge scheduling with confirmation
+- `MemberReport`: downloadable member data report
+
+Test file: `import-export.test.ts` (17 tests). SP payloads use `number` timestamps, PK payloads use `string` timestamps (matching their respective export formats).
