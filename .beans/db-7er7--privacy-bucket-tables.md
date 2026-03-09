@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:32:56Z
-updated_at: 2026-03-09T23:00:44Z
+updated_at: 2026-03-09T23:21:08Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -23,7 +23,7 @@ Privacy bucket, content tagging, key grant, friend connection, friend code, and 
 - **`key_grants`**: id (UUID PK), bucket_id (FK → buckets, NOT NULL), friend_system_id (UUID, FK → systems, NOT NULL), encrypted_key (bytea, T2 — bucket key encrypted with friend's public key), key_version (integer, NOT NULL), created_at (T3, NOT NULL, default NOW()), revoked_at (T3, nullable — set during key rotation)
   - Unique: (bucket_id, friend_system_id, key_version)
   - CHECK: `key_version >= 1`
-- **`friend_connections`**: id (UUID PK), system_id (FK → systems, NOT NULL), friend_system_id (FK → systems, NOT NULL), status ('pending' | 'accepted' | 'blocked' | 'removed', T3), encrypted_data (T1, nullable — FriendVisibilitySettings: showFrontingStatus, showMemberList, showCustomFields, showStructure, showInnerworld, nickname, notes)
+- **`friend_connections`**: id (UUID PK), system_id (FK → systems, NOT NULL), friend_system_id (FK → systems, NOT NULL), status ('pending' | 'accepted' | 'blocked' | 'removed', T3), encrypted_data (T1, nullable — FriendVisibilitySettings: showMembers, showGroups, showStructure, allowFrontingNotifications)
   - CHECK: `status IN ('pending', 'accepted', 'blocked', 'removed')`, created_at (T3, NOT NULL, default NOW()), updated_at (T3)
   - Unique: (system_id, friend_system_id)
   - Both system_id and friend_system_id are FKs to systems (asymmetric: requester vs recipient)

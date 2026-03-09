@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-08T13:33:22Z
-updated_at: 2026-03-09T23:00:06Z
+updated_at: 2026-03-09T23:21:05Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -59,7 +59,8 @@ Account, authentication key, session, and recovery tables. Foundation for crypto
 
 ### Additional tables (from audit C7)
 
-- **`device_transfer_requests`**: id (UUID PK), account_id (FK → accounts, NOT NULL), source_device_id (UUID, T3, NOT NULL), target_device_id (UUID, T3, NOT NULL), status ('pending' | 'accepted' | 'rejected' | 'expired' | 'completed', T3, NOT NULL, default 'pending'), encrypted_key_bundle (bytea, T1, nullable — encrypted master key material for transfer), created_at (T3, NOT NULL, default NOW()), expires_at (T3, NOT NULL), completed_at (T3, nullable)
+- **`device_transfer_requests`**: id (UUID PK), account_id (FK → accounts, NOT NULL — DB-only, not in type; needed for cascade), source_session_id (UUID FK → sessions, T3, NOT NULL), target_session_id (UUID FK → sessions, T3, NOT NULL), status ('pending' | 'approved' | 'expired', T3, NOT NULL, default 'pending'), created_at (T3, NOT NULL, default NOW()), expires_at (T3, NOT NULL)
+  - Encrypted master key payload (DeviceTransferPayload) is handled at the application layer, not stored as a column
   - CHECK: `expires_at > created_at`
   - Account deletion → CASCADE: device_transfer_requests
   - Index: device_transfer_requests (account_id, status)

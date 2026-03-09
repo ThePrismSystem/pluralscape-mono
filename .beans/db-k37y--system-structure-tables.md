@@ -5,7 +5,7 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:59Z
-updated_at: 2026-03-09T23:01:16Z
+updated_at: 2026-03-09T23:21:23Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -19,9 +19,9 @@ Relationship, subsystem, side system, layer, and membership tables for system st
 ### Tables
 
 - **`relationships`**: id (UUID PK), system_id (FK → systems, NOT NULL), version (integer, T3, default 1), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — source_member_id, target_member_id, relationship_type, bidirectional, custom label, notes)
-- **`subsystems`**: id (UUID PK), system_id (FK → systems, NOT NULL), parent_subsystem_id (FK → subsystems, nullable — recursive nesting), version (integer, T3, default 1), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, description, origin, has_core, discovery_status, architecture_type, color, imageSource, emoji)
+- **`subsystems`**: id (UUID PK), system_id (FK → systems, NOT NULL), parent_subsystem_id (FK → subsystems, nullable — recursive nesting), version (integer, T3, default 1), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, description, has_core, discovery_status, architecture_type, color, imageSource, emoji)
 - **`side_systems`**: id (UUID PK), system_id (FK → systems, NOT NULL), version (integer, T3, default 1), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, description, color, imageSource, emoji)
-- **`layers`**: id (UUID PK), system_id (FK → systems, NOT NULL), sort_order (integer, T3), version (integer, T3, default 1), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, access_type, gatekeeper_member_ids, color, imageSource, emoji)
+- **`layers`**: id (UUID PK), system_id (FK → systems, NOT NULL), sort_order (integer, T3), version (integer, T3, default 1), created_at (T3, NOT NULL, default NOW()), updated_at (T3), encrypted_data (T1, NOT NULL — name, description, access_type, gatekeeper_member_ids, color, imageSource, emoji)
 - **`subsystem_memberships`**: id (UUID PK), subsystem_id (FK → subsystems, NOT NULL — structural, exposed via parent chain), system_id (FK → systems, NOT NULL — for RLS), created_at (T3, NOT NULL, default NOW()), encrypted_data (T1, NOT NULL — member_id)
   - subsystem_id is plaintext because subsystem hierarchy is already exposed via the parent chain; member_id remains T1 encrypted
   - Composite unique on (subsystem_id, encrypted member) enforced at application layer
@@ -32,7 +32,7 @@ Relationship, subsystem, side system, layer, and membership tables for system st
 
 - Privacy: member_id references are inside encrypted_data (T1) so the server cannot learn system structure. Only system_id and structural IDs are plaintext.
 - CRDT: `version` column on relationships, subsystems, side_systems, layers for optimistic locking during sync.
-- Cascade: system deletion → CASCADE all 7 structure tables (GDPR purge path).
+- Cascade: system deletion → CASCADE all 10 structure tables (GDPR purge path).
 
 ### Indexes
 
@@ -53,7 +53,7 @@ Relationship, subsystem, side system, layer, and membership tables for system st
 - [ ] side_system_memberships M:N join table defined
 - [ ] layer_memberships M:N join table defined
 - [ ] version column on relationships, subsystems, side_systems, layers
-- [ ] created_at/updated_at on all 7 tables
+- [ ] created_at/updated_at on all 10 tables
 - [ ] NOT NULL on id, system_id, encrypted_data, created_at
 - [ ] CASCADE on system deletion for all structure tables
 - [ ] Migrations for both dialects

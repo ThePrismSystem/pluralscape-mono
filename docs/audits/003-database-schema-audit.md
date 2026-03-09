@@ -21,6 +21,9 @@ The types package (37 files, 300+ types) was completed after the initial databas
 | db-fe5s | Simpler schema than `JobDefinition` type                                   | SQLite fallback by design (ADR 010); PG uses BullMQ directly |
 | db-puza | `group_memberships` has `system_id` (not in type)                          | RLS requirement — DB-only field                              |
 | db-btrp | `entity_mappings` as encrypted blob vs typed mappings                      | Serialized storage; type models logical structure            |
+| db-f70u | `device_tokens.account_id` (not in type)                                   | Needed for account deletion CASCADE                          |
+| db-s6p9 | `device_transfer_requests.account_id` (not in type)                        | Needed for account deletion CASCADE                          |
+| db-k9sr | `audit_log.system_id` nullable (type has it required)                      | ON DELETE SET NULL for compliance — logs survive deletion    |
 
 ### Types with No Corresponding Bean Needed
 
@@ -38,15 +41,15 @@ The types package (37 files, 300+ types) was completed after the initial databas
 
 ### C1: Missing `fronting_comments` table (db-82q2)
 
-**Type:** `FrontingComment` is a separate entity with its own `id`, `sessionId`, `author`, `content`, `createdAt`, `updatedAt`
+**Type:** `FrontingComment` is a separate entity with its own `id`, `frontingSessionId`, `memberId`, `content`, `createdAt`, `updatedAt`
 **Bean:** Embedded `fronting_comments` as a field inside `fronting_sessions.encrypted_data`
-**Resolution:** Add `fronting_comments` table with `id`, `session_id` FK, `system_id` FK (RLS), `version`, `created_at`, `updated_at`, `encrypted_data` (T1 — author, content)
+**Resolution:** Add `fronting_comments` table with `id`, `session_id` FK, `system_id` FK (RLS), `version`, `created_at`, `updated_at`, `encrypted_data` (T1 — member_id, content)
 
 ### C2: Missing `positionality` field in fronting_sessions (db-82q2)
 
-**Type:** `FrontingSession` includes `positionality: Positionality` (enum: 'fronting' | 'co-fronting' | 'co-conscious' | 'nearby' | 'distant' | 'unknown')
-**Bean:** Only has `fronting_type: 'fronting' | 'co-conscious'`
-**Resolution:** Replace `fronting_type` with `positionality` in encrypted_data, expand to full 6-value enum
+**Type:** `FrontingSession` has both `frontingType: "fronting" | "co-conscious"` (enum) AND `positionality: string | null` (free-text description of fronting positionality)
+**Bean:** Only had `fronting_type: 'fronting' | 'co-conscious'`, missing `positionality`
+**Resolution:** Retain `fronting_type` in encrypted_data, add `positionality` as a separate free-text nullable string
 
 ### C3: `subsystem_id` should be `linked_structure` (db-82q2)
 
@@ -66,17 +69,17 @@ The types package (37 files, 300+ types) was completed after the initial databas
 **Bean:** Only lists 8 categories (missing dormancy, body, amnesia, saturation)
 **Resolution:** Add 4 missing term categories to encrypted_data
 
-### C6: `completeness_level` should be `saturation_level` (db-i2gl)
+### C6: `completeness_level` should be `saturationLevel` inside encrypted_data (db-i2gl)
 
-**Type:** `Member` uses `saturationLevel: SaturationLevel` with values 'full' | 'semi' | 'fragment' | 'blur' | 'undetermined'
-**Bean:** Uses `completeness_level` with values 'fragment' | 'demi-member' | 'full'
-**Resolution:** Rename to `saturation_level`, align enum values to match type
+**Type:** `Member` uses `saturationLevel: SaturationLevel` — a discriminated union: `{ kind: "known", level: KnownSaturationLevel } | { kind: "custom", value: string }` where `KnownSaturationLevel = "fragment" | "functional-fragment" | "partially-elaborated" | "highly-elaborated"`
+**Bean:** Used `completeness_level` as flat T3 enum column with wrong values ('fragment' | 'demi-member' | 'full')
+**Resolution:** Move to encrypted_data as serialized discriminated union (supports both known levels and custom user-defined values)
 
 ### C7: No table for DeviceTransferRequest (db-s6p9)
 
-**Type:** `DeviceTransferRequest` is a persisted entity with `id`, `accountId`, `sourceDeviceId`, `targetDeviceId`, `status`, `encryptedKeyBundle`, `createdAt`, `expiresAt`, `completedAt`
+**Type:** `DeviceTransferRequest` is a persisted entity with `id`, `sourceSessionId`, `targetSessionId`, `status` ("pending" | "approved" | "expired"), `createdAt`, `expiresAt`. `DeviceTransferPayload` (encrypted master key) is a separate application-layer concern.
 **Bean:** No corresponding table defined
-**Resolution:** Add `device_transfer_requests` table to db-s6p9
+**Resolution:** Add `device_transfer_requests` table to db-s6p9 with `account_id` FK (DB-only, for cascade)
 
 ---
 
@@ -84,7 +87,7 @@ The types package (37 files, 300+ types) was completed after the initial databas
 
 ### M1: friend_connections missing visibility settings (db-7er7)
 
-**Type:** `FriendConnection` includes `visibilitySettings: FriendVisibilitySettings` (showFrontingStatus, showMemberList, showCustomFields, etc.)
+**Type:** `FriendConnection` includes `visibility: FriendVisibilitySettings` (showMembers, showGroups, showStructure, allowFrontingNotifications)
 **Resolution:** Add visibility settings fields to `friend_connections.encrypted_data`
 
 ### M2: Poll missing multiple fields (db-ju0q)
@@ -119,8 +122,8 @@ The types package (37 files, 300+ types) was completed after the initial databas
 
 ### M8: notification_configs should be per-event-type rows (db-f70u)
 
-**Type:** `NotificationConfig` is per-event-type with `eventType`, `enabled`, `channels[]`, `quietHoursOverride`
-**Resolution:** Restructure as rows (one per event type) rather than single encrypted blob
+**Type:** `NotificationConfig` is per-event-type with `eventType`, `enabled`, `pushEnabled`
+**Resolution:** Restructure as rows (one per event type) with `enabled` and `push_enabled` booleans
 
 ### M9: device_tokens needs system_id (db-f70u)
 
@@ -154,7 +157,7 @@ The types package (37 files, 300+ types) was completed after the initial databas
 
 ### M15: innerworld entity_type CHECK too restrictive (db-vfhd)
 
-**Type:** Defines 5 entity types (member, landmark, portal, path, annotation), not just 2
+**Type:** Defines 5 entity types (member, landmark, subsystem, side-system, layer), not just 2
 **Resolution:** Expand CHECK constraint to allow all 5 entity types
 
 ### M16: jobs table missing system_id (db-fe5s)
@@ -249,9 +252,9 @@ All tables audited for correct tier assignment per ADR 006 and ADR 013.
 
 | Bean    | Key Changes                                                                                           |
 | ------- | ----------------------------------------------------------------------------------------------------- |
-| db-i2gl | Rename completeness_level → saturation_level, align enum, add member notification fields              |
+| db-i2gl | Move saturationLevel to encrypted_data as discriminated union, add member notification fields         |
 | db-s6p9 | Add version to accounts, add device_transfer_requests table                                           |
-| db-82q2 | Add fronting_comments table, positionality field, linked_structure, emoji to custom_fronts            |
+| db-82q2 | Add fronting_comments table, positionality (free-text) + linked_structure, emoji to custom_fronts     |
 | db-7er7 | Add FriendVisibilitySettings to friend_connections                                                    |
 | db-k37y | Add 3 cross-link tables, fix gatekeeper naming, add visual properties                                 |
 | db-ju0q | Expand polls, poll_votes, board_messages, acknowledgements, channels                                  |
