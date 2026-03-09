@@ -22,6 +22,7 @@ import type {
   ApiKeyWithSecret,
   AppLockConfig,
   ArchivalEvent,
+  AuditActor,
   AuditEventType,
   AuditLogEntry,
   BlobDownloadRef,
@@ -100,6 +101,7 @@ import type {
   MemberFrontingBreakdown,
   MemberLinkBlock,
   MemberReport,
+  SystemOverviewReport,
   MemberUpdatedEvent,
   MergeEvent,
   MessageReceivedEvent,
@@ -142,15 +144,20 @@ import type {
   SearchQuery,
   SearchResult,
   SearchResultItem,
+  ServerAcknowledgementRequest,
+  ServerAuditLogEntry,
   ServerBoardMessage,
   ServerChannel,
   ServerChatMessage,
+  ServerCustomFront,
   ServerFieldDefinition,
   ServerFieldValue,
   ServerFrontingSession,
   ServerGroup,
   ServerInnerWorldEntity,
   ServerInnerWorldRegion,
+  ServerJournalEntry,
+  ServerLayer,
   ServerLifecycleEvent,
   SPImportBoardMessage,
   SPImportChatMessage,
@@ -166,9 +173,14 @@ import type {
   SPImportPrivacyBucket,
   SPImportTimer,
   ServerMember,
+  ServerMemberPhoto,
   ServerNote,
+  ServerPoll,
   ServerRelationship,
+  ServerSideSystem,
   ServerSubsystem,
+  ServerTimerConfig,
+  ServerWikiPage,
   SplitEvent,
   SSEEvent,
   SubscriptionId,
@@ -187,15 +199,25 @@ import type {
   WikiPage,
   ArchivedJournalEntry,
   ArchivedWikiPage,
+  ClientAcknowledgementRequest,
+  ClientAuditLogEntry,
   ClientBoardMessage,
   ClientChannel,
   ClientChatMessage,
+  ClientCustomFront,
   ClientFieldDefinition,
   ClientFieldValue,
   ClientInnerWorldEntity,
   ClientInnerWorldRegion,
+  ClientJournalEntry,
+  ClientLayer,
   ClientLifecycleEvent,
+  ClientMemberPhoto,
   ClientNote,
+  ClientPoll,
+  ClientSideSystem,
+  ClientTimerConfig,
+  ClientWikiPage,
   CodeBlock,
   DividerBlock,
   EntityLinkBlock,
@@ -213,6 +235,8 @@ import type {
   BucketContentTag,
   BucketVisibilityScope,
   CanonicalTerm,
+  CoFrontingAnalytics,
+  CoFrontingPair,
   CoFrontState,
   CompletedFrontingSession,
   CreateInput,
@@ -231,6 +255,9 @@ import type {
   FriendCode,
   FriendConnection,
   FriendConnectionStatus,
+  FriendNotificationEventType,
+  FriendNotificationPreference,
+  FriendNotificationPreferenceId,
   FrontingSession,
   FrontingType,
   GatekeptLayer,
@@ -414,6 +441,35 @@ describe("barrel exports", () => {
     expectTypeOf<ClientInnerWorldRegion>().toBeObject();
     expectTypeOf<ServerLifecycleEvent>().toBeObject();
     expectTypeOf<ClientLifecycleEvent>().toBeObject();
+    expectTypeOf<ServerCustomFront>().toBeObject();
+    expectTypeOf<ClientCustomFront>().toBeObject();
+    expectTypeOf<ServerJournalEntry>().toBeObject();
+    expectTypeOf<ClientJournalEntry>().toBeObject();
+    expectTypeOf<ServerWikiPage>().toBeObject();
+    expectTypeOf<ClientWikiPage>().toBeObject();
+    expectTypeOf<ServerMemberPhoto>().toBeObject();
+    expectTypeOf<ClientMemberPhoto>().toBeObject();
+    expectTypeOf<ServerPoll>().toBeObject();
+    expectTypeOf<ClientPoll>().toBeObject();
+    expectTypeOf<ServerAcknowledgementRequest>().toBeObject();
+    expectTypeOf<ClientAcknowledgementRequest>().toBeObject();
+    expectTypeOf<ServerSideSystem>().toBeObject();
+    expectTypeOf<ClientSideSystem>().toBeObject();
+    expectTypeOf<ServerLayer>().toBeObject();
+    expectTypeOf<ClientLayer>().toBeObject();
+    expectTypeOf<ServerTimerConfig>().toBeObject();
+    expectTypeOf<ClientTimerConfig>().toBeObject();
+    expectTypeOf<ServerAuditLogEntry>().toBeObject();
+    expectTypeOf<ClientAuditLogEntry>().toBeObject();
+    expectTypeOf<ClientJournalEntry>().toBeObject();
+    expectTypeOf<ClientWikiPage>().toBeObject();
+    expectTypeOf<ClientMemberPhoto>().toBeObject();
+    expectTypeOf<ClientPoll>().toBeObject();
+    expectTypeOf<ClientAcknowledgementRequest>().toBeObject();
+    expectTypeOf<ClientSideSystem>().toBeObject();
+    expectTypeOf<ClientLayer>().toBeObject();
+    expectTypeOf<ClientTimerConfig>().toBeObject();
+    expectTypeOf<ClientAuditLogEntry>().toBeObject();
     expectTypeOf<DecryptFn<ServerMember, ClientMember>>().toBeFunction();
     expectTypeOf<EncryptFn<ClientMember, ServerMember>>().toBeFunction();
   });
@@ -473,6 +529,7 @@ describe("barrel exports", () => {
   });
 
   it("exports audit log types", () => {
+    expectTypeOf<AuditActor>().toBeObject();
     expectTypeOf<AuditEventType>().toBeString();
     expectTypeOf<AuditLogEntry>().toBeObject();
   });
@@ -492,6 +549,9 @@ describe("barrel exports", () => {
     expectTypeOf<NotificationEventType>().toBeString();
     expectTypeOf<NotificationConfig>().toBeObject();
     expectTypeOf<NotificationPayload>().toBeObject();
+    expectTypeOf<FriendNotificationEventType>().toBeString();
+    expectTypeOf<FriendNotificationPreference>().toBeObject();
+    expectTypeOf<FriendNotificationPreferenceId>().toExtend<string>();
   });
 
   it("exports realtime types", () => {
@@ -581,6 +641,8 @@ describe("barrel exports", () => {
     expectTypeOf<FrontingReportId>().toExtend<string>();
     expectTypeOf<ChartDataset>().toBeObject();
     expectTypeOf<ChartData>().toBeObject();
+    expectTypeOf<CoFrontingPair>().toBeObject();
+    expectTypeOf<CoFrontingAnalytics>().toBeObject();
   });
 
   it("exports innerworld types", () => {
@@ -711,6 +773,7 @@ describe("barrel exports", () => {
     expectTypeOf<ReportFormat>().toBeString();
     expectTypeOf<AccountPurgeRequest>().toBeObject();
     expectTypeOf<MemberReport>().toBeObject();
+    expectTypeOf<SystemOverviewReport>().toBeObject();
   });
 
   it("exports runtime utilities", () => {

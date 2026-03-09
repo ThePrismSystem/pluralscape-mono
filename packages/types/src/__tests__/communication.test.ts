@@ -37,6 +37,7 @@ describe("Channel", () => {
     expectTypeOf<Channel["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<Channel["name"]>().toBeString();
     expectTypeOf<Channel["type"]>().toEqualTypeOf<"category" | "channel">();
+    expectTypeOf<Channel["parentId"]>().toEqualTypeOf<ChannelId | null>();
     expectTypeOf<Channel["sortOrder"]>().toEqualTypeOf<number>();
   });
 });
@@ -68,6 +69,7 @@ describe("BoardMessage", () => {
   it("has correct field types", () => {
     expectTypeOf<BoardMessage["id"]>().toEqualTypeOf<BoardMessageId>();
     expectTypeOf<BoardMessage["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<BoardMessage["senderId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<BoardMessage["content"]>().toBeString();
     expectTypeOf<BoardMessage["pinned"]>().toEqualTypeOf<boolean>();
     expectTypeOf<BoardMessage["sortOrder"]>().toEqualTypeOf<number>();
@@ -109,10 +111,13 @@ describe("Poll", () => {
   it("has correct field types", () => {
     expectTypeOf<Poll["id"]>().toEqualTypeOf<PollId>();
     expectTypeOf<Poll["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<Poll["createdByMemberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<Poll["title"]>().toBeString();
     expectTypeOf<Poll["options"]>().toEqualTypeOf<readonly PollOption[]>();
     expectTypeOf<Poll["status"]>().toEqualTypeOf<"open" | "closed">();
     expectTypeOf<Poll["closedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<Poll["allowMultipleVotes"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<Poll["maxVotesPerMember"]>().toEqualTypeOf<number>();
   });
 });
 
@@ -144,6 +149,7 @@ describe("AcknowledgementRequest", () => {
   it("has correct field types", () => {
     expectTypeOf<AcknowledgementRequest["id"]>().toEqualTypeOf<AcknowledgementId>();
     expectTypeOf<AcknowledgementRequest["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<AcknowledgementRequest["createdByMemberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<AcknowledgementRequest["targetMemberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<AcknowledgementRequest["message"]>().toBeString();
     expectTypeOf<AcknowledgementRequest["confirmed"]>().toEqualTypeOf<boolean>();

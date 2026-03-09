@@ -20,16 +20,19 @@ export type AuditEventType =
   | "sharing.granted"
   | "sharing.revoked";
 
+/** The actor who performed an audit-logged action. */
+export type AuditActor =
+  | { readonly kind: "account"; readonly id: AccountId }
+  | { readonly kind: "api-key"; readonly id: ApiKeyId }
+  | { readonly kind: "system"; readonly id: SystemId };
+
 /** An append-only audit log entry. */
 export interface AuditLogEntry {
   readonly id: AuditLogEntryId;
   readonly systemId: SystemId;
   readonly eventType: AuditEventType;
   readonly createdAt: UnixMillis;
-  readonly actor:
-    | { readonly kind: "account"; readonly id: AccountId }
-    | { readonly kind: "api-key"; readonly id: ApiKeyId }
-    | { readonly kind: "system"; readonly id: SystemId };
+  readonly actor: AuditActor;
   readonly detail: Plaintext<string> | null;
   readonly ipAddress: string | null;
   readonly userAgent: string | null;

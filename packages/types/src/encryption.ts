@@ -1,4 +1,4 @@
-import type { AuditLogEntry } from "./audit-log.js";
+import type { AuditEventType, AuditActor, AuditLogEntry } from "./audit-log.js";
 import type {
   Channel,
   ChatMessage,
@@ -7,17 +7,21 @@ import type {
   Poll,
   AcknowledgementRequest,
 } from "./communication.js";
-import type { FieldDefinition, FieldValue } from "./custom-fields.js";
+import type { FieldDefinition, FieldValue, FieldType } from "./custom-fields.js";
 import type { FrontingSession, FrontingType, CustomFront } from "./fronting.js";
 import type { Group } from "./groups.js";
 import type { CompletenessLevel, MemberPhoto } from "./identity.js";
 import type {
   AcknowledgementId,
   AuditLogEntryId,
+  BlobId,
+  BoardMessageId,
   BucketId,
   ChannelId,
   CustomFrontId,
   EventId,
+  FieldDefinitionId,
+  FieldValueId,
   FrontingSessionId,
   GroupId,
   InnerWorldEntityId,
@@ -26,6 +30,8 @@ import type {
   LayerId,
   MemberId,
   MemberPhotoId,
+  MessageId,
+  NoteId,
   PollId,
   RelationshipId,
   SideSystemId,
@@ -36,8 +42,17 @@ import type {
 } from "./ids.js";
 import type { InnerWorldEntity, InnerWorldRegion } from "./innerworld.js";
 import type { JournalEntry, WikiPage } from "./journal.js";
-import type { LifecycleEvent } from "./lifecycle.js";
-import type { RelationshipType, Relationship, Subsystem, SideSystem, Layer } from "./structure.js";
+import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
+import type {
+  RelationshipType,
+  Relationship,
+  Subsystem,
+  SideSystem,
+  Layer,
+  ArchitectureType,
+  OriginType,
+  DiscoveryStatus,
+} from "./structure.js";
 import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
@@ -151,10 +166,10 @@ export interface ServerSubsystem extends AuditMetadata {
   readonly id: SubsystemId;
   readonly systemId: SystemId;
   readonly parentSubsystemId: SubsystemId | null;
-  readonly architectureType: import("./structure.js").ArchitectureType | null;
-  readonly originType: import("./structure.js").OriginType | null;
+  readonly architectureType: ArchitectureType | null;
+  readonly originType: OriginType | null;
   readonly hasCore: boolean;
-  readonly discoveryStatus: import("./structure.js").DiscoveryStatus;
+  readonly discoveryStatus: DiscoveryStatus;
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -188,6 +203,7 @@ export type ClientRelationship = Relationship;
 /**
  * Server-side channel representation.
  * T1 encrypted: name
+ * T3 plaintext: type, parentId, sortOrder
  */
 export interface ServerChannel extends AuditMetadata {
   readonly id: ChannelId;
@@ -203,14 +219,15 @@ export type ClientChannel = Channel;
 
 /**
  * Server-side chat message representation.
- * T1 encrypted: content, attachments
+ * T1 encrypted: content, attachments, mentions
+ * T3 plaintext: senderId, channelId, replyToId, timestamp, editedAt
  */
 export interface ServerChatMessage extends AuditMetadata {
-  readonly id: import("./ids.js").MessageId;
+  readonly id: MessageId;
   readonly channelId: ChannelId;
   readonly systemId: SystemId;
   readonly senderId: MemberId;
-  readonly replyToId: import("./ids.js").MessageId | null;
+  readonly replyToId: MessageId | null;
   readonly timestamp: UnixMillis;
   readonly editedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
@@ -222,9 +239,10 @@ export type ClientChatMessage = ChatMessage;
 /**
  * Server-side board message representation.
  * T1 encrypted: content
+ * T3 plaintext: senderId, pinned, sortOrder
  */
 export interface ServerBoardMessage extends AuditMetadata {
-  readonly id: import("./ids.js").BoardMessageId;
+  readonly id: BoardMessageId;
   readonly systemId: SystemId;
   readonly senderId: MemberId;
   readonly pinned: boolean;
@@ -240,7 +258,7 @@ export type ClientBoardMessage = BoardMessage;
  * T1 encrypted: title, content, backgroundColor
  */
 export interface ServerNote extends AuditMetadata {
-  readonly id: import("./ids.js").NoteId;
+  readonly id: NoteId;
   readonly systemId: SystemId;
   readonly memberId: MemberId | null;
   readonly encryptedData: EncryptedBlob;
@@ -256,9 +274,9 @@ export type ClientNote = Note;
  * T1 encrypted: name, description, options
  */
 export interface ServerFieldDefinition extends AuditMetadata {
-  readonly id: import("./ids.js").FieldDefinitionId;
+  readonly id: FieldDefinitionId;
   readonly systemId: SystemId;
-  readonly fieldType: import("./custom-fields.js").FieldType;
+  readonly fieldType: FieldType;
   readonly required: boolean;
   readonly sortOrder: number;
   readonly encryptedData: EncryptedBlob;
@@ -272,8 +290,8 @@ export type ClientFieldDefinition = FieldDefinition;
  * T1 encrypted: value
  */
 export interface ServerFieldValue extends AuditMetadata {
-  readonly id: import("./ids.js").FieldValueId;
-  readonly fieldDefinitionId: import("./ids.js").FieldDefinitionId;
+  readonly id: FieldValueId;
+  readonly fieldDefinitionId: FieldDefinitionId;
   readonly memberId: MemberId;
   readonly encryptedData: EncryptedBlob;
 }
@@ -325,7 +343,7 @@ export type ClientInnerWorldRegion = InnerWorldRegion;
 export interface ServerLifecycleEvent {
   readonly id: EventId;
   readonly systemId: SystemId;
-  readonly eventType: import("./lifecycle.js").LifecycleEventType;
+  readonly eventType: LifecycleEventType;
   readonly occurredAt: UnixMillis;
   readonly recordedAt: UnixMillis;
   readonly encryptedData: EncryptedBlob | null;
@@ -391,11 +409,14 @@ export type ClientWikiPage = WikiPage;
  * Server-side member photo representation.
  * T1 encrypted: caption
  * T3 plaintext: memberId, blobRef, sortOrder
+ *
+ * Intentionally omits AuditMetadata — photos are append-only gallery items.
+ * The domain MemberPhoto type also omits it.
  */
 export interface ServerMemberPhoto {
   readonly id: MemberPhotoId;
   readonly memberId: MemberId;
-  readonly blobRef: import("./ids.js").BlobId;
+  readonly blobRef: BlobId;
   readonly sortOrder: number;
   readonly encryptedData: EncryptedBlob | null;
 }
@@ -508,12 +529,9 @@ export type ClientTimerConfig = TimerConfig;
 export interface ServerAuditLogEntry {
   readonly id: AuditLogEntryId;
   readonly systemId: SystemId;
-  readonly eventType: import("./audit-log.js").AuditEventType;
+  readonly eventType: AuditEventType;
   readonly createdAt: UnixMillis;
-  readonly actor:
-    | { readonly kind: "account"; readonly id: import("./ids.js").AccountId }
-    | { readonly kind: "api-key"; readonly id: import("./ids.js").ApiKeyId }
-    | { readonly kind: "system"; readonly id: SystemId };
+  readonly actor: AuditActor;
   readonly encryptedData: EncryptedBlob | null;
   readonly ipAddress: string | null;
   readonly userAgent: string | null;

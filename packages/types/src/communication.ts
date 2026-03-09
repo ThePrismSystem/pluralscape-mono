@@ -76,7 +76,9 @@ export interface Poll extends AuditMetadata {
   readonly options: readonly PollOption[];
   readonly status: "open" | "closed";
   readonly closedAt: UnixMillis | null;
+  /** Whether members can vote for multiple options. When false, maxVotesPerMember should be 1. */
   readonly allowMultipleVotes: boolean;
+  /** Maximum votes a single member may cast. Must be >= 1. */
   readonly maxVotesPerMember: number;
 }
 

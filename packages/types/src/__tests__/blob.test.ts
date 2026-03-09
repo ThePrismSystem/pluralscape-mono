@@ -47,6 +47,7 @@ describe("BlobMetadata", () => {
     expectTypeOf<BlobMetadata["sizeBytes"]>().toEqualTypeOf<number>();
     expectTypeOf<BlobMetadata["checksum"]>().toBeString();
     expectTypeOf<BlobMetadata["uploadedAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<BlobMetadata["thumbnailOfBlobId"]>().toEqualTypeOf<BlobId | null>();
   });
 });
 

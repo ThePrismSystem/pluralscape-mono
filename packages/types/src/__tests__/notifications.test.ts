@@ -1,9 +1,17 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { EncryptedString } from "../encryption.js";
-import type { DeviceTokenId, NotificationConfigId, SystemId } from "../ids.js";
+import type {
+  DeviceTokenId,
+  FriendConnectionId,
+  FriendNotificationPreferenceId,
+  NotificationConfigId,
+  SystemId,
+} from "../ids.js";
 import type {
   DeviceToken,
+  FriendNotificationEventType,
+  FriendNotificationPreference,
   NotificationConfig,
   NotificationEventType,
   NotificationPayload,
@@ -81,6 +89,40 @@ describe("NotificationPayload", () => {
       Record<string, string>
     > | null>();
     expectTypeOf<NotificationPayload["createdAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+});
+
+describe("FriendNotificationEventType", () => {
+  it("accepts valid event types", () => {
+    assertType<FriendNotificationEventType>("friend-switch-alert");
+  });
+
+  it("rejects invalid event types", () => {
+    // @ts-expect-error invalid friend notification event type
+    assertType<FriendNotificationEventType>("message-received");
+  });
+
+  it("is a subset of NotificationEventType", () => {
+    expectTypeOf<FriendNotificationEventType>().toExtend<NotificationEventType>();
+  });
+});
+
+describe("FriendNotificationPreference", () => {
+  it("extends AuditMetadata", () => {
+    expectTypeOf<FriendNotificationPreference>().toExtend<AuditMetadata>();
+  });
+
+  it("has correct field types", () => {
+    expectTypeOf<
+      FriendNotificationPreference["id"]
+    >().toEqualTypeOf<FriendNotificationPreferenceId>();
+    expectTypeOf<
+      FriendNotificationPreference["friendConnectionId"]
+    >().toEqualTypeOf<FriendConnectionId>();
+    expectTypeOf<FriendNotificationPreference["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FriendNotificationPreference["enabledEventTypes"]>().toEqualTypeOf<
+      readonly FriendNotificationEventType[]
+    >();
   });
 });
 

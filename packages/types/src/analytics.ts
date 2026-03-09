@@ -60,7 +60,10 @@ export interface ChartData {
   readonly datasets: readonly ChartDataset[];
 }
 
-/** A pair of members who have co-fronted together. */
+/**
+ * A pair of members who have co-fronted together.
+ * Canonical ordering: memberA < memberB (lexicographic) to prevent duplicate pairs.
+ */
 export interface CoFrontingPair {
   readonly memberA: MemberId;
   readonly memberB: MemberId;

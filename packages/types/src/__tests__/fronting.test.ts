@@ -99,7 +99,7 @@ describe("Switch", () => {
   it("has correct field types", () => {
     expectTypeOf<Switch["id"]>().toEqualTypeOf<SwitchId>();
     expectTypeOf<Switch["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<Switch["memberIds"]>().toEqualTypeOf<readonly MemberId[]>();
+    expectTypeOf<Switch["memberIds"]>().toEqualTypeOf<readonly [MemberId, ...MemberId[]]>();
     expectTypeOf<Switch["timestamp"]>().toEqualTypeOf<UnixMillis>();
   });
 

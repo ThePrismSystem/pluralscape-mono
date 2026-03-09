@@ -1,5 +1,11 @@
 import type { EncryptedString } from "./encryption.js";
-import type { DeviceTokenId, FriendConnectionId, NotificationConfigId, SystemId } from "./ids.js";
+import type {
+  DeviceTokenId,
+  FriendConnectionId,
+  FriendNotificationPreferenceId,
+  NotificationConfigId,
+  SystemId,
+} from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -40,9 +46,13 @@ export interface NotificationPayload {
   readonly createdAt: UnixMillis;
 }
 
+/** Notification event types relevant to friend connections. */
+export type FriendNotificationEventType = "friend-switch-alert";
+
 /** Configures which notification events a friend receives. */
 export interface FriendNotificationPreference extends AuditMetadata {
+  readonly id: FriendNotificationPreferenceId;
   readonly friendConnectionId: FriendConnectionId;
   readonly systemId: SystemId;
-  readonly enabledEventTypes: readonly NotificationEventType[];
+  readonly enabledEventTypes: readonly FriendNotificationEventType[];
 }

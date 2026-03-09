@@ -184,6 +184,10 @@ describe("SystemProfile", () => {
     expectTypeOf<SystemProfile["discoveryStatus"]>().toEqualTypeOf<DiscoveryStatus>();
   });
 
+  it("has hasCore boolean", () => {
+    expectTypeOf<SystemProfile["hasCore"]>().toEqualTypeOf<boolean>();
+  });
+
   it("does not extend AuditMetadata", () => {
     expectTypeOf<SystemProfile>().not.toExtend<AuditMetadata>();
   });
@@ -221,6 +225,10 @@ describe("Subsystem", () => {
     expectTypeOf<Subsystem["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<Subsystem["name"]>().toBeString();
     expectTypeOf<Subsystem["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<Subsystem["architectureType"]>().toEqualTypeOf<ArchitectureType | null>();
+    expectTypeOf<Subsystem["originType"]>().toEqualTypeOf<OriginType | null>();
+    expectTypeOf<Subsystem["hasCore"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<Subsystem["discoveryStatus"]>().toEqualTypeOf<DiscoveryStatus>();
   });
 
   it("has recursive parentSubsystemId", () => {

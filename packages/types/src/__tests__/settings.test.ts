@@ -141,4 +141,8 @@ describe("SystemSettings", () => {
     expectTypeOf<SystemSettings["littlesSafeMode"]>().toEqualTypeOf<LittlesSafeModeConfig>();
     expectTypeOf<SystemSettings["nomenclature"]>().toEqualTypeOf<NomenclatureSettings>();
   });
+
+  it("has onboardingComplete boolean", () => {
+    expectTypeOf<SystemSettings["onboardingComplete"]>().toEqualTypeOf<boolean>();
+  });
 });

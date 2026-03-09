@@ -57,6 +57,7 @@ export type {
   SubscriptionId,
   WebhookDeliveryId,
   FrontingReportId,
+  FriendNotificationPreferenceId,
   HexColor,
   EntityType,
 } from "./ids.js";
@@ -302,7 +303,7 @@ export type { JobType, JobStatus, RetryPolicy, JobResult, JobDefinition } from "
 export type { BlobPurpose, BlobMetadata, BlobUploadRequest, BlobDownloadRef } from "./blob.js";
 
 // ── Audit log ─────────────────────────────────────────────────
-export type { AuditEventType, AuditLogEntry } from "./audit-log.js";
+export type { AuditEventType, AuditActor, AuditLogEntry } from "./audit-log.js";
 
 // ── Webhooks ──────────────────────────────────────────────────
 export type {
@@ -320,6 +321,7 @@ export type {
   NotificationEventType,
   NotificationConfig,
   NotificationPayload,
+  FriendNotificationEventType,
   FriendNotificationPreference,
 } from "./notifications.js";
 

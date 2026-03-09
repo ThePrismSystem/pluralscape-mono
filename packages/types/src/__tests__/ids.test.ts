@@ -21,6 +21,7 @@ import type {
   FieldValueId,
   FriendCodeId,
   FriendConnectionId,
+  FriendNotificationPreferenceId,
   FrontingSessionId,
   GroupId,
   HexColor,
@@ -100,7 +101,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 44 branded ID types as string-based", () => {
+  it("defines all 45 branded ID types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -154,6 +155,7 @@ describe("branded ID types", () => {
     expectTypeOf<JobId>().toExtend<string>();
     expectTypeOf<SubscriptionId>().toExtend<string>();
     expectTypeOf<WebhookDeliveryId>().toExtend<string>();
+    expectTypeOf<FriendNotificationPreferenceId>().toExtend<string>();
     expectTypeOf<HexColor>().toExtend<string>();
   });
 });
@@ -193,7 +195,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(54);
+    expect(prefixCount).toBe(55);
   });
 });
 
@@ -274,6 +276,7 @@ describe("EntityType", () => {
         case "subscription":
         case "webhook-delivery":
         case "fronting-report":
+        case "friend-notification-preference":
           return type;
         default: {
           const _exhaustive: never = type;
