@@ -79,6 +79,24 @@ Etebase's Collection/key model maps well to Privacy Buckets, and its crypto choi
 
 Full encryption architecture documented in `docs/planning/encryption-research.md`.
 
+### Addendum: Independent Key Derivation via KDF
+
+The key hierarchy diagram shows "Identity Key Pair (X25519 + Ed25519)" derived from the Master Key. The original assumption was to derive a single Ed25519 keypair and convert it to X25519 using `crypto_sign_ed25519_sk_to_curve25519` / `crypto_sign_ed25519_pk_to_curve25519`.
+
+This approach is **not used**. Instead, both keypairs are derived independently via KDF sub-key derivation:
+
+```
+Master Key → KDF(subkeyId=1, ctx="identity") → 32-byte seed → Ed25519 keypair (signing)
+Master Key → KDF(subkeyId=2, ctx="identity") → 32-byte seed → X25519 keypair (encryption)
+```
+
+Rationale:
+
+- `react-native-libsodium` does not expose the Ed25519-to-Curve25519 conversion functions
+- Independent derivation is cryptographically sound (BLAKE2B-based KDF with distinct sub-key IDs)
+- Simpler implementation with no cross-algorithm dependency
+- Both keypairs remain deterministically derivable from the Master Key
+
 ### License
 
 libsodium: ISC. SQLCipher Community Edition: BSD 3-Clause. Both compatible with AGPL-3.0.
