@@ -11,11 +11,11 @@
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.15",
-    "drizzle-orm": "^0.39.3"
+    "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
     "@pluralscape/tsconfig": "workspace:*",
-    "@types/node": "^22.15.0",
+    "@types/node": "^25.3.5",
     "typescript": "^5.7.3"
   },
   "peerDependencies": {

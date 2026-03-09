@@ -18,15 +18,17 @@
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@tanstack/react-query": "^5.66.9",
+    "@expo/metro-runtime": "~55.0.6",
     "expo": "~55.0.5",
-    "expo-router": "~4.0.17",
-    "expo-status-bar": "~2.0.1",
+    "expo-linking": "~55.0.7",
+    "expo-router": "~55.0.4",
+    "expo-status-bar": "~55.0.4",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-native": "0.84.1",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "~4.24.0",
-    "react-native-web": "~0.19.13"
+    "react-native-web": "~0.21.2"
   },
   "devDependencies": {
     "@babel/core": "^7.26.9",
