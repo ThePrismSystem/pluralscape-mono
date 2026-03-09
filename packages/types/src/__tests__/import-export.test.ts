@@ -15,6 +15,7 @@ import type {
   ImportProgress,
   ImportSource,
   MemberReport,
+  SystemOverviewReport,
   PKImportGroup,
   PKImportMember,
   PKImportPayload,
@@ -313,6 +314,11 @@ describe("ExportSection", () => {
         case "notes":
         case "chat":
         case "board-messages":
+        case "privacy-buckets":
+        case "system-structure":
+        case "settings":
+        case "polls":
+        case "lifecycle-events":
           return section;
         default: {
           const _exhaustive: never = section;
@@ -405,5 +411,21 @@ describe("MemberReport", () => {
     expectTypeOf<MemberReport["sizeBytes"]>().toEqualTypeOf<number>();
     expectTypeOf<MemberReport["downloadUrl"]>().toBeString();
     expectTypeOf<MemberReport["expiresAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+});
+
+describe("SystemOverviewReport", () => {
+  it("extends DownloadableReport", () => {
+    expectTypeOf<SystemOverviewReport>().toExtend<DownloadableReport>();
+  });
+
+  it("has correct field types", () => {
+    expectTypeOf<SystemOverviewReport["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<SystemOverviewReport["bucketId"]>().toEqualTypeOf<BucketId>();
+    expectTypeOf<SystemOverviewReport["format"]>().toEqualTypeOf<ReportFormat>();
+    expectTypeOf<SystemOverviewReport["generatedAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<SystemOverviewReport["sizeBytes"]>().toEqualTypeOf<number>();
+    expectTypeOf<SystemOverviewReport["downloadUrl"]>().toBeString();
+    expectTypeOf<SystemOverviewReport["expiresAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });

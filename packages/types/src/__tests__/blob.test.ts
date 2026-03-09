@@ -26,6 +26,7 @@ describe("BlobPurpose", () => {
         case "journal-image":
         case "attachment":
         case "export":
+        case "littles-safe-mode":
           return purpose;
         default: {
           const _exhaustive: never = purpose;
@@ -46,6 +47,7 @@ describe("BlobMetadata", () => {
     expectTypeOf<BlobMetadata["sizeBytes"]>().toEqualTypeOf<number>();
     expectTypeOf<BlobMetadata["checksum"]>().toBeString();
     expectTypeOf<BlobMetadata["uploadedAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<BlobMetadata["thumbnailOfBlobId"]>().toEqualTypeOf<BlobId | null>();
   });
 });
 

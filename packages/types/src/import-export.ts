@@ -232,7 +232,12 @@ export type ExportSection =
   | "custom-fields"
   | "notes"
   | "chat"
-  | "board-messages";
+  | "board-messages"
+  | "privacy-buckets"
+  | "system-structure"
+  | "settings"
+  | "polls"
+  | "lifecycle-events";
 
 /** Base type for downloadable report artifacts. */
 export interface DownloadableReport {
@@ -273,6 +278,13 @@ export interface AccountPurgeRequest {
 export interface MemberReport extends DownloadableReport {
   readonly systemId: SystemId;
   readonly memberId: MemberId;
+  readonly bucketId: BucketId;
+  readonly format: ReportFormat;
+}
+
+/** A "Meet our system" overview report for sharing with friends/family. */
+export interface SystemOverviewReport extends DownloadableReport {
+  readonly systemId: SystemId;
   readonly bucketId: BucketId;
   readonly format: ReportFormat;
 }

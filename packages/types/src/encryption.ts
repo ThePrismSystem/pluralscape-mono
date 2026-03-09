@@ -1,25 +1,59 @@
-import type { Channel, ChatMessage, BoardMessage, Note } from "./communication.js";
-import type { FieldDefinition, FieldValue } from "./custom-fields.js";
-import type { FrontingSession, FrontingType } from "./fronting.js";
-import type { Group } from "./groups.js";
-import type { CompletenessLevel } from "./identity.js";
+import type { AuditEventType, AuditActor, AuditLogEntry } from "./audit-log.js";
 import type {
+  Channel,
+  ChatMessage,
+  BoardMessage,
+  Note,
+  Poll,
+  AcknowledgementRequest,
+} from "./communication.js";
+import type { FieldDefinition, FieldValue, FieldType } from "./custom-fields.js";
+import type { FrontingSession, FrontingType, CustomFront } from "./fronting.js";
+import type { Group } from "./groups.js";
+import type { CompletenessLevel, MemberPhoto } from "./identity.js";
+import type {
+  AcknowledgementId,
+  AuditLogEntryId,
+  BlobId,
+  BoardMessageId,
   BucketId,
   ChannelId,
   CustomFrontId,
   EventId,
+  FieldDefinitionId,
+  FieldValueId,
   FrontingSessionId,
   GroupId,
   InnerWorldEntityId,
   InnerWorldRegionId,
+  JournalEntryId,
+  LayerId,
   MemberId,
+  MemberPhotoId,
+  MessageId,
+  NoteId,
+  PollId,
   RelationshipId,
+  SideSystemId,
   SubsystemId,
   SystemId,
+  TimerId,
+  WikiPageId,
 } from "./ids.js";
 import type { InnerWorldEntity, InnerWorldRegion } from "./innerworld.js";
-import type { LifecycleEvent } from "./lifecycle.js";
-import type { RelationshipType, Relationship, Subsystem } from "./structure.js";
+import type { JournalEntry, WikiPage } from "./journal.js";
+import type { LifecycleEvent, LifecycleEventType } from "./lifecycle.js";
+import type {
+  RelationshipType,
+  Relationship,
+  Subsystem,
+  SideSystem,
+  Layer,
+  ArchitectureType,
+  OriginType,
+  DiscoveryStatus,
+} from "./structure.js";
+import type { TimerConfig } from "./timer.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -126,12 +160,16 @@ export type ClientGroup = Group;
 /**
  * Server-side subsystem representation.
  * T1 encrypted: name, description
- * T3 plaintext: parentSubsystemId
+ * T3 plaintext: parentSubsystemId, architectureType, originType, hasCore, discoveryStatus
  */
 export interface ServerSubsystem extends AuditMetadata {
   readonly id: SubsystemId;
   readonly systemId: SystemId;
   readonly parentSubsystemId: SubsystemId | null;
+  readonly architectureType: ArchitectureType | null;
+  readonly originType: OriginType | null;
+  readonly hasCore: boolean;
+  readonly discoveryStatus: DiscoveryStatus;
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -165,11 +203,13 @@ export type ClientRelationship = Relationship;
 /**
  * Server-side channel representation.
  * T1 encrypted: name
+ * T3 plaintext: type, parentId, sortOrder
  */
 export interface ServerChannel extends AuditMetadata {
   readonly id: ChannelId;
   readonly systemId: SystemId;
   readonly type: "category" | "channel";
+  readonly parentId: ChannelId | null;
   readonly sortOrder: number;
   readonly encryptedData: EncryptedBlob;
 }
@@ -179,14 +219,15 @@ export type ClientChannel = Channel;
 
 /**
  * Server-side chat message representation.
- * T1 encrypted: content, attachments
+ * T1 encrypted: content, attachments, mentions
+ * T3 plaintext: senderId, channelId, replyToId, timestamp, editedAt
  */
 export interface ServerChatMessage extends AuditMetadata {
-  readonly id: import("./ids.js").MessageId;
+  readonly id: MessageId;
   readonly channelId: ChannelId;
   readonly systemId: SystemId;
   readonly senderId: MemberId;
-  readonly replyToId: import("./ids.js").MessageId | null;
+  readonly replyToId: MessageId | null;
   readonly timestamp: UnixMillis;
   readonly editedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
@@ -198,10 +239,12 @@ export type ClientChatMessage = ChatMessage;
 /**
  * Server-side board message representation.
  * T1 encrypted: content
+ * T3 plaintext: senderId, pinned, sortOrder
  */
 export interface ServerBoardMessage extends AuditMetadata {
-  readonly id: import("./ids.js").BoardMessageId;
+  readonly id: BoardMessageId;
   readonly systemId: SystemId;
+  readonly senderId: MemberId;
   readonly pinned: boolean;
   readonly sortOrder: number;
   readonly encryptedData: EncryptedBlob;
@@ -215,7 +258,7 @@ export type ClientBoardMessage = BoardMessage;
  * T1 encrypted: title, content, backgroundColor
  */
 export interface ServerNote extends AuditMetadata {
-  readonly id: import("./ids.js").NoteId;
+  readonly id: NoteId;
   readonly systemId: SystemId;
   readonly memberId: MemberId | null;
   readonly encryptedData: EncryptedBlob;
@@ -231,9 +274,9 @@ export type ClientNote = Note;
  * T1 encrypted: name, description, options
  */
 export interface ServerFieldDefinition extends AuditMetadata {
-  readonly id: import("./ids.js").FieldDefinitionId;
+  readonly id: FieldDefinitionId;
   readonly systemId: SystemId;
-  readonly fieldType: import("./custom-fields.js").FieldType;
+  readonly fieldType: FieldType;
   readonly required: boolean;
   readonly sortOrder: number;
   readonly encryptedData: EncryptedBlob;
@@ -247,8 +290,8 @@ export type ClientFieldDefinition = FieldDefinition;
  * T1 encrypted: value
  */
 export interface ServerFieldValue extends AuditMetadata {
-  readonly id: import("./ids.js").FieldValueId;
-  readonly fieldDefinitionId: import("./ids.js").FieldDefinitionId;
+  readonly id: FieldValueId;
+  readonly fieldDefinitionId: FieldDefinitionId;
   readonly memberId: MemberId;
   readonly encryptedData: EncryptedBlob;
 }
@@ -300,7 +343,7 @@ export type ClientInnerWorldRegion = InnerWorldRegion;
 export interface ServerLifecycleEvent {
   readonly id: EventId;
   readonly systemId: SystemId;
-  readonly eventType: import("./lifecycle.js").LifecycleEventType;
+  readonly eventType: LifecycleEventType;
   readonly occurredAt: UnixMillis;
   readonly recordedAt: UnixMillis;
   readonly encryptedData: EncryptedBlob | null;
@@ -308,6 +351,194 @@ export interface ServerLifecycleEvent {
 
 /** Client-side lifecycle event — flat decrypted fields. */
 export type ClientLifecycleEvent = LifecycleEvent;
+
+// ── Custom fronts ──────────────────────────────────────────────
+
+/**
+ * Server-side custom front representation.
+ * T1 encrypted: name, description, color, emoji
+ * T3 plaintext: archived
+ */
+export interface ServerCustomFront extends AuditMetadata {
+  readonly id: CustomFrontId;
+  readonly systemId: SystemId;
+  readonly archived: boolean;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side custom front — flat decrypted fields. */
+export type ClientCustomFront = CustomFront;
+
+// ── Journal ────────────────────────────────────────────────────
+
+/**
+ * Server-side journal entry representation.
+ * T1 encrypted: title, blocks, tags, linkedEntities
+ * T3 plaintext: authorMemberId, frontingSessionId, archived
+ */
+export interface ServerJournalEntry extends AuditMetadata {
+  readonly id: JournalEntryId;
+  readonly systemId: SystemId;
+  readonly authorMemberId: MemberId | null;
+  readonly frontingSessionId: FrontingSessionId | null;
+  readonly archived: boolean;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side journal entry — flat decrypted fields. */
+export type ClientJournalEntry = JournalEntry;
+
+/**
+ * Server-side wiki page representation.
+ * T1 encrypted: title, slug, blocks, tags, linkedEntities, linkedFromPages
+ * T3 plaintext: archived
+ */
+export interface ServerWikiPage extends AuditMetadata {
+  readonly id: WikiPageId;
+  readonly systemId: SystemId;
+  readonly archived: boolean;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side wiki page — flat decrypted fields. */
+export type ClientWikiPage = WikiPage;
+
+// ── Member photos ──────────────────────────────────────────────
+
+/**
+ * Server-side member photo representation.
+ * T1 encrypted: caption
+ * T3 plaintext: memberId, blobRef, sortOrder
+ *
+ * Intentionally omits AuditMetadata — photos are append-only gallery items.
+ * The domain MemberPhoto type also omits it.
+ */
+export interface ServerMemberPhoto {
+  readonly id: MemberPhotoId;
+  readonly memberId: MemberId;
+  readonly blobRef: BlobId;
+  readonly sortOrder: number;
+  readonly encryptedData: EncryptedBlob | null;
+}
+
+/** Client-side member photo — flat decrypted fields. */
+export type ClientMemberPhoto = MemberPhoto;
+
+// ── Polls ──────────────────────────────────────────────────────
+
+/**
+ * Server-side poll representation.
+ * T1 encrypted: title, options
+ * T3 plaintext: createdByMemberId, status, closedAt, allowMultipleVotes, maxVotesPerMember
+ */
+export interface ServerPoll extends AuditMetadata {
+  readonly id: PollId;
+  readonly systemId: SystemId;
+  readonly createdByMemberId: MemberId;
+  readonly status: "open" | "closed";
+  readonly closedAt: UnixMillis | null;
+  readonly allowMultipleVotes: boolean;
+  readonly maxVotesPerMember: number;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side poll — flat decrypted fields. */
+export type ClientPoll = Poll;
+
+// ── Acknowledgement requests ───────────────────────────────────
+
+/**
+ * Server-side acknowledgement request representation.
+ * T1 encrypted: message
+ * T3 plaintext: createdByMemberId, targetMemberId, confirmed, confirmedAt
+ */
+export interface ServerAcknowledgementRequest extends AuditMetadata {
+  readonly id: AcknowledgementId;
+  readonly systemId: SystemId;
+  readonly createdByMemberId: MemberId;
+  readonly targetMemberId: MemberId;
+  readonly confirmed: boolean;
+  readonly confirmedAt: UnixMillis | null;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side acknowledgement request — flat decrypted fields. */
+export type ClientAcknowledgementRequest = AcknowledgementRequest;
+
+// ── Side systems ───────────────────────────────────────────────
+
+/**
+ * Server-side side system representation.
+ * T1 encrypted: name, description
+ */
+export interface ServerSideSystem extends AuditMetadata {
+  readonly id: SideSystemId;
+  readonly systemId: SystemId;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side side system — flat decrypted fields. */
+export type ClientSideSystem = SideSystem;
+
+// ── Layers ─────────────────────────────────────────────────────
+
+/**
+ * Server-side layer representation.
+ * T1 encrypted: name, description
+ * T3 plaintext: accessType, gatekeeperMemberId
+ */
+export interface ServerLayer extends AuditMetadata {
+  readonly id: LayerId;
+  readonly systemId: SystemId;
+  readonly accessType: "open" | "gatekept";
+  readonly gatekeeperMemberId: MemberId | null;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side layer — flat decrypted fields. */
+export type ClientLayer = Layer;
+
+// ── Timer config ───────────────────────────────────────────────
+
+/**
+ * Server-side timer config representation.
+ * T1 encrypted: promptText
+ * T3 plaintext: intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled
+ */
+export interface ServerTimerConfig extends AuditMetadata {
+  readonly id: TimerId;
+  readonly systemId: SystemId;
+  readonly intervalMinutes: number;
+  readonly wakingHoursOnly: boolean;
+  readonly wakingStart: string;
+  readonly wakingEnd: string;
+  readonly enabled: boolean;
+  readonly encryptedData: EncryptedBlob;
+}
+
+/** Client-side timer config — flat decrypted fields. */
+export type ClientTimerConfig = TimerConfig;
+
+// ── Audit log ──────────────────────────────────────────────────
+
+/**
+ * Server-side audit log entry representation.
+ * T1 encrypted: detail
+ * T3 plaintext: eventType, actor, ipAddress, userAgent, createdAt
+ */
+export interface ServerAuditLogEntry {
+  readonly id: AuditLogEntryId;
+  readonly systemId: SystemId;
+  readonly eventType: AuditEventType;
+  readonly createdAt: UnixMillis;
+  readonly actor: AuditActor;
+  readonly encryptedData: EncryptedBlob | null;
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+}
+
+/** Client-side audit log entry — flat decrypted fields. */
+export type ClientAuditLogEntry = AuditLogEntry;
 
 // ── Mapping utility types ──────────────────────────────────────
 
@@ -322,26 +553,35 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // Member: T1 (name, pronouns, description, roleTags, colors, avatarRef) | T3 (completenessLevel, archived)
 // FrontingSession: T1 (comment) | T3 (timestamps, memberId, frontingType, customFrontId, subsystemId)
 // Group: T1 (name, description, imageRef, color, emoji) | T3 (sortOrder, archived, parentGroupId)
-// Subsystem: T1 (name, description) | T3 (parentSubsystemId)
+// Subsystem: T1 (name, description) | T3 (parentSubsystemId, architectureType, originType, hasCore, discoveryStatus)
 // Relationship: T1 (label) | T3 (type, sourceMemberId, targetMemberId, bidirectional)
-// Channel: T1 (name) | T3 (type, sortOrder)
+// Channel: T1 (name) | T3 (type, parentId, sortOrder)
 // ChatMessage: T1 (content, attachments) | T3 (senderId, channelId, replyToId, timestamp, editedAt)
-// BoardMessage: T1 (content) | T3 (pinned, sortOrder)
+// BoardMessage: T1 (content) | T3 (senderId, pinned, sortOrder)
 // Note: T1 (title, content, backgroundColor) | T3 (memberId)
 // FieldDefinition: T1 (name, description, options) | T3 (fieldType, required, sortOrder)
 // FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId)
 // InnerWorldEntity: T1 (name/linkedMemberId, description, visual) | T3 (positionX/Y, regionId, entityType)
 // InnerWorldRegion: T1 (name, description, boundaryData, visual) | T3 (parentRegionId, accessType, gatekeeperMemberId)
 // LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
+// CustomFront: T1 (name, description, color, emoji) | T3 (archived)
+// JournalEntry: T1 (title, blocks, tags, linkedEntities) | T3 (authorMemberId, frontingSessionId, archived)
+// WikiPage: T1 (title, slug, blocks, tags, linkedEntities, linkedFromPages) | T3 (archived)
+// MemberPhoto: T1 (caption) | T3 (memberId, blobRef, sortOrder)
+// Poll: T1 (title, options) | T3 (createdByMemberId, status, closedAt, allowMultipleVotes, maxVotesPerMember)
+// AcknowledgementRequest: T1 (message) | T3 (createdByMemberId, targetMemberId, confirmed, confirmedAt)
+// SideSystem: T1 (name, description) | T3 (none)
+// Layer: T1 (name, description) | T3 (accessType, gatekeeperMemberId)
+// TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
+// AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
 //
 // ApiKey: T3 (all fields — server metadata, no user content)
-// AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
 // BlobMetadata: T3 (all fields — metadata only, blob content encrypted at storage layer)
 // JobDefinition: T3 (all fields — server-internal job metadata)
 // DeviceToken: T1 (token) | T3 (platform, lastActiveAt)
 // NotificationConfig: T3 (all fields — user preferences, no sensitive content)
 // NotificationPayload: T1 (title, body, data) | T3 (eventType, systemId)
-// WebhookConfig: T1 (secret via EncryptedString) | T3 (url, eventTypes, enabled)
+// WebhookConfig: T1 (secret via EncryptedString) | T3 (url, eventTypes, enabled, cryptoKeyId)
 // WebhookDelivery: T1 (payload when encrypted) | T3 (eventType, statusCode, deliveredAt, success)
 // RealtimeSubscription: T3 (all fields — subscription metadata)
 // SearchQuery/SearchResult: client-only types, not persisted server-side

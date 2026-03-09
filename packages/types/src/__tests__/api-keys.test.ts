@@ -8,7 +8,7 @@ import type {
   CryptoApiKey,
   MetadataApiKey,
 } from "../api-keys.js";
-import type { ApiKeyId, SystemId } from "../ids.js";
+import type { ApiKeyId, BucketId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 
@@ -90,6 +90,10 @@ describe("CryptoApiKey", () => {
   it("has keyType crypto and publicKey", () => {
     expectTypeOf<CryptoApiKey["keyType"]>().toEqualTypeOf<"crypto">();
     expectTypeOf<CryptoApiKey["publicKey"]>().toEqualTypeOf<Uint8Array>();
+  });
+
+  it("has scopedBucketIds", () => {
+    expectTypeOf<CryptoApiKey["scopedBucketIds"]>().toEqualTypeOf<readonly BucketId[] | null>();
   });
 });
 

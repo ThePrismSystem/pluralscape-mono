@@ -2,7 +2,13 @@ import type { BlobId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** The intended purpose of a blob. */
-export type BlobPurpose = "avatar" | "member-photo" | "journal-image" | "attachment" | "export";
+export type BlobPurpose =
+  | "avatar"
+  | "member-photo"
+  | "journal-image"
+  | "attachment"
+  | "export"
+  | "littles-safe-mode";
 
 /**
  * Metadata about a stored blob.
@@ -18,6 +24,8 @@ export interface BlobMetadata {
   readonly sizeBytes: number;
   readonly checksum: string;
   readonly uploadedAt: UnixMillis;
+  /** Links this blob as a thumbnail of another blob. Null if not a thumbnail. */
+  readonly thumbnailOfBlobId: BlobId | null;
 }
 
 /** A request to upload a blob. */

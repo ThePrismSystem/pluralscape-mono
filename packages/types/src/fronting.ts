@@ -48,7 +48,7 @@ export type FrontingSession = ActiveFrontingSession | CompletedFrontingSession;
 export interface Switch {
   readonly id: SwitchId;
   readonly systemId: SystemId;
-  readonly memberId: MemberId;
+  readonly memberIds: readonly [MemberId, ...MemberId[]];
   readonly timestamp: UnixMillis;
 }
 

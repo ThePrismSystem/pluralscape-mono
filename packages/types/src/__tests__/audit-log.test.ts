@@ -23,7 +23,10 @@ describe("AuditEventType", () => {
     function handleType(type: AuditEventType): string {
       switch (type) {
         case "auth.login":
+        case "auth.login-failed":
         case "auth.logout":
+        case "auth.password-changed":
+        case "auth.recovery-key-used":
         case "auth.key-created":
         case "auth.key-revoked":
         case "data.export":

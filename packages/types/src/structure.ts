@@ -55,6 +55,7 @@ export interface SystemProfile {
   readonly architecture: ArchitectureType | null;
   readonly origin: OriginType | null;
   readonly discoveryStatus: DiscoveryStatus;
+  readonly hasCore: boolean;
 }
 
 /** Whether a layer is freely accessible or requires a gatekeeper. */
@@ -67,6 +68,10 @@ export interface Subsystem extends AuditMetadata {
   readonly name: string;
   readonly description: string | null;
   readonly parentSubsystemId: SubsystemId | null;
+  readonly architectureType: ArchitectureType | null;
+  readonly originType: OriginType | null;
+  readonly hasCore: boolean;
+  readonly discoveryStatus: DiscoveryStatus;
 }
 
 /** A parallel group that exists alongside the main system — not nested. */

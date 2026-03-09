@@ -1,7 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { EncryptedString } from "../encryption.js";
-import type { SystemId, WebhookDeliveryId, WebhookId } from "../ids.js";
+import type { ApiKeyId, SystemId, WebhookDeliveryId, WebhookId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 import type {
@@ -47,6 +47,14 @@ describe("WebhookEventType", () => {
         case "switch.recorded":
         case "group.created":
         case "group.updated":
+        case "note.created":
+        case "note.updated":
+        case "chat.message-sent":
+        case "poll.created":
+        case "poll.closed":
+        case "acknowledgement.requested":
+        case "lifecycle.event-recorded":
+        case "custom-front.changed":
           return type;
         default: {
           const _exhaustive: never = type;
@@ -70,6 +78,7 @@ describe("WebhookConfig", () => {
     expectTypeOf<WebhookConfig["secret"]>().toEqualTypeOf<EncryptedString>();
     expectTypeOf<WebhookConfig["eventTypes"]>().toEqualTypeOf<readonly WebhookEventType[]>();
     expectTypeOf<WebhookConfig["enabled"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<WebhookConfig["cryptoKeyId"]>().toEqualTypeOf<ApiKeyId | null>();
   });
 });
 

@@ -3,6 +3,8 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 import type {
   ChartData,
   ChartDataset,
+  CoFrontingAnalytics,
+  CoFrontingPair,
   DateRangeFilter,
   DateRangePreset,
   Duration,
@@ -119,5 +121,30 @@ describe("ChartData", () => {
     expectTypeOf<ChartData["chartType"]>().toEqualTypeOf<"pie" | "bar" | "timeline">();
     expectTypeOf<ChartData["labels"]>().toEqualTypeOf<readonly string[]>();
     expectTypeOf<ChartData["datasets"]>().toEqualTypeOf<readonly ChartDataset[]>();
+  });
+});
+
+describe("CoFrontingPair", () => {
+  it("has correct field types", () => {
+    expectTypeOf<CoFrontingPair["memberA"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<CoFrontingPair["memberB"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<CoFrontingPair["totalDuration"]>().toEqualTypeOf<Duration>();
+    expectTypeOf<CoFrontingPair["sessionCount"]>().toEqualTypeOf<number>();
+    expectTypeOf<CoFrontingPair["percentageOfTotal"]>().toEqualTypeOf<number>();
+  });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof CoFrontingPair>().toEqualTypeOf<
+      "memberA" | "memberB" | "totalDuration" | "sessionCount" | "percentageOfTotal"
+    >();
+  });
+});
+
+describe("CoFrontingAnalytics", () => {
+  it("has correct field types", () => {
+    expectTypeOf<CoFrontingAnalytics["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<CoFrontingAnalytics["dateRange"]>().toEqualTypeOf<DateRange>();
+    expectTypeOf<CoFrontingAnalytics["coFrontingPercentage"]>().toEqualTypeOf<number>();
+    expectTypeOf<CoFrontingAnalytics["pairs"]>().toEqualTypeOf<readonly CoFrontingPair[]>();
   });
 });

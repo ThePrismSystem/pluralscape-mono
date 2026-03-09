@@ -10,7 +10,10 @@ export type SearchableEntityType =
   | "journal-entry"
   | "wiki-page"
   | "channel"
-  | "note";
+  | "note"
+  | "custom-field"
+  | "chat-message"
+  | "board-message";
 
 /** A search query with filters. */
 export interface SearchQuery {

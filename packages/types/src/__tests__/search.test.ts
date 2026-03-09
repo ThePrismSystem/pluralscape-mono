@@ -43,6 +43,9 @@ describe("SearchableEntityType", () => {
         case "wiki-page":
         case "channel":
         case "note":
+        case "custom-field":
+        case "chat-message":
+        case "board-message":
           return type;
         default: {
           const _exhaustive: never = type;

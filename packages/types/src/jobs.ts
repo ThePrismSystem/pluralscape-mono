@@ -11,7 +11,10 @@ export type JobType =
   | "import-process"
   | "webhook-deliver"
   | "notification-send"
-  | "analytics-compute";
+  | "analytics-compute"
+  | "account-purge"
+  | "bucket-key-rotation"
+  | "report-generate";
 
 /** Current status of a background job. */
 export type JobStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
