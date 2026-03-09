@@ -4,15 +4,25 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./pg": "./src/schema/pg/index.ts",
+    "./sqlite": "./src/schema/sqlite/index.ts",
+    "./columns/pg": "./src/columns/pg.ts",
+    "./columns/sqlite": "./src/columns/sqlite.ts",
+    "./helpers": "./src/helpers/index.ts"
   },
   "dependencies": {
-    "drizzle-orm": "^0.39.3"
+    "@pluralscape/types": "workspace:*",
+    "better-sqlite3": "^12.6.2",
+    "drizzle-orm": "^0.39.3",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.15",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
     "drizzle-kit": "^0.31.9",
     "eslint": "^10.0.3",
     "typescript": "^5.7.3"
@@ -21,6 +31,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --max-warnings 0 .",
-    "lint:fix": "eslint --fix --max-warnings 0 ."
+    "lint:fix": "eslint --fix --max-warnings 0 .",
+    "db:generate:pg": "drizzle-kit generate --config=drizzle.config.pg.ts",
+    "db:generate:sqlite": "drizzle-kit generate --config=drizzle.config.sqlite.ts"
   }
 }

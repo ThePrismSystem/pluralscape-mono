@@ -1,0 +1,86 @@
+import type {
+  AccountId,
+  AuthKeyId,
+  DeviceTransferRequestId,
+  RecoveryKeyId,
+  SessionId,
+} from "./ids.js";
+import type { UnixMillis } from "./timestamps.js";
+import type { AuditMetadata } from "./utility.js";
+
+/** Whether an auth key is used for encryption or signing. */
+export type AuthKeyType = "encryption" | "signing";
+
+/** Status of a device transfer request. */
+export type DeviceTransferStatus = "pending" | "approved" | "expired";
+
+/** A user account — the top-level authentication entity. */
+export interface Account extends AuditMetadata {
+  readonly id: AccountId;
+  readonly emailHash: string;
+  readonly emailSalt: string;
+  readonly passwordHash: string;
+}
+
+/** A cryptographic keypair associated with an account. Immutable after creation. */
+export interface AuthKey {
+  readonly id: AuthKeyId;
+  readonly accountId: AccountId;
+  readonly encryptedPrivateKey: Uint8Array;
+  readonly publicKey: Uint8Array;
+  readonly keyType: AuthKeyType;
+  readonly createdAt: UnixMillis;
+}
+
+/** An active session on a device. */
+export interface Session {
+  readonly id: SessionId;
+  readonly accountId: AccountId;
+  readonly deviceInfo: DeviceInfo;
+  readonly createdAt: UnixMillis;
+  readonly lastActive: UnixMillis;
+  readonly revoked: boolean;
+}
+
+/** Device metadata embedded in a session. */
+export interface DeviceInfo {
+  readonly platform: string;
+  readonly appVersion: string;
+  readonly deviceName: string;
+}
+
+/** An encrypted recovery key for account recovery. Immutable after creation. */
+export interface RecoveryKey {
+  readonly id: RecoveryKeyId;
+  readonly accountId: AccountId;
+  readonly encryptedMasterKey: Uint8Array;
+  readonly createdAt: UnixMillis;
+}
+
+/** Input type for login. */
+export interface LoginCredentials {
+  readonly email: string;
+  readonly password: string;
+}
+
+/** Input type for registration. */
+export interface RegistrationInput {
+  readonly email: string;
+  readonly password: string;
+  readonly recoveryKeyBackupConfirmed: boolean;
+}
+
+/** A request to transfer encryption keys from one device to another. */
+export interface DeviceTransferRequest {
+  readonly id: DeviceTransferRequestId;
+  readonly sourceSessionId: SessionId;
+  readonly targetSessionId: SessionId;
+  readonly createdAt: UnixMillis;
+  readonly expiresAt: UnixMillis;
+  readonly status: DeviceTransferStatus;
+}
+
+/** Encrypted master key payload for device transfer. */
+export interface DeviceTransferPayload {
+  readonly encryptedMasterKey: Uint8Array;
+}

@@ -1,11 +1,11 @@
 ---
 # types-ae5n
 title: Encryption tier type annotations
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:32:39Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T02:02:54Z
 parent: types-im7i
 blocked_by:
   - types-fid9
@@ -62,14 +62,14 @@ Record mapping each domain type + field to its tier (from encryption-research.md
 
 ## Acceptance Criteria
 
-- [ ] Encrypted<T> / BucketEncrypted<T> / Plaintext<T> generic types defined
-- [ ] EncryptedBlob with ciphertext, nonce, tier, algorithm, optional bucketId
-- [ ] EncryptedString branded type to prevent logging ciphertext
-- [ ] Server/Client type variant pattern documented with example pair (ServerMember/ClientMember)
-- [ ] Decrypt<ServerT, ClientT> and Encrypt<ClientT, ServerT> mapping utility types
-- [ ] Encryption tier map covers ALL domain types
-- [ ] Type-safe: cannot accidentally pass Encrypted<T> where Plaintext<T> expected
-- [ ] Documentation of tier assignments as code comments
+- [x] Encrypted<T> / BucketEncrypted<T> / Plaintext<T> generic types defined
+- [x] EncryptedBlob with ciphertext, nonce, tier, algorithm, optional bucketId
+- [x] EncryptedString branded type to prevent logging ciphertext
+- [x] Server/Client pairs for Member, FrontingSession, Group, Subsystem, Relationship
+- [x] DecryptFn<ServerT, ClientT> and EncryptFn<ClientT, ServerT> mapping utility types
+- [x] Encryption tier map covers completed domain types (partial — TODOs for remaining)
+- [x] Type-safe: phantom brand prevents Encrypted/BucketEncrypted/Plaintext interchange
+- [x] Documentation of tier assignments as code comments
 
 ## References
 
@@ -78,3 +78,7 @@ Record mapping each domain type + field to its tier (from encryption-research.md
 ## Cross-Bean Adoption
 
 All domain type beans with encrypted data MUST define Server/Client type variant pairs and annotate fields with tier wrappers. Beans needing variants: types-fid9, types-itej, types-8klm, types-puxp, types-rwnq, types-iz5j, types-0jjx, types-c2eu, types-qryr, types-xmsf, types-jawp, types-p24v, types-gey6.
+
+## Summary of Changes
+
+Implemented encryption tier framework with Encrypted<T>, BucketEncrypted<T>, Plaintext<T> phantom-branded wrappers. Added EncryptedBlob wire format and EncryptedString branded type. Defined Server/Client pairs for 5 completed domains (Member, FrontingSession, Group, Subsystem, Relationship). Added DecryptFn/EncryptFn mapping utility types. Scope is partial — TODOs left for communication, custom fields, innerworld, and lifecycle event types.

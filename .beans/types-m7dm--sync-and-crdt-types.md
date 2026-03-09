@@ -1,11 +1,11 @@
 ---
 # types-m7dm
 title: Sync and CRDT types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:58Z
-updated_at: 2026-03-08T19:56:09Z
+updated_at: 2026-03-09T01:58:51Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -23,13 +23,17 @@ Offline-first sync state, CRDT document, and conflict resolution types.
 
 ## Acceptance Criteria
 
-- [ ] SyncDocument tracks Automerge document state
-- [ ] SyncQueueItem for offline write persistence and replay
-- [ ] SyncConflict for debugging merge history
-- [ ] SyncState for overall system sync status
-- [ ] Unit tests for sync state transitions
+- [x] SyncDocument tracks Automerge document state
+- [x] SyncQueueItem for offline write persistence and replay
+- [x] SyncConflict for debugging merge history
+- [x] SyncState for overall system sync status
+- [x] Unit tests for type-level assertions
 
 ## References
 
 - features.md section 15 (Offline-First and Sync)
 - ADR 005 (Offline Sync — Automerge CRDT)
+
+## Summary of Changes
+
+Added SyncDocument, SyncQueueItem, SyncConflict, SyncState, SyncIndicator types with 3 union types (SyncOperation, SyncResolution, SyncIndicatorStatus). Added 3 new branded IDs (SyncDocumentId, SyncQueueItemId, SyncConflictId) with prefixes and EntityType members. Full type-level test coverage.

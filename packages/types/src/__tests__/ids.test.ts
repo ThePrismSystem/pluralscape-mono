@@ -42,6 +42,12 @@ import type {
   SideSystemId,
   SubsystemId,
   SwitchId,
+  AuthKeyId,
+  RecoveryKeyId,
+  DeviceTransferRequestId,
+  SyncDocumentId,
+  SyncQueueItemId,
+  SyncConflictId,
   SystemId,
   SystemSettingsId,
   TimerId,
@@ -130,6 +136,12 @@ describe("branded ID types", () => {
     expectTypeOf<PollOptionId>().toExtend<string>();
     expectTypeOf<MemberPhotoId>().toExtend<string>();
     expectTypeOf<SwitchId>().toExtend<string>();
+    expectTypeOf<AuthKeyId>().toExtend<string>();
+    expectTypeOf<RecoveryKeyId>().toExtend<string>();
+    expectTypeOf<DeviceTransferRequestId>().toExtend<string>();
+    expectTypeOf<SyncDocumentId>().toExtend<string>();
+    expectTypeOf<SyncQueueItemId>().toExtend<string>();
+    expectTypeOf<SyncConflictId>().toExtend<string>();
     expectTypeOf<HexColor>().toExtend<string>();
   });
 });
@@ -169,7 +181,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(41);
+    expect(prefixCount).toBe(47);
   });
 });
 
@@ -237,6 +249,12 @@ describe("EntityType", () => {
         case "poll-option":
         case "member-photo":
         case "switch":
+        case "auth-key":
+        case "recovery-key":
+        case "device-transfer-request":
+        case "sync-document":
+        case "sync-queue-item":
+        case "sync-conflict":
           return type;
         default: {
           const _exhaustive: never = type;

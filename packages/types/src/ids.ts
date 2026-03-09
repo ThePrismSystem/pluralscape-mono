@@ -50,6 +50,12 @@ export type SystemSettingsId = Brand<string, "SystemSettingsId">;
 export type PollOptionId = Brand<string, "PollOptionId">;
 export type MemberPhotoId = Brand<string, "MemberPhotoId">;
 export type SwitchId = Brand<string, "SwitchId">;
+export type AuthKeyId = Brand<string, "AuthKeyId">;
+export type RecoveryKeyId = Brand<string, "RecoveryKeyId">;
+export type DeviceTransferRequestId = Brand<string, "DeviceTransferRequestId">;
+export type SyncDocumentId = Brand<string, "SyncDocumentId">;
+export type SyncQueueItemId = Brand<string, "SyncQueueItemId">;
+export type SyncConflictId = Brand<string, "SyncConflictId">;
 export type HexColor = Brand<string, "HexColor">;
 
 // ── ID prefix convention ────────────────────────────────────────────
@@ -96,6 +102,12 @@ export const ID_PREFIXES = {
   pollOption: "po_",
   memberPhoto: "mp_",
   switch: "sw_",
+  authKey: "auk_",
+  recoveryKey: "rk_",
+  deviceTransferRequest: "dtr_",
+  syncDocument: "sdoc_",
+  syncQueueItem: "sqi_",
+  syncConflict: "scon_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -141,4 +153,10 @@ export type EntityType =
   | "system-settings"
   | "poll-option"
   | "member-photo"
-  | "switch";
+  | "switch"
+  | "auth-key"
+  | "recovery-key"
+  | "device-transfer-request"
+  | "sync-document"
+  | "sync-queue-item"
+  | "sync-conflict";

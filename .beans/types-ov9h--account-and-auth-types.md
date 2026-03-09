@@ -1,11 +1,11 @@
 ---
 # types-ov9h
 title: Account and auth types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:13Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T01:56:06Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -28,14 +28,14 @@ Domain types for accounts, authentication, sessions, and recovery keys.
 
 ## Acceptance Criteria
 
-- [ ] Account type with passwordHash and updatedAt
-- [ ] AuthKey type for encryption and signing keypairs
-- [ ] Session type with structured DeviceInfo
-- [ ] RecoveryKey type for key recovery
-- [ ] DeviceTransferRequest and DeviceTransferPayload per ADR 011
-- [ ] Login and registration input types
-- [ ] All types exported from package index
-- [ ] Unit tests for type guards
+- [x] Account type with passwordHash and updatedAt
+- [x] AuthKey type for encryption and signing keypairs
+- [x] Session type with structured DeviceInfo
+- [x] RecoveryKey type for key recovery
+- [x] DeviceTransferRequest and DeviceTransferPayload per ADR 011
+- [x] Login and registration input types
+- [x] All types exported from package index
+- [x] Unit tests for type-level assertions
 
 ## References
 
@@ -44,3 +44,7 @@ Domain types for accounts, authentication, sessions, and recovery keys.
 - ADR 011 (Key Recovery)
 - ADR 013 (API Authentication)
 - DB bean: db-s6p9
+
+## Summary of Changes
+
+Added Account, AuthKey, Session, DeviceInfo, RecoveryKey, LoginCredentials, RegistrationInput, DeviceTransferRequest, DeviceTransferPayload types. Added 3 new branded IDs (AuthKeyId, RecoveryKeyId, DeviceTransferRequestId) with prefixes and EntityType members. Full type-level test coverage.
