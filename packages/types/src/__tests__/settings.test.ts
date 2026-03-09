@@ -51,6 +51,17 @@ describe("AppLockConfig", () => {
     expectTypeOf<AppLockConfig["pinEnabled"]>().toEqualTypeOf<boolean>();
     expectTypeOf<AppLockConfig["biometricEnabled"]>().toEqualTypeOf<boolean>();
     expectTypeOf<AppLockConfig["lockTimeout"]>().toEqualTypeOf<number>();
+    expectTypeOf<AppLockConfig["backgroundGraceSeconds"]>().toEqualTypeOf<number>();
+  });
+
+  it("can construct a structurally complete literal", () => {
+    const config: AppLockConfig = {
+      pinEnabled: true,
+      biometricEnabled: true,
+      lockTimeout: 5,
+      backgroundGraceSeconds: 60,
+    };
+    expectTypeOf(config).toEqualTypeOf<AppLockConfig>();
   });
 });
 

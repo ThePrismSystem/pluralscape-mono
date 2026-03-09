@@ -46,3 +46,39 @@ export class UnsupportedOperationError extends Error {
     );
   }
 }
+
+/** Thrown when crypto operations are attempted while keys are cleared. */
+export class KeysLockedError extends Error {
+  override readonly name = "KeysLockedError" as const;
+
+  constructor(
+    message = "Keys are locked. Unlock before performing crypto operations.",
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+  }
+}
+
+/** Thrown when expo-secure-store operations fail. */
+export class KeyStorageFailedError extends Error {
+  override readonly name = "KeyStorageFailedError" as const;
+
+  constructor(message = "Secure storage operation failed.", options?: ErrorOptions) {
+    super(message, options);
+  }
+}
+
+/** Thrown when biometric authentication fails after max retries. */
+export class BiometricFailedError extends Error {
+  override readonly name = "BiometricFailedError" as const;
+  readonly retriesExhausted: boolean;
+
+  constructor(
+    retriesExhausted: boolean,
+    message = "Biometric authentication failed.",
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.retriesExhausted = retriesExhausted;
+  }
+}

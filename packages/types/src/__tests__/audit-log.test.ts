@@ -12,6 +12,11 @@ describe("AuditEventType", () => {
     assertType<AuditEventType>("data.export");
     assertType<AuditEventType>("member.created");
     assertType<AuditEventType>("sharing.granted");
+    assertType<AuditEventType>("bucket.key_rotation.initiated");
+    assertType<AuditEventType>("bucket.key_rotation.chunk_completed");
+    assertType<AuditEventType>("bucket.key_rotation.completed");
+    assertType<AuditEventType>("bucket.key_rotation.failed");
+    assertType<AuditEventType>("device.security.jailbreak_warning_shown");
   });
 
   it("rejects invalid event types", () => {
@@ -37,6 +42,11 @@ describe("AuditEventType", () => {
         case "member.archived":
         case "sharing.granted":
         case "sharing.revoked":
+        case "bucket.key_rotation.initiated":
+        case "bucket.key_rotation.chunk_completed":
+        case "bucket.key_rotation.completed":
+        case "bucket.key_rotation.failed":
+        case "device.security.jailbreak_warning_shown":
           return type;
         default: {
           const _exhaustive: never = type;

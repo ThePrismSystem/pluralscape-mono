@@ -18,13 +18,22 @@ export type {
   SignSecretKey,
 } from "./types.js";
 export type { SodiumAdapter, SodiumConstants } from "./adapter/interface.js";
+export type {
+  KeyLifecycleManager,
+  KeyLifecycleState,
+  NativeMemzero,
+  SecurityPresetLevel,
+} from "./lifecycle-types.js";
 
 // ── Errors ──────────────────────────────────────────────────────────
 export {
   AlreadyInitializedError,
+  BiometricFailedError,
   CryptoNotReadyError,
   DecryptionFailedError,
   InvalidInputError,
+  KeysLockedError,
+  KeyStorageFailedError,
   UnsupportedOperationError,
 } from "./errors.js";
 
@@ -43,8 +52,10 @@ export {
   KDF_CONTEXT_BYTES,
   KDF_KEY_BYTES,
   PWHASH_MEMLIMIT_INTERACTIVE,
+  PWHASH_MEMLIMIT_MOBILE,
   PWHASH_MEMLIMIT_MODERATE,
   PWHASH_OPSLIMIT_INTERACTIVE,
+  PWHASH_OPSLIMIT_MOBILE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_SALT_BYTES,
   SIGN_BYTES,

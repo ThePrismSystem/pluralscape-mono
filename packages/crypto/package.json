@@ -9,6 +9,7 @@
     "./react-native": "./src/adapter/react-native-adapter.ts"
   },
   "dependencies": {
+    "@pluralscape/types": "workspace:*",
     "libsodium-wrappers-sumo": "^0.8.2"
   },
   "peerDependencies": {
