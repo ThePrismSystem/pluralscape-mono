@@ -43,6 +43,8 @@ export type {
   SystemSettingsId,
   PollOptionId,
   MemberPhotoId,
+  SwitchId,
+  HexColor,
   EntityType,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
@@ -78,3 +80,54 @@ export type {
   ArchivedMember,
   MemberListItem,
 } from "./identity.js";
+
+// ── Fronting ────────────────────────────────────────────────────────
+export type {
+  FrontingType,
+  ActiveFrontingSession,
+  CompletedFrontingSession,
+  FrontingSession,
+  Switch,
+  CustomFront,
+  ArchivedCustomFront,
+  CoFrontState,
+} from "./fronting.js";
+
+// ── Privacy ────────────────────────────────────────────────────────
+export type {
+  PrivacyBucket,
+  BucketContentTag,
+  BucketVisibilityScope,
+  KeyGrant,
+  FriendConnectionStatus,
+  FriendConnection,
+  FriendCode,
+  BucketAccessCheck,
+} from "./privacy.js";
+
+// ── Structure ──────────────────────────────────────────────────────
+export type {
+  RelationshipType,
+  Relationship,
+  ArchitectureType,
+  OriginType,
+  DiscoveryStatus,
+  LayerAccessType,
+  Subsystem,
+  SideSystem,
+  Layer,
+  OpenLayer,
+  GatekeptLayer,
+  SubsystemMembership,
+  SideSystemMembership,
+  LayerMembership,
+} from "./structure.js";
+
+// ── Groups ─────────────────────────────────────────────────────────
+export type {
+  Group,
+  ArchivedGroup,
+  GroupMembership,
+  GroupTree,
+  GroupMoveOperation,
+} from "./groups.js";

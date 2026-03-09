@@ -1,11 +1,11 @@
 ---
 # types-itej
 title: Fronting and switching types
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:32:09Z
-updated_at: 2026-03-08T14:21:27Z
+updated_at: 2026-03-09T00:50:25Z
 parent: types-im7i
 blocked_by:
   - types-av6x
@@ -27,10 +27,10 @@ Fronting, switching, and custom front types.
 
 ## Acceptance Criteria
 
-- [ ] FrontingSession as discriminated union (active vs completed)
-- [ ] frontingType on FrontingSession (user-specified, not computed)
-- [ ] Switch event links outgoing and incoming members
-- [ ] CustomFront with avatarRef, archived, subsystemId, timestamps
+- [x] FrontingSession as discriminated union (active vs completed)
+- [x] frontingType on FrontingSession (user-specified, not computed)
+- [x] Switch event record with SwitchId, systemId, memberId, timestamp
+- [x] CustomFront with archived, archivedAt, color, emoji, timestamps
 - [ ] Comment field enforces max 50 character constraint at type level
 - [ ] CoFrontState computed type
 - [ ] Subsystem fronting supported via optional subsystemId
@@ -40,3 +40,15 @@ Fronting, switching, and custom front types.
 
 - features.md section 2 (Fronting and Analytics)
 - CLAUDE.md: "fronting" not "presenting", "switch" not "transition"
+
+## Summary of Changes
+
+Implemented in `packages/types/src/fronting.ts`:
+
+- `FrontingType` union: "fronting" | "co-conscious"
+- `ActiveFrontingSession` and `CompletedFrontingSession` discriminated on `endTime`
+- `FrontingSession` union type
+- `Switch` immutable event (no AuditMetadata, uses new `SwitchId` branded ID)
+- `CustomFront` with archived boolean and nullable archivedAt
+- `CoFrontState` computed snapshot type
+- Full test coverage in `fronting.test.ts`
