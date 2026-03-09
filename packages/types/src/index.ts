@@ -44,6 +44,12 @@ export type {
   PollOptionId,
   MemberPhotoId,
   SwitchId,
+  AuthKeyId,
+  RecoveryKeyId,
+  DeviceTransferRequestId,
+  SyncDocumentId,
+  SyncQueueItemId,
+  SyncConflictId,
   HexColor,
   EntityType,
 } from "./ids.js";
@@ -122,6 +128,54 @@ export type {
   SideSystemMembership,
   LayerMembership,
 } from "./structure.js";
+
+// ── Auth ──────────────────────────────────────────────────────
+export type {
+  AuthKeyType,
+  DeviceTransferStatus,
+  Account,
+  AuthKey,
+  Session,
+  DeviceInfo,
+  RecoveryKey,
+  LoginCredentials,
+  RegistrationInput,
+  DeviceTransferRequest,
+  DeviceTransferPayload,
+} from "./auth.js";
+
+// ── Encryption ────────────────────────────────────────────────
+export type {
+  Encrypted,
+  BucketEncrypted,
+  Plaintext,
+  EncryptedBlob,
+  EncryptedString,
+  ServerMember,
+  ClientMember,
+  ServerFrontingSession,
+  ClientFrontingSession,
+  ServerGroup,
+  ClientGroup,
+  ServerSubsystem,
+  ClientSubsystem,
+  ServerRelationship,
+  ClientRelationship,
+  DecryptFn,
+  EncryptFn,
+} from "./encryption.js";
+
+// ── Sync ──────────────────────────────────────────────────────
+export type {
+  SyncOperation,
+  SyncResolution,
+  SyncIndicatorStatus,
+  SyncDocument,
+  SyncQueueItem,
+  SyncConflict,
+  SyncState,
+  SyncIndicator,
+} from "./sync.js";
 
 // ── Groups ─────────────────────────────────────────────────────────
 export type {

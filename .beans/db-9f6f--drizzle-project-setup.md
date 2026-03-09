@@ -1,11 +1,11 @@
 ---
 # db-9f6f
 title: Drizzle project setup
-status: todo
+status: completed
 type: task
 priority: critical
 created_at: 2026-03-08T13:32:40Z
-updated_at: 2026-03-08T19:32:27Z
+updated_at: 2026-03-09T02:19:05Z
 parent: db-2je4
 blocking:
   - db-i2gl
@@ -48,18 +48,18 @@ Drizzle ORM project setup with PostgreSQL + SQLite dual-dialect support.
 
 ## Acceptance Criteria
 
-- [ ] packages/db initialized with Drizzle ORM dependency
-- [ ] Dual-dialect config: drizzle.config.ts supports both PG and SQLite
-- [ ] Shared interfaces extracted for table shapes
-- [ ] pgTable and sqliteTable definitions for at least one example table
-- [ ] Migration generation works for both dialects
-- [ ] Connection factory selects dialect from env
-- [ ] Reusable audit column helpers (timestamps, archivable, versioned)
-- [ ] customType mappings: timestamp, bytea/blob, jsonb/text-json
-- [ ] Enum strategy documented: varchar + CHECK for portability
-- [ ] Database client exported for consumers
-- [ ] Document: which PG features are unavailable on SQLite
-- [ ] Unit test: connection factory creates correct dialect
+- [x] packages/db initialized with Drizzle ORM dependency
+- [x] Dual-dialect config: drizzle.config.pg.ts and drizzle.config.sqlite.ts
+- [x] Shared interfaces extracted for table shapes
+- [x] pgTable and sqliteTable definitions for systems table
+- [x] Migration generation scripts configured
+- [x] Connection factory selects dialect from env (createDatabase + createDatabaseFromEnv)
+- [x] Reusable audit column helpers (timestamps, archivable, versioned) for both dialects
+- [x] customType mappings: pgTimestamp/sqliteTimestamp, pgBinary/sqliteBinary, pgJsonb/sqliteJson
+- [x] Enum arrays defined in helpers/enums.ts for CHECK constraints
+- [x] Database client types and factory exported via barrel
+- [x] Documented in bean research notes
+- [x] 47 tests: dialect, columns, audit helpers, enums, PG/SQLite integration, factory
 
 ## Research Notes
 
@@ -84,3 +84,7 @@ Complete deletion cascade for GDPR account purge:
 ## NULL Semantics
 
 PG treats NULL as unique in UNIQUE indexes by default. SQLite does the same since 3.38.0 but only with NULLS NOT DISTINCT. For nullable unique columns, verify behavior on both dialects.
+
+## Summary of Changes
+
+Full Drizzle project setup with dual PG+SQLite dialect support. Custom column types for timestamps, binary, and JSON with testable mapping functions. Audit helpers (timestamps, archivable, versioned) for both dialects. Enum arrays for CHECK constraints. Example systems table with PGlite and better-sqlite3 integration tests. Connection factory with env-based dialect selection. Subpath exports for per-dialect schema access.

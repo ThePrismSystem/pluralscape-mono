@@ -1,11 +1,11 @@
 ---
 # types-cp8f
 title: Runtime ID and timestamp helpers
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T23:47:42Z
-updated_at: 2026-03-08T23:47:42Z
+updated_at: 2026-03-09T01:46:18Z
 parent: types-im7i
 ---
 
@@ -23,8 +23,12 @@ These may belong in a separate `@pluralscape/utils` package or in `@pluralscape/
 
 ## Acceptance Criteria
 
-- [ ] createId function with prefix support
-- [ ] now() helper returning UnixMillis
-- [ ] toISO() conversion helper
-- [ ] Unit tests with actual runtime assertions
-- [ ] Decide package location (types/runtime vs utils)
+- [x] createId function with prefix support
+- [x] now() helper returning UnixMillis
+- [x] toISO() conversion helper
+- [x] Unit tests with actual runtime assertions
+- [x] Decide package location: @pluralscape/types/runtime subpath export
+
+## Summary of Changes
+
+Implemented runtime ID and timestamp helpers as `@pluralscape/types/runtime` subpath export. Added `createId<T>()`, `now()`, and `toISO()` functions with full test coverage. Added `crypto.randomUUID()` global type declaration.
