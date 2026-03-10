@@ -1,11 +1,11 @@
 ---
 # db-i2gl
 title: Core tables
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:32:44Z
-updated_at: 2026-03-09T23:20:57Z
+updated_at: 2026-03-09T23:59:45Z
 parent: db-2je4
 blocking:
   - db-82q2
@@ -44,19 +44,23 @@ Core database tables for systems and members — the foundational entities all o
 
 ## Acceptance Criteria
 
-- [ ] systems table with account_id FK
-- [ ] members table with encrypted_data blob column
-- [ ] version column on members for CRDT optimistic locking (default 1)
-- [ ] member_photos table with system_id FK for RLS
-- [ ] NOT NULL on id, system_id, account_id, encrypted_data, created_at
-- [ ] DEFAULT: archived = false, version = 1
-- [ ] version column on systems for CRDT
-- [ ] member_photos has version, created_at, updated_at
-- [ ] Index on member_photos (member_id, sort_order) for ordered gallery
-- [ ] CASCADE on system deletion → members, member_photos
-- [ ] Migrations for both dialects
-- [ ] Integration test: insert/select with both dialects
+- [x] systems table with account_id FK
+- [x] members table with encrypted_data blob column
+- [x] version column on members for CRDT optimistic locking (default 1)
+- [x] member_photos table with system_id FK for RLS
+- [x] NOT NULL on id, system_id, account_id, encrypted_data, created_at
+- [x] DEFAULT: archived = false, version = 1
+- [x] version column on systems for CRDT
+- [x] member_photos has version, created_at, updated_at
+- [x] Index on member_photos (member_id, sort_order) for ordered gallery
+- [x] CASCADE on system deletion → members, member_photos
+- [x] Migrations for both dialects
+- [x] Integration test: insert/select with both dialects
 
 ## References
 
 - features.md section 1 (Identity Management)
+
+## Summary of Changes
+
+Refactored systems table to use account_id FK and encrypted_data blob. Implemented members and member_photos tables in both PG and SQLite with archivable support, FK cascades, and indexes. Full integration tests covering binary round-trips, defaults, and cascade behavior.

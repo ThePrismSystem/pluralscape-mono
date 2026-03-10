@@ -61,6 +61,8 @@ export default defineConfig({
         "packages/crypto/src/types.ts",
         "packages/crypto/src/adapter/interface.ts",
         "packages/db/src/client/types.ts",
+        // Drizzle schema files are declarative — callbacks only run during migration generation
+        "packages/db/src/schema/**/*.ts",
       ],
       reporter: ["text", "lcov", "html"],
       reportsDirectory: "./coverage",

@@ -3,119 +3,162 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
+
+import { createPgSystemTables } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
+const schema = { accounts, systems };
+
 describe("PG systems schema", () => {
   let client: PGlite;
-  let db: PgliteDatabase<{ systems: typeof systems }>;
+  let db: PgliteDatabase<typeof schema>;
+
+  async function insertAccount(id = crypto.randomUUID()): Promise<string> {
+    const now = Date.now();
+    await db.insert(accounts).values({
+      id,
+      emailHash: `hash_${crypto.randomUUID()}`,
+      emailSalt: `salt_${crypto.randomUUID()}`,
+      passwordHash: `$argon2id$${crypto.randomUUID()}`,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
 
   beforeAll(async () => {
     client = await PGlite.create();
-    db = drizzle(client, { schema: { systems } });
-
-    await client.query(`
-      CREATE TABLE systems (
-        id VARCHAR(255) PRIMARY KEY,
-        name TEXT NOT NULL,
-        display_name TEXT,
-        description TEXT,
-        avatar_ref VARCHAR(255),
-        settings_id VARCHAR(255) NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
+    db = drizzle(client, { schema });
+    await createPgSystemTables(client);
   });
 
   afterAll(async () => {
     await client.close();
   });
 
-  it("inserts and retrieves a system with all columns", async () => {
+  it("inserts and retrieves with all columns", async () => {
+    const accountId = await insertAccount();
     const now = Date.now();
-    const id = `sys_${crypto.randomUUID()}`;
-    const settingsId = `sset_${crypto.randomUUID()}`;
+    const id = crypto.randomUUID();
+    const data = new Uint8Array([1, 2, 3, 4, 5]);
 
     await db.insert(systems).values({
       id,
-      name: "Test System",
-      displayName: "Test Display",
-      description: "A test system",
-      avatarRef: "blob_avatar-001",
-      settingsId,
+      accountId,
+      encryptedData: data,
       createdAt: now,
       updatedAt: now,
-      version: 1,
     });
 
     const rows = await db.select().from(systems).where(eq(systems.id, id));
     expect(rows).toHaveLength(1);
-
-    const row = rows[0];
-    expect(row).toBeDefined();
-    expect(row?.id).toBe(id);
-    expect(row?.name).toBe("Test System");
-    expect(row?.displayName).toBe("Test Display");
-    expect(row?.description).toBe("A test system");
-    expect(row?.avatarRef).toBe("blob_avatar-001");
-    expect(row?.settingsId).toBe(settingsId);
-    expect(row?.version).toBe(1);
+    expect(rows[0]?.id).toBe(id);
+    expect(rows[0]?.accountId).toBe(accountId);
+    expect(rows[0]?.encryptedData).toEqual(data);
   });
 
-  it("round-trips timestamp values correctly", async () => {
-    const now = 1704067200000; // 2024-01-01T00:00:00.000Z
-    const id = `sys_${crypto.randomUUID()}`;
-    const settingsId = `sset_${crypto.randomUUID()}`;
+  it("allows nullable encrypted_data", async () => {
+    const accountId = await insertAccount();
+    const now = Date.now();
+    const id = crypto.randomUUID();
 
     await db.insert(systems).values({
       id,
-      name: "Timestamp Test",
-      settingsId,
+      accountId,
       createdAt: now,
       updatedAt: now,
     });
 
     const rows = await db.select().from(systems).where(eq(systems.id, id));
-    expect(rows[0]?.createdAt).toBe(now);
-    expect(rows[0]?.updatedAt).toBe(now);
+    expect(rows[0]?.encryptedData).toBeNull();
   });
 
-  it("handles nullable columns correctly", async () => {
+  it("round-trips encrypted_data binary correctly", async () => {
+    const accountId = await insertAccount();
     const now = Date.now();
-    const id = `sys_${crypto.randomUUID()}`;
-    const settingsId = `sset_${crypto.randomUUID()}`;
+    const id = crypto.randomUUID();
+    const blob = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) blob[i] = i;
 
     await db.insert(systems).values({
       id,
-      name: "Nullable Test",
-      settingsId,
+      accountId,
+      encryptedData: blob,
       createdAt: now,
       updatedAt: now,
     });
 
     const rows = await db.select().from(systems).where(eq(systems.id, id));
-    expect(rows[0]?.displayName).toBeNull();
-    expect(rows[0]?.description).toBeNull();
-    expect(rows[0]?.avatarRef).toBeNull();
+    expect(rows[0]?.encryptedData).toEqual(blob);
   });
 
-  it("defaults version to 1 when not specified", async () => {
+  it("defaults version to 1", async () => {
+    const accountId = await insertAccount();
     const now = Date.now();
-    const id = `sys_${crypto.randomUUID()}`;
-    const settingsId = `sset_${crypto.randomUUID()}`;
+    const id = crypto.randomUUID();
 
     await db.insert(systems).values({
       id,
-      name: "Version Default Test",
-      settingsId,
+      accountId,
       createdAt: now,
       updatedAt: now,
     });
 
     const rows = await db.select().from(systems).where(eq(systems.id, id));
     expect(rows[0]?.version).toBe(1);
+  });
+
+  it("cascades on account deletion", async () => {
+    const accountId = await insertAccount();
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    await db.insert(systems).values({
+      id,
+      accountId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db.delete(accounts).where(eq(accounts.id, accountId));
+    const rows = await db.select().from(systems).where(eq(systems.id, id));
+    expect(rows).toHaveLength(0);
+  });
+
+  it("rejects nonexistent accountId FK", async () => {
+    const now = Date.now();
+    await expect(
+      db.insert(systems).values({
+        id: crypto.randomUUID(),
+        accountId: "nonexistent",
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects duplicate primary key", async () => {
+    const accountId = await insertAccount();
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    await db.insert(systems).values({
+      id,
+      accountId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await expect(
+      db.insert(systems).values({
+        id,
+        accountId,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ).rejects.toThrow();
   });
 });

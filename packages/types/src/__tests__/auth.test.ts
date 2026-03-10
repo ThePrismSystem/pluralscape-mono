@@ -77,9 +77,9 @@ describe("Session", () => {
   it("has expected fields", () => {
     expectTypeOf<Session["id"]>().toEqualTypeOf<SessionId>();
     expectTypeOf<Session["accountId"]>().toEqualTypeOf<AccountId>();
-    expectTypeOf<Session["deviceInfo"]>().toEqualTypeOf<DeviceInfo>();
+    expectTypeOf<Session["deviceInfo"]>().toEqualTypeOf<DeviceInfo | null>();
     expectTypeOf<Session["createdAt"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<Session["lastActive"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<Session["lastActive"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<Session["revoked"]>().toEqualTypeOf<boolean>();
   });
 });
@@ -128,6 +128,7 @@ describe("RegistrationInput", () => {
 describe("DeviceTransferRequest", () => {
   it("has expected fields", () => {
     expectTypeOf<DeviceTransferRequest["id"]>().toEqualTypeOf<DeviceTransferRequestId>();
+    expectTypeOf<DeviceTransferRequest["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<DeviceTransferRequest["sourceSessionId"]>().toEqualTypeOf<SessionId>();
     expectTypeOf<DeviceTransferRequest["targetSessionId"]>().toEqualTypeOf<SessionId>();
     expectTypeOf<DeviceTransferRequest["createdAt"]>().toEqualTypeOf<UnixMillis>();

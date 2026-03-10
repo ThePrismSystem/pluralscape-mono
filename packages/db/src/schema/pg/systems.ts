@@ -1,15 +1,22 @@
-import { pgTable, varchar, text } from "drizzle-orm/pg-core";
+import { index, pgTable, varchar } from "drizzle-orm/pg-core";
 
+import { pgBinary } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 
-/** PG systems table — top-level account entity for a plural system. */
-export const systems = pgTable("systems", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  name: text("name").notNull(),
-  displayName: text("display_name"),
-  description: text("description"),
-  avatarRef: varchar("avatar_ref", { length: 255 }),
-  settingsId: varchar("settings_id", { length: 255 }).notNull(),
-  ...timestamps(),
-  ...versioned(),
-});
+import { accounts } from "./auth.js";
+
+/** PG systems table — top-level entity for a plural system. */
+export const systems = pgTable(
+  "systems",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    accountId: varchar("account_id", { length: 255 })
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    /** Nullable — system can exist before profile setup during onboarding. */
+    encryptedData: pgBinary("encrypted_data"),
+    ...timestamps(),
+    ...versioned(),
+  },
+  (t) => [index("systems_account_id_idx").on(t.accountId)],
+);
