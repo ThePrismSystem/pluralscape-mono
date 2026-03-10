@@ -1,11 +1,11 @@
 ---
 # db-s6p9
 title: Account and auth tables
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:33:22Z
-updated_at: 2026-03-09T23:21:05Z
+updated_at: 2026-03-09T23:59:31Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -37,19 +37,19 @@ Account, authentication key, session, and recovery tables. Foundation for crypto
 
 ## Acceptance Criteria
 
-- [ ] accounts table with hashed email and Argon2id password hash
-- [ ] email_salt column for deterministic email verification
-- [ ] auth_keys table for encryption and signing keypairs
-- [ ] sessions table with revocation support (default false)
-- [ ] recovery_keys table for key recovery flow
-- [ ] Unique index on email_hash
-- [ ] NOT NULL on id, email_hash, password_hash, created_at
-- [ ] DEFAULT: created_at = NOW(), sessions.revoked = false
-- [ ] CASCADE on account deletion → sessions, auth_keys, recovery_keys
-- [ ] Migrations for both dialects
-- [ ] version column on accounts for CRDT
-- [ ] device_transfer_requests table with expiry and status tracking
-- [ ] Integration test: full account + key + session creation flow
+- [x] accounts table with hashed email and Argon2id password hash
+- [x] email_salt column for deterministic email verification
+- [x] auth_keys table for encryption and signing keypairs
+- [x] sessions table with revocation support (default false)
+- [x] recovery_keys table for key recovery flow
+- [x] Unique index on email_hash
+- [x] NOT NULL on id, email_hash, password_hash, created_at
+- [x] DEFAULT: created_at = NOW(), sessions.revoked = false
+- [x] CASCADE on account deletion → sessions, auth_keys, recovery_keys
+- [x] Migrations for both dialects
+- [x] version column on accounts for CRDT
+- [x] device_transfer_requests table with expiry and status tracking
+- [x] Integration test: full account + key + session creation flow
 
 ## References
 
@@ -64,3 +64,7 @@ Account, authentication key, session, and recovery tables. Foundation for crypto
   - CHECK: `expires_at > created_at`
   - Account deletion → CASCADE: device_transfer_requests
   - Index: device_transfer_requests (account_id, status)
+
+## Summary of Changes
+
+Implemented all 5 auth tables (accounts, auth_keys, sessions, recovery_keys, device_transfer_requests) in both PG and SQLite dialects with CHECK constraints, FK cascades, and indexes. Full integration tests covering all columns, defaults, constraints, cascades, and binary round-trips.

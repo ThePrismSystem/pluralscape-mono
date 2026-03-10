@@ -3,27 +3,54 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
+const schema = { accounts, systems };
+
 describe("SQLite systems schema", () => {
   let client: InstanceType<typeof Database>;
-  let db: BetterSQLite3Database<{ systems: typeof systems }>;
+  let db: BetterSQLite3Database<typeof schema>;
+
+  function insertAccount(id = crypto.randomUUID()): string {
+    const now = Date.now();
+    db.insert(accounts)
+      .values({
+        id,
+        emailHash: `hash_${crypto.randomUUID()}`,
+        emailSalt: `salt_${crypto.randomUUID()}`,
+        passwordHash: `$argon2id$${crypto.randomUUID()}`,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    return id;
+  }
 
   beforeAll(() => {
     client = new Database(":memory:");
-    db = drizzle(client, { schema: { systems } });
+    client.pragma("foreign_keys = ON");
+    db = drizzle(client, { schema });
 
-    // Create the table using raw SQL matching the schema
+    client.exec(`
+      CREATE TABLE accounts (
+        id TEXT PRIMARY KEY,
+        email_hash TEXT NOT NULL UNIQUE,
+        email_salt TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+
     client.exec(`
       CREATE TABLE systems (
         id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        display_name TEXT,
-        description TEXT,
-        avatar_ref TEXT,
-        settings_id TEXT NOT NULL,
+        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        encrypted_data BLOB,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -35,90 +62,77 @@ describe("SQLite systems schema", () => {
     client.close();
   });
 
-  it("inserts and retrieves a system with all columns", () => {
+  it("inserts and retrieves with all columns", () => {
+    const accountId = insertAccount();
     const now = Date.now();
-    const id = `sys_${crypto.randomUUID()}`;
-    const settingsId = `sset_${crypto.randomUUID()}`;
+    const id = crypto.randomUUID();
+    const data = new Uint8Array([1, 2, 3, 4, 5]);
 
     db.insert(systems)
       .values({
         id,
-        name: "Test System",
-        displayName: "Test Display",
-        description: "A test system",
-        avatarRef: "blob_avatar-001",
-        settingsId,
+        accountId,
+        encryptedData: data,
         createdAt: now,
         updatedAt: now,
-        version: 1,
       })
       .run();
 
     const rows = db.select().from(systems).where(eq(systems.id, id)).all();
     expect(rows).toHaveLength(1);
-
-    const row = rows[0];
-    expect(row).toBeDefined();
-    expect(row?.id).toBe(id);
-    expect(row?.name).toBe("Test System");
-    expect(row?.displayName).toBe("Test Display");
-    expect(row?.description).toBe("A test system");
-    expect(row?.avatarRef).toBe("blob_avatar-001");
-    expect(row?.settingsId).toBe(settingsId);
-    expect(row?.version).toBe(1);
+    expect(rows[0]?.id).toBe(id);
+    expect(rows[0]?.accountId).toBe(accountId);
+    expect(rows[0]?.encryptedData).toEqual(data);
   });
 
-  it("round-trips timestamp values correctly", () => {
-    const now = 1704067200000;
-    const id = `sys_${crypto.randomUUID()}`;
-    const settingsId = `sset_${crypto.randomUUID()}`;
+  it("allows nullable encrypted_data", () => {
+    const accountId = insertAccount();
+    const now = Date.now();
+    const id = crypto.randomUUID();
 
     db.insert(systems)
       .values({
         id,
-        name: "Timestamp Test",
-        settingsId,
+        accountId,
         createdAt: now,
         updatedAt: now,
       })
       .run();
 
     const rows = db.select().from(systems).where(eq(systems.id, id)).all();
-    expect(rows[0]?.createdAt).toBe(now);
-    expect(rows[0]?.updatedAt).toBe(now);
+    expect(rows[0]?.encryptedData).toBeNull();
   });
 
-  it("handles nullable columns correctly", () => {
+  it("round-trips encrypted_data binary correctly", () => {
+    const accountId = insertAccount();
     const now = Date.now();
-    const id = `sys_${crypto.randomUUID()}`;
-    const settingsId = `sset_${crypto.randomUUID()}`;
+    const id = crypto.randomUUID();
+    const blob = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) blob[i] = i;
 
     db.insert(systems)
       .values({
         id,
-        name: "Nullable Test",
-        settingsId,
+        accountId,
+        encryptedData: blob,
         createdAt: now,
         updatedAt: now,
       })
       .run();
 
     const rows = db.select().from(systems).where(eq(systems.id, id)).all();
-    expect(rows[0]?.displayName).toBeNull();
-    expect(rows[0]?.description).toBeNull();
-    expect(rows[0]?.avatarRef).toBeNull();
+    expect(rows[0]?.encryptedData).toEqual(blob);
   });
 
-  it("defaults version to 1 when not specified", () => {
+  it("defaults version to 1", () => {
+    const accountId = insertAccount();
     const now = Date.now();
-    const id = `sys_${crypto.randomUUID()}`;
-    const settingsId = `sset_${crypto.randomUUID()}`;
+    const id = crypto.randomUUID();
 
     db.insert(systems)
       .values({
         id,
-        name: "Version Default Test",
-        settingsId,
+        accountId,
         createdAt: now,
         updatedAt: now,
       })
@@ -126,5 +140,24 @@ describe("SQLite systems schema", () => {
 
     const rows = db.select().from(systems).where(eq(systems.id, id)).all();
     expect(rows[0]?.version).toBe(1);
+  });
+
+  it("cascades on account deletion", () => {
+    const accountId = insertAccount();
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    db.insert(systems)
+      .values({
+        id,
+        accountId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+
+    db.delete(accounts).where(eq(accounts.id, accountId)).run();
+    const rows = db.select().from(systems).where(eq(systems.id, id)).all();
+    expect(rows).toHaveLength(0);
   });
 });

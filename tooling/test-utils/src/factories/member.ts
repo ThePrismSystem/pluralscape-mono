@@ -1,10 +1,7 @@
-const UNIQUE_SUFFIX_LENGTH = 8;
-
 export interface MemberFactoryOutput {
   id: string;
   systemId: string;
-  name: string;
-  pronouns: string | null;
+  encryptedData: Uint8Array;
   createdAt: Date;
 }
 
@@ -14,8 +11,7 @@ export function buildMember(overrides: MemberFactoryInput = {}): MemberFactoryOu
   return {
     id: overrides.id ?? crypto.randomUUID(),
     systemId: overrides.systemId ?? crypto.randomUUID(),
-    name: overrides.name ?? `Test Member ${crypto.randomUUID().slice(0, UNIQUE_SUFFIX_LENGTH)}`,
-    pronouns: overrides.pronouns ?? null,
+    encryptedData: overrides.encryptedData ?? new Uint8Array([0]),
     createdAt: overrides.createdAt ?? new Date(),
   };
 }

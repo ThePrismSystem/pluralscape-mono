@@ -47,10 +47,15 @@ export const sqliteTimestamp = customType<{ data: number; driverData: number }>(
   fromDriver: timestampFromDriver,
 });
 
-/** SQLite blob column that maps to/from Uint8Array (passthrough). */
+/** SQLite blob column that maps to/from Uint8Array. */
 export const sqliteBinary = customType<{ data: Uint8Array; driverData: Uint8Array }>({
   dataType() {
     return "blob";
+  },
+  fromDriver(val: Uint8Array): Uint8Array {
+    // better-sqlite3 returns Buffer (a Node.js subclass of Uint8Array).
+    // Convert to plain Uint8Array for consistent cross-dialect behavior.
+    return new Uint8Array(val);
   },
 });
 
