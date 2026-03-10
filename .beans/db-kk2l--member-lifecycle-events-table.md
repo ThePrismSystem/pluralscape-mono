@@ -1,11 +1,11 @@
 ---
 # db-kk2l
 title: Member lifecycle events table
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:33:02Z
-updated_at: 2026-03-09T23:00:43Z
+updated_at: 2026-03-10T02:56:56Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -35,13 +35,13 @@ Append-only lifecycle event log table for tracking member splits, fusions, merge
 
 ## Acceptance Criteria
 
-- [ ] lifecycle_events table with event_type inside encrypted_data
-- [ ] No plaintext event_type column
-- [ ] Append-only pattern enforced in application
-- [ ] occurred_at and recorded_at split timestamps
-- [ ] Index on (system_id, occurred_at) and (system_id, recorded_at)
-- [ ] Migrations for both dialects
-- [ ] Integration test: insert events and query chronologically
+- [x] lifecycle_events table with event_type inside encrypted_data
+- [x] No plaintext event_type column
+- [x] Append-only pattern enforced in application
+- [x] occurred_at and recorded_at split timestamps
+- [x] Index on (system_id, occurred_at) and (system_id, recorded_at)
+- [x] Migrations for both dialects
+- [x] Integration test: insert events and query chronologically
 
 ## References
 
@@ -50,3 +50,7 @@ Append-only lifecycle event log table for tracking member splits, fusions, merge
 ### Cascade rules
 
 - System deletion → CASCADE: lifecycle_events
+
+## Summary of Changes
+
+Implemented `lifecycle_events` table (PG + SQLite) with encrypted_data (event_type inside), occurred_at/recorded_at split timestamps, composite indexes. Append-only pattern (no UPDATE/DELETE). 8 integration tests.

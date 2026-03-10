@@ -1,11 +1,11 @@
 ---
 # db-k9sr
 title: Security audit log table
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:43Z
-updated_at: 2026-03-09T23:21:08Z
+updated_at: 2026-03-10T02:56:32Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -39,16 +39,20 @@ Configurable per deployment (default 90 days hosted, unlimited self-hosted)
 
 ## Acceptance Criteria
 
-- [ ] audit_log table with all event types supported
-- [ ] system_id column (nullable, ON DELETE SET NULL)
-- [ ] actor as structured JSONB (kind: 'account'|'system'|'api-key', id)
-- [ ] detail (renamed from metadata) as JSONB (PG) / TEXT-as-JSON (SQLite) via Drizzle customType
-- [ ] Append-only pattern enforced in application
-- [ ] IP address and user agent captured
-- [ ] Indexes on (account_id, timestamp) and event_type
-- [ ] Migrations for both dialects
-- [ ] Integration test: insert audit entries and query by account
+- [x] audit_log table with all event types supported
+- [x] system_id column (nullable, ON DELETE SET NULL)
+- [x] actor as structured JSONB (kind: 'account'|'system'|'api-key', id)
+- [x] detail (renamed from metadata) as JSONB (PG) / TEXT-as-JSON (SQLite) via Drizzle customType
+- [x] Append-only pattern enforced in application
+- [x] IP address and user agent captured
+- [x] Indexes on (account_id, timestamp) and event_type
+- [x] Migrations for both dialects
+- [x] Integration test: insert audit entries and query by account
 
 ## References
 
 - features.md section 14 (Security audit log)
+
+## Summary of Changes
+
+Implemented `audit_log` table (PG + SQLite) with all 20 event types via CHECK constraint, JSONB actor (DbAuditActor), ON DELETE SET NULL for both FKs, AUDIT_EVENT_TYPES enum. Used built-in jsonb() for PG (pgJsonb double-parses with PGlite). 8 integration tests.

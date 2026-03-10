@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  API_KEY_KEY_TYPES,
+  API_KEY_SCOPES,
+  AUDIT_EVENT_TYPES,
   AUTH_KEY_TYPES,
   BUCKET_VISIBILITY_SCOPES,
   KNOWN_SATURATION_LEVELS,
@@ -63,6 +66,22 @@ describe("enum arrays", () => {
     expect(SYNC_RESOLUTIONS).toEqual(["local", "remote", "merged"]);
   });
 
+  it("API_KEY_KEY_TYPES matches ApiKey keyType union", () => {
+    expect(API_KEY_KEY_TYPES).toEqual(["metadata", "crypto"]);
+  });
+
+  it("API_KEY_SCOPES matches ApiKeyScope union", () => {
+    expect(API_KEY_SCOPES).toHaveLength(16);
+    expect(API_KEY_SCOPES).toContain("read:members");
+    expect(API_KEY_SCOPES).toContain("full");
+  });
+
+  it("AUDIT_EVENT_TYPES matches AuditEventType union", () => {
+    expect(AUDIT_EVENT_TYPES).toHaveLength(20);
+    expect(AUDIT_EVENT_TYPES).toContain("auth.login");
+    expect(AUDIT_EVENT_TYPES).toContain("device.security.jailbreak_warning_shown");
+  });
+
   it("all arrays have correct element counts", () => {
     expect(KNOWN_SATURATION_LEVELS).toHaveLength(4);
     expect(FRONTING_TYPES).toHaveLength(2);
@@ -74,5 +93,8 @@ describe("enum arrays", () => {
     expect(DEVICE_TRANSFER_STATUSES).toHaveLength(3);
     expect(SYNC_OPERATIONS).toHaveLength(3);
     expect(SYNC_RESOLUTIONS).toHaveLength(3);
+    expect(API_KEY_KEY_TYPES).toHaveLength(2);
+    expect(API_KEY_SCOPES).toHaveLength(16);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(20);
   });
 });

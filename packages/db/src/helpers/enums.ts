@@ -14,6 +14,8 @@ import type { AuthKeyType } from "@pluralscape/types";
 import type { DeviceTransferStatus } from "@pluralscape/types";
 import type { SyncOperation } from "@pluralscape/types";
 import type { SyncResolution } from "@pluralscape/types";
+import type { ApiKey, ApiKeyScope } from "@pluralscape/types";
+import type { AuditEventType } from "@pluralscape/types";
 
 export const KNOWN_SATURATION_LEVELS = [
   "fragment",
@@ -74,3 +76,47 @@ export const SYNC_RESOLUTIONS = [
   "remote",
   "merged",
 ] as const satisfies readonly SyncResolution[];
+export const API_KEY_KEY_TYPES = [
+  "metadata",
+  "crypto",
+] as const satisfies readonly ApiKey["keyType"][];
+export const API_KEY_SCOPES = [
+  "read:members",
+  "write:members",
+  "read:fronting",
+  "write:fronting",
+  "read:groups",
+  "write:groups",
+  "read:system",
+  "write:system",
+  "read:webhooks",
+  "write:webhooks",
+  "read:audit-log",
+  "read:blobs",
+  "write:blobs",
+  "read:notifications",
+  "write:notifications",
+  "full",
+] as const satisfies readonly ApiKeyScope[];
+export const AUDIT_EVENT_TYPES = [
+  "auth.login",
+  "auth.login-failed",
+  "auth.logout",
+  "auth.password-changed",
+  "auth.recovery-key-used",
+  "auth.key-created",
+  "auth.key-revoked",
+  "data.export",
+  "data.import",
+  "data.purge",
+  "settings.changed",
+  "member.created",
+  "member.archived",
+  "sharing.granted",
+  "sharing.revoked",
+  "bucket.key_rotation.initiated",
+  "bucket.key_rotation.chunk_completed",
+  "bucket.key_rotation.completed",
+  "bucket.key_rotation.failed",
+  "device.security.jailbreak_warning_shown",
+] as const satisfies readonly AuditEventType[];

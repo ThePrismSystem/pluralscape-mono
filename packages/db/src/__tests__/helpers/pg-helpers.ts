@@ -414,6 +414,101 @@ export const PG_DDL = {
       PRIMARY KEY (field_definition_id, bucket_id)
     )
   `,
+  // Nomenclature Settings
+  nomenclatureSettings: `
+    CREATE TABLE nomenclature_settings (
+      system_id VARCHAR(255) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  // System Settings
+  systemSettings: `
+    CREATE TABLE system_settings (
+      system_id VARCHAR(255) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      locale VARCHAR(255),
+      pin_hash VARCHAR(255),
+      biometric_enabled BOOLEAN NOT NULL DEFAULT false,
+      littles_safe_mode_enabled BOOLEAN NOT NULL DEFAULT false,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  // API Keys
+  apiKeys: `
+    CREATE TABLE api_keys (
+      id VARCHAR(255) PRIMARY KEY,
+      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      key_type VARCHAR(255) NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
+      token_hash VARCHAR(255) NOT NULL UNIQUE,
+      scopes JSONB NOT NULL,
+      encrypted_key_material BYTEA,
+      created_at TIMESTAMPTZ NOT NULL,
+      last_used_at TIMESTAMPTZ,
+      revoked_at TIMESTAMPTZ,
+      expires_at TIMESTAMPTZ,
+      scoped_bucket_ids JSONB
+    )
+  `,
+  apiKeysIndexes: `
+    CREATE INDEX api_keys_account_id_idx ON api_keys (account_id);
+    CREATE INDEX api_keys_revoked_at_idx ON api_keys (revoked_at);
+    CREATE INDEX api_keys_key_type_idx ON api_keys (key_type)
+  `,
+  // Audit Log
+  auditLog: `
+    CREATE TABLE audit_log (
+      id VARCHAR(255) PRIMARY KEY,
+      account_id VARCHAR(255) REFERENCES accounts(id) ON DELETE SET NULL,
+      system_id VARCHAR(255) REFERENCES systems(id) ON DELETE SET NULL,
+      event_type VARCHAR(255) NOT NULL CHECK (event_type IN ('auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown')),
+      timestamp TIMESTAMPTZ NOT NULL,
+      ip_address VARCHAR(255),
+      user_agent VARCHAR(1024),
+      actor JSONB NOT NULL,
+      detail JSONB
+    )
+  `,
+  auditLogIndexes: `
+    CREATE INDEX audit_log_account_timestamp_idx ON audit_log (account_id, timestamp);
+    CREATE INDEX audit_log_system_timestamp_idx ON audit_log (system_id, timestamp);
+    CREATE INDEX audit_log_event_type_idx ON audit_log (event_type)
+  `,
+  // Lifecycle Events
+  lifecycleEvents: `
+    CREATE TABLE lifecycle_events (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      occurred_at TIMESTAMPTZ NOT NULL,
+      recorded_at TIMESTAMPTZ NOT NULL,
+      encrypted_data BYTEA NOT NULL
+    )
+  `,
+  lifecycleEventsIndexes: `
+    CREATE INDEX lifecycle_events_system_occurred_idx ON lifecycle_events (system_id, occurred_at);
+    CREATE INDEX lifecycle_events_system_recorded_idx ON lifecycle_events (system_id, recorded_at)
+  `,
+  // Safe Mode Content
+  safeModeContent: `
+    CREATE TABLE safe_mode_content (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sort_order INTEGER,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  safeModeContentIndexes: `
+    CREATE INDEX safe_mode_content_system_sort_idx ON safe_mode_content (system_id, sort_order)
+  `,
 } as const;
 
 async function pgExec(client: PGlite, sql: string): Promise<void> {
@@ -545,4 +640,38 @@ export async function createPgCustomFieldsTables(client: PGlite): Promise<void> 
   await pgExec(client, PG_DDL.fieldValues);
   await pgExec(client, PG_DDL.fieldValuesIndexes);
   await pgExec(client, PG_DDL.fieldBucketVisibility);
+}
+
+export async function createPgNomenclatureSettingsTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.nomenclatureSettings);
+}
+
+export async function createPgSystemSettingsTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.systemSettings);
+}
+
+export async function createPgApiKeysTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.apiKeys);
+  await pgExec(client, PG_DDL.apiKeysIndexes);
+}
+
+export async function createPgAuditLogTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.auditLog);
+  await pgExec(client, PG_DDL.auditLogIndexes);
+}
+
+export async function createPgLifecycleEventsTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.lifecycleEvents);
+  await pgExec(client, PG_DDL.lifecycleEventsIndexes);
+}
+
+export async function createPgSafeModeContentTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.safeModeContent);
+  await pgExec(client, PG_DDL.safeModeContentIndexes);
 }
