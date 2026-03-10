@@ -10,3 +10,4 @@ export {
   SYNC_OPERATIONS,
   SYNC_RESOLUTIONS,
 } from "./enums.js";
+export { enumCheck } from "./check.js";

@@ -31,6 +31,7 @@ export const memberPhotos = pgTable(
     memberId: varchar("member_id", { length: 255 })
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
+    /** Denormalized from members — avoids join through members for RLS queries. */
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -40,7 +41,6 @@ export const memberPhotos = pgTable(
     ...versioned(),
   },
   (t) => [
-    index("member_photos_member_id_idx").on(t.memberId),
     index("member_photos_system_id_idx").on(t.systemId),
     index("member_photos_member_sort_idx").on(t.memberId, t.sortOrder),
   ],

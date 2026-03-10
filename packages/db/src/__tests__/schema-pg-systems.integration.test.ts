@@ -6,6 +6,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
+import { createPgSystemTables } from "./helpers/pg-helpers.js";
+
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems };
@@ -30,29 +32,7 @@ describe("PG systems schema", () => {
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
-
-    await client.query(`
-      CREATE TABLE accounts (
-        id VARCHAR(255) PRIMARY KEY,
-        email_hash VARCHAR(255) NOT NULL UNIQUE,
-        email_salt VARCHAR(255) NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE systems (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_data BYTEA,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
+    await createPgSystemTables(client);
   });
 
   afterAll(async () => {
@@ -146,5 +126,39 @@ describe("PG systems schema", () => {
     await db.delete(accounts).where(eq(accounts.id, accountId));
     const rows = await db.select().from(systems).where(eq(systems.id, id));
     expect(rows).toHaveLength(0);
+  });
+
+  it("rejects nonexistent accountId FK", async () => {
+    const now = Date.now();
+    await expect(
+      db.insert(systems).values({
+        id: crypto.randomUUID(),
+        accountId: "nonexistent",
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects duplicate primary key", async () => {
+    const accountId = await insertAccount();
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    await db.insert(systems).values({
+      id,
+      accountId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await expect(
+      db.insert(systems).values({
+        id,
+        accountId,
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ).rejects.toThrow();
   });
 });

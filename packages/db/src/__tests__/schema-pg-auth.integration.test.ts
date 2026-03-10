@@ -11,6 +11,8 @@ import {
   sessions,
 } from "../schema/pg/auth.js";
 
+import { createPgAuthTables } from "./helpers/pg-helpers.js";
+
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, authKeys, sessions, recoveryKeys, deviceTransferRequests };
@@ -65,62 +67,7 @@ describe("PG auth schema", () => {
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
-
-    await client.query(`
-      CREATE TABLE accounts (
-        id VARCHAR(255) PRIMARY KEY,
-        email_hash VARCHAR(255) NOT NULL UNIQUE,
-        email_salt VARCHAR(255) NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE auth_keys (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_private_key BYTEA NOT NULL,
-        public_key BYTEA NOT NULL,
-        key_type VARCHAR(255) NOT NULL CHECK (key_type IN ('encryption', 'signing')),
-        created_at TIMESTAMPTZ NOT NULL
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE sessions (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        device_info VARCHAR(255),
-        created_at TIMESTAMPTZ NOT NULL,
-        last_active TIMESTAMPTZ,
-        revoked BOOLEAN NOT NULL DEFAULT false
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE recovery_keys (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_master_key BYTEA NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE device_transfer_requests (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        source_session_id VARCHAR(255) NOT NULL REFERENCES sessions(id),
-        target_session_id VARCHAR(255) NOT NULL REFERENCES sessions(id),
-        status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'expired')),
-        created_at TIMESTAMPTZ NOT NULL,
-        expires_at TIMESTAMPTZ NOT NULL,
-        CHECK (expires_at > created_at)
-      )
-    `);
+    await createPgAuthTables(client);
   });
 
   afterAll(async () => {
@@ -157,6 +104,12 @@ describe("PG auth schema", () => {
       await expect(
         client.query("INSERT INTO accounts (id) VALUES ($1)", [crypto.randomUUID()]),
       ).rejects.toThrow();
+    });
+
+    it("rejects duplicate primary key", async () => {
+      const id = crypto.randomUUID();
+      await insertAccount({ id });
+      await expect(insertAccount({ id })).rejects.toThrow();
     });
   });
 
@@ -208,7 +161,7 @@ describe("PG auth schema", () => {
           accountId: account.id,
           encryptedPrivateKey: new Uint8Array([1]),
           publicKey: new Uint8Array([2]),
-          keyType: "invalid",
+          keyType: "invalid" as "encryption",
           createdAt: Date.now(),
         }),
       ).rejects.toThrow();
@@ -230,6 +183,47 @@ describe("PG auth schema", () => {
       await db.delete(accounts).where(eq(accounts.id, account.id));
       const rows = await db.select().from(authKeys).where(eq(authKeys.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent accountId FK", async () => {
+      await expect(
+        db.insert(authKeys).values({
+          id: crypto.randomUUID(),
+          accountId: "nonexistent",
+          encryptedPrivateKey: new Uint8Array([1]),
+          publicKey: new Uint8Array([2]),
+          keyType: "encryption",
+          createdAt: Date.now(),
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("round-trips empty Uint8Array", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+
+      await db.insert(authKeys).values({
+        id,
+        accountId: account.id,
+        encryptedPrivateKey: new Uint8Array(0),
+        publicKey: new Uint8Array(0),
+        keyType: "encryption",
+        createdAt: Date.now(),
+      });
+
+      const rows = await db.select().from(authKeys).where(eq(authKeys.id, id));
+      expect(rows[0]?.encryptedPrivateKey).toEqual(new Uint8Array(0));
+      expect(rows[0]?.publicKey).toEqual(new Uint8Array(0));
+    });
+
+    it("enforces NOT NULL on required columns", async () => {
+      const account = await insertAccount();
+      await expect(
+        client.query(
+          "INSERT INTO auth_keys (id, account_id, key_type, created_at) VALUES ($1, $2, 'encryption', $3)",
+          [crypto.randomUUID(), account.id, Date.now()],
+        ),
+      ).rejects.toThrow();
     });
   });
 
@@ -300,6 +294,16 @@ describe("PG auth schema", () => {
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects nonexistent accountId FK", async () => {
+      await expect(
+        db.insert(sessions).values({
+          id: crypto.randomUUID(),
+          accountId: "nonexistent",
+          createdAt: Date.now(),
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("recovery_keys", () => {
@@ -334,6 +338,17 @@ describe("PG auth schema", () => {
       await db.delete(accounts).where(eq(accounts.id, account.id));
       const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent accountId FK", async () => {
+      await expect(
+        db.insert(recoveryKeys).values({
+          id: crypto.randomUUID(),
+          accountId: "nonexistent",
+          encryptedMasterKey: new Uint8Array([1]),
+          createdAt: Date.now(),
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -388,6 +403,54 @@ describe("PG auth schema", () => {
       expect(rows[0]?.status).toBe("pending");
     });
 
+    it("accepts approved status", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: target.id,
+        status: "approved",
+        createdAt: now,
+        expiresAt: now + 3600000,
+      });
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows[0]?.status).toBe("approved");
+    });
+
+    it("accepts expired status", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: target.id,
+        status: "expired",
+        createdAt: now,
+        expiresAt: now + 3600000,
+      });
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows[0]?.status).toBe("expired");
+    });
+
     it("rejects invalid status via CHECK", async () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
@@ -400,7 +463,7 @@ describe("PG auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
-          status: "invalid",
+          status: "invalid" as "pending",
           createdAt: now,
           expiresAt: now + 3600000,
         }),
@@ -425,6 +488,24 @@ describe("PG auth schema", () => {
       ).rejects.toThrow();
     });
 
+    it("rejects expiresAt === createdAt (boundary of > CHECK)", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+
+      await expect(
+        db.insert(deviceTransferRequests).values({
+          id: crypto.randomUUID(),
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          createdAt: now,
+          expiresAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
     it("cascades on account deletion", async () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
@@ -442,6 +523,30 @@ describe("PG auth schema", () => {
       });
 
       await db.delete(accounts).where(eq(accounts.id, account.id));
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("cascades on session deletion", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: target.id,
+        createdAt: now,
+        expiresAt: now + 3600000,
+      });
+
+      await db.delete(sessions).where(eq(sessions.id, source.id));
       const rows = await db
         .select()
         .from(deviceTransferRequests)

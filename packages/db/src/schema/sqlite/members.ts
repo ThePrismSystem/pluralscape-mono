@@ -31,6 +31,7 @@ export const memberPhotos = sqliteTable(
     memberId: text("member_id")
       .notNull()
       .references(() => members.id, { onDelete: "cascade" }),
+    /** Denormalized from members — avoids join through members for RLS queries. */
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -40,7 +41,6 @@ export const memberPhotos = sqliteTable(
     ...versioned(),
   },
   (t) => [
-    index("member_photos_member_id_idx").on(t.memberId),
     index("member_photos_system_id_idx").on(t.systemId),
     index("member_photos_member_sort_idx").on(t.memberId, t.sortOrder),
   ],

@@ -36,9 +36,9 @@ export interface AuthKey {
 export interface Session {
   readonly id: SessionId;
   readonly accountId: AccountId;
-  readonly deviceInfo: DeviceInfo;
+  readonly deviceInfo: DeviceInfo | null;
   readonly createdAt: UnixMillis;
-  readonly lastActive: UnixMillis;
+  readonly lastActive: UnixMillis | null;
   readonly revoked: boolean;
 }
 
@@ -73,6 +73,7 @@ export interface RegistrationInput {
 /** A request to transfer encryption keys from one device to another. */
 export interface DeviceTransferRequest {
   readonly id: DeviceTransferRequestId;
+  readonly accountId: AccountId;
   readonly sourceSessionId: SessionId;
   readonly targetSessionId: SessionId;
   readonly createdAt: UnixMillis;

@@ -11,6 +11,8 @@ import {
   sessions,
 } from "../schema/sqlite/auth.js";
 
+import { createSqliteAuthTables } from "./helpers/sqlite-helpers.js";
+
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, authKeys, sessions, recoveryKeys, deviceTransferRequests };
@@ -66,62 +68,7 @@ describe("SQLite auth schema", () => {
     client = new Database(":memory:");
     client.pragma("foreign_keys = ON");
     db = drizzle(client, { schema });
-
-    client.exec(`
-      CREATE TABLE accounts (
-        id TEXT PRIMARY KEY,
-        email_hash TEXT NOT NULL UNIQUE,
-        email_salt TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-
-    client.exec(`
-      CREATE TABLE auth_keys (
-        id TEXT PRIMARY KEY,
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_private_key BLOB NOT NULL,
-        public_key BLOB NOT NULL,
-        key_type TEXT NOT NULL CHECK (key_type IN ('encryption', 'signing')),
-        created_at INTEGER NOT NULL
-      )
-    `);
-
-    client.exec(`
-      CREATE TABLE sessions (
-        id TEXT PRIMARY KEY,
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        device_info TEXT,
-        created_at INTEGER NOT NULL,
-        last_active INTEGER,
-        revoked INTEGER NOT NULL DEFAULT 0
-      )
-    `);
-
-    client.exec(`
-      CREATE TABLE recovery_keys (
-        id TEXT PRIMARY KEY,
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_master_key BLOB NOT NULL,
-        created_at INTEGER NOT NULL
-      )
-    `);
-
-    client.exec(`
-      CREATE TABLE device_transfer_requests (
-        id TEXT PRIMARY KEY,
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        source_session_id TEXT NOT NULL REFERENCES sessions(id),
-        target_session_id TEXT NOT NULL REFERENCES sessions(id),
-        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'expired')),
-        created_at INTEGER NOT NULL,
-        expires_at INTEGER NOT NULL,
-        CHECK (expires_at > created_at)
-      )
-    `);
+    createSqliteAuthTables(client);
   });
 
   afterAll(() => {
@@ -151,13 +98,19 @@ describe("SQLite auth schema", () => {
     it("rejects duplicate email_hash", () => {
       const emailHash = `hash_${crypto.randomUUID()}`;
       insertAccount({ emailHash });
-      expect(() => insertAccount({ emailHash })).toThrow();
+      expect(() => insertAccount({ emailHash })).toThrow(/UNIQUE|constraint/i);
     });
 
     it("enforces NOT NULL on required columns", () => {
       expect(() =>
         client.exec(`INSERT INTO accounts (id) VALUES ('${crypto.randomUUID()}')`),
-      ).toThrow();
+      ).toThrow(/NOT NULL/i);
+    });
+
+    it("rejects duplicate primary key", () => {
+      const id = crypto.randomUUID();
+      insertAccount({ id });
+      expect(() => insertAccount({ id })).toThrow(/UNIQUE|constraint/i);
     });
   });
 
@@ -215,11 +168,11 @@ describe("SQLite auth schema", () => {
             accountId: account.id,
             encryptedPrivateKey: new Uint8Array([1]),
             publicKey: new Uint8Array([2]),
-            keyType: "invalid",
+            keyType: "invalid" as "encryption",
             createdAt: Date.now(),
           })
           .run(),
-      ).toThrow();
+      ).toThrow(/constraint|CHECK/i);
     });
 
     it("cascades on account deletion", () => {
@@ -240,6 +193,52 @@ describe("SQLite auth schema", () => {
       db.delete(accounts).where(eq(accounts.id, account.id)).run();
       const rows = db.select().from(authKeys).where(eq(authKeys.id, id)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent accountId FK", () => {
+      expect(() =>
+        db
+          .insert(authKeys)
+          .values({
+            id: crypto.randomUUID(),
+            accountId: "nonexistent",
+            encryptedPrivateKey: new Uint8Array([1]),
+            publicKey: new Uint8Array([2]),
+            keyType: "encryption",
+            createdAt: Date.now(),
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("round-trips empty Uint8Array", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+
+      db.insert(authKeys)
+        .values({
+          id,
+          accountId: account.id,
+          encryptedPrivateKey: new Uint8Array(0),
+          publicKey: new Uint8Array(0),
+          keyType: "encryption",
+          createdAt: Date.now(),
+        })
+        .run();
+
+      const rows = db.select().from(authKeys).where(eq(authKeys.id, id)).all();
+      expect(rows[0]?.encryptedPrivateKey).toEqual(new Uint8Array(0));
+      expect(rows[0]?.publicKey).toEqual(new Uint8Array(0));
+    });
+
+    it("enforces NOT NULL on required columns", () => {
+      const account = insertAccount();
+      const now = String(Date.now());
+      expect(() =>
+        client.exec(
+          `INSERT INTO auth_keys (id, account_id, key_type, created_at) VALUES ('${crypto.randomUUID()}', '${account.id}', 'encryption', ${now})`,
+        ),
+      ).toThrow(/NOT NULL/i);
     });
   });
 
@@ -318,6 +317,19 @@ describe("SQLite auth schema", () => {
       const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects nonexistent accountId FK", () => {
+      expect(() =>
+        db
+          .insert(sessions)
+          .values({
+            id: crypto.randomUUID(),
+            accountId: "nonexistent",
+            createdAt: Date.now(),
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("recovery_keys", () => {
@@ -356,6 +368,20 @@ describe("SQLite auth schema", () => {
       db.delete(accounts).where(eq(accounts.id, account.id)).run();
       const rows = db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent accountId FK", () => {
+      expect(() =>
+        db
+          .insert(recoveryKeys)
+          .values({
+            id: crypto.randomUUID(),
+            accountId: "nonexistent",
+            encryptedMasterKey: new Uint8Array([1]),
+            createdAt: Date.now(),
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 
@@ -416,6 +442,60 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.status).toBe("pending");
     });
 
+    it("accepts approved status", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          status: "approved",
+          createdAt: now,
+          expiresAt: now + 3600000,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows[0]?.status).toBe("approved");
+    });
+
+    it("accepts expired status", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          status: "expired",
+          createdAt: now,
+          expiresAt: now + 3600000,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows[0]?.status).toBe("expired");
+    });
+
     it("rejects invalid status via CHECK", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
@@ -430,12 +510,12 @@ describe("SQLite auth schema", () => {
             accountId: account.id,
             sourceSessionId: source.id,
             targetSessionId: target.id,
-            status: "invalid",
+            status: "invalid" as "pending",
             createdAt: now,
             expiresAt: now + 3600000,
           })
           .run(),
-      ).toThrow();
+      ).toThrow(/constraint|CHECK/i);
     });
 
     it("rejects expires_at <= created_at via CHECK", () => {
@@ -456,7 +536,28 @@ describe("SQLite auth schema", () => {
             expiresAt: now - 1000,
           })
           .run(),
-      ).toThrow();
+      ).toThrow(/constraint|CHECK/i);
+    });
+
+    it("rejects expiresAt === createdAt (boundary of > CHECK)", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(deviceTransferRequests)
+          .values({
+            id: crypto.randomUUID(),
+            accountId: account.id,
+            sourceSessionId: source.id,
+            targetSessionId: target.id,
+            createdAt: now,
+            expiresAt: now,
+          })
+          .run(),
+      ).toThrow(/constraint|CHECK/i);
     });
 
     it("cascades on account deletion", () => {
@@ -486,6 +587,33 @@ describe("SQLite auth schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("cascades on session deletion", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          createdAt: now,
+          expiresAt: now + 3600000,
+        })
+        .run();
+
+      db.delete(sessions).where(eq(sessions.id, source.id)).run();
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
     it("validates both source and target session FKs", () => {
       const account = insertAccount();
       const session = insertSession(account.id);
@@ -503,7 +631,7 @@ describe("SQLite auth schema", () => {
             expiresAt: now + 3600000,
           })
           .run(),
-      ).toThrow();
+      ).toThrow(/FOREIGN KEY|constraint/i);
 
       expect(() =>
         db
@@ -517,7 +645,7 @@ describe("SQLite auth schema", () => {
             expiresAt: now + 3600000,
           })
           .run(),
-      ).toThrow();
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 });

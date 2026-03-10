@@ -6,6 +6,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
+import { createSqliteSystemTables } from "./helpers/sqlite-helpers.js";
+
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems };
@@ -33,29 +35,7 @@ describe("SQLite systems schema", () => {
     client = new Database(":memory:");
     client.pragma("foreign_keys = ON");
     db = drizzle(client, { schema });
-
-    client.exec(`
-      CREATE TABLE accounts (
-        id TEXT PRIMARY KEY,
-        email_hash TEXT NOT NULL UNIQUE,
-        email_salt TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-
-    client.exec(`
-      CREATE TABLE systems (
-        id TEXT PRIMARY KEY,
-        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_data BLOB,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
+    createSqliteSystemTables(client);
   });
 
   afterAll(() => {
@@ -159,5 +139,47 @@ describe("SQLite systems schema", () => {
     db.delete(accounts).where(eq(accounts.id, accountId)).run();
     const rows = db.select().from(systems).where(eq(systems.id, id)).all();
     expect(rows).toHaveLength(0);
+  });
+
+  it("rejects nonexistent accountId FK", () => {
+    const now = Date.now();
+    expect(() =>
+      db
+        .insert(systems)
+        .values({
+          id: crypto.randomUUID(),
+          accountId: "nonexistent",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run(),
+    ).toThrow(/FOREIGN KEY|constraint/i);
+  });
+
+  it("rejects duplicate primary key", () => {
+    const accountId = insertAccount();
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    db.insert(systems)
+      .values({
+        id,
+        accountId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+
+    expect(() =>
+      db
+        .insert(systems)
+        .values({
+          id,
+          accountId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run(),
+    ).toThrow(/UNIQUE|constraint/i);
   });
 });

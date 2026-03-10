@@ -3,6 +3,10 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-o
 
 import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
+import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
+
+import type { AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
 
 export const accounts = sqliteTable(
   "accounts",
@@ -26,12 +30,12 @@ export const authKeys = sqliteTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedPrivateKey: sqliteBinary("encrypted_private_key").notNull(),
     publicKey: sqliteBinary("public_key").notNull(),
-    keyType: text("key_type").notNull(),
+    keyType: text("key_type").notNull().$type<AuthKeyType>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
     index("auth_keys_account_id_idx").on(t.accountId),
-    check("auth_keys_key_type_check", sql`${t.keyType} IN ('encryption', 'signing')`),
+    check("auth_keys_key_type_check", enumCheck(t.keyType, AUTH_KEY_TYPES)),
   ],
 );
 
@@ -50,6 +54,7 @@ export const sessions = sqliteTable(
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
     index("sessions_revoked_idx").on(t.revoked),
+    index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
   ],
 );
 
@@ -75,20 +80,18 @@ export const deviceTransferRequests = sqliteTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     sourceSessionId: text("source_session_id")
       .notNull()
-      .references(() => sessions.id),
+      .references(() => sessions.id, { onDelete: "cascade" }),
     targetSessionId: text("target_session_id")
       .notNull()
-      .references(() => sessions.id),
-    status: text("status").notNull().default("pending"),
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("pending").$type<DeviceTransferStatus>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     expiresAt: sqliteTimestamp("expires_at").notNull(),
   },
   (t) => [
     index("device_transfer_requests_account_status_idx").on(t.accountId, t.status),
-    check(
-      "device_transfer_requests_status_check",
-      sql`${t.status} IN ('pending', 'approved', 'expired')`,
-    ),
+    index("device_transfer_requests_status_expires_idx").on(t.status, t.expiresAt),
+    check("device_transfer_requests_status_check", enumCheck(t.status, DEVICE_TRANSFER_STATUSES)),
     check("device_transfer_requests_expires_at_check", sql`${t.expiresAt} > ${t.createdAt}`),
   ],
 );

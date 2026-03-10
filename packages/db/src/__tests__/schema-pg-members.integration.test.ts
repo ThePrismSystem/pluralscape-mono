@@ -1,11 +1,13 @@
 import { PGlite } from "@electric-sql/pglite";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { members, memberPhotos } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
+
+import { createPgMemberTables } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -54,55 +56,7 @@ describe("PG members schema", () => {
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
-
-    await client.query(`
-      CREATE TABLE accounts (
-        id VARCHAR(255) PRIMARY KEY,
-        email_hash VARCHAR(255) NOT NULL UNIQUE,
-        email_salt VARCHAR(255) NOT NULL,
-        password_hash VARCHAR(255) NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE systems (
-        id VARCHAR(255) PRIMARY KEY,
-        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-        encrypted_data BYTEA,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE members (
-        id VARCHAR(255) PRIMARY KEY,
-        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-        encrypted_data BYTEA NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1,
-        archived BOOLEAN NOT NULL DEFAULT false,
-        archived_at TIMESTAMPTZ
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE member_photos (
-        id VARCHAR(255) PRIMARY KEY,
-        member_id VARCHAR(255) NOT NULL REFERENCES members(id) ON DELETE CASCADE,
-        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-        sort_order INTEGER,
-        encrypted_data BYTEA NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL,
-        version INTEGER NOT NULL DEFAULT 1
-      )
-    `);
+    await createPgMemberTables(client);
   });
 
   afterAll(async () => {
@@ -177,6 +131,83 @@ describe("PG members schema", () => {
       const rows = await db.select().from(members).where(eq(members.id, memberId));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects nonexistent systemId FK", async () => {
+      const now = Date.now();
+      await expect(
+        db.insert(members).values({
+          id: crypto.randomUUID(),
+          systemId: "nonexistent",
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("round-trips empty Uint8Array for encrypted_data", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(members).values({
+        id,
+        systemId,
+        encryptedData: new Uint8Array(0),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(members).where(eq(members.id, id));
+      expect(rows[0]?.encryptedData).toEqual(new Uint8Array(0));
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(members).values({
+        id,
+        systemId,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      const rows = await db.select().from(members).where(eq(members.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates version and updatedAt correctly", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(members).values({
+        id,
+        systemId,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const later = now + 1000;
+      await db
+        .update(members)
+        .set({ version: sql`${members.version} + 1`, updatedAt: later })
+        .where(eq(members.id, id));
+
+      const rows = await db.select().from(members).where(eq(members.id, id));
+      expect(rows[0]?.version).toBe(2);
+      expect(rows[0]?.updatedAt).toBe(later);
+    });
   });
 
   describe("member_photos", () => {
@@ -224,6 +255,26 @@ describe("PG members schema", () => {
       expect(rows[0]?.sortOrder).toBeNull();
     });
 
+    it("defaults version to 1", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(memberPhotos).values({
+        id,
+        memberId,
+        systemId,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(memberPhotos).where(eq(memberPhotos.id, id));
+      expect(rows[0]?.version).toBe(1);
+    });
+
     it("cascades on member deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -264,6 +315,41 @@ describe("PG members schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(memberPhotos).where(eq(memberPhotos.id, photoId));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent memberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(memberPhotos).values({
+          id: crypto.randomUUID(),
+          memberId: "nonexistent",
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent systemId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(memberPhotos).values({
+          id: crypto.randomUUID(),
+          memberId,
+          systemId: "nonexistent",
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 });

@@ -3,6 +3,10 @@ import { boolean, check, index, pgTable, uniqueIndex, varchar } from "drizzle-or
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
+import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
+
+import type { AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
 
 export const accounts = pgTable(
   "accounts",
@@ -26,12 +30,12 @@ export const authKeys = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedPrivateKey: pgBinary("encrypted_private_key").notNull(),
     publicKey: pgBinary("public_key").notNull(),
-    keyType: varchar("key_type", { length: 255 }).notNull(),
+    keyType: varchar("key_type", { length: 255 }).notNull().$type<AuthKeyType>(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
     index("auth_keys_account_id_idx").on(t.accountId),
-    check("auth_keys_key_type_check", sql`${t.keyType} IN ('encryption', 'signing')`),
+    check("auth_keys_key_type_check", enumCheck(t.keyType, AUTH_KEY_TYPES)),
   ],
 );
 
@@ -50,6 +54,7 @@ export const sessions = pgTable(
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
     index("sessions_revoked_idx").on(t.revoked),
+    index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
   ],
 );
 
@@ -75,20 +80,21 @@ export const deviceTransferRequests = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     sourceSessionId: varchar("source_session_id", { length: 255 })
       .notNull()
-      .references(() => sessions.id),
+      .references(() => sessions.id, { onDelete: "cascade" }),
     targetSessionId: varchar("target_session_id", { length: 255 })
       .notNull()
-      .references(() => sessions.id),
-    status: varchar("status", { length: 255 }).notNull().default("pending"),
+      .references(() => sessions.id, { onDelete: "cascade" }),
+    status: varchar("status", { length: 255 })
+      .notNull()
+      .default("pending")
+      .$type<DeviceTransferStatus>(),
     createdAt: pgTimestamp("created_at").notNull(),
     expiresAt: pgTimestamp("expires_at").notNull(),
   },
   (t) => [
     index("device_transfer_requests_account_status_idx").on(t.accountId, t.status),
-    check(
-      "device_transfer_requests_status_check",
-      sql`${t.status} IN ('pending', 'approved', 'expired')`,
-    ),
+    index("device_transfer_requests_status_expires_idx").on(t.status, t.expiresAt),
+    check("device_transfer_requests_status_check", enumCheck(t.status, DEVICE_TRANSFER_STATUSES)),
     check("device_transfer_requests_expires_at_check", sql`${t.expiresAt} > ${t.createdAt}`),
   ],
 );
