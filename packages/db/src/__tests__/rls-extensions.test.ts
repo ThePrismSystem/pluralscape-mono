@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ENABLE_PGCRYPTO } from "../rls/extensions.js";
+import { ENABLE_PGCRYPTO } from "../dialect.js";
 
 describe("ENABLE_PGCRYPTO", () => {
   it("contains CREATE EXTENSION statement", () => {

@@ -6,71 +6,100 @@
  */
 
 /** Policy scoping type for each table. */
-export type RlsScopeType = "system" | "account" | "system-pk" | "account-pk";
+export type RlsScopeType =
+  | "system"
+  | "account"
+  | "system-pk"
+  | "account-pk"
+  | "dual"
+  | "join-system";
+
+/**
+ * Returns a SQL expression for reading a GUC variable fail-closed.
+ * - `missing_ok = true` prevents errors when the variable is unset.
+ * - `NULLIF(..., '')` converts empty string to NULL, causing the comparison to fail.
+ * Combined, an unset or empty variable will never match any row.
+ */
+function currentSettingSql(gucKey: string): string {
+  return `NULLIF(current_setting('${gucKey}', true), '')::varchar`;
+}
 
 /**
  * Generates ENABLE ROW LEVEL SECURITY + FORCE for a table.
  * FORCE ensures policies apply even to the table owner (important for PGlite tests).
+ * Returns an array of individual SQL statements.
  */
-export function enableRls(tableName: string): string {
+export function enableRls(tableName: string): string[] {
   return [
     `ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY`,
     `ALTER TABLE ${tableName} FORCE ROW LEVEL SECURITY`,
-  ].join(";\n");
+  ];
 }
 
 /**
- * Creates an RLS policy scoped to system_id via session variable.
- * Applies to tables where system_id is a regular column.
+ * Creates an RLS policy scoped to system_id (or a custom column) via session variable.
+ * Defaults to `system_id` column; pass `idColumn = "id"` for PK tables like `systems`.
  */
-export function systemRlsPolicy(tableName: string): string {
+export function systemRlsPolicy(tableName: string, idColumn = "system_id"): string {
   const policyName = `${tableName}_system_isolation`;
-  return `CREATE POLICY ${policyName} ON ${tableName} USING (system_id = current_setting('app.current_system_id')::varchar) WITH CHECK (system_id = current_setting('app.current_system_id')::varchar)`;
+  const setting = currentSettingSql("app.current_system_id");
+  return `CREATE POLICY ${policyName} ON ${tableName} USING (${idColumn} = ${setting}) WITH CHECK (${idColumn} = ${setting})`;
 }
 
 /**
- * Creates an RLS policy for tables where the primary key IS the system_id.
- * Used for 1:1 tables like nomenclature_settings, system_settings, innerworld_canvas.
+ * Creates an RLS policy scoped to account_id (or a custom column) via session variable.
+ * Defaults to `account_id` column; pass `idColumn = "id"` for PK tables like `accounts`.
  */
-export function systemPkRlsPolicy(tableName: string): string {
-  const policyName = `${tableName}_system_isolation`;
-  return `CREATE POLICY ${policyName} ON ${tableName} USING (system_id = current_setting('app.current_system_id')::varchar) WITH CHECK (system_id = current_setting('app.current_system_id')::varchar)`;
-}
-
-/**
- * Creates an RLS policy scoped to account_id via session variable.
- * Applies to account-level tables (auth_keys, sessions, etc.).
- */
-export function accountRlsPolicy(tableName: string): string {
+export function accountRlsPolicy(tableName: string, idColumn = "account_id"): string {
   const policyName = `${tableName}_account_isolation`;
-  return `CREATE POLICY ${policyName} ON ${tableName} USING (account_id = current_setting('app.current_account_id')::varchar) WITH CHECK (account_id = current_setting('app.current_account_id')::varchar)`;
+  const setting = currentSettingSql("app.current_account_id");
+  return `CREATE POLICY ${policyName} ON ${tableName} USING (${idColumn} = ${setting}) WITH CHECK (${idColumn} = ${setting})`;
 }
 
 /**
- * Creates an RLS policy for the systems table itself.
- * Uses `id` column instead of `system_id`.
+ * Creates an RLS policy for dual-column tables (both account_id + system_id).
+ * Used for tables like api_keys and audit_log.
  */
-export function systemsTableRlsPolicy(): string {
-  return `CREATE POLICY systems_system_isolation ON systems USING (id = current_setting('app.current_system_id')::varchar) WITH CHECK (id = current_setting('app.current_system_id')::varchar)`;
+export function dualTenantRlsPolicy(tableName: string): string {
+  const system = currentSettingSql("app.current_system_id");
+  const account = currentSettingSql("app.current_account_id");
+  return (
+    `CREATE POLICY ${tableName}_tenant_isolation ON ${tableName} ` +
+    `USING (account_id = ${account} AND system_id = ${system}) ` +
+    `WITH CHECK (account_id = ${account} AND system_id = ${system})`
+  );
 }
 
 /**
- * Creates an RLS policy for the accounts table itself.
- * Uses `id` column instead of `account_id`.
+ * Creates an RLS policy for join tables that lack a direct tenant column.
+ * Verifies ownership via EXISTS subquery against a parent table's system_id.
  */
-export function accountsTableRlsPolicy(): string {
-  return `CREATE POLICY accounts_account_isolation ON accounts USING (id = current_setting('app.current_account_id')::varchar) WITH CHECK (id = current_setting('app.current_account_id')::varchar)`;
+export function joinSystemRlsPolicy(
+  tableName: string,
+  parentTable: string,
+  joinColumn: string,
+): string {
+  const setting = currentSettingSql("app.current_system_id");
+  const exists = `EXISTS (SELECT 1 FROM ${parentTable} WHERE ${parentTable}.id = ${tableName}.${joinColumn} AND ${parentTable}.system_id = ${setting})`;
+  return `CREATE POLICY ${tableName}_system_isolation ON ${tableName} USING (${exists}) WITH CHECK (${exists})`;
 }
+
+/** Configuration for join-based RLS tables: maps table name to parent table and join column. */
+const JOIN_SYSTEM_CONFIG: Readonly<Record<string, { parentTable: string; joinColumn: string }>> = {
+  key_grants: { parentTable: "buckets", joinColumn: "bucket_id" },
+  bucket_content_tags: { parentTable: "buckets", joinColumn: "bucket_id" },
+  friend_bucket_assignments: {
+    parentTable: "friend_connections",
+    joinColumn: "friend_connection_id",
+  },
+  field_bucket_visibility: { parentTable: "field_definitions", joinColumn: "field_definition_id" },
+};
 
 /**
  * Map of every RLS-enabled table to its policy scope type.
- *
- * Tables not in this map either:
- * - Have no direct tenant column (bucket_content_tags, friend_bucket_assignments)
- *   and are protected via FK cascades from parent tables that DO have RLS.
- * - Need dual-column policies (api_keys, audit_log) handled separately.
+ * All tables with tenant data are covered — no table relies solely on FK cascades.
  */
-export const RLS_TABLE_POLICIES: Record<string, RlsScopeType> = {
+export const RLS_TABLE_POLICIES = {
   // Account-scoped (account_id column)
   auth_keys: "account",
   sessions: "account",
@@ -83,6 +112,16 @@ export const RLS_TABLE_POLICIES: Record<string, RlsScopeType> = {
   nomenclature_settings: "system-pk",
   system_settings: "system-pk",
   innerworld_canvas: "system-pk",
+
+  // Dual-column tables (account_id + system_id)
+  api_keys: "dual",
+  audit_log: "dual",
+
+  // Join tables (no direct tenant column — verified via parent)
+  key_grants: "join-system",
+  bucket_content_tags: "join-system",
+  friend_bucket_assignments: "join-system",
+  field_bucket_visibility: "join-system",
 
   // System-scoped (system_id column)
   members: "system",
@@ -101,7 +140,6 @@ export const RLS_TABLE_POLICIES: Record<string, RlsScopeType> = {
   poll_votes: "system",
   acknowledgements: "system",
   buckets: "system",
-  key_grants: "system",
   friend_connections: "system",
   friend_codes: "system",
   groups: "system",
@@ -123,19 +161,22 @@ export const RLS_TABLE_POLICIES: Record<string, RlsScopeType> = {
   lifecycle_events: "system",
   safe_mode_content: "system",
   pk_bridge_state: "system",
-} as const;
+} as const satisfies Record<string, RlsScopeType>;
+
+/** Type-safe table names that have RLS policies. */
+export type RlsTableName = keyof typeof RLS_TABLE_POLICIES;
 
 /**
  * Generates all RLS SQL statements (ENABLE + policy) for a given table.
  * Returns an array of SQL strings to execute sequentially.
  */
 export function generateRlsStatements(tableName: string): string[] {
-  const scopeType = RLS_TABLE_POLICIES[tableName];
+  const scopeType = (RLS_TABLE_POLICIES as Record<string, RlsScopeType>)[tableName];
   if (scopeType === undefined) {
     throw new Error(`No RLS policy defined for table '${tableName}'`);
   }
 
-  const statements = [enableRls(tableName)];
+  const statements = [...enableRls(tableName)];
 
   switch (scopeType) {
     case "system":
@@ -146,14 +187,29 @@ export function generateRlsStatements(tableName: string): string[] {
       break;
     case "system-pk":
       if (tableName === "systems") {
-        statements.push(systemsTableRlsPolicy());
+        statements.push(systemRlsPolicy("systems", "id"));
       } else {
-        statements.push(systemPkRlsPolicy(tableName));
+        statements.push(systemRlsPolicy(tableName));
       }
       break;
     case "account-pk":
-      statements.push(accountsTableRlsPolicy());
+      statements.push(accountRlsPolicy("accounts", "id"));
       break;
+    case "dual":
+      statements.push(dualTenantRlsPolicy(tableName));
+      break;
+    case "join-system": {
+      const config = JOIN_SYSTEM_CONFIG[tableName];
+      if (config === undefined) {
+        throw new Error(`No join config for table '${tableName}'`);
+      }
+      statements.push(joinSystemRlsPolicy(tableName, config.parentTable, config.joinColumn));
+      break;
+    }
+    default: {
+      const _exhaustive: never = scopeType;
+      throw new Error(`Unknown RLS scope type: ${_exhaustive as string}`);
+    }
   }
 
   return statements;

@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
+import { frontingSessions } from "../schema/pg/fronting.js";
 import { journalEntries, wikiPages } from "../schema/pg/journal.js";
 import { systems } from "../schema/pg/systems.js";
 
@@ -11,7 +12,7 @@ import { createPgJournalTables, pgInsertAccount, pgInsertSystem } from "./helper
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, journalEntries, wikiPages };
+const schema = { accounts, systems, frontingSessions, journalEntries, wikiPages };
 
 describe("PG journal schema", () => {
   let client: PGlite;
@@ -31,16 +32,29 @@ describe("PG journal schema", () => {
   });
 
   describe("journal_entries", () => {
-    it("round-trips with encrypted_data", async () => {
+    it("round-trips with encrypted_data and author JSON", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const fsId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = new Uint8Array([10, 20, 30]);
+      const author = { type: "member", id: "member-1" };
+
+      await db.insert(frontingSessions).values({
+        id: fsId,
+        systemId,
+        startTime: now,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
 
       await db.insert(journalEntries).values({
         id,
         systemId,
+        author,
+        frontingSessionId: fsId,
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -49,6 +63,27 @@ describe("PG journal schema", () => {
       const rows = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.author).toEqual(author);
+      expect(rows[0]?.frontingSessionId).toBe(fsId);
+    });
+
+    it("allows nullable author and frontingSessionId", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(journalEntries).values({
+        id,
+        systemId,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
+      expect(rows[0]?.author).toBeNull();
+      expect(rows[0]?.frontingSessionId).toBeNull();
     });
 
     it("defaults archived to false and version to 1", async () => {

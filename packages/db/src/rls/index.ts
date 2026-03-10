@@ -1,14 +1,5 @@
-export {
-  accountRlsPolicy,
-  accountsTableRlsPolicy,
-  enableRls,
-  generateRlsStatements,
-  RLS_TABLE_POLICIES,
-  systemPkRlsPolicy,
-  systemRlsPolicy,
-  systemsTableRlsPolicy,
-} from "./policies.js";
-export type { RlsScopeType } from "./policies.js";
+export { enableRls, generateRlsStatements, RLS_TABLE_POLICIES } from "./policies.js";
+export type { RlsScopeType, RlsTableName } from "./policies.js";
 
 export {
   setAccountId,
@@ -17,7 +8,8 @@ export {
   setSystemIdSql,
   setTenantContext,
 } from "./session.js";
+export type { PgExecutor } from "./session.js";
 
 export { accountScope, systemScope } from "./sqlite-isolation.js";
 
-export { ENABLE_PGCRYPTO } from "./extensions.js";
+export { ENABLE_PGCRYPTO } from "../dialect.js";

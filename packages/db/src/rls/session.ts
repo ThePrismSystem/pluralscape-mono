@@ -25,13 +25,14 @@ export async function setAccountId(db: PgExecutor, accountId: string): Promise<v
   await db.execute(sql`SELECT set_config('app.current_account_id', ${accountId}, true)`);
 }
 
-/** Sets both system and account context for RLS policies (transaction-scoped). */
+/** Sets both system and account context for RLS policies in a single round-trip. */
 export async function setTenantContext(
   db: PgExecutor,
   context: { systemId: string; accountId: string },
 ): Promise<void> {
-  await setSystemId(db, context.systemId);
-  await setAccountId(db, context.accountId);
+  await db.execute(
+    sql`SELECT set_config('app.current_system_id', ${context.systemId}, true), set_config('app.current_account_id', ${context.accountId}, true)`,
+  );
 }
 
 /** Returns a raw SQL fragment for setting the system ID. Useful in raw queries. */

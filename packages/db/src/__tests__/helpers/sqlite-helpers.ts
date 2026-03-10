@@ -1,3 +1,8 @@
+/**
+ * Hand-written DDL for SQLite integration tests.
+ * These must be manually synchronized with schema changes in src/schema/sqlite/.
+ */
+
 import { accounts } from "../../schema/sqlite/auth.js";
 import { channels } from "../../schema/sqlite/communication.js";
 import { members } from "../../schema/sqlite/members.js";
@@ -537,6 +542,8 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sender_id TEXT NOT NULL,
+      reply_to_id TEXT REFERENCES messages(id) ON DELETE SET NULL,
       timestamp INTEGER NOT NULL,
       edited_at INTEGER,
       encrypted_data BLOB NOT NULL,
@@ -549,7 +556,8 @@ export const SQLITE_DDL = {
   `,
   messagesIndexes: `
     CREATE INDEX messages_channel_id_timestamp_idx ON messages (channel_id, timestamp);
-    CREATE INDEX messages_system_id_idx ON messages (system_id)
+    CREATE INDEX messages_system_id_idx ON messages (system_id);
+    CREATE INDEX messages_reply_to_id_idx ON messages (reply_to_id)
   `,
   boardMessages: `
     CREATE TABLE board_messages (
@@ -589,6 +597,11 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at INTEGER,
+      ends_at INTEGER,
+      allow_multiple_votes INTEGER NOT NULL,
+      max_votes_per_member INTEGER NOT NULL CHECK (max_votes_per_member >= 1),
+      allow_abstain INTEGER NOT NULL,
+      allow_veto INTEGER NOT NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -623,13 +636,16 @@ export const SQLITE_DDL = {
   `,
   acknowledgementsIndexes: `
     CREATE INDEX acknowledgements_system_id_idx ON acknowledgements (system_id);
-    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed)
+    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed);
+    CREATE INDEX acknowledgements_target_member_id_idx ON acknowledgements (target_member_id)
   `,
   // Journal
   journalEntries: `
     CREATE TABLE journal_entries (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      author TEXT,
+      fronting_session_id TEXT REFERENCES fronting_sessions(id) ON DELETE SET NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -639,7 +655,8 @@ export const SQLITE_DDL = {
     )
   `,
   journalEntriesIndexes: `
-    CREATE INDEX journal_entries_system_id_created_at_idx ON journal_entries (system_id, created_at)
+    CREATE INDEX journal_entries_system_id_created_at_idx ON journal_entries (system_id, created_at);
+    CREATE INDEX journal_entries_fronting_session_id_idx ON journal_entries (fronting_session_id)
   `,
   wikiPages: `
     CREATE TABLE wiki_pages (
@@ -986,6 +1003,8 @@ export function createSqliteCommunicationTables(client: InstanceType<typeof Data
 
 export function createSqliteJournalTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.frontingSessions);
+  client.exec(SQLITE_DDL.frontingSessionsIndexes);
   client.exec(SQLITE_DDL.journalEntries);
   client.exec(SQLITE_DDL.journalEntriesIndexes);
   client.exec(SQLITE_DDL.wikiPages);

@@ -1,3 +1,6 @@
+/** SQL to enable pgcrypto for defense-in-depth encryption at rest. */
+export const ENABLE_PGCRYPTO = "CREATE EXTENSION IF NOT EXISTS pgcrypto";
+
 /** Supported database dialects. */
 export type DbDialect = "pg" | "sqlite";
 

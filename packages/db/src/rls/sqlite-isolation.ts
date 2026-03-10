@@ -8,15 +8,14 @@
 
 import { eq } from "drizzle-orm";
 
-import type { SQL } from "drizzle-orm";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
+import type { AnyColumn, SQL } from "drizzle-orm";
 
 /** Returns a Drizzle WHERE condition: `system_id = ?` */
-export function systemScope(systemIdColumn: SQLiteColumn, systemId: string): SQL {
+export function systemScope(systemIdColumn: AnyColumn, systemId: string): SQL {
   return eq(systemIdColumn, systemId);
 }
 
 /** Returns a Drizzle WHERE condition: `account_id = ?` */
-export function accountScope(accountIdColumn: SQLiteColumn, accountId: string): SQL {
+export function accountScope(accountIdColumn: AnyColumn, accountId: string): SQL {
   return eq(accountIdColumn, accountId);
 }
