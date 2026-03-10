@@ -47,6 +47,8 @@ export const messages = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    senderId: text("sender_id").notNull(),
+    replyToId: text("reply_to_id"),
     timestamp: sqliteTimestamp("timestamp").notNull(),
     editedAt: sqliteTimestamp("edited_at"),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
@@ -57,6 +59,11 @@ export const messages = sqliteTable(
   (t) => [
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_id_idx").on(t.systemId),
+    index("messages_reply_to_id_idx").on(t.replyToId),
+    foreignKey({
+      columns: [t.replyToId],
+      foreignColumns: [t.id],
+    }).onDelete("set null"),
   ],
 );
 
@@ -104,6 +111,11 @@ export const polls = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("open").$type<ServerPoll["status"]>(),
     closedAt: sqliteTimestamp("closed_at"),
+    endsAt: sqliteTimestamp("ends_at"),
+    allowMultipleVotes: integer("allow_multiple_votes", { mode: "boolean" }).notNull(),
+    maxVotesPerMember: integer("max_votes_per_member").notNull(),
+    allowAbstain: integer("allow_abstain", { mode: "boolean" }).notNull(),
+    allowVeto: integer("allow_veto", { mode: "boolean" }).notNull(),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -111,6 +123,7 @@ export const polls = sqliteTable(
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
+    check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
   ],
 );
 
@@ -140,6 +153,7 @@ export const acknowledgements = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    targetMemberId: text("target_member_id"),
     confirmed: integer("confirmed", { mode: "boolean" }).notNull().default(false),
     confirmedAt: sqliteTimestamp("confirmed_at"),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
@@ -148,5 +162,6 @@ export const acknowledgements = sqliteTable(
   (t) => [
     index("acknowledgements_system_id_idx").on(t.systemId),
     index("acknowledgements_confirmed_idx").on(t.confirmed),
+    index("acknowledgements_target_member_id_idx").on(t.targetMemberId),
   ],
 );

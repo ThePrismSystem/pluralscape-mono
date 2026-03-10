@@ -1,3 +1,6 @@
+/** SQL to enable pgcrypto for defense-in-depth encryption at rest. */
+export const ENABLE_PGCRYPTO = "CREATE EXTENSION IF NOT EXISTS pgcrypto";
+
 /** Supported database dialects. */
 export type DbDialect = "pg" | "sqlite";
 
@@ -14,4 +17,53 @@ export function getDialect(): DbDialect {
     return raw;
   }
   throw new Error(`Invalid DB_DIALECT '${raw}' (expected 'pg' or 'sqlite')`);
+}
+
+/** Returns true if the current dialect is PostgreSQL. */
+export function isPostgreSQL(): boolean {
+  return getDialect() === "pg";
+}
+
+/** Returns true if the current dialect is SQLite. */
+export function isSQLite(): boolean {
+  return getDialect() === "sqlite";
+}
+
+/** Dialect capability matrix. */
+export interface DialectCapabilities {
+  /** Row-level security (server-enforced tenant isolation). */
+  readonly rls: boolean;
+  /** Native JSONB type with indexable operators. */
+  readonly jsonb: boolean;
+  /** Native array columns. */
+  readonly arrays: boolean;
+  /** pgcrypto extension for defense-in-depth encryption. */
+  readonly pgcrypto: boolean;
+  /** Native enum types. */
+  readonly nativeEnums: boolean;
+  /** Full-text search via tsvector/tsquery. */
+  readonly fullTextSearch: boolean;
+}
+
+const PG_CAPABILITIES: DialectCapabilities = {
+  rls: true,
+  jsonb: true,
+  arrays: true,
+  pgcrypto: true,
+  nativeEnums: true,
+  fullTextSearch: true,
+};
+
+const SQLITE_CAPABILITIES: DialectCapabilities = {
+  rls: false,
+  jsonb: false,
+  arrays: false,
+  pgcrypto: false,
+  nativeEnums: false,
+  fullTextSearch: false,
+};
+
+/** Returns the capability matrix for the given dialect. */
+export function getDialectCapabilities(dialect: DbDialect): DialectCapabilities {
+  return dialect === "pg" ? PG_CAPABILITIES : SQLITE_CAPABILITIES;
 }

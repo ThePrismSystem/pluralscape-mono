@@ -1,3 +1,8 @@
+/**
+ * Hand-written DDL for PGlite integration tests.
+ * These must be manually synchronized with schema changes in src/schema/pg/.
+ */
+
 import { accounts } from "../../schema/pg/auth.js";
 import { channels } from "../../schema/pg/communication.js";
 import { members } from "../../schema/pg/members.js";
@@ -537,6 +542,8 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       channel_id VARCHAR(255) NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sender_id VARCHAR(255) NOT NULL,
+      reply_to_id VARCHAR(255) REFERENCES messages(id) ON DELETE SET NULL,
       timestamp TIMESTAMPTZ NOT NULL,
       edited_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
@@ -549,7 +556,8 @@ export const PG_DDL = {
   `,
   messagesIndexes: `
     CREATE INDEX messages_channel_id_timestamp_idx ON messages (channel_id, timestamp);
-    CREATE INDEX messages_system_id_idx ON messages (system_id)
+    CREATE INDEX messages_system_id_idx ON messages (system_id);
+    CREATE INDEX messages_reply_to_id_idx ON messages (reply_to_id)
   `,
   boardMessages: `
     CREATE TABLE board_messages (
@@ -589,6 +597,11 @@ export const PG_DDL = {
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       status VARCHAR(255) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at TIMESTAMPTZ,
+      ends_at TIMESTAMPTZ,
+      allow_multiple_votes BOOLEAN NOT NULL,
+      max_votes_per_member INTEGER NOT NULL CHECK (max_votes_per_member >= 1),
+      allow_abstain BOOLEAN NOT NULL,
+      allow_veto BOOLEAN NOT NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -623,13 +636,16 @@ export const PG_DDL = {
   `,
   acknowledgementsIndexes: `
     CREATE INDEX acknowledgements_system_id_idx ON acknowledgements (system_id);
-    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed)
+    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed);
+    CREATE INDEX acknowledgements_target_member_id_idx ON acknowledgements (target_member_id)
   `,
   // Journal
   journalEntries: `
     CREATE TABLE journal_entries (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      author JSONB,
+      fronting_session_id VARCHAR(255) REFERENCES fronting_sessions(id) ON DELETE SET NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -639,7 +655,8 @@ export const PG_DDL = {
     )
   `,
   journalEntriesIndexes: `
-    CREATE INDEX journal_entries_system_id_created_at_idx ON journal_entries (system_id, created_at)
+    CREATE INDEX journal_entries_system_id_created_at_idx ON journal_entries (system_id, created_at);
+    CREATE INDEX journal_entries_fronting_session_id_idx ON journal_entries (fronting_session_id)
   `,
   wikiPages: `
     CREATE TABLE wiki_pages (
@@ -986,6 +1003,8 @@ export async function createPgCommunicationTables(client: PGlite): Promise<void>
 
 export async function createPgJournalTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.frontingSessions);
+  await pgExec(client, PG_DDL.frontingSessionsIndexes);
   await pgExec(client, PG_DDL.journalEntries);
   await pgExec(client, PG_DDL.journalEntriesIndexes);
   await pgExec(client, PG_DDL.wikiPages);
