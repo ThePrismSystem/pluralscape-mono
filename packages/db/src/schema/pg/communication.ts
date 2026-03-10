@@ -1,19 +1,10 @@
 import { sql } from "drizzle-orm";
-import {
-  boolean,
-  check,
-  foreignKey,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { boolean, check, foreignKey, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
+import { CHANNEL_TYPES, POLL_STATUSES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -56,14 +47,12 @@ export const messages = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    senderId: varchar("sender_id", { length: 255 }).notNull(),
-    replyToId: varchar("reply_to_id", { length: 255 }),
     timestamp: pgTimestamp("timestamp").notNull(),
     editedAt: pgTimestamp("edited_at"),
-    archived: boolean("archived").notNull().default(false),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
@@ -78,14 +67,16 @@ export const boardMessages = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    senderId: varchar("sender_id", { length: 255 }).notNull(),
     pinned: boolean("pinned").notNull().default(false),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("board_messages_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("board_messages_system_id_idx").on(t.systemId),
+    check("board_messages_sort_order_check", sql`${t.sortOrder} >= 0`),
+  ],
 );
 
 export const notes = pgTable(
@@ -113,25 +104,17 @@ export const polls = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: varchar("created_by_member_id", { length: 255 }).notNull(),
-    kind: varchar("kind", { length: 255 }).notNull().$type<ServerPoll["kind"]>(),
     status: varchar("status", { length: 255 })
       .notNull()
       .default("open")
       .$type<ServerPoll["status"]>(),
     closedAt: pgTimestamp("closed_at"),
-    endsAt: pgTimestamp("ends_at"),
-    allowMultipleVotes: boolean("allow_multiple_votes").notNull(),
-    maxVotesPerMember: integer("max_votes_per_member").notNull(),
-    allowAbstain: boolean("allow_abstain").notNull(),
-    allowVeto: boolean("allow_veto").notNull(),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
-    check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
   ],
 );
@@ -146,11 +129,8 @@ export const pollVotes = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    optionId: varchar("option_id", { length: 255 }),
-    voter: jsonb("voter").notNull(),
-    isVeto: boolean("is_veto").notNull().default(false),
-    votedAt: pgTimestamp("voted_at").notNull(),
-    encryptedData: pgBinary("encrypted_data"),
+    encryptedData: pgBinary("encrypted_data").notNull(),
+    createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
     index("poll_votes_poll_id_idx").on(t.pollId),
@@ -165,13 +145,10 @@ export const acknowledgements = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: varchar("created_by_member_id", { length: 255 }).notNull(),
-    targetMemberId: varchar("target_member_id", { length: 255 }).notNull(),
     confirmed: boolean("confirmed").notNull().default(false),
     confirmedAt: pgTimestamp("confirmed_at"),
     encryptedData: pgBinary("encrypted_data").notNull(),
-    ...timestamps(),
-    ...versioned(),
+    createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
     index("acknowledgements_system_id_idx").on(t.systemId),

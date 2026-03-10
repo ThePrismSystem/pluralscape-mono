@@ -31,19 +31,16 @@ describe("PG journal schema", () => {
   });
 
   describe("journal_entries", () => {
-    it("round-trips with encrypted_data and author JSON", async () => {
+    it("round-trips with encrypted_data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = new Uint8Array([10, 20, 30]);
-      const author = { type: "member", id: "member-1" };
 
       await db.insert(journalEntries).values({
         id,
         systemId,
-        author,
-        frontingSessionId: "fs-123",
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -52,27 +49,6 @@ describe("PG journal schema", () => {
       const rows = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.author).toEqual(author);
-      expect(rows[0]?.frontingSessionId).toBe("fs-123");
-    });
-
-    it("allows nullable author and frontingSessionId", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(journalEntries).values({
-        id,
-        systemId,
-        encryptedData: new Uint8Array([1]),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
-      expect(rows[0]?.author).toBeNull();
-      expect(rows[0]?.frontingSessionId).toBeNull();
     });
 
     it("defaults archived to false and version to 1", async () => {
@@ -137,7 +113,7 @@ describe("PG journal schema", () => {
   });
 
   describe("wiki_pages", () => {
-    it("round-trips with encrypted_data", async () => {
+    it("round-trips with encrypted_data and slug", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -147,6 +123,7 @@ describe("PG journal schema", () => {
       await db.insert(wikiPages).values({
         id,
         systemId,
+        slug: "test-page",
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -155,6 +132,7 @@ describe("PG journal schema", () => {
       const rows = await db.select().from(wikiPages).where(eq(wikiPages.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.slug).toBe("test-page");
     });
 
     it("defaults archived to false and version to 1", async () => {
@@ -166,6 +144,7 @@ describe("PG journal schema", () => {
       await db.insert(wikiPages).values({
         id,
         systemId,
+        slug: `slug-${crypto.randomUUID()}`,
         encryptedData: new Uint8Array([1]),
         createdAt: now,
         updatedAt: now,
@@ -177,6 +156,64 @@ describe("PG journal schema", () => {
       expect(rows[0]?.version).toBe(1);
     });
 
+    it("enforces unique (system_id, slug)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const slug = `unique-${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      await db.insert(wikiPages).values({
+        id: crypto.randomUUID(),
+        systemId,
+        slug,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(wikiPages).values({
+          id: crypto.randomUUID(),
+          systemId,
+          slug,
+          encryptedData: new Uint8Array([2]),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("allows same slug in different systems", async () => {
+      const accountId = await insertAccount();
+      const systemId1 = await insertSystem(accountId);
+      const systemId2 = await insertSystem(accountId);
+      const slug = `shared-${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      await db.insert(wikiPages).values({
+        id: crypto.randomUUID(),
+        systemId: systemId1,
+        slug,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(wikiPages).values({
+        id: crypto.randomUUID(),
+        systemId: systemId2,
+        slug,
+        encryptedData: new Uint8Array([2]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows1 = await db.select().from(wikiPages).where(eq(wikiPages.systemId, systemId1));
+      const rows2 = await db.select().from(wikiPages).where(eq(wikiPages.systemId, systemId2));
+      expect(rows1).toHaveLength(1);
+      expect(rows2).toHaveLength(1);
+    });
+
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -186,6 +223,7 @@ describe("PG journal schema", () => {
       await db.insert(wikiPages).values({
         id,
         systemId,
+        slug: `del-${crypto.randomUUID()}`,
         encryptedData: new Uint8Array([1]),
         createdAt: now,
         updatedAt: now,

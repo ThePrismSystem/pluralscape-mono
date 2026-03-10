@@ -19,6 +19,7 @@ import { systems } from "../schema/sqlite/systems.js";
 import {
   createSqliteCommunicationTables,
   sqliteInsertAccount,
+  sqliteInsertChannel,
   sqliteInsertMember,
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
@@ -47,32 +48,10 @@ describe("SQLite communication schema", () => {
     sqliteInsertSystem(db, accountId, id);
   const insertMember = (systemId: string, id?: string): string =>
     sqliteInsertMember(db, systemId, id);
-
-  function insertChannel(
+  const insertChannel = (
     systemId: string,
-    opts: {
-      id?: string;
-      type?: "category" | "channel";
-      parentId?: string;
-      sortOrder?: number;
-    } = {},
-  ): string {
-    const id = opts.id ?? crypto.randomUUID();
-    const now = Date.now();
-    db.insert(channels)
-      .values({
-        id,
-        systemId,
-        type: opts.type ?? "channel",
-        parentId: opts.parentId ?? null,
-        sortOrder: opts.sortOrder ?? 0,
-        encryptedData: new Uint8Array([1, 2, 3]),
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
+    opts?: Parameters<typeof sqliteInsertChannel>[2],
+  ): string => sqliteInsertChannel(db, systemId, opts);
 
   function insertPoll(systemId: string, opts: { id?: string } = {}): string {
     const id = opts.id ?? crypto.randomUUID();
@@ -81,12 +60,6 @@ describe("SQLite communication schema", () => {
       .values({
         id,
         systemId,
-        createdByMemberId: crypto.randomUUID(),
-        kind: "standard",
-        allowMultipleVotes: false,
-        maxVotesPerMember: 1,
-        allowAbstain: false,
-        allowVeto: false,
         encryptedData: new Uint8Array([1, 2, 3]),
         createdAt: now,
         updatedAt: now,
@@ -221,7 +194,6 @@ describe("SQLite communication schema", () => {
           id,
           channelId,
           systemId,
-          senderId: "member-1",
           timestamp: now,
           encryptedData: data,
           createdAt: now,
@@ -232,8 +204,8 @@ describe("SQLite communication schema", () => {
       const rows = db.select().from(messages).where(eq(messages.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.senderId).toBe("member-1");
       expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
     });
 
     it("cascades on channel deletion", () => {
@@ -248,7 +220,6 @@ describe("SQLite communication schema", () => {
           id: msgId,
           channelId,
           systemId,
-          senderId: "m1",
           timestamp: now,
           encryptedData: new Uint8Array([1]),
           createdAt: now,
@@ -257,6 +228,30 @@ describe("SQLite communication schema", () => {
         .run();
 
       db.delete(channels).where(eq(channels.id, channelId)).run();
+      const rows = db.select().from(messages).where(eq(messages.id, msgId)).all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const channelId = insertChannel(systemId);
+      const msgId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(messages)
+        .values({
+          id: msgId,
+          channelId,
+          systemId,
+          timestamp: now,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(messages).where(eq(messages.id, msgId)).all();
       expect(rows).toHaveLength(0);
     });
@@ -273,7 +268,6 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          senderId: "m1",
           sortOrder: 5,
           encryptedData: new Uint8Array([1, 2]),
           createdAt: now,
@@ -287,9 +281,94 @@ describe("SQLite communication schema", () => {
       expect(rows[0]?.sortOrder).toBe(5);
       expect(rows[0]?.version).toBe(1);
     });
+
+    it("round-trips pinned=true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(boardMessages)
+        .values({
+          id,
+          systemId,
+          pinned: true,
+          sortOrder: 0,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(boardMessages).where(eq(boardMessages.id, id)).all();
+      expect(rows[0]?.pinned).toBe(true);
+    });
+
+    it("rejects negative sort_order via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(boardMessages)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            sortOrder: -1,
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(boardMessages)
+        .values({
+          id,
+          systemId,
+          sortOrder: 0,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db.select().from(boardMessages).where(eq(boardMessages.id, id)).all();
+      expect(rows).toHaveLength(0);
+    });
   });
 
   describe("notes", () => {
+    it("round-trips with nullable memberId", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(notes)
+        .values({
+          id,
+          systemId,
+          encryptedData: new Uint8Array([1, 2]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(notes).where(eq(notes.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.memberId).toBeNull();
+    });
+
     it("sets memberId to null on member deletion (SET NULL)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -333,10 +412,54 @@ describe("SQLite communication schema", () => {
       expect(rows[0]?.archived).toBe(false);
       expect(rows[0]?.memberId).toBeNull();
     });
+
+    it("round-trips archived state", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(notes)
+        .values({
+          id,
+          systemId,
+          archived: true,
+          archivedAt: now,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(notes).where(eq(notes.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(notes)
+        .values({
+          id,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db.select().from(notes).where(eq(notes.id, id)).all();
+      expect(rows).toHaveLength(0);
+    });
   });
 
   describe("polls", () => {
-    it("round-trips with all T3 fields", () => {
+    it("round-trips with status and closedAt", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -346,13 +469,7 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          createdByMemberId: "member-1",
-          kind: "standard",
-          endsAt: now + 86400000,
-          allowMultipleVotes: true,
-          maxVotesPerMember: 3,
-          allowAbstain: true,
-          allowVeto: false,
+          status: "open",
           encryptedData: new Uint8Array([1, 2]),
           createdAt: now,
           updatedAt: now,
@@ -361,13 +478,20 @@ describe("SQLite communication schema", () => {
 
       const rows = db.select().from(polls).where(eq(polls.id, id)).all();
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.kind).toBe("standard");
       expect(rows[0]?.status).toBe("open");
-      expect(rows[0]?.allowMultipleVotes).toBe(true);
-      expect(rows[0]?.maxVotesPerMember).toBe(3);
+      expect(rows[0]?.closedAt).toBeNull();
     });
 
-    it("rejects invalid kind via CHECK", () => {
+    it("defaults status to 'open'", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const pollId = insertPoll(systemId);
+
+      const rows = db.select().from(polls).where(eq(polls.id, pollId)).all();
+      expect(rows[0]?.status).toBe("open");
+    });
+
+    it("rejects invalid status via CHECK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const now = Date.now();
@@ -378,12 +502,7 @@ describe("SQLite communication schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId,
-            createdByMemberId: "m1",
-            kind: "invalid" as "standard",
-            allowMultipleVotes: false,
-            maxVotesPerMember: 1,
-            allowAbstain: false,
-            allowVeto: false,
+            status: "invalid" as "open",
             encryptedData: new Uint8Array([1]),
             createdAt: now,
             updatedAt: now,
@@ -391,33 +510,57 @@ describe("SQLite communication schema", () => {
           .run(),
       ).toThrow();
     });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const pollId = insertPoll(systemId);
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db.select().from(polls).where(eq(polls.id, pollId)).all();
+      expect(rows).toHaveLength(0);
+    });
   });
 
   describe("poll_votes", () => {
-    it("round-trips voter JSON", () => {
+    it("round-trips with encryptedData", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const voter = { type: "member", id: "member-1" };
+      const data = new Uint8Array([10, 20]);
 
       db.insert(pollVotes)
         .values({
           id,
           pollId,
           systemId,
-          optionId: "opt-1",
-          voter,
-          votedAt: now,
+          encryptedData: data,
+          createdAt: now,
         })
         .run();
 
       const rows = db.select().from(pollVotes).where(eq(pollVotes.id, id)).all();
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.voter).toEqual(voter);
-      expect(rows[0]?.isVeto).toBe(false);
-      expect(rows[0]?.encryptedData).toBeNull();
+      expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.createdAt).toBe(now);
+    });
+
+    it("rejects null encryptedData", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const pollId = insertPoll(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at)
+             VALUES (?, ?, ?, NULL, ?)`,
+          )
+          .run(crypto.randomUUID(), pollId, systemId, now),
+      ).toThrow();
     });
 
     it("cascades on poll deletion", () => {
@@ -432,12 +575,34 @@ describe("SQLite communication schema", () => {
           id: voteId,
           pollId,
           systemId,
-          voter: { type: "member", id: "m1" },
-          votedAt: now,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
         })
         .run();
 
       db.delete(polls).where(eq(polls.id, pollId)).run();
+      const rows = db.select().from(pollVotes).where(eq(pollVotes.id, voteId)).all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const pollId = insertPoll(systemId);
+      const voteId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(pollVotes)
+        .values({
+          id: voteId,
+          pollId,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(pollVotes).where(eq(pollVotes.id, voteId)).all();
       expect(rows).toHaveLength(0);
     });
@@ -454,11 +619,8 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          createdByMemberId: "m1",
-          targetMemberId: "m2",
           encryptedData: new Uint8Array([1, 2]),
           createdAt: now,
-          updatedAt: now,
         })
         .run();
 
@@ -466,7 +628,28 @@ describe("SQLite communication schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.confirmed).toBe(false);
       expect(rows[0]?.confirmedAt).toBeNull();
-      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("round-trips confirmed state", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(acknowledgements)
+        .values({
+          id,
+          systemId,
+          confirmed: true,
+          confirmedAt: now,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
+      expect(rows[0]?.confirmed).toBe(true);
+      expect(rows[0]?.confirmedAt).toBe(now);
     });
 
     it("cascades on system deletion", () => {
@@ -479,11 +662,8 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          createdByMemberId: "m1",
-          targetMemberId: "m2",
           encryptedData: new Uint8Array([1]),
           createdAt: now,
-          updatedAt: now,
         })
         .run();
 

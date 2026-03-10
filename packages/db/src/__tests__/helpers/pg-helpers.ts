@@ -1,4 +1,5 @@
 import { accounts } from "../../schema/pg/auth.js";
+import { channels } from "../../schema/pg/communication.js";
 import { members } from "../../schema/pg/members.js";
 import { systems } from "../../schema/pg/systems.js";
 
@@ -536,15 +537,14 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       channel_id VARCHAR(255) NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sender_id VARCHAR(255) NOT NULL,
-      reply_to_id VARCHAR(255),
       timestamp TIMESTAMPTZ NOT NULL,
       edited_at TIMESTAMPTZ,
-      archived BOOLEAN NOT NULL DEFAULT false,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
     )
   `,
   messagesIndexes: `
@@ -555,9 +555,8 @@ export const PG_DDL = {
     CREATE TABLE board_messages (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sender_id VARCHAR(255) NOT NULL,
       pinned BOOLEAN NOT NULL DEFAULT false,
-      sort_order INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -588,15 +587,8 @@ export const PG_DDL = {
     CREATE TABLE polls (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      created_by_member_id VARCHAR(255) NOT NULL,
-      kind VARCHAR(255) NOT NULL CHECK (kind IN ('standard', 'custom')),
       status VARCHAR(255) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at TIMESTAMPTZ,
-      ends_at TIMESTAMPTZ,
-      allow_multiple_votes BOOLEAN NOT NULL,
-      max_votes_per_member INTEGER NOT NULL,
-      allow_abstain BOOLEAN NOT NULL,
-      allow_veto BOOLEAN NOT NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -611,11 +603,8 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       poll_id VARCHAR(255) NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      option_id VARCHAR(255),
-      voter JSONB NOT NULL,
-      is_veto BOOLEAN NOT NULL DEFAULT false,
-      voted_at TIMESTAMPTZ NOT NULL,
-      encrypted_data BYTEA
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
     )
   `,
   pollVotesIndexes: `
@@ -626,14 +615,10 @@ export const PG_DDL = {
     CREATE TABLE acknowledgements (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      created_by_member_id VARCHAR(255) NOT NULL,
-      target_member_id VARCHAR(255) NOT NULL,
       confirmed BOOLEAN NOT NULL DEFAULT false,
       confirmed_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      created_at TIMESTAMPTZ NOT NULL
     )
   `,
   acknowledgementsIndexes: `
@@ -645,14 +630,12 @@ export const PG_DDL = {
     CREATE TABLE journal_entries (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      author JSONB,
-      fronting_session_id VARCHAR(255),
-      archived BOOLEAN NOT NULL DEFAULT false,
-      archived_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
     )
   `,
   journalEntriesIndexes: `
@@ -662,16 +645,20 @@ export const PG_DDL = {
     CREATE TABLE wiki_pages (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      archived BOOLEAN NOT NULL DEFAULT false,
-      archived_at TIMESTAMPTZ,
+      slug VARCHAR(255) NOT NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
     )
   `,
   wikiPagesIndexes: `
     CREATE INDEX wiki_pages_system_id_idx ON wiki_pages (system_id)
+  `,
+  wikiPagesUniqueSlugIndex: `
+    CREATE UNIQUE INDEX wiki_pages_system_id_slug_idx ON wiki_pages (system_id, slug)
   `,
 } as const;
 
@@ -857,6 +844,31 @@ export async function pgInsertMember(
   return resolvedId;
 }
 
+export async function pgInsertChannel(
+  db: PgliteDatabase<Record<string, unknown>>,
+  systemId: string,
+  opts: {
+    id?: string;
+    type?: "category" | "channel";
+    parentId?: string | null;
+    sortOrder?: number;
+  } = {},
+): Promise<string> {
+  const id = opts.id ?? crypto.randomUUID();
+  const now = Date.now();
+  await db.insert(channels).values({
+    id,
+    systemId,
+    type: opts.type ?? "channel",
+    parentId: opts.parentId ?? null,
+    sortOrder: opts.sortOrder ?? 0,
+    encryptedData: new Uint8Array([1, 2, 3]),
+    createdAt: now,
+    updatedAt: now,
+  });
+  return id;
+}
+
 export async function createPgCommunicationTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
@@ -882,4 +894,5 @@ export async function createPgJournalTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.journalEntriesIndexes);
   await pgExec(client, PG_DDL.wikiPages);
   await pgExec(client, PG_DDL.wikiPagesIndexes);
+  await pgExec(client, PG_DDL.wikiPagesUniqueSlugIndex);
 }

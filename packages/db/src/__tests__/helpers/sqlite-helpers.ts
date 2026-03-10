@@ -1,4 +1,5 @@
 import { accounts } from "../../schema/sqlite/auth.js";
+import { channels } from "../../schema/sqlite/communication.js";
 import { members } from "../../schema/sqlite/members.js";
 import { systems } from "../../schema/sqlite/systems.js";
 
@@ -536,15 +537,14 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sender_id TEXT NOT NULL,
-      reply_to_id TEXT,
       timestamp INTEGER NOT NULL,
       edited_at INTEGER,
-      archived INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER
     )
   `,
   messagesIndexes: `
@@ -555,9 +555,8 @@ export const SQLITE_DDL = {
     CREATE TABLE board_messages (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sender_id TEXT NOT NULL,
       pinned INTEGER NOT NULL DEFAULT 0,
-      sort_order INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -588,15 +587,8 @@ export const SQLITE_DDL = {
     CREATE TABLE polls (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      created_by_member_id TEXT NOT NULL,
-      kind TEXT NOT NULL CHECK (kind IN ('standard', 'custom')),
       status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at INTEGER,
-      ends_at INTEGER,
-      allow_multiple_votes INTEGER NOT NULL,
-      max_votes_per_member INTEGER NOT NULL,
-      allow_abstain INTEGER NOT NULL,
-      allow_veto INTEGER NOT NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -611,11 +603,8 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       poll_id TEXT NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      option_id TEXT,
-      voter TEXT NOT NULL,
-      is_veto INTEGER NOT NULL DEFAULT 0,
-      voted_at INTEGER NOT NULL,
-      encrypted_data BLOB
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL
     )
   `,
   pollVotesIndexes: `
@@ -626,14 +615,10 @@ export const SQLITE_DDL = {
     CREATE TABLE acknowledgements (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      created_by_member_id TEXT NOT NULL,
-      target_member_id TEXT NOT NULL,
       confirmed INTEGER NOT NULL DEFAULT 0,
       confirmed_at INTEGER,
       encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      created_at INTEGER NOT NULL
     )
   `,
   acknowledgementsIndexes: `
@@ -645,14 +630,12 @@ export const SQLITE_DDL = {
     CREATE TABLE journal_entries (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      author TEXT,
-      fronting_session_id TEXT,
-      archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER
     )
   `,
   journalEntriesIndexes: `
@@ -662,16 +645,20 @@ export const SQLITE_DDL = {
     CREATE TABLE wiki_pages (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER,
+      slug TEXT NOT NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER
     )
   `,
   wikiPagesIndexes: `
     CREATE INDEX wiki_pages_system_id_idx ON wiki_pages (system_id)
+  `,
+  wikiPagesUniqueSlugIndex: `
+    CREATE UNIQUE INDEX wiki_pages_system_id_slug_idx ON wiki_pages (system_id, slug)
   `,
 } as const;
 
@@ -855,6 +842,33 @@ export function sqliteInsertMember(
   return resolvedId;
 }
 
+export function sqliteInsertChannel(
+  db: BetterSQLite3Database<Record<string, unknown>>,
+  systemId: string,
+  opts: {
+    id?: string;
+    type?: "category" | "channel";
+    parentId?: string | null;
+    sortOrder?: number;
+  } = {},
+): string {
+  const id = opts.id ?? crypto.randomUUID();
+  const now = Date.now();
+  db.insert(channels)
+    .values({
+      id,
+      systemId,
+      type: opts.type ?? "channel",
+      parentId: opts.parentId ?? null,
+      sortOrder: opts.sortOrder ?? 0,
+      encryptedData: new Uint8Array([1, 2, 3]),
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  return id;
+}
+
 export function createSqliteCommunicationTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
@@ -880,4 +894,5 @@ export function createSqliteJournalTables(client: InstanceType<typeof Database>)
   client.exec(SQLITE_DDL.journalEntriesIndexes);
   client.exec(SQLITE_DDL.wikiPages);
   client.exec(SQLITE_DDL.wikiPagesIndexes);
+  client.exec(SQLITE_DDL.wikiPagesUniqueSlugIndex);
 }

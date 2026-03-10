@@ -37,20 +37,17 @@ describe("SQLite journal schema", () => {
   });
 
   describe("journal_entries", () => {
-    it("round-trips with encrypted_data and author JSON", () => {
+    it("round-trips with encrypted_data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = new Uint8Array([10, 20, 30]);
-      const author = { type: "member", id: "member-1" };
 
       db.insert(journalEntries)
         .values({
           id,
           systemId,
-          author,
-          frontingSessionId: "fs-123",
           encryptedData: data,
           createdAt: now,
           updatedAt: now,
@@ -60,29 +57,6 @@ describe("SQLite journal schema", () => {
       const rows = db.select().from(journalEntries).where(eq(journalEntries.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.author).toEqual(author);
-      expect(rows[0]?.frontingSessionId).toBe("fs-123");
-    });
-
-    it("allows nullable author and frontingSessionId", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(journalEntries)
-        .values({
-          id,
-          systemId,
-          encryptedData: new Uint8Array([1]),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(journalEntries).where(eq(journalEntries.id, id)).all();
-      expect(rows[0]?.author).toBeNull();
-      expect(rows[0]?.frontingSessionId).toBeNull();
     });
 
     it("defaults archived to false and version to 1", () => {
@@ -105,6 +79,29 @@ describe("SQLite journal schema", () => {
       expect(rows[0]?.archived).toBe(false);
       expect(rows[0]?.archivedAt).toBeNull();
       expect(rows[0]?.version).toBe(1);
+    });
+
+    it("round-trips archived state", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(journalEntries)
+        .values({
+          id,
+          systemId,
+          archived: true,
+          archivedAt: now,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(journalEntries).where(eq(journalEntries.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
 
     it("cascades on system deletion", () => {
@@ -130,7 +127,7 @@ describe("SQLite journal schema", () => {
   });
 
   describe("wiki_pages", () => {
-    it("round-trips with encrypted_data", () => {
+    it("round-trips with encrypted_data and slug", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -141,6 +138,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
+          slug: "test-page",
           encryptedData: data,
           createdAt: now,
           updatedAt: now,
@@ -150,6 +148,7 @@ describe("SQLite journal schema", () => {
       const rows = db.select().from(wikiPages).where(eq(wikiPages.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.slug).toBe("test-page");
     });
 
     it("defaults archived to false and version to 1", () => {
@@ -162,6 +161,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
+          slug: `slug-${crypto.randomUUID()}`,
           encryptedData: new Uint8Array([1]),
           createdAt: now,
           updatedAt: now,
@@ -174,6 +174,73 @@ describe("SQLite journal schema", () => {
       expect(rows[0]?.version).toBe(1);
     });
 
+    it("enforces unique (system_id, slug)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const slug = `unique-${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      db.insert(wikiPages)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          slug,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(wikiPages)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            slug,
+            encryptedData: new Uint8Array([2]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("allows same slug in different systems", () => {
+      const accountId = insertAccount();
+      const systemId1 = insertSystem(accountId);
+      const systemId2 = insertSystem(accountId);
+      const slug = `shared-${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      db.insert(wikiPages)
+        .values({
+          id: crypto.randomUUID(),
+          systemId: systemId1,
+          slug,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(wikiPages)
+        .values({
+          id: crypto.randomUUID(),
+          systemId: systemId2,
+          slug,
+          encryptedData: new Uint8Array([2]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows1 = db.select().from(wikiPages).where(eq(wikiPages.systemId, systemId1)).all();
+      const rows2 = db.select().from(wikiPages).where(eq(wikiPages.systemId, systemId2)).all();
+      expect(rows1).toHaveLength(1);
+      expect(rows2).toHaveLength(1);
+    });
+
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -184,6 +251,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
+          slug: `del-${crypto.randomUUID()}`,
           encryptedData: new Uint8Array([1]),
           createdAt: now,
           updatedAt: now,

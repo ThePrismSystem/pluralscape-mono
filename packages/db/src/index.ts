@@ -26,6 +26,5 @@ export {
   AUDIT_EVENT_TYPES,
   CHANNEL_TYPES,
   POLL_STATUSES,
-  POLL_KINDS,
 } from "./helpers/index.js";
 export type { DbAuditActor } from "./helpers/index.js";

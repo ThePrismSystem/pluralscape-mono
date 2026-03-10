@@ -15,9 +15,9 @@ import type {
   FrontingType,
   KnownSaturationLevel,
   LayerAccessType,
-  PollKind,
   RelationshipType,
   ServerChannel,
+  ServerPoll,
   SyncOperation,
   SyncResolution,
 } from "@pluralscape/types";
@@ -130,5 +130,4 @@ export const CHANNEL_TYPES = [
   "category",
   "channel",
 ] as const satisfies readonly ServerChannel["type"][];
-export const POLL_STATUSES = ["open", "closed"] as const satisfies readonly ("open" | "closed")[];
-export const POLL_KINDS = ["standard", "custom"] as const satisfies readonly PollKind[];
+export const POLL_STATUSES = ["open", "closed"] as const satisfies readonly ServerPoll["status"][];

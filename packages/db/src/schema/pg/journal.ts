@@ -1,7 +1,7 @@
-import { boolean, index, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+import { index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
+import { pgBinary } from "../../columns/pg.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { systems } from "./systems.js";
 
@@ -12,13 +12,10 @@ export const journalEntries = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    author: jsonb("author"),
-    frontingSessionId: varchar("fronting_session_id", { length: 255 }),
-    archived: boolean("archived").notNull().default(false),
-    archivedAt: pgTimestamp("archived_at"),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt)],
 );
@@ -30,11 +27,14 @@ export const wikiPages = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    archived: boolean("archived").notNull().default(false),
-    archivedAt: pgTimestamp("archived_at"),
+    slug: varchar("slug", { length: 255 }).notNull(),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
-  (t) => [index("wiki_pages_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("wiki_pages_system_id_idx").on(t.systemId),
+    uniqueIndex("wiki_pages_system_id_slug_idx").on(t.systemId, t.slug),
+  ],
 );

@@ -1,7 +1,7 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { sqliteBinary } from "../../columns/sqlite.js";
+import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
 
@@ -12,13 +12,10 @@ export const journalEntries = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    author: sqliteJson("author"),
-    frontingSessionId: text("fronting_session_id"),
-    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
-    archivedAt: sqliteTimestamp("archived_at"),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt)],
 );
@@ -30,11 +27,14 @@ export const wikiPages = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
-    archivedAt: sqliteTimestamp("archived_at"),
+    slug: text("slug").notNull(),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
-  (t) => [index("wiki_pages_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("wiki_pages_system_id_idx").on(t.systemId),
+    uniqueIndex("wiki_pages_system_id_slug_idx").on(t.systemId, t.slug),
+  ],
 );

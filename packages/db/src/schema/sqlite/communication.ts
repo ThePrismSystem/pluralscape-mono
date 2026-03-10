@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
-import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
+import { CHANNEL_TYPES, POLL_STATUSES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -47,14 +47,12 @@ export const messages = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    senderId: text("sender_id").notNull(),
-    replyToId: text("reply_to_id"),
     timestamp: sqliteTimestamp("timestamp").notNull(),
     editedAt: sqliteTimestamp("edited_at"),
-    archived: integer("archived", { mode: "boolean" }).notNull().default(false),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
@@ -69,14 +67,16 @@ export const boardMessages = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    senderId: text("sender_id").notNull(),
     pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("board_messages_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("board_messages_system_id_idx").on(t.systemId),
+    check("board_messages_sort_order_check", sql`${t.sortOrder} >= 0`),
+  ],
 );
 
 export const notes = sqliteTable(
@@ -102,22 +102,14 @@ export const polls = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: text("created_by_member_id").notNull(),
-    kind: text("kind").notNull().$type<ServerPoll["kind"]>(),
     status: text("status").notNull().default("open").$type<ServerPoll["status"]>(),
     closedAt: sqliteTimestamp("closed_at"),
-    endsAt: sqliteTimestamp("ends_at"),
-    allowMultipleVotes: integer("allow_multiple_votes", { mode: "boolean" }).notNull(),
-    maxVotesPerMember: integer("max_votes_per_member").notNull(),
-    allowAbstain: integer("allow_abstain", { mode: "boolean" }).notNull(),
-    allowVeto: integer("allow_veto", { mode: "boolean" }).notNull(),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
-    check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
   ],
 );
@@ -132,11 +124,8 @@ export const pollVotes = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    optionId: text("option_id"),
-    voter: sqliteJson("voter").notNull(),
-    isVeto: integer("is_veto", { mode: "boolean" }).notNull().default(false),
-    votedAt: sqliteTimestamp("voted_at").notNull(),
-    encryptedData: sqliteBinary("encrypted_data"),
+    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
     index("poll_votes_poll_id_idx").on(t.pollId),
@@ -151,13 +140,10 @@ export const acknowledgements = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: text("created_by_member_id").notNull(),
-    targetMemberId: text("target_member_id").notNull(),
     confirmed: integer("confirmed", { mode: "boolean" }).notNull().default(false),
     confirmedAt: sqliteTimestamp("confirmed_at"),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
-    ...timestamps(),
-    ...versioned(),
+    createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
     index("acknowledgements_system_id_idx").on(t.systemId),
