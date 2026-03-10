@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
+import { pgJsonb, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import {
   ACCOUNT_PURGE_STATUSES,
@@ -39,7 +39,7 @@ export const importJobs = pgTable(
       .default("pending")
       .$type<ImportJobStatus>(),
     progressPercent: integer("progress_percent").notNull().default(0),
-    errorLog: jsonb("error_log"),
+    errorLog: pgJsonb("error_log"),
     warningCount: integer("warning_count").notNull().default(0),
     chunksTotal: integer("chunks_total"),
     chunksCompleted: integer("chunks_completed").notNull().default(0),
@@ -55,6 +55,10 @@ export const importJobs = pgTable(
     check(
       "import_jobs_progress_percent_check",
       sql`${t.progressPercent} >= 0 AND ${t.progressPercent} <= 100`,
+    ),
+    check(
+      "import_jobs_chunks_check",
+      sql`${t.chunksTotal} IS NULL OR ${t.chunksCompleted} <= ${t.chunksTotal}`,
     ),
   ],
 );
@@ -78,6 +82,7 @@ export const exportRequests = pgTable(
       onDelete: "set null",
     }),
     createdAt: pgTimestamp("created_at").notNull(),
+    updatedAt: pgTimestamp("updated_at"),
     completedAt: pgTimestamp("completed_at"),
   },
   (t) => [
@@ -95,7 +100,10 @@ export const accountPurgeRequests = pgTable(
     accountId: varchar("account_id", { length: 255 })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    status: varchar("status", { length: 255 }).notNull().$type<AccountPurgeStatus>(),
+    status: varchar("status", { length: 255 })
+      .notNull()
+      .default("pending")
+      .$type<AccountPurgeStatus>(),
     confirmationPhrase: varchar("confirmation_phrase", { length: 255 }).notNull(),
     scheduledPurgeAt: pgTimestamp("scheduled_purge_at").notNull(),
     requestedAt: pgTimestamp("requested_at").notNull(),

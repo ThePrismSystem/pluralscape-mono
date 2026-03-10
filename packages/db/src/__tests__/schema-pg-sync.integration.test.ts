@@ -185,6 +185,46 @@ describe("PG sync schema", () => {
       ).rejects.toThrow();
     });
 
+    it("exercises update operation", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(syncQueue).values({
+        id,
+        systemId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        operation: "update",
+        changeData: new Uint8Array([10]),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
+      expect(rows[0]?.operation).toBe("update");
+    });
+
+    it("exercises delete operation", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(syncQueue).values({
+        id,
+        systemId,
+        entityType: "group",
+        entityId: crypto.randomUUID(),
+        operation: "delete",
+        changeData: new Uint8Array([20]),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
+      expect(rows[0]?.operation).toBe("delete");
+    });
+
     it("allows nullable syncedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -255,6 +295,50 @@ describe("PG sync schema", () => {
       expect(rows[0]?.resolution).toBe("merged");
       expect(rows[0]?.resolvedAt).toBe(now);
       expect(rows[0]?.details).toBe("auto-merged field changes");
+    });
+
+    it("exercises local resolution", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(syncConflicts).values({
+        id,
+        systemId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        localVersion: 1,
+        remoteVersion: 2,
+        resolution: "local",
+        createdAt: now,
+        resolvedAt: now,
+      });
+
+      const rows = await db.select().from(syncConflicts).where(eq(syncConflicts.id, id));
+      expect(rows[0]?.resolution).toBe("local");
+    });
+
+    it("exercises remote resolution", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(syncConflicts).values({
+        id,
+        systemId,
+        entityType: "group",
+        entityId: crypto.randomUUID(),
+        localVersion: 3,
+        remoteVersion: 4,
+        resolution: "remote",
+        createdAt: now,
+        resolvedAt: now,
+      });
+
+      const rows = await db.select().from(syncConflicts).where(eq(syncConflicts.id, id));
+      expect(rows[0]?.resolution).toBe("remote");
     });
 
     it("allows nullable resolution", async () => {

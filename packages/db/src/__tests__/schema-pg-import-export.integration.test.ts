@@ -164,6 +164,44 @@ describe("PG import-export schema", () => {
       ).rejects.toThrow();
     });
 
+    it("exercises validating status", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "pluralkit",
+        status: "validating",
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows[0]?.status).toBe("validating");
+    });
+
+    it("exercises failed status", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "pluralscape",
+        status: "failed",
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows[0]?.status).toBe("failed");
+    });
+
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -253,6 +291,44 @@ describe("PG import-export schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.status).toBe("pending");
       expect(rows[0]?.completedAt).toBeNull();
+    });
+
+    it("exercises processing status", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(exportRequests).values({
+        id,
+        accountId,
+        systemId,
+        format: "csv",
+        status: "processing",
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(exportRequests).where(eq(exportRequests.id, id));
+      expect(rows[0]?.status).toBe("processing");
+    });
+
+    it("exercises failed status", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(exportRequests).values({
+        id,
+        accountId,
+        systemId,
+        format: "json",
+        status: "failed",
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(exportRequests).where(eq(exportRequests.id, id));
+      expect(rows[0]?.status).toBe("failed");
     });
 
     it("rejects invalid format value", async () => {

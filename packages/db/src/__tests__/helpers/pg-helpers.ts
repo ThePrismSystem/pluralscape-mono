@@ -927,7 +927,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ,
-      CHECK (progress_percent >= 0 AND progress_percent <= 100)
+      CHECK (progress_percent >= 0 AND progress_percent <= 100),
+      CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total)
     )
   `,
   importJobsIndexes: `
@@ -943,6 +944,7 @@ export const PG_DDL = {
       status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
       blob_id VARCHAR(255) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ
     )
   `,
@@ -954,7 +956,7 @@ export const PG_DDL = {
     CREATE TABLE account_purge_requests (
       id VARCHAR(255) PRIMARY KEY,
       account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      status VARCHAR(255) NOT NULL CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
+      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
       confirmation_phrase VARCHAR(255) NOT NULL,
       scheduled_purge_at TIMESTAMPTZ NOT NULL,
       requested_at TIMESTAMPTZ NOT NULL,
@@ -995,7 +997,8 @@ export const PG_DDL = {
     )
   `,
   syncQueueIndexes: `
-    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at)
+    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
+    CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id)
   `,
   syncConflicts: `
     CREATE TABLE sync_conflicts (
@@ -1008,7 +1011,7 @@ export const PG_DDL = {
       resolution VARCHAR(255) CHECK (resolution IN ('local', 'remote', 'merged')),
       created_at TIMESTAMPTZ NOT NULL,
       resolved_at TIMESTAMPTZ,
-      details VARCHAR(65535)
+      details TEXT
     )
   `,
   syncConflictsIndexes: `

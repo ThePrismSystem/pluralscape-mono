@@ -1,4 +1,4 @@
-import { check, index, integer, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { check, index, integer, pgTable, text, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -47,6 +47,12 @@ export const syncQueue = pgTable(
   },
   (t) => [
     index("sync_queue_system_id_synced_at_idx").on(t.systemId, t.syncedAt),
+    // TODO: Add partial index on synced_at IS NULL when Drizzle supports it
+    index("sync_queue_system_id_entity_type_entity_id_idx").on(
+      t.systemId,
+      t.entityType,
+      t.entityId,
+    ),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
   ],
 );
@@ -65,7 +71,7 @@ export const syncConflicts = pgTable(
     resolution: varchar("resolution", { length: 255 }).$type<SyncResolution>(),
     createdAt: pgTimestamp("created_at").notNull(),
     resolvedAt: pgTimestamp("resolved_at"),
-    details: varchar("details", { length: 65535 }),
+    details: text("details"),
   },
   (t) => [
     index("sync_conflicts_system_id_entity_type_entity_id_idx").on(

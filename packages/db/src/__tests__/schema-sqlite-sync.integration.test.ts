@@ -211,6 +211,27 @@ describe("SQLite sync schema", () => {
       expect(rows[0]?.syncedAt).toBeNull();
     });
 
+    it("rejects invalid operation", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(syncQueue)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            entityType: "member",
+            entityId: crypto.randomUUID(),
+            operation: "invalid" as "create",
+            changeData: new Uint8Array([1]),
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
     it("round-trips binary changeData accurately", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -290,6 +311,76 @@ describe("SQLite sync schema", () => {
       expect(rows[0]?.resolution).toBeNull();
       expect(rows[0]?.resolvedAt).toBeNull();
       expect(rows[0]?.details).toBeNull();
+    });
+
+    it("rejects invalid resolution", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(syncConflicts)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            entityType: "member",
+            entityId: crypto.randomUUID(),
+            localVersion: 1,
+            remoteVersion: 2,
+            resolution: "invalid" as "local",
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("exercises local resolution", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(syncConflicts)
+        .values({
+          id,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          localVersion: 1,
+          remoteVersion: 2,
+          resolution: "local",
+          createdAt: now,
+          resolvedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
+      expect(rows[0]?.resolution).toBe("local");
+    });
+
+    it("exercises remote resolution", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(syncConflicts)
+        .values({
+          id,
+          systemId,
+          entityType: "group",
+          entityId: crypto.randomUUID(),
+          localVersion: 3,
+          remoteVersion: 4,
+          resolution: "remote",
+          createdAt: now,
+          resolvedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
+      expect(rows[0]?.resolution).toBe("remote");
     });
 
     it("cascades on system deletion", () => {

@@ -50,6 +50,9 @@ import type {
   SyncQueueItemId,
   SyncConflictId,
   ImportJobId,
+  ExportRequestId,
+  FrontingReportId,
+  FrontingCommentId,
   PKBridgeConfigId,
   AccountPurgeRequestId,
   JobId,
@@ -101,7 +104,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 45 branded ID types as string-based", () => {
+  it("defines all 58 branded types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -150,6 +153,9 @@ describe("branded ID types", () => {
     expectTypeOf<SyncQueueItemId>().toExtend<string>();
     expectTypeOf<SyncConflictId>().toExtend<string>();
     expectTypeOf<ImportJobId>().toExtend<string>();
+    expectTypeOf<ExportRequestId>().toExtend<string>();
+    expectTypeOf<FrontingReportId>().toExtend<string>();
+    expectTypeOf<FrontingCommentId>().toExtend<string>();
     expectTypeOf<PKBridgeConfigId>().toExtend<string>();
     expectTypeOf<AccountPurgeRequestId>().toExtend<string>();
     expectTypeOf<JobId>().toExtend<string>();
