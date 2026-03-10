@@ -47,6 +47,8 @@ export const messages = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    senderId: varchar("sender_id", { length: 255 }).notNull(),
+    replyToId: varchar("reply_to_id", { length: 255 }),
     timestamp: pgTimestamp("timestamp").notNull(),
     editedAt: pgTimestamp("edited_at"),
     encryptedData: pgBinary("encrypted_data").notNull(),
@@ -57,6 +59,11 @@ export const messages = pgTable(
   (t) => [
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_id_idx").on(t.systemId),
+    index("messages_reply_to_id_idx").on(t.replyToId),
+    foreignKey({
+      columns: [t.replyToId],
+      foreignColumns: [t.id],
+    }).onDelete("set null"),
   ],
 );
 
@@ -109,6 +116,11 @@ export const polls = pgTable(
       .default("open")
       .$type<ServerPoll["status"]>(),
     closedAt: pgTimestamp("closed_at"),
+    endsAt: pgTimestamp("ends_at"),
+    allowMultipleVotes: boolean("allow_multiple_votes").notNull(),
+    maxVotesPerMember: integer("max_votes_per_member").notNull(),
+    allowAbstain: boolean("allow_abstain").notNull(),
+    allowVeto: boolean("allow_veto").notNull(),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -116,6 +128,7 @@ export const polls = pgTable(
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
+    check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
   ],
 );
 
@@ -145,6 +158,7 @@ export const acknowledgements = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    targetMemberId: varchar("target_member_id", { length: 255 }),
     confirmed: boolean("confirmed").notNull().default(false),
     confirmedAt: pgTimestamp("confirmed_at"),
     encryptedData: pgBinary("encrypted_data").notNull(),
@@ -153,5 +167,6 @@ export const acknowledgements = pgTable(
   (t) => [
     index("acknowledgements_system_id_idx").on(t.systemId),
     index("acknowledgements_confirmed_idx").on(t.confirmed),
+    index("acknowledgements_target_member_id_idx").on(t.targetMemberId),
   ],
 );

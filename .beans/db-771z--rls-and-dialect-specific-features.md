@@ -1,11 +1,11 @@
 ---
 # db-771z
 title: RLS and dialect-specific features
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:33:24Z
-updated_at: 2026-03-09T23:03:12Z
+updated_at: 2026-03-10T05:09:26Z
 parent: db-2je4
 blocked_by:
   - db-s6p9
@@ -29,14 +29,26 @@ Row-level security (PostgreSQL) and dialect feature detection.
 
 ## Acceptance Criteria
 
-- [ ] RLS policies defined for all tables with system_id
-- [ ] member_photos has direct system_id for RLS policy
-- [ ] RLS policies tested on PostgreSQL
-- [ ] SQLite isolation enforced via query builder wrappers
-- [ ] Feature detection utility exported
-- [ ] Dialect capability matrix documented
-- [ ] Integration test: verify RLS prevents cross-tenant access (PG only)
+- [x] RLS policies defined for all tables with system_id
+- [x] member_photos has direct system_id for RLS policy
+- [x] RLS policies tested on PostgreSQL
+- [x] SQLite isolation enforced via query builder wrappers
+- [x] Feature detection utility exported
+- [x] Dialect capability matrix documented
+- [x] Integration test: verify RLS prevents cross-tenant access (PG only)
 
 ## References
 
 - ADR 004 (PostgreSQL RLS)
+
+## Summary of Changes
+
+Implemented RLS infrastructure and dialect detection:
+
+- `rls/policies.ts`: SQL generators for system/account RLS policies, table policy map (38+ tables), `generateRlsStatements()` helper
+- `rls/session.ts`: Transaction-scoped session variable setters (`setSystemId`, `setAccountId`, `setTenantContext`)
+- `rls/sqlite-isolation.ts`: WHERE clause helpers (`systemScope`, `accountScope`) for SQLite tenant isolation
+- `rls/extensions.ts`: pgcrypto extension SQL constant
+- `dialect.ts`: Added `isPostgreSQL()`, `isSQLite()`, `getDialectCapabilities()` with full capability matrix
+- `docs/dialect-capabilities.md`: Documented capability matrix, runtime detection, and tenant isolation patterns
+- Integration tests: PGlite-based cross-tenant isolation tests with `app_user` role, SQLite scope unit tests, dialect detection tests

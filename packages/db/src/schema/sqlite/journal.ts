@@ -1,8 +1,9 @@
 import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary } from "../../columns/sqlite.js";
+import { sqliteBinary, sqliteJson } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
+import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
 
 export const journalEntries = sqliteTable(
@@ -12,12 +13,19 @@ export const journalEntries = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    author: sqliteJson("author"),
+    frontingSessionId: text("fronting_session_id").references(() => frontingSessions.id, {
+      onDelete: "set null",
+    }),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
   },
-  (t) => [index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt)],
+  (t) => [
+    index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt),
+    index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
+  ],
 );
 
 export const wikiPages = sqliteTable(

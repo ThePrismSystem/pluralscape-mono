@@ -1,8 +1,9 @@
-import { index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 
+import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
 
 export const journalEntries = pgTable(
@@ -12,12 +13,20 @@ export const journalEntries = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    author: jsonb("author"),
+    frontingSessionId: varchar("fronting_session_id", { length: 255 }).references(
+      () => frontingSessions.id,
+      { onDelete: "set null" },
+    ),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
   },
-  (t) => [index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt)],
+  (t) => [
+    index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt),
+    index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
+  ],
 );
 
 export const wikiPages = pgTable(
