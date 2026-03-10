@@ -20,7 +20,7 @@ export const webhookConfigs = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     url: varchar("url", { length: 2048 }).notNull(),
     secret: pgBinary("secret").notNull(),
-    events: jsonb("events").notNull(),
+    eventTypes: jsonb("event_types").notNull().$type<readonly WebhookEventType[]>(),
     enabled: boolean("enabled").notNull().default(true),
     cryptoKeyId: varchar("crypto_key_id", { length: 255 }).references(() => apiKeys.id, {
       onDelete: "set null",
@@ -50,6 +50,7 @@ export const webhookDeliveries = pgTable(
     lastAttemptAt: pgTimestamp("last_attempt_at"),
     nextRetryAt: pgTimestamp("next_retry_at"),
     encryptedData: pgBinary("encrypted_data"),
+    createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
     index("webhook_deliveries_webhook_id_idx").on(t.webhookId),

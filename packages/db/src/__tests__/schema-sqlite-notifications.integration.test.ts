@@ -117,6 +117,28 @@ describe("SQLite notifications schema", () => {
       const rows = db.select().from(deviceTokens).where(eq(deviceTokens.id, id)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("cascades on account deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(deviceTokens)
+        .values({
+          id,
+          accountId,
+          systemId,
+          platform: "ios",
+          token: `token-${crypto.randomUUID()}`,
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(accounts).where(eq(accounts.id, accountId)).run();
+      const rows = db.select().from(deviceTokens).where(eq(deviceTokens.id, id)).all();
+      expect(rows).toHaveLength(0);
+    });
   });
 
   describe("notification_configs", () => {
@@ -199,6 +221,33 @@ describe("SQLite notifications schema", () => {
         .all();
       expect(rows).toHaveLength(0);
     });
+
+    it("stores enabled and pushEnabled as false correctly", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(notificationConfigs)
+        .values({
+          id,
+          systemId,
+          eventType: "sync-conflict",
+          enabled: false,
+          pushEnabled: false,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(notificationConfigs)
+        .where(eq(notificationConfigs.id, id))
+        .all();
+      expect(rows[0]?.enabled).toBe(false);
+      expect(rows[0]?.pushEnabled).toBe(false);
+    });
   });
 
   describe("friend_notification_preferences", () => {
@@ -239,6 +288,45 @@ describe("SQLite notifications schema", () => {
         .all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.enabledEventTypes).toEqual(["friend-switch-alert"]);
+    });
+
+    it("cascades on friend_connection deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const friendSystemId = insertSystem(accountId);
+      const fcId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendConnections)
+        .values({
+          id: fcId,
+          systemId,
+          friendSystemId,
+          status: "accepted",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(friendNotificationPreferences)
+        .values({
+          id,
+          systemId,
+          friendConnectionId: fcId,
+          enabledEventTypes: ["friend-switch-alert"],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(friendConnections).where(eq(friendConnections.id, fcId)).run();
+      const rows = db
+        .select()
+        .from(friendNotificationPreferences)
+        .where(eq(friendNotificationPreferences.id, id))
+        .all();
+      expect(rows).toHaveLength(0);
     });
 
     it("enforces unique (system_id, friend_connection_id)", () => {

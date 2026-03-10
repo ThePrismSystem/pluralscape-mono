@@ -7,7 +7,11 @@ import { accounts } from "./auth.js";
 import { friendConnections } from "./privacy.js";
 import { systems } from "./systems.js";
 
-import type { DeviceTokenPlatform, NotificationEventType } from "@pluralscape/types";
+import type {
+  DeviceTokenPlatform,
+  FriendNotificationEventType,
+  NotificationEventType,
+} from "@pluralscape/types";
 
 export const deviceTokens = sqliteTable(
   "device_tokens",
@@ -57,7 +61,9 @@ export const friendNotificationPreferences = sqliteTable(
     friendConnectionId: text("friend_connection_id")
       .notNull()
       .references(() => friendConnections.id, { onDelete: "cascade" }),
-    enabledEventTypes: sqliteJson("enabled_event_types").notNull(),
+    enabledEventTypes: sqliteJson("enabled_event_types")
+      .notNull()
+      .$type<readonly FriendNotificationEventType[]>(),
     ...timestamps(),
   },
   (t) => [

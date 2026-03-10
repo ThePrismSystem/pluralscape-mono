@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { apiKeys } from "../schema/sqlite/api-keys.js";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/sqlite/webhooks.js";
@@ -15,7 +16,7 @@ import {
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-const schema = { accounts, systems, webhookConfigs, webhookDeliveries };
+const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
 
 describe("SQLite webhooks schema", () => {
   let client: InstanceType<typeof Database>;
@@ -50,7 +51,7 @@ describe("SQLite webhooks schema", () => {
           systemId,
           url: "https://example.com/webhook",
           secret,
-          events: ["member.created", "fronting.started"],
+          eventTypes: ["member.created", "fronting.started"],
           enabled: true,
           createdAt: now,
           updatedAt: now,
@@ -61,7 +62,7 @@ describe("SQLite webhooks schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.url).toBe("https://example.com/webhook");
       expect(rows[0]?.secret).toEqual(secret);
-      expect(rows[0]?.events).toEqual(["member.created", "fronting.started"]);
+      expect(rows[0]?.eventTypes).toEqual(["member.created", "fronting.started"]);
       expect(rows[0]?.enabled).toBe(true);
       expect(rows[0]?.cryptoKeyId).toBeNull();
     });
@@ -78,7 +79,7 @@ describe("SQLite webhooks schema", () => {
           systemId,
           url: "https://example.com/hook",
           secret: new Uint8Array([4, 5]),
-          events: [],
+          eventTypes: [],
           createdAt: now,
           updatedAt: now,
         })
@@ -100,7 +101,7 @@ describe("SQLite webhooks schema", () => {
           systemId,
           url: "https://example.com/del",
           secret: new Uint8Array([1]),
-          events: [],
+          eventTypes: [],
           createdAt: now,
           updatedAt: now,
         })
@@ -109,6 +110,68 @@ describe("SQLite webhooks schema", () => {
       db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("sets crypto_key_id to NULL on api_key deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const keyId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(apiKeys)
+        .values({
+          id: keyId,
+          accountId,
+          systemId,
+          name: "test-key",
+          keyType: "metadata",
+          tokenHash: `hash-${crypto.randomUUID()}`,
+          scopes: ["read:members"],
+          createdAt: now,
+        })
+        .run();
+
+      db.insert(webhookConfigs)
+        .values({
+          id,
+          systemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: [],
+          cryptoKeyId: keyId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(apiKeys).where(eq(apiKeys.id, keyId)).run();
+      const rows = db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.cryptoKeyId).toBeNull();
+    });
+
+    it("stores enabled as false correctly", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(webhookConfigs)
+        .values({
+          id,
+          systemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: [],
+          enabled: false,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id)).all();
+      expect(rows[0]?.enabled).toBe(false);
     });
   });
 
@@ -126,7 +189,7 @@ describe("SQLite webhooks schema", () => {
           systemId,
           url: "https://example.com/hook",
           secret: new Uint8Array([1]),
-          events: ["member.created"],
+          eventTypes: ["member.created"],
           createdAt: now,
           updatedAt: now,
         })
@@ -138,6 +201,7 @@ describe("SQLite webhooks schema", () => {
           webhookId: whId,
           systemId,
           eventType: "member.created",
+          createdAt: now,
         })
         .run();
 
@@ -147,6 +211,40 @@ describe("SQLite webhooks schema", () => {
       expect(rows[0]?.attemptCount).toBe(0);
       expect(rows[0]?.httpStatus).toBeNull();
       expect(rows[0]?.encryptedData).toBeNull();
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(webhookConfigs)
+        .values({
+          id: whId,
+          systemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: [],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(webhookDeliveries)
+        .values({
+          id,
+          webhookId: whId,
+          systemId,
+          eventType: "member.created",
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id)).all();
+      expect(rows).toHaveLength(0);
     });
 
     it("cascades on webhook config deletion", () => {
@@ -162,7 +260,7 @@ describe("SQLite webhooks schema", () => {
           systemId,
           url: "https://example.com/hook",
           secret: new Uint8Array([1]),
-          events: [],
+          eventTypes: [],
           createdAt: now,
           updatedAt: now,
         })
@@ -174,6 +272,7 @@ describe("SQLite webhooks schema", () => {
           webhookId: whId,
           systemId,
           eventType: "member.created",
+          createdAt: now,
         })
         .run();
 

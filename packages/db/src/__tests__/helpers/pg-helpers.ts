@@ -780,7 +780,7 @@ export const PG_DDL = {
       account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       platform VARCHAR(255) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
-      token VARCHAR(255) NOT NULL,
+      token VARCHAR(512) NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       last_used_at TIMESTAMPTZ,
       revoked_at TIMESTAMPTZ
@@ -825,7 +825,7 @@ export const PG_DDL = {
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       url VARCHAR(2048) NOT NULL,
       secret BYTEA NOT NULL,
-      events JSONB NOT NULL,
+      event_types JSONB NOT NULL,
       enabled BOOLEAN NOT NULL DEFAULT true,
       crypto_key_id VARCHAR(255) REFERENCES api_keys(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -847,6 +847,7 @@ export const PG_DDL = {
       last_attempt_at TIMESTAMPTZ,
       next_retry_at TIMESTAMPTZ,
       encrypted_data BYTEA,
+      created_at TIMESTAMPTZ NOT NULL,
       CHECK (attempt_count >= 0),
       CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599))
     )
@@ -862,14 +863,15 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       storage_key VARCHAR(1024) NOT NULL,
-      content_type VARCHAR(255),
-      size_bytes INTEGER NOT NULL,
+      mime_type VARCHAR(255),
+      size_bytes BIGINT NOT NULL,
       encryption_tier INTEGER NOT NULL,
       bucket_id VARCHAR(255) REFERENCES buckets(id) ON DELETE SET NULL,
       purpose VARCHAR(255) NOT NULL CHECK (purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
-      thumbnail_blob_id VARCHAR(255),
+      thumbnail_of_blob_id VARCHAR(255),
       checksum VARCHAR(255),
       uploaded_at TIMESTAMPTZ NOT NULL,
+      FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       CHECK (size_bytes > 0),
       CHECK (encryption_tier IN (1, 2))
     )

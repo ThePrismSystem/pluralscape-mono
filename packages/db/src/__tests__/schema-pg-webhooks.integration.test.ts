@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { apiKeys } from "../schema/pg/api-keys.js";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/pg/webhooks.js";
@@ -11,7 +12,7 @@ import { createPgWebhookTables, pgInsertAccount, pgInsertSystem } from "./helper
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, webhookConfigs, webhookDeliveries };
+const schema = { accounts, systems, apiKeys, webhookConfigs, webhookDeliveries };
 
 describe("PG webhooks schema", () => {
   let client: PGlite;
@@ -43,7 +44,7 @@ describe("PG webhooks schema", () => {
         systemId,
         url: "https://example.com/webhook",
         secret,
-        events: ["member.created", "fronting.started"],
+        eventTypes: ["member.created", "fronting.started"],
         enabled: true,
         createdAt: now,
         updatedAt: now,
@@ -53,7 +54,7 @@ describe("PG webhooks schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.url).toBe("https://example.com/webhook");
       expect(rows[0]?.secret).toEqual(secret);
-      expect(rows[0]?.events).toEqual(["member.created", "fronting.started"]);
+      expect(rows[0]?.eventTypes).toEqual(["member.created", "fronting.started"]);
       expect(rows[0]?.enabled).toBe(true);
       expect(rows[0]?.cryptoKeyId).toBeNull();
     });
@@ -69,7 +70,7 @@ describe("PG webhooks schema", () => {
         systemId,
         url: "https://example.com/hook",
         secret: new Uint8Array([4, 5]),
-        events: [],
+        eventTypes: [],
         createdAt: now,
         updatedAt: now,
       });
@@ -89,7 +90,7 @@ describe("PG webhooks schema", () => {
         systemId,
         url: "https://example.com/del",
         secret: new Uint8Array([1]),
-        events: [],
+        eventTypes: [],
         createdAt: now,
         updatedAt: now,
       });
@@ -97,6 +98,62 @@ describe("PG webhooks schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("sets crypto_key_id to NULL on api_key deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const keyId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(apiKeys).values({
+        id: keyId,
+        accountId,
+        systemId,
+        name: "test-key",
+        keyType: "metadata",
+        tokenHash: `hash-${crypto.randomUUID()}`,
+        scopes: ["read:members"],
+        createdAt: now,
+      });
+
+      await db.insert(webhookConfigs).values({
+        id,
+        systemId,
+        url: "https://example.com/hook",
+        secret: new Uint8Array([1]),
+        eventTypes: [],
+        cryptoKeyId: keyId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(apiKeys).where(eq(apiKeys.id, keyId));
+      const rows = await db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.cryptoKeyId).toBeNull();
+    });
+
+    it("stores enabled as false correctly", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(webhookConfigs).values({
+        id,
+        systemId,
+        url: "https://example.com/hook",
+        secret: new Uint8Array([1]),
+        eventTypes: [],
+        enabled: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id));
+      expect(rows[0]?.enabled).toBe(false);
     });
   });
 
@@ -113,7 +170,7 @@ describe("PG webhooks schema", () => {
         systemId,
         url: "https://example.com/hook",
         secret: new Uint8Array([1]),
-        events: ["member.created"],
+        eventTypes: ["member.created"],
         createdAt: now,
         updatedAt: now,
       });
@@ -123,6 +180,7 @@ describe("PG webhooks schema", () => {
         webhookId: whId,
         systemId,
         eventType: "member.created",
+        createdAt: now,
       });
 
       const rows = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id));
@@ -144,7 +202,7 @@ describe("PG webhooks schema", () => {
         systemId,
         url: "https://example.com/hook",
         secret: new Uint8Array([1]),
-        events: [],
+        eventTypes: [],
         createdAt: now,
         updatedAt: now,
       });
@@ -155,6 +213,7 @@ describe("PG webhooks schema", () => {
           webhookId: whId,
           systemId,
           eventType: "invalid.event" as "member.created",
+          createdAt: now,
         }),
       ).rejects.toThrow();
     });
@@ -170,7 +229,7 @@ describe("PG webhooks schema", () => {
         systemId,
         url: "https://example.com/hook",
         secret: new Uint8Array([1]),
-        events: [],
+        eventTypes: [],
         createdAt: now,
         updatedAt: now,
       });
@@ -182,6 +241,7 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created",
           attemptCount: -1,
+          createdAt: now,
         }),
       ).rejects.toThrow();
     });
@@ -197,7 +257,7 @@ describe("PG webhooks schema", () => {
         systemId,
         url: "https://example.com/hook",
         secret: new Uint8Array([1]),
-        events: [],
+        eventTypes: [],
         createdAt: now,
         updatedAt: now,
       });
@@ -209,6 +269,65 @@ describe("PG webhooks schema", () => {
           systemId,
           eventType: "member.created",
           httpStatus: 999,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(webhookConfigs).values({
+        id: whId,
+        systemId,
+        url: "https://example.com/hook",
+        secret: new Uint8Array([1]),
+        eventTypes: [],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(webhookDeliveries).values({
+        id,
+        webhookId: whId,
+        systemId,
+        eventType: "member.created",
+        createdAt: now,
+      });
+
+      await db.delete(systems).where(eq(systems.id, systemId));
+      const rows = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects invalid status", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(webhookConfigs).values({
+        id: whId,
+        systemId,
+        url: "https://example.com/hook",
+        secret: new Uint8Array([1]),
+        eventTypes: [],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(webhookDeliveries).values({
+          id: crypto.randomUUID(),
+          webhookId: whId,
+          systemId,
+          eventType: "member.created",
+          status: "queued" as "pending",
+          createdAt: now,
         }),
       ).rejects.toThrow();
     });
@@ -225,7 +344,7 @@ describe("PG webhooks schema", () => {
         systemId,
         url: "https://example.com/hook",
         secret: new Uint8Array([1]),
-        events: [],
+        eventTypes: [],
         createdAt: now,
         updatedAt: now,
       });
@@ -235,6 +354,7 @@ describe("PG webhooks schema", () => {
         webhookId: whId,
         systemId,
         eventType: "member.created",
+        createdAt: now,
       });
 
       await db.delete(webhookConfigs).where(eq(webhookConfigs.id, whId));

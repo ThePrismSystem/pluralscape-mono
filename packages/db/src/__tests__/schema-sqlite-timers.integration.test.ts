@@ -81,6 +81,27 @@ describe("SQLite timers schema", () => {
       const rows = db.select().from(timerConfigs).where(eq(timerConfigs.id, id)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("stores enabled as false correctly", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id,
+          systemId,
+          enabled: false,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(timerConfigs).where(eq(timerConfigs.id, id)).all();
+      expect(rows[0]?.enabled).toBe(false);
+    });
   });
 
   describe("check_in_records", () => {
@@ -213,6 +234,37 @@ describe("SQLite timers schema", () => {
       db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("stores dismissed as false explicitly", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id: timerId,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(checkInRecords)
+        .values({
+          id,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+          dismissed: false,
+        })
+        .run();
+
+      const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
+      expect(rows[0]?.dismissed).toBe(false);
     });
   });
 });

@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { blobMetadata } from "../schema/pg/blob-metadata.js";
+import { buckets } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
 import {
@@ -15,7 +16,7 @@ import {
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, blobMetadata };
+const schema = { accounts, systems, buckets, blobMetadata };
 
 describe("PG blob_metadata schema", () => {
   let client: PGlite;
@@ -44,7 +45,7 @@ describe("PG blob_metadata schema", () => {
       id,
       systemId,
       storageKey: `blobs/${crypto.randomUUID()}`,
-      contentType: "image/png",
+      mimeType: "image/png",
       sizeBytes: 1024,
       encryptionTier: 1,
       purpose: "avatar",
@@ -54,11 +55,11 @@ describe("PG blob_metadata schema", () => {
 
     const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.contentType).toBe("image/png");
+    expect(rows[0]?.mimeType).toBe("image/png");
     expect(rows[0]?.sizeBytes).toBe(1024);
     expect(rows[0]?.encryptionTier).toBe(1);
     expect(rows[0]?.purpose).toBe("avatar");
-    expect(rows[0]?.thumbnailBlobId).toBeNull();
+    expect(rows[0]?.thumbnailOfBlobId).toBeNull();
     expect(rows[0]?.bucketId).toBeNull();
   });
 
@@ -164,5 +165,37 @@ describe("PG blob_metadata schema", () => {
     await db.delete(systems).where(eq(systems.id, systemId));
     const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
     expect(rows).toHaveLength(0);
+  });
+
+  it("sets bucket_id to NULL on bucket deletion", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const bucketId = crypto.randomUUID();
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(buckets).values({
+      id: bucketId,
+      systemId,
+      encryptedData: new Uint8Array([1]),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db.insert(blobMetadata).values({
+      id,
+      systemId,
+      storageKey: `blobs/${crypto.randomUUID()}`,
+      sizeBytes: 100,
+      encryptionTier: 1,
+      purpose: "attachment",
+      bucketId,
+      uploadedAt: now,
+    });
+
+    await db.delete(buckets).where(eq(buckets.id, bucketId));
+    const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.bucketId).toBeNull();
   });
 });

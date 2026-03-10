@@ -17,7 +17,7 @@ export const webhookConfigs = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     url: text("url").notNull(),
     secret: sqliteBinary("secret").notNull(),
-    events: sqliteJson("events").notNull(),
+    eventTypes: sqliteJson("event_types").notNull().$type<readonly WebhookEventType[]>(),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     cryptoKeyId: text("crypto_key_id").references(() => apiKeys.id, {
       onDelete: "set null",
@@ -44,6 +44,7 @@ export const webhookDeliveries = sqliteTable(
     lastAttemptAt: sqliteTimestamp("last_attempt_at"),
     nextRetryAt: sqliteTimestamp("next_retry_at"),
     encryptedData: sqliteBinary("encrypted_data"),
+    createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
     index("webhook_deliveries_webhook_id_idx").on(t.webhookId),

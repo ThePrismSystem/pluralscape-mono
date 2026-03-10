@@ -9,7 +9,11 @@ import { accounts } from "./auth.js";
 import { friendConnections } from "./privacy.js";
 import { systems } from "./systems.js";
 
-import type { DeviceTokenPlatform, NotificationEventType } from "@pluralscape/types";
+import type {
+  DeviceTokenPlatform,
+  FriendNotificationEventType,
+  NotificationEventType,
+} from "@pluralscape/types";
 
 export const deviceTokens = pgTable(
   "device_tokens",
@@ -22,7 +26,7 @@ export const deviceTokens = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     platform: varchar("platform", { length: 255 }).notNull().$type<DeviceTokenPlatform>(),
-    token: varchar("token", { length: 255 }).notNull(),
+    token: varchar("token", { length: 512 }).notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
     lastUsedAt: pgTimestamp("last_used_at"),
     revokedAt: pgTimestamp("revoked_at"),
@@ -66,7 +70,9 @@ export const friendNotificationPreferences = pgTable(
     friendConnectionId: varchar("friend_connection_id", { length: 255 })
       .notNull()
       .references(() => friendConnections.id, { onDelete: "cascade" }),
-    enabledEventTypes: jsonb("enabled_event_types").notNull(),
+    enabledEventTypes: jsonb("enabled_event_types")
+      .notNull()
+      .$type<readonly FriendNotificationEventType[]>(),
     ...timestamps(),
   },
   (t) => [

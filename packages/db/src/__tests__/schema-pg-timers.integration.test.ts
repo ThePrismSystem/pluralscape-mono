@@ -71,6 +71,25 @@ describe("PG timers schema", () => {
       const rows = await db.select().from(timerConfigs).where(eq(timerConfigs.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("stores enabled as false correctly", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id,
+        systemId,
+        enabled: false,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(timerConfigs).where(eq(timerConfigs.id, id));
+      expect(rows[0]?.enabled).toBe(false);
+    });
   });
 
   describe("check_in_records", () => {
@@ -187,6 +206,33 @@ describe("PG timers schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("stores dismissed as false explicitly", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(checkInRecords).values({
+        id,
+        systemId,
+        timerConfigId: timerId,
+        scheduledAt: now,
+        dismissed: false,
+      });
+
+      const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
+      expect(rows[0]?.dismissed).toBe(false);
     });
   });
 });

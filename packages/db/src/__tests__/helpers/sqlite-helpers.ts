@@ -825,7 +825,7 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       url TEXT NOT NULL,
       secret BLOB NOT NULL,
-      events TEXT NOT NULL,
+      event_types TEXT NOT NULL,
       enabled INTEGER NOT NULL DEFAULT 1,
       crypto_key_id TEXT REFERENCES api_keys(id) ON DELETE SET NULL,
       created_at INTEGER NOT NULL,
@@ -846,7 +846,8 @@ export const SQLITE_DDL = {
       attempt_count INTEGER NOT NULL DEFAULT 0,
       last_attempt_at INTEGER,
       next_retry_at INTEGER,
-      encrypted_data BLOB
+      encrypted_data BLOB,
+      created_at INTEGER NOT NULL
     )
   `,
   webhookDeliveriesIndexes: `
@@ -860,14 +861,15 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       storage_key TEXT NOT NULL,
-      content_type TEXT,
+      mime_type TEXT,
       size_bytes INTEGER NOT NULL,
       encryption_tier INTEGER NOT NULL,
       bucket_id TEXT REFERENCES buckets(id) ON DELETE SET NULL,
       purpose TEXT NOT NULL,
-      thumbnail_blob_id TEXT,
+      thumbnail_of_blob_id TEXT,
       checksum TEXT,
-      uploaded_at INTEGER NOT NULL
+      uploaded_at INTEGER NOT NULL,
+      FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL
     )
   `,
   blobMetadataIndexes: `

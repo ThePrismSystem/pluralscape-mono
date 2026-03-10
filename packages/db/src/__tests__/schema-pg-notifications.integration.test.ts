@@ -126,6 +126,26 @@ describe("PG notifications schema", () => {
       const rows = await db.select().from(deviceTokens).where(eq(deviceTokens.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("cascades on account deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(deviceTokens).values({
+        id,
+        accountId,
+        systemId,
+        platform: "ios",
+        token: `token-${crypto.randomUUID()}`,
+        createdAt: now,
+      });
+
+      await db.delete(accounts).where(eq(accounts.id, accountId));
+      const rows = await db.select().from(deviceTokens).where(eq(deviceTokens.id, id));
+      expect(rows).toHaveLength(0);
+    });
   });
 
   describe("notification_configs", () => {
@@ -197,6 +217,46 @@ describe("PG notifications schema", () => {
         .where(eq(notificationConfigs.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects invalid event_type", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(notificationConfigs).values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "invalid-event" as "switch-reminder",
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("stores enabled and pushEnabled as false correctly", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(notificationConfigs).values({
+        id,
+        systemId,
+        eventType: "sync-conflict",
+        enabled: false,
+        pushEnabled: false,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(notificationConfigs)
+        .where(eq(notificationConfigs.id, id));
+      expect(rows[0]?.enabled).toBe(false);
+      expect(rows[0]?.pushEnabled).toBe(false);
+    });
   });
 
   describe("friend_notification_preferences", () => {
@@ -231,6 +291,39 @@ describe("PG notifications schema", () => {
         .where(eq(friendNotificationPreferences.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.enabledEventTypes).toEqual(["friend-switch-alert"]);
+    });
+
+    it("cascades on friend_connection deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fcId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: fcId,
+        systemId,
+        friendSystemId: await insertSystem(accountId),
+        status: "accepted",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(friendNotificationPreferences).values({
+        id,
+        systemId,
+        friendConnectionId: fcId,
+        enabledEventTypes: ["friend-switch-alert"],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(friendConnections).where(eq(friendConnections.id, fcId));
+      const rows = await db
+        .select()
+        .from(friendNotificationPreferences)
+        .where(eq(friendNotificationPreferences.id, id));
+      expect(rows).toHaveLength(0);
     });
 
     it("enforces unique (system_id, friend_connection_id)", async () => {
