@@ -1,8 +1,29 @@
 // @pluralscape/db — Drizzle schema (PostgreSQL + SQLite)
 
 // ── Dialect ────────────────────────────────────────────────────
-export { getDialect } from "./dialect.js";
-export type { DbDialect } from "./dialect.js";
+export { getDialect, getDialectCapabilities, isPostgreSQL, isSQLite } from "./dialect.js";
+export type { DbDialect, DialectCapabilities } from "./dialect.js";
+
+// ── RLS ────────────────────────────────────────────────────────
+export {
+  accountRlsPolicy,
+  accountScope,
+  accountsTableRlsPolicy,
+  enableRls,
+  ENABLE_PGCRYPTO,
+  generateRlsStatements,
+  RLS_TABLE_POLICIES,
+  setAccountId,
+  setAccountIdSql,
+  setSystemId,
+  setSystemIdSql,
+  setTenantContext,
+  systemPkRlsPolicy,
+  systemRlsPolicy,
+  systemScope,
+  systemsTableRlsPolicy,
+} from "./rls/index.js";
+export type { RlsScopeType } from "./rls/index.js";
 
 // ── Client ─────────────────────────────────────────────────────
 export { createDatabase, createDatabaseFromEnv } from "./client/factory.js";
