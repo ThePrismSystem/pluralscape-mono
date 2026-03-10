@@ -19,7 +19,7 @@ export const innerworldRegions = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     parentRegionId: text("parent_region_id"),
     accessType: text("access_type").notNull().$type<ServerInnerWorldRegion["accessType"]>(),
-    gatekeeperMemberIds: sqliteJson("gatekeeper_member_ids").notNull(),
+    gatekeeperMemberIds: sqliteJson("gatekeeper_member_ids").notNull().$type<readonly string[]>(),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -67,4 +67,6 @@ export const innerworldCanvas = sqliteTable("innerworld_canvas", {
     .primaryKey()
     .references(() => systems.id, { onDelete: "cascade" }),
   encryptedData: sqliteBinary("encrypted_data").notNull(),
+  ...timestamps(),
+  ...versioned(),
 });

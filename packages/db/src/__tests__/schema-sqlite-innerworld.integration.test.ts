@@ -127,11 +127,14 @@ describe("SQLite Innerworld Schema", () => {
 
   it("round-trips innerworldCanvas (1:1 pattern, systemId as PK)", () => {
     const systemId = setupSystem();
+    const now = Date.now();
 
     db.insert(innerworldCanvas)
       .values({
         systemId,
         encryptedData: new Uint8Array([100, 200, 255]),
+        createdAt: now,
+        updatedAt: now,
       })
       .run();
 
@@ -332,7 +335,7 @@ describe("SQLite Innerworld Schema", () => {
       .run();
 
     db.insert(innerworldCanvas)
-      .values({ systemId, encryptedData: new Uint8Array([3]) })
+      .values({ systemId, encryptedData: new Uint8Array([3]), createdAt: now, updatedAt: now })
       .run();
 
     client.exec(`DELETE FROM systems WHERE id = '${systemId}'`);
@@ -350,14 +353,15 @@ describe("SQLite Innerworld Schema", () => {
 
   it("enforces canvas 1:1 pattern (PK violation on duplicate systemId)", () => {
     const systemId = setupSystem();
+    const now = Date.now();
 
     db.insert(innerworldCanvas)
-      .values({ systemId, encryptedData: new Uint8Array([1]) })
+      .values({ systemId, encryptedData: new Uint8Array([1]), createdAt: now, updatedAt: now })
       .run();
 
     expect(() => {
       db.insert(innerworldCanvas)
-        .values({ systemId, encryptedData: new Uint8Array([2]) })
+        .values({ systemId, encryptedData: new Uint8Array([2]), createdAt: now, updatedAt: now })
         .run();
     }).toThrow();
   });

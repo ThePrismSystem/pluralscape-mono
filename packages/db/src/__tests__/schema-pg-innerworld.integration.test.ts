@@ -11,15 +11,14 @@ import {
 
 import { createPgInnerworldTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
-import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 describe("PG Innerworld Schema", () => {
-  let client: PGliteType;
+  let client: PGlite;
   let db: PgliteDatabase<Record<string, unknown>>;
 
   beforeAll(async () => {
-    client = new PGlite();
+    client = await PGlite.create();
     db = drizzle(client);
     await createPgInnerworldTables(client);
   });
@@ -102,10 +101,13 @@ describe("PG Innerworld Schema", () => {
 
   it("round-trips innerworldCanvas (1:1 pattern, systemId as PK)", async () => {
     const systemId = await setupSystem();
+    const now = Date.now();
 
     await db.insert(innerworldCanvas).values({
       systemId,
       encryptedData: new Uint8Array([10, 20, 30]),
+      createdAt: now,
+      updatedAt: now,
     });
 
     const rows = await db
@@ -287,6 +289,8 @@ describe("PG Innerworld Schema", () => {
     await db.insert(innerworldCanvas).values({
       systemId,
       encryptedData: new Uint8Array([3]),
+      createdAt: now,
+      updatedAt: now,
     });
 
     await client.query("DELETE FROM systems WHERE id = $1", [systemId]);
@@ -312,16 +316,21 @@ describe("PG Innerworld Schema", () => {
 
   it("enforces canvas 1:1 pattern (PK violation on duplicate systemId)", async () => {
     const systemId = await setupSystem();
+    const now = Date.now();
 
     await db.insert(innerworldCanvas).values({
       systemId,
       encryptedData: new Uint8Array([1]),
+      createdAt: now,
+      updatedAt: now,
     });
 
     await expect(
       db.insert(innerworldCanvas).values({
         systemId,
         encryptedData: new Uint8Array([2]),
+        createdAt: now,
+        updatedAt: now,
       }),
     ).rejects.toThrow();
   });

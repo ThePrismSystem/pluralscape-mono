@@ -254,7 +254,7 @@ describe("PG groups schema", () => {
 
       await insertGroupMembership(groupId, memberId, systemId);
 
-      await client.query(`DELETE FROM members WHERE id = '${memberId}'`);
+      await client.query("DELETE FROM members WHERE id = $1", [memberId]);
       const rows = await db
         .select()
         .from(groupMemberships)

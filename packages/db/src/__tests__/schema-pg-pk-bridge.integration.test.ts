@@ -91,13 +91,13 @@ describe("PG pk_bridge_state schema", () => {
   });
 
   it("accepts all valid syncDirection values", async () => {
-    const accountId = await insertAccount();
-    const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
     const directions = ["ps-to-pk", "pk-to-ps", "bidirectional"] as const;
 
     for (const dir of directions) {
+      const accountId = await insertAccount();
+      const systemId = await pgInsertSystem(db, accountId);
       const id = crypto.randomUUID();
+      const now = Date.now();
       await db.insert(pkBridgeState).values({
         id,
         systemId,
@@ -249,5 +249,43 @@ describe("PG pk_bridge_state schema", () => {
 
     const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
     expect(rows[0]?.version).toBe(1);
+  });
+
+  it("rejects nonexistent systemId FK", async () => {
+    const now = Date.now();
+    await expect(
+      db.insert(pkBridgeState).values({
+        id: crypto.randomUUID(),
+        systemId: "nonexistent-system-id",
+        syncDirection: "ps-to-pk",
+        pkTokenEncrypted: new Uint8Array([1]),
+        entityMappings: new Uint8Array([2]),
+        errorLog: new Uint8Array([3]),
+        createdAt: now,
+        updatedAt: now,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("stores enabled as false and retrieves it correctly", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(pkBridgeState).values({
+      id,
+      systemId,
+      enabled: false,
+      syncDirection: "bidirectional",
+      pkTokenEncrypted: new Uint8Array([1]),
+      entityMappings: new Uint8Array([2]),
+      errorLog: new Uint8Array([3]),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(rows[0]?.enabled).toBe(false);
   });
 });

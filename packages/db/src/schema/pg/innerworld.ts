@@ -21,7 +21,7 @@ export const innerworldRegions = pgTable(
     accessType: varchar("access_type", { length: 255 })
       .notNull()
       .$type<ServerInnerWorldRegion["accessType"]>(),
-    gatekeeperMemberIds: jsonb("gatekeeper_member_ids").notNull(),
+    gatekeeperMemberIds: jsonb("gatekeeper_member_ids").notNull().$type<readonly string[]>(),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -73,4 +73,6 @@ export const innerworldCanvas = pgTable("innerworld_canvas", {
     .primaryKey()
     .references(() => systems.id, { onDelete: "cascade" }),
   encryptedData: pgBinary("encrypted_data").notNull(),
+  ...timestamps(),
+  ...versioned(),
 });

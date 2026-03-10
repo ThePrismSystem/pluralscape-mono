@@ -731,7 +731,10 @@ export const SQLITE_DDL = {
   innerworldCanvas: `
     CREATE TABLE innerworld_canvas (
       system_id TEXT PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
-      encrypted_data BLOB NOT NULL
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
     )
   `,
   // PK Bridge
@@ -751,7 +754,7 @@ export const SQLITE_DDL = {
     )
   `,
   pkBridgeStateIndexes: `
-    CREATE INDEX pk_bridge_state_system_id_idx ON pk_bridge_state (system_id)
+    CREATE UNIQUE INDEX pk_bridge_state_system_id_idx ON pk_bridge_state (system_id)
   `,
 } as const;
 
