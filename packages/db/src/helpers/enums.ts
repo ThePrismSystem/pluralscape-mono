@@ -5,6 +5,7 @@
  */
 
 import type {
+  AccountPurgeStatus,
   ApiKey,
   ApiKeyScope,
   AuditEventType,
@@ -13,8 +14,12 @@ import type {
   BucketVisibilityScope,
   DeviceTokenPlatform,
   DeviceTransferStatus,
+  ExportFormat,
+  ExportRequestStatus,
   FriendConnectionStatus,
   FrontingType,
+  ImportJobStatus,
+  ImportSource,
   KnownSaturationLevel,
   LayerAccessType,
   NotificationEventType,
@@ -201,3 +206,29 @@ export const BLOB_PURPOSES = [
   "export",
   "littles-safe-mode",
 ] as const satisfies readonly BlobPurpose[];
+export const IMPORT_SOURCES = [
+  "simply-plural",
+  "pluralkit",
+  "pluralscape",
+] as const satisfies readonly ImportSource[];
+export const IMPORT_JOB_STATUSES = [
+  "pending",
+  "validating",
+  "importing",
+  "completed",
+  "failed",
+] as const satisfies readonly ImportJobStatus[];
+export const EXPORT_FORMATS = ["json", "csv"] as const satisfies readonly ExportFormat[];
+export const EXPORT_REQUEST_STATUSES = [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+] as const satisfies readonly ExportRequestStatus[];
+export const ACCOUNT_PURGE_STATUSES = [
+  "pending",
+  "confirmed",
+  "processing",
+  "completed",
+  "cancelled",
+] as const satisfies readonly AccountPurgeStatus[];

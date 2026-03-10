@@ -1,11 +1,11 @@
 ---
 # db-rcgj
 title: Import and export tracking tables
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:22:27Z
-updated_at: 2026-03-09T23:02:43Z
+updated_at: 2026-03-10T09:33:45Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -42,3 +42,18 @@ Tables for tracking data import/export jobs and GDPR account purge requests.
 
 - features.md section 10 (Data Portability)
 - ADR 010 (Background Jobs)
+
+## Summary of Changes
+
+Added 3 dual-dialect tables (PG + SQLite) for import/export tracking:
+
+- `import_jobs`: tracks data import jobs with source, status, progress, error log (JSON), chunk tracking
+- `export_requests`: tracks data export requests with format, status, blob reference for generated file
+- `account_purge_requests`: tracks GDPR account purge lifecycle with confirmation phrase and grace period
+
+Also added:
+
+- `ExportRequestId` branded type and `ExportRequestStatus` union type to `@pluralscape/types`
+- 5 enum arrays in `helpers/enums.ts`: IMPORT_SOURCES, IMPORT_JOB_STATUSES, EXPORT_FORMATS, EXPORT_REQUEST_STATUSES, ACCOUNT_PURGE_STATUSES
+- RLS policies: import_jobs (dual), export_requests (dual), account_purge_requests (account)
+- Integration tests for both PG and SQLite dialects

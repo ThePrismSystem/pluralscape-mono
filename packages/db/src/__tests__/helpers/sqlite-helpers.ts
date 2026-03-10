@@ -907,6 +907,112 @@ export const SQLITE_DDL = {
     CREATE INDEX check_in_records_timer_config_id_idx ON check_in_records (timer_config_id);
     CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at)
   `,
+  // Import/Export
+  importJobs: `
+    CREATE TABLE import_jobs (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      source TEXT NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validating', 'importing', 'completed', 'failed')),
+      progress_percent INTEGER NOT NULL DEFAULT 0,
+      error_log TEXT,
+      warning_count INTEGER NOT NULL DEFAULT 0,
+      chunks_total INTEGER,
+      chunks_completed INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER,
+      completed_at INTEGER,
+      CHECK (progress_percent >= 0 AND progress_percent <= 100),
+      CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total)
+    )
+  `,
+  importJobsIndexes: `
+    CREATE INDEX import_jobs_account_id_status_idx ON import_jobs (account_id, status);
+    CREATE INDEX import_jobs_system_id_idx ON import_jobs (system_id)
+  `,
+  exportRequests: `
+    CREATE TABLE export_requests (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      format TEXT NOT NULL CHECK (format IN ('json', 'csv')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+      blob_id TEXT REFERENCES blob_metadata(id) ON DELETE SET NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER,
+      completed_at INTEGER
+    )
+  `,
+  exportRequestsIndexes: `
+    CREATE INDEX export_requests_account_id_idx ON export_requests (account_id);
+    CREATE INDEX export_requests_system_id_idx ON export_requests (system_id)
+  `,
+  accountPurgeRequests: `
+    CREATE TABLE account_purge_requests (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
+      confirmation_phrase TEXT NOT NULL,
+      scheduled_purge_at INTEGER NOT NULL,
+      requested_at INTEGER NOT NULL,
+      confirmed_at INTEGER,
+      completed_at INTEGER,
+      cancelled_at INTEGER
+    )
+  `,
+  accountPurgeRequestsIndexes: `
+    CREATE INDEX account_purge_requests_account_id_idx ON account_purge_requests (account_id)
+  `,
+  // Sync
+  syncDocuments: `
+    CREATE TABLE sync_documents (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      automerge_heads BLOB,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      last_synced_at INTEGER
+    )
+  `,
+  syncDocumentsIndexes: `
+    CREATE UNIQUE INDEX sync_documents_system_id_entity_type_entity_id_idx ON sync_documents (system_id, entity_type, entity_id)
+  `,
+  syncQueue: `
+    CREATE TABLE sync_queue (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      operation TEXT NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
+      change_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      synced_at INTEGER
+    )
+  `,
+  syncQueueIndexes: `
+    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
+    CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id)
+  `,
+  syncConflicts: `
+    CREATE TABLE sync_conflicts (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      local_version INTEGER NOT NULL,
+      remote_version INTEGER NOT NULL,
+      resolution TEXT CHECK (resolution IN ('local', 'remote', 'merged')),
+      created_at INTEGER NOT NULL,
+      resolved_at INTEGER,
+      details TEXT
+    )
+  `,
+  syncConflictsIndexes: `
+    CREATE INDEX sync_conflicts_system_id_entity_type_entity_id_idx ON sync_conflicts (system_id, entity_type, entity_id)
+  `,
 } as const;
 
 function createSqliteBaseTables(client: InstanceType<typeof Database>): void {
@@ -1206,4 +1312,27 @@ export function createSqliteTimerTables(client: InstanceType<typeof Database>): 
   client.exec(SQLITE_DDL.timerConfigsIndexes);
   client.exec(SQLITE_DDL.checkInRecords);
   client.exec(SQLITE_DDL.checkInRecordsIndexes);
+}
+
+export function createSqliteImportExportTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.buckets);
+  client.exec(SQLITE_DDL.blobMetadata);
+  client.exec(SQLITE_DDL.blobMetadataIndexes);
+  client.exec(SQLITE_DDL.importJobs);
+  client.exec(SQLITE_DDL.importJobsIndexes);
+  client.exec(SQLITE_DDL.exportRequests);
+  client.exec(SQLITE_DDL.exportRequestsIndexes);
+  client.exec(SQLITE_DDL.accountPurgeRequests);
+  client.exec(SQLITE_DDL.accountPurgeRequestsIndexes);
+}
+
+export function createSqliteSyncTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.syncDocuments);
+  client.exec(SQLITE_DDL.syncDocumentsIndexes);
+  client.exec(SQLITE_DDL.syncQueue);
+  client.exec(SQLITE_DDL.syncQueueIndexes);
+  client.exec(SQLITE_DDL.syncConflicts);
+  client.exec(SQLITE_DDL.syncConflictsIndexes);
 }

@@ -169,6 +169,16 @@ export const RLS_TABLE_POLICIES = {
   blob_metadata: "system",
   timer_configs: "system",
   check_in_records: "system",
+
+  // Import/Export
+  import_jobs: "dual",
+  export_requests: "dual",
+  account_purge_requests: "account",
+
+  // Sync
+  sync_documents: "system",
+  sync_queue: "system",
+  sync_conflicts: "system",
 } as const satisfies Record<string, RlsScopeType>;
 
 /** Type-safe table names that have RLS policies. */

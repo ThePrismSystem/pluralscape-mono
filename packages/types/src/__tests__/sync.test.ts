@@ -80,9 +80,10 @@ describe("SyncDocument", () => {
     expectTypeOf<SyncDocument["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<SyncDocument["entityType"]>().toEqualTypeOf<EntityType>();
     expectTypeOf<SyncDocument["entityId"]>().toEqualTypeOf<string>();
-    expectTypeOf<SyncDocument["automergeHeads"]>().toEqualTypeOf<Uint8Array>();
-    expectTypeOf<SyncDocument["lastSyncedAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<SyncDocument["automergeHeads"]>().toEqualTypeOf<Uint8Array | null>();
+    expectTypeOf<SyncDocument["lastSyncedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<SyncDocument["version"]>().toEqualTypeOf<number>();
+    expectTypeOf<SyncDocument["createdAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });
 
@@ -107,9 +108,10 @@ describe("SyncConflict", () => {
     expectTypeOf<SyncConflict["entityId"]>().toEqualTypeOf<string>();
     expectTypeOf<SyncConflict["localVersion"]>().toEqualTypeOf<number>();
     expectTypeOf<SyncConflict["remoteVersion"]>().toEqualTypeOf<number>();
-    expectTypeOf<SyncConflict["resolution"]>().toEqualTypeOf<SyncResolution>();
+    expectTypeOf<SyncConflict["resolution"]>().toEqualTypeOf<SyncResolution | null>();
     expectTypeOf<SyncConflict["resolvedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<SyncConflict["details"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SyncConflict["createdAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });
 

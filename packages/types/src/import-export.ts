@@ -1,4 +1,13 @@
-import type { AccountPurgeRequestId, BucketId, ImportJobId, MemberId, SystemId } from "./ids.js";
+import type {
+  AccountId,
+  AccountPurgeRequestId,
+  BlobId,
+  BucketId,
+  ExportRequestId,
+  ImportJobId,
+  MemberId,
+  SystemId,
+} from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 // ── Import/Export types ─────────────────────────────────────────────
@@ -210,15 +219,24 @@ export interface ImportError {
 /** An import job. */
 export interface ImportJob {
   readonly id: ImportJobId;
+  readonly accountId: AccountId;
   readonly systemId: SystemId;
   readonly source: ImportSource;
   readonly status: ImportJobStatus;
-  readonly progress: ImportProgress;
-  readonly startedAt: UnixMillis | null;
+  readonly progressPercent: number;
+  readonly errorLog: readonly ImportError[] | null;
+  readonly warningCount: number;
+  readonly chunksTotal: number | null;
+  readonly chunksCompleted: number;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis | null;
   readonly completedAt: UnixMillis | null;
 }
 
 // ── Export types ─────────────────────────────────────────────────────
+
+/** Status of an export request. */
+export type ExportRequestStatus = "pending" | "processing" | "completed" | "failed";
 
 /** Format for an export manifest. */
 export type ExportFormat = "json" | "csv";
@@ -254,6 +272,19 @@ export interface ExportManifest extends DownloadableReport {
   readonly sections: readonly ExportSection[];
 }
 
+/** An export request tracking record. */
+export interface ExportRequest {
+  readonly id: ExportRequestId;
+  readonly accountId: AccountId;
+  readonly systemId: SystemId;
+  readonly format: ExportFormat;
+  readonly status: ExportRequestStatus;
+  readonly blobId: BlobId | null;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis | null;
+  readonly completedAt: UnixMillis | null;
+}
+
 // ── Account management ──────────────────────────────────────────────
 
 /** Status of an account purge request. */
@@ -265,13 +296,14 @@ export type ReportFormat = "html" | "pdf";
 /** Request to purge an entire account and all associated data. */
 export interface AccountPurgeRequest {
   readonly id: AccountPurgeRequestId;
-  readonly systemId: SystemId;
+  readonly accountId: AccountId;
   readonly status: AccountPurgeStatus;
   readonly confirmationPhrase: string;
   readonly requestedAt: UnixMillis;
   readonly confirmedAt: UnixMillis | null;
   readonly scheduledPurgeAt: UnixMillis;
   readonly completedAt: UnixMillis | null;
+  readonly cancelledAt: UnixMillis | null;
 }
 
 /** A downloadable report of a single member's data. */
