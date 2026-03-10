@@ -1,4 +1,8 @@
+import { accounts } from "../../schema/sqlite/auth.js";
+import { systems } from "../../schema/sqlite/systems.js";
+
 import type Database from "better-sqlite3";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 export const SQLITE_DDL = {
   accounts: `
@@ -106,6 +110,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1
     )
   `,
+  bucketsIndexes: `
+    CREATE INDEX buckets_system_id_idx ON buckets (system_id)
+  `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
       entity_type TEXT NOT NULL CHECK (entity_type IN ('members', 'custom-fields', 'fronting-status', 'custom-fronts', 'notes', 'chat', 'journal-entries', 'member-photos', 'groups')),
@@ -113,6 +120,10 @@ export const SQLITE_DDL = {
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       PRIMARY KEY (entity_type, entity_id, bucket_id)
     )
+  `,
+  bucketContentTagsIndexes: `
+    CREATE INDEX bucket_content_tags_entity_idx ON bucket_content_tags (entity_type, entity_id);
+    CREATE INDEX bucket_content_tags_bucket_id_idx ON bucket_content_tags (bucket_id)
   `,
   keyGrants: `
     CREATE TABLE key_grants (
@@ -126,6 +137,10 @@ export const SQLITE_DDL = {
       UNIQUE (bucket_id, friend_system_id, key_version)
     )
   `,
+  keyGrantsIndexes: `
+    CREATE INDEX key_grants_friend_bucket_idx ON key_grants (friend_system_id, bucket_id);
+    CREATE INDEX key_grants_revoked_at_idx ON key_grants (revoked_at)
+  `,
   friendConnections: `
     CREATE TABLE friend_connections (
       id TEXT PRIMARY KEY,
@@ -136,8 +151,13 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (system_id, friend_system_id)
+      UNIQUE (system_id, friend_system_id),
+      CHECK (system_id != friend_system_id)
     )
+  `,
+  friendConnectionsIndexes: `
+    CREATE INDEX friend_connections_system_status_idx ON friend_connections (system_id, status);
+    CREATE INDEX friend_connections_friend_system_id_idx ON friend_connections (friend_system_id)
   `,
   friendCodes: `
     CREATE TABLE friend_codes (
@@ -148,6 +168,9 @@ export const SQLITE_DDL = {
       expires_at INTEGER,
       CHECK (expires_at IS NULL OR expires_at > created_at)
     )
+  `,
+  friendCodesIndexes: `
+    CREATE INDEX friend_codes_system_id_idx ON friend_codes (system_id)
   `,
   friendBucketAssignments: `
     CREATE TABLE friend_bucket_assignments (
@@ -170,6 +193,10 @@ export const SQLITE_DDL = {
       CHECK (end_time IS NULL OR end_time > start_time)
     )
   `,
+  frontingSessionsIndexes: `
+    CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
+    CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time)
+  `,
   switches: `
     CREATE TABLE switches (
       id TEXT PRIMARY KEY,
@@ -178,6 +205,9 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL
     )
+  `,
+  switchesIndexes: `
+    CREATE INDEX switches_system_timestamp_idx ON switches (system_id, timestamp)
   `,
   customFronts: `
     CREATE TABLE custom_fronts (
@@ -191,6 +221,9 @@ export const SQLITE_DDL = {
       archived_at INTEGER
     )
   `,
+  customFrontsIndexes: `
+    CREATE INDEX custom_fronts_system_id_idx ON custom_fronts (system_id)
+  `,
   frontingComments: `
     CREATE TABLE fronting_comments (
       id TEXT PRIMARY KEY,
@@ -201,6 +234,9 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1
     )
+  `,
+  frontingCommentsIndexes: `
+    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (session_id, created_at)
   `,
   // Structure
   relationships: `
@@ -213,6 +249,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1
     )
   `,
+  relationshipsIndexes: `
+    CREATE INDEX relationships_system_id_idx ON relationships (system_id)
+  `,
   subsystems: `
     CREATE TABLE subsystems (
       id TEXT PRIMARY KEY,
@@ -224,6 +263,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1
     )
   `,
+  subsystemsIndexes: `
+    CREATE INDEX subsystems_system_id_idx ON subsystems (system_id)
+  `,
   sideSystems: `
     CREATE TABLE side_systems (
       id TEXT PRIMARY KEY,
@@ -233,6 +275,9 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1
     )
+  `,
+  sideSystemsIndexes: `
+    CREATE INDEX side_systems_system_id_idx ON side_systems (system_id)
   `,
   layers: `
     CREATE TABLE layers (
@@ -245,6 +290,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1
     )
   `,
+  layersIndexes: `
+    CREATE INDEX layers_system_id_idx ON layers (system_id)
+  `,
   subsystemMemberships: `
     CREATE TABLE subsystem_memberships (
       id TEXT PRIMARY KEY,
@@ -253,6 +301,10 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL
     )
+  `,
+  subsystemMembershipsIndexes: `
+    CREATE INDEX subsystem_memberships_subsystem_id_idx ON subsystem_memberships (subsystem_id);
+    CREATE INDEX subsystem_memberships_system_id_idx ON subsystem_memberships (system_id)
   `,
   sideSystemMemberships: `
     CREATE TABLE side_system_memberships (
@@ -263,6 +315,10 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL
     )
   `,
+  sideSystemMembershipsIndexes: `
+    CREATE INDEX side_system_memberships_side_system_id_idx ON side_system_memberships (side_system_id);
+    CREATE INDEX side_system_memberships_system_id_idx ON side_system_memberships (system_id)
+  `,
   layerMemberships: `
     CREATE TABLE layer_memberships (
       id TEXT PRIMARY KEY,
@@ -271,6 +327,10 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL
     )
+  `,
+  layerMembershipsIndexes: `
+    CREATE INDEX layer_memberships_layer_id_idx ON layer_memberships (layer_id);
+    CREATE INDEX layer_memberships_system_id_idx ON layer_memberships (system_id)
   `,
   subsystemLayerLinks: `
     CREATE TABLE subsystem_layer_links (
@@ -283,6 +343,10 @@ export const SQLITE_DDL = {
       UNIQUE (subsystem_id, layer_id)
     )
   `,
+  subsystemLayerLinksIndexes: `
+    CREATE INDEX subsystem_layer_links_subsystem_id_idx ON subsystem_layer_links (subsystem_id);
+    CREATE INDEX subsystem_layer_links_layer_id_idx ON subsystem_layer_links (layer_id)
+  `,
   subsystemSideSystemLinks: `
     CREATE TABLE subsystem_side_system_links (
       id TEXT PRIMARY KEY,
@@ -294,6 +358,10 @@ export const SQLITE_DDL = {
       UNIQUE (subsystem_id, side_system_id)
     )
   `,
+  subsystemSideSystemLinksIndexes: `
+    CREATE INDEX subsystem_side_system_links_subsystem_id_idx ON subsystem_side_system_links (subsystem_id);
+    CREATE INDEX subsystem_side_system_links_side_system_id_idx ON subsystem_side_system_links (side_system_id)
+  `,
   sideSystemLayerLinks: `
     CREATE TABLE side_system_layer_links (
       id TEXT PRIMARY KEY,
@@ -304,6 +372,10 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       UNIQUE (side_system_id, layer_id)
     )
+  `,
+  sideSystemLayerLinksIndexes: `
+    CREATE INDEX side_system_layer_links_side_system_id_idx ON side_system_layer_links (side_system_id);
+    CREATE INDEX side_system_layer_links_layer_id_idx ON side_system_layer_links (layer_id)
   `,
   // Custom Fields
   fieldDefinitions: `
@@ -318,6 +390,9 @@ export const SQLITE_DDL = {
       archived_at INTEGER
     )
   `,
+  fieldDefinitionsIndexes: `
+    CREATE INDEX field_definitions_system_id_idx ON field_definitions (system_id)
+  `,
   fieldValues: `
     CREATE TABLE field_values (
       id TEXT PRIMARY KEY,
@@ -329,6 +404,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1
     )
   `,
+  fieldValuesIndexes: `
+    CREATE INDEX field_values_definition_system_idx ON field_values (field_definition_id, system_id)
+  `,
   fieldBucketVisibility: `
     CREATE TABLE field_bucket_visibility (
       field_definition_id TEXT NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
@@ -337,6 +415,49 @@ export const SQLITE_DDL = {
     )
   `,
 } as const;
+
+function createSqliteBaseTables(client: InstanceType<typeof Database>): void {
+  client.exec(SQLITE_DDL.accounts);
+  client.exec(SQLITE_DDL.systems);
+  client.exec(SQLITE_DDL.systemsIndexes);
+}
+
+export function sqliteInsertAccount(
+  db: BetterSQLite3Database<Record<string, unknown>>,
+  id?: string,
+): string {
+  const resolvedId = id ?? crypto.randomUUID();
+  const now = Date.now();
+  db.insert(accounts)
+    .values({
+      id: resolvedId,
+      emailHash: `hash_${crypto.randomUUID()}`,
+      emailSalt: `salt_${crypto.randomUUID()}`,
+      passwordHash: `$argon2id$${crypto.randomUUID()}`,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  return resolvedId;
+}
+
+export function sqliteInsertSystem(
+  db: BetterSQLite3Database<Record<string, unknown>>,
+  accountId: string,
+  id?: string,
+): string {
+  const resolvedId = id ?? crypto.randomUUID();
+  const now = Date.now();
+  db.insert(systems)
+    .values({
+      id: resolvedId,
+      accountId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  return resolvedId;
+}
 
 export function createSqliteAuthTables(client: InstanceType<typeof Database>): void {
   client.exec(SQLITE_DDL.accounts);
@@ -349,63 +470,73 @@ export function createSqliteAuthTables(client: InstanceType<typeof Database>): v
 }
 
 export function createSqliteSystemTables(client: InstanceType<typeof Database>): void {
-  client.exec(SQLITE_DDL.accounts);
-  client.exec(SQLITE_DDL.systems);
-  client.exec(SQLITE_DDL.systemsIndexes);
+  createSqliteBaseTables(client);
 }
 
 export function createSqliteMemberTables(client: InstanceType<typeof Database>): void {
-  client.exec(SQLITE_DDL.accounts);
-  client.exec(SQLITE_DDL.systems);
-  client.exec(SQLITE_DDL.systemsIndexes);
+  createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.memberPhotos);
 }
 
 export function createSqlitePrivacyTables(client: InstanceType<typeof Database>): void {
-  client.exec(SQLITE_DDL.accounts);
-  client.exec(SQLITE_DDL.systems);
-  client.exec(SQLITE_DDL.systemsIndexes);
+  createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.buckets);
+  client.exec(SQLITE_DDL.bucketsIndexes);
   client.exec(SQLITE_DDL.bucketContentTags);
+  client.exec(SQLITE_DDL.bucketContentTagsIndexes);
   client.exec(SQLITE_DDL.keyGrants);
+  client.exec(SQLITE_DDL.keyGrantsIndexes);
   client.exec(SQLITE_DDL.friendConnections);
+  client.exec(SQLITE_DDL.friendConnectionsIndexes);
   client.exec(SQLITE_DDL.friendCodes);
+  client.exec(SQLITE_DDL.friendCodesIndexes);
   client.exec(SQLITE_DDL.friendBucketAssignments);
 }
 
 export function createSqliteFrontingTables(client: InstanceType<typeof Database>): void {
-  client.exec(SQLITE_DDL.accounts);
-  client.exec(SQLITE_DDL.systems);
-  client.exec(SQLITE_DDL.systemsIndexes);
+  createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.frontingSessions);
+  client.exec(SQLITE_DDL.frontingSessionsIndexes);
   client.exec(SQLITE_DDL.switches);
+  client.exec(SQLITE_DDL.switchesIndexes);
   client.exec(SQLITE_DDL.customFronts);
+  client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingComments);
+  client.exec(SQLITE_DDL.frontingCommentsIndexes);
 }
 
 export function createSqliteStructureTables(client: InstanceType<typeof Database>): void {
-  client.exec(SQLITE_DDL.accounts);
-  client.exec(SQLITE_DDL.systems);
-  client.exec(SQLITE_DDL.systemsIndexes);
+  createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.relationships);
+  client.exec(SQLITE_DDL.relationshipsIndexes);
   client.exec(SQLITE_DDL.subsystems);
+  client.exec(SQLITE_DDL.subsystemsIndexes);
   client.exec(SQLITE_DDL.sideSystems);
+  client.exec(SQLITE_DDL.sideSystemsIndexes);
   client.exec(SQLITE_DDL.layers);
+  client.exec(SQLITE_DDL.layersIndexes);
   client.exec(SQLITE_DDL.subsystemMemberships);
+  client.exec(SQLITE_DDL.subsystemMembershipsIndexes);
   client.exec(SQLITE_DDL.sideSystemMemberships);
+  client.exec(SQLITE_DDL.sideSystemMembershipsIndexes);
   client.exec(SQLITE_DDL.layerMemberships);
+  client.exec(SQLITE_DDL.layerMembershipsIndexes);
   client.exec(SQLITE_DDL.subsystemLayerLinks);
+  client.exec(SQLITE_DDL.subsystemLayerLinksIndexes);
   client.exec(SQLITE_DDL.subsystemSideSystemLinks);
+  client.exec(SQLITE_DDL.subsystemSideSystemLinksIndexes);
   client.exec(SQLITE_DDL.sideSystemLayerLinks);
+  client.exec(SQLITE_DDL.sideSystemLayerLinksIndexes);
 }
 
 export function createSqliteCustomFieldsTables(client: InstanceType<typeof Database>): void {
-  client.exec(SQLITE_DDL.accounts);
-  client.exec(SQLITE_DDL.systems);
-  client.exec(SQLITE_DDL.systemsIndexes);
+  createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.buckets);
+  client.exec(SQLITE_DDL.bucketsIndexes);
   client.exec(SQLITE_DDL.fieldDefinitions);
+  client.exec(SQLITE_DDL.fieldDefinitionsIndexes);
   client.exec(SQLITE_DDL.fieldValues);
+  client.exec(SQLITE_DDL.fieldValuesIndexes);
   client.exec(SQLITE_DDL.fieldBucketVisibility);
 }

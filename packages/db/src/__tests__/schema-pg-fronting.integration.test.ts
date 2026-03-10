@@ -12,7 +12,7 @@ import {
 } from "../schema/pg/fronting.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgFrontingTables } from "./helpers/pg-helpers.js";
+import { createPgFrontingTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -29,29 +29,8 @@ describe("PG fronting schema", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
 
-  async function insertAccount(id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(accounts).values({
-      id,
-      emailHash: `hash_${crypto.randomUUID()}`,
-      emailSalt: `salt_${crypto.randomUUID()}`,
-      passwordHash: `$argon2id$${crypto.randomUUID()}`,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
-
-  async function insertSystem(accountId: string, id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(systems).values({
-      id,
-      accountId,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
+  const insertAccount = (id?: string) => pgInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
   async function insertFrontingSession(
     systemId: string,

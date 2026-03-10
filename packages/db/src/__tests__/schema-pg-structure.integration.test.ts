@@ -18,7 +18,7 @@ import {
 } from "../schema/pg/structure.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgStructureTables } from "./helpers/pg-helpers.js";
+import { createPgStructureTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -41,29 +41,8 @@ describe("PG structure schema", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
 
-  async function insertAccount(id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(accounts).values({
-      id,
-      emailHash: `hash_${crypto.randomUUID()}`,
-      emailSalt: `salt_${crypto.randomUUID()}`,
-      passwordHash: `$argon2id$${crypto.randomUUID()}`,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
-
-  async function insertSystem(accountId: string, id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(systems).values({
-      id,
-      accountId,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
+  const insertAccount = (id?: string) => pgInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
   async function insertSubsystem(
     systemId: string,
@@ -180,6 +159,19 @@ describe("PG structure schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(relationships).where(eq(relationships.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent systemId FK", async () => {
+      const now = Date.now();
+      await expect(
+        db.insert(relationships).values({
+          id: crypto.randomUUID(),
+          systemId: "nonexistent",
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -302,6 +294,19 @@ describe("PG structure schema", () => {
       const rows = await db.select().from(sideSystems).where(eq(sideSystems.id, sideSystemId));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects nonexistent systemId FK", async () => {
+      const now = Date.now();
+      await expect(
+        db.insert(sideSystems).values({
+          id: crypto.randomUUID(),
+          systemId: "nonexistent",
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("layers", () => {
@@ -355,6 +360,20 @@ describe("PG structure schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(layers).where(eq(layers.id, layerId));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent systemId FK", async () => {
+      const now = Date.now();
+      await expect(
+        db.insert(layers).values({
+          id: crypto.randomUUID(),
+          systemId: "nonexistent",
+          sortOrder: 0,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -692,6 +711,64 @@ describe("PG structure schema", () => {
         .where(eq(subsystemLayerLinks.id, linkId));
       expect(rows).toHaveLength(0);
     });
+
+    it("cascades on layer deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const subsystemId = await insertSubsystem(systemId);
+      const layerId = await insertLayer(systemId, 0);
+      const linkId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(subsystemLayerLinks).values({
+        id: linkId,
+        subsystemId,
+        layerId,
+        systemId,
+        createdAt: now,
+      });
+
+      await db.delete(layers).where(eq(layers.id, layerId));
+      const rows = await db
+        .select()
+        .from(subsystemLayerLinks)
+        .where(eq(subsystemLayerLinks.id, linkId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent subsystemId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const layerId = await insertLayer(systemId, 0);
+      const now = Date.now();
+
+      await expect(
+        db.insert(subsystemLayerLinks).values({
+          id: crypto.randomUUID(),
+          subsystemId: "nonexistent",
+          layerId,
+          systemId,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent layerId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const subsystemId = await insertSubsystem(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(subsystemLayerLinks).values({
+          id: crypto.randomUUID(),
+          subsystemId,
+          layerId: "nonexistent",
+          systemId,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("subsystem_side_system_links", () => {
@@ -772,6 +849,64 @@ describe("PG structure schema", () => {
         .where(eq(subsystemSideSystemLinks.id, linkId));
       expect(rows).toHaveLength(0);
     });
+
+    it("cascades on side system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const subsystemId = await insertSubsystem(systemId);
+      const sideSystemId = await insertSideSystem(systemId);
+      const linkId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(subsystemSideSystemLinks).values({
+        id: linkId,
+        subsystemId,
+        sideSystemId,
+        systemId,
+        createdAt: now,
+      });
+
+      await db.delete(sideSystems).where(eq(sideSystems.id, sideSystemId));
+      const rows = await db
+        .select()
+        .from(subsystemSideSystemLinks)
+        .where(eq(subsystemSideSystemLinks.id, linkId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent subsystemId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const sideSystemId = await insertSideSystem(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(subsystemSideSystemLinks).values({
+          id: crypto.randomUUID(),
+          subsystemId: "nonexistent",
+          sideSystemId,
+          systemId,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent sideSystemId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const subsystemId = await insertSubsystem(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(subsystemSideSystemLinks).values({
+          id: crypto.randomUUID(),
+          subsystemId,
+          sideSystemId: "nonexistent",
+          systemId,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("side_system_layer_links", () => {
@@ -851,6 +986,64 @@ describe("PG structure schema", () => {
         .from(sideSystemLayerLinks)
         .where(eq(sideSystemLayerLinks.id, linkId));
       expect(rows).toHaveLength(0);
+    });
+
+    it("cascades on layer deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const sideSystemId = await insertSideSystem(systemId);
+      const layerId = await insertLayer(systemId, 0);
+      const linkId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(sideSystemLayerLinks).values({
+        id: linkId,
+        sideSystemId,
+        layerId,
+        systemId,
+        createdAt: now,
+      });
+
+      await db.delete(layers).where(eq(layers.id, layerId));
+      const rows = await db
+        .select()
+        .from(sideSystemLayerLinks)
+        .where(eq(sideSystemLayerLinks.id, linkId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent sideSystemId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const layerId = await insertLayer(systemId, 0);
+      const now = Date.now();
+
+      await expect(
+        db.insert(sideSystemLayerLinks).values({
+          id: crypto.randomUUID(),
+          sideSystemId: "nonexistent",
+          layerId,
+          systemId,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent layerId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const sideSystemId = await insertSideSystem(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(sideSystemLayerLinks).values({
+          id: crypto.randomUUID(),
+          sideSystemId,
+          layerId: "nonexistent",
+          systemId,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 });

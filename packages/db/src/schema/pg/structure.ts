@@ -61,6 +61,7 @@ export const layers = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    // Ties are intentionally allowed; no uniqueness constraint on sortOrder
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgBinary("encrypted_data").notNull(),
     ...timestamps(),
@@ -69,6 +70,7 @@ export const layers = pgTable(
   (t) => [index("layers_system_id_idx").on(t.systemId)],
 );
 
+// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const subsystemMemberships = pgTable(
   "subsystem_memberships",
   {
@@ -88,6 +90,7 @@ export const subsystemMemberships = pgTable(
   ],
 );
 
+// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const sideSystemMemberships = pgTable(
   "side_system_memberships",
   {
@@ -107,6 +110,7 @@ export const sideSystemMemberships = pgTable(
   ],
 );
 
+// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const layerMemberships = pgTable(
   "layer_memberships",
   {

@@ -44,6 +44,7 @@ export const bucketContentTags = sqliteTable(
   (t) => [
     primaryKey({ columns: [t.entityType, t.entityId, t.bucketId] }),
     index("bucket_content_tags_entity_idx").on(t.entityType, t.entityId),
+    index("bucket_content_tags_bucket_id_idx").on(t.bucketId),
     check(
       "bucket_content_tags_entity_type_check",
       enumCheck(t.entityType, BUCKET_VISIBILITY_SCOPES),
@@ -74,6 +75,7 @@ export const keyGrants = sqliteTable(
   ],
 );
 
+// Connections are intentionally directional: A→B and B→A are separate entries
 export const friendConnections = sqliteTable(
   "friend_connections",
   {
@@ -91,8 +93,10 @@ export const friendConnections = sqliteTable(
   },
   (t) => [
     index("friend_connections_system_status_idx").on(t.systemId, t.status),
+    index("friend_connections_friend_system_id_idx").on(t.friendSystemId),
     unique("friend_connections_system_friend_uniq").on(t.systemId, t.friendSystemId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
+    check("friend_connections_no_self_check", sql`${t.systemId} != ${t.friendSystemId}`),
   ],
 );
 

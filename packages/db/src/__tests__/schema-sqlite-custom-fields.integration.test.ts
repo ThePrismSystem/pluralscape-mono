@@ -12,7 +12,11 @@ import {
 import { buckets } from "../schema/sqlite/privacy.js";
 import { systems } from "../schema/sqlite/systems.js";
 
-import { createSqliteCustomFieldsTables } from "./helpers/sqlite-helpers.js";
+import {
+  createSqliteCustomFieldsTables,
+  sqliteInsertAccount,
+  sqliteInsertSystem,
+} from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -29,33 +33,9 @@ describe("SQLite custom fields schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  function insertAccount(id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(accounts)
-      .values({
-        id,
-        emailHash: `hash_${crypto.randomUUID()}`,
-        emailSalt: `salt_${crypto.randomUUID()}`,
-        passwordHash: `$argon2id$${crypto.randomUUID()}`,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
-
-  function insertSystem(accountId: string, id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(systems)
-      .values({
-        id,
-        accountId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
+  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string): string =>
+    sqliteInsertSystem(db, accountId, id);
 
   function insertBucket(systemId: string, id = crypto.randomUUID()): string {
     const now = Date.now();
@@ -401,6 +381,38 @@ describe("SQLite custom fields schema", () => {
           })
           .run(),
       ).toThrow(/UNIQUE|PRIMARY KEY|constraint/i);
+    });
+
+    it("rejects nonexistent fieldDefinitionId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const bucketId = insertBucket(systemId);
+
+      expect(() =>
+        db
+          .insert(fieldBucketVisibility)
+          .values({
+            fieldDefinitionId: "nonexistent",
+            bucketId,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects nonexistent bucketId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+
+      expect(() =>
+        db
+          .insert(fieldBucketVisibility)
+          .values({
+            fieldDefinitionId: fieldDefId,
+            bucketId: "nonexistent",
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 });

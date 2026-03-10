@@ -14,7 +14,7 @@ import {
 } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgPrivacyTables } from "./helpers/pg-helpers.js";
+import { createPgPrivacyTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -33,29 +33,8 @@ describe("PG privacy schema", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
 
-  async function insertAccount(id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(accounts).values({
-      id,
-      emailHash: `hash_${crypto.randomUUID()}`,
-      emailSalt: `salt_${crypto.randomUUID()}`,
-      passwordHash: `$argon2id$${crypto.randomUUID()}`,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
-
-  async function insertSystem(accountId: string, id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(systems).values({
-      id,
-      accountId,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
+  const insertAccount = (id?: string) => pgInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
   async function insertBucket(systemId: string, id = crypto.randomUUID()): Promise<string> {
     const now = Date.now();
@@ -232,6 +211,16 @@ describe("PG privacy schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("rejects nonexistent bucketId FK", async () => {
+      await expect(
+        db.insert(bucketContentTags).values({
+          entityType: "members",
+          entityId: crypto.randomUUID(),
+          bucketId: "nonexistent",
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("key_grants", () => {
@@ -355,6 +344,24 @@ describe("PG privacy schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("rejects nonexistent friendSystemId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(keyGrants).values({
+          id: crypto.randomUUID(),
+          bucketId,
+          friendSystemId: "nonexistent",
+          encryptedKey: new Uint8Array([1]),
+          keyVersion: 1,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("friend_connections", () => {
@@ -408,6 +415,22 @@ describe("PG privacy schema", () => {
         .from(friendConnections)
         .where(eq(friendConnections.id, connectionId));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects self-friendship via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(friendConnections).values({
+          id: crypto.randomUUID(),
+          systemId,
+          friendSystemId: systemId,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
 
     it("rejects duplicate systemId + friendSystemId", async () => {
@@ -531,6 +554,22 @@ describe("PG privacy schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("rejects expiresAt === createdAt via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(friendCodes).values({
+          id: crypto.randomUUID(),
+          systemId,
+          code: `CODE_${crypto.randomUUID()}`,
+          createdAt: now,
+          expiresAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("friend_bucket_assignments", () => {
@@ -614,6 +653,34 @@ describe("PG privacy schema", () => {
         db.insert(friendBucketAssignments).values({
           friendConnectionId: connectionId,
           bucketId,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent friendConnectionId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+
+      await expect(
+        db.insert(friendBucketAssignments).values({
+          friendConnectionId: "nonexistent",
+          bucketId,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent bucketId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const connectionId = await insertFriendConnection(systemId, friendSystemId);
+
+      await expect(
+        db.insert(friendBucketAssignments).values({
+          friendConnectionId: connectionId,
+          bucketId: "nonexistent",
         }),
       ).rejects.toThrow();
     });

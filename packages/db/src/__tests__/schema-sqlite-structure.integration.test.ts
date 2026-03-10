@@ -18,7 +18,11 @@ import {
 } from "../schema/sqlite/structure.js";
 import { systems } from "../schema/sqlite/systems.js";
 
-import { createSqliteStructureTables } from "./helpers/sqlite-helpers.js";
+import {
+  createSqliteStructureTables,
+  sqliteInsertAccount,
+  sqliteInsertSystem,
+} from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -41,33 +45,9 @@ describe("SQLite structure schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  function insertAccount(id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(accounts)
-      .values({
-        id,
-        emailHash: `hash_${crypto.randomUUID()}`,
-        emailSalt: `salt_${crypto.randomUUID()}`,
-        passwordHash: `$argon2id$${crypto.randomUUID()}`,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
-
-  function insertSystem(accountId: string, id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(systems)
-      .values({
-        id,
-        accountId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
+  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string): string =>
+    sqliteInsertSystem(db, accountId, id);
 
   function insertSubsystem(
     systemId: string,
@@ -192,6 +172,22 @@ describe("SQLite structure schema", () => {
       const rows = db.select().from(relationships).where(eq(relationships.id, id)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects nonexistent systemId FK", () => {
+      const now = Date.now();
+      expect(() =>
+        db
+          .insert(relationships)
+          .values({
+            id: crypto.randomUUID(),
+            systemId: "nonexistent",
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("subsystems", () => {
@@ -315,6 +311,22 @@ describe("SQLite structure schema", () => {
       const rows = db.select().from(sideSystems).where(eq(sideSystems.id, sideSystemId)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects nonexistent systemId FK", () => {
+      const now = Date.now();
+      expect(() =>
+        db
+          .insert(sideSystems)
+          .values({
+            id: crypto.randomUUID(),
+            systemId: "nonexistent",
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("layers", () => {
@@ -372,6 +384,23 @@ describe("SQLite structure schema", () => {
       db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(layers).where(eq(layers.id, layerId)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent systemId FK", () => {
+      const now = Date.now();
+      expect(() =>
+        db
+          .insert(layers)
+          .values({
+            id: crypto.randomUUID(),
+            systemId: "nonexistent",
+            sortOrder: 0,
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 
@@ -746,6 +775,73 @@ describe("SQLite structure schema", () => {
         .all();
       expect(rows).toHaveLength(0);
     });
+
+    it("cascades on layer deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const subsystemId = insertSubsystem(systemId);
+      const layerId = insertLayer(systemId, 1);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(subsystemLayerLinks)
+        .values({
+          id,
+          subsystemId,
+          layerId,
+          systemId,
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(layers).where(eq(layers.id, layerId)).run();
+      const rows = db
+        .select()
+        .from(subsystemLayerLinks)
+        .where(eq(subsystemLayerLinks.id, id))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent subsystemId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const layerId = insertLayer(systemId, 1);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(subsystemLayerLinks)
+          .values({
+            id: crypto.randomUUID(),
+            subsystemId: "nonexistent",
+            layerId,
+            systemId,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects nonexistent layerId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const subsystemId = insertSubsystem(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(subsystemLayerLinks)
+          .values({
+            id: crypto.randomUUID(),
+            subsystemId,
+            layerId: "nonexistent",
+            systemId,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("subsystem_side_system_links", () => {
@@ -837,6 +933,73 @@ describe("SQLite structure schema", () => {
         .all();
       expect(rows).toHaveLength(0);
     });
+
+    it("cascades on side system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const subsystemId = insertSubsystem(systemId);
+      const sideSystemId = insertSideSystem(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(subsystemSideSystemLinks)
+        .values({
+          id,
+          subsystemId,
+          sideSystemId,
+          systemId,
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(sideSystems).where(eq(sideSystems.id, sideSystemId)).run();
+      const rows = db
+        .select()
+        .from(subsystemSideSystemLinks)
+        .where(eq(subsystemSideSystemLinks.id, id))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent subsystemId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sideSystemId = insertSideSystem(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(subsystemSideSystemLinks)
+          .values({
+            id: crypto.randomUUID(),
+            subsystemId: "nonexistent",
+            sideSystemId,
+            systemId,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects nonexistent sideSystemId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const subsystemId = insertSubsystem(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(subsystemSideSystemLinks)
+          .values({
+            id: crypto.randomUUID(),
+            subsystemId,
+            sideSystemId: "nonexistent",
+            systemId,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("side_system_layer_links", () => {
@@ -927,6 +1090,73 @@ describe("SQLite structure schema", () => {
         .where(eq(sideSystemLayerLinks.id, id))
         .all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("cascades on layer deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sideSystemId = insertSideSystem(systemId);
+      const layerId = insertLayer(systemId, 1);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(sideSystemLayerLinks)
+        .values({
+          id,
+          sideSystemId,
+          layerId,
+          systemId,
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(layers).where(eq(layers.id, layerId)).run();
+      const rows = db
+        .select()
+        .from(sideSystemLayerLinks)
+        .where(eq(sideSystemLayerLinks.id, id))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent sideSystemId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const layerId = insertLayer(systemId, 1);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(sideSystemLayerLinks)
+          .values({
+            id: crypto.randomUUID(),
+            sideSystemId: "nonexistent",
+            layerId,
+            systemId,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects nonexistent layerId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sideSystemId = insertSideSystem(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(sideSystemLayerLinks)
+          .values({
+            id: crypto.randomUUID(),
+            sideSystemId,
+            layerId: "nonexistent",
+            systemId,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 });

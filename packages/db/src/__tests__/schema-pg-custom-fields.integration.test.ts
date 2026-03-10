@@ -12,7 +12,11 @@ import {
 import { buckets } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgCustomFieldsTables } from "./helpers/pg-helpers.js";
+import {
+  createPgCustomFieldsTables,
+  pgInsertAccount,
+  pgInsertSystem,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -29,29 +33,8 @@ describe("PG custom fields schema", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
 
-  async function insertAccount(id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(accounts).values({
-      id,
-      emailHash: `hash_${crypto.randomUUID()}`,
-      emailSalt: `salt_${crypto.randomUUID()}`,
-      passwordHash: `$argon2id$${crypto.randomUUID()}`,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
-
-  async function insertSystem(accountId: string, id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(systems).values({
-      id,
-      accountId,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
+  const insertAccount = (id?: string) => pgInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
   async function insertBucket(systemId: string, id = crypto.randomUUID()): Promise<string> {
     const now = Date.now();
@@ -364,6 +347,32 @@ describe("PG custom fields schema", () => {
         db.insert(fieldBucketVisibility).values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent fieldDefinitionId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+
+      await expect(
+        db.insert(fieldBucketVisibility).values({
+          fieldDefinitionId: "nonexistent",
+          bucketId,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent bucketId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+
+      await expect(
+        db.insert(fieldBucketVisibility).values({
+          fieldDefinitionId: fieldDefId,
+          bucketId: "nonexistent",
         }),
       ).rejects.toThrow();
     });

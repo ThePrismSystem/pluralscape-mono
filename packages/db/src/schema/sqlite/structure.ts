@@ -61,6 +61,7 @@ export const layers = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    // Ties are intentionally allowed; no uniqueness constraint on sortOrder
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteBinary("encrypted_data").notNull(),
     ...timestamps(),
@@ -69,6 +70,7 @@ export const layers = sqliteTable(
   (t) => [index("layers_system_id_idx").on(t.systemId)],
 );
 
+// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const subsystemMemberships = sqliteTable(
   "subsystem_memberships",
   {
@@ -88,6 +90,7 @@ export const subsystemMemberships = sqliteTable(
   ],
 );
 
+// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const sideSystemMemberships = sqliteTable(
   "side_system_memberships",
   {
@@ -107,6 +110,7 @@ export const sideSystemMemberships = sqliteTable(
   ],
 );
 
+// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const layerMemberships = sqliteTable(
   "layer_memberships",
   {

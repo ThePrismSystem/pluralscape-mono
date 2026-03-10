@@ -14,7 +14,11 @@ import {
 } from "../schema/sqlite/privacy.js";
 import { systems } from "../schema/sqlite/systems.js";
 
-import { createSqlitePrivacyTables } from "./helpers/sqlite-helpers.js";
+import {
+  createSqlitePrivacyTables,
+  sqliteInsertAccount,
+  sqliteInsertSystem,
+} from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -33,33 +37,9 @@ describe("SQLite privacy schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  function insertAccount(id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(accounts)
-      .values({
-        id,
-        emailHash: `hash_${crypto.randomUUID()}`,
-        emailSalt: `salt_${crypto.randomUUID()}`,
-        passwordHash: `$argon2id$${crypto.randomUUID()}`,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
-
-  function insertSystem(accountId: string, id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(systems)
-      .values({
-        id,
-        accountId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
+  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string): string =>
+    sqliteInsertSystem(db, accountId, id);
 
   function insertBucket(systemId: string, id = crypto.randomUUID()): string {
     const now = Date.now();
@@ -265,6 +245,19 @@ describe("SQLite privacy schema", () => {
           .run(),
       ).toThrow();
     });
+
+    it("rejects nonexistent bucketId FK", () => {
+      expect(() =>
+        db
+          .insert(bucketContentTags)
+          .values({
+            entityType: "members",
+            entityId: crypto.randomUUID(),
+            bucketId: "nonexistent",
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("key_grants", () => {
@@ -402,6 +395,27 @@ describe("SQLite privacy schema", () => {
           .run(),
       ).toThrow();
     });
+
+    it("rejects nonexistent friendSystemId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const bucketId = insertBucket(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(keyGrants)
+          .values({
+            id: crypto.randomUUID(),
+            bucketId,
+            friendSystemId: "nonexistent",
+            encryptedKey: new Uint8Array([1]),
+            keyVersion: 1,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("friend_connections", () => {
@@ -466,6 +480,25 @@ describe("SQLite privacy schema", () => {
         .where(eq(friendConnections.id, connId))
         .all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects self-friendship via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(friendConnections)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            friendSystemId: systemId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
 
     it("rejects duplicate (systemId, friendSystemId)", () => {
@@ -580,6 +613,25 @@ describe("SQLite privacy schema", () => {
       db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(friendCodes).where(eq(friendCodes.id, id)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects expiresAt === createdAt via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(friendCodes)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            code: `FC-${crypto.randomUUID()}`,
+            createdAt: now,
+            expiresAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
 
     it("rejects expiresAt <= createdAt via CHECK", () => {
@@ -699,6 +751,40 @@ describe("SQLite privacy schema", () => {
           })
           .run(),
       ).toThrow();
+    });
+
+    it("rejects nonexistent friendConnectionId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const bucketId = insertBucket(systemId);
+
+      expect(() =>
+        db
+          .insert(friendBucketAssignments)
+          .values({
+            friendConnectionId: "nonexistent",
+            bucketId,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects nonexistent bucketId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      const friendSystemId = insertSystem(friendAccountId);
+      const connId = insertFriendConnection(systemId, friendSystemId);
+
+      expect(() =>
+        db
+          .insert(friendBucketAssignments)
+          .values({
+            friendConnectionId: connId,
+            bucketId: "nonexistent",
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 });

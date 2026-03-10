@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgSystemTables } from "./helpers/pg-helpers.js";
+import { createPgSystemTables, pgInsertAccount } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -16,18 +16,7 @@ describe("PG systems schema", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
 
-  async function insertAccount(id = crypto.randomUUID()): Promise<string> {
-    const now = Date.now();
-    await db.insert(accounts).values({
-      id,
-      emailHash: `hash_${crypto.randomUUID()}`,
-      emailSalt: `salt_${crypto.randomUUID()}`,
-      passwordHash: `$argon2id$${crypto.randomUUID()}`,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
+  const insertAccount = (id?: string) => pgInsertAccount(db, id);
 
   beforeAll(async () => {
     client = await PGlite.create();
