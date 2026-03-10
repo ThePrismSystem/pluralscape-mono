@@ -195,7 +195,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(56);
+    expect(prefixCount).toBe(57);
   });
 });
 
@@ -272,6 +272,7 @@ describe("EntityType", () => {
         case "import-job":
         case "pk-bridge-config":
         case "account-purge-request":
+        case "export-request":
         case "job":
         case "subscription":
         case "webhook-delivery":

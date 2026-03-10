@@ -50,6 +50,8 @@ export { systemSettings } from "./system-settings.js";
 export { systems } from "./systems.js";
 export { checkInRecords, timerConfigs } from "./timers.js";
 export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
+export { importJobs, exportRequests, accountPurgeRequests } from "./import-export.js";
+export { syncDocuments, syncQueue, syncConflicts } from "./sync.js";
 
 import type { apiKeys } from "./api-keys.js";
 import type { auditLog } from "./audit-log.js";
@@ -67,6 +69,7 @@ import type {
 import type { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
 import type { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
 import type { groupMemberships, groups } from "./groups.js";
+import type { accountPurgeRequests, exportRequests, importJobs } from "./import-export.js";
 import type { innerworldCanvas, innerworldEntities, innerworldRegions } from "./innerworld.js";
 import type { journalEntries, wikiPages } from "./journal.js";
 import type { lifecycleEvents } from "./lifecycle-events.js";
@@ -99,6 +102,7 @@ import type {
   subsystemSideSystemLinks,
   subsystems,
 } from "./structure.js";
+import type { syncConflicts, syncDocuments, syncQueue } from "./sync.js";
 import type { systemSettings } from "./system-settings.js";
 import type { systems } from "./systems.js";
 import type { checkInRecords, timerConfigs } from "./timers.js";
@@ -264,3 +268,19 @@ export type TimerConfigRow = InferSelectModel<typeof timerConfigs>;
 export type NewTimerConfig = InferInsertModel<typeof timerConfigs>;
 export type CheckInRecordRow = InferSelectModel<typeof checkInRecords>;
 export type NewCheckInRecord = InferInsertModel<typeof checkInRecords>;
+
+// Import/Export
+export type ImportJobRow = InferSelectModel<typeof importJobs>;
+export type NewImportJob = InferInsertModel<typeof importJobs>;
+export type ExportRequestRow = InferSelectModel<typeof exportRequests>;
+export type NewExportRequest = InferInsertModel<typeof exportRequests>;
+export type AccountPurgeRequestRow = InferSelectModel<typeof accountPurgeRequests>;
+export type NewAccountPurgeRequest = InferInsertModel<typeof accountPurgeRequests>;
+
+// Sync
+export type SyncDocumentRow = InferSelectModel<typeof syncDocuments>;
+export type NewSyncDocument = InferInsertModel<typeof syncDocuments>;
+export type SyncQueueRow = InferSelectModel<typeof syncQueue>;
+export type NewSyncQueue = InferInsertModel<typeof syncQueue>;
+export type SyncConflictRow = InferSelectModel<typeof syncConflicts>;
+export type NewSyncConflict = InferInsertModel<typeof syncConflicts>;

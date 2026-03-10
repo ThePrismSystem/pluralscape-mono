@@ -1,11 +1,11 @@
 ---
 # db-xj5n
 title: Sync metadata tables
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:22:47Z
-updated_at: 2026-03-08T19:32:26Z
+updated_at: 2026-03-10T09:33:56Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -46,3 +46,18 @@ Tables for tracking CRDT sync state, offline write queue, and merge history.
 
 - features.md section 15 (Offline-First and Sync)
 - ADR 005 (Offline Sync — Automerge CRDT)
+
+## Summary of Changes
+
+Added 3 dual-dialect tables (PG + SQLite) for CRDT sync metadata:
+
+- `sync_documents`: tracks Automerge document state per entity with binary heads and version
+- `sync_queue`: offline write queue with operation type, binary change data, synced-at tracking
+- `sync_conflicts`: merge conflict log with local/remote versions and resolution status
+
+Also added:
+
+- RLS policies: all 3 tables use system scope
+- Unique constraint on sync_documents (system_id, entity_type, entity_id)
+- No CHECK on entity_type (set grows); CHECK on operation and resolution enums
+- Integration tests for both PG and SQLite dialects including binary round-trip verification

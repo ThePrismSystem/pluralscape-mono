@@ -59,6 +59,7 @@ export type SyncConflictId = Brand<string, "SyncConflictId">;
 export type ImportJobId = Brand<string, "ImportJobId">;
 export type PKBridgeConfigId = Brand<string, "PKBridgeConfigId">;
 export type AccountPurgeRequestId = Brand<string, "AccountPurgeRequestId">;
+export type ExportRequestId = Brand<string, "ExportRequestId">;
 export type JobId = Brand<string, "JobId">;
 export type SubscriptionId = Brand<string, "SubscriptionId">;
 export type WebhookDeliveryId = Brand<string, "WebhookDeliveryId">;
@@ -120,6 +121,7 @@ export const ID_PREFIXES = {
   importJob: "ij_",
   pkBridgeConfig: "pkb_",
   accountPurgeRequest: "apr_",
+  exportRequest: "er_",
   job: "job_",
   subscription: "rsub_",
   webhookDelivery: "wd_",
@@ -181,6 +183,7 @@ export type EntityType =
   | "import-job"
   | "pk-bridge-config"
   | "account-purge-request"
+  | "export-request"
   | "job"
   | "subscription"
   | "webhook-delivery"

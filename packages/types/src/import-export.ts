@@ -1,4 +1,12 @@
-import type { AccountPurgeRequestId, BucketId, ImportJobId, MemberId, SystemId } from "./ids.js";
+import type {
+  AccountPurgeRequestId,
+  BlobId,
+  BucketId,
+  ExportRequestId,
+  ImportJobId,
+  MemberId,
+  SystemId,
+} from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 // ── Import/Export types ─────────────────────────────────────────────
@@ -220,6 +228,9 @@ export interface ImportJob {
 
 // ── Export types ─────────────────────────────────────────────────────
 
+/** Status of an export request. */
+export type ExportRequestStatus = "pending" | "processing" | "completed" | "failed";
+
 /** Format for an export manifest. */
 export type ExportFormat = "json" | "csv";
 
@@ -252,6 +263,17 @@ export interface ExportManifest extends DownloadableReport {
   readonly systemId: SystemId;
   readonly format: ExportFormat;
   readonly sections: readonly ExportSection[];
+}
+
+/** An export request tracking record. */
+export interface ExportRequest {
+  readonly id: ExportRequestId;
+  readonly systemId: SystemId;
+  readonly format: ExportFormat;
+  readonly status: ExportRequestStatus;
+  readonly blobId: BlobId | null;
+  readonly createdAt: UnixMillis;
+  readonly completedAt: UnixMillis | null;
 }
 
 // ── Account management ──────────────────────────────────────────────
