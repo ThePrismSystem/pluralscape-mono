@@ -1,11 +1,11 @@
 ---
 # db-tu5g
 title: Custom fields tables
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:53Z
-updated_at: 2026-03-08T19:32:26Z
+updated_at: 2026-03-10T01:37:20Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -37,16 +37,20 @@ Custom field definition, value, and bucket visibility tables.
 
 ## Acceptance Criteria
 
-- [ ] field_definitions with version, archived/archived_at
-- [ ] field_values with system_id for RLS and version
-- [ ] CASCADE on system and field_definition deletion
-- [ ] field_definitions table with created_at/updated_at
-- [ ] field_values table with timestamps and FK indexes
-- [ ] field_bucket_visibility with composite PK (field_definition_id, bucket_id)
-- [ ] Indexes on field_values (field_definition_id, member_id)
-- [ ] Migrations for both dialects
-- [ ] Integration test: create definition + values + visibility
+- [x] field_definitions with version, archived/archived_at
+- [x] field_values with system_id for RLS and version
+- [x] CASCADE on system and field_definition deletion
+- [x] field_definitions table with created_at/updated_at
+- [x] field_values table with timestamps and FK indexes
+- [x] field_bucket_visibility with composite PK (field_definition_id, bucket_id)
+- [x] Indexes on field_values (field_definition_id, member_id)
+- [x] Migrations for both dialects
+- [x] Integration test: create definition + values + visibility
 
 ## References
 
 - features.md section 1 (Custom fields)
+
+## Summary of Changes
+
+Added 3 custom fields tables (PG + SQLite): field_definitions (archivable), field_values, field_bucket_visibility (cross-references privacy buckets). 28 integration tests.

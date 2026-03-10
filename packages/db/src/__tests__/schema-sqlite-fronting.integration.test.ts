@@ -1,0 +1,541 @@
+import Database from "better-sqlite3";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { accounts } from "../schema/sqlite/auth.js";
+import {
+  customFronts,
+  frontingComments,
+  frontingSessions,
+  switches,
+} from "../schema/sqlite/fronting.js";
+import { systems } from "../schema/sqlite/systems.js";
+
+import { createSqliteFrontingTables } from "./helpers/sqlite-helpers.js";
+
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+
+const schema = {
+  accounts,
+  systems,
+  frontingSessions,
+  switches,
+  customFronts,
+  frontingComments,
+};
+
+describe("SQLite fronting schema", () => {
+  let client: InstanceType<typeof Database>;
+  let db: BetterSQLite3Database<typeof schema>;
+
+  function insertAccount(id = crypto.randomUUID()): string {
+    const now = Date.now();
+    db.insert(accounts)
+      .values({
+        id,
+        emailHash: `hash_${crypto.randomUUID()}`,
+        emailSalt: `salt_${crypto.randomUUID()}`,
+        passwordHash: `$argon2id$${crypto.randomUUID()}`,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    return id;
+  }
+
+  function insertSystem(accountId: string, id = crypto.randomUUID()): string {
+    const now = Date.now();
+    db.insert(systems)
+      .values({
+        id,
+        accountId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    return id;
+  }
+
+  function insertFrontingSession(systemId: string, id = crypto.randomUUID()): string {
+    const now = Date.now();
+    db.insert(frontingSessions)
+      .values({
+        id,
+        systemId,
+        startTime: now,
+        encryptedData: new Uint8Array([1, 2, 3]),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    return id;
+  }
+
+  beforeAll(() => {
+    client = new Database(":memory:");
+    client.pragma("foreign_keys = ON");
+    db = drizzle(client, { schema });
+    createSqliteFrontingTables(client);
+  });
+
+  afterAll(() => {
+    client.close();
+  });
+
+  describe("fronting_sessions", () => {
+    it("inserts with encrypted_data and round-trips binary", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const data = new Uint8Array([10, 20, 30, 40, 50]);
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          endTime: now + 1000,
+          encryptedData: data,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.systemId).toBe(systemId);
+      expect(rows[0]?.startTime).toBe(now);
+      expect(rows[0]?.endTime).toBe(now + 1000);
+    });
+
+    it("allows nullable endTime for open sessions", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows[0]?.endTime).toBeNull();
+    });
+
+    it("defaults version to 1", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db
+        .select()
+        .from(frontingSessions)
+        .where(eq(frontingSessions.id, sessionId))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent systemId FK", () => {
+      const now = Date.now();
+      expect(() =>
+        db
+          .insert(frontingSessions)
+          .values({
+            id: crypto.randomUUID(),
+            systemId: "nonexistent",
+            startTime: now,
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects endTime less than or equal to startTime via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(frontingSessions)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            startTime: now,
+            endTime: now,
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+
+      expect(() =>
+        db
+          .insert(frontingSessions)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            startTime: now,
+            endTime: now - 1,
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("allows overlapping sessions for the same system", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      const id1 = crypto.randomUUID();
+      const id2 = crypto.randomUUID();
+
+      db.insert(frontingSessions)
+        .values({
+          id: id1,
+          systemId,
+          startTime: now,
+          endTime: now + 2000,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(frontingSessions)
+        .values({
+          id: id2,
+          systemId,
+          startTime: now + 1000,
+          endTime: now + 3000,
+          encryptedData: new Uint8Array([2]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(frontingSessions)
+        .where(eq(frontingSessions.systemId, systemId))
+        .all();
+      expect(rows).toHaveLength(2);
+    });
+  });
+
+  describe("switches", () => {
+    it("inserts with encrypted_data and round-trips binary", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const data = new Uint8Array([10, 20, 30, 40, 50]);
+
+      db.insert(switches)
+        .values({
+          id,
+          systemId,
+          timestamp: now,
+          encryptedData: data,
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.systemId).toBe(systemId);
+      expect(rows[0]?.timestamp).toBe(now);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(switches)
+        .values({
+          id,
+          systemId,
+          timestamp: now,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent systemId FK", () => {
+      const now = Date.now();
+      expect(() =>
+        db
+          .insert(switches)
+          .values({
+            id: crypto.randomUUID(),
+            systemId: "nonexistent",
+            timestamp: now,
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+  });
+
+  describe("custom_fronts", () => {
+    it("inserts with encrypted_data and round-trips binary", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const data = new Uint8Array([10, 20, 30, 40, 50]);
+
+      db.insert(customFronts)
+        .values({
+          id,
+          systemId,
+          encryptedData: data,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(customFronts).where(eq(customFronts.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.systemId).toBe(systemId);
+    });
+
+    it("defaults archived to false, archivedAt to null, and version to 1", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(customFronts)
+        .values({
+          id,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(customFronts).where(eq(customFronts.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(customFronts)
+        .values({
+          id,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db.select().from(customFronts).where(eq(customFronts.id, id)).all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(customFronts)
+        .values({
+          id,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(customFronts).where(eq(customFronts.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+  });
+
+  describe("fronting_comments", () => {
+    it("inserts with encrypted_data and round-trips binary", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const data = new Uint8Array([10, 20, 30, 40, 50]);
+
+      db.insert(frontingComments)
+        .values({
+          id,
+          sessionId,
+          systemId,
+          encryptedData: data,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.sessionId).toBe(sessionId);
+      expect(rows[0]?.systemId).toBe(systemId);
+    });
+
+    it("defaults version to 1", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingComments)
+        .values({
+          id,
+          sessionId,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("cascades on session deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const commentId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingComments)
+        .values({
+          id: commentId,
+          sessionId,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(frontingSessions).where(eq(frontingSessions.id, sessionId)).run();
+      const rows = db
+        .select()
+        .from(frontingComments)
+        .where(eq(frontingComments.id, commentId))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const commentId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingComments)
+        .values({
+          id: commentId,
+          sessionId,
+          systemId,
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db
+        .select()
+        .from(frontingComments)
+        .where(eq(frontingComments.id, commentId))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent sessionId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(frontingComments)
+          .values({
+            id: crypto.randomUUID(),
+            sessionId: "nonexistent",
+            systemId,
+            encryptedData: new Uint8Array([1]),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+  });
+});

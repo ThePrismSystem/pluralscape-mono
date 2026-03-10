@@ -1,0 +1,621 @@
+import { PGlite } from "@electric-sql/pglite";
+import { eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/pglite";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { accounts } from "../schema/pg/auth.js";
+import {
+  bucketContentTags,
+  buckets,
+  friendBucketAssignments,
+  friendCodes,
+  friendConnections,
+  keyGrants,
+} from "../schema/pg/privacy.js";
+import { systems } from "../schema/pg/systems.js";
+
+import { createPgPrivacyTables } from "./helpers/pg-helpers.js";
+
+import type { PgliteDatabase } from "drizzle-orm/pglite";
+
+const schema = {
+  accounts,
+  systems,
+  buckets,
+  bucketContentTags,
+  keyGrants,
+  friendConnections,
+  friendCodes,
+  friendBucketAssignments,
+};
+
+describe("PG privacy schema", () => {
+  let client: PGlite;
+  let db: PgliteDatabase<typeof schema>;
+
+  async function insertAccount(id = crypto.randomUUID()): Promise<string> {
+    const now = Date.now();
+    await db.insert(accounts).values({
+      id,
+      emailHash: `hash_${crypto.randomUUID()}`,
+      emailSalt: `salt_${crypto.randomUUID()}`,
+      passwordHash: `$argon2id$${crypto.randomUUID()}`,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
+
+  async function insertSystem(accountId: string, id = crypto.randomUUID()): Promise<string> {
+    const now = Date.now();
+    await db.insert(systems).values({
+      id,
+      accountId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
+
+  async function insertBucket(systemId: string, id = crypto.randomUUID()): Promise<string> {
+    const now = Date.now();
+    await db.insert(buckets).values({
+      id,
+      systemId,
+      encryptedData: new Uint8Array([1, 2, 3]),
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
+
+  async function insertFriendConnection(
+    systemId: string,
+    friendSystemId: string,
+    id = crypto.randomUUID(),
+  ): Promise<string> {
+    const now = Date.now();
+    await db.insert(friendConnections).values({
+      id,
+      systemId,
+      friendSystemId,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client, { schema });
+    await createPgPrivacyTables(client);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  describe("buckets", () => {
+    it("inserts with encrypted_data and round-trips binary", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const data = new Uint8Array([10, 20, 30, 40, 50]);
+
+      await db.insert(buckets).values({
+        id,
+        systemId,
+        encryptedData: data,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(buckets).where(eq(buckets.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.systemId).toBe(systemId);
+    });
+
+    it("defaults version to 1", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(buckets).values({
+        id,
+        systemId,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(buckets).where(eq(buckets.id, id));
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+
+      await db.delete(systems).where(eq(systems.id, systemId));
+      const rows = await db.select().from(buckets).where(eq(buckets.id, bucketId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects nonexistent systemId FK", async () => {
+      const now = Date.now();
+      await expect(
+        db.insert(buckets).values({
+          id: crypto.randomUUID(),
+          systemId: "nonexistent",
+          encryptedData: new Uint8Array([1]),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("bucket_content_tags", () => {
+    it("inserts and queries by composite PK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const entityId = crypto.randomUUID();
+
+      await db.insert(bucketContentTags).values({
+        entityType: "members",
+        entityId,
+        bucketId,
+      });
+
+      const rows = await db
+        .select()
+        .from(bucketContentTags)
+        .where(eq(bucketContentTags.bucketId, bucketId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.entityType).toBe("members");
+      expect(rows[0]?.entityId).toBe(entityId);
+    });
+
+    it("cascades on bucket deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+
+      await db.insert(bucketContentTags).values({
+        entityType: "notes",
+        entityId: crypto.randomUUID(),
+        bucketId,
+      });
+
+      await db.delete(buckets).where(eq(buckets.id, bucketId));
+      const rows = await db
+        .select()
+        .from(bucketContentTags)
+        .where(eq(bucketContentTags.bucketId, bucketId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects invalid entityType CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+
+      await expect(
+        db.execute(
+          sql`INSERT INTO bucket_content_tags (entity_type, entity_id, bucket_id) VALUES ('invalid-type', ${crypto.randomUUID()}, ${bucketId})`,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("composite PK prevents duplicates", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const entityId = crypto.randomUUID();
+
+      await db.insert(bucketContentTags).values({
+        entityType: "chat",
+        entityId,
+        bucketId,
+      });
+
+      await expect(
+        db.insert(bucketContentTags).values({
+          entityType: "chat",
+          entityId,
+          bucketId,
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("key_grants", () => {
+    it("inserts and round-trips encrypted key", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const keyData = new Uint8Array([99, 88, 77]);
+
+      await db.insert(keyGrants).values({
+        id,
+        bucketId,
+        friendSystemId,
+        encryptedKey: keyData,
+        keyVersion: 1,
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(keyGrants).where(eq(keyGrants.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedKey).toEqual(keyData);
+      expect(rows[0]?.bucketId).toBe(bucketId);
+      expect(rows[0]?.friendSystemId).toBe(friendSystemId);
+      expect(rows[0]?.keyVersion).toBe(1);
+    });
+
+    it("allows nullable revokedAt", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(keyGrants).values({
+        id,
+        bucketId,
+        friendSystemId,
+        encryptedKey: new Uint8Array([1]),
+        keyVersion: 1,
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(keyGrants).where(eq(keyGrants.id, id));
+      expect(rows[0]?.revokedAt).toBeNull();
+    });
+
+    it("cascades on bucket deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const grantId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(keyGrants).values({
+        id: grantId,
+        bucketId,
+        friendSystemId,
+        encryptedKey: new Uint8Array([1]),
+        keyVersion: 1,
+        createdAt: now,
+      });
+
+      await db.delete(buckets).where(eq(buckets.id, bucketId));
+      const rows = await db.select().from(keyGrants).where(eq(keyGrants.id, grantId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects keyVersion = 0 via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(keyGrants).values({
+          id: crypto.randomUUID(),
+          bucketId,
+          friendSystemId,
+          encryptedKey: new Uint8Array([1]),
+          keyVersion: 0,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects duplicate bucket + friendSystem + keyVersion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const now = Date.now();
+
+      await db.insert(keyGrants).values({
+        id: crypto.randomUUID(),
+        bucketId,
+        friendSystemId,
+        encryptedKey: new Uint8Array([1]),
+        keyVersion: 1,
+        createdAt: now,
+      });
+
+      await expect(
+        db.insert(keyGrants).values({
+          id: crypto.randomUUID(),
+          bucketId,
+          friendSystemId,
+          encryptedKey: new Uint8Array([2]),
+          keyVersion: 1,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("friend_connections", () => {
+    it("inserts with default status and version", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id,
+        systemId,
+        friendSystemId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(friendConnections).where(eq(friendConnections.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.status).toBe("pending");
+      expect(rows[0]?.version).toBe(1);
+      expect(rows[0]?.encryptedData).toBeNull();
+    });
+
+    it("rejects invalid status CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const now = Date.now();
+
+      await expect(
+        db.execute(
+          sql`INSERT INTO friend_connections (id, system_id, friend_system_id, status, created_at, updated_at, version) VALUES (${crypto.randomUUID()}, ${systemId}, ${friendSystemId}, 'invalid-status', ${now}, ${now}, 1)`,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const connectionId = await insertFriendConnection(systemId, friendSystemId);
+
+      await db.delete(systems).where(eq(systems.id, systemId));
+      const rows = await db
+        .select()
+        .from(friendConnections)
+        .where(eq(friendConnections.id, connectionId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects duplicate systemId + friendSystemId", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: crypto.randomUUID(),
+        systemId,
+        friendSystemId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(friendConnections).values({
+          id: crypto.randomUUID(),
+          systemId,
+          friendSystemId,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("friend_codes", () => {
+    it("inserts and queries by id", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const code = `CODE_${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      await db.insert(friendCodes).values({
+        id,
+        systemId,
+        code,
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(friendCodes).where(eq(friendCodes.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.code).toBe(code);
+      expect(rows[0]?.systemId).toBe(systemId);
+    });
+
+    it("allows nullable expiresAt", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendCodes).values({
+        id,
+        systemId,
+        code: `CODE_${crypto.randomUUID()}`,
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(friendCodes).where(eq(friendCodes.id, id));
+      expect(rows[0]?.expiresAt).toBeNull();
+    });
+
+    it("enforces unique code", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const code = `CODE_${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      await db.insert(friendCodes).values({
+        id: crypto.randomUUID(),
+        systemId,
+        code,
+        createdAt: now,
+      });
+
+      await expect(
+        db.insert(friendCodes).values({
+          id: crypto.randomUUID(),
+          systemId,
+          code,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const codeId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendCodes).values({
+        id: codeId,
+        systemId,
+        code: `CODE_${crypto.randomUUID()}`,
+        createdAt: now,
+      });
+
+      await db.delete(systems).where(eq(systems.id, systemId));
+      const rows = await db.select().from(friendCodes).where(eq(friendCodes.id, codeId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("rejects expiresAt <= createdAt via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(friendCodes).values({
+          id: crypto.randomUUID(),
+          systemId,
+          code: `CODE_${crypto.randomUUID()}`,
+          createdAt: now,
+          expiresAt: now - 1000,
+        }),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe("friend_bucket_assignments", () => {
+    it("inserts and queries by connection", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const bucketId = await insertBucket(systemId);
+      const connectionId = await insertFriendConnection(systemId, friendSystemId);
+
+      await db.insert(friendBucketAssignments).values({
+        friendConnectionId: connectionId,
+        bucketId,
+      });
+
+      const rows = await db
+        .select()
+        .from(friendBucketAssignments)
+        .where(eq(friendBucketAssignments.friendConnectionId, connectionId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.bucketId).toBe(bucketId);
+    });
+
+    it("cascades on connection deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const bucketId = await insertBucket(systemId);
+      const connectionId = await insertFriendConnection(systemId, friendSystemId);
+
+      await db.insert(friendBucketAssignments).values({
+        friendConnectionId: connectionId,
+        bucketId,
+      });
+
+      await db.delete(friendConnections).where(eq(friendConnections.id, connectionId));
+      const rows = await db
+        .select()
+        .from(friendBucketAssignments)
+        .where(eq(friendBucketAssignments.friendConnectionId, connectionId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("cascades on bucket deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const bucketId = await insertBucket(systemId);
+      const connectionId = await insertFriendConnection(systemId, friendSystemId);
+
+      await db.insert(friendBucketAssignments).values({
+        friendConnectionId: connectionId,
+        bucketId,
+      });
+
+      await db.delete(buckets).where(eq(buckets.id, bucketId));
+      const rows = await db
+        .select()
+        .from(friendBucketAssignments)
+        .where(eq(friendBucketAssignments.bucketId, bucketId));
+      expect(rows).toHaveLength(0);
+    });
+
+    it("composite PK prevents duplicates", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      const friendSystemId = await insertSystem(friendAccountId);
+      const bucketId = await insertBucket(systemId);
+      const connectionId = await insertFriendConnection(systemId, friendSystemId);
+
+      await db.insert(friendBucketAssignments).values({
+        friendConnectionId: connectionId,
+        bucketId,
+      });
+
+      await expect(
+        db.insert(friendBucketAssignments).values({
+          friendConnectionId: connectionId,
+          bucketId,
+        }),
+      ).rejects.toThrow();
+    });
+  });
+});

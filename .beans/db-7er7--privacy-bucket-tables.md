@@ -1,11 +1,11 @@
 ---
 # db-7er7
 title: Privacy bucket tables
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:32:56Z
-updated_at: 2026-03-09T23:21:08Z
+updated_at: 2026-03-10T01:36:51Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -46,22 +46,26 @@ Privacy bucket, content tagging, key grant, friend connection, friend code, and 
 
 ## Acceptance Criteria
 
-- [ ] version on buckets for CRDT
-- [ ] key_grants.friend_system_id (renamed from friend_user_id)
-- [ ] CHECK: key_version >= 1, friend_connections.status, friend_codes.expires_at
-- [ ] Index on friend_codes (system_id)
-- [ ] buckets table with UUID id and timestamps
-- [ ] bucket_content_tags with composite PK (entity_type, entity_id, bucket_id)
-- [ ] key_grants with versioned encrypted key blob and revoked_at for rotation
-- [ ] friend_connections with status enum and unique (system_id, friend_system_id)
-- [ ] friend_codes table with unique code and optional expiry
-- [ ] friend_bucket_assignments join table for friend-to-bucket mapping
-- [ ] CASCADE rules on bucket and system deletion
-- [ ] Migrations for both dialects
-- [ ] FriendVisibilitySettings in friend_connections encrypted_data
-- [ ] Integration test: full bucket → tag → grant → friend code flow
+- [x] version on buckets for CRDT
+- [x] key_grants.friend_system_id (renamed from friend_user_id)
+- [x] CHECK: key_version >= 1, friend_connections.status, friend_codes.expires_at
+- [x] Index on friend_codes (system_id)
+- [x] buckets table with UUID id and timestamps
+- [x] bucket_content_tags with composite PK (entity_type, entity_id, bucket_id)
+- [x] key_grants with versioned encrypted key blob and revoked_at for rotation
+- [x] friend_connections with status enum and unique (system_id, friend_system_id)
+- [x] friend_codes table with unique code and optional expiry
+- [x] friend_bucket_assignments join table for friend-to-bucket mapping
+- [x] CASCADE rules on bucket and system deletion
+- [x] Migrations for both dialects
+- [x] FriendVisibilitySettings in friend_connections encrypted_data
+- [x] Integration test: full bucket → tag → grant → friend code flow
 
 ## References
 
 - ADR 006 (Privacy Bucket Model)
 - features.md section 4 (Privacy and Social)
+
+## Summary of Changes
+
+Added 6 privacy tables (PG + SQLite): buckets, bucket_content_tags, key_grants, friend_connections, friend_codes, friend_bucket_assignments. All with CHECK constraints, unique constraints, CASCADE rules, indexes, and 52 integration tests.
