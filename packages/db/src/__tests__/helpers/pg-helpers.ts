@@ -660,6 +660,99 @@ export const PG_DDL = {
   wikiPagesUniqueSlugIndex: `
     CREATE UNIQUE INDEX wiki_pages_system_id_slug_idx ON wiki_pages (system_id, slug)
   `,
+  // Groups
+  groups: `
+    CREATE TABLE groups (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      parent_group_id VARCHAR(255),
+      sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      FOREIGN KEY (parent_group_id) REFERENCES groups(id) ON DELETE SET NULL
+    )
+  `,
+  groupsIndexes: `
+    CREATE INDEX groups_system_id_idx ON groups (system_id)
+  `,
+  groupMemberships: `
+    CREATE TABLE group_memberships (
+      group_id VARCHAR(255) NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      member_id VARCHAR(255) NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL,
+      PRIMARY KEY (group_id, member_id)
+    )
+  `,
+  groupMembershipsIndexes: `
+    CREATE INDEX group_memberships_member_id_idx ON group_memberships (member_id);
+    CREATE INDEX group_memberships_system_id_idx ON group_memberships (system_id)
+  `,
+  // Innerworld
+  innerworldRegions: `
+    CREATE TABLE innerworld_regions (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      parent_region_id VARCHAR(255),
+      access_type VARCHAR(255) NOT NULL CHECK (access_type IN ('open', 'gatekept')),
+      gatekeeper_member_ids JSONB NOT NULL,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL
+    )
+  `,
+  innerworldRegionsIndexes: `
+    CREATE INDEX innerworld_regions_system_id_idx ON innerworld_regions (system_id)
+  `,
+  innerworldEntities: `
+    CREATE TABLE innerworld_entities (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type VARCHAR(255) NOT NULL CHECK (entity_type IN ('member', 'landmark', 'subsystem', 'side-system', 'layer')),
+      region_id VARCHAR(255) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
+      position_x INTEGER NOT NULL,
+      position_y INTEGER NOT NULL,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  innerworldEntitiesIndexes: `
+    CREATE INDEX innerworld_entities_system_id_idx ON innerworld_entities (system_id);
+    CREATE INDEX innerworld_entities_region_id_idx ON innerworld_entities (region_id)
+  `,
+  innerworldCanvas: `
+    CREATE TABLE innerworld_canvas (
+      system_id VARCHAR(255) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      encrypted_data BYTEA NOT NULL
+    )
+  `,
+  // PK Bridge
+  pkBridgeState: `
+    CREATE TABLE pk_bridge_state (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      enabled BOOLEAN NOT NULL DEFAULT true,
+      sync_direction VARCHAR(255) NOT NULL CHECK (sync_direction IN ('ps-to-pk', 'pk-to-ps', 'bidirectional')),
+      pk_token_encrypted BYTEA NOT NULL,
+      entity_mappings BYTEA NOT NULL,
+      error_log BYTEA NOT NULL,
+      last_sync_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  pkBridgeStateIndexes: `
+    CREATE INDEX pk_bridge_state_system_id_idx ON pk_bridge_state (system_id)
+  `,
 } as const;
 
 async function pgExec(client: PGlite, sql: string): Promise<void> {
@@ -895,4 +988,28 @@ export async function createPgJournalTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.wikiPages);
   await pgExec(client, PG_DDL.wikiPagesIndexes);
   await pgExec(client, PG_DDL.wikiPagesUniqueSlugIndex);
+}
+
+export async function createPgGroupsTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.groups);
+  await pgExec(client, PG_DDL.groupsIndexes);
+  await pgExec(client, PG_DDL.groupMemberships);
+  await pgExec(client, PG_DDL.groupMembershipsIndexes);
+}
+
+export async function createPgInnerworldTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.innerworldRegions);
+  await pgExec(client, PG_DDL.innerworldRegionsIndexes);
+  await pgExec(client, PG_DDL.innerworldEntities);
+  await pgExec(client, PG_DDL.innerworldEntitiesIndexes);
+  await pgExec(client, PG_DDL.innerworldCanvas);
+}
+
+export async function createPgPkBridgeTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.pkBridgeState);
+  await pgExec(client, PG_DDL.pkBridgeStateIndexes);
 }

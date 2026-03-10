@@ -660,6 +660,99 @@ export const SQLITE_DDL = {
   wikiPagesUniqueSlugIndex: `
     CREATE UNIQUE INDEX wiki_pages_system_id_slug_idx ON wiki_pages (system_id, slug)
   `,
+  // Groups
+  groups: `
+    CREATE TABLE groups (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      parent_group_id TEXT,
+      sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      FOREIGN KEY (parent_group_id) REFERENCES groups(id) ON DELETE SET NULL
+    )
+  `,
+  groupsIndexes: `
+    CREATE INDEX groups_system_id_idx ON groups (system_id)
+  `,
+  groupMemberships: `
+    CREATE TABLE group_memberships (
+      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY (group_id, member_id)
+    )
+  `,
+  groupMembershipsIndexes: `
+    CREATE INDEX group_memberships_member_id_idx ON group_memberships (member_id);
+    CREATE INDEX group_memberships_system_id_idx ON group_memberships (system_id)
+  `,
+  // Innerworld
+  innerworldRegions: `
+    CREATE TABLE innerworld_regions (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      parent_region_id TEXT,
+      access_type TEXT NOT NULL CHECK (access_type IN ('open', 'gatekept')),
+      gatekeeper_member_ids TEXT NOT NULL,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL
+    )
+  `,
+  innerworldRegionsIndexes: `
+    CREATE INDEX innerworld_regions_system_id_idx ON innerworld_regions (system_id)
+  `,
+  innerworldEntities: `
+    CREATE TABLE innerworld_entities (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL CHECK (entity_type IN ('member', 'landmark', 'subsystem', 'side-system', 'layer')),
+      region_id TEXT REFERENCES innerworld_regions(id) ON DELETE SET NULL,
+      position_x INTEGER NOT NULL,
+      position_y INTEGER NOT NULL,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  innerworldEntitiesIndexes: `
+    CREATE INDEX innerworld_entities_system_id_idx ON innerworld_entities (system_id);
+    CREATE INDEX innerworld_entities_region_id_idx ON innerworld_entities (region_id)
+  `,
+  innerworldCanvas: `
+    CREATE TABLE innerworld_canvas (
+      system_id TEXT PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      encrypted_data BLOB NOT NULL
+    )
+  `,
+  // PK Bridge
+  pkBridgeState: `
+    CREATE TABLE pk_bridge_state (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      sync_direction TEXT NOT NULL CHECK (sync_direction IN ('ps-to-pk', 'pk-to-ps', 'bidirectional')),
+      pk_token_encrypted BLOB NOT NULL,
+      entity_mappings BLOB NOT NULL,
+      error_log BLOB NOT NULL,
+      last_sync_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  pkBridgeStateIndexes: `
+    CREATE INDEX pk_bridge_state_system_id_idx ON pk_bridge_state (system_id)
+  `,
 } as const;
 
 function createSqliteBaseTables(client: InstanceType<typeof Database>): void {
@@ -895,4 +988,28 @@ export function createSqliteJournalTables(client: InstanceType<typeof Database>)
   client.exec(SQLITE_DDL.wikiPages);
   client.exec(SQLITE_DDL.wikiPagesIndexes);
   client.exec(SQLITE_DDL.wikiPagesUniqueSlugIndex);
+}
+
+export function createSqliteGroupsTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.groups);
+  client.exec(SQLITE_DDL.groupsIndexes);
+  client.exec(SQLITE_DDL.groupMemberships);
+  client.exec(SQLITE_DDL.groupMembershipsIndexes);
+}
+
+export function createSqliteInnerworldTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.innerworldRegions);
+  client.exec(SQLITE_DDL.innerworldRegionsIndexes);
+  client.exec(SQLITE_DDL.innerworldEntities);
+  client.exec(SQLITE_DDL.innerworldEntitiesIndexes);
+  client.exec(SQLITE_DDL.innerworldCanvas);
+}
+
+export function createSqlitePkBridgeTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.pkBridgeState);
+  client.exec(SQLITE_DDL.pkBridgeStateIndexes);
 }

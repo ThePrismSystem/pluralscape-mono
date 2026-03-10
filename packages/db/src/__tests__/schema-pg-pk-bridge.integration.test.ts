@@ -1,0 +1,253 @@
+import { PGlite } from "@electric-sql/pglite";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/pglite";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { accounts } from "../schema/pg/auth.js";
+import { pkBridgeState } from "../schema/pg/pk-bridge.js";
+import { systems } from "../schema/pg/systems.js";
+
+import { createPgPkBridgeTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+
+import type { PgliteDatabase } from "drizzle-orm/pglite";
+
+const schema = { accounts, systems, pkBridgeState };
+
+describe("PG pk_bridge_state schema", () => {
+  let client: PGlite;
+  let db: PgliteDatabase<typeof schema>;
+
+  const insertAccount = (id?: string) => pgInsertAccount(db, id);
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client, { schema });
+    await createPgPkBridgeTables(client);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("round-trips insert and select with all fields", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    const syncAt = now - 60_000;
+    const token = new Uint8Array([10, 20, 30, 40]);
+    const mappings = new Uint8Array([50, 60, 70]);
+    const errors = new Uint8Array([80, 90]);
+
+    await db.insert(pkBridgeState).values({
+      id,
+      systemId,
+      enabled: true,
+      syncDirection: "ps-to-pk",
+      pkTokenEncrypted: token,
+      entityMappings: mappings,
+      errorLog: errors,
+      lastSyncAt: syncAt,
+      createdAt: now,
+      updatedAt: now,
+      version: 3,
+    });
+
+    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(rows).toHaveLength(1);
+    const row = rows[0];
+    expect(row?.id).toBe(id);
+    expect(row?.systemId).toBe(systemId);
+    expect(row?.enabled).toBe(true);
+    expect(row?.syncDirection).toBe("ps-to-pk");
+    expect(row?.pkTokenEncrypted).toEqual(token);
+    expect(row?.entityMappings).toEqual(mappings);
+    expect(row?.errorLog).toEqual(errors);
+    expect(row?.lastSyncAt).toBe(syncAt);
+    expect(row?.createdAt).toBe(now);
+    expect(row?.updatedAt).toBe(now);
+    expect(row?.version).toBe(3);
+  });
+
+  it("defaults enabled to true when omitted", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(pkBridgeState).values({
+      id,
+      systemId,
+      syncDirection: "bidirectional",
+      pkTokenEncrypted: new Uint8Array([1]),
+      entityMappings: new Uint8Array([2]),
+      errorLog: new Uint8Array([3]),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(rows[0]?.enabled).toBe(true);
+  });
+
+  it("accepts all valid syncDirection values", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+    const directions = ["ps-to-pk", "pk-to-ps", "bidirectional"] as const;
+
+    for (const dir of directions) {
+      const id = crypto.randomUUID();
+      await db.insert(pkBridgeState).values({
+        id,
+        systemId,
+        syncDirection: dir,
+        pkTokenEncrypted: new Uint8Array([1]),
+        entityMappings: new Uint8Array([2]),
+        errorLog: new Uint8Array([3]),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+      expect(rows[0]?.syncDirection).toBe(dir);
+    }
+  });
+
+  it("rejects invalid syncDirection via CHECK constraint", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+
+    await expect(
+      client.query(
+        `INSERT INTO pk_bridge_state (id, system_id, enabled, sync_direction, pk_token_encrypted, entity_mappings, error_log, created_at, updated_at, version)
+         VALUES ($1, $2, true, 'invalid-dir', '\\x01', '\\x02', '\\x03', NOW(), NOW(), 1)`,
+        [crypto.randomUUID(), systemId],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("allows null lastSyncAt", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(pkBridgeState).values({
+      id,
+      systemId,
+      syncDirection: "ps-to-pk",
+      pkTokenEncrypted: new Uint8Array([1]),
+      entityMappings: new Uint8Array([2]),
+      errorLog: new Uint8Array([3]),
+      lastSyncAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(rows[0]?.lastSyncAt).toBeNull();
+  });
+
+  it("persists a non-null lastSyncAt value", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+    const syncAt = now - 120_000;
+
+    await db.insert(pkBridgeState).values({
+      id,
+      systemId,
+      syncDirection: "pk-to-ps",
+      pkTokenEncrypted: new Uint8Array([1]),
+      entityMappings: new Uint8Array([2]),
+      errorLog: new Uint8Array([3]),
+      lastSyncAt: syncAt,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(rows[0]?.lastSyncAt).toBe(syncAt);
+  });
+
+  it("round-trips larger binary data for all BYTEA columns", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    const token = new Uint8Array(256);
+    const mappings = new Uint8Array(512);
+    const errors = new Uint8Array(1024);
+    for (let i = 0; i < 256; i++) token[i] = i;
+    for (let i = 0; i < 512; i++) mappings[i] = i % 256;
+    for (let i = 0; i < 1024; i++) errors[i] = (i * 7) % 256;
+
+    await db.insert(pkBridgeState).values({
+      id,
+      systemId,
+      syncDirection: "bidirectional",
+      pkTokenEncrypted: token,
+      entityMappings: mappings,
+      errorLog: errors,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(rows[0]?.pkTokenEncrypted).toEqual(token);
+    expect(rows[0]?.entityMappings).toEqual(mappings);
+    expect(rows[0]?.errorLog).toEqual(errors);
+  });
+
+  it("cascades delete when parent system is deleted", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(pkBridgeState).values({
+      id,
+      systemId,
+      syncDirection: "ps-to-pk",
+      pkTokenEncrypted: new Uint8Array([1]),
+      entityMappings: new Uint8Array([2]),
+      errorLog: new Uint8Array([3]),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Verify it exists first
+    const before = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(before).toHaveLength(1);
+
+    // Delete the parent system via raw SQL to bypass any ORM protections
+    await client.query("DELETE FROM systems WHERE id = $1", [systemId]);
+
+    const after = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(after).toHaveLength(0);
+  });
+
+  it("defaults version to 1 when omitted", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(pkBridgeState).values({
+      id,
+      systemId,
+      syncDirection: "pk-to-ps",
+      pkTokenEncrypted: new Uint8Array([1]),
+      entityMappings: new Uint8Array([2]),
+      errorLog: new Uint8Array([3]),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    expect(rows[0]?.version).toBe(1);
+  });
+});

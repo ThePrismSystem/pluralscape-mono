@@ -12,10 +12,13 @@ export {
 } from "./communication.js";
 export { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
 export { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
+export { groupMemberships, groups } from "./groups.js";
+export { innerworldCanvas, innerworldEntities, innerworldRegions } from "./innerworld.js";
 export { journalEntries, wikiPages } from "./journal.js";
 export { lifecycleEvents } from "./lifecycle-events.js";
 export { members, memberPhotos } from "./members.js";
 export { nomenclatureSettings } from "./nomenclature-settings.js";
+export { pkBridgeState } from "./pk-bridge.js";
 export {
   bucketContentTags,
   buckets,
@@ -54,10 +57,13 @@ import type {
 } from "./communication.js";
 import type { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
 import type { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
+import type { groupMemberships, groups } from "./groups.js";
+import type { innerworldCanvas, innerworldEntities, innerworldRegions } from "./innerworld.js";
 import type { journalEntries, wikiPages } from "./journal.js";
 import type { lifecycleEvents } from "./lifecycle-events.js";
 import type { members, memberPhotos } from "./members.js";
 import type { nomenclatureSettings } from "./nomenclature-settings.js";
+import type { pkBridgeState } from "./pk-bridge.js";
 import type {
   bucketContentTags,
   buckets,
@@ -196,3 +202,21 @@ export type JournalEntryRow = InferSelectModel<typeof journalEntries>;
 export type NewJournalEntry = InferInsertModel<typeof journalEntries>;
 export type WikiPageRow = InferSelectModel<typeof wikiPages>;
 export type NewWikiPage = InferInsertModel<typeof wikiPages>;
+
+// Groups
+export type GroupRow = InferSelectModel<typeof groups>;
+export type NewGroup = InferInsertModel<typeof groups>;
+export type GroupMembershipRow = InferSelectModel<typeof groupMemberships>;
+export type NewGroupMembership = InferInsertModel<typeof groupMemberships>;
+
+// Innerworld
+export type InnerworldRegionRow = InferSelectModel<typeof innerworldRegions>;
+export type NewInnerworldRegion = InferInsertModel<typeof innerworldRegions>;
+export type InnerworldEntityRow = InferSelectModel<typeof innerworldEntities>;
+export type NewInnerworldEntity = InferInsertModel<typeof innerworldEntities>;
+export type InnerworldCanvasRow = InferSelectModel<typeof innerworldCanvas>;
+export type NewInnerworldCanvas = InferInsertModel<typeof innerworldCanvas>;
+
+// PK Bridge
+export type PkBridgeStateRow = InferSelectModel<typeof pkBridgeState>;
+export type NewPkBridgeState = InferInsertModel<typeof pkBridgeState>;
