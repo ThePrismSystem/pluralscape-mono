@@ -1,11 +1,11 @@
 ---
 # db-f70u
 title: Push notification tables
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:22:17Z
-updated_at: 2026-03-09T23:21:39Z
+updated_at: 2026-03-10T08:11:13Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -52,3 +52,5 @@ Device registration and notification preference tables for push notification del
 
 - `device_tokens.account_id`: not in DeviceToken type, but needed for account deletion CASCADE
 - `device_tokens.revoked_at`: type has no revocation field, but useful for DB-level token invalidation audit trail
+
+## Summary of Changes\n\nAdded 3 notification tables (device_tokens, notification_configs, friend_notification_preferences) for both PG and SQLite with full integration tests, enums, RLS policies, and type exports.

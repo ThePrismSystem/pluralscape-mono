@@ -210,10 +210,18 @@ describe("RLS_TABLE_POLICIES", () => {
       ["journal_entries", "system"],
       ["api_keys", "dual"],
       ["audit_log", "dual"],
+      ["device_tokens", "dual"],
       ["key_grants", "join-system"],
       ["bucket_content_tags", "join-system"],
       ["friend_bucket_assignments", "join-system"],
       ["field_bucket_visibility", "join-system"],
+      ["notification_configs", "system"],
+      ["friend_notification_preferences", "system"],
+      ["webhook_configs", "system"],
+      ["webhook_deliveries", "system"],
+      ["blob_metadata", "system"],
+      ["timer_configs", "system"],
+      ["check_in_records", "system"],
     ];
 
     for (const [table, scope] of expected) {

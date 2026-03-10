@@ -1,11 +1,11 @@
 ---
 # db-1dza
 title: Blob metadata table
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:44Z
-updated_at: 2026-03-09T23:01:25Z
+updated_at: 2026-03-10T08:11:13Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -61,3 +61,5 @@ Encrypted blob/media metadata tracking table for avatars, photos, attachments, a
 
 - features.md section 16 (Media Storage)
 - ADR 009 (Blob/Media Storage)
+
+## Summary of Changes\n\nAdded blob_metadata table for both PG and SQLite with CHECK constraints (size_bytes > 0, encryption_tier IN (1,2), purpose enum), unique storage_key, integration tests, RLS policies, and type exports.

@@ -1,11 +1,11 @@
 ---
 # db-nodl
 title: Webhook configuration tables
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:41Z
-updated_at: 2026-03-09T23:02:20Z
+updated_at: 2026-03-10T08:11:13Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -56,3 +56,5 @@ Webhook endpoint configuration and delivery tracking tables.
 
 - features.md section 9 (Custom webhooks)
 - ADR 010 (Background Jobs — webhook delivery)
+
+## Summary of Changes\n\nAdded 2 webhook tables (webhook_configs, webhook_deliveries) for both PG and SQLite with CHECK constraints, integration tests, enums, RLS policies, and type exports.

@@ -116,6 +116,7 @@ export const RLS_TABLE_POLICIES = {
   // Dual-column tables (account_id + system_id)
   api_keys: "dual",
   audit_log: "dual",
+  device_tokens: "dual",
 
   // Join tables (no direct tenant column — verified via parent)
   key_grants: "join-system",
@@ -161,6 +162,13 @@ export const RLS_TABLE_POLICIES = {
   lifecycle_events: "system",
   safe_mode_content: "system",
   pk_bridge_state: "system",
+  notification_configs: "system",
+  friend_notification_preferences: "system",
+  webhook_configs: "system",
+  webhook_deliveries: "system",
+  blob_metadata: "system",
+  timer_configs: "system",
+  check_in_records: "system",
 } as const satisfies Record<string, RlsScopeType>;
 
 /** Type-safe table names that have RLS policies. */

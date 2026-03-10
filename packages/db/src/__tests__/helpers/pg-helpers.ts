@@ -773,6 +773,144 @@ export const PG_DDL = {
   pkBridgeStateIndexes: `
     CREATE UNIQUE INDEX pk_bridge_state_system_id_idx ON pk_bridge_state (system_id)
   `,
+  // Notifications
+  deviceTokens: `
+    CREATE TABLE device_tokens (
+      id VARCHAR(255) PRIMARY KEY,
+      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      platform VARCHAR(255) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+      token VARCHAR(512) NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      last_used_at TIMESTAMPTZ,
+      revoked_at TIMESTAMPTZ
+    )
+  `,
+  deviceTokensIndexes: `
+    CREATE INDEX device_tokens_account_id_idx ON device_tokens (account_id);
+    CREATE INDEX device_tokens_system_id_idx ON device_tokens (system_id);
+    CREATE INDEX device_tokens_revoked_at_idx ON device_tokens (revoked_at)
+  `,
+  notificationConfigs: `
+    CREATE TABLE notification_configs (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type VARCHAR(255) NOT NULL CHECK (event_type IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert')),
+      enabled BOOLEAN NOT NULL DEFAULT true,
+      push_enabled BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    )
+  `,
+  notificationConfigsIndexes: `
+    CREATE UNIQUE INDEX notification_configs_system_id_event_type_idx ON notification_configs (system_id, event_type)
+  `,
+  friendNotificationPreferences: `
+    CREATE TABLE friend_notification_preferences (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      friend_connection_id VARCHAR(255) NOT NULL REFERENCES friend_connections(id) ON DELETE CASCADE,
+      enabled_event_types JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    )
+  `,
+  friendNotificationPreferencesIndexes: `
+    CREATE UNIQUE INDEX friend_notification_prefs_system_id_friend_connection_id_idx ON friend_notification_preferences (system_id, friend_connection_id)
+  `,
+  // Webhooks
+  webhookConfigs: `
+    CREATE TABLE webhook_configs (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      url VARCHAR(2048) NOT NULL,
+      secret BYTEA NOT NULL,
+      event_types JSONB NOT NULL,
+      enabled BOOLEAN NOT NULL DEFAULT true,
+      crypto_key_id VARCHAR(255) REFERENCES api_keys(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    )
+  `,
+  webhookConfigsIndexes: `
+    CREATE INDEX webhook_configs_system_id_idx ON webhook_configs (system_id)
+  `,
+  webhookDeliveries: `
+    CREATE TABLE webhook_deliveries (
+      id VARCHAR(255) PRIMARY KEY,
+      webhook_id VARCHAR(255) NOT NULL REFERENCES webhook_configs(id) ON DELETE CASCADE,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type VARCHAR(255) NOT NULL CHECK (event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'success', 'failed')),
+      http_status INTEGER,
+      attempt_count INTEGER NOT NULL DEFAULT 0,
+      last_attempt_at TIMESTAMPTZ,
+      next_retry_at TIMESTAMPTZ,
+      encrypted_data BYTEA,
+      created_at TIMESTAMPTZ NOT NULL,
+      CHECK (attempt_count >= 0),
+      CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599))
+    )
+  `,
+  webhookDeliveriesIndexes: `
+    CREATE INDEX webhook_deliveries_webhook_id_idx ON webhook_deliveries (webhook_id);
+    CREATE INDEX webhook_deliveries_system_id_idx ON webhook_deliveries (system_id);
+    CREATE INDEX webhook_deliveries_status_next_retry_at_idx ON webhook_deliveries (status, next_retry_at)
+  `,
+  // Blob Metadata
+  blobMetadata: `
+    CREATE TABLE blob_metadata (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      storage_key VARCHAR(1024) NOT NULL,
+      mime_type VARCHAR(255),
+      size_bytes BIGINT NOT NULL,
+      encryption_tier INTEGER NOT NULL,
+      bucket_id VARCHAR(255) REFERENCES buckets(id) ON DELETE SET NULL,
+      purpose VARCHAR(255) NOT NULL CHECK (purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
+      thumbnail_of_blob_id VARCHAR(255),
+      checksum VARCHAR(255),
+      uploaded_at TIMESTAMPTZ NOT NULL,
+      FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
+      CHECK (size_bytes > 0),
+      CHECK (encryption_tier IN (1, 2))
+    )
+  `,
+  blobMetadataIndexes: `
+    CREATE INDEX blob_metadata_system_id_idx ON blob_metadata (system_id);
+    CREATE UNIQUE INDEX blob_metadata_storage_key_idx ON blob_metadata (storage_key)
+  `,
+  // Timers
+  timerConfigs: `
+    CREATE TABLE timer_configs (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      enabled BOOLEAN NOT NULL DEFAULT true,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  timerConfigsIndexes: `
+    CREATE INDEX timer_configs_system_id_idx ON timer_configs (system_id)
+  `,
+  checkInRecords: `
+    CREATE TABLE check_in_records (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      timer_config_id VARCHAR(255) NOT NULL REFERENCES timer_configs(id) ON DELETE CASCADE,
+      scheduled_at TIMESTAMPTZ NOT NULL,
+      responded_at TIMESTAMPTZ,
+      dismissed BOOLEAN NOT NULL DEFAULT false,
+      encrypted_data BYTEA
+    )
+  `,
+  checkInRecordsIndexes: `
+    CREATE INDEX check_in_records_system_id_idx ON check_in_records (system_id);
+    CREATE INDEX check_in_records_timer_config_id_idx ON check_in_records (timer_config_id);
+    CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at)
+  `,
 } as const;
 
 async function pgExec(client: PGlite, sql: string): Promise<void> {
@@ -1034,4 +1172,42 @@ export async function createPgPkBridgeTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.pkBridgeState);
   await pgExec(client, PG_DDL.pkBridgeStateIndexes);
+}
+
+export async function createPgNotificationTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.buckets);
+  await pgExec(client, PG_DDL.friendConnections);
+  await pgExec(client, PG_DDL.friendConnectionsIndexes);
+  await pgExec(client, PG_DDL.deviceTokens);
+  await pgExec(client, PG_DDL.deviceTokensIndexes);
+  await pgExec(client, PG_DDL.notificationConfigs);
+  await pgExec(client, PG_DDL.notificationConfigsIndexes);
+  await pgExec(client, PG_DDL.friendNotificationPreferences);
+  await pgExec(client, PG_DDL.friendNotificationPreferencesIndexes);
+}
+
+export async function createPgWebhookTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.apiKeys);
+  await pgExec(client, PG_DDL.apiKeysIndexes);
+  await pgExec(client, PG_DDL.webhookConfigs);
+  await pgExec(client, PG_DDL.webhookConfigsIndexes);
+  await pgExec(client, PG_DDL.webhookDeliveries);
+  await pgExec(client, PG_DDL.webhookDeliveriesIndexes);
+}
+
+export async function createPgBlobMetadataTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.buckets);
+  await pgExec(client, PG_DDL.blobMetadata);
+  await pgExec(client, PG_DDL.blobMetadataIndexes);
+}
+
+export async function createPgTimerTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.timerConfigs);
+  await pgExec(client, PG_DDL.timerConfigsIndexes);
+  await pgExec(client, PG_DDL.checkInRecords);
+  await pgExec(client, PG_DDL.checkInRecordsIndexes);
 }

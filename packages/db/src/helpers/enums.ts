@@ -9,12 +9,15 @@ import type {
   ApiKeyScope,
   AuditEventType,
   AuthKeyType,
+  BlobPurpose,
   BucketVisibilityScope,
+  DeviceTokenPlatform,
   DeviceTransferStatus,
   FriendConnectionStatus,
   FrontingType,
   KnownSaturationLevel,
   LayerAccessType,
+  NotificationEventType,
   PKSyncDirection,
   PollKind,
   RelationshipType,
@@ -24,6 +27,8 @@ import type {
   ServerPoll,
   SyncOperation,
   SyncResolution,
+  WebhookDeliveryStatus,
+  WebhookEventType,
 } from "@pluralscape/types";
 
 export const KNOWN_SATURATION_LEVELS = [
@@ -152,3 +157,47 @@ export const PK_SYNC_DIRECTIONS = [
   "pk-to-ps",
   "bidirectional",
 ] as const satisfies readonly PKSyncDirection[];
+export const DEVICE_TOKEN_PLATFORMS = [
+  "ios",
+  "android",
+  "web",
+] as const satisfies readonly DeviceTokenPlatform[];
+export const NOTIFICATION_EVENT_TYPES = [
+  "switch-reminder",
+  "check-in-due",
+  "acknowledgement-requested",
+  "message-received",
+  "sync-conflict",
+  "friend-switch-alert",
+] as const satisfies readonly NotificationEventType[];
+export const WEBHOOK_EVENT_TYPES = [
+  "member.created",
+  "member.updated",
+  "member.archived",
+  "fronting.started",
+  "fronting.ended",
+  "switch.recorded",
+  "group.created",
+  "group.updated",
+  "note.created",
+  "note.updated",
+  "chat.message-sent",
+  "poll.created",
+  "poll.closed",
+  "acknowledgement.requested",
+  "lifecycle.event-recorded",
+  "custom-front.changed",
+] as const satisfies readonly WebhookEventType[];
+export const WEBHOOK_DELIVERY_STATUSES = [
+  "pending",
+  "success",
+  "failed",
+] as const satisfies readonly WebhookDeliveryStatus[];
+export const BLOB_PURPOSES = [
+  "avatar",
+  "member-photo",
+  "journal-image",
+  "attachment",
+  "export",
+  "littles-safe-mode",
+] as const satisfies readonly BlobPurpose[];
