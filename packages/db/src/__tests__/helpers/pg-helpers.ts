@@ -628,6 +628,7 @@ export const PG_DDL = {
     CREATE TABLE acknowledgements (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      target_member_id VARCHAR(255),
       confirmed BOOLEAN NOT NULL DEFAULT false,
       confirmed_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
