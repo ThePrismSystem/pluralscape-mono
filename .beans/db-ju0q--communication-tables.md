@@ -1,11 +1,11 @@
 ---
 # db-ju0q
 title: Communication tables
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-08T13:33:04Z
-updated_at: 2026-03-09T23:01:46Z
+updated_at: 2026-03-10T04:19:16Z
 parent: db-2je4
 blocked_by:
   - db-9f6f

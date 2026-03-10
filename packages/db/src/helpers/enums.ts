@@ -16,6 +16,8 @@ import type {
   KnownSaturationLevel,
   LayerAccessType,
   RelationshipType,
+  ServerChannel,
+  ServerPoll,
   SyncOperation,
   SyncResolution,
 } from "@pluralscape/types";
@@ -124,3 +126,8 @@ export const AUDIT_EVENT_TYPES = [
   "bucket.key_rotation.failed",
   "device.security.jailbreak_warning_shown",
 ] as const satisfies readonly AuditEventType[];
+export const CHANNEL_TYPES = [
+  "category",
+  "channel",
+] as const satisfies readonly ServerChannel["type"][];
+export const POLL_STATUSES = ["open", "closed"] as const satisfies readonly ServerPoll["status"][];

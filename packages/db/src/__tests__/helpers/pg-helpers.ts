@@ -1,4 +1,6 @@
 import { accounts } from "../../schema/pg/auth.js";
+import { channels } from "../../schema/pg/communication.js";
+import { members } from "../../schema/pg/members.js";
 import { systems } from "../../schema/pg/systems.js";
 
 import type { PGlite } from "@electric-sql/pglite";
@@ -511,6 +513,153 @@ export const PG_DDL = {
   safeModeContentIndexes: `
     CREATE INDEX safe_mode_content_system_sort_idx ON safe_mode_content (system_id, sort_order)
   `,
+  // Communication
+  channels: `
+    CREATE TABLE channels (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      type VARCHAR(255) NOT NULL CHECK (type IN ('category', 'channel')),
+      parent_id VARCHAR(255) REFERENCES channels(id) ON DELETE SET NULL,
+      sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
+    )
+  `,
+  channelsIndexes: `
+    CREATE INDEX channels_system_id_idx ON channels (system_id)
+  `,
+  messages: `
+    CREATE TABLE messages (
+      id VARCHAR(255) PRIMARY KEY,
+      channel_id VARCHAR(255) NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      timestamp TIMESTAMPTZ NOT NULL,
+      edited_at TIMESTAMPTZ,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
+    )
+  `,
+  messagesIndexes: `
+    CREATE INDEX messages_channel_id_timestamp_idx ON messages (channel_id, timestamp);
+    CREATE INDEX messages_system_id_idx ON messages (system_id)
+  `,
+  boardMessages: `
+    CREATE TABLE board_messages (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      pinned BOOLEAN NOT NULL DEFAULT false,
+      sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  boardMessagesIndexes: `
+    CREATE INDEX board_messages_system_id_idx ON board_messages (system_id)
+  `,
+  notes: `
+    CREATE TABLE notes (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      member_id VARCHAR(255) REFERENCES members(id) ON DELETE SET NULL,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
+    )
+  `,
+  notesIndexes: `
+    CREATE INDEX notes_system_id_idx ON notes (system_id);
+    CREATE INDEX notes_member_id_idx ON notes (member_id)
+  `,
+  polls: `
+    CREATE TABLE polls (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      status VARCHAR(255) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+      closed_at TIMESTAMPTZ,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  pollsIndexes: `
+    CREATE INDEX polls_system_id_idx ON polls (system_id)
+  `,
+  pollVotes: `
+    CREATE TABLE poll_votes (
+      id VARCHAR(255) PRIMARY KEY,
+      poll_id VARCHAR(255) NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    )
+  `,
+  pollVotesIndexes: `
+    CREATE INDEX poll_votes_poll_id_idx ON poll_votes (poll_id);
+    CREATE INDEX poll_votes_system_id_idx ON poll_votes (system_id)
+  `,
+  acknowledgements: `
+    CREATE TABLE acknowledgements (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      confirmed BOOLEAN NOT NULL DEFAULT false,
+      confirmed_at TIMESTAMPTZ,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    )
+  `,
+  acknowledgementsIndexes: `
+    CREATE INDEX acknowledgements_system_id_idx ON acknowledgements (system_id);
+    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed)
+  `,
+  // Journal
+  journalEntries: `
+    CREATE TABLE journal_entries (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
+    )
+  `,
+  journalEntriesIndexes: `
+    CREATE INDEX journal_entries_system_id_created_at_idx ON journal_entries (system_id, created_at)
+  `,
+  wikiPages: `
+    CREATE TABLE wiki_pages (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      slug VARCHAR(255) NOT NULL,
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ
+    )
+  `,
+  wikiPagesIndexes: `
+    CREATE INDEX wiki_pages_system_id_idx ON wiki_pages (system_id)
+  `,
+  wikiPagesUniqueSlugIndex: `
+    CREATE UNIQUE INDEX wiki_pages_system_id_slug_idx ON wiki_pages (system_id, slug)
+  `,
 } as const;
 
 async function pgExec(client: PGlite, sql: string): Promise<void> {
@@ -676,4 +825,74 @@ export async function createPgSafeModeContentTables(client: PGlite): Promise<voi
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.safeModeContent);
   await pgExec(client, PG_DDL.safeModeContentIndexes);
+}
+
+export async function pgInsertMember(
+  db: PgliteDatabase<Record<string, unknown>>,
+  systemId: string,
+  id?: string,
+): Promise<string> {
+  const resolvedId = id ?? crypto.randomUUID();
+  const now = Date.now();
+  await db.insert(members).values({
+    id: resolvedId,
+    systemId,
+    encryptedData: new Uint8Array([1, 2, 3]),
+    createdAt: now,
+    updatedAt: now,
+  });
+  return resolvedId;
+}
+
+export async function pgInsertChannel(
+  db: PgliteDatabase<Record<string, unknown>>,
+  systemId: string,
+  opts: {
+    id?: string;
+    type?: "category" | "channel";
+    parentId?: string | null;
+    sortOrder?: number;
+  } = {},
+): Promise<string> {
+  const id = opts.id ?? crypto.randomUUID();
+  const now = Date.now();
+  await db.insert(channels).values({
+    id,
+    systemId,
+    type: opts.type ?? "channel",
+    parentId: opts.parentId ?? null,
+    sortOrder: opts.sortOrder ?? 0,
+    encryptedData: new Uint8Array([1, 2, 3]),
+    createdAt: now,
+    updatedAt: now,
+  });
+  return id;
+}
+
+export async function createPgCommunicationTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.channels);
+  await pgExec(client, PG_DDL.channelsIndexes);
+  await pgExec(client, PG_DDL.messages);
+  await pgExec(client, PG_DDL.messagesIndexes);
+  await pgExec(client, PG_DDL.boardMessages);
+  await pgExec(client, PG_DDL.boardMessagesIndexes);
+  await pgExec(client, PG_DDL.notes);
+  await pgExec(client, PG_DDL.notesIndexes);
+  await pgExec(client, PG_DDL.polls);
+  await pgExec(client, PG_DDL.pollsIndexes);
+  await pgExec(client, PG_DDL.pollVotes);
+  await pgExec(client, PG_DDL.pollVotesIndexes);
+  await pgExec(client, PG_DDL.acknowledgements);
+  await pgExec(client, PG_DDL.acknowledgementsIndexes);
+}
+
+export async function createPgJournalTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.journalEntries);
+  await pgExec(client, PG_DDL.journalEntriesIndexes);
+  await pgExec(client, PG_DDL.wikiPages);
+  await pgExec(client, PG_DDL.wikiPagesIndexes);
+  await pgExec(client, PG_DDL.wikiPagesUniqueSlugIndex);
 }
