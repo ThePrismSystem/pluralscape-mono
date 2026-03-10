@@ -10,7 +10,7 @@ export const systemSettings = pgTable("system_settings", {
     .primaryKey()
     .references(() => systems.id, { onDelete: "cascade" }),
   locale: varchar("locale", { length: 255 }),
-  pinHash: varchar("pin_hash", { length: 255 }),
+  pinHash: varchar("pin_hash", { length: 512 }),
   biometricEnabled: boolean("biometric_enabled").notNull().default(false),
   littlesSafeModeEnabled: boolean("littles_safe_mode_enabled").notNull().default(false),
   encryptedData: pgBinary("encrypted_data").notNull(),

@@ -429,7 +429,7 @@ export const PG_DDL = {
     CREATE TABLE system_settings (
       system_id VARCHAR(255) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
       locale VARCHAR(255),
-      pin_hash VARCHAR(255),
+      pin_hash VARCHAR(512),
       biometric_enabled BOOLEAN NOT NULL DEFAULT false,
       littles_safe_mode_enabled BOOLEAN NOT NULL DEFAULT false,
       encrypted_data BYTEA NOT NULL,
@@ -453,11 +453,13 @@ export const PG_DDL = {
       last_used_at TIMESTAMPTZ,
       revoked_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ,
-      scoped_bucket_ids JSONB
+      scoped_bucket_ids JSONB,
+      CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL))
     )
   `,
   apiKeysIndexes: `
     CREATE INDEX api_keys_account_id_idx ON api_keys (account_id);
+    CREATE INDEX api_keys_system_id_idx ON api_keys (system_id);
     CREATE INDEX api_keys_revoked_at_idx ON api_keys (revoked_at);
     CREATE INDEX api_keys_key_type_idx ON api_keys (key_type)
   `,
@@ -472,7 +474,7 @@ export const PG_DDL = {
       ip_address VARCHAR(255),
       user_agent VARCHAR(1024),
       actor JSONB NOT NULL,
-      detail JSONB
+      detail TEXT
     )
   `,
   auditLogIndexes: `

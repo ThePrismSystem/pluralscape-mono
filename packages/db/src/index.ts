@@ -21,4 +21,8 @@ export {
   DEVICE_TRANSFER_STATUSES,
   SYNC_OPERATIONS,
   SYNC_RESOLUTIONS,
+  API_KEY_KEY_TYPES,
+  API_KEY_SCOPES,
+  AUDIT_EVENT_TYPES,
 } from "./helpers/index.js";
+export type { DbAuditActor } from "./helpers/index.js";

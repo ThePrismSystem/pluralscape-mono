@@ -1,4 +1,4 @@
-import { check, index, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, jsonb, pgTable, text, varchar } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -7,18 +7,16 @@ import { AUDIT_EVENT_TYPES } from "../../helpers/enums.js";
 import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
+import type { DbAuditActor } from "../../helpers/types.js";
 import type { AuditEventType } from "@pluralscape/types";
 
-/** DB-level actor type — uses plain string IDs (branded types are an app-layer concern). */
-export type DbAuditActor =
-  | { readonly kind: "account"; readonly id: string }
-  | { readonly kind: "api-key"; readonly id: string }
-  | { readonly kind: "system"; readonly id: string };
+export type { DbAuditActor } from "../../helpers/types.js";
 
 export const auditLog = pgTable(
   "audit_log",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
+    /** Denormalized for query performance — avoids joining through systems to get account. */
     accountId: varchar("account_id", { length: 255 }).references(() => accounts.id, {
       onDelete: "set null",
     }),
@@ -26,11 +24,12 @@ export const auditLog = pgTable(
       onDelete: "set null",
     }),
     eventType: varchar("event_type", { length: 255 }).notNull().$type<AuditEventType>(),
+    /** Named "timestamp" (not "createdAt") to reflect when the event occurred, not row creation. */
     timestamp: pgTimestamp("timestamp").notNull(),
     ipAddress: varchar("ip_address", { length: 255 }),
     userAgent: varchar("user_agent", { length: 1024 }),
     actor: jsonb("actor").notNull().$type<DbAuditActor>(),
-    detail: jsonb("detail").$type<string>(),
+    detail: text("detail"),
   },
   (t) => [
     index("audit_log_account_timestamp_idx").on(t.accountId, t.timestamp),

@@ -9,5 +9,9 @@ export {
   DEVICE_TRANSFER_STATUSES,
   SYNC_OPERATIONS,
   SYNC_RESOLUTIONS,
+  API_KEY_KEY_TYPES,
+  API_KEY_SCOPES,
+  AUDIT_EVENT_TYPES,
 } from "./enums.js";
 export { enumCheck } from "./check.js";
+export type { DbAuditActor } from "./types.js";

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
@@ -9,6 +10,7 @@ import { systems } from "./systems.js";
 
 import type { ApiKey, ApiKeyScope } from "@pluralscape/types";
 
+/** Account-system ownership (ensuring the account owns the system) is enforced at the app layer. */
 export const apiKeys = pgTable(
   "api_keys",
   {
@@ -28,13 +30,18 @@ export const apiKeys = pgTable(
     lastUsedAt: pgTimestamp("last_used_at"),
     revokedAt: pgTimestamp("revoked_at"),
     expiresAt: pgTimestamp("expires_at"),
-    scopedBucketIds: jsonb("scoped_bucket_ids").$type<readonly string[] | null>(),
+    scopedBucketIds: jsonb("scoped_bucket_ids").$type<readonly string[]>(),
   },
   (t) => [
     index("api_keys_account_id_idx").on(t.accountId),
+    index("api_keys_system_id_idx").on(t.systemId),
     uniqueIndex("api_keys_token_hash_idx").on(t.tokenHash),
     index("api_keys_revoked_at_idx").on(t.revokedAt),
     index("api_keys_key_type_idx").on(t.keyType),
     check("api_keys_key_type_check", enumCheck(t.keyType, API_KEY_KEY_TYPES)),
+    check(
+      "api_keys_key_material_check",
+      sql`(${t.keyType} = 'crypto' AND ${t.encryptedKeyMaterial} IS NOT NULL) OR (${t.keyType} = 'metadata' AND ${t.encryptedKeyMaterial} IS NULL)`,
+    ),
   ],
 );

@@ -151,6 +151,30 @@ describe("PG nomenclature_settings schema", () => {
     ).rejects.toThrow();
   });
 
+  it("supports version increment", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+
+    await db.insert(nomenclatureSettings).values({
+      systemId,
+      encryptedData: new Uint8Array([1]),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await db
+      .update(nomenclatureSettings)
+      .set({ version: 2, updatedAt: Date.now() })
+      .where(eq(nomenclatureSettings.systemId, systemId));
+
+    const rows = await db
+      .select()
+      .from(nomenclatureSettings)
+      .where(eq(nomenclatureSettings.systemId, systemId));
+    expect(rows[0]?.version).toBe(2);
+  });
+
   it("rejects null encrypted_data via raw SQL", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);

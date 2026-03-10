@@ -4,18 +4,21 @@
  * Used in both PG and SQLite table definitions.
  */
 
-import type { KnownSaturationLevel } from "@pluralscape/types";
-import type { FrontingType } from "@pluralscape/types";
-import type { RelationshipType } from "@pluralscape/types";
-import type { LayerAccessType } from "@pluralscape/types";
-import type { FriendConnectionStatus } from "@pluralscape/types";
-import type { BucketVisibilityScope } from "@pluralscape/types";
-import type { AuthKeyType } from "@pluralscape/types";
-import type { DeviceTransferStatus } from "@pluralscape/types";
-import type { SyncOperation } from "@pluralscape/types";
-import type { SyncResolution } from "@pluralscape/types";
-import type { ApiKey, ApiKeyScope } from "@pluralscape/types";
-import type { AuditEventType } from "@pluralscape/types";
+import type {
+  ApiKey,
+  ApiKeyScope,
+  AuditEventType,
+  AuthKeyType,
+  BucketVisibilityScope,
+  DeviceTransferStatus,
+  FriendConnectionStatus,
+  FrontingType,
+  KnownSaturationLevel,
+  LayerAccessType,
+  RelationshipType,
+  SyncOperation,
+  SyncResolution,
+} from "@pluralscape/types";
 
 export const KNOWN_SATURATION_LEVELS = [
   "fragment",
@@ -76,6 +79,7 @@ export const SYNC_RESOLUTIONS = [
   "remote",
   "merged",
 ] as const satisfies readonly SyncResolution[];
+/** Naming convention: TABLE_COLUMN (e.g. API_KEY_KEY_TYPES = api_keys.key_type). */
 export const API_KEY_KEY_TYPES = [
   "metadata",
   "crypto",

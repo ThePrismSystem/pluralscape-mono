@@ -250,6 +250,66 @@ describe("PG api_keys schema", () => {
     ).rejects.toThrow();
   });
 
+  it("rejects metadata key with encrypted_key_material", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+
+    await expect(
+      db.insert(apiKeys).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        name: "Bad Metadata Key",
+        keyType: "metadata",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["full"],
+        encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
+        createdAt: now,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects crypto key without encrypted_key_material", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+
+    await expect(
+      db.insert(apiKeys).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        name: "Bad Crypto Key",
+        keyType: "crypto",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["full"],
+        createdAt: now,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("round-trips empty scopes array", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    await db.insert(apiKeys).values({
+      id,
+      accountId,
+      systemId,
+      name: "Empty Scopes Key",
+      keyType: "metadata",
+      tokenHash: `hash_${crypto.randomUUID()}`,
+      scopes: [],
+      createdAt: now,
+    });
+
+    const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
+    expect(rows[0]?.scopes).toEqual([]);
+  });
+
   it("rejects nonexistent systemId FK", async () => {
     const accountId = await insertAccount();
     const now = Date.now();

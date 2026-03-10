@@ -9,7 +9,7 @@ import { systems } from "../schema/pg/systems.js";
 
 import { createPgAuditLogTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
-import type { DbAuditActor } from "../schema/pg/audit-log.js";
+import type { DbAuditActor } from "../helpers/types.js";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const schema = { accounts, systems, auditLog };
@@ -121,17 +121,19 @@ describe("PG audit_log schema", () => {
       "device.security.jailbreak_warning_shown",
     ] as const;
 
+    const accountId = await insertAccount();
     const now = Date.now();
     for (const eventType of eventTypes) {
       await db.insert(auditLog).values({
         id: crypto.randomUUID(),
+        accountId,
         eventType,
         timestamp: now,
-        actor: testActor("account", "acc-test"),
+        actor: testActor("account", accountId),
       });
     }
 
-    const rows = await db.select().from(auditLog);
+    const rows = await db.select().from(auditLog).where(eq(auditLog.accountId, accountId));
     const insertedTypes = new Set(rows.map((r) => r.eventType));
     for (const et of eventTypes) {
       expect(insertedTypes.has(et)).toBe(true);
