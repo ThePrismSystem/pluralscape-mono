@@ -1,11 +1,11 @@
 ---
 # db-btrp
 title: PluralKit bridge sync state table
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T18:49:42Z
-updated_at: 2026-03-08T19:32:26Z
+updated_at: 2026-03-10T04:54:52Z
 parent: db-2je4
 blocked_by:
   - db-9f6f

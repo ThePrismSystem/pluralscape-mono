@@ -1,11 +1,11 @@
 ---
 # db-vfhd
 title: Innerworld tables
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-08T13:33:19Z
-updated_at: 2026-03-09T23:21:21Z
+updated_at: 2026-03-10T04:54:51Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
