@@ -1,11 +1,11 @@
 ---
 # db-1icu
 title: Timer and check-in tables
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:39Z
-updated_at: 2026-03-08T19:32:26Z
+updated_at: 2026-03-10T08:11:13Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -44,3 +44,5 @@ Timer configuration and check-in record tables for automated dissociation check-
 
 - System deletion → CASCADE: timer_configs, check_in_records
 - Timer config deletion → CASCADE: check_in_records
+
+## Summary of Changes\n\nAdded 2 timer tables (timer_configs, check_in_records) for both PG and SQLite with encrypted_data, versioning, integration tests, RLS policies, and type exports.

@@ -18,6 +18,11 @@ export { journalEntries, wikiPages } from "./journal.js";
 export { lifecycleEvents } from "./lifecycle-events.js";
 export { members, memberPhotos } from "./members.js";
 export { nomenclatureSettings } from "./nomenclature-settings.js";
+export {
+  deviceTokens,
+  friendNotificationPreferences,
+  notificationConfigs,
+} from "./notifications.js";
 export { pkBridgeState } from "./pk-bridge.js";
 export {
   bucketContentTags,
@@ -40,12 +45,16 @@ export {
   subsystemSideSystemLinks,
   subsystems,
 } from "./structure.js";
+export { blobMetadata } from "./blob-metadata.js";
 export { systemSettings } from "./system-settings.js";
 export { systems } from "./systems.js";
+export { checkInRecords, timerConfigs } from "./timers.js";
+export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
 
 import type { apiKeys } from "./api-keys.js";
 import type { auditLog } from "./audit-log.js";
 import type { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
+import type { blobMetadata } from "./blob-metadata.js";
 import type {
   acknowledgements,
   boardMessages,
@@ -63,6 +72,11 @@ import type { journalEntries, wikiPages } from "./journal.js";
 import type { lifecycleEvents } from "./lifecycle-events.js";
 import type { members, memberPhotos } from "./members.js";
 import type { nomenclatureSettings } from "./nomenclature-settings.js";
+import type {
+  deviceTokens,
+  friendNotificationPreferences,
+  notificationConfigs,
+} from "./notifications.js";
 import type { pkBridgeState } from "./pk-bridge.js";
 import type {
   bucketContentTags,
@@ -87,6 +101,8 @@ import type {
 } from "./structure.js";
 import type { systemSettings } from "./system-settings.js";
 import type { systems } from "./systems.js";
+import type { checkInRecords, timerConfigs } from "./timers.js";
+import type { webhookConfigs, webhookDeliveries } from "./webhooks.js";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 // Inferred row types
@@ -220,3 +236,31 @@ export type NewInnerworldCanvas = InferInsertModel<typeof innerworldCanvas>;
 // PK Bridge
 export type PkBridgeStateRow = InferSelectModel<typeof pkBridgeState>;
 export type NewPkBridgeState = InferInsertModel<typeof pkBridgeState>;
+
+// Notifications
+export type DeviceTokenRow = InferSelectModel<typeof deviceTokens>;
+export type NewDeviceToken = InferInsertModel<typeof deviceTokens>;
+export type NotificationConfigRow = InferSelectModel<typeof notificationConfigs>;
+export type NewNotificationConfig = InferInsertModel<typeof notificationConfigs>;
+export type FriendNotificationPreferenceRow = InferSelectModel<
+  typeof friendNotificationPreferences
+>;
+export type NewFriendNotificationPreference = InferInsertModel<
+  typeof friendNotificationPreferences
+>;
+
+// Webhooks
+export type WebhookConfigRow = InferSelectModel<typeof webhookConfigs>;
+export type NewWebhookConfig = InferInsertModel<typeof webhookConfigs>;
+export type WebhookDeliveryRow = InferSelectModel<typeof webhookDeliveries>;
+export type NewWebhookDelivery = InferInsertModel<typeof webhookDeliveries>;
+
+// Blob Metadata
+export type BlobMetadataRow = InferSelectModel<typeof blobMetadata>;
+export type NewBlobMetadata = InferInsertModel<typeof blobMetadata>;
+
+// Timers
+export type TimerConfigRow = InferSelectModel<typeof timerConfigs>;
+export type NewTimerConfig = InferInsertModel<typeof timerConfigs>;
+export type CheckInRecordRow = InferSelectModel<typeof checkInRecords>;
+export type NewCheckInRecord = InferInsertModel<typeof checkInRecords>;

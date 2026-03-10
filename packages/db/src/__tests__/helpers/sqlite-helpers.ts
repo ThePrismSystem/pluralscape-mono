@@ -773,6 +773,138 @@ export const SQLITE_DDL = {
   pkBridgeStateIndexes: `
     CREATE UNIQUE INDEX pk_bridge_state_system_id_idx ON pk_bridge_state (system_id)
   `,
+  // Notifications
+  deviceTokens: `
+    CREATE TABLE device_tokens (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      platform TEXT NOT NULL,
+      token TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER,
+      revoked_at INTEGER
+    )
+  `,
+  deviceTokensIndexes: `
+    CREATE INDEX device_tokens_account_id_idx ON device_tokens (account_id);
+    CREATE INDEX device_tokens_system_id_idx ON device_tokens (system_id);
+    CREATE INDEX device_tokens_revoked_at_idx ON device_tokens (revoked_at)
+  `,
+  notificationConfigs: `
+    CREATE TABLE notification_configs (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      push_enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `,
+  notificationConfigsIndexes: `
+    CREATE UNIQUE INDEX notification_configs_system_id_event_type_idx ON notification_configs (system_id, event_type)
+  `,
+  friendNotificationPreferences: `
+    CREATE TABLE friend_notification_preferences (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      friend_connection_id TEXT NOT NULL REFERENCES friend_connections(id) ON DELETE CASCADE,
+      enabled_event_types TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `,
+  friendNotificationPreferencesIndexes: `
+    CREATE UNIQUE INDEX friend_notification_prefs_system_id_friend_connection_id_idx ON friend_notification_preferences (system_id, friend_connection_id)
+  `,
+  // Webhooks
+  webhookConfigs: `
+    CREATE TABLE webhook_configs (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      url TEXT NOT NULL,
+      secret BLOB NOT NULL,
+      events TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      crypto_key_id TEXT REFERENCES api_keys(id) ON DELETE SET NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )
+  `,
+  webhookConfigsIndexes: `
+    CREATE INDEX webhook_configs_system_id_idx ON webhook_configs (system_id)
+  `,
+  webhookDeliveries: `
+    CREATE TABLE webhook_deliveries (
+      id TEXT PRIMARY KEY,
+      webhook_id TEXT NOT NULL REFERENCES webhook_configs(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      http_status INTEGER,
+      attempt_count INTEGER NOT NULL DEFAULT 0,
+      last_attempt_at INTEGER,
+      next_retry_at INTEGER,
+      encrypted_data BLOB
+    )
+  `,
+  webhookDeliveriesIndexes: `
+    CREATE INDEX webhook_deliveries_webhook_id_idx ON webhook_deliveries (webhook_id);
+    CREATE INDEX webhook_deliveries_system_id_idx ON webhook_deliveries (system_id);
+    CREATE INDEX webhook_deliveries_status_next_retry_at_idx ON webhook_deliveries (status, next_retry_at)
+  `,
+  // Blob Metadata
+  blobMetadata: `
+    CREATE TABLE blob_metadata (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      storage_key TEXT NOT NULL,
+      content_type TEXT,
+      size_bytes INTEGER NOT NULL,
+      encryption_tier INTEGER NOT NULL,
+      bucket_id TEXT REFERENCES buckets(id) ON DELETE SET NULL,
+      purpose TEXT NOT NULL,
+      thumbnail_blob_id TEXT,
+      checksum TEXT,
+      uploaded_at INTEGER NOT NULL
+    )
+  `,
+  blobMetadataIndexes: `
+    CREATE INDEX blob_metadata_system_id_idx ON blob_metadata (system_id);
+    CREATE UNIQUE INDEX blob_metadata_storage_key_idx ON blob_metadata (storage_key)
+  `,
+  // Timers
+  timerConfigs: `
+    CREATE TABLE timer_configs (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  timerConfigsIndexes: `
+    CREATE INDEX timer_configs_system_id_idx ON timer_configs (system_id)
+  `,
+  checkInRecords: `
+    CREATE TABLE check_in_records (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      timer_config_id TEXT NOT NULL REFERENCES timer_configs(id) ON DELETE CASCADE,
+      scheduled_at INTEGER NOT NULL,
+      responded_at INTEGER,
+      dismissed INTEGER NOT NULL DEFAULT 0,
+      encrypted_data BLOB
+    )
+  `,
+  checkInRecordsIndexes: `
+    CREATE INDEX check_in_records_system_id_idx ON check_in_records (system_id);
+    CREATE INDEX check_in_records_timer_config_id_idx ON check_in_records (timer_config_id);
+    CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at)
+  `,
 } as const;
 
 function createSqliteBaseTables(client: InstanceType<typeof Database>): void {
@@ -1034,4 +1166,42 @@ export function createSqlitePkBridgeTables(client: InstanceType<typeof Database>
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.pkBridgeState);
   client.exec(SQLITE_DDL.pkBridgeStateIndexes);
+}
+
+export function createSqliteNotificationTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.buckets);
+  client.exec(SQLITE_DDL.friendConnections);
+  client.exec(SQLITE_DDL.friendConnectionsIndexes);
+  client.exec(SQLITE_DDL.deviceTokens);
+  client.exec(SQLITE_DDL.deviceTokensIndexes);
+  client.exec(SQLITE_DDL.notificationConfigs);
+  client.exec(SQLITE_DDL.notificationConfigsIndexes);
+  client.exec(SQLITE_DDL.friendNotificationPreferences);
+  client.exec(SQLITE_DDL.friendNotificationPreferencesIndexes);
+}
+
+export function createSqliteWebhookTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.apiKeys);
+  client.exec(SQLITE_DDL.apiKeysIndexes);
+  client.exec(SQLITE_DDL.webhookConfigs);
+  client.exec(SQLITE_DDL.webhookConfigsIndexes);
+  client.exec(SQLITE_DDL.webhookDeliveries);
+  client.exec(SQLITE_DDL.webhookDeliveriesIndexes);
+}
+
+export function createSqliteBlobMetadataTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.buckets);
+  client.exec(SQLITE_DDL.blobMetadata);
+  client.exec(SQLITE_DDL.blobMetadataIndexes);
+}
+
+export function createSqliteTimerTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.timerConfigs);
+  client.exec(SQLITE_DDL.timerConfigsIndexes);
+  client.exec(SQLITE_DDL.checkInRecords);
+  client.exec(SQLITE_DDL.checkInRecordsIndexes);
 }

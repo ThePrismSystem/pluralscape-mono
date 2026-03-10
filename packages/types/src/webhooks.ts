@@ -3,6 +3,9 @@ import type { ApiKeyId, SystemId, WebhookDeliveryId, WebhookId } from "./ids.js"
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
+/** Status of a webhook delivery attempt. */
+export type WebhookDeliveryStatus = "pending" | "success" | "failed";
+
 /** Events that can trigger a webhook. */
 export type WebhookEventType =
   | "member.created"

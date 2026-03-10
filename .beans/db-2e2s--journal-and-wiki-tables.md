@@ -1,11 +1,11 @@
 ---
 # db-2e2s
 title: Journal and wiki tables
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:40Z
-updated_at: 2026-03-10T04:19:16Z
+updated_at: 2026-03-10T07:59:13Z
 parent: db-2je4
 blocked_by:
   - db-9f6f

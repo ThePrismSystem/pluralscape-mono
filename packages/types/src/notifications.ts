@@ -9,11 +9,14 @@ import type {
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
+/** Platforms that can receive push notifications. */
+export type DeviceTokenPlatform = "ios" | "android" | "web";
+
 /** A registered device push token. */
 export interface DeviceToken extends AuditMetadata {
   readonly id: DeviceTokenId;
   readonly systemId: SystemId;
-  readonly platform: "ios" | "android" | "web";
+  readonly platform: DeviceTokenPlatform;
   readonly token: EncryptedString;
   readonly lastActiveAt: UnixMillis;
 }

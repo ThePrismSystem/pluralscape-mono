@@ -323,6 +323,7 @@ export type { AuditEventType, AuditActor, AuditLogEntry } from "./audit-log.js";
 
 // ── Webhooks ──────────────────────────────────────────────────
 export type {
+  WebhookDeliveryStatus,
   WebhookEventType,
   WebhookConfig,
   PlaintextWebhookPayload,
@@ -333,6 +334,7 @@ export type {
 
 // ── Notifications ─────────────────────────────────────────────
 export type {
+  DeviceTokenPlatform,
   DeviceToken,
   NotificationEventType,
   NotificationConfig,
