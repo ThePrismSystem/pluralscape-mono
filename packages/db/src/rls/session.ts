@@ -11,7 +11,7 @@ import { sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 
 /** Minimal interface for a Drizzle PG database that can execute raw SQL. */
-interface PgExecutor {
+export interface PgExecutor {
   execute(query: SQL): Promise<unknown>;
 }
 
