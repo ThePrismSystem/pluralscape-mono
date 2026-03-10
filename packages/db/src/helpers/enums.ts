@@ -15,7 +15,9 @@ import type {
   FrontingType,
   KnownSaturationLevel,
   LayerAccessType,
+  PollKind,
   RelationshipType,
+  ServerChannel,
   SyncOperation,
   SyncResolution,
 } from "@pluralscape/types";
@@ -124,3 +126,9 @@ export const AUDIT_EVENT_TYPES = [
   "bucket.key_rotation.failed",
   "device.security.jailbreak_warning_shown",
 ] as const satisfies readonly AuditEventType[];
+export const CHANNEL_TYPES = [
+  "category",
+  "channel",
+] as const satisfies readonly ServerChannel["type"][];
+export const POLL_STATUSES = ["open", "closed"] as const satisfies readonly ("open" | "closed")[];
+export const POLL_KINDS = ["standard", "custom"] as const satisfies readonly PollKind[];

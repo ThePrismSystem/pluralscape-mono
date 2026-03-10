@@ -1,8 +1,18 @@
 export { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
 export { apiKeys } from "./api-keys.js";
 export { auditLog } from "./audit-log.js";
+export {
+  acknowledgements,
+  boardMessages,
+  channels,
+  messages,
+  notes,
+  polls,
+  pollVotes,
+} from "./communication.js";
 export { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
 export { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
+export { journalEntries, wikiPages } from "./journal.js";
 export { lifecycleEvents } from "./lifecycle-events.js";
 export { members, memberPhotos } from "./members.js";
 export { nomenclatureSettings } from "./nomenclature-settings.js";
@@ -33,8 +43,18 @@ export { systems } from "./systems.js";
 import type { apiKeys } from "./api-keys.js";
 import type { auditLog } from "./audit-log.js";
 import type { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
+import type {
+  acknowledgements,
+  boardMessages,
+  channels,
+  messages,
+  notes,
+  polls,
+  pollVotes,
+} from "./communication.js";
 import type { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
 import type { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
+import type { journalEntries, wikiPages } from "./journal.js";
 import type { lifecycleEvents } from "./lifecycle-events.js";
 import type { members, memberPhotos } from "./members.js";
 import type { nomenclatureSettings } from "./nomenclature-settings.js";
@@ -154,3 +174,25 @@ export type NewLifecycleEvent = InferInsertModel<typeof lifecycleEvents>;
 // Safe Mode
 export type SafeModeContentRow = InferSelectModel<typeof safeModeContent>;
 export type NewSafeModeContent = InferInsertModel<typeof safeModeContent>;
+
+// Communication
+export type ChannelRow = InferSelectModel<typeof channels>;
+export type NewChannel = InferInsertModel<typeof channels>;
+export type MessageRow = InferSelectModel<typeof messages>;
+export type NewMessage = InferInsertModel<typeof messages>;
+export type BoardMessageRow = InferSelectModel<typeof boardMessages>;
+export type NewBoardMessage = InferInsertModel<typeof boardMessages>;
+export type NoteRow = InferSelectModel<typeof notes>;
+export type NewNote = InferInsertModel<typeof notes>;
+export type PollRow = InferSelectModel<typeof polls>;
+export type NewPoll = InferInsertModel<typeof polls>;
+export type PollVoteRow = InferSelectModel<typeof pollVotes>;
+export type NewPollVote = InferInsertModel<typeof pollVotes>;
+export type AcknowledgementRow = InferSelectModel<typeof acknowledgements>;
+export type NewAcknowledgement = InferInsertModel<typeof acknowledgements>;
+
+// Journal
+export type JournalEntryRow = InferSelectModel<typeof journalEntries>;
+export type NewJournalEntry = InferInsertModel<typeof journalEntries>;
+export type WikiPageRow = InferSelectModel<typeof wikiPages>;
+export type NewWikiPage = InferInsertModel<typeof wikiPages>;

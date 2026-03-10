@@ -24,5 +24,8 @@ export {
   API_KEY_KEY_TYPES,
   API_KEY_SCOPES,
   AUDIT_EVENT_TYPES,
+  CHANNEL_TYPES,
+  POLL_STATUSES,
+  POLL_KINDS,
 } from "./helpers/index.js";
 export type { DbAuditActor } from "./helpers/index.js";

@@ -1,4 +1,5 @@
 import { accounts } from "../../schema/sqlite/auth.js";
+import { members } from "../../schema/sqlite/members.js";
 import { systems } from "../../schema/sqlite/systems.js";
 
 import type Database from "better-sqlite3";
@@ -511,6 +512,167 @@ export const SQLITE_DDL = {
   safeModeContentIndexes: `
     CREATE INDEX safe_mode_content_system_sort_idx ON safe_mode_content (system_id, sort_order)
   `,
+  // Communication
+  channels: `
+    CREATE TABLE channels (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('category', 'channel')),
+      parent_id TEXT REFERENCES channels(id) ON DELETE SET NULL,
+      sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER
+    )
+  `,
+  channelsIndexes: `
+    CREATE INDEX channels_system_id_idx ON channels (system_id)
+  `,
+  messages: `
+    CREATE TABLE messages (
+      id TEXT PRIMARY KEY,
+      channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sender_id TEXT NOT NULL,
+      reply_to_id TEXT,
+      timestamp INTEGER NOT NULL,
+      edited_at INTEGER,
+      archived INTEGER NOT NULL DEFAULT 0,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  messagesIndexes: `
+    CREATE INDEX messages_channel_id_timestamp_idx ON messages (channel_id, timestamp);
+    CREATE INDEX messages_system_id_idx ON messages (system_id)
+  `,
+  boardMessages: `
+    CREATE TABLE board_messages (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sender_id TEXT NOT NULL,
+      pinned INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  boardMessagesIndexes: `
+    CREATE INDEX board_messages_system_id_idx ON board_messages (system_id)
+  `,
+  notes: `
+    CREATE TABLE notes (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      member_id TEXT REFERENCES members(id) ON DELETE SET NULL,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER
+    )
+  `,
+  notesIndexes: `
+    CREATE INDEX notes_system_id_idx ON notes (system_id);
+    CREATE INDEX notes_member_id_idx ON notes (member_id)
+  `,
+  polls: `
+    CREATE TABLE polls (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_by_member_id TEXT NOT NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('standard', 'custom')),
+      status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+      closed_at INTEGER,
+      ends_at INTEGER,
+      allow_multiple_votes INTEGER NOT NULL,
+      max_votes_per_member INTEGER NOT NULL,
+      allow_abstain INTEGER NOT NULL,
+      allow_veto INTEGER NOT NULL,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  pollsIndexes: `
+    CREATE INDEX polls_system_id_idx ON polls (system_id)
+  `,
+  pollVotes: `
+    CREATE TABLE poll_votes (
+      id TEXT PRIMARY KEY,
+      poll_id TEXT NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      option_id TEXT,
+      voter TEXT NOT NULL,
+      is_veto INTEGER NOT NULL DEFAULT 0,
+      voted_at INTEGER NOT NULL,
+      encrypted_data BLOB
+    )
+  `,
+  pollVotesIndexes: `
+    CREATE INDEX poll_votes_poll_id_idx ON poll_votes (poll_id);
+    CREATE INDEX poll_votes_system_id_idx ON poll_votes (system_id)
+  `,
+  acknowledgements: `
+    CREATE TABLE acknowledgements (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_by_member_id TEXT NOT NULL,
+      target_member_id TEXT NOT NULL,
+      confirmed INTEGER NOT NULL DEFAULT 0,
+      confirmed_at INTEGER,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  acknowledgementsIndexes: `
+    CREATE INDEX acknowledgements_system_id_idx ON acknowledgements (system_id);
+    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed)
+  `,
+  // Journal
+  journalEntries: `
+    CREATE TABLE journal_entries (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      author TEXT,
+      fronting_session_id TEXT,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  journalEntriesIndexes: `
+    CREATE INDEX journal_entries_system_id_created_at_idx ON journal_entries (system_id, created_at)
+  `,
+  wikiPages: `
+    CREATE TABLE wiki_pages (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  wikiPagesIndexes: `
+    CREATE INDEX wiki_pages_system_id_idx ON wiki_pages (system_id)
+  `,
 } as const;
 
 function createSqliteBaseTables(client: InstanceType<typeof Database>): void {
@@ -672,4 +834,50 @@ export function createSqliteSafeModeContentTables(client: InstanceType<typeof Da
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.safeModeContent);
   client.exec(SQLITE_DDL.safeModeContentIndexes);
+}
+
+export function sqliteInsertMember(
+  db: BetterSQLite3Database<Record<string, unknown>>,
+  systemId: string,
+  id?: string,
+): string {
+  const resolvedId = id ?? crypto.randomUUID();
+  const now = Date.now();
+  db.insert(members)
+    .values({
+      id: resolvedId,
+      systemId,
+      encryptedData: new Uint8Array([1, 2, 3]),
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  return resolvedId;
+}
+
+export function createSqliteCommunicationTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.channels);
+  client.exec(SQLITE_DDL.channelsIndexes);
+  client.exec(SQLITE_DDL.messages);
+  client.exec(SQLITE_DDL.messagesIndexes);
+  client.exec(SQLITE_DDL.boardMessages);
+  client.exec(SQLITE_DDL.boardMessagesIndexes);
+  client.exec(SQLITE_DDL.notes);
+  client.exec(SQLITE_DDL.notesIndexes);
+  client.exec(SQLITE_DDL.polls);
+  client.exec(SQLITE_DDL.pollsIndexes);
+  client.exec(SQLITE_DDL.pollVotes);
+  client.exec(SQLITE_DDL.pollVotesIndexes);
+  client.exec(SQLITE_DDL.acknowledgements);
+  client.exec(SQLITE_DDL.acknowledgementsIndexes);
+}
+
+export function createSqliteJournalTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.journalEntries);
+  client.exec(SQLITE_DDL.journalEntriesIndexes);
+  client.exec(SQLITE_DDL.wikiPages);
+  client.exec(SQLITE_DDL.wikiPagesIndexes);
 }
