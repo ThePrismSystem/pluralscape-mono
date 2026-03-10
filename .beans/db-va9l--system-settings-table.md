@@ -1,11 +1,11 @@
 ---
 # db-va9l
 title: System settings table
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:22:58Z
-updated_at: 2026-03-09T23:01:02Z
+updated_at: 2026-03-10T02:54:54Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -28,18 +28,22 @@ General per-system settings and preferences table (distinct from nomenclature_se
 
 ## Acceptance Criteria
 
-- [ ] version for CRDT, created_at/updated_at
-- [ ] system_settings table with system_id as PK
-- [ ] locale column for user locale preference
-- [ ] PIN hash stored server-side for app lock
-- [ ] Littles safe mode flag as T3
-- [ ] All settings fields explicitly enumerated in encrypted_data (onboardingComplete, saturationLevelsEnabled, etc.)
-- [ ] Encrypted preferences blob for private settings
-- [ ] Migrations for both dialects
-- [ ] Integration test: set and retrieve settings
+- [x] version for CRDT, created_at/updated_at
+- [x] system_settings table with system_id as PK
+- [x] locale column for user locale preference
+- [x] PIN hash stored server-side for app lock
+- [x] Littles safe mode flag as T3
+- [x] All settings fields explicitly enumerated in encrypted_data (onboardingComplete, saturationLevelsEnabled, etc.)
+- [x] Encrypted preferences blob for private settings
+- [x] Migrations for both dialects
+- [x] Integration test: set and retrieve settings
 
 ## References
 
 - features.md section 13 (Accessibility and UX)
 - features.md section 14 (PIN code / biometric lock)
 - features.md section 11 (i18n — locale preference)
+
+## Summary of Changes
+
+Implemented `system_settings` table (PG + SQLite) with system_id as PK (1:1), locale, pin_hash, biometric_enabled, littles_safe_mode_enabled, encrypted_data, version, timestamps. 9 integration tests.

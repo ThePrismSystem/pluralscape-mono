@@ -414,6 +414,103 @@ export const SQLITE_DDL = {
       PRIMARY KEY (field_definition_id, bucket_id)
     )
   `,
+  // Nomenclature Settings
+  nomenclatureSettings: `
+    CREATE TABLE nomenclature_settings (
+      system_id TEXT PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  // System Settings
+  systemSettings: `
+    CREATE TABLE system_settings (
+      system_id TEXT PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      locale TEXT,
+      pin_hash TEXT,
+      biometric_enabled INTEGER NOT NULL DEFAULT 0,
+      littles_safe_mode_enabled INTEGER NOT NULL DEFAULT 0,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  // API Keys
+  apiKeys: `
+    CREATE TABLE api_keys (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      key_type TEXT NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
+      token_hash TEXT NOT NULL UNIQUE,
+      scopes TEXT NOT NULL,
+      encrypted_key_material BLOB,
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER,
+      revoked_at INTEGER,
+      expires_at INTEGER,
+      scoped_bucket_ids TEXT,
+      CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL))
+    )
+  `,
+  apiKeysIndexes: `
+    CREATE INDEX api_keys_account_id_idx ON api_keys (account_id);
+    CREATE INDEX api_keys_system_id_idx ON api_keys (system_id);
+    CREATE INDEX api_keys_revoked_at_idx ON api_keys (revoked_at);
+    CREATE INDEX api_keys_key_type_idx ON api_keys (key_type)
+  `,
+  // Audit Log
+  auditLog: `
+    CREATE TABLE audit_log (
+      id TEXT PRIMARY KEY,
+      account_id TEXT REFERENCES accounts(id) ON DELETE SET NULL,
+      system_id TEXT REFERENCES systems(id) ON DELETE SET NULL,
+      event_type TEXT NOT NULL CHECK (event_type IN ('auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown')),
+      timestamp INTEGER NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      actor TEXT NOT NULL,
+      detail TEXT
+    )
+  `,
+  auditLogIndexes: `
+    CREATE INDEX audit_log_account_timestamp_idx ON audit_log (account_id, timestamp);
+    CREATE INDEX audit_log_system_timestamp_idx ON audit_log (system_id, timestamp);
+    CREATE INDEX audit_log_event_type_idx ON audit_log (event_type)
+  `,
+  // Lifecycle Events
+  lifecycleEvents: `
+    CREATE TABLE lifecycle_events (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      occurred_at INTEGER NOT NULL,
+      recorded_at INTEGER NOT NULL,
+      encrypted_data BLOB NOT NULL
+    )
+  `,
+  lifecycleEventsIndexes: `
+    CREATE INDEX lifecycle_events_system_occurred_idx ON lifecycle_events (system_id, occurred_at);
+    CREATE INDEX lifecycle_events_system_recorded_idx ON lifecycle_events (system_id, recorded_at)
+  `,
+  // Safe Mode Content
+  safeModeContent: `
+    CREATE TABLE safe_mode_content (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sort_order INTEGER,
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1
+    )
+  `,
+  safeModeContentIndexes: `
+    CREATE INDEX safe_mode_content_system_sort_idx ON safe_mode_content (system_id, sort_order)
+  `,
 } as const;
 
 function createSqliteBaseTables(client: InstanceType<typeof Database>): void {
@@ -539,4 +636,40 @@ export function createSqliteCustomFieldsTables(client: InstanceType<typeof Datab
   client.exec(SQLITE_DDL.fieldValues);
   client.exec(SQLITE_DDL.fieldValuesIndexes);
   client.exec(SQLITE_DDL.fieldBucketVisibility);
+}
+
+export function createSqliteNomenclatureSettingsTables(
+  client: InstanceType<typeof Database>,
+): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.nomenclatureSettings);
+}
+
+export function createSqliteSystemSettingsTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.systemSettings);
+}
+
+export function createSqliteApiKeysTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.apiKeys);
+  client.exec(SQLITE_DDL.apiKeysIndexes);
+}
+
+export function createSqliteAuditLogTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.auditLog);
+  client.exec(SQLITE_DDL.auditLogIndexes);
+}
+
+export function createSqliteLifecycleEventsTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.lifecycleEvents);
+  client.exec(SQLITE_DDL.lifecycleEventsIndexes);
+}
+
+export function createSqliteSafeModeContentTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.safeModeContent);
+  client.exec(SQLITE_DDL.safeModeContentIndexes);
 }

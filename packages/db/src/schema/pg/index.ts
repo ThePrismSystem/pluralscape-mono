@@ -1,7 +1,11 @@
 export { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
+export { apiKeys } from "./api-keys.js";
+export { auditLog } from "./audit-log.js";
 export { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
 export { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
+export { lifecycleEvents } from "./lifecycle-events.js";
 export { members, memberPhotos } from "./members.js";
+export { nomenclatureSettings } from "./nomenclature-settings.js";
 export {
   bucketContentTags,
   buckets,
@@ -10,6 +14,7 @@ export {
   friendConnections,
   keyGrants,
 } from "./privacy.js";
+export { safeModeContent } from "./safe-mode-content.js";
 export {
   layerMemberships,
   layers,
@@ -22,12 +27,17 @@ export {
   subsystemSideSystemLinks,
   subsystems,
 } from "./structure.js";
+export { systemSettings } from "./system-settings.js";
 export { systems } from "./systems.js";
 
+import type { apiKeys } from "./api-keys.js";
+import type { auditLog } from "./audit-log.js";
 import type { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
 import type { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
 import type { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
+import type { lifecycleEvents } from "./lifecycle-events.js";
 import type { members, memberPhotos } from "./members.js";
+import type { nomenclatureSettings } from "./nomenclature-settings.js";
 import type {
   bucketContentTags,
   buckets,
@@ -36,6 +46,7 @@ import type {
   friendConnections,
   keyGrants,
 } from "./privacy.js";
+import type { safeModeContent } from "./safe-mode-content.js";
 import type {
   layerMemberships,
   layers,
@@ -48,6 +59,7 @@ import type {
   subsystemSideSystemLinks,
   subsystems,
 } from "./structure.js";
+import type { systemSettings } from "./system-settings.js";
 import type { systems } from "./systems.js";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -122,3 +134,23 @@ export type FieldValueRow = InferSelectModel<typeof fieldValues>;
 export type NewFieldValue = InferInsertModel<typeof fieldValues>;
 export type FieldBucketVisibilityRow = InferSelectModel<typeof fieldBucketVisibility>;
 export type NewFieldBucketVisibility = InferInsertModel<typeof fieldBucketVisibility>;
+
+// Config & Settings
+export type NomenclatureSettingsRow = InferSelectModel<typeof nomenclatureSettings>;
+export type NewNomenclatureSettings = InferInsertModel<typeof nomenclatureSettings>;
+export type SystemSettingsRow = InferSelectModel<typeof systemSettings>;
+export type NewSystemSettings = InferInsertModel<typeof systemSettings>;
+
+// API Keys
+export type ApiKeyRow = InferSelectModel<typeof apiKeys>;
+export type NewApiKey = InferInsertModel<typeof apiKeys>;
+
+// Audit & Lifecycle
+export type AuditLogRow = InferSelectModel<typeof auditLog>;
+export type NewAuditLog = InferInsertModel<typeof auditLog>;
+export type LifecycleEventRow = InferSelectModel<typeof lifecycleEvents>;
+export type NewLifecycleEvent = InferInsertModel<typeof lifecycleEvents>;
+
+// Safe Mode
+export type SafeModeContentRow = InferSelectModel<typeof safeModeContent>;
+export type NewSafeModeContent = InferInsertModel<typeof safeModeContent>;

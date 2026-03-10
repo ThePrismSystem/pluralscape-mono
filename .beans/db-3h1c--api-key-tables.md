@@ -1,11 +1,11 @@
 ---
 # db-3h1c
 title: API key tables
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:03:42Z
-updated_at: 2026-03-09T23:01:29Z
+updated_at: 2026-03-10T02:56:32Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -40,20 +40,24 @@ API key storage with scoped permissions per ADR 013. Distinct from auth_keys (us
 
 ## Acceptance Criteria
 
-- [ ] api_keys table with metadata and crypto key variants
-- [ ] Token hash for bearer token verification
-- [ ] Scopes stored for server-side permission checking
-- [ ] Encrypted key material for crypto keys only
-- [ ] Revocation support via revoked_at
-- [ ] Unique index on token_hash
-- [ ] Indexes on revoked_at and key_type
-- [ ] Migrations for both dialects
-- [ ] system_id FK for tenant isolation
-- [ ] expires_at for key expiration
-- [ ] scoped_bucket_ids for bucket-scoped access control
-- [ ] Integration test: create both key types, verify token hash lookup
+- [x] api_keys table with metadata and crypto key variants
+- [x] Token hash for bearer token verification
+- [x] Scopes stored for server-side permission checking
+- [x] Encrypted key material for crypto keys only
+- [x] Revocation support via revoked_at
+- [x] Unique index on token_hash
+- [x] Indexes on revoked_at and key_type
+- [x] Migrations for both dialects
+- [x] system_id FK for tenant isolation
+- [x] expires_at for key expiration
+- [x] scoped_bucket_ids for bucket-scoped access control
+- [x] Integration test: create both key types, verify token hash lookup
 
 ## References
 
 - features.md section 9 (Public REST API, hybrid auth model)
 - ADR 013 (API Authentication with E2E Encryption)
+
+## Summary of Changes
+
+Implemented `api_keys` table (PG + SQLite) with metadata/crypto key_type CHECK, unique token_hash, JSONB scopes, encrypted_key_material, revoked_at, expires_at, scoped_bucket_ids. New enums: API_KEY_KEY_TYPES, API_KEY_SCOPES. 10 integration tests.
