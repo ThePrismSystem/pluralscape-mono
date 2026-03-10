@@ -7,7 +7,11 @@ import { accounts } from "../schema/sqlite/auth.js";
 import { members, memberPhotos } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
-import { createSqliteMemberTables } from "./helpers/sqlite-helpers.js";
+import {
+  createSqliteMemberTables,
+  sqliteInsertAccount,
+  sqliteInsertSystem,
+} from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -17,33 +21,9 @@ describe("SQLite members schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  function insertAccount(id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(accounts)
-      .values({
-        id,
-        emailHash: `hash_${crypto.randomUUID()}`,
-        emailSalt: `salt_${crypto.randomUUID()}`,
-        passwordHash: `$argon2id$${crypto.randomUUID()}`,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
-
-  function insertSystem(accountId: string, id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(systems)
-      .values({
-        id,
-        accountId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
+  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertSystem = (accountId: string, id?: string): string =>
+    sqliteInsertSystem(db, accountId, id);
 
   function insertMember(systemId: string, id = crypto.randomUUID()): string {
     const now = Date.now();

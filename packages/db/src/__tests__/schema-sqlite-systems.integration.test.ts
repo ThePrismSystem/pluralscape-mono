@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
-import { createSqliteSystemTables } from "./helpers/sqlite-helpers.js";
+import { createSqliteSystemTables, sqliteInsertAccount } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -16,20 +16,7 @@ describe("SQLite systems schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
 
-  function insertAccount(id = crypto.randomUUID()): string {
-    const now = Date.now();
-    db.insert(accounts)
-      .values({
-        id,
-        emailHash: `hash_${crypto.randomUUID()}`,
-        emailSalt: `salt_${crypto.randomUUID()}`,
-        passwordHash: `$argon2id$${crypto.randomUUID()}`,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
+  const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
 
   beforeAll(() => {
     client = new Database(":memory:");

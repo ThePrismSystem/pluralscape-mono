@@ -1,11 +1,11 @@
 ---
 # db-k37y
 title: System structure tables
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:32:59Z
-updated_at: 2026-03-09T23:21:23Z
+updated_at: 2026-03-10T01:37:20Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -42,21 +42,21 @@ Relationship, subsystem, side system, layer, and membership tables for system st
 
 ## Acceptance Criteria
 
-- [ ] All 10 tables defined for both dialects (PG + SQLite) — 7 original + 3 cross-links
-- [ ] Cross-link tables for subsystem↔layer, subsystem↔side_system, side_system↔layer
-- [ ] Visual properties (color, imageSource, emoji) on subsystems, side_systems, layers
-- [ ] gatekeeper_member_ids (plural) in layers encrypted_data
-- [ ] Recursive subsystem nesting via self-referential FK
-- [ ] Relationship type stored as varchar (extensible)
-- [ ] Layer sort ordering
-- [ ] subsystem_memberships has surrogate id and plaintext subsystem_id for queryability
-- [ ] side_system_memberships M:N join table defined
-- [ ] layer_memberships M:N join table defined
-- [ ] version column on relationships, subsystems, side_systems, layers
-- [ ] created_at/updated_at on all 10 tables
-- [ ] NOT NULL on id, system_id, encrypted_data, created_at
-- [ ] CASCADE on system deletion for all structure tables
-- [ ] Migrations for both dialects
+- [x] All 10 tables defined for both dialects (PG + SQLite) — 7 original + 3 cross-links
+- [x] Cross-link tables for subsystem↔layer, subsystem↔side_system, side_system↔layer
+- [x] Visual properties (color, imageSource, emoji) on subsystems, side_systems, layers
+- [x] gatekeeper_member_ids (plural) in layers encrypted_data
+- [x] Recursive subsystem nesting via self-referential FK
+- [x] Relationship type stored as varchar (extensible)
+- [x] Layer sort ordering
+- [x] subsystem_memberships has surrogate id and plaintext subsystem_id for queryability
+- [x] side_system_memberships M:N join table defined
+- [x] layer_memberships M:N join table defined
+- [x] version column on relationships, subsystems, side_systems, layers
+- [x] created_at/updated_at on all 10 tables
+- [x] NOT NULL on id, system_id, encrypted_data, created_at
+- [x] CASCADE on system deletion for all structure tables
+- [x] Migrations for both dialects
 
 ## References
 
@@ -72,3 +72,7 @@ Relationship, subsystem, side system, layer, and membership tables for system st
   - Unique: (side_system_id, layer_id)
 - All cross-link tables CASCADE on system deletion
 - Indexes: each link table indexed on both FK columns
+
+## Summary of Changes
+
+Added 10 structure tables (PG + SQLite): relationships, subsystems (self-referential SET NULL), side_systems, layers, 3 membership junctions, 3 cross-link tables with unique constraints. 66 integration tests.

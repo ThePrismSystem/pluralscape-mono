@@ -1,11 +1,11 @@
 ---
 # db-82q2
 title: Fronting tables
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:32:47Z
-updated_at: 2026-03-09T23:20:59Z
+updated_at: 2026-03-10T01:36:51Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -49,23 +49,23 @@ Fronting session, switch, and custom front tables for the fronting engine.
 
 ## Acceptance Criteria
 
-- [ ] fronting_sessions with nullable end_time for open sessions
-- [ ] fronting_type ('fronting' | 'co-conscious') stored inside encrypted_data
-- [ ] positionality (free-text, nullable) stored inside encrypted_data
-- [ ] linked_structure as EntityReference in encrypted_data
-- [ ] fronting_comments as separate table with session FK
-- [ ] emoji field in custom_fronts encrypted_data
-- [ ] comment inside encrypted_data (fronting_comments moved to separate table)
-- [ ] CHECK: end_time IS NULL OR end_time > start_time
-- [ ] switches table as append-only event log
-- [ ] custom_fronts with archived flag and timestamps
-- [ ] version on fronting_sessions and custom_fronts for CRDT
-- [ ] CASCADE on system deletion
-- [ ] Index on switches (system_id, timestamp)
-- [ ] No unique constraint preventing overlapping sessions
-- [ ] Indexes on system_id + start_time and system_id + end_time
-- [ ] Migrations for both dialects
-- [ ] Integration test: create overlapping sessions with co-conscious type
+- [x] fronting_sessions with nullable end_time for open sessions
+- [x] fronting_type ('fronting' | 'co-conscious') stored inside encrypted_data
+- [x] positionality (free-text, nullable) stored inside encrypted_data
+- [x] linked_structure as EntityReference in encrypted_data
+- [x] fronting_comments as separate table with session FK
+- [x] emoji field in custom_fronts encrypted_data
+- [x] comment inside encrypted_data (fronting_comments moved to separate table)
+- [x] CHECK: end_time IS NULL OR end_time > start_time
+- [x] switches table as append-only event log
+- [x] custom_fronts with archived flag and timestamps
+- [x] version on fronting_sessions and custom_fronts for CRDT
+- [x] CASCADE on system deletion
+- [x] Index on switches (system_id, timestamp)
+- [x] No unique constraint preventing overlapping sessions
+- [x] Indexes on system_id + start_time and system_id + end_time
+- [x] Migrations for both dialects
+- [x] Integration test: create overlapping sessions with co-conscious type
 
 ## References
 
@@ -77,3 +77,7 @@ Fronting session, switch, and custom front tables for the fronting engine.
   - Separate table allows independent CRDT versioning and pagination
   - Session deletion → CASCADE: fronting_comments
   - Index: fronting_comments (session_id, created_at)
+
+## Summary of Changes
+
+Added 4 fronting tables (PG + SQLite): fronting_sessions, switches, custom_fronts, fronting_comments. Sessions support overlapping time ranges, switches are append-only, and 38 integration tests cover all behavior.

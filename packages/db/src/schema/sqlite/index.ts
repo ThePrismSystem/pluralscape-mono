@@ -1,9 +1,53 @@
 export { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
+export { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
+export { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
 export { members, memberPhotos } from "./members.js";
+export {
+  bucketContentTags,
+  buckets,
+  friendBucketAssignments,
+  friendCodes,
+  friendConnections,
+  keyGrants,
+} from "./privacy.js";
+export {
+  layerMemberships,
+  layers,
+  relationships,
+  sideSystemLayerLinks,
+  sideSystemMemberships,
+  sideSystems,
+  subsystemLayerLinks,
+  subsystemMemberships,
+  subsystemSideSystemLinks,
+  subsystems,
+} from "./structure.js";
 export { systems } from "./systems.js";
 
 import type { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
+import type { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
+import type { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
 import type { members, memberPhotos } from "./members.js";
+import type {
+  bucketContentTags,
+  buckets,
+  friendBucketAssignments,
+  friendCodes,
+  friendConnections,
+  keyGrants,
+} from "./privacy.js";
+import type {
+  layerMemberships,
+  layers,
+  relationships,
+  sideSystemLayerLinks,
+  sideSystemMemberships,
+  sideSystems,
+  subsystemLayerLinks,
+  subsystemMemberships,
+  subsystemSideSystemLinks,
+  subsystems,
+} from "./structure.js";
 import type { systems } from "./systems.js";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -24,3 +68,57 @@ export type MemberRow = InferSelectModel<typeof members>;
 export type NewMember = InferInsertModel<typeof members>;
 export type MemberPhotoRow = InferSelectModel<typeof memberPhotos>;
 export type NewMemberPhoto = InferInsertModel<typeof memberPhotos>;
+
+// Privacy
+export type BucketRow = InferSelectModel<typeof buckets>;
+export type NewBucket = InferInsertModel<typeof buckets>;
+export type BucketContentTagRow = InferSelectModel<typeof bucketContentTags>;
+export type NewBucketContentTag = InferInsertModel<typeof bucketContentTags>;
+export type KeyGrantRow = InferSelectModel<typeof keyGrants>;
+export type NewKeyGrant = InferInsertModel<typeof keyGrants>;
+export type FriendConnectionRow = InferSelectModel<typeof friendConnections>;
+export type NewFriendConnection = InferInsertModel<typeof friendConnections>;
+export type FriendCodeRow = InferSelectModel<typeof friendCodes>;
+export type NewFriendCode = InferInsertModel<typeof friendCodes>;
+export type FriendBucketAssignmentRow = InferSelectModel<typeof friendBucketAssignments>;
+export type NewFriendBucketAssignment = InferInsertModel<typeof friendBucketAssignments>;
+
+// Fronting
+export type FrontingSessionRow = InferSelectModel<typeof frontingSessions>;
+export type NewFrontingSession = InferInsertModel<typeof frontingSessions>;
+export type SwitchRow = InferSelectModel<typeof switches>;
+export type NewSwitch = InferInsertModel<typeof switches>;
+export type CustomFrontRow = InferSelectModel<typeof customFronts>;
+export type NewCustomFront = InferInsertModel<typeof customFronts>;
+export type FrontingCommentRow = InferSelectModel<typeof frontingComments>;
+export type NewFrontingComment = InferInsertModel<typeof frontingComments>;
+
+// Structure
+export type RelationshipRow = InferSelectModel<typeof relationships>;
+export type NewRelationship = InferInsertModel<typeof relationships>;
+export type SubsystemRow = InferSelectModel<typeof subsystems>;
+export type NewSubsystem = InferInsertModel<typeof subsystems>;
+export type SideSystemRow = InferSelectModel<typeof sideSystems>;
+export type NewSideSystem = InferInsertModel<typeof sideSystems>;
+export type LayerRow = InferSelectModel<typeof layers>;
+export type NewLayer = InferInsertModel<typeof layers>;
+export type SubsystemMembershipRow = InferSelectModel<typeof subsystemMemberships>;
+export type NewSubsystemMembership = InferInsertModel<typeof subsystemMemberships>;
+export type SideSystemMembershipRow = InferSelectModel<typeof sideSystemMemberships>;
+export type NewSideSystemMembership = InferInsertModel<typeof sideSystemMemberships>;
+export type LayerMembershipRow = InferSelectModel<typeof layerMemberships>;
+export type NewLayerMembership = InferInsertModel<typeof layerMemberships>;
+export type SubsystemLayerLinkRow = InferSelectModel<typeof subsystemLayerLinks>;
+export type NewSubsystemLayerLink = InferInsertModel<typeof subsystemLayerLinks>;
+export type SubsystemSideSystemLinkRow = InferSelectModel<typeof subsystemSideSystemLinks>;
+export type NewSubsystemSideSystemLink = InferInsertModel<typeof subsystemSideSystemLinks>;
+export type SideSystemLayerLinkRow = InferSelectModel<typeof sideSystemLayerLinks>;
+export type NewSideSystemLayerLink = InferInsertModel<typeof sideSystemLayerLinks>;
+
+// Custom Fields
+export type FieldDefinitionRow = InferSelectModel<typeof fieldDefinitions>;
+export type NewFieldDefinition = InferInsertModel<typeof fieldDefinitions>;
+export type FieldValueRow = InferSelectModel<typeof fieldValues>;
+export type NewFieldValue = InferInsertModel<typeof fieldValues>;
+export type FieldBucketVisibilityRow = InferSelectModel<typeof fieldBucketVisibility>;
+export type NewFieldBucketVisibility = InferInsertModel<typeof fieldBucketVisibility>;
