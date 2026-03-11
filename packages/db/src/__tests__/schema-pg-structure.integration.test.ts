@@ -178,6 +178,69 @@ describe("PG structure schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("round-trips T3 metadata columns", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(relationships).values({
+        id,
+        systemId,
+        sourceMemberId: "member-1",
+        targetMemberId: "member-2",
+        type: "sibling",
+        bidirectional: true,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(relationships).where(eq(relationships.id, id));
+      expect(rows[0]?.sourceMemberId).toBe("member-1");
+      expect(rows[0]?.targetMemberId).toBe("member-2");
+      expect(rows[0]?.type).toBe("sibling");
+      expect(rows[0]?.bidirectional).toBe(true);
+    });
+
+    it("defaults T3 metadata to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(relationships).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(relationships).where(eq(relationships.id, id));
+      expect(rows[0]?.sourceMemberId).toBeNull();
+      expect(rows[0]?.targetMemberId).toBeNull();
+      expect(rows[0]?.type).toBeNull();
+      expect(rows[0]?.bidirectional).toBeNull();
+    });
+
+    it("rejects invalid type via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(relationships).values({
+          id: crypto.randomUUID(),
+          systemId,
+          type: "invalid" as "sibling",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow(/check|constraint|failed query/i);
+    });
   });
 
   describe("subsystems", () => {
@@ -247,6 +310,66 @@ describe("PG structure schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(subsystems).where(eq(subsystems.id, subsystemId));
       expect(rows).toHaveLength(0);
+    });
+
+    it("round-trips T3 metadata columns", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(subsystems).values({
+        id,
+        systemId,
+        architectureType: { kind: "known", type: "orbital" },
+        hasCore: true,
+        discoveryStatus: "fully-mapped",
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
+      expect(rows[0]?.architectureType).toEqual({ kind: "known", type: "orbital" });
+      expect(rows[0]?.hasCore).toBe(true);
+      expect(rows[0]?.discoveryStatus).toBe("fully-mapped");
+    });
+
+    it("defaults T3 metadata to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(subsystems).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
+      expect(rows[0]?.architectureType).toBeNull();
+      expect(rows[0]?.hasCore).toBeNull();
+      expect(rows[0]?.discoveryStatus).toBeNull();
+    });
+
+    it("rejects invalid discoveryStatus via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(subsystems).values({
+          id: crypto.randomUUID(),
+          systemId,
+          discoveryStatus: "invalid" as "fully-mapped",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow(/check|constraint|failed query/i);
     });
   });
 

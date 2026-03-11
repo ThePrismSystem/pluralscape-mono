@@ -1,10 +1,14 @@
-import { index, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
+import { FIELD_TYPES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
+
+import type { ServerFieldDefinition } from "@pluralscape/types";
 
 export const fieldDefinitions = sqliteTable(
   "field_definitions",
@@ -13,12 +17,18 @@ export const fieldDefinitions = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    fieldType: text("field_type").$type<ServerFieldDefinition["fieldType"]>(),
+    required: integer("required", { mode: "boolean" }),
+    sortOrder: integer("sort_order"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
   },
-  (t) => [index("field_definitions_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("field_definitions_system_id_idx").on(t.systemId),
+    check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
+  ],
 );
 
 export const fieldValues = sqliteTable(
@@ -28,6 +38,7 @@ export const fieldValues = sqliteTable(
     fieldDefinitionId: text("field_definition_id")
       .notNull()
       .references(() => fieldDefinitions.id, { onDelete: "cascade" }),
+    memberId: text("member_id"),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),

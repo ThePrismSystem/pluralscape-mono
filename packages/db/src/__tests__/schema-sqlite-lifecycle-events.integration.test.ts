@@ -206,4 +206,65 @@ describe("SQLite lifecycle_events schema", () => {
         .run(),
     ).toThrow(/UNIQUE|constraint/i);
   });
+
+  it("round-trips eventType T3 column", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    db.insert(lifecycleEvents)
+      .values({
+        id,
+        systemId,
+        eventType: "discovery",
+        occurredAt: now,
+        recordedAt: now,
+        encryptedData: testBlob(new Uint8Array([1, 2, 3])),
+      })
+      .run();
+
+    const rows = db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id)).all();
+    expect(rows[0]?.eventType).toBe("discovery");
+  });
+
+  it("defaults eventType to null", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    db.insert(lifecycleEvents)
+      .values({
+        id,
+        systemId,
+        occurredAt: now,
+        recordedAt: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+      })
+      .run();
+
+    const rows = db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id)).all();
+    expect(rows[0]?.eventType).toBeNull();
+  });
+
+  it("rejects invalid eventType via CHECK constraint", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const now = Date.now();
+
+    expect(() =>
+      db
+        .insert(lifecycleEvents)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "invalid" as "discovery",
+          occurredAt: now,
+          recordedAt: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+        })
+        .run(),
+    ).toThrow(/CHECK|constraint/i);
+  });
 });

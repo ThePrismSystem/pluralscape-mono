@@ -6,7 +6,7 @@
 import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
 
 import { accounts } from "../../schema/sqlite/auth.js";
-import { channels } from "../../schema/sqlite/communication.js";
+import { channels, polls } from "../../schema/sqlite/communication.js";
 import { members } from "../../schema/sqlite/members.js";
 import { systems } from "../../schema/sqlite/systems.js";
 
@@ -227,6 +227,10 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       start_time INTEGER NOT NULL,
       end_time INTEGER,
+      member_id TEXT,
+      fronting_type TEXT CHECK (fronting_type IS NULL OR fronting_type IN ('fronting', 'co-conscious')),
+      custom_front_id TEXT,
+      linked_structure TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -270,6 +274,7 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       session_id TEXT NOT NULL REFERENCES fronting_sessions(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      member_id TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -284,6 +289,10 @@ export const SQLITE_DDL = {
     CREATE TABLE relationships (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      source_member_id TEXT,
+      target_member_id TEXT,
+      type TEXT CHECK (type IS NULL OR type IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
+      bidirectional INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -298,6 +307,9 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       parent_subsystem_id TEXT REFERENCES subsystems(id) ON DELETE SET NULL,
+      architecture_type TEXT,
+      has_core INTEGER,
+      discovery_status TEXT CHECK (discovery_status IS NULL OR discovery_status IN ('fully-mapped', 'partially-mapped', 'unknown')),
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -423,6 +435,9 @@ export const SQLITE_DDL = {
     CREATE TABLE field_definitions (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      field_type TEXT CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
+      required INTEGER,
+      sort_order INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -438,6 +453,7 @@ export const SQLITE_DDL = {
     CREATE TABLE field_values (
       id TEXT PRIMARY KEY,
       field_definition_id TEXT NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
+      member_id TEXT,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
@@ -528,6 +544,7 @@ export const SQLITE_DDL = {
     CREATE TABLE lifecycle_events (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type TEXT CHECK (event_type IS NULL OR event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
       occurred_at INTEGER NOT NULL,
       recorded_at INTEGER NOT NULL,
       encrypted_data BLOB NOT NULL
@@ -597,6 +614,7 @@ export const SQLITE_DDL = {
     CREATE TABLE board_messages (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sender_id TEXT,
       pinned INTEGER NOT NULL DEFAULT 0,
       sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BLOB NOT NULL,
@@ -629,6 +647,8 @@ export const SQLITE_DDL = {
     CREATE TABLE polls (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_by_member_id TEXT,
+      kind TEXT CHECK (kind IS NULL OR kind IN ('standard', 'custom')),
       status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at INTEGER,
       ends_at INTEGER,
@@ -650,6 +670,10 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       poll_id TEXT NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      option_id TEXT,
+      voter TEXT,
+      is_veto INTEGER,
+      voted_at INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL
     )
@@ -662,6 +686,7 @@ export const SQLITE_DDL = {
     CREATE TABLE acknowledgements (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_by_member_id TEXT,
       target_member_id TEXT,
       confirmed INTEGER NOT NULL DEFAULT 0,
       confirmed_at INTEGER,
@@ -915,6 +940,10 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       enabled INTEGER NOT NULL DEFAULT 1,
+      interval_minutes INTEGER,
+      waking_hours_only INTEGER,
+      waking_start TEXT,
+      waking_end TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -932,6 +961,7 @@ export const SQLITE_DDL = {
       scheduled_at INTEGER NOT NULL,
       responded_at INTEGER,
       dismissed INTEGER NOT NULL DEFAULT 0,
+      responded_by_member_id TEXT,
       encrypted_data BLOB
     )
   `,
@@ -1271,6 +1301,29 @@ export function sqliteInsertChannel(
       parentId: opts.parentId ?? null,
       sortOrder: opts.sortOrder ?? 0,
       encryptedData: testBlob(),
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  return id;
+}
+
+export function sqliteInsertPoll(
+  db: BetterSQLite3Database<Record<string, unknown>>,
+  systemId: string,
+  opts: { id?: string } = {},
+): string {
+  const id = opts.id ?? crypto.randomUUID();
+  const now = Date.now();
+  db.insert(polls)
+    .values({
+      id,
+      systemId,
+      encryptedData: testBlob(),
+      allowMultipleVotes: false,
+      maxVotesPerMember: 1,
+      allowAbstain: false,
+      allowVeto: false,
       createdAt: now,
       updatedAt: now,
     })

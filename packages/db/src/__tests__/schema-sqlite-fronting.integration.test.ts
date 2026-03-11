@@ -240,6 +240,79 @@ describe("SQLite fronting schema", () => {
         .all();
       expect(rows).toHaveLength(2);
     });
+
+    it("round-trips T3 metadata columns", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          memberId: "member-1",
+          frontingType: "fronting",
+          customFrontId: "custom-1",
+          linkedStructure: { entityType: "subsystem", entityId: "r-1" },
+        })
+        .run();
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows[0]?.memberId).toBe("member-1");
+      expect(rows[0]?.frontingType).toBe("fronting");
+      expect(rows[0]?.customFrontId).toBe("custom-1");
+      expect(rows[0]?.linkedStructure).toEqual({ entityType: "subsystem", entityId: "r-1" });
+    });
+
+    it("defaults T3 metadata columns to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.frontingType).toBeNull();
+      expect(rows[0]?.customFrontId).toBeNull();
+      expect(rows[0]?.linkedStructure).toBeNull();
+    });
+
+    it("rejects invalid frontingType via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(frontingSessions)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            startTime: now,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+            frontingType: "invalid" as "fronting",
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 
   describe("switches", () => {
@@ -517,6 +590,51 @@ describe("SQLite fronting schema", () => {
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("round-trips memberId T3 column", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingComments)
+        .values({
+          id,
+          sessionId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          memberId: "member-1",
+        })
+        .run();
+
+      const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
+      expect(rows[0]?.memberId).toBe("member-1");
+    });
+
+    it("defaults memberId to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingComments)
+        .values({
+          id,
+          sessionId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
+      expect(rows[0]?.memberId).toBeNull();
     });
   });
 });

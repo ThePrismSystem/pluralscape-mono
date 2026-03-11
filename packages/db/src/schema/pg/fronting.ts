@@ -1,10 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
+import { FRONTING_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
+
+import type { ServerFrontingSession } from "@pluralscape/types";
 
 export const frontingSessions = pgTable(
   "fronting_sessions",
@@ -15,6 +19,12 @@ export const frontingSessions = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: pgTimestamp("start_time").notNull(),
     endTime: pgTimestamp("end_time"),
+    memberId: varchar("member_id", { length: 255 }),
+    frontingType: varchar("fronting_type", { length: 255 }).$type<
+      ServerFrontingSession["frontingType"]
+    >(),
+    customFrontId: varchar("custom_front_id", { length: 255 }),
+    linkedStructure: jsonb("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -26,6 +36,7 @@ export const frontingSessions = pgTable(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
+    check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
   ],
 );
 
@@ -68,6 +79,7 @@ export const frontingComments = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    memberId: varchar("member_id", { length: 255 }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

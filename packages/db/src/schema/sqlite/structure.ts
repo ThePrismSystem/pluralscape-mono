@@ -1,9 +1,21 @@
-import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
+import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
+
+import type { ServerRelationship, ServerSubsystem } from "@pluralscape/types";
 
 export const relationships = sqliteTable(
   "relationships",
@@ -12,11 +24,18 @@ export const relationships = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    sourceMemberId: text("source_member_id"),
+    targetMemberId: text("target_member_id"),
+    type: text("type").$type<ServerRelationship["type"]>(),
+    bidirectional: integer("bidirectional", { mode: "boolean" }),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("relationships_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("relationships_system_id_idx").on(t.systemId),
+    check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
+  ],
 );
 
 export const subsystems = sqliteTable(
@@ -27,6 +46,9 @@ export const subsystems = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: text("parent_subsystem_id"),
+    architectureType: sqliteJson("architecture_type").$type<ServerSubsystem["architectureType"]>(),
+    hasCore: integer("has_core", { mode: "boolean" }),
+    discoveryStatus: text("discovery_status").$type<ServerSubsystem["discoveryStatus"]>(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -37,6 +59,7 @@ export const subsystems = sqliteTable(
       columns: [t.parentSubsystemId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
+    check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
   ],
 );
 

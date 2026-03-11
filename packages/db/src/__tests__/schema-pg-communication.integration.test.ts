@@ -21,6 +21,7 @@ import {
   pgInsertAccount,
   pgInsertChannel,
   pgInsertMember,
+  pgInsertPoll,
   pgInsertSystem,
   testBlob,
 } from "./helpers/pg-helpers.js";
@@ -49,23 +50,8 @@ describe("PG communication schema", () => {
   const insertMember = (systemId: string, id?: string) => pgInsertMember(db, systemId, id);
   const insertChannel = (systemId: string, opts?: Parameters<typeof pgInsertChannel>[2]) =>
     pgInsertChannel(db, systemId, opts);
-
-  async function insertPoll(systemId: string, opts: { id?: string } = {}): Promise<string> {
-    const id = opts.id ?? crypto.randomUUID();
-    const now = Date.now();
-    await db.insert(polls).values({
-      id,
-      systemId,
-      encryptedData: testBlob(),
-      allowMultipleVotes: false,
-      maxVotesPerMember: 1,
-      allowAbstain: false,
-      allowVeto: false,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
+  const insertPoll = (systemId: string, opts?: Parameters<typeof pgInsertPoll>[2]) =>
+    pgInsertPoll(db, systemId, opts);
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -397,6 +383,45 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("round-trips senderId T3 column", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(boardMessages).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        senderId: "member-1",
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
+      expect(rows[0]?.senderId).toBe("member-1");
+    });
+
+    it("defaults senderId to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(boardMessages).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
+      expect(rows[0]?.senderId).toBeNull();
+    });
   });
 
   describe("notes", () => {
@@ -565,6 +590,62 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(polls).where(eq(polls.id, pollId));
       expect(rows).toHaveLength(0);
     });
+
+    it("round-trips T3 metadata columns", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(polls).values({
+        id,
+        systemId,
+        createdByMemberId: "member-1",
+        kind: "standard",
+        allowMultipleVotes: false,
+        maxVotesPerMember: 1,
+        allowAbstain: false,
+        allowVeto: false,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(polls).where(eq(polls.id, id));
+      expect(rows[0]?.createdByMemberId).toBe("member-1");
+      expect(rows[0]?.kind).toBe("standard");
+    });
+
+    it("defaults T3 metadata to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+
+      const rows = await db.select().from(polls).where(eq(polls.id, pollId));
+      expect(rows[0]?.createdByMemberId).toBeNull();
+      expect(rows[0]?.kind).toBeNull();
+    });
+
+    it("rejects invalid kind via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(polls).values({
+          id: crypto.randomUUID(),
+          systemId,
+          kind: "invalid" as "standard",
+          allowMultipleVotes: false,
+          maxVotesPerMember: 1,
+          allowAbstain: false,
+          allowVeto: false,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow(/check|constraint|failed query/i);
+    });
   });
 
   describe("poll_votes", () => {
@@ -644,6 +725,55 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, voteId));
       expect(rows).toHaveLength(0);
     });
+
+    it("round-trips T3 metadata columns", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const votedAt = Date.now();
+
+      await db.insert(pollVotes).values({
+        id,
+        pollId,
+        systemId,
+        optionId: "opt-1",
+        voter: { entityType: "member", entityId: "m-1" },
+        isVeto: true,
+        votedAt,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
+      expect(rows[0]?.optionId).toBe("opt-1");
+      expect(rows[0]?.voter).toEqual({ entityType: "member", entityId: "m-1" });
+      expect(rows[0]?.isVeto).toBe(true);
+      expect(rows[0]?.votedAt).toBe(votedAt);
+    });
+
+    it("defaults T3 metadata to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(pollVotes).values({
+        id,
+        pollId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
+      expect(rows[0]?.optionId).toBeNull();
+      expect(rows[0]?.voter).toBeNull();
+      expect(rows[0]?.isVeto).toBeNull();
+      expect(rows[0]?.votedAt).toBeNull();
+    });
   });
 
   describe("acknowledgements", () => {
@@ -702,6 +832,41 @@ describe("PG communication schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("round-trips createdByMemberId T3 column", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(acknowledgements).values({
+        id,
+        systemId,
+        createdByMemberId: "member-1",
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
+      expect(rows[0]?.createdByMemberId).toBe("member-1");
+    });
+
+    it("defaults createdByMemberId to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(acknowledgements).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
+      expect(rows[0]?.createdByMemberId).toBeNull();
     });
   });
 });

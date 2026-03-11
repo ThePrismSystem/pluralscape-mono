@@ -13,6 +13,10 @@ export const timerConfigs = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    intervalMinutes: integer("interval_minutes"),
+    wakingHoursOnly: integer("waking_hours_only", { mode: "boolean" }),
+    wakingStart: text("waking_start"),
+    wakingEnd: text("waking_end"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -33,6 +37,7 @@ export const checkInRecords = sqliteTable(
     scheduledAt: sqliteTimestamp("scheduled_at").notNull(),
     respondedAt: sqliteTimestamp("responded_at"),
     dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),
+    respondedByMemberId: text("responded_by_member_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
   },
   (t) => [
