@@ -920,7 +920,7 @@ export const SQLITE_DDL = {
       error_log TEXT,
       warning_count INTEGER NOT NULL DEFAULT 0,
       chunks_total INTEGER,
-      chunks_completed INTEGER NOT NULL DEFAULT 0,
+      chunks_completed INTEGER NOT NULL DEFAULT 0 CHECK (chunks_completed <= chunks_total),
       created_at INTEGER NOT NULL,
       updated_at INTEGER,
       completed_at INTEGER
