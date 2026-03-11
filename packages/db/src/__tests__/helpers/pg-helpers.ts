@@ -967,7 +967,8 @@ export const PG_DDL = {
     )
   `,
   accountPurgeRequestsIndexes: `
-    CREATE INDEX account_purge_requests_account_id_idx ON account_purge_requests (account_id)
+    CREATE INDEX account_purge_requests_account_id_idx ON account_purge_requests (account_id);
+    CREATE UNIQUE INDEX account_purge_requests_pending_unique_idx ON account_purge_requests (account_id) WHERE status = 'pending'
   `,
   // Sync
   syncDocuments: `
@@ -998,8 +999,8 @@ export const PG_DDL = {
     )
   `,
   syncQueueIndexes: `
-    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at) WHERE synced_at IS NULL;
-    CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id)
+    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
+    CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id) WHERE synced_at IS NULL
   `,
   syncConflicts: `
     CREATE TABLE sync_conflicts (

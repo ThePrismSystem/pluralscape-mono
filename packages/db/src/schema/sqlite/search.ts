@@ -1,7 +1,5 @@
 import { sql } from "drizzle-orm";
 
-import { SEARCHABLE_ENTITY_TYPES } from "../../helpers/enums.js";
-
 import type { SearchableEntityType } from "@pluralscape/types";
 // Intentionally typed for better-sqlite3 (self-hosted tier); mobile app will need its own FTS5 wrapper.
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -83,17 +81,33 @@ export function sanitizeFtsQuery(input: string): string | null {
   return `"${trimmed.replace(/"/g, '""')}"`;
 }
 
-function validateEntityType(value: string): SearchableEntityType {
-  if (!(SEARCHABLE_ENTITY_TYPES as readonly string[]).includes(value)) {
-    throw new Error(`Invalid SearchableEntityType: "${value}"`);
-  }
-  return value as SearchableEntityType;
-}
-
 /** Search options. */
 export interface SearchOptions {
   readonly entityType?: SearchableEntityType;
   readonly limit?: number;
+}
+
+interface RawSearchRow {
+  entity_type: string;
+  entity_id: string;
+  title: string;
+  content: string;
+  rank: number;
+}
+
+function mapSearchRow(r: RawSearchRow): SearchIndexResult {
+  return {
+    entityType: r.entity_type as SearchableEntityType,
+    entityId: r.entity_id,
+    title: r.title,
+    content: r.content,
+    rank: r.rank,
+  };
+}
+
+/** Sanitize a query string for FTS5 MATCH by wrapping in double quotes (phrase query). */
+function sanitizeFts5Query(query: string): string {
+  return '"' + query.replace(/"/g, '""') + '"';
 }
 
 /** Search the index using FTS5 MATCH, returning ranked results. */
@@ -102,31 +116,13 @@ export function searchEntries(
   query: string,
   opts?: SearchOptions,
 ): SearchIndexResult[] {
-  const sanitized = sanitizeFtsQuery(query);
-  if (sanitized === null) {
-    return [];
-  }
-
   const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
-  const entityType = opts?.entityType;
+  const safeQuery = sanitizeFts5Query(query);
 
-  const results = db.all<{
-    entity_type: string;
-    entity_id: string;
-    title: string;
-    content: string;
-    rank: number;
-  }>(
-    entityType
-      ? sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${sanitized} AND entity_type = ${entityType} ORDER BY rank LIMIT ${limit}`
-      : sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${sanitized} ORDER BY rank LIMIT ${limit}`,
+  const typeFilter = opts?.entityType ? sql` AND entity_type = ${opts.entityType}` : sql``;
+
+  const results = db.all<RawSearchRow>(
+    sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${safeQuery}${typeFilter} ORDER BY rank LIMIT ${limit}`,
   );
-
-  return results.map((r) => ({
-    entityType: validateEntityType(r.entity_type),
-    entityId: r.entity_id,
-    title: r.title,
-    content: r.content,
-    rank: r.rank,
-  }));
+  return results.map(mapSearchRow);
 }

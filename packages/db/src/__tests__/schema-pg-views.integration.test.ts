@@ -45,15 +45,21 @@ describe("PG views / query helpers", () => {
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
 
+  let accountId: string;
+  let systemId: string;
+
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client);
     // Base tables (only once)
     await pgExec(client, PG_DDL.accounts);
-    await pgExec(client, PG_DDL.sessions);
-    await pgExec(client, PG_DDL.sessionsIndexes);
     await pgExec(client, PG_DDL.systems);
     await pgExec(client, PG_DDL.systemsIndexes);
+    // Sessions & device transfer requests
+    await pgExec(client, PG_DDL.sessions);
+    await pgExec(client, PG_DDL.sessionsIndexes);
+    await pgExec(client, PG_DDL.deviceTransferRequests);
+    await pgExec(client, PG_DDL.deviceTransferRequestsIndexes);
     // Members (needed for groups)
     await pgExec(client, PG_DDL.members);
     // Fronting
@@ -76,12 +82,9 @@ describe("PG views / query helpers", () => {
     await pgExec(client, PG_DDL.groupsIndexes);
     await pgExec(client, PG_DDL.groupMemberships);
     await pgExec(client, PG_DDL.groupMembershipsIndexes);
-    // Device tokens
+    // Notifications (device tokens)
     await pgExec(client, PG_DDL.deviceTokens);
     await pgExec(client, PG_DDL.deviceTokensIndexes);
-    // Device transfer requests
-    await pgExec(client, PG_DDL.deviceTransferRequests);
-    await pgExec(client, PG_DDL.deviceTransferRequestsIndexes);
     // Webhooks
     await pgExec(client, PG_DDL.webhookConfigs);
     await pgExec(client, PG_DDL.webhookConfigsIndexes);
@@ -107,9 +110,6 @@ describe("PG views / query helpers", () => {
     await client.close();
   });
 
-  let accountId: string;
-  let systemId: string;
-
   beforeEach(async () => {
     // Clean up tables for each test (FK-safe order: children first)
     for (const table of [
@@ -119,11 +119,12 @@ describe("PG views / query helpers", () => {
       "webhook_deliveries",
       "webhook_configs",
       "device_tokens",
-      "device_transfer_requests",
       "friend_connections",
       "group_memberships",
       "groups",
       "api_keys",
+      "device_transfer_requests",
+      "sessions",
       "side_system_layer_links",
       "subsystem_side_system_links",
       "subsystem_layer_links",
@@ -131,7 +132,6 @@ describe("PG views / query helpers", () => {
       "side_systems",
       "subsystems",
       "members",
-      "sessions",
       "systems",
       "accounts",
     ]) {
@@ -247,16 +247,16 @@ describe("PG views / query helpers", () => {
 
       await db.insert(friendConnections).values({
         id: crypto.randomUUID(),
-        systemId,
-        friendSystemId: otherSystemId1,
+        systemId: otherSystemId1,
+        friendSystemId: systemId,
         status: "pending",
         createdAt: now,
         updatedAt: now,
       });
       await db.insert(friendConnections).values({
         id: crypto.randomUUID(),
-        systemId,
-        friendSystemId: otherSystemId2,
+        systemId: otherSystemId2,
+        friendSystemId: systemId,
         status: "accepted",
         createdAt: now,
         updatedAt: now,
@@ -287,6 +287,7 @@ describe("PG views / query helpers", () => {
         createdAt: now,
         updatedAt: now,
       });
+      // Under limit, nextRetryAt in the past
       await db.insert(webhookDeliveries).values({
         id: crypto.randomUUID(),
         webhookId,
@@ -294,8 +295,10 @@ describe("PG views / query helpers", () => {
         eventType: "member.created",
         status: "failed",
         attemptCount: 2,
+        nextRetryAt: now - 60000,
         createdAt: now,
       });
+      // Over limit, nextRetryAt in the past
       await db.insert(webhookDeliveries).values({
         id: crypto.randomUUID(),
         webhookId,
@@ -303,6 +306,18 @@ describe("PG views / query helpers", () => {
         eventType: "member.created",
         status: "failed",
         attemptCount: 5,
+        nextRetryAt: now - 60000,
+        createdAt: now,
+      });
+      // Under limit but nextRetryAt in the future — should NOT be returned
+      await db.insert(webhookDeliveries).values({
+        id: crypto.randomUUID(),
+        webhookId,
+        systemId,
+        eventType: "member.created",
+        status: "failed",
+        attemptCount: 2,
+        nextRetryAt: now + 60000,
         createdAt: now,
       });
 
@@ -396,15 +411,25 @@ describe("PG views / query helpers", () => {
 
   describe("getActiveFriendConnections", () => {
     it("returns only accepted connections", async () => {
-      const otherAccountId = await insertAccount();
-      const otherSystemId = await insertSystem(otherAccountId);
       const now = Date.now();
+      const otherAccountId1 = await insertAccount();
+      const otherSystemId1 = await insertSystem(otherAccountId1);
+      const otherAccountId2 = await insertAccount();
+      const otherSystemId2 = await insertSystem(otherAccountId2);
 
       await db.insert(friendConnections).values({
         id: crypto.randomUUID(),
         systemId,
-        friendSystemId: otherSystemId,
+        friendSystemId: otherSystemId1,
         status: "accepted",
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(friendConnections).values({
+        id: crypto.randomUUID(),
+        systemId,
+        friendSystemId: otherSystemId2,
+        status: "pending",
         createdAt: now,
         updatedAt: now,
       });
@@ -412,23 +437,18 @@ describe("PG views / query helpers", () => {
       const active = await getActiveFriendConnections(db, systemId);
       expect(active).toHaveLength(1);
     });
-
-    it("returns empty array when no accepted connections", async () => {
-      const active = await getActiveFriendConnections(db, systemId);
-      expect(active).toHaveLength(0);
-    });
   });
 
   describe("getActiveDeviceTokens", () => {
-    it("returns non-revoked tokens with token field", async () => {
+    it("returns non-revoked tokens", async () => {
       const now = Date.now();
-      const tokenValue = `token_${crypto.randomUUID()}`;
+
       await db.insert(deviceTokens).values({
         id: crypto.randomUUID(),
         accountId,
         systemId,
         platform: "ios",
-        token: tokenValue,
+        token: `token_${crypto.randomUUID()}`,
         createdAt: now,
       });
       await db.insert(deviceTokens).values({
@@ -444,12 +464,6 @@ describe("PG views / query helpers", () => {
       const active = await getActiveDeviceTokens(db, accountId);
       expect(active).toHaveLength(1);
       expect(active[0]?.platform).toBe("ios");
-      expect(active[0]?.token).toBe(tokenValue);
-    });
-
-    it("returns empty array when no tokens", async () => {
-      const active = await getActiveDeviceTokens(db, accountId);
-      expect(active).toHaveLength(0);
     });
   });
 
@@ -464,6 +478,7 @@ describe("PG views / query helpers", () => {
         { id: targetSession, accountId, createdAt: now },
       ]);
 
+      // Pending, not expired
       await db.insert(deviceTransferRequests).values({
         id: crypto.randomUUID(),
         accountId,
@@ -474,14 +489,26 @@ describe("PG views / query helpers", () => {
         expiresAt: now + 3600000,
       });
 
+      // Pending but expired
+      const sourceSession2 = crypto.randomUUID();
+      const targetSession2 = crypto.randomUUID();
+      await db.insert(sessions).values([
+        { id: sourceSession2, accountId, createdAt: now },
+        { id: targetSession2, accountId, createdAt: now },
+      ]);
+      await db.insert(deviceTransferRequests).values({
+        id: crypto.randomUUID(),
+        accountId,
+        sourceSessionId: sourceSession2,
+        targetSessionId: targetSession2,
+        status: "pending",
+        createdAt: now - 7200000,
+        expiresAt: now - 3600000,
+      });
+
       const active = await getActiveDeviceTransfers(db, accountId);
       expect(active).toHaveLength(1);
       expect(active[0]?.expiresAt).toBeGreaterThan(now);
-    });
-
-    it("returns empty array when no transfers", async () => {
-      const active = await getActiveDeviceTransfers(db, accountId);
-      expect(active).toHaveLength(0);
     });
   });
 

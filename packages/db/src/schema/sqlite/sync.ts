@@ -49,14 +49,7 @@ export const syncQueue = sqliteTable(
     syncedAt: sqliteTimestamp("synced_at"),
   },
   (t) => [
-    index("sync_queue_system_id_synced_at_idx")
-      .on(t.systemId, t.syncedAt)
-      .where(sql`synced_at IS NULL`),
-    index("sync_queue_system_id_entity_type_entity_id_idx").on(
-      t.systemId,
-      t.entityType,
-      t.entityId,
-    ),
+    index("sync_queue_system_id_synced_at_idx").on(t.systemId, t.syncedAt),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
   ],
 );

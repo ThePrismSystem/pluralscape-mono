@@ -6,6 +6,8 @@
  * converting query results into domain objects.
  */
 
+import type { DeviceTokenPlatform, WebhookEventType } from "@pluralscape/types";
+
 /** A currently fronting member (end_time IS NULL). */
 export interface CurrentFronter {
   readonly id: string;
@@ -24,7 +26,7 @@ export interface ActiveApiKey {
   readonly accountId: string;
   readonly systemId: string;
   readonly name: string;
-  readonly keyType: string;
+  readonly keyType: "metadata" | "crypto";
   readonly createdAt: number;
   readonly expiresAt: number | null;
 }
@@ -45,8 +47,8 @@ export interface PendingWebhookRetry {
   readonly id: string;
   readonly webhookId: string;
   readonly systemId: string;
-  readonly eventType: string;
-  readonly status: string;
+  readonly eventType: WebhookEventType;
+  readonly status: "failed";
   readonly attemptCount: number;
   readonly nextRetryAt: number | null;
 }
@@ -80,8 +82,7 @@ export interface ActiveDeviceToken {
   readonly id: string;
   readonly accountId: string;
   readonly systemId: string;
-  readonly platform: string;
-  readonly token: string;
+  readonly platform: DeviceTokenPlatform;
   readonly createdAt: number;
 }
 
