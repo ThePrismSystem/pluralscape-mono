@@ -512,7 +512,6 @@ export const PG_DDL = {
       locale VARCHAR(255),
       pin_hash VARCHAR(512),
       biometric_enabled BOOLEAN NOT NULL DEFAULT false,
-      littles_safe_mode_enabled BOOLEAN NOT NULL DEFAULT false,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -619,7 +618,6 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       channel_id VARCHAR(255) NOT NULL,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sender_id VARCHAR(255) NOT NULL,
       reply_to_id VARCHAR(255),
       timestamp TIMESTAMPTZ NOT NULL,
       edited_at TIMESTAMPTZ,
@@ -643,7 +641,6 @@ export const PG_DDL = {
     CREATE TABLE board_messages (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sender_id VARCHAR(255),
       pinned BOOLEAN NOT NULL DEFAULT false,
       sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BYTEA NOT NULL,
@@ -719,17 +716,14 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       created_by_member_id VARCHAR(255),
-      target_member_id VARCHAR(255),
       confirmed BOOLEAN NOT NULL DEFAULT false,
-      confirmed_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL
     )
   `,
   acknowledgementsIndexes: `
     CREATE INDEX acknowledgements_system_id_idx ON acknowledgements (system_id);
-    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed);
-    CREATE INDEX acknowledgements_target_member_id_idx ON acknowledgements (target_member_id)
+    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed)
   `,
   // Journal
   journalEntries: `
@@ -810,7 +804,6 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       parent_region_id VARCHAR(255),
-      access_type VARCHAR(255) NOT NULL CHECK (access_type IN ('open', 'gatekept')),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -826,10 +819,7 @@ export const PG_DDL = {
     CREATE TABLE innerworld_entities (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      entity_type VARCHAR(255) NOT NULL CHECK (entity_type IN ('member', 'landmark', 'subsystem', 'side-system', 'layer')),
       region_id VARCHAR(255),
-      position_x INTEGER NOT NULL,
-      position_y INTEGER NOT NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -878,7 +868,7 @@ export const PG_DDL = {
       platform VARCHAR(255) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
       token VARCHAR(512) NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      last_used_at TIMESTAMPTZ,
+      last_active_at TIMESTAMPTZ,
       revoked_at TIMESTAMPTZ
     )
   `,

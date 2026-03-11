@@ -85,7 +85,11 @@ export function encryptedBlobFromDriver(val: Buffer): EncryptedBlob {
   return deserializeEncryptedBlob(new Uint8Array(val.buffer, val.byteOffset, val.byteLength));
 }
 
-/** PG bytea column that maps EncryptedBlob ↔ binary via blob-codec. */
+/**
+ * PG bytea column that maps EncryptedBlob ↔ binary via blob-codec.
+ * Nonce, keyVersion, tier, and bucketId are embedded in the wire format —
+ * see blob-codec.ts for layout details.
+ */
 export const pgEncryptedBlob = customType<{ data: EncryptedBlob; driverData: Buffer }>({
   dataType() {
     return "bytea";

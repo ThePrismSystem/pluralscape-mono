@@ -1,13 +1,9 @@
-import { check, foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
-import { INNERWORLD_ENTITY_TYPES, INNERWORLD_REGION_ACCESS_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
-
-import type { ServerInnerWorldEntity, ServerInnerWorldRegion } from "@pluralscape/types";
 
 // Regions must be declared before entities (entities FK to regions)
 export const innerworldRegions = pgTable(
@@ -18,9 +14,6 @@ export const innerworldRegions = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentRegionId: varchar("parent_region_id", { length: 255 }),
-    accessType: varchar("access_type", { length: 255 })
-      .notNull()
-      .$type<ServerInnerWorldRegion["accessType"]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -32,10 +25,6 @@ export const innerworldRegions = pgTable(
       columns: [t.parentRegionId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
-    check(
-      "innerworld_regions_access_type_check",
-      enumCheck(t.accessType, INNERWORLD_REGION_ACCESS_TYPES),
-    ),
   ],
 );
 
@@ -46,12 +35,7 @@ export const innerworldEntities = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityType: varchar("entity_type", { length: 255 })
-      .notNull()
-      .$type<ServerInnerWorldEntity["entityType"]>(),
     regionId: varchar("region_id", { length: 255 }),
-    positionX: integer("position_x").notNull(),
-    positionY: integer("position_y").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -63,10 +47,6 @@ export const innerworldEntities = pgTable(
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
-    check(
-      "innerworld_entities_entity_type_check",
-      enumCheck(t.entityType, INNERWORLD_ENTITY_TYPES),
-    ),
   ],
 );
 

@@ -376,6 +376,41 @@ describe("SQLite fronting schema", () => {
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
+
+    it("rejects empty memberIds array via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO switches (id, system_id, timestamp, member_ids, created_at) VALUES (?, ?, ?, '[]', ?)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("accepts single-element memberIds array (minimum valid)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(switches)
+        .values({
+          id,
+          systemId,
+          timestamp: now,
+          memberIds: ["mem_single"],
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.memberIds).toEqual(["mem_single"]);
+    });
   });
 
   describe("custom_fronts", () => {

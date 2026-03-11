@@ -85,16 +85,28 @@ export type EncryptionAlgorithm = "xchacha20-poly1305";
 
 // ── EncryptedBlob ──────────────────────────────────────────────
 
-/** Wire format for encrypted data. Carried in server-side entity representations. */
-export interface EncryptedBlob {
+/** Shared fields across all encrypted blob tiers. */
+interface EncryptedBlobBase {
   readonly ciphertext: Uint8Array;
   readonly nonce: Uint8Array;
-  readonly tier: 1 | 2;
   readonly algorithm: EncryptionAlgorithm;
   readonly keyVersion: number | null;
-  /** Present for T2 blobs — identifies which bucket key was used. */
-  readonly bucketId: BucketId | null;
 }
+
+/** T1 zero-knowledge blob — encrypted with the system master key. No bucket association. */
+export interface T1EncryptedBlob extends EncryptedBlobBase {
+  readonly tier: 1;
+  readonly bucketId: null;
+}
+
+/** T2 per-bucket blob — encrypted with a bucket-specific key. Always has a bucketId. */
+export interface T2EncryptedBlob extends EncryptedBlobBase {
+  readonly tier: 2;
+  readonly bucketId: BucketId;
+}
+
+/** Wire format for encrypted data. Discriminated union on `tier`. */
+export type EncryptedBlob = T1EncryptedBlob | T2EncryptedBlob;
 
 // ── EncryptedString ────────────────────────────────────────────
 
@@ -237,14 +249,13 @@ export type ClientChannel = Channel;
 
 /**
  * Server-side chat message representation.
- * T1 encrypted: content, attachments, mentions
- * T3 plaintext: senderId, channelId, replyToId, timestamp, editedAt
+ * T1 encrypted: content, attachments, mentions, senderId
+ * T3 plaintext: channelId, replyToId, timestamp, editedAt
  */
 export interface ServerChatMessage extends AuditMetadata {
   readonly id: MessageId;
   readonly channelId: ChannelId;
   readonly systemId: SystemId;
-  readonly senderId: MemberId;
   readonly replyToId: MessageId | null;
   readonly timestamp: UnixMillis;
   readonly editedAt: UnixMillis | null;
@@ -256,13 +267,12 @@ export type ClientChatMessage = ChatMessage;
 
 /**
  * Server-side board message representation.
- * T1 encrypted: content
- * T3 plaintext: senderId, pinned, sortOrder
+ * T1 encrypted: content, senderId
+ * T3 plaintext: pinned, sortOrder
  */
 export interface ServerBoardMessage extends AuditMetadata {
   readonly id: BoardMessageId;
   readonly systemId: SystemId;
-  readonly senderId: MemberId | null;
   readonly pinned: boolean;
   readonly sortOrder: number;
   readonly encryptedData: EncryptedBlob;
@@ -321,15 +331,13 @@ export type ClientFieldValue = FieldValue;
 
 /**
  * Server-side innerworld entity representation.
- * T1 encrypted: name/linkedMemberId/linkedSubsystemId/linkedSideSystemId/linkedLayerId, description, visual
+ * T1 encrypted: name/linkedMemberId/linkedSubsystemId/linkedSideSystemId/linkedLayerId, description, visual,
+ *   entityType, positionX, positionY
  */
 export interface ServerInnerWorldEntity extends AuditMetadata {
   readonly id: InnerWorldEntityId;
   readonly systemId: SystemId;
-  readonly positionX: number;
-  readonly positionY: number;
   readonly regionId: InnerWorldRegionId | null;
-  readonly entityType: "member" | "landmark" | "subsystem" | "side-system" | "layer";
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -338,14 +346,13 @@ export type ClientInnerWorldEntity = InnerWorldEntity;
 
 /**
  * Server-side innerworld region representation.
- * T1 encrypted: name, description, boundaryData, visual, gatekeeperMemberIds
- * T3 plaintext: parentRegionId, accessType
+ * T1 encrypted: name, description, boundaryData, visual, gatekeeperMemberIds, accessType
+ * T3 plaintext: parentRegionId
  */
 export interface ServerInnerWorldRegion extends AuditMetadata {
   readonly id: InnerWorldRegionId;
   readonly systemId: SystemId;
   readonly parentRegionId: InnerWorldRegionId | null;
-  readonly accessType: "open" | "gatekept";
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -488,16 +495,14 @@ export type ClientPollVote = PollVote;
 
 /**
  * Server-side acknowledgement request representation.
- * T1 encrypted: message
- * T3 plaintext: createdByMemberId, targetMemberId, confirmed, confirmedAt
+ * T1 encrypted: message, targetMemberId, confirmedAt
+ * T3 plaintext: createdByMemberId, confirmed
  */
 export interface ServerAcknowledgementRequest extends AuditMetadata {
   readonly id: AcknowledgementId;
   readonly systemId: SystemId;
   readonly createdByMemberId: MemberId;
-  readonly targetMemberId: MemberId;
   readonly confirmed: boolean;
-  readonly confirmedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -598,13 +603,13 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // Subsystem: T1 (name, description, color, imageSource, emoji) | T3 (parentSubsystemId, architectureType, hasCore, discoveryStatus)
 // Relationship: T1 (label) | T3 (type, sourceMemberId, targetMemberId, bidirectional)
 // Channel: T1 (name) | T3 (type, parentId, sortOrder)
-// ChatMessage: T1 (content, attachments) | T3 (senderId, channelId, replyToId, timestamp, editedAt)
-// BoardMessage: T1 (content) | T3 (senderId, pinned, sortOrder)
+// ChatMessage: T1 (content, attachments, senderId) | T3 (channelId, replyToId, timestamp, editedAt)
+// BoardMessage: T1 (content, senderId) | T3 (pinned, sortOrder)
 // Note: T1 (title, content, backgroundColor) | T3 (memberId)
 // FieldDefinition: T1 (name, description, options) | T3 (fieldType, required, sortOrder)
 // FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId)
-// InnerWorldEntity: T1 (linked entity refs, description, visual) | T3 (positionX/Y, regionId, entityType)
-// InnerWorldRegion: T1 (name, description, boundaryData, visual, gatekeeperMemberIds) | T3 (parentRegionId, accessType)
+// InnerWorldEntity: T1 (linked entity refs, description, visual, entityType, positionX, positionY) | T3 (regionId)
+// InnerWorldRegion: T1 (name, description, boundaryData, visual, gatekeeperMemberIds, accessType) | T3 (parentRegionId)
 // LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
 // CustomFront: T1 (name, description, color, emoji) | T3 (archived)
 // JournalEntry: T1 (title, blocks, tags, linkedEntities, author) | T3 (frontingSessionId, archived)
@@ -612,16 +617,19 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // MemberPhoto: T1 (imageSource, caption) | T3 (memberId, sortOrder)
 // Poll: T1 (title, options, description) | T3 (createdByMemberId, kind, status, closedAt, endsAt, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto)
 // PollVote: T1 (comment) | T3 (pollId, optionId, voter, isVeto, votedAt)
-// AcknowledgementRequest: T1 (message) | T3 (createdByMemberId, targetMemberId, confirmed, confirmedAt)
+// AcknowledgementRequest: T1 (message, targetMemberId, confirmedAt) | T3 (createdByMemberId, confirmed)
 // SideSystem: T1 (name, description, color, imageSource, emoji) | T3 (none)
 // Layer: T1 (name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds) | T3 (none)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
 // AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
 //
+// Switch: T3 (memberIds, timestamp — immutable event metadata; member IDs are non-identifying opaque tokens)
+// FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side
+//
 // ApiKey: T3 (all fields — server metadata, no user content)
 // BlobMetadata: T3 (all fields — metadata only, blob content encrypted at storage layer)
 // JobDefinition: T3 (all fields — server-internal job metadata)
-// DeviceToken: T1 (token) | T3 (platform, lastActiveAt)
+// DeviceToken: T3 (token, platform, lastActiveAt — server must read push tokens to deliver notifications)
 // NotificationConfig: T3 (all fields — user preferences, no sensitive content)
 // NotificationPayload: T1 (title, body, data) | T3 (eventType, systemId)
 // WebhookConfig: T1 (secret via EncryptedString) | T3 (url, eventTypes, enabled, cryptoKeyId)

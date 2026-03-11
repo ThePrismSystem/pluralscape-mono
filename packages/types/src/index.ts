@@ -175,6 +175,8 @@ export type {
   Plaintext,
   EncryptionAlgorithm,
   EncryptedBlob,
+  T1EncryptedBlob,
+  T2EncryptedBlob,
   EncryptedString,
   ServerMember,
   ClientMember,

@@ -14,7 +14,6 @@ export const systemSettings = pgTable("system_settings", {
   locale: varchar("locale", { length: 255 }),
   pinHash: varchar("pin_hash", { length: 512 }),
   biometricEnabled: boolean("biometric_enabled").notNull().default(false),
-  littlesSafeModeEnabled: boolean("littles_safe_mode_enabled").notNull().default(false),
   encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
   ...timestamps(),
   ...versioned(),

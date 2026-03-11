@@ -11,7 +11,6 @@ import type {
   AuditEventType,
   AuthKeyType,
   BlobPurpose,
-  BucketVisibilityScope,
   DeviceTokenPlatform,
   DeviceTransferStatus,
   DiscoveryStatus,
@@ -32,17 +31,15 @@ import type {
   PKSyncDirection,
   PollKind,
   RelationshipType,
+  ReportFormat,
   RotationItemStatus,
   RotationState,
   SearchableEntityType,
   ServerChannel,
-  ServerInnerWorldEntity,
-  ServerInnerWorldRegion,
   ServerPoll,
   SyncOperation,
   SyncResolution,
   WebhookDeliveryStatus,
-  ReportFormat,
   WebhookEventType,
 } from "@pluralscape/types";
 
@@ -119,17 +116,6 @@ export const FRIEND_CONNECTION_STATUSES = [
   "blocked",
   "removed",
 ] as const satisfies readonly FriendConnectionStatus[];
-export const BUCKET_VISIBILITY_SCOPES = [
-  "members",
-  "custom-fields",
-  "fronting-status",
-  "custom-fronts",
-  "notes",
-  "chat",
-  "journal-entries",
-  "member-photos",
-  "groups",
-] as const satisfies readonly BucketVisibilityScope[];
 export const AUTH_KEY_TYPES = ["encryption", "signing"] as const satisfies readonly AuthKeyType[];
 export const DEVICE_TRANSFER_STATUSES = [
   "pending",
@@ -201,19 +187,6 @@ export const CHANNEL_TYPES = [
 ] as const satisfies readonly ServerChannel["type"][];
 export const POLL_STATUSES = ["open", "closed"] as const satisfies readonly ServerPoll["status"][];
 export const POLL_KINDS = ["standard", "custom"] as const satisfies readonly PollKind[];
-export const INNERWORLD_ENTITY_TYPES = [
-  "member",
-  "landmark",
-  "subsystem",
-  "side-system",
-  "layer",
-] as const satisfies readonly ServerInnerWorldEntity["entityType"][];
-// Intentionally duplicates LAYER_ACCESS_TYPES — innerworld regions and layers share the same
-// access semantics today, but are kept as separate arrays so they can diverge independently.
-export const INNERWORLD_REGION_ACCESS_TYPES = [
-  "open",
-  "gatekept",
-] as const satisfies readonly ServerInnerWorldRegion["accessType"][];
 export const PK_SYNC_DIRECTIONS = [
   "ps-to-pk",
   "pk-to-ps",

@@ -1,10 +1,22 @@
 import { AEAD_NONCE_BYTES } from "./constants.js";
 import { InvalidInputError } from "./errors.js";
 
-import type { BucketId, EncryptedBlob, EncryptionAlgorithm } from "@pluralscape/types";
+import type {
+  BucketId,
+  EncryptedBlob,
+  EncryptionAlgorithm,
+  T1EncryptedBlob,
+  T2EncryptedBlob,
+} from "@pluralscape/types";
 
 /**
  * Binary wire format for EncryptedBlob ↔ Uint8Array.
+ *
+ * Every `pgEncryptedBlob` / `sqliteEncryptedBlob` column stores a single blob
+ * encoded with this codec. The format is self-describing — **nonces and
+ * keyVersions are embedded per-blob**, so no separate DB columns are needed
+ * for either field. This resolves db-kveq (nonce storage) and db-0d2a
+ * (keyVersion on content tables).
  *
  * Layout:
  *   [1B version=0x01]
@@ -177,5 +189,18 @@ export function deserializeEncryptedBlob(data: Uint8Array): EncryptedBlob {
   // Ciphertext (rest of buffer)
   const ciphertext = new Uint8Array(data.subarray(offset));
 
-  return { ciphertext, nonce, tier, algorithm, keyVersion, bucketId };
+  if (tier === 1) {
+    return {
+      ciphertext,
+      nonce,
+      tier,
+      algorithm,
+      keyVersion,
+      bucketId: null,
+    } satisfies T1EncryptedBlob;
+  }
+  if (bucketId === null) {
+    throw new InvalidInputError("T2 EncryptedBlob missing bucketId");
+  }
+  return { ciphertext, nonce, tier, algorithm, keyVersion, bucketId } satisfies T2EncryptedBlob;
 }

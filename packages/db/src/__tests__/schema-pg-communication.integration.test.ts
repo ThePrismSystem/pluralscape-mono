@@ -193,7 +193,6 @@ describe("PG communication schema", () => {
         id,
         channelId,
         systemId,
-        senderId: "member-1",
         timestamp: now,
         encryptedData: data,
         createdAt: now,
@@ -219,7 +218,6 @@ describe("PG communication schema", () => {
         id,
         channelId,
         systemId,
-        senderId: "member-1",
         timestamp: now,
         archived: true,
         archivedAt: now,
@@ -245,7 +243,6 @@ describe("PG communication schema", () => {
         id,
         channelId,
         systemId,
-        senderId: "member-1",
         timestamp: now,
         editedAt,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -268,7 +265,6 @@ describe("PG communication schema", () => {
         id: msgId,
         channelId,
         systemId,
-        senderId: "member-1",
         timestamp: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -291,7 +287,6 @@ describe("PG communication schema", () => {
         id: msgId,
         channelId,
         systemId,
-        senderId: "member-1",
         timestamp: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -382,45 +377,6 @@ describe("PG communication schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
       expect(rows).toHaveLength(0);
-    });
-
-    it("round-trips senderId T3 column", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(boardMessages).values({
-        id,
-        systemId,
-        sortOrder: 0,
-        senderId: "member-1",
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
-      expect(rows[0]?.senderId).toBe("member-1");
-    });
-
-    it("defaults senderId to null", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(boardMessages).values({
-        id,
-        systemId,
-        sortOrder: 0,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
-      expect(rows[0]?.senderId).toBeNull();
     });
   });
 
@@ -793,7 +749,6 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.confirmed).toBe(false);
-      expect(rows[0]?.confirmedAt).toBeNull();
     });
 
     it("round-trips confirmed state", async () => {
@@ -806,14 +761,12 @@ describe("PG communication schema", () => {
         id,
         systemId,
         confirmed: true,
-        confirmedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
       expect(rows[0]?.confirmed).toBe(true);
-      expect(rows[0]?.confirmedAt).toBe(now);
     });
 
     it("cascades on system deletion", async () => {

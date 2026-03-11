@@ -1,4 +1,3 @@
-import type { EncryptedString } from "./encryption.js";
 import type {
   DeviceTokenId,
   FriendConnectionId,
@@ -12,12 +11,15 @@ import type { AuditMetadata } from "./utility.js";
 /** Platforms that can receive push notifications. */
 export type DeviceTokenPlatform = "ios" | "android" | "web";
 
-/** A registered device push token. */
+/**
+ * A registered device push token.
+ * T3 (all fields) — server must read the token to deliver push notifications.
+ */
 export interface DeviceToken extends AuditMetadata {
   readonly id: DeviceTokenId;
   readonly systemId: SystemId;
   readonly platform: DeviceTokenPlatform;
-  readonly token: EncryptedString;
+  readonly token: string;
   readonly lastActiveAt: UnixMillis;
 }
 

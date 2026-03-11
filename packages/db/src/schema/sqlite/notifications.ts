@@ -33,7 +33,7 @@ export const deviceTokens = sqliteTable(
     platform: text("platform").notNull().$type<DeviceTokenPlatform>(),
     token: text("token").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
-    lastUsedAt: sqliteTimestamp("last_used_at"),
+    lastActiveAt: sqliteTimestamp("last_active_at"),
     revokedAt: sqliteTimestamp("revoked_at"),
   },
   (t) => [

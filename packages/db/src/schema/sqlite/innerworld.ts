@@ -1,21 +1,9 @@
-import {
-  check,
-  foreignKey,
-  index,
-  integer,
-  sqliteTable,
-  text,
-  unique,
-} from "drizzle-orm/sqlite-core";
+import { foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
-import { INNERWORLD_ENTITY_TYPES, INNERWORLD_REGION_ACCESS_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
-
-import type { ServerInnerWorldEntity, ServerInnerWorldRegion } from "@pluralscape/types";
 
 // Regions must be declared before entities (entities FK to regions)
 export const innerworldRegions = sqliteTable(
@@ -26,7 +14,6 @@ export const innerworldRegions = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentRegionId: text("parent_region_id"),
-    accessType: text("access_type").notNull().$type<ServerInnerWorldRegion["accessType"]>(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -38,10 +25,6 @@ export const innerworldRegions = sqliteTable(
       columns: [t.parentRegionId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
-    check(
-      "innerworld_regions_access_type_check",
-      enumCheck(t.accessType, INNERWORLD_REGION_ACCESS_TYPES),
-    ),
   ],
 );
 
@@ -52,10 +35,7 @@ export const innerworldEntities = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityType: text("entity_type").notNull().$type<ServerInnerWorldEntity["entityType"]>(),
     regionId: text("region_id"),
-    positionX: integer("position_x").notNull(),
-    positionY: integer("position_y").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -67,10 +47,6 @@ export const innerworldEntities = sqliteTable(
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
-    check(
-      "innerworld_entities_entity_type_check",
-      enumCheck(t.entityType, INNERWORLD_ENTITY_TYPES),
-    ),
   ],
 );
 

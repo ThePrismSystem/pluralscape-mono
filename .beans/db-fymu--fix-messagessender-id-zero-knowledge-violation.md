@@ -1,11 +1,11 @@
 ---
 # db-fymu
 title: Fix messages.sender_id zero-knowledge violation
-status: todo
+status: completed
 type: bug
 priority: critical
 created_at: 2026-03-11T08:08:59Z
-updated_at: 2026-03-11T19:39:42Z
+updated_at: 2026-03-11T22:31:39Z
 parent: db-bbzk
 ---
 
@@ -22,3 +22,7 @@ senderId is plaintext in both ServerChatMessage and ServerBoardMessage with real
 - [ ] Update integration tests
 - [ ] Add type-level absence assertions
 - [ ] Add negative DB assertions
+
+## Summary of Changes
+
+Removed `senderId` from `messages` and `boardMessages` tables in both PG and SQLite schemas. Removed from `ServerChatMessage` and `ServerBoardMessage` types. Updated all integration tests and type tests. Sender identity is now exclusively in T1 encrypted data.

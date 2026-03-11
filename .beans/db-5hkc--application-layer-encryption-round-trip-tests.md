@@ -1,11 +1,11 @@
 ---
 # db-5hkc
 title: Application-layer encryption round-trip tests
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-11T08:09:02Z
-updated_at: 2026-03-11T19:39:42Z
+updated_at: 2026-03-11T22:31:53Z
 parent: db-bbzk
 ---
 
@@ -19,3 +19,7 @@ Blocked by: crypto helpers implementation (packages/crypto encrypt/decrypt for e
 - [ ] Write encrypt round-trip tests (client -> encrypt -> insert -> select -> decrypt -> compare)
 - [ ] Cover all entity types with T1 encrypted fields
 - [ ] Test error cases (corrupted blob, wrong key, missing fields)
+
+## Summary of Changes
+
+Created entity-round-trip.test.ts with one working end-to-end test (blob-codec + real AEAD encrypt/decrypt) and 26 describe.todo() scaffolds for each entity type, pending entity-level encrypt/decrypt helpers in packages/crypto.

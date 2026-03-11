@@ -3,8 +3,7 @@ import { describe, expect, it } from "vitest";
 import { deserializeEncryptedBlob, serializeEncryptedBlob } from "../blob-codec.js";
 import { AEAD_NONCE_BYTES } from "../constants.js";
 
-import type { EncryptedBlob } from "@pluralscape/types";
-import type { BucketId } from "@pluralscape/types";
+import type { BucketId, EncryptedBlob, T1EncryptedBlob } from "@pluralscape/types";
 
 /** Header size: version(1) + tier(1) + algorithm(1) + keyVersion(4) + hasBucketId(1) */
 const HEADER_BYTES = 8;
@@ -19,7 +18,7 @@ function makeNonce(fill = 0xaa): Uint8Array {
   return nonce;
 }
 
-function makeT1Blob(overrides?: Partial<EncryptedBlob>): EncryptedBlob {
+function makeT1Blob(overrides?: Partial<T1EncryptedBlob>): T1EncryptedBlob {
   return {
     ciphertext: new Uint8Array([1, 2, 3]),
     nonce: makeNonce(),
@@ -169,6 +168,43 @@ describe("blob-codec", () => {
       expect(deserialized.ciphertext).toEqual(blob.ciphertext);
       expect(deserialized.nonce).toEqual(blob.nonce);
     });
+
+    // ── Nonce and keyVersion wire-format verification (db-kveq, db-0d2a) ──
+
+    it("distinct nonces survive round-trip", () => {
+      const nonceA = makeNonce(0x11);
+      const nonceB = makeNonce(0x22);
+      const blobA = makeT1Blob({ nonce: nonceA });
+      const blobB = makeT1Blob({ nonce: nonceB });
+
+      const a = deserializeEncryptedBlob(serializeEncryptedBlob(blobA));
+      const b = deserializeEncryptedBlob(serializeEncryptedBlob(blobB));
+
+      expect(a.nonce).toEqual(nonceA);
+      expect(b.nonce).toEqual(nonceB);
+      expect(a.nonce).not.toEqual(b.nonce);
+    });
+
+    it("T2 blob preserves non-null keyVersion through round-trip", () => {
+      const blob: EncryptedBlob = {
+        ciphertext: new Uint8Array([1]),
+        nonce: makeNonce(),
+        tier: 2,
+        algorithm: "xchacha20-poly1305",
+        keyVersion: 42,
+        bucketId: makeBucketId("bucket-1"),
+      };
+
+      const result = deserializeEncryptedBlob(serializeEncryptedBlob(blob));
+      expect(result.keyVersion).toBe(42);
+    });
+
+    it("T1 blob keyVersion is null through round-trip", () => {
+      const blob = makeT1Blob({ keyVersion: null });
+
+      const result = deserializeEncryptedBlob(serializeEncryptedBlob(blob));
+      expect(result.keyVersion).toBeNull();
+    });
   });
 
   describe("serialize", () => {
@@ -230,12 +266,12 @@ describe("blob-codec", () => {
 
   describe("serialize errors", () => {
     it("throws on invalid tier", () => {
-      const blob = makeT1Blob({ tier: 3 as 1 | 2 });
+      const blob = makeT1Blob({ tier: 3 as 1 });
       expect(() => serializeEncryptedBlob(blob)).toThrow("tier");
     });
 
     it("throws on tier 0", () => {
-      const blob = makeT1Blob({ tier: 0 as 1 | 2 });
+      const blob = makeT1Blob({ tier: 0 as 1 });
       expect(() => serializeEncryptedBlob(blob)).toThrow("tier");
     });
 

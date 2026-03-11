@@ -512,7 +512,6 @@ export const SQLITE_DDL = {
       locale TEXT,
       pin_hash TEXT,
       biometric_enabled INTEGER NOT NULL DEFAULT 0,
-      littles_safe_mode_enabled INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -619,7 +618,6 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       channel_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sender_id TEXT NOT NULL,
       reply_to_id TEXT,
       timestamp INTEGER NOT NULL,
       edited_at INTEGER,
@@ -643,7 +641,6 @@ export const SQLITE_DDL = {
     CREATE TABLE board_messages (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sender_id TEXT,
       pinned INTEGER NOT NULL DEFAULT 0,
       sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BLOB NOT NULL,
@@ -719,17 +716,14 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       created_by_member_id TEXT,
-      target_member_id TEXT,
       confirmed INTEGER NOT NULL DEFAULT 0,
-      confirmed_at INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL
     )
   `,
   acknowledgementsIndexes: `
     CREATE INDEX acknowledgements_system_id_idx ON acknowledgements (system_id);
-    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed);
-    CREATE INDEX acknowledgements_target_member_id_idx ON acknowledgements (target_member_id)
+    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed)
   `,
   // Journal
   journalEntries: `
@@ -810,7 +804,6 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       parent_region_id TEXT,
-      access_type TEXT NOT NULL CHECK (access_type IN ('open', 'gatekept')),
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -826,10 +819,7 @@ export const SQLITE_DDL = {
     CREATE TABLE innerworld_entities (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      entity_type TEXT NOT NULL CHECK (entity_type IN ('member', 'landmark', 'subsystem', 'side-system', 'layer')),
       region_id TEXT,
-      position_x INTEGER NOT NULL,
-      position_y INTEGER NOT NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -878,7 +868,7 @@ export const SQLITE_DDL = {
       platform TEXT NOT NULL,
       token TEXT NOT NULL,
       created_at INTEGER NOT NULL,
-      last_used_at INTEGER,
+      last_active_at INTEGER,
       revoked_at INTEGER
     )
   `,

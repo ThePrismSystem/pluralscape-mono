@@ -340,6 +340,38 @@ describe("PG fronting schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("rejects empty memberIds array via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO switches (id, system_id, timestamp, member_ids, created_at) VALUES ($1, $2, $3, '[]'::jsonb, $4)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("accepts single-element memberIds array (minimum valid)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(switches).values({
+        id,
+        systemId,
+        timestamp: now,
+        memberIds: ["mem_single"],
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(switches).where(eq(switches.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.memberIds).toEqual(["mem_single"]);
+    });
   });
 
   describe("custom_fronts", () => {
