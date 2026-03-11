@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { accountPurgeRequests, exportRequests, importJobs } from "../schema/pg/import-export.js";
@@ -32,6 +32,12 @@ describe("PG import-export schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(importJobs);
+    await db.delete(exportRequests);
+    await db.delete(accountPurgeRequests);
   });
 
   describe("import_jobs", () => {
@@ -164,6 +170,43 @@ describe("PG import-export schema", () => {
       ).rejects.toThrow();
     });
 
+    it.each(["validating", "failed"] as const)("exercises %s status", async (status) => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "pluralkit",
+        status,
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows[0]?.status).toBe(status);
+    });
+
+    it("rejects chunksCompleted exceeding chunksTotal", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(importJobs).values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          source: "pluralscape",
+          chunksCompleted: 5,
+          chunksTotal: 3,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -255,6 +298,25 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.completedAt).toBeNull();
     });
 
+    it.each(["processing", "failed"] as const)("exercises %s status", async (status) => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(exportRequests).values({
+        id,
+        accountId,
+        systemId,
+        format: "json",
+        status,
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(exportRequests).where(eq(exportRequests.id, id));
+      expect(rows[0]?.status).toBe(status);
+    });
+
     it("rejects invalid format value", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -321,7 +383,7 @@ describe("PG import-export schema", () => {
         accountId,
         status: "completed",
         confirmationPhrase: "DELETE MY ACCOUNT",
-        scheduledPurgeAt: now + 86400000,
+        scheduledPurgeAt: now,
         requestedAt: now,
         confirmedAt: now,
         completedAt: now,
@@ -336,11 +398,31 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.accountId).toBe(accountId);
       expect(rows[0]?.status).toBe("completed");
       expect(rows[0]?.confirmationPhrase).toBe("DELETE MY ACCOUNT");
-      expect(rows[0]?.scheduledPurgeAt).toBe(now + 86400000);
+      expect(rows[0]?.scheduledPurgeAt).toBe(now);
       expect(rows[0]?.requestedAt).toBe(now);
       expect(rows[0]?.confirmedAt).toBe(now);
       expect(rows[0]?.completedAt).toBe(now);
       expect(rows[0]?.cancelledAt).toBe(now);
+    });
+
+    it("applies default status of pending", async () => {
+      const accountId = await insertAccount();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(accountPurgeRequests).values({
+        id,
+        accountId,
+        confirmationPhrase: "DELETE MY ACCOUNT",
+        scheduledPurgeAt: now,
+        requestedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(accountPurgeRequests)
+        .where(eq(accountPurgeRequests.id, id));
+      expect(rows[0]?.status).toBe("pending");
     });
 
     it("rejects invalid status value", async () => {
@@ -369,7 +451,7 @@ describe("PG import-export schema", () => {
         accountId,
         status: "pending",
         confirmationPhrase: "DELETE MY ACCOUNT",
-        scheduledPurgeAt: now + 86400000,
+        scheduledPurgeAt: now,
         requestedAt: now,
       });
 
@@ -391,7 +473,7 @@ describe("PG import-export schema", () => {
         accountId,
         status: "pending",
         confirmationPhrase: "DELETE MY ACCOUNT",
-        scheduledPurgeAt: now + 86400000,
+        scheduledPurgeAt: now,
         requestedAt: now,
       });
 

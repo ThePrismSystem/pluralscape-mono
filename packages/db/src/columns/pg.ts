@@ -36,8 +36,11 @@ export function jsonToDriver(val: unknown): string {
   return JSON.stringify(val);
 }
 
-/** Parses JSON string from storage. */
-export function jsonFromDriver(val: string): unknown {
+/** Parses JSON string from storage. PGlite returns pre-parsed objects for JSONB; handle both. */
+export function jsonFromDriver(val: unknown): unknown {
+  if (typeof val !== "string") {
+    return val;
+  }
   try {
     return JSON.parse(val) as unknown;
   } catch (error) {

@@ -941,6 +941,7 @@ export const SQLITE_DDL = {
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
       blob_id TEXT REFERENCES blob_metadata(id) ON DELETE SET NULL,
       created_at INTEGER NOT NULL,
+      updated_at INTEGER,
       completed_at INTEGER
     )
   `,
@@ -958,8 +959,7 @@ export const SQLITE_DDL = {
       requested_at INTEGER NOT NULL,
       confirmed_at INTEGER,
       completed_at INTEGER,
-      cancelled_at INTEGER,
-      CHECK (scheduled_purge_at > requested_at)
+      cancelled_at INTEGER
     )
   `,
   accountPurgeRequestsIndexes: `
@@ -973,7 +973,7 @@ export const SQLITE_DDL = {
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
       automerge_heads BLOB,
-      version INTEGER NOT NULL DEFAULT 1,
+      version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
       created_at INTEGER NOT NULL,
       last_synced_at INTEGER
     )
@@ -994,7 +994,8 @@ export const SQLITE_DDL = {
     )
   `,
   syncQueueIndexes: `
-    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at)
+    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at) WHERE synced_at IS NULL;
+    CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id)
   `,
   syncConflicts: `
     CREATE TABLE sync_conflicts (
@@ -1007,8 +1008,7 @@ export const SQLITE_DDL = {
       resolution TEXT CHECK (resolution IN ('local', 'remote', 'merged')),
       created_at INTEGER NOT NULL,
       resolved_at INTEGER,
-      details TEXT,
-      CHECK ((resolution IS NULL) = (resolved_at IS NULL))
+      details TEXT
     )
   `,
   syncConflictsIndexes: `
@@ -1029,7 +1029,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       started_at INTEGER,
       completed_at INTEGER,
-      idempotency_key TEXT
+      idempotency_key TEXT,
+      CHECK (attempts <= max_attempts)
     )
   `,
   jobsIndexes: `

@@ -65,7 +65,6 @@ export {
   SEARCHABLE_ENTITY_TYPES,
   JOB_TYPES,
   JOB_STATUSES,
-  enumCheck,
 } from "./helpers/index.js";
 export type { DbAuditActor } from "./helpers/index.js";
 

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
@@ -25,7 +26,6 @@ export const jobs = sqliteTable(
     createdAt: sqliteTimestamp("created_at").notNull(),
     startedAt: sqliteTimestamp("started_at"),
     completedAt: sqliteTimestamp("completed_at"),
-    /** SQLite treats each NULL as unique, so this column allows multiple NULL values. */
     idempotencyKey: text("idempotency_key"),
   },
   (t) => [
@@ -34,5 +34,6 @@ export const jobs = sqliteTable(
     uniqueIndex("jobs_idempotency_key_idx").on(t.idempotencyKey),
     check("jobs_status_check", enumCheck(t.status, JOB_STATUSES)),
     check("jobs_type_check", enumCheck(t.type, JOB_TYPES)),
+    check("jobs_attempts_check", sql`${t.attempts} <= ${t.maxAttempts}`),
   ],
 );

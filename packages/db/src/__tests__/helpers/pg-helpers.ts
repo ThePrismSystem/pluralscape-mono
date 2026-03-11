@@ -945,6 +945,7 @@ export const PG_DDL = {
       status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
       blob_id VARCHAR(255) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ
     )
   `,
@@ -962,8 +963,7 @@ export const PG_DDL = {
       requested_at TIMESTAMPTZ NOT NULL,
       confirmed_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ,
-      cancelled_at TIMESTAMPTZ,
-      CHECK (scheduled_purge_at > requested_at)
+      cancelled_at TIMESTAMPTZ
     )
   `,
   accountPurgeRequestsIndexes: `
@@ -977,7 +977,7 @@ export const PG_DDL = {
       entity_type VARCHAR(255) NOT NULL,
       entity_id VARCHAR(255) NOT NULL,
       automerge_heads BYTEA,
-      version INTEGER NOT NULL DEFAULT 1,
+      version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
       created_at TIMESTAMPTZ NOT NULL,
       last_synced_at TIMESTAMPTZ
     )
@@ -998,7 +998,8 @@ export const PG_DDL = {
     )
   `,
   syncQueueIndexes: `
-    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at)
+    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at) WHERE synced_at IS NULL;
+    CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id)
   `,
   syncConflicts: `
     CREATE TABLE sync_conflicts (
@@ -1011,8 +1012,7 @@ export const PG_DDL = {
       resolution VARCHAR(255) CHECK (resolution IN ('local', 'remote', 'merged')),
       created_at TIMESTAMPTZ NOT NULL,
       resolved_at TIMESTAMPTZ,
-      details TEXT,
-      CHECK ((resolution IS NULL) = (resolved_at IS NULL))
+      details TEXT
     )
   `,
   syncConflictsIndexes: `

@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { syncConflicts, syncDocuments, syncQueue } from "../schema/pg/sync.js";
@@ -28,6 +28,12 @@ describe("PG sync schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(syncConflicts);
+    await db.delete(syncQueue);
+    await db.delete(syncDocuments);
   });
 
   describe("sync_documents", () => {
@@ -138,6 +144,23 @@ describe("PG sync schema", () => {
       const rows = await db.select().from(syncDocuments).where(eq(syncDocuments.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects version less than 1", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(syncDocuments).values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          version: 0,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("sync_queue", () => {
@@ -185,6 +208,26 @@ describe("PG sync schema", () => {
       ).rejects.toThrow();
     });
 
+    it.each(["update", "delete"] as const)("exercises %s operation", async (operation) => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(syncQueue).values({
+        id,
+        systemId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        operation,
+        changeData: new Uint8Array([10]),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
+      expect(rows[0]?.operation).toBe(operation);
+    });
+
     it("allows nullable syncedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -226,6 +269,32 @@ describe("PG sync schema", () => {
       expect(rows[0]?.changeData).toBeInstanceOf(Uint8Array);
       expect(rows[0]?.changeData).toEqual(data);
     });
+
+    it("supports lifecycle: insert unsynced then mark synced", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(syncQueue).values({
+        id,
+        systemId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        operation: "create",
+        changeData: new Uint8Array([1, 2, 3]),
+        createdAt: now,
+      });
+
+      const before = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
+      expect(before[0]?.syncedAt).toBeNull();
+
+      const syncedAt = now + 5000;
+      await db.update(syncQueue).set({ syncedAt }).where(eq(syncQueue.id, id));
+
+      const after = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
+      expect(after[0]?.syncedAt).toBe(syncedAt);
+    });
   });
 
   describe("sync_conflicts", () => {
@@ -255,6 +324,28 @@ describe("PG sync schema", () => {
       expect(rows[0]?.resolution).toBe("merged");
       expect(rows[0]?.resolvedAt).toBe(now);
       expect(rows[0]?.details).toBe("auto-merged field changes");
+    });
+
+    it.each(["local", "remote"] as const)("exercises %s resolution", async (resolution) => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(syncConflicts).values({
+        id,
+        systemId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        localVersion: 1,
+        remoteVersion: 2,
+        resolution,
+        createdAt: now,
+        resolvedAt: now,
+      });
+
+      const rows = await db.select().from(syncConflicts).where(eq(syncConflicts.id, id));
+      expect(rows[0]?.resolution).toBe(resolution);
     });
 
     it("allows nullable resolution", async () => {

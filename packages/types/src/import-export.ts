@@ -219,11 +219,17 @@ export interface ImportError {
 /** An import job. */
 export interface ImportJob {
   readonly id: ImportJobId;
+  readonly accountId: AccountId;
   readonly systemId: SystemId;
   readonly source: ImportSource;
   readonly status: ImportJobStatus;
-  readonly progress: ImportProgress;
-  readonly startedAt: UnixMillis | null;
+  readonly progressPercent: number;
+  readonly errorLog: readonly ImportError[] | null;
+  readonly warningCount: number;
+  readonly chunksTotal: number | null;
+  readonly chunksCompleted: number;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis | null;
   readonly completedAt: UnixMillis | null;
 }
 
@@ -275,6 +281,7 @@ export interface ExportRequest {
   readonly status: ExportRequestStatus;
   readonly blobId: BlobId | null;
   readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis | null;
   readonly completedAt: UnixMillis | null;
 }
 
@@ -289,13 +296,14 @@ export type ReportFormat = "html" | "pdf";
 /** Request to purge an entire account and all associated data. */
 export interface AccountPurgeRequest {
   readonly id: AccountPurgeRequestId;
-  readonly systemId: SystemId;
+  readonly accountId: AccountId;
   readonly status: AccountPurgeStatus;
   readonly confirmationPhrase: string;
   readonly requestedAt: UnixMillis;
   readonly confirmedAt: UnixMillis | null;
   readonly scheduledPurgeAt: UnixMillis;
   readonly completedAt: UnixMillis | null;
+  readonly cancelledAt: UnixMillis | null;
 }
 
 /** A downloadable report of a single member's data. */

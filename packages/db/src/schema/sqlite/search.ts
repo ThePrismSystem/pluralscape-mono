@@ -1,6 +1,9 @@
 import { sql } from "drizzle-orm";
 
+import { SEARCHABLE_ENTITY_TYPES } from "../../helpers/enums.js";
+
 import type { SearchableEntityType } from "@pluralscape/types";
+// Intentionally typed for better-sqlite3 (self-hosted tier); mobile app will need its own FTS5 wrapper.
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const DEFAULT_SEARCH_LIMIT = 50;
@@ -8,7 +11,7 @@ const DEFAULT_SEARCH_LIMIT = 50;
 /** FTS5 virtual table DDL for client-side full-text search. */
 export const SEARCH_INDEX_DDL = `
   CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
-    entity_type,
+    entity_type UNINDEXED,
     entity_id UNINDEXED,
     title,
     content,
@@ -61,27 +64,30 @@ export function deleteSearchEntry(
   );
 }
 
-/** Drop and recreate the search index atomically within a transaction. */
+/** Drop and recreate the search index. */
 export function rebuildSearchIndex(db: BetterSQLite3Database): void {
-  db.transaction(() => {
-    dropSearchIndex(db);
-    createSearchIndex(db);
-  });
+  dropSearchIndex(db);
+  createSearchIndex(db);
 }
 
 /**
- * Escape a user query for safe use with FTS5 MATCH.
- *
- * Splits on whitespace, wraps each token in double quotes (escaping internal
- * double quotes by doubling them), then joins with spaces for implicit AND.
+ * Sanitize user input for safe FTS5 MATCH usage.
+ * Escapes double quotes and wraps in double quotes so FTS5 treats the input as a literal phrase.
+ * Returns null for empty/whitespace-only input.
  */
-export function escapeFts5Query(query: string): string {
-  return query
-    .trim()
-    .split(/\s+/)
-    .filter((t) => t.length > 0)
-    .map((t) => `"${t.replace(/"/g, '""')}"`)
-    .join(" ");
+export function sanitizeFtsQuery(input: string): string | null {
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  return `"${trimmed.replace(/"/g, '""')}"`;
+}
+
+function validateEntityType(value: string): SearchableEntityType {
+  if (!(SEARCHABLE_ENTITY_TYPES as readonly string[]).includes(value)) {
+    throw new Error(`Invalid SearchableEntityType: "${value}"`);
+  }
+  return value as SearchableEntityType;
 }
 
 /** Search options. */
@@ -90,42 +96,37 @@ export interface SearchOptions {
   readonly limit?: number;
 }
 
-interface RawSearchRow {
-  entity_type: string;
-  entity_id: string;
-  title: string;
-  content: string;
-  rank: number;
-}
-
-function mapSearchRow(r: RawSearchRow): SearchIndexResult {
-  return {
-    entityType: r.entity_type as SearchableEntityType,
-    entityId: r.entity_id,
-    title: r.title,
-    content: r.content,
-    rank: r.rank,
-  };
-}
-
 /** Search the index using FTS5 MATCH, returning ranked results. */
 export function searchEntries(
   db: BetterSQLite3Database,
   query: string,
   opts?: SearchOptions,
 ): SearchIndexResult[] {
-  const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
-  const escaped = escapeFts5Query(query);
-
-  if (escaped.length === 0) {
+  const sanitized = sanitizeFtsQuery(query);
+  if (sanitized === null) {
     return [];
   }
 
-  const entityTypeFilter = opts?.entityType ? sql` AND entity_type = ${opts.entityType}` : sql``;
+  const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
+  const entityType = opts?.entityType;
 
-  const results = db.all<RawSearchRow>(
-    sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${escaped}${entityTypeFilter} ORDER BY rank LIMIT ${limit}`,
+  const results = db.all<{
+    entity_type: string;
+    entity_id: string;
+    title: string;
+    content: string;
+    rank: number;
+  }>(
+    entityType
+      ? sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${sanitized} AND entity_type = ${entityType} ORDER BY rank LIMIT ${limit}`
+      : sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${sanitized} ORDER BY rank LIMIT ${limit}`,
   );
 
-  return results.map(mapSearchRow);
+  return results.map((r) => ({
+    entityType: validateEntityType(r.entity_type),
+    entityId: r.entity_id,
+    title: r.title,
+    content: r.content,
+    rank: r.rank,
+  }));
 }

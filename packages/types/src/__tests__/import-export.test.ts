@@ -1,6 +1,13 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { AccountPurgeRequestId, BucketId, ImportJobId, MemberId, SystemId } from "../ids.js";
+import type {
+  AccountId,
+  AccountPurgeRequestId,
+  BucketId,
+  ImportJobId,
+  MemberId,
+  SystemId,
+} from "../ids.js";
 import type {
   AccountPurgeRequest,
   AccountPurgeStatus,
@@ -281,11 +288,17 @@ describe("ImportError", () => {
 describe("ImportJob", () => {
   it("has correct field types", () => {
     expectTypeOf<ImportJob["id"]>().toEqualTypeOf<ImportJobId>();
+    expectTypeOf<ImportJob["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<ImportJob["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<ImportJob["source"]>().toEqualTypeOf<ImportSource>();
     expectTypeOf<ImportJob["status"]>().toEqualTypeOf<ImportJobStatus>();
-    expectTypeOf<ImportJob["progress"]>().toEqualTypeOf<ImportProgress>();
-    expectTypeOf<ImportJob["startedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<ImportJob["progressPercent"]>().toEqualTypeOf<number>();
+    expectTypeOf<ImportJob["errorLog"]>().toEqualTypeOf<readonly ImportError[] | null>();
+    expectTypeOf<ImportJob["warningCount"]>().toEqualTypeOf<number>();
+    expectTypeOf<ImportJob["chunksTotal"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<ImportJob["chunksCompleted"]>().toEqualTypeOf<number>();
+    expectTypeOf<ImportJob["createdAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<ImportJob["updatedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<ImportJob["completedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 });
@@ -391,13 +404,14 @@ describe("AccountPurgeStatus", () => {
 describe("AccountPurgeRequest", () => {
   it("has correct field types", () => {
     expectTypeOf<AccountPurgeRequest["id"]>().toEqualTypeOf<AccountPurgeRequestId>();
-    expectTypeOf<AccountPurgeRequest["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<AccountPurgeRequest["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<AccountPurgeRequest["status"]>().toEqualTypeOf<AccountPurgeStatus>();
     expectTypeOf<AccountPurgeRequest["confirmationPhrase"]>().toBeString();
     expectTypeOf<AccountPurgeRequest["requestedAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<AccountPurgeRequest["confirmedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<AccountPurgeRequest["scheduledPurgeAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<AccountPurgeRequest["completedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<AccountPurgeRequest["cancelledAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 });
 

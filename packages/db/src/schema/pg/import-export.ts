@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
+import { pgJsonb, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import {
   ACCOUNT_PURGE_STATUSES,
@@ -39,7 +39,7 @@ export const importJobs = pgTable(
       .default("pending")
       .$type<ImportJobStatus>(),
     progressPercent: integer("progress_percent").notNull().default(0),
-    errorLog: jsonb("error_log"),
+    errorLog: pgJsonb("error_log"),
     warningCount: integer("warning_count").notNull().default(0),
     chunksTotal: integer("chunks_total"),
     chunksCompleted: integer("chunks_completed").notNull().default(0),
@@ -78,10 +78,12 @@ export const exportRequests = pgTable(
       .notNull()
       .default("pending")
       .$type<ExportRequestStatus>(),
+    // ON DELETE SET NULL can orphan completed exports; app logic must handle expired/orphaned state.
     blobId: varchar("blob_id", { length: 255 }).references(() => blobMetadata.id, {
       onDelete: "set null",
     }),
     createdAt: pgTimestamp("created_at").notNull(),
+    updatedAt: pgTimestamp("updated_at"),
     completedAt: pgTimestamp("completed_at"),
   },
   (t) => [
@@ -92,6 +94,7 @@ export const exportRequests = pgTable(
   ],
 );
 
+// App-level enforcement needed: only one active purge request per account at a time.
 export const accountPurgeRequests = pgTable(
   "account_purge_requests",
   {
@@ -113,6 +116,5 @@ export const accountPurgeRequests = pgTable(
   (t) => [
     index("account_purge_requests_account_id_idx").on(t.accountId),
     check("account_purge_requests_status_check", enumCheck(t.status, ACCOUNT_PURGE_STATUSES)),
-    check("account_purge_requests_schedule_check", sql`${t.scheduledPurgeAt} > ${t.requestedAt}`),
   ],
 );

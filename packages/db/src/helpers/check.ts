@@ -2,21 +2,12 @@ import { sql, type SQL } from "drizzle-orm";
 
 import type { AnyColumn } from "drizzle-orm";
 
-const SAFE_ENUM_VALUE = /^[\w.:-]+$/;
-
 /**
  * Generate a CHECK constraint SQL fragment from a column and an array of allowed values.
- *
- * WARNING: Values are interpolated via `sql.raw()` — they must be trusted compile-time
- * constants (e.g. const arrays derived from type unions). A runtime regex guard is applied
- * as defense-in-depth, but never pass user input here.
+ * Values are inlined via sql`${v}` which Drizzle renders as string literals in DDL context,
+ * not bind parameters. Verified by integration tests that reject invalid enum values.
  */
 export function enumCheck(column: AnyColumn, values: readonly string[]): SQL {
-  for (const v of values) {
-    if (!SAFE_ENUM_VALUE.test(v)) {
-      throw new Error(`enumCheck: unsafe value "${v}" — must match ${String(SAFE_ENUM_VALUE)}`);
-    }
-  }
-  const list = values.map((v) => `'${v}'`).join(", ");
-  return sql`${column} IN (${sql.raw(list)})`;
+  const params = values.map((v) => sql`${v}`);
+  return sql`${column} IN (${sql.join(params, sql`, `)})`;
 }

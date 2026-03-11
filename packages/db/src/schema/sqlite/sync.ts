@@ -29,9 +29,11 @@ export const syncDocuments = sqliteTable(
       t.entityType,
       t.entityId,
     ),
+    check("sync_documents_version_check", sql`${t.version} >= 1`),
   ],
 );
 
+// UUID PKs don't guarantee insertion order; consider UUIDv7 or autoincrement sequence for replay ordering.
 export const syncQueue = sqliteTable(
   "sync_queue",
   {
@@ -47,7 +49,14 @@ export const syncQueue = sqliteTable(
     syncedAt: sqliteTimestamp("synced_at"),
   },
   (t) => [
-    index("sync_queue_system_id_synced_at_idx").on(t.systemId, t.syncedAt),
+    index("sync_queue_system_id_synced_at_idx")
+      .on(t.systemId, t.syncedAt)
+      .where(sql`synced_at IS NULL`),
+    index("sync_queue_system_id_entity_type_entity_id_idx").on(
+      t.systemId,
+      t.entityType,
+      t.entityId,
+    ),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
   ],
 );
@@ -75,9 +84,5 @@ export const syncConflicts = sqliteTable(
       t.entityId,
     ),
     check("sync_conflicts_resolution_check", enumCheck(t.resolution, SYNC_RESOLUTIONS)),
-    check(
-      "sync_conflicts_resolution_resolved_at_check",
-      sql`(${t.resolution} IS NULL) = (${t.resolvedAt} IS NULL)`,
-    ),
   ],
 );

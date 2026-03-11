@@ -23,9 +23,11 @@ export interface SyncDocument {
   readonly entityType: EntityType;
   /** Plain string rather than branded ID — the referenced entity type varies by entityType. */
   readonly entityId: string;
-  readonly automergeHeads: Uint8Array;
-  readonly lastSyncedAt: UnixMillis;
+  /** Null until first successful sync round-trip. */
+  readonly automergeHeads: Uint8Array | null;
+  readonly lastSyncedAt: UnixMillis | null;
   readonly version: number;
+  readonly createdAt: UnixMillis;
 }
 
 /** An offline write queued for sync. Replayed in order when connectivity returns. */
@@ -50,9 +52,10 @@ export interface SyncConflict {
   readonly entityId: string;
   readonly localVersion: number;
   readonly remoteVersion: number;
-  readonly resolution: SyncResolution;
+  readonly resolution: SyncResolution | null;
   readonly resolvedAt: UnixMillis | null;
   readonly details: string | null;
+  readonly createdAt: UnixMillis;
 }
 
 /** Overall sync status for a system. Runtime state, not persisted. */

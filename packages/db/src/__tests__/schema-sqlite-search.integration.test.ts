@@ -8,6 +8,7 @@ import {
   dropSearchIndex,
   insertSearchEntry,
   rebuildSearchIndex,
+  sanitizeFtsQuery,
   searchEntries,
 } from "../schema/sqlite/search.js";
 
@@ -238,6 +239,94 @@ describe("SQLite FTS5 search index", () => {
 
       const results = searchEntries(db, "parentheses");
       expect(results).toHaveLength(1);
+    });
+  });
+
+  describe("FTS5 input safety", () => {
+    it("returns empty array for empty string", () => {
+      insertSearchEntry(db, {
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        title: "Someone",
+        content: "Description",
+      });
+
+      const results = searchEntries(db, "");
+      expect(results).toHaveLength(0);
+    });
+
+    it("returns empty array for whitespace-only input", () => {
+      insertSearchEntry(db, {
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        title: "Someone",
+        content: "Description",
+      });
+
+      const results = searchEntries(db, "   ");
+      expect(results).toHaveLength(0);
+    });
+
+    it("handles FTS5 operators as search terms", () => {
+      insertSearchEntry(db, {
+        entityType: "note",
+        entityId: crypto.randomUUID(),
+        title: "Boolean operators",
+        content: "AND OR NOT are operators",
+      });
+
+      expect(() => searchEntries(db, "AND")).not.toThrow();
+      expect(() => searchEntries(db, "OR")).not.toThrow();
+      expect(() => searchEntries(db, "NOT")).not.toThrow();
+    });
+
+    it("handles unbalanced quotes without crashing", () => {
+      insertSearchEntry(db, {
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        title: "Quote test",
+        content: "hello world",
+      });
+
+      expect(() => searchEntries(db, '"hello')).not.toThrow();
+    });
+
+    it("handles special characters in search", () => {
+      insertSearchEntry(db, {
+        entityType: "note",
+        entityId: crypto.randomUUID(),
+        title: "C++ programming",
+        content: "self-care routine",
+      });
+
+      expect(() => searchEntries(db, "C++")).not.toThrow();
+      expect(() => searchEntries(db, "self-care")).not.toThrow();
+    });
+  });
+
+  describe("sanitizeFtsQuery", () => {
+    it("returns null for empty string", () => {
+      expect(sanitizeFtsQuery("")).toBeNull();
+    });
+
+    it("returns null for whitespace-only string", () => {
+      expect(sanitizeFtsQuery("   ")).toBeNull();
+    });
+
+    it("wraps simple input in double quotes", () => {
+      expect(sanitizeFtsQuery("hello")).toBe('"hello"');
+    });
+
+    it("escapes double quotes by doubling them", () => {
+      expect(sanitizeFtsQuery('say "hello"')).toBe('"say ""hello"""');
+    });
+
+    it("trims leading and trailing whitespace", () => {
+      expect(sanitizeFtsQuery("  hello  ")).toBe('"hello"');
+    });
+
+    it("preserves internal whitespace", () => {
+      expect(sanitizeFtsQuery("hello world")).toBe('"hello world"');
     });
   });
 });

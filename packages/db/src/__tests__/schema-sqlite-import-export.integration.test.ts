@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { blobMetadata } from "../schema/sqlite/blob-metadata.js";
@@ -48,6 +48,12 @@ describe("SQLite import-export schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(importJobs).run();
+    db.delete(exportRequests).run();
+    db.delete(accountPurgeRequests).run();
   });
 
   describe("import_jobs", () => {
@@ -141,6 +147,127 @@ describe("SQLite import-export schema", () => {
 
       const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
       expect(rows[0]?.errorLog).toEqual(errors);
+    });
+
+    it("rejects invalid source value", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(importJobs)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            source: "invalid-source" as "simply-plural",
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("rejects invalid status value", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(importJobs)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            source: "pluralkit",
+            status: "bogus-status" as "pending",
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("rejects negative progressPercent", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(importJobs)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            source: "pluralscape",
+            progressPercent: -1,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("rejects progressPercent above 100", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(importJobs)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            source: "pluralscape",
+            progressPercent: 101,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it.each(["validating", "failed"] as const)("exercises %s status", (status) => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(importJobs)
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralkit",
+          status,
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
+      expect(rows[0]?.status).toBe(status);
+    });
+
+    it("rejects chunksCompleted exceeding chunksTotal", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(importJobs)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            source: "pluralscape",
+            chunksCompleted: 5,
+            chunksTotal: 3,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
 
     it("cascades on system deletion", () => {
@@ -263,6 +390,107 @@ describe("SQLite import-export schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("rejects invalid format value", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(exportRequests)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            format: "xml" as "json",
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("rejects invalid status value", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(exportRequests)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            format: "json",
+            status: "bogus" as "pending",
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it.each(["processing", "failed"] as const)("exercises %s status", (status) => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(exportRequests)
+        .values({ id, accountId, systemId, format: "json", status, createdAt: now })
+        .run();
+
+      const rows = db.select().from(exportRequests).where(eq(exportRequests.id, id)).all();
+      expect(rows[0]?.status).toBe(status);
+    });
+
+    it("sets blobId to null when blob is deleted", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const blobId = crypto.randomUUID();
+      const exportId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(buckets)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          encryptedData: new Uint8Array([1, 2, 3]),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(blobMetadata)
+        .values({
+          id: blobId,
+          systemId,
+          storageKey: `key_${crypto.randomUUID()}`,
+          sizeBytes: 1024,
+          encryptionTier: 1,
+          purpose: "export",
+          uploadedAt: now,
+        })
+        .run();
+
+      db.insert(exportRequests)
+        .values({
+          id: exportId,
+          accountId,
+          systemId,
+          format: "json",
+          status: "completed",
+          blobId,
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(blobMetadata).where(eq(blobMetadata.id, blobId)).run();
+
+      const rows = db.select().from(exportRequests).where(eq(exportRequests.id, exportId)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.blobId).toBeNull();
+    });
+
     it("allows null blobId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -320,6 +548,48 @@ describe("SQLite import-export schema", () => {
       expect(rows[0]?.confirmedAt).toBe(now + 1000);
       expect(rows[0]?.completedAt).toBe(now + 86400000);
       expect(rows[0]?.cancelledAt).toBeNull();
+    });
+
+    it("rejects invalid status value", () => {
+      const accountId = insertAccount();
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(accountPurgeRequests)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            status: "invalid-status" as "pending",
+            confirmationPhrase: "DELETE MY ACCOUNT",
+            scheduledPurgeAt: now + 86400000,
+            requestedAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("applies default status of pending", () => {
+      const accountId = insertAccount();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(accountPurgeRequests)
+        .values({
+          id,
+          accountId,
+          confirmationPhrase: "DELETE MY ACCOUNT",
+          scheduledPurgeAt: now,
+          requestedAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(accountPurgeRequests)
+        .where(eq(accountPurgeRequests.id, id))
+        .all();
+      expect(rows[0]?.status).toBe("pending");
     });
 
     it("cascades on account deletion", () => {
