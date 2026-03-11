@@ -16,6 +16,7 @@ import {
   createSqliteCustomFieldsTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -43,7 +44,7 @@ describe("SQLite custom fields schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -57,7 +58,7 @@ describe("SQLite custom fields schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -82,7 +83,7 @@ describe("SQLite custom fields schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(fieldDefinitions)
         .values({
@@ -110,7 +111,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -144,7 +145,7 @@ describe("SQLite custom fields schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -162,7 +163,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
           archived: true,
@@ -183,7 +184,7 @@ describe("SQLite custom fields schema", () => {
       const fieldDefId = insertFieldDefinition(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(fieldValues)
         .values({
@@ -215,7 +216,7 @@ describe("SQLite custom fields schema", () => {
           id,
           fieldDefinitionId: fieldDefId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -237,7 +238,7 @@ describe("SQLite custom fields schema", () => {
           id,
           fieldDefinitionId: fieldDefId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -260,7 +261,7 @@ describe("SQLite custom fields schema", () => {
           id,
           fieldDefinitionId: fieldDefId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -283,7 +284,7 @@ describe("SQLite custom fields schema", () => {
             id: crypto.randomUUID(),
             fieldDefinitionId: "nonexistent",
             systemId,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })

@@ -13,6 +13,7 @@ import {
   sqliteInsertAccount,
   sqliteInsertMember,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -51,7 +52,7 @@ describe("SQLite groups schema", () => {
         systemId,
         parentGroupId: opts.parentGroupId ?? null,
         sortOrder: opts.sortOrder ?? 0,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -76,7 +77,7 @@ describe("SQLite groups schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(groups)
         .values({
@@ -115,7 +116,7 @@ describe("SQLite groups schema", () => {
           id,
           systemId,
           sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -156,7 +157,7 @@ describe("SQLite groups schema", () => {
             id: crypto.randomUUID(),
             systemId,
             sortOrder: -1,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -175,7 +176,7 @@ describe("SQLite groups schema", () => {
           id,
           systemId,
           sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })

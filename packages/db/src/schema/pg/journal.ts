@@ -1,6 +1,6 @@
 import { index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary } from "../../columns/pg.js";
+import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { frontingSessions } from "./fronting.js";
@@ -18,7 +18,7 @@ export const journalEntries = pgTable(
       () => frontingSessions.id,
       { onDelete: "set null" },
     ),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -37,7 +37,7 @@ export const wikiPages = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     slug: varchar("slug", { length: 255 }).notNull(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),

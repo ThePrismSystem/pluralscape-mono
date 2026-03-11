@@ -11,6 +11,7 @@ import {
   createPgLifecycleEventsTables,
   pgInsertAccount,
   pgInsertSystem,
+  testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -39,7 +40,7 @@ describe("PG lifecycle_events schema", () => {
     const occurredAt = Date.now() - 86400000;
     const recordedAt = Date.now();
     const id = crypto.randomUUID();
-    const data = new Uint8Array([10, 20, 30]);
+    const data = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(lifecycleEvents).values({
       id,
@@ -62,8 +63,9 @@ describe("PG lifecycle_events schema", () => {
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
     const id = crypto.randomUUID();
-    const blob = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) blob[i] = i;
+    const blobCiphertext = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
+    const blob = testBlob(blobCiphertext);
 
     await db.insert(lifecycleEvents).values({
       id,
@@ -88,7 +90,7 @@ describe("PG lifecycle_events schema", () => {
         systemId,
         occurredAt: now + i * 1000,
         recordedAt: now + i * 1000,
-        encryptedData: new Uint8Array([i]),
+        encryptedData: testBlob(new Uint8Array([i])),
       });
     }
 
@@ -110,7 +112,7 @@ describe("PG lifecycle_events schema", () => {
       systemId,
       occurredAt: now,
       recordedAt: now,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
     });
 
     await db.delete(systems).where(eq(systems.id, systemId));
@@ -126,7 +128,7 @@ describe("PG lifecycle_events schema", () => {
         systemId: "nonexistent",
         occurredAt: now,
         recordedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
       }),
     ).rejects.toThrow();
   });
@@ -154,7 +156,7 @@ describe("PG lifecycle_events schema", () => {
       systemId,
       occurredAt: now,
       recordedAt: now,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
     });
 
     await expect(
@@ -163,7 +165,7 @@ describe("PG lifecycle_events schema", () => {
         systemId,
         occurredAt: now,
         recordedAt: now,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
       }),
     ).rejects.toThrow();
   });
@@ -180,7 +182,7 @@ describe("PG lifecycle_events schema", () => {
       systemId,
       occurredAt,
       recordedAt,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
     });
 
     const rows = await db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id));

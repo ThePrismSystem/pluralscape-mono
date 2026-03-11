@@ -1,6 +1,6 @@
 import { boolean, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { systems } from "./systems.js";
@@ -13,7 +13,7 @@ export const timerConfigs = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     enabled: boolean("enabled").notNull().default(true),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -33,7 +33,7 @@ export const checkInRecords = pgTable(
     scheduledAt: pgTimestamp("scheduled_at").notNull(),
     respondedAt: pgTimestamp("responded_at"),
     dismissed: boolean("dismissed").notNull().default(false),
-    encryptedData: pgBinary("encrypted_data"),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
   },
   (t) => [
     index("check_in_records_system_id_idx").on(t.systemId),

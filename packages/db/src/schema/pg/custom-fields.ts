@@ -1,6 +1,6 @@
 import { index, pgTable, primaryKey, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary } from "../../columns/pg.js";
+import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { buckets } from "./privacy.js";
@@ -13,7 +13,7 @@ export const fieldDefinitions = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -31,7 +31,7 @@ export const fieldValues = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },

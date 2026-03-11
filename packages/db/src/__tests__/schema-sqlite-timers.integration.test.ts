@@ -11,6 +11,7 @@ import {
   createSqliteTimerTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -42,7 +43,7 @@ describe("SQLite timers schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
 
       db.insert(timerConfigs)
         .values({
@@ -71,7 +72,7 @@ describe("SQLite timers schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -93,7 +94,7 @@ describe("SQLite timers schema", () => {
           id,
           systemId,
           enabled: false,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -116,7 +117,7 @@ describe("SQLite timers schema", () => {
         .values({
           id: timerId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -144,13 +145,13 @@ describe("SQLite timers schema", () => {
       const timerId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([5, 6, 7]);
+      const data = testBlob(new Uint8Array([5, 6, 7]));
 
       db.insert(timerConfigs)
         .values({
           id: timerId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -185,7 +186,7 @@ describe("SQLite timers schema", () => {
         .values({
           id: timerId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -216,7 +217,7 @@ describe("SQLite timers schema", () => {
         .values({
           id: timerId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -247,7 +248,7 @@ describe("SQLite timers schema", () => {
         .values({
           id: timerId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })

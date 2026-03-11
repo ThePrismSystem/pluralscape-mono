@@ -6,7 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/sqlite/auth.js";
 import { systems } from "../schema/sqlite/systems.js";
 
-import { createSqliteSystemTables, sqliteInsertAccount } from "./helpers/sqlite-helpers.js";
+import {
+  createSqliteSystemTables,
+  sqliteInsertAccount,
+  testBlob,
+} from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -33,7 +37,7 @@ describe("SQLite systems schema", () => {
     const accountId = insertAccount();
     const now = Date.now();
     const id = crypto.randomUUID();
-    const data = new Uint8Array([1, 2, 3, 4, 5]);
+    const data = testBlob(new Uint8Array([1, 2, 3, 4, 5]));
 
     db.insert(systems)
       .values({
@@ -74,8 +78,9 @@ describe("SQLite systems schema", () => {
     const accountId = insertAccount();
     const now = Date.now();
     const id = crypto.randomUUID();
-    const blob = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) blob[i] = i;
+    const bigArray = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) bigArray[i] = i;
+    const blob = testBlob(bigArray);
 
     db.insert(systems)
       .values({

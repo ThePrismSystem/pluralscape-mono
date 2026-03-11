@@ -1,6 +1,6 @@
 import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 
 import { systems } from "./systems.js";
 
@@ -13,7 +13,7 @@ export const lifecycleEvents = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     occurredAt: sqliteTimestamp("occurred_at").notNull(),
     recordedAt: sqliteTimestamp("recorded_at").notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
   },
   (t) => [
     index("lifecycle_events_system_occurred_idx").on(t.systemId, t.occurredAt),

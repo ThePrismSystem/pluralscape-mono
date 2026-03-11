@@ -11,6 +11,7 @@ import {
   createSqliteLifecycleEventsTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -40,7 +41,7 @@ describe("SQLite lifecycle_events schema", () => {
     const occurred = Date.now() - 86400000;
     const recorded = Date.now();
     const id = crypto.randomUUID();
-    const data = new Uint8Array([10, 20, 30]);
+    const data = testBlob(new Uint8Array([10, 20, 30]));
 
     db.insert(lifecycleEvents)
       .values({
@@ -65,8 +66,9 @@ describe("SQLite lifecycle_events schema", () => {
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
     const id = crypto.randomUUID();
-    const blob = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) blob[i] = i;
+    const bigArray = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) bigArray[i] = i;
+    const blob = testBlob(bigArray);
 
     db.insert(lifecycleEvents)
       .values({
@@ -93,7 +95,7 @@ describe("SQLite lifecycle_events schema", () => {
         systemId,
         occurredAt: now,
         recordedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
 
@@ -103,7 +105,7 @@ describe("SQLite lifecycle_events schema", () => {
         systemId,
         occurredAt: now + 1000,
         recordedAt: now + 1000,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
       })
       .run();
 
@@ -128,7 +130,7 @@ describe("SQLite lifecycle_events schema", () => {
         systemId,
         occurredAt: occurred,
         recordedAt: recorded,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
 
@@ -150,7 +152,7 @@ describe("SQLite lifecycle_events schema", () => {
         systemId,
         occurredAt: now,
         recordedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
 
@@ -169,7 +171,7 @@ describe("SQLite lifecycle_events schema", () => {
           systemId: "nonexistent",
           occurredAt: now,
           recordedAt: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
         })
         .run(),
     ).toThrow(/FOREIGN KEY|constraint/i);
@@ -187,7 +189,7 @@ describe("SQLite lifecycle_events schema", () => {
         systemId,
         occurredAt: now,
         recordedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
       })
       .run();
 
@@ -199,7 +201,7 @@ describe("SQLite lifecycle_events schema", () => {
           systemId,
           occurredAt: now,
           recordedAt: now,
-          encryptedData: new Uint8Array([2]),
+          encryptedData: testBlob(new Uint8Array([2])),
         })
         .run(),
     ).toThrow(/UNIQUE|constraint/i);

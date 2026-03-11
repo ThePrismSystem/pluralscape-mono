@@ -3,13 +3,30 @@
  * These must be manually synchronized with schema changes in src/schema/pg/.
  */
 
+import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
+
 import { accounts } from "../../schema/pg/auth.js";
 import { channels } from "../../schema/pg/communication.js";
 import { members } from "../../schema/pg/members.js";
 import { systems } from "../../schema/pg/systems.js";
 
 import type { PGlite } from "@electric-sql/pglite";
+import type { EncryptedBlob } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
+
+/** Creates a minimal valid EncryptedBlob for test fixtures. */
+export function testBlob(ciphertext: Uint8Array = new Uint8Array([1, 2, 3])): EncryptedBlob {
+  const nonce = new Uint8Array(AEAD_NONCE_BYTES);
+  nonce.fill(0xaa);
+  return {
+    ciphertext,
+    nonce,
+    tier: 1,
+    algorithm: "xchacha20-poly1305",
+    keyVersion: null,
+    bucketId: null,
+  };
+}
 
 export const PG_DDL = {
   accounts: `
@@ -1196,7 +1213,7 @@ export async function pgInsertMember(
   await db.insert(members).values({
     id: resolvedId,
     systemId,
-    encryptedData: new Uint8Array([1, 2, 3]),
+    encryptedData: testBlob(),
     createdAt: now,
     updatedAt: now,
   });
@@ -1221,7 +1238,7 @@ export async function pgInsertChannel(
     type: opts.type ?? "channel",
     parentId: opts.parentId ?? null,
     sortOrder: opts.sortOrder ?? 0,
-    encryptedData: new Uint8Array([1, 2, 3]),
+    encryptedData: testBlob(),
     createdAt: now,
     updatedAt: now,
   });

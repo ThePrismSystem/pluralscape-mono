@@ -11,6 +11,7 @@ import {
   createSqliteMemberTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -31,7 +32,7 @@ describe("SQLite members schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -56,7 +57,7 @@ describe("SQLite members schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(members)
         .values({
@@ -84,7 +85,7 @@ describe("SQLite members schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -105,7 +106,7 @@ describe("SQLite members schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -133,7 +134,7 @@ describe("SQLite members schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -151,14 +152,14 @@ describe("SQLite members schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array(0),
+          encryptedData: testBlob(new Uint8Array(0)),
           createdAt: now,
           updatedAt: now,
         })
         .run();
 
       const rows = db.select().from(members).where(eq(members.id, id)).all();
-      expect(rows[0]?.encryptedData).toEqual(new Uint8Array(0));
+      expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array(0)));
     });
 
     it("round-trips archived: true with archivedAt timestamp", () => {
@@ -171,7 +172,7 @@ describe("SQLite members schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
           archived: true,
@@ -194,7 +195,7 @@ describe("SQLite members schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -219,7 +220,7 @@ describe("SQLite members schema", () => {
       const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([100, 200]);
+      const data = testBlob(new Uint8Array([100, 200]));
 
       db.insert(memberPhotos)
         .values({
@@ -251,7 +252,7 @@ describe("SQLite members schema", () => {
           id,
           memberId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -273,7 +274,7 @@ describe("SQLite members schema", () => {
           id,
           memberId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -295,7 +296,7 @@ describe("SQLite members schema", () => {
           id: photoId,
           memberId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -318,7 +319,7 @@ describe("SQLite members schema", () => {
           id: photoId,
           memberId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -341,7 +342,7 @@ describe("SQLite members schema", () => {
             id: crypto.randomUUID(),
             memberId: "nonexistent",
             systemId,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -362,7 +363,7 @@ describe("SQLite members schema", () => {
             id: crypto.randomUUID(),
             memberId,
             systemId: "nonexistent",
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })

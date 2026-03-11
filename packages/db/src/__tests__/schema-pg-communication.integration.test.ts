@@ -22,6 +22,7 @@ import {
   pgInsertChannel,
   pgInsertMember,
   pgInsertSystem,
+  testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -55,7 +56,7 @@ describe("PG communication schema", () => {
     await db.insert(polls).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       allowMultipleVotes: false,
       maxVotesPerMember: 1,
       allowAbstain: false,
@@ -80,7 +81,7 @@ describe("PG communication schema", () => {
     it("round-trips with encrypted_data", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -112,7 +113,7 @@ describe("PG communication schema", () => {
           systemId,
           type: "invalid" as "channel",
           sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -130,7 +131,7 @@ describe("PG communication schema", () => {
           systemId,
           type: "channel",
           sortOrder: -1,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -182,7 +183,7 @@ describe("PG communication schema", () => {
         sortOrder: 0,
         archived: true,
         archivedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -200,7 +201,7 @@ describe("PG communication schema", () => {
       const channelId = await insertChannel(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([5, 6, 7]);
+      const data = testBlob(new Uint8Array([5, 6, 7]));
 
       await db.insert(messages).values({
         id,
@@ -236,7 +237,7 @@ describe("PG communication schema", () => {
         timestamp: now,
         archived: true,
         archivedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -261,7 +262,7 @@ describe("PG communication schema", () => {
         senderId: "member-1",
         timestamp: now,
         editedAt,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -283,7 +284,7 @@ describe("PG communication schema", () => {
         systemId,
         senderId: "member-1",
         timestamp: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -306,7 +307,7 @@ describe("PG communication schema", () => {
         systemId,
         senderId: "member-1",
         timestamp: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -328,7 +329,7 @@ describe("PG communication schema", () => {
         id,
         systemId,
         sortOrder: 5,
-        encryptedData: new Uint8Array([1, 2]),
+        encryptedData: testBlob(new Uint8Array([1, 2])),
         createdAt: now,
         updatedAt: now,
       });
@@ -351,7 +352,7 @@ describe("PG communication schema", () => {
         systemId,
         pinned: true,
         sortOrder: 0,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -370,7 +371,7 @@ describe("PG communication schema", () => {
           id: crypto.randomUUID(),
           systemId,
           sortOrder: -1,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -387,7 +388,7 @@ describe("PG communication schema", () => {
         id,
         systemId,
         sortOrder: 0,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -408,7 +409,7 @@ describe("PG communication schema", () => {
       await db.insert(notes).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2]),
+        encryptedData: testBlob(new Uint8Array([1, 2])),
         createdAt: now,
         updatedAt: now,
       });
@@ -429,7 +430,7 @@ describe("PG communication schema", () => {
         id,
         systemId,
         memberId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -448,7 +449,7 @@ describe("PG communication schema", () => {
       await db.insert(notes).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -469,7 +470,7 @@ describe("PG communication schema", () => {
         systemId,
         archived: true,
         archivedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -488,7 +489,7 @@ describe("PG communication schema", () => {
       await db.insert(notes).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -514,7 +515,7 @@ describe("PG communication schema", () => {
         maxVotesPerMember: 1,
         allowAbstain: false,
         allowVeto: false,
-        encryptedData: new Uint8Array([1, 2]),
+        encryptedData: testBlob(new Uint8Array([1, 2])),
         createdAt: now,
         updatedAt: now,
       });
@@ -548,7 +549,7 @@ describe("PG communication schema", () => {
           maxVotesPerMember: 1,
           allowAbstain: false,
           allowVeto: false,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -573,7 +574,7 @@ describe("PG communication schema", () => {
       const pollId = await insertPoll(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20]);
+      const data = testBlob(new Uint8Array([10, 20]));
 
       await db.insert(pollVotes).values({
         id,
@@ -615,7 +616,7 @@ describe("PG communication schema", () => {
         id: voteId,
         pollId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 
@@ -635,7 +636,7 @@ describe("PG communication schema", () => {
         id: voteId,
         pollId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 
@@ -655,7 +656,7 @@ describe("PG communication schema", () => {
       await db.insert(acknowledgements).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2]),
+        encryptedData: testBlob(new Uint8Array([1, 2])),
         createdAt: now,
       });
 
@@ -676,7 +677,7 @@ describe("PG communication schema", () => {
         systemId,
         confirmed: true,
         confirmedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 
@@ -694,7 +695,7 @@ describe("PG communication schema", () => {
       await db.insert(acknowledgements).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 

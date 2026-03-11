@@ -1,6 +1,6 @@
 import { index, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
 import { buckets } from "./privacy.js";
@@ -13,7 +13,7 @@ export const fieldDefinitions = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -31,7 +31,7 @@ export const fieldValues = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },

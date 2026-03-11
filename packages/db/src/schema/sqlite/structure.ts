@@ -1,6 +1,6 @@
 import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
@@ -12,7 +12,7 @@ export const relationships = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -27,7 +27,7 @@ export const subsystems = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: text("parent_subsystem_id"),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -47,7 +47,7 @@ export const sideSystems = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -63,7 +63,7 @@ export const layers = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     // Ties are intentionally allowed; no uniqueness constraint on sortOrder
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -81,7 +81,7 @@ export const subsystemMemberships = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -101,7 +101,7 @@ export const sideSystemMemberships = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -121,7 +121,7 @@ export const layerMemberships = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -143,7 +143,7 @@ export const subsystemLayerLinks = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data"),
+    encryptedData: sqliteEncryptedBlob("encrypted_data"),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -166,7 +166,7 @@ export const subsystemSideSystemLinks = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data"),
+    encryptedData: sqliteEncryptedBlob("encrypted_data"),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -189,7 +189,7 @@ export const sideSystemLayerLinks = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data"),
+    encryptedData: sqliteEncryptedBlob("encrypted_data"),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [

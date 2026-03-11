@@ -22,6 +22,7 @@ import {
   createSqliteStructureTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -60,7 +61,7 @@ describe("SQLite structure schema", () => {
         id,
         systemId,
         parentSubsystemId,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -74,7 +75,7 @@ describe("SQLite structure schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -89,7 +90,7 @@ describe("SQLite structure schema", () => {
         id,
         systemId,
         sortOrder,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -114,7 +115,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(relationships)
         .values({
@@ -142,7 +143,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -162,7 +163,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -181,7 +182,7 @@ describe("SQLite structure schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -196,7 +197,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
 
       db.insert(subsystems)
         .values({
@@ -224,7 +225,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -264,7 +265,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([5, 10, 15]);
+      const data = testBlob(new Uint8Array([5, 10, 15]));
 
       db.insert(sideSystems)
         .values({
@@ -292,7 +293,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -320,7 +321,7 @@ describe("SQLite structure schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -335,7 +336,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([7, 14, 21]);
+      const data = testBlob(new Uint8Array([7, 14, 21]));
 
       db.insert(layers)
         .values({
@@ -366,7 +367,7 @@ describe("SQLite structure schema", () => {
           id,
           systemId,
           sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -395,7 +396,7 @@ describe("SQLite structure schema", () => {
             id: crypto.randomUUID(),
             systemId: "nonexistent",
             sortOrder: 0,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -411,7 +412,7 @@ describe("SQLite structure schema", () => {
       const subsystemId = insertSubsystem(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([11, 22, 33]);
+      const data = testBlob(new Uint8Array([11, 22, 33]));
 
       db.insert(subsystemMemberships)
         .values({
@@ -446,7 +447,7 @@ describe("SQLite structure schema", () => {
           id,
           subsystemId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -472,7 +473,7 @@ describe("SQLite structure schema", () => {
           id,
           subsystemId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -498,7 +499,7 @@ describe("SQLite structure schema", () => {
             id: crypto.randomUUID(),
             subsystemId: "nonexistent",
             systemId,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
           })
           .run(),
@@ -513,7 +514,7 @@ describe("SQLite structure schema", () => {
       const sideSystemId = insertSideSystem(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([44, 55, 66]);
+      const data = testBlob(new Uint8Array([44, 55, 66]));
 
       db.insert(sideSystemMemberships)
         .values({
@@ -548,7 +549,7 @@ describe("SQLite structure schema", () => {
           id,
           sideSystemId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -574,7 +575,7 @@ describe("SQLite structure schema", () => {
           id,
           sideSystemId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -596,7 +597,7 @@ describe("SQLite structure schema", () => {
       const layerId = insertLayer(systemId, 1);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([77, 88, 99]);
+      const data = testBlob(new Uint8Array([77, 88, 99]));
 
       db.insert(layerMemberships)
         .values({
@@ -627,7 +628,7 @@ describe("SQLite structure schema", () => {
           id,
           layerId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -649,7 +650,7 @@ describe("SQLite structure schema", () => {
           id,
           layerId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -668,7 +669,7 @@ describe("SQLite structure schema", () => {
       const layerId = insertLayer(systemId, 1);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([100, 110]);
+      const data = testBlob(new Uint8Array([100, 110]));
 
       db.insert(subsystemLayerLinks)
         .values({
@@ -852,7 +853,7 @@ describe("SQLite structure schema", () => {
       const sideSystemId = insertSideSystem(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([120, 130]);
+      const data = testBlob(new Uint8Array([120, 130]));
 
       db.insert(subsystemSideSystemLinks)
         .values({
@@ -1010,7 +1011,7 @@ describe("SQLite structure schema", () => {
       const layerId = insertLayer(systemId, 1);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([140, 150]);
+      const data = testBlob(new Uint8Array([140, 150]));
 
       db.insert(sideSystemLayerLinks)
         .values({

@@ -11,6 +11,7 @@ import {
   createSqliteSafeModeContentTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -39,7 +40,7 @@ describe("SQLite safe_mode_content schema", () => {
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
     const id = crypto.randomUUID();
-    const data = new Uint8Array([10, 20, 30]);
+    const data = testBlob(new Uint8Array([10, 20, 30]));
 
     db.insert(safeModeContent)
       .values({
@@ -71,7 +72,7 @@ describe("SQLite safe_mode_content schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -91,7 +92,7 @@ describe("SQLite safe_mode_content schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -112,7 +113,7 @@ describe("SQLite safe_mode_content schema", () => {
           id: crypto.randomUUID(),
           systemId,
           sortOrder: i + 1,
-          encryptedData: new Uint8Array([i + 1]),
+          encryptedData: testBlob(new Uint8Array([i + 1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -134,8 +135,9 @@ describe("SQLite safe_mode_content schema", () => {
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
     const id = crypto.randomUUID();
-    const blob = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) blob[i] = i;
+    const bigArray = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) bigArray[i] = i;
+    const blob = testBlob(bigArray);
 
     db.insert(safeModeContent)
       .values({
@@ -161,7 +163,7 @@ describe("SQLite safe_mode_content schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -180,7 +182,7 @@ describe("SQLite safe_mode_content schema", () => {
         .values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -198,7 +200,7 @@ describe("SQLite safe_mode_content schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -210,7 +212,7 @@ describe("SQLite safe_mode_content schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([2]),
+          encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
           updatedAt: now,
         })

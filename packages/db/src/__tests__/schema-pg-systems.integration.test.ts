@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgSystemTables, pgInsertAccount } from "./helpers/pg-helpers.js";
+import { createPgSystemTables, pgInsertAccount, testBlob } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -32,7 +32,7 @@ describe("PG systems schema", () => {
     const accountId = await insertAccount();
     const now = Date.now();
     const id = crypto.randomUUID();
-    const data = new Uint8Array([1, 2, 3, 4, 5]);
+    const data = testBlob(new Uint8Array([1, 2, 3, 4, 5]));
 
     await db.insert(systems).values({
       id,
@@ -69,8 +69,9 @@ describe("PG systems schema", () => {
     const accountId = await insertAccount();
     const now = Date.now();
     const id = crypto.randomUUID();
-    const blob = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) blob[i] = i;
+    const blobCiphertext = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
+    const blob = testBlob(blobCiphertext);
 
     await db.insert(systems).values({
       id,

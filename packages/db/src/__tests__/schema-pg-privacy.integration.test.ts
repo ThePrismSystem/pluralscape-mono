@@ -14,7 +14,12 @@ import {
 } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgPrivacyTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgPrivacyTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -41,7 +46,7 @@ describe("PG privacy schema", () => {
     await db.insert(buckets).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -80,7 +85,7 @@ describe("PG privacy schema", () => {
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(buckets).values({
         id,
@@ -105,7 +110,7 @@ describe("PG privacy schema", () => {
       await db.insert(buckets).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -130,7 +135,7 @@ describe("PG privacy schema", () => {
         db.insert(buckets).values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),

@@ -1,6 +1,6 @@
 import { index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary } from "../../columns/pg.js";
+import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { systems } from "./systems.js";
@@ -13,7 +13,7 @@ export const safeModeContent = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order"),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },

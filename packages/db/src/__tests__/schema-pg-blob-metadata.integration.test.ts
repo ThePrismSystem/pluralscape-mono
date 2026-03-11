@@ -12,6 +12,7 @@ import {
   createPgBlobMetadataTables,
   pgInsertAccount,
   pgInsertSystem,
+  testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -177,7 +178,7 @@ describe("PG blob_metadata schema", () => {
     await db.insert(buckets).values({
       id: bucketId,
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });

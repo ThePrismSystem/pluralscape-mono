@@ -22,6 +22,7 @@ import {
   sqliteInsertChannel,
   sqliteInsertMember,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -60,7 +61,7 @@ describe("SQLite communication schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         allowMultipleVotes: false,
         maxVotesPerMember: 1,
         allowAbstain: false,
@@ -87,7 +88,7 @@ describe("SQLite communication schema", () => {
     it("round-trips with encrypted_data", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -122,7 +123,7 @@ describe("SQLite communication schema", () => {
             systemId,
             type: "invalid" as "channel",
             sortOrder: 0,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -143,7 +144,7 @@ describe("SQLite communication schema", () => {
             systemId,
             type: "channel",
             sortOrder: -1,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -191,7 +192,7 @@ describe("SQLite communication schema", () => {
       const channelId = insertChannel(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([5, 6, 7]);
+      const data = testBlob(new Uint8Array([5, 6, 7]));
 
       db.insert(messages)
         .values({
@@ -227,7 +228,7 @@ describe("SQLite communication schema", () => {
           systemId,
           senderId: "member-1",
           timestamp: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -252,7 +253,7 @@ describe("SQLite communication schema", () => {
           systemId,
           senderId: "member-1",
           timestamp: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -276,7 +277,7 @@ describe("SQLite communication schema", () => {
           id,
           systemId,
           sortOrder: 5,
-          encryptedData: new Uint8Array([1, 2]),
+          encryptedData: testBlob(new Uint8Array([1, 2])),
           createdAt: now,
           updatedAt: now,
         })
@@ -301,7 +302,7 @@ describe("SQLite communication schema", () => {
           systemId,
           pinned: true,
           sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -323,7 +324,7 @@ describe("SQLite communication schema", () => {
             id: crypto.randomUUID(),
             systemId,
             sortOrder: -1,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -342,7 +343,7 @@ describe("SQLite communication schema", () => {
           id,
           systemId,
           sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -365,7 +366,7 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1, 2]),
+          encryptedData: testBlob(new Uint8Array([1, 2])),
           createdAt: now,
           updatedAt: now,
         })
@@ -388,7 +389,7 @@ describe("SQLite communication schema", () => {
           id,
           systemId,
           memberId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -409,7 +410,7 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -432,7 +433,7 @@ describe("SQLite communication schema", () => {
           systemId,
           archived: true,
           archivedAt: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -453,7 +454,7 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -481,7 +482,7 @@ describe("SQLite communication schema", () => {
           maxVotesPerMember: 1,
           allowAbstain: false,
           allowVeto: false,
-          encryptedData: new Uint8Array([1, 2]),
+          encryptedData: testBlob(new Uint8Array([1, 2])),
           createdAt: now,
           updatedAt: now,
         })
@@ -518,7 +519,7 @@ describe("SQLite communication schema", () => {
             maxVotesPerMember: 1,
             allowAbstain: false,
             allowVeto: false,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -544,7 +545,7 @@ describe("SQLite communication schema", () => {
       const pollId = insertPoll(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20]);
+      const data = testBlob(new Uint8Array([10, 20]));
 
       db.insert(pollVotes)
         .values({
@@ -590,7 +591,7 @@ describe("SQLite communication schema", () => {
           id: voteId,
           pollId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -612,7 +613,7 @@ describe("SQLite communication schema", () => {
           id: voteId,
           pollId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -634,7 +635,7 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1, 2]),
+          encryptedData: testBlob(new Uint8Array([1, 2])),
           createdAt: now,
         })
         .run();
@@ -657,7 +658,7 @@ describe("SQLite communication schema", () => {
           systemId,
           confirmed: true,
           confirmedAt: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -677,7 +678,7 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();

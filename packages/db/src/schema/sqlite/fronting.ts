@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
@@ -15,7 +15,7 @@ export const frontingSessions = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: sqliteTimestamp("start_time").notNull(),
     endTime: sqliteTimestamp("end_time"),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -37,7 +37,7 @@ export const switches = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     timestamp: sqliteTimestamp("timestamp").notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [index("switches_system_timestamp_idx").on(t.systemId, t.timestamp)],
@@ -50,7 +50,7 @@ export const customFronts = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -68,7 +68,7 @@ export const frontingComments = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },

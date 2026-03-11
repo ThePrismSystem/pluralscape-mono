@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, primaryKey, unique, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { BUCKET_VISIBILITY_SCOPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
@@ -17,7 +17,7 @@ export const buckets = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -82,7 +82,7 @@ export const friendConnections = pgTable(
       .notNull()
       .default("pending")
       .$type<FriendConnectionStatus>(),
-    encryptedData: pgBinary("encrypted_data"),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
     ...timestamps(),
     ...versioned(),
   },

@@ -1,6 +1,6 @@
 import { foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { systems } from "./systems.js";
@@ -12,7 +12,7 @@ export const relationships = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -27,7 +27,7 @@ export const subsystems = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: varchar("parent_subsystem_id", { length: 255 }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -47,7 +47,7 @@ export const sideSystems = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -63,7 +63,7 @@ export const layers = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     // Ties are intentionally allowed; no uniqueness constraint on sortOrder
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -81,7 +81,7 @@ export const subsystemMemberships = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -101,7 +101,7 @@ export const sideSystemMemberships = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -121,7 +121,7 @@ export const layerMemberships = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -143,7 +143,7 @@ export const subsystemLayerLinks = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data"),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -166,7 +166,7 @@ export const subsystemSideSystemLinks = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data"),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -189,7 +189,7 @@ export const sideSystemLayerLinks = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data"),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [

@@ -1,6 +1,6 @@
 import { check, foreignKey, index, integer, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary } from "../../columns/pg.js";
+import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { INNERWORLD_ENTITY_TYPES, INNERWORLD_REGION_ACCESS_TYPES } from "../../helpers/enums.js";
@@ -22,7 +22,7 @@ export const innerworldRegions = pgTable(
       .notNull()
       .$type<ServerInnerWorldRegion["accessType"]>(),
     gatekeeperMemberIds: jsonb("gatekeeper_member_ids").notNull().$type<readonly string[]>(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -54,7 +54,7 @@ export const innerworldEntities = pgTable(
     }),
     positionX: integer("position_x").notNull(),
     positionY: integer("position_y").notNull(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -72,7 +72,7 @@ export const innerworldCanvas = pgTable("innerworld_canvas", {
   systemId: varchar("system_id", { length: 255 })
     .primaryKey()
     .references(() => systems.id, { onDelete: "cascade" }),
-  encryptedData: pgBinary("encrypted_data").notNull(),
+  encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
   ...timestamps(),
   ...versioned(),
 });

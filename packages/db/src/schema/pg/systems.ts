@@ -1,6 +1,6 @@
 import { index, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary } from "../../columns/pg.js";
+import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { accounts } from "./auth.js";
@@ -14,7 +14,7 @@ export const systems = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     /** Nullable — system can exist before profile setup during onboarding. */
-    encryptedData: pgBinary("encrypted_data"),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
     ...timestamps(),
     ...versioned(),
   },

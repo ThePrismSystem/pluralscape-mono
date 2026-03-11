@@ -12,7 +12,7 @@ import {
 } from "../rls/policies.js";
 import { members } from "../schema/pg/members.js";
 
-import { pgInsertAccount, pgInsertSystem, pgInsertMember } from "./helpers/pg-helpers.js";
+import { pgInsertAccount, pgInsertSystem, pgInsertMember, testBlob } from "./helpers/pg-helpers.js";
 
 import type { PGlite as PGliteType } from "@electric-sql/pglite";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -247,7 +247,7 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
       db.insert(members).values({
         id: crossTenantId,
         systemId: systemIdB,
-        encryptedData: new Uint8Array([9, 9, 9]),
+        encryptedData: testBlob(new Uint8Array([9, 9, 9])),
         createdAt: now,
         updatedAt: now,
       }),
@@ -260,7 +260,7 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
     // Attempt to update a member that belongs to system B
     const result = await db
       .update(members)
-      .set({ encryptedData: new Uint8Array([99, 99]) })
+      .set({ encryptedData: testBlob(new Uint8Array([99, 99])) })
       .where(eq(members.id, memberIdB1));
 
     expect(result.rows).toHaveLength(0);
