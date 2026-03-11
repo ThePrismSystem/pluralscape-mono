@@ -480,7 +480,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   fieldValuesIndexes: `
@@ -1296,6 +1297,7 @@ export function createSqliteStructureTables(client: InstanceType<typeof Database
 
 export function createSqliteCustomFieldsTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.buckets);
   client.exec(SQLITE_DDL.bucketsIndexes);
   client.exec(SQLITE_DDL.fieldDefinitions);

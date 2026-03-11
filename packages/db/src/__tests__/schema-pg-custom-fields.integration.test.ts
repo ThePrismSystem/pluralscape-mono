@@ -15,6 +15,7 @@ import { systems } from "../schema/pg/systems.js";
 import {
   createPgCustomFieldsTables,
   pgInsertAccount,
+  pgInsertMember,
   pgInsertSystem,
   testBlob,
 } from "./helpers/pg-helpers.js";
@@ -331,6 +332,7 @@ describe("PG custom fields schema", () => {
     it("round-trips memberId T3 column", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await pgInsertMember(db, systemId);
       const fieldDefId = await insertFieldDefinition(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -339,14 +341,14 @@ describe("PG custom fields schema", () => {
         id,
         fieldDefinitionId: fieldDefId,
         systemId,
-        memberId: "member-1",
+        memberId,
         encryptedData: testBlob(new Uint8Array([1, 2, 3])),
         createdAt: now,
         updatedAt: now,
       });
 
       const rows = await db.select().from(fieldValues).where(eq(fieldValues.id, id));
-      expect(rows[0]?.memberId).toBe("member-1");
+      expect(rows[0]?.memberId).toBe(memberId);
     });
 
     it("defaults memberId to null", async () => {

@@ -17,20 +17,13 @@ Many child tables carry parent FK + denormalized system_id/account_id but no com
 
 members, frontingSessions, channels, messages, polls, groups, innerworldRegions, subsystems, sideSystems, layers, timerConfigs, webhookConfigs, fieldDefinitions, buckets, friendConnections, blobMetadata
 
-### Child tables needing composite FKs
+### Child tables needing composite FKs (CASCADE)
 
 - [x] member_photos → members
 - [x] fronting_comments → fronting_sessions
-- [x] journal_entries → fronting_sessions
-- [x] messages → channels (+ self-ref replyTo)
-- [x] channels → channels (self-ref parentId)
-- [x] notes → members
+- [x] messages → channels (channel_id, system_id)
 - [x] poll_votes → polls
-- [x] groups → groups (self-ref parentGroupId)
 - [x] group_memberships → groups, members
-- [x] innerworld_regions → innerworld_regions (self-ref)
-- [x] innerworld_entities → innerworld_regions
-- [x] subsystems → subsystems (self-ref)
 - [x] subsystem_memberships → subsystems
 - [x] side_system_memberships → side_systems
 - [x] layer_memberships → layers
@@ -40,8 +33,25 @@ members, frontingSessions, channels, messages, polls, groups, innerworldRegions,
 - [x] field_values → field_definitions
 - [x] check_in_records → timer_configs
 - [x] webhook_deliveries → webhook_configs
-- [x] blob_metadata → buckets (+ self-ref thumbnail)
 - [x] friend_notification_preferences → friend_connections
+
+### SET NULL FKs (kept simple to avoid nullifying system_id)
+
+- [x] channels → channels (self-ref parentId)
+- [x] messages → messages (self-ref replyToId)
+- [x] notes → members (memberId)
+- [x] journal_entries → fronting_sessions (frontingSessionId)
+- [x] innerworld_entities → innerworld_regions (regionId)
+- [x] innerworld_regions → innerworld_regions (self-ref parentRegionId)
+- [x] subsystems → subsystems (self-ref parentSubsystemId)
+- [x] groups → groups (self-ref parentGroupId)
+- [x] blob_metadata → buckets (bucketId)
+- [x] blob_metadata → blob_metadata (self-ref thumbnailOfBlobId)
+- [x] field_values → members (memberId)
+
+### Excluded from scope
+
+- import_jobs, export_requests: account-scoped tables with separate FKs to accounts and systems, not parent-child system-owned relationships. Cross-account isolation is enforced by the account FK; cross-system isolation is an application-layer concern here since the account-system ownership relationship is not expressible as a composite FK on these tables.
 
 ## Summary of Changes
 

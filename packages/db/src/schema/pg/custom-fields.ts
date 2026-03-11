@@ -1,10 +1,21 @@
-import { boolean, check, foreignKey, index, integer, pgTable, primaryKey, unique, varchar } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  foreignKey,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  unique,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { FIELD_TYPES } from "../../helpers/enums.js";
 
+import { members } from "./members.js";
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
@@ -37,6 +48,7 @@ export const fieldValues = pgTable(
   {
     id: varchar("id", { length: 255 }).primaryKey(),
     fieldDefinitionId: varchar("field_definition_id", { length: 255 }).notNull(),
+    memberId: varchar("member_id", { length: 255 }),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -50,6 +62,10 @@ export const fieldValues = pgTable(
       columns: [t.fieldDefinitionId, t.systemId],
       foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
     }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.memberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
   ],
 );
 

@@ -14,6 +14,7 @@ import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js
 import { enumCheck } from "../../helpers/check.js";
 import { FIELD_TYPES } from "../../helpers/enums.js";
 
+import { members } from "./members.js";
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
@@ -60,6 +61,10 @@ export const fieldValues = sqliteTable(
       columns: [t.fieldDefinitionId, t.systemId],
       foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
     }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.memberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
   ],
 );
 

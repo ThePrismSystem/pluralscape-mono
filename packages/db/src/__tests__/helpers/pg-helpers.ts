@@ -480,7 +480,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   fieldValuesIndexes: `
@@ -1284,6 +1285,7 @@ export async function createPgStructureTables(client: PGlite): Promise<void> {
 
 export async function createPgCustomFieldsTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.buckets);
   await pgExec(client, PG_DDL.bucketsIndexes);
   await pgExec(client, PG_DDL.fieldDefinitions);

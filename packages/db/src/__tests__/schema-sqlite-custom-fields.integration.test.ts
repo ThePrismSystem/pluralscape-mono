@@ -15,6 +15,7 @@ import { systems } from "../schema/sqlite/systems.js";
 import {
   createSqliteCustomFieldsTables,
   sqliteInsertAccount,
+  sqliteInsertMember,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
@@ -362,6 +363,7 @@ describe("SQLite custom fields schema", () => {
     it("round-trips memberId T3 column", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = sqliteInsertMember(db, systemId);
       const fieldDefId = insertFieldDefinition(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -371,7 +373,7 @@ describe("SQLite custom fields schema", () => {
           id,
           fieldDefinitionId: fieldDefId,
           systemId,
-          memberId: "member-1",
+          memberId,
           encryptedData: testBlob(new Uint8Array([1, 2, 3])),
           createdAt: now,
           updatedAt: now,
@@ -379,7 +381,7 @@ describe("SQLite custom fields schema", () => {
         .run();
 
       const rows = db.select().from(fieldValues).where(eq(fieldValues.id, id)).all();
-      expect(rows[0]?.memberId).toBe("member-1");
+      expect(rows[0]?.memberId).toBe(memberId);
     });
 
     it("defaults memberId to null", () => {
