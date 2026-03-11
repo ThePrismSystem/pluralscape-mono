@@ -1020,7 +1020,7 @@ export const PG_DDL = {
   `,
 } as const;
 
-async function pgExec(client: PGlite, sql: string): Promise<void> {
+export async function pgExec(client: PGlite, sql: string): Promise<void> {
   const statements = sql
     .split(";")
     .map((s) => s.trim())

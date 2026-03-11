@@ -67,3 +67,20 @@ export {
   JOB_STATUSES,
 } from "./helpers/index.js";
 export type { DbAuditActor } from "./helpers/index.js";
+
+// ── Views / Query Helpers ─────────────────────────────────────
+export { pgViews, sqliteViews, LINK_TYPES, mapStructureCrossLinkRow } from "./views/index.js";
+export type {
+  ActiveApiKey,
+  ActiveDeviceToken,
+  ActiveDeviceTransfer,
+  ActiveFriendConnection,
+  CurrentFronter,
+  CurrentFronterWithDuration,
+  CurrentFrontingComment,
+  MemberGroupSummary,
+  PendingFriendRequest,
+  PendingWebhookRetry,
+  StructureCrossLink,
+  UnconfirmedAcknowledgement,
+} from "./views/index.js";

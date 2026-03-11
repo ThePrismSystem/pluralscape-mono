@@ -1,19 +1,38 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ACCOUNT_PURGE_STATUSES,
   API_KEY_KEY_TYPES,
   API_KEY_SCOPES,
   AUDIT_EVENT_TYPES,
   AUTH_KEY_TYPES,
+  BLOB_PURPOSES,
   BUCKET_VISIBILITY_SCOPES,
-  KNOWN_SATURATION_LEVELS,
+  CHANNEL_TYPES,
+  DEVICE_TOKEN_PLATFORMS,
   DEVICE_TRANSFER_STATUSES,
+  EXPORT_FORMATS,
+  EXPORT_REQUEST_STATUSES,
   FRIEND_CONNECTION_STATUSES,
   FRONTING_TYPES,
+  IMPORT_JOB_STATUSES,
+  IMPORT_SOURCES,
+  INNERWORLD_ENTITY_TYPES,
+  INNERWORLD_REGION_ACCESS_TYPES,
+  JOB_STATUSES,
+  JOB_TYPES,
+  KNOWN_SATURATION_LEVELS,
   LAYER_ACCESS_TYPES,
+  NOTIFICATION_EVENT_TYPES,
+  PK_SYNC_DIRECTIONS,
+  POLL_KINDS,
+  POLL_STATUSES,
   RELATIONSHIP_TYPES,
+  SEARCHABLE_ENTITY_TYPES,
   SYNC_OPERATIONS,
   SYNC_RESOLUTIONS,
+  WEBHOOK_DELIVERY_STATUSES,
+  WEBHOOK_EVENT_TYPES,
 } from "../helpers/enums.js";
 
 describe("enum arrays", () => {
@@ -82,6 +101,106 @@ describe("enum arrays", () => {
     expect(AUDIT_EVENT_TYPES).toContain("device.security.jailbreak_warning_shown");
   });
 
+  it("CHANNEL_TYPES matches ServerChannel type union", () => {
+    expect(CHANNEL_TYPES).toEqual(["category", "channel"]);
+  });
+
+  it("POLL_STATUSES matches ServerPoll status union", () => {
+    expect(POLL_STATUSES).toEqual(["open", "closed"]);
+  });
+
+  it("POLL_KINDS matches PollKind union", () => {
+    expect(POLL_KINDS).toEqual(["standard", "custom"]);
+  });
+
+  it("INNERWORLD_ENTITY_TYPES matches ServerInnerWorldEntity entityType union", () => {
+    expect(INNERWORLD_ENTITY_TYPES).toHaveLength(5);
+    expect(INNERWORLD_ENTITY_TYPES).toContain("member");
+    expect(INNERWORLD_ENTITY_TYPES).toContain("layer");
+  });
+
+  it("INNERWORLD_REGION_ACCESS_TYPES matches ServerInnerWorldRegion accessType union", () => {
+    expect(INNERWORLD_REGION_ACCESS_TYPES).toEqual(["open", "gatekept"]);
+  });
+
+  it("PK_SYNC_DIRECTIONS matches PKSyncDirection union", () => {
+    expect(PK_SYNC_DIRECTIONS).toEqual(["ps-to-pk", "pk-to-ps", "bidirectional"]);
+  });
+
+  it("DEVICE_TOKEN_PLATFORMS matches DeviceTokenPlatform union", () => {
+    expect(DEVICE_TOKEN_PLATFORMS).toEqual(["ios", "android", "web"]);
+  });
+
+  it("NOTIFICATION_EVENT_TYPES matches NotificationEventType union", () => {
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(6);
+    expect(NOTIFICATION_EVENT_TYPES).toContain("switch-reminder");
+    expect(NOTIFICATION_EVENT_TYPES).toContain("friend-switch-alert");
+  });
+
+  it("WEBHOOK_EVENT_TYPES matches WebhookEventType union", () => {
+    expect(WEBHOOK_EVENT_TYPES).toHaveLength(16);
+    expect(WEBHOOK_EVENT_TYPES).toContain("member.created");
+    expect(WEBHOOK_EVENT_TYPES).toContain("custom-front.changed");
+  });
+
+  it("WEBHOOK_DELIVERY_STATUSES matches WebhookDeliveryStatus union", () => {
+    expect(WEBHOOK_DELIVERY_STATUSES).toEqual(["pending", "success", "failed"]);
+  });
+
+  it("BLOB_PURPOSES matches BlobPurpose union", () => {
+    expect(BLOB_PURPOSES).toHaveLength(6);
+    expect(BLOB_PURPOSES).toContain("avatar");
+    expect(BLOB_PURPOSES).toContain("littles-safe-mode");
+  });
+
+  it("IMPORT_SOURCES matches ImportSource union", () => {
+    expect(IMPORT_SOURCES).toEqual(["simply-plural", "pluralkit", "pluralscape"]);
+  });
+
+  it("IMPORT_JOB_STATUSES matches ImportJobStatus union", () => {
+    expect(IMPORT_JOB_STATUSES).toEqual([
+      "pending",
+      "validating",
+      "importing",
+      "completed",
+      "failed",
+    ]);
+  });
+
+  it("EXPORT_FORMATS matches ExportFormat union", () => {
+    expect(EXPORT_FORMATS).toEqual(["json", "csv"]);
+  });
+
+  it("EXPORT_REQUEST_STATUSES matches ExportRequestStatus union", () => {
+    expect(EXPORT_REQUEST_STATUSES).toEqual(["pending", "processing", "completed", "failed"]);
+  });
+
+  it("ACCOUNT_PURGE_STATUSES matches AccountPurgeStatus union", () => {
+    expect(ACCOUNT_PURGE_STATUSES).toEqual([
+      "pending",
+      "confirmed",
+      "processing",
+      "completed",
+      "cancelled",
+    ]);
+  });
+
+  it("SEARCHABLE_ENTITY_TYPES matches SearchableEntityType union", () => {
+    expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
+    expect(SEARCHABLE_ENTITY_TYPES).toContain("member");
+    expect(SEARCHABLE_ENTITY_TYPES).toContain("board-message");
+  });
+
+  it("JOB_TYPES matches JobType union", () => {
+    expect(JOB_TYPES).toHaveLength(12);
+    expect(JOB_TYPES).toContain("sync-push");
+    expect(JOB_TYPES).toContain("report-generate");
+  });
+
+  it("JOB_STATUSES matches JobStatus union", () => {
+    expect(JOB_STATUSES).toEqual(["pending", "running", "completed", "failed", "cancelled"]);
+  });
+
   it("all arrays have correct element counts", () => {
     expect(KNOWN_SATURATION_LEVELS).toHaveLength(4);
     expect(FRONTING_TYPES).toHaveLength(2);
@@ -96,5 +215,24 @@ describe("enum arrays", () => {
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_SCOPES).toHaveLength(16);
     expect(AUDIT_EVENT_TYPES).toHaveLength(20);
+    expect(CHANNEL_TYPES).toHaveLength(2);
+    expect(POLL_STATUSES).toHaveLength(2);
+    expect(POLL_KINDS).toHaveLength(2);
+    expect(INNERWORLD_ENTITY_TYPES).toHaveLength(5);
+    expect(INNERWORLD_REGION_ACCESS_TYPES).toHaveLength(2);
+    expect(PK_SYNC_DIRECTIONS).toHaveLength(3);
+    expect(DEVICE_TOKEN_PLATFORMS).toHaveLength(3);
+    expect(NOTIFICATION_EVENT_TYPES).toHaveLength(6);
+    expect(WEBHOOK_EVENT_TYPES).toHaveLength(16);
+    expect(WEBHOOK_DELIVERY_STATUSES).toHaveLength(3);
+    expect(BLOB_PURPOSES).toHaveLength(6);
+    expect(IMPORT_SOURCES).toHaveLength(3);
+    expect(IMPORT_JOB_STATUSES).toHaveLength(5);
+    expect(EXPORT_FORMATS).toHaveLength(2);
+    expect(EXPORT_REQUEST_STATUSES).toHaveLength(4);
+    expect(ACCOUNT_PURGE_STATUSES).toHaveLength(5);
+    expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
+    expect(JOB_TYPES).toHaveLength(12);
+    expect(JOB_STATUSES).toHaveLength(5);
   });
 });
