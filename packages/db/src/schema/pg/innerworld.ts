@@ -1,4 +1,4 @@
-import { check, foreignKey, index, integer, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, foreignKey, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
@@ -21,7 +21,6 @@ export const innerworldRegions = pgTable(
     accessType: varchar("access_type", { length: 255 })
       .notNull()
       .$type<ServerInnerWorldRegion["accessType"]>(),
-    gatekeeperMemberIds: jsonb("gatekeeper_member_ids").notNull().$type<readonly string[]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

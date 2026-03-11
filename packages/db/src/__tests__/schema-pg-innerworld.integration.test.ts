@@ -47,7 +47,6 @@ describe("PG Innerworld Schema", () => {
       systemId,
       parentRegionId: null,
       accessType: "open",
-      gatekeeperMemberIds: ["member-1", "member-2"],
       encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
@@ -64,7 +63,6 @@ describe("PG Innerworld Schema", () => {
     expect(rows[0]?.systemId).toBe(systemId);
     expect(rows[0]?.parentRegionId).toBeNull();
     expect(rows[0]?.accessType).toBe("open");
-    expect(rows[0]?.gatekeeperMemberIds).toEqual(["member-1", "member-2"]);
     expect(rows[0]?.encryptedData).toEqual(testBlob());
     expect(rows[0]?.createdAt).toBe(now);
     expect(rows[0]?.updatedAt).toBe(now);
@@ -135,7 +133,6 @@ describe("PG Innerworld Schema", () => {
       id: parentId,
       systemId,
       accessType: "open",
-      gatekeeperMemberIds: [],
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
@@ -146,7 +143,6 @@ describe("PG Innerworld Schema", () => {
       systemId,
       parentRegionId: parentId,
       accessType: "open",
-      gatekeeperMemberIds: [],
       encryptedData: testBlob(new Uint8Array([2])),
       createdAt: now,
       updatedAt: now,
@@ -170,7 +166,6 @@ describe("PG Innerworld Schema", () => {
       id: regionId,
       systemId,
       accessType: "open",
-      gatekeeperMemberIds: [],
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
@@ -243,7 +238,6 @@ describe("PG Innerworld Schema", () => {
         id: regionId,
         systemId,
         accessType,
-        gatekeeperMemberIds: [],
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -258,7 +252,7 @@ describe("PG Innerworld Schema", () => {
 
     await expect(
       client.query(
-        `INSERT INTO innerworld_regions (id, system_id, access_type, gatekeeper_member_ids, encrypted_data, created_at, updated_at, version) VALUES ($1, $2, 'invalid', '[]', $3, $4, $4, 1)`,
+        `INSERT INTO innerworld_regions (id, system_id, access_type, encrypted_data, created_at, updated_at, version) VALUES ($1, $2, 'invalid', $3, $4, $4, 1)`,
         [crypto.randomUUID(), systemId, new Uint8Array([1]), now],
       ),
     ).rejects.toThrow();
@@ -273,7 +267,6 @@ describe("PG Innerworld Schema", () => {
       id: regionId,
       systemId,
       accessType: "open",
-      gatekeeperMemberIds: [],
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
@@ -338,37 +331,6 @@ describe("PG Innerworld Schema", () => {
         updatedAt: now,
       }),
     ).rejects.toThrow();
-  });
-
-  it("round-trips complex gatekeeperMemberIds JSON array", async () => {
-    const systemId = await setupSystem();
-    const now = Date.now();
-    const regionId = crypto.randomUUID();
-    const complexArray = [
-      "member-aaa-111",
-      "member-bbb-222",
-      "member-ccc-333",
-      "member-ddd-444",
-      "member-eee-555",
-    ];
-
-    await db.insert(innerworldRegions).values({
-      id: regionId,
-      systemId,
-      accessType: "gatekept",
-      gatekeeperMemberIds: complexArray,
-      encryptedData: testBlob(new Uint8Array([1])),
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    const rows = await db
-      .select()
-      .from(innerworldRegions)
-      .where(eq(innerworldRegions.id, regionId));
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.gatekeeperMemberIds).toEqual(complexArray);
   });
 
   it("persists positionX/Y integer values including zero and negatives", async () => {

@@ -679,7 +679,6 @@ export const PG_DDL = {
     CREATE TABLE journal_entries (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      author JSONB,
       fronting_session_id VARCHAR(255) REFERENCES fronting_sessions(id) ON DELETE SET NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -751,7 +750,6 @@ export const PG_DDL = {
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       parent_region_id VARCHAR(255),
       access_type VARCHAR(255) NOT NULL CHECK (access_type IN ('open', 'gatekept')),
-      gatekeeper_member_ids JSONB NOT NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,

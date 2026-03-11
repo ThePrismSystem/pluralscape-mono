@@ -679,7 +679,6 @@ export const SQLITE_DDL = {
     CREATE TABLE journal_entries (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      author TEXT,
       fronting_session_id TEXT REFERENCES fronting_sessions(id) ON DELETE SET NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
@@ -751,7 +750,6 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       parent_region_id TEXT,
       access_type TEXT NOT NULL CHECK (access_type IN ('open', 'gatekept')),
-      gatekeeper_member_ids TEXT NOT NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
