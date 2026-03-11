@@ -9,7 +9,7 @@ import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerChannel, ServerPoll } from "@pluralscape/types";
+import type { ServerChannel, ServerPoll, ServerPollVote } from "@pluralscape/types";
 
 export const channels = sqliteTable(
   "channels",
@@ -142,7 +142,7 @@ export const pollVotes = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     optionId: text("option_id"),
-    voter: sqliteJson("voter"),
+    voter: sqliteJson("voter").$type<ServerPollVote["voter"]>(),
     isVeto: integer("is_veto", { mode: "boolean" }),
     votedAt: sqliteTimestamp("voted_at"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),

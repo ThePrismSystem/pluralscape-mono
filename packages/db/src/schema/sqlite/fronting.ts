@@ -22,7 +22,8 @@ export const frontingSessions = sqliteTable(
     memberId: text("member_id"),
     frontingType: text("fronting_type").$type<ServerFrontingSession["frontingType"]>(),
     customFrontId: text("custom_front_id"),
-    linkedStructure: sqliteJson("linked_structure"),
+    linkedStructure:
+      sqliteJson("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

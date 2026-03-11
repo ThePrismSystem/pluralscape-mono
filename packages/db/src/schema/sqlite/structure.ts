@@ -46,7 +46,7 @@ export const subsystems = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: text("parent_subsystem_id"),
-    architectureType: sqliteJson("architecture_type"),
+    architectureType: sqliteJson("architecture_type").$type<ServerSubsystem["architectureType"]>(),
     hasCore: integer("has_core", { mode: "boolean" }),
     discoveryStatus: text("discovery_status").$type<ServerSubsystem["discoveryStatus"]>(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -90,9 +90,7 @@ export const layers = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [
-    index("layers_system_id_idx").on(t.systemId),
-  ],
+  (t) => [index("layers_system_id_idx").on(t.systemId)],
 );
 
 // Member identity is inside encryptedData; uniqueness enforced at application layer

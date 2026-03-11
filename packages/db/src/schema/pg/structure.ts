@@ -48,7 +48,7 @@ export const subsystems = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: varchar("parent_subsystem_id", { length: 255 }),
-    architectureType: jsonb("architecture_type"),
+    architectureType: jsonb("architecture_type").$type<ServerSubsystem["architectureType"]>(),
     hasCore: boolean("has_core"),
     discoveryStatus: varchar("discovery_status", { length: 255 }).$type<
       ServerSubsystem["discoveryStatus"]
@@ -94,9 +94,7 @@ export const layers = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [
-    index("layers_system_id_idx").on(t.systemId),
-  ],
+  (t) => [index("layers_system_id_idx").on(t.systemId)],
 );
 
 // Member identity is inside encryptedData; uniqueness enforced at application layer

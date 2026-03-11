@@ -6,7 +6,7 @@
 import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
 
 import { accounts } from "../../schema/sqlite/auth.js";
-import { channels } from "../../schema/sqlite/communication.js";
+import { channels, polls } from "../../schema/sqlite/communication.js";
 import { members } from "../../schema/sqlite/members.js";
 import { systems } from "../../schema/sqlite/systems.js";
 
@@ -1301,6 +1301,29 @@ export function sqliteInsertChannel(
       parentId: opts.parentId ?? null,
       sortOrder: opts.sortOrder ?? 0,
       encryptedData: testBlob(),
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  return id;
+}
+
+export function sqliteInsertPoll(
+  db: BetterSQLite3Database<Record<string, unknown>>,
+  systemId: string,
+  opts: { id?: string } = {},
+): string {
+  const id = opts.id ?? crypto.randomUUID();
+  const now = Date.now();
+  db.insert(polls)
+    .values({
+      id,
+      systemId,
+      encryptedData: testBlob(),
+      allowMultipleVotes: false,
+      maxVotesPerMember: 1,
+      allowAbstain: false,
+      allowVeto: false,
       createdAt: now,
       updatedAt: now,
     })

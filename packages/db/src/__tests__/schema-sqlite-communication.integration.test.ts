@@ -21,6 +21,7 @@ import {
   sqliteInsertAccount,
   sqliteInsertChannel,
   sqliteInsertMember,
+  sqliteInsertPoll,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
@@ -53,25 +54,8 @@ describe("SQLite communication schema", () => {
     systemId: string,
     opts?: Parameters<typeof sqliteInsertChannel>[2],
   ): string => sqliteInsertChannel(db, systemId, opts);
-
-  function insertPoll(systemId: string, opts: { id?: string } = {}): string {
-    const id = opts.id ?? crypto.randomUUID();
-    const now = Date.now();
-    db.insert(polls)
-      .values({
-        id,
-        systemId,
-        encryptedData: testBlob(),
-        allowMultipleVotes: false,
-        maxVotesPerMember: 1,
-        allowAbstain: false,
-        allowVeto: false,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-    return id;
-  }
+  const insertPoll = (systemId: string, opts?: Parameters<typeof sqliteInsertPoll>[2]): string =>
+    sqliteInsertPoll(db, systemId, opts);
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -741,7 +725,7 @@ describe("SQLite communication schema", () => {
           pollId,
           systemId,
           optionId: "opt-1",
-          voter: { memberId: "m-1" },
+          voter: { entityType: "member", entityId: "m-1" },
           isVeto: true,
           votedAt,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -751,7 +735,7 @@ describe("SQLite communication schema", () => {
 
       const rows = db.select().from(pollVotes).where(eq(pollVotes.id, id)).all();
       expect(rows[0]?.optionId).toBe("opt-1");
-      expect(rows[0]?.voter).toEqual({ memberId: "m-1" });
+      expect(rows[0]?.voter).toEqual({ entityType: "member", entityId: "m-1" });
       expect(rows[0]?.isVeto).toBe(true);
       expect(rows[0]?.votedAt).toBe(votedAt);
     });
@@ -863,6 +847,25 @@ describe("SQLite communication schema", () => {
 
       const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
       expect(rows[0]?.createdByMemberId).toBe("member-1");
+    });
+
+    it("defaults createdByMemberId to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(acknowledgements)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
+      expect(rows[0]?.createdByMemberId).toBeNull();
     });
   });
 });

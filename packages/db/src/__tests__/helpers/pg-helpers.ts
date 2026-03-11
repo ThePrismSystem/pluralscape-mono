@@ -6,7 +6,7 @@
 import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
 
 import { accounts } from "../../schema/pg/auth.js";
-import { channels } from "../../schema/pg/communication.js";
+import { channels, polls } from "../../schema/pg/communication.js";
 import { members } from "../../schema/pg/members.js";
 import { systems } from "../../schema/pg/systems.js";
 
@@ -1284,6 +1284,27 @@ export async function pgInsertChannel(
     parentId: opts.parentId ?? null,
     sortOrder: opts.sortOrder ?? 0,
     encryptedData: testBlob(),
+    createdAt: now,
+    updatedAt: now,
+  });
+  return id;
+}
+
+export async function pgInsertPoll(
+  db: PgliteDatabase<Record<string, unknown>>,
+  systemId: string,
+  opts: { id?: string } = {},
+): Promise<string> {
+  const id = opts.id ?? crypto.randomUUID();
+  const now = Date.now();
+  await db.insert(polls).values({
+    id,
+    systemId,
+    encryptedData: testBlob(),
+    allowMultipleVotes: false,
+    maxVotesPerMember: 1,
+    allowAbstain: false,
+    allowVeto: false,
     createdAt: now,
     updatedAt: now,
   });

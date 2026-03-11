@@ -258,7 +258,7 @@ describe("SQLite fronting schema", () => {
           memberId: "member-1",
           frontingType: "fronting",
           customFrontId: "custom-1",
-          linkedStructure: { regionId: "r-1" },
+          linkedStructure: { entityType: "subsystem", entityId: "r-1" },
         })
         .run();
 
@@ -266,7 +266,7 @@ describe("SQLite fronting schema", () => {
       expect(rows[0]?.memberId).toBe("member-1");
       expect(rows[0]?.frontingType).toBe("fronting");
       expect(rows[0]?.customFrontId).toBe("custom-1");
-      expect(rows[0]?.linkedStructure).toEqual({ regionId: "r-1" });
+      expect(rows[0]?.linkedStructure).toEqual({ entityType: "subsystem", entityId: "r-1" });
     });
 
     it("defaults T3 metadata columns to null", () => {

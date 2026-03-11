@@ -338,7 +338,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
-          architectureType: { mode: "layered" },
+          architectureType: { kind: "known", type: "orbital" },
           hasCore: true,
           discoveryStatus: "fully-mapped",
           encryptedData: testBlob(new Uint8Array([1])),
@@ -348,7 +348,7 @@ describe("SQLite structure schema", () => {
         .run();
 
       const rows = db.select().from(subsystems).where(eq(subsystems.id, id)).all();
-      expect(rows[0]?.architectureType).toEqual({ mode: "layered" });
+      expect(rows[0]?.architectureType).toEqual({ kind: "known", type: "orbital" });
       expect(rows[0]?.hasCore).toBe(true);
       expect(rows[0]?.discoveryStatus).toBe("fully-mapped");
     });

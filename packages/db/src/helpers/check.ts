@@ -9,5 +9,5 @@ import type { AnyColumn } from "drizzle-orm";
  */
 export function enumCheck(column: AnyColumn, values: readonly string[]): SQL {
   const params = values.map((v) => sql`${v}`);
-  return sql`${column} IN (${sql.join(params, sql`, `)})`;
+  return sql`${column} IS NULL OR ${column} IN (${sql.join(params, sql`, `)})`;
 }

@@ -18,7 +18,7 @@ import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
-import type { ServerChannel, ServerPoll } from "@pluralscape/types";
+import type { ServerChannel, ServerPoll, ServerPollVote } from "@pluralscape/types";
 
 export const channels = pgTable(
   "channels",
@@ -156,7 +156,7 @@ export const pollVotes = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     optionId: varchar("option_id", { length: 255 }),
-    voter: jsonb("voter"),
+    voter: jsonb("voter").$type<ServerPollVote["voter"]>(),
     isVeto: boolean("is_veto"),
     votedAt: pgTimestamp("voted_at"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

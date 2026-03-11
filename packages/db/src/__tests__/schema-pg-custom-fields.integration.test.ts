@@ -220,7 +220,7 @@ describe("PG custom fields schema", () => {
           createdAt: now,
           updatedAt: now,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(/check|constraint|failed query/i);
     });
   });
 

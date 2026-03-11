@@ -24,7 +24,7 @@ export const frontingSessions = pgTable(
       ServerFrontingSession["frontingType"]
     >(),
     customFrontId: varchar("custom_front_id", { length: 255 }),
-    linkedStructure: jsonb("linked_structure"),
+    linkedStructure: jsonb("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

@@ -21,6 +21,7 @@ import {
   pgInsertAccount,
   pgInsertChannel,
   pgInsertMember,
+  pgInsertPoll,
   pgInsertSystem,
   testBlob,
 } from "./helpers/pg-helpers.js";
@@ -49,23 +50,8 @@ describe("PG communication schema", () => {
   const insertMember = (systemId: string, id?: string) => pgInsertMember(db, systemId, id);
   const insertChannel = (systemId: string, opts?: Parameters<typeof pgInsertChannel>[2]) =>
     pgInsertChannel(db, systemId, opts);
-
-  async function insertPoll(systemId: string, opts: { id?: string } = {}): Promise<string> {
-    const id = opts.id ?? crypto.randomUUID();
-    const now = Date.now();
-    await db.insert(polls).values({
-      id,
-      systemId,
-      encryptedData: testBlob(),
-      allowMultipleVotes: false,
-      maxVotesPerMember: 1,
-      allowAbstain: false,
-      allowVeto: false,
-      createdAt: now,
-      updatedAt: now,
-    });
-    return id;
-  }
+  const insertPoll = (systemId: string, opts?: Parameters<typeof pgInsertPoll>[2]) =>
+    pgInsertPoll(db, systemId, opts);
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -658,7 +644,7 @@ describe("PG communication schema", () => {
           createdAt: now,
           updatedAt: now,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(/check|constraint|failed query/i);
     });
   });
 
@@ -753,7 +739,7 @@ describe("PG communication schema", () => {
         pollId,
         systemId,
         optionId: "opt-1",
-        voter: { memberId: "m-1" },
+        voter: { entityType: "member", entityId: "m-1" },
         isVeto: true,
         votedAt,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -762,7 +748,7 @@ describe("PG communication schema", () => {
 
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
       expect(rows[0]?.optionId).toBe("opt-1");
-      expect(rows[0]?.voter).toEqual({ memberId: "m-1" });
+      expect(rows[0]?.voter).toEqual({ entityType: "member", entityId: "m-1" });
       expect(rows[0]?.isVeto).toBe(true);
       expect(rows[0]?.votedAt).toBe(votedAt);
     });
@@ -864,6 +850,23 @@ describe("PG communication schema", () => {
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
       expect(rows[0]?.createdByMemberId).toBe("member-1");
+    });
+
+    it("defaults createdByMemberId to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(acknowledgements).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
+      expect(rows[0]?.createdByMemberId).toBeNull();
     });
   });
 });

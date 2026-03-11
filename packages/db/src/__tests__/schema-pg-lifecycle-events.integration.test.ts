@@ -242,6 +242,6 @@ describe("PG lifecycle_events schema", () => {
         recordedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/check|constraint|failed query/i);
   });
 });

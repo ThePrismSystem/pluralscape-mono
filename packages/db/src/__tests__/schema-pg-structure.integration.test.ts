@@ -239,7 +239,7 @@ describe("PG structure schema", () => {
           createdAt: now,
           updatedAt: now,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(/check|constraint|failed query/i);
     });
   });
 
@@ -321,7 +321,7 @@ describe("PG structure schema", () => {
       await db.insert(subsystems).values({
         id,
         systemId,
-        architectureType: { mode: "layered" },
+        architectureType: { kind: "known", type: "orbital" },
         hasCore: true,
         discoveryStatus: "fully-mapped",
         encryptedData: testBlob(new Uint8Array([1])),
@@ -330,7 +330,7 @@ describe("PG structure schema", () => {
       });
 
       const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
-      expect(rows[0]?.architectureType).toEqual({ mode: "layered" });
+      expect(rows[0]?.architectureType).toEqual({ kind: "known", type: "orbital" });
       expect(rows[0]?.hasCore).toBe(true);
       expect(rows[0]?.discoveryStatus).toBe("fully-mapped");
     });
@@ -369,7 +369,7 @@ describe("PG structure schema", () => {
           createdAt: now,
           updatedAt: now,
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(/check|constraint|failed query/i);
     });
   });
 
