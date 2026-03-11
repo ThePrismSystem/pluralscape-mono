@@ -188,7 +188,7 @@ describe("SQLite privacy schema", () => {
 
       db.insert(bucketContentTags)
         .values({
-          entityType: "members",
+          entityType: "member",
           entityId,
           bucketId,
         })
@@ -200,7 +200,7 @@ describe("SQLite privacy schema", () => {
         .where(eq(bucketContentTags.bucketId, bucketId))
         .all();
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.entityType).toBe("members");
+      expect(rows[0]?.entityType).toBe("member");
       expect(rows[0]?.entityId).toBe(entityId);
     });
 
@@ -212,7 +212,7 @@ describe("SQLite privacy schema", () => {
 
       db.insert(bucketContentTags)
         .values({
-          entityType: "fronting-status",
+          entityType: "fronting-session",
           entityId,
           bucketId,
         })
@@ -236,7 +236,7 @@ describe("SQLite privacy schema", () => {
         db
           .insert(bucketContentTags)
           .values({
-            entityType: "invalid-type" as "members",
+            entityType: "invalid-type" as "member",
             entityId: crypto.randomUUID(),
             bucketId,
           })
@@ -252,7 +252,7 @@ describe("SQLite privacy schema", () => {
 
       db.insert(bucketContentTags)
         .values({
-          entityType: "notes",
+          entityType: "note",
           entityId,
           bucketId,
         })
@@ -262,7 +262,7 @@ describe("SQLite privacy schema", () => {
         db
           .insert(bucketContentTags)
           .values({
-            entityType: "notes",
+            entityType: "note",
             entityId,
             bucketId,
           })
@@ -275,7 +275,7 @@ describe("SQLite privacy schema", () => {
         db
           .insert(bucketContentTags)
           .values({
-            entityType: "members",
+            entityType: "member",
             entityId: crypto.randomUUID(),
             bucketId: "nonexistent",
           })

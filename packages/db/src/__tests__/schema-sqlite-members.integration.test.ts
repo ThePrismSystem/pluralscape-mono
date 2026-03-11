@@ -240,7 +240,7 @@ describe("SQLite members schema", () => {
       expect(rows[0]?.sortOrder).toBe(1);
     });
 
-    it("allows nullable sort_order", () => {
+    it("defaults sort_order to 0", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
@@ -259,7 +259,7 @@ describe("SQLite members schema", () => {
         .run();
 
       const rows = db.select().from(memberPhotos).where(eq(memberPhotos.id, id)).all();
-      expect(rows[0]?.sortOrder).toBeNull();
+      expect(rows[0]?.sortOrder).toBe(0);
     });
 
     it("defaults version to 1", () => {

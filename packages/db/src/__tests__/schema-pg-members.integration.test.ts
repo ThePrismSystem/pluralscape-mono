@@ -219,7 +219,7 @@ describe("PG members schema", () => {
       expect(rows[0]?.sortOrder).toBe(1);
     });
 
-    it("allows nullable sort_order", async () => {
+    it("defaults sort_order to 0", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
@@ -236,7 +236,7 @@ describe("PG members schema", () => {
       });
 
       const rows = await db.select().from(memberPhotos).where(eq(memberPhotos.id, id));
-      expect(rows[0]?.sortOrder).toBeNull();
+      expect(rows[0]?.sortOrder).toBe(0);
     });
 
     it("defaults version to 1", async () => {

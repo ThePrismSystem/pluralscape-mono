@@ -72,7 +72,7 @@ export const PG_DDL = {
     CREATE TABLE sessions (
       id VARCHAR(255) PRIMARY KEY,
       account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      device_info VARCHAR(255),
+      device_info JSONB,
       created_at TIMESTAMPTZ NOT NULL,
       last_active TIMESTAMPTZ,
       revoked BOOLEAN NOT NULL DEFAULT false
@@ -135,7 +135,7 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       member_id VARCHAR(255) NOT NULL,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sort_order INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -160,7 +160,7 @@ export const PG_DDL = {
   `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
-      entity_type VARCHAR(255) NOT NULL CHECK (entity_type IN ('members', 'custom-fields', 'fronting-status', 'custom-fronts', 'notes', 'chat', 'journal-entries', 'member-photos', 'groups')),
+      entity_type VARCHAR(255) NOT NULL CHECK (entity_type IN ('system', 'member', 'group', 'bucket', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'blob', 'webhook', 'timer', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'api-key', 'audit-log-entry', 'check-in-record', 'friend-connection', 'key-grant', 'device-token', 'poll-vote', 'session', 'event', 'account', 'friend-code', 'notification-config', 'system-settings', 'poll-option', 'member-photo', 'switch', 'auth-key', 'recovery-key', 'device-transfer-request', 'sync-document', 'sync-queue-item', 'sync-conflict', 'import-job', 'pk-bridge-config', 'account-purge-request', 'export-request', 'job', 'subscription', 'webhook-delivery', 'fronting-report', 'friend-notification-preference', 'fronting-comment', 'bucket-key-rotation', 'bucket-rotation-item')),
       entity_id VARCHAR(255) NOT NULL,
       bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       PRIMARY KEY (entity_type, entity_id, bucket_id)
@@ -253,7 +253,7 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       timestamp TIMESTAMPTZ NOT NULL,
-      encrypted_data BYTEA NOT NULL,
+      member_ids JSONB NOT NULL,
       created_at TIMESTAMPTZ NOT NULL
     )
   `,
@@ -278,18 +278,18 @@ export const PG_DDL = {
   frontingComments: `
     CREATE TABLE fronting_comments (
       id VARCHAR(255) PRIMARY KEY,
-      session_id VARCHAR(255) NOT NULL,
+      fronting_session_id VARCHAR(255) NOT NULL,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       member_id VARCHAR(255),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE
     )
   `,
   frontingCommentsIndexes: `
-    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (session_id, created_at)
+    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (fronting_session_id, created_at)
   `,
   // Structure
   relationships: `
@@ -507,7 +507,8 @@ export const PG_DDL = {
   // System Settings
   systemSettings: `
     CREATE TABLE system_settings (
-      system_id VARCHAR(255) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL UNIQUE REFERENCES systems(id) ON DELETE CASCADE,
       locale VARCHAR(255),
       pin_hash VARCHAR(512),
       biometric_enabled BOOLEAN NOT NULL DEFAULT false,
@@ -1032,7 +1033,7 @@ export const PG_DDL = {
       chunks_total INTEGER,
       chunks_completed INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL,
-      updated_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL,
       completed_at TIMESTAMPTZ,
       CHECK (progress_percent >= 0 AND progress_percent <= 100),
       CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total)
@@ -1051,7 +1052,7 @@ export const PG_DDL = {
       status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
       blob_id VARCHAR(255) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      updated_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL,
       completed_at TIMESTAMPTZ
     )
   `,
@@ -1160,6 +1161,21 @@ export const PG_DDL = {
   bucketRotationItemsIndexes: `
     CREATE INDEX bucket_rotation_items_rotation_status_idx ON bucket_rotation_items (rotation_id, status);
     CREATE INDEX bucket_rotation_items_status_claimed_by_idx ON bucket_rotation_items (status, claimed_by)
+  `,
+  // Analytics
+  frontingReports: `
+    CREATE TABLE fronting_reports (
+      id VARCHAR(255) PRIMARY KEY,
+      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      date_range JSONB NOT NULL,
+      member_breakdowns JSONB NOT NULL,
+      chart_data JSONB NOT NULL,
+      format VARCHAR(255) NOT NULL CHECK (format IN ('html', 'pdf')),
+      generated_at TIMESTAMPTZ NOT NULL
+    )
+  `,
+  frontingReportsIndexes: `
+    CREATE INDEX fronting_reports_system_id_idx ON fronting_reports (system_id)
   `,
 } as const;
 
@@ -1505,6 +1521,12 @@ export async function createPgSyncTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.syncQueueIndexes);
   await pgExec(client, PG_DDL.syncConflicts);
   await pgExec(client, PG_DDL.syncConflictsIndexes);
+}
+
+export async function createPgAnalyticsTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.frontingReports);
+  await pgExec(client, PG_DDL.frontingReportsIndexes);
 }
 
 export async function createPgKeyRotationTables(client: PGlite): Promise<void> {

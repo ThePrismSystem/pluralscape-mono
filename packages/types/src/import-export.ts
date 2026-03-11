@@ -229,7 +229,7 @@ export interface ImportJob {
   readonly chunksTotal: number | null;
   readonly chunksCompleted: number;
   readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis | null;
+  readonly updatedAt: UnixMillis;
   readonly completedAt: UnixMillis | null;
 }
 
@@ -281,7 +281,7 @@ export interface ExportRequest {
   readonly status: ExportRequestStatus;
   readonly blobId: BlobId | null;
   readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis | null;
+  readonly updatedAt: UnixMillis;
   readonly completedAt: UnixMillis | null;
 }
 

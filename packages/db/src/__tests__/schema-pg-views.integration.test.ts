@@ -541,7 +541,7 @@ describe("PG views / query helpers", () => {
       await db.insert(frontingComments).values([
         {
           id: crypto.randomUUID(),
-          sessionId: activeSessionId,
+          frontingSessionId: activeSessionId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -549,7 +549,7 @@ describe("PG views / query helpers", () => {
         },
         {
           id: crypto.randomUUID(),
-          sessionId: endedSessionId,
+          frontingSessionId: endedSessionId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -559,7 +559,7 @@ describe("PG views / query helpers", () => {
 
       const comments = await getCurrentFrontingComments(db, systemId);
       expect(comments).toHaveLength(1);
-      expect(comments[0]?.sessionId).toBe(activeSessionId);
+      expect(comments[0]?.frontingSessionId).toBe(activeSessionId);
     });
 
     it("returns empty array when no comments", async () => {

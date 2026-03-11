@@ -135,7 +135,7 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       member_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sort_order INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -160,7 +160,7 @@ export const SQLITE_DDL = {
   `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
-      entity_type TEXT NOT NULL CHECK (entity_type IN ('members', 'custom-fields', 'fronting-status', 'custom-fronts', 'notes', 'chat', 'journal-entries', 'member-photos', 'groups')),
+      entity_type TEXT NOT NULL CHECK (entity_type IN ('system', 'member', 'group', 'bucket', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'blob', 'webhook', 'timer', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'api-key', 'audit-log-entry', 'check-in-record', 'friend-connection', 'key-grant', 'device-token', 'poll-vote', 'session', 'event', 'account', 'friend-code', 'notification-config', 'system-settings', 'poll-option', 'member-photo', 'switch', 'auth-key', 'recovery-key', 'device-transfer-request', 'sync-document', 'sync-queue-item', 'sync-conflict', 'import-job', 'pk-bridge-config', 'account-purge-request', 'export-request', 'job', 'subscription', 'webhook-delivery', 'fronting-report', 'friend-notification-preference', 'fronting-comment', 'bucket-key-rotation', 'bucket-rotation-item')),
       entity_id TEXT NOT NULL,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       PRIMARY KEY (entity_type, entity_id, bucket_id)
@@ -253,7 +253,7 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       timestamp INTEGER NOT NULL,
-      encrypted_data BLOB NOT NULL,
+      member_ids TEXT NOT NULL,
       created_at INTEGER NOT NULL
     )
   `,
@@ -278,18 +278,18 @@ export const SQLITE_DDL = {
   frontingComments: `
     CREATE TABLE fronting_comments (
       id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL,
+      fronting_session_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       member_id TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE
     )
   `,
   frontingCommentsIndexes: `
-    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (session_id, created_at)
+    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (fronting_session_id, created_at)
   `,
   // Structure
   relationships: `
@@ -507,7 +507,8 @@ export const SQLITE_DDL = {
   // System Settings
   systemSettings: `
     CREATE TABLE system_settings (
-      system_id TEXT PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL UNIQUE REFERENCES systems(id) ON DELETE CASCADE,
       locale TEXT,
       pin_hash TEXT,
       biometric_enabled INTEGER NOT NULL DEFAULT 0,
@@ -1028,7 +1029,7 @@ export const SQLITE_DDL = {
       chunks_total INTEGER,
       chunks_completed INTEGER NOT NULL DEFAULT 0 CHECK (chunks_completed <= chunks_total),
       created_at INTEGER NOT NULL,
-      updated_at INTEGER,
+      updated_at INTEGER NOT NULL,
       completed_at INTEGER
     )
   `,
@@ -1045,7 +1046,7 @@ export const SQLITE_DDL = {
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
       blob_id TEXT REFERENCES blob_metadata(id) ON DELETE SET NULL,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER,
+      updated_at INTEGER NOT NULL,
       completed_at INTEGER
     )
   `,
@@ -1178,6 +1179,21 @@ export const SQLITE_DDL = {
   bucketRotationItemsIndexes: `
     CREATE INDEX bucket_rotation_items_rotation_status_idx ON bucket_rotation_items (rotation_id, status);
     CREATE INDEX bucket_rotation_items_status_claimed_by_idx ON bucket_rotation_items (status, claimed_by)
+  `,
+  // Analytics
+  frontingReports: `
+    CREATE TABLE fronting_reports (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      date_range TEXT NOT NULL,
+      member_breakdowns TEXT NOT NULL,
+      chart_data TEXT NOT NULL,
+      format TEXT NOT NULL CHECK (format IN ('html', 'pdf')),
+      generated_at INTEGER NOT NULL
+    )
+  `,
+  frontingReportsIndexes: `
+    CREATE INDEX fronting_reports_system_id_idx ON fronting_reports (system_id)
   `,
 } as const;
 
@@ -1531,6 +1547,12 @@ export function createSqliteJobsTables(client: InstanceType<typeof Database>): v
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.jobs);
   client.exec(SQLITE_DDL.jobsIndexes);
+}
+
+export function createSqliteAnalyticsTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.frontingReports);
+  client.exec(SQLITE_DDL.frontingReportsIndexes);
 }
 
 export function createSqliteKeyRotationTables(client: InstanceType<typeof Database>): void {

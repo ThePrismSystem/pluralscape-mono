@@ -41,7 +41,7 @@ export const importJobs = sqliteTable(
     chunksTotal: integer("chunks_total"),
     chunksCompleted: integer("chunks_completed").notNull().default(0),
     createdAt: sqliteTimestamp("created_at").notNull(),
-    updatedAt: sqliteTimestamp("updated_at"),
+    updatedAt: sqliteTimestamp("updated_at").notNull(),
     completedAt: sqliteTimestamp("completed_at"),
   },
   (t) => [
@@ -72,7 +72,7 @@ export const exportRequests = sqliteTable(
     // ON DELETE SET NULL can orphan completed exports; app logic must handle expired/orphaned state.
     blobId: text("blob_id").references(() => blobMetadata.id, { onDelete: "set null" }),
     createdAt: sqliteTimestamp("created_at").notNull(),
-    updatedAt: sqliteTimestamp("updated_at"),
+    updatedAt: sqliteTimestamp("updated_at").notNull(),
     completedAt: sqliteTimestamp("completed_at"),
   },
   (t) => [

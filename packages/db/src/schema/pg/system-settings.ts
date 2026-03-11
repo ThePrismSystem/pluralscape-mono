@@ -6,8 +6,10 @@ import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { systems } from "./systems.js";
 
 export const systemSettings = pgTable("system_settings", {
+  id: varchar("id", { length: 255 }).primaryKey(),
   systemId: varchar("system_id", { length: 255 })
-    .primaryKey()
+    .notNull()
+    .unique()
     .references(() => systems.id, { onDelete: "cascade" }),
   locale: varchar("locale", { length: 255 }),
   pinHash: varchar("pin_hash", { length: 512 }),

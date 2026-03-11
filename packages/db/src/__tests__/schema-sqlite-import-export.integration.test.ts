@@ -110,6 +110,7 @@ describe("SQLite import-export schema", () => {
           systemId,
           source: "pluralkit",
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -120,7 +121,7 @@ describe("SQLite import-export schema", () => {
       expect(rows[0]?.warningCount).toBe(0);
       expect(rows[0]?.chunksCompleted).toBe(0);
       expect(rows[0]?.chunksTotal).toBeNull();
-      expect(rows[0]?.updatedAt).toBeNull();
+      expect(rows[0]?.updatedAt).toBe(now);
       expect(rows[0]?.completedAt).toBeNull();
       expect(rows[0]?.errorLog).toBeNull();
     });
@@ -143,6 +144,7 @@ describe("SQLite import-export schema", () => {
           source: "pluralscape",
           errorLog: errors,
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -164,6 +166,7 @@ describe("SQLite import-export schema", () => {
             systemId,
             source: "invalid-source" as "simply-plural",
             createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -184,6 +187,7 @@ describe("SQLite import-export schema", () => {
             source: "pluralkit",
             status: "bogus-status" as "pending",
             createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -204,6 +208,7 @@ describe("SQLite import-export schema", () => {
             source: "pluralscape",
             progressPercent: -1,
             createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -224,6 +229,7 @@ describe("SQLite import-export schema", () => {
             source: "pluralscape",
             progressPercent: 101,
             createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -243,6 +249,7 @@ describe("SQLite import-export schema", () => {
           source: "pluralkit",
           status,
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -266,6 +273,7 @@ describe("SQLite import-export schema", () => {
             chunksCompleted: 5,
             chunksTotal: 3,
             createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -284,6 +292,7 @@ describe("SQLite import-export schema", () => {
           systemId,
           source: "simply-plural",
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -332,6 +341,7 @@ describe("SQLite import-export schema", () => {
           status: "completed",
           blobId,
           createdAt: now,
+          updatedAt: now,
           completedAt: now + 3000,
         })
         .run();
@@ -360,6 +370,7 @@ describe("SQLite import-export schema", () => {
           systemId,
           format: "csv",
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -383,6 +394,7 @@ describe("SQLite import-export schema", () => {
           systemId,
           format: "json",
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -405,6 +417,7 @@ describe("SQLite import-export schema", () => {
             systemId,
             format: "xml" as "json",
             createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -425,6 +438,7 @@ describe("SQLite import-export schema", () => {
             format: "json",
             status: "bogus" as "pending",
             createdAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
@@ -437,7 +451,7 @@ describe("SQLite import-export schema", () => {
       const now = Date.now();
 
       db.insert(exportRequests)
-        .values({ id, accountId, systemId, format: "json", status, createdAt: now })
+        .values({ id, accountId, systemId, format: "json", status, createdAt: now, updatedAt: now })
         .run();
 
       const rows = db.select().from(exportRequests).where(eq(exportRequests.id, id)).all();
@@ -482,6 +496,7 @@ describe("SQLite import-export schema", () => {
           status: "completed",
           blobId,
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 
@@ -506,6 +521,7 @@ describe("SQLite import-export schema", () => {
           format: "json",
           blobId: null,
           createdAt: now,
+          updatedAt: now,
         })
         .run();
 

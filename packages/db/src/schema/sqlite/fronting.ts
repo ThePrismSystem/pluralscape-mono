@@ -48,7 +48,7 @@ export const switches = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     timestamp: sqliteTimestamp("timestamp").notNull(),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    memberIds: sqliteJson("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [index("switches_system_timestamp_idx").on(t.systemId, t.timestamp)],
@@ -73,7 +73,7 @@ export const frontingComments = sqliteTable(
   "fronting_comments",
   {
     id: text("id").primaryKey(),
-    sessionId: text("session_id").notNull(),
+    frontingSessionId: text("fronting_session_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -83,9 +83,9 @@ export const frontingComments = sqliteTable(
     ...versioned(),
   },
   (t) => [
-    index("fronting_comments_session_created_idx").on(t.sessionId, t.createdAt),
+    index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
     foreignKey({
-      columns: [t.sessionId, t.systemId],
+      columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
     }).onDelete("cascade"),
   ],

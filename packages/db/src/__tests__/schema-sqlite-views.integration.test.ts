@@ -535,7 +535,7 @@ describe("SQLite views / query helpers", () => {
         .values([
           {
             id: crypto.randomUUID(),
-            sessionId: activeSessionId,
+            frontingSessionId: activeSessionId,
             systemId,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -543,7 +543,7 @@ describe("SQLite views / query helpers", () => {
           },
           {
             id: crypto.randomUUID(),
-            sessionId: endedSessionId,
+            frontingSessionId: endedSessionId,
             systemId,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -554,7 +554,7 @@ describe("SQLite views / query helpers", () => {
 
       const comments = getCurrentFrontingComments(db, systemId);
       expect(comments).toHaveLength(1);
-      expect(comments[0]?.sessionId).toBe(activeSessionId);
+      expect(comments[0]?.frontingSessionId).toBe(activeSessionId);
     });
   });
 
