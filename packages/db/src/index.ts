@@ -62,11 +62,15 @@ export {
   EXPORT_FORMATS,
   EXPORT_REQUEST_STATUSES,
   ACCOUNT_PURGE_STATUSES,
+  SEARCHABLE_ENTITY_TYPES,
+  JOB_TYPES,
+  JOB_STATUSES,
+  enumCheck,
 } from "./helpers/index.js";
 export type { DbAuditActor } from "./helpers/index.js";
 
 // ── Views / Query Helpers ─────────────────────────────────────
-export { pgViews, sqliteViews } from "./views/index.js";
+export { pgViews, sqliteViews, LINK_TYPES, mapStructureCrossLinkRow } from "./views/index.js";
 export type {
   ActiveApiKey,
   ActiveDeviceToken,

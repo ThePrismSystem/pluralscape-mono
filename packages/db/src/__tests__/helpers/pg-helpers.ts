@@ -928,7 +928,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ,
-      CHECK (progress_percent >= 0 AND progress_percent <= 100)
+      CHECK (progress_percent >= 0 AND progress_percent <= 100),
+      CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total)
     )
   `,
   importJobsIndexes: `
@@ -955,13 +956,14 @@ export const PG_DDL = {
     CREATE TABLE account_purge_requests (
       id VARCHAR(255) PRIMARY KEY,
       account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      status VARCHAR(255) NOT NULL CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
+      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
       confirmation_phrase VARCHAR(255) NOT NULL,
       scheduled_purge_at TIMESTAMPTZ NOT NULL,
       requested_at TIMESTAMPTZ NOT NULL,
       confirmed_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ,
-      cancelled_at TIMESTAMPTZ
+      cancelled_at TIMESTAMPTZ,
+      CHECK (scheduled_purge_at > requested_at)
     )
   `,
   accountPurgeRequestsIndexes: `
@@ -1009,7 +1011,8 @@ export const PG_DDL = {
       resolution VARCHAR(255) CHECK (resolution IN ('local', 'remote', 'merged')),
       created_at TIMESTAMPTZ NOT NULL,
       resolved_at TIMESTAMPTZ,
-      details VARCHAR(65535)
+      details TEXT,
+      CHECK ((resolution IS NULL) = (resolved_at IS NULL))
     )
   `,
   syncConflictsIndexes: `
@@ -1017,7 +1020,7 @@ export const PG_DDL = {
   `,
 } as const;
 
-async function pgExec(client: PGlite, sql: string): Promise<void> {
+export async function pgExec(client: PGlite, sql: string): Promise<void> {
   const statements = sql
     .split(";")
     .map((s) => s.trim())

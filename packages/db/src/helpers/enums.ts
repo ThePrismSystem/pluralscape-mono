@@ -98,7 +98,11 @@ export const SYNC_RESOLUTIONS = [
   "remote",
   "merged",
 ] as const satisfies readonly SyncResolution[];
-/** Naming convention: TABLE_COLUMN (e.g. API_KEY_KEY_TYPES = api_keys.key_type). */
+/**
+ * Naming convention: TABLE_COLUMN (e.g. API_KEY_KEY_TYPES = api_keys.key_type).
+ * Each array name maps to the table and column it constrains, so
+ * `API_KEY_KEY_TYPES` → `api_keys.key_type`, `API_KEY_SCOPES` → `api_keys.scopes`, etc.
+ */
 export const API_KEY_KEY_TYPES = [
   "metadata",
   "crypto",
@@ -156,6 +160,8 @@ export const INNERWORLD_ENTITY_TYPES = [
   "side-system",
   "layer",
 ] as const satisfies readonly ServerInnerWorldEntity["entityType"][];
+// Intentionally duplicates LAYER_ACCESS_TYPES — innerworld regions and layers share the same
+// access semantics today, but are kept as separate arrays so they can diverge independently.
 export const INNERWORLD_REGION_ACCESS_TYPES = [
   "open",
   "gatekept",

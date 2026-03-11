@@ -56,6 +56,10 @@ export const importJobs = pgTable(
       "import_jobs_progress_percent_check",
       sql`${t.progressPercent} >= 0 AND ${t.progressPercent} <= 100`,
     ),
+    check(
+      "import_jobs_chunks_check",
+      sql`${t.chunksTotal} IS NULL OR ${t.chunksCompleted} <= ${t.chunksTotal}`,
+    ),
   ],
 );
 
@@ -95,7 +99,10 @@ export const accountPurgeRequests = pgTable(
     accountId: varchar("account_id", { length: 255 })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    status: varchar("status", { length: 255 }).notNull().$type<AccountPurgeStatus>(),
+    status: varchar("status", { length: 255 })
+      .notNull()
+      .default("pending")
+      .$type<AccountPurgeStatus>(),
     confirmationPhrase: varchar("confirmation_phrase", { length: 255 }).notNull(),
     scheduledPurgeAt: pgTimestamp("scheduled_purge_at").notNull(),
     requestedAt: pgTimestamp("requested_at").notNull(),
@@ -106,5 +113,6 @@ export const accountPurgeRequests = pgTable(
   (t) => [
     index("account_purge_requests_account_id_idx").on(t.accountId),
     check("account_purge_requests_status_check", enumCheck(t.status, ACCOUNT_PURGE_STATUSES)),
+    check("account_purge_requests_schedule_check", sql`${t.scheduledPurgeAt} > ${t.requestedAt}`),
   ],
 );

@@ -1,12 +1,14 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { apiKeys } from "../schema/pg/api-keys.js";
+import { deviceTransferRequests, sessions } from "../schema/pg/auth.js";
 import { acknowledgements } from "../schema/pg/communication.js";
 import { frontingComments, frontingSessions } from "../schema/pg/fronting.js";
 import { groupMemberships, groups } from "../schema/pg/groups.js";
 import { members } from "../schema/pg/members.js";
+import { deviceTokens } from "../schema/pg/notifications.js";
 import { friendConnections } from "../schema/pg/privacy.js";
 import {
   layers,
@@ -18,7 +20,10 @@ import {
 } from "../schema/pg/structure.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/pg/webhooks.js";
 import {
+  getActiveFriendConnections,
   getActiveApiKeys,
+  getActiveDeviceTokens,
+  getActiveDeviceTransfers,
   getCurrentFronters,
   getCurrentFrontersWithDuration,
   getCurrentFrontingComments,
@@ -29,20 +34,9 @@ import {
   getUnconfirmedAcknowledgements,
 } from "../views/pg.js";
 
-import { PG_DDL, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import { PG_DDL, pgExec, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
-
-/** Execute one or more semicolon-separated SQL statements. */
-async function pgExec(client: PGlite, sqlText: string): Promise<void> {
-  const stmts = sqlText
-    .split(";")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  for (const stmt of stmts) {
-    await client.exec(stmt);
-  }
-}
 
 describe("PG views / query helpers", () => {
   let client: PGlite;
@@ -56,6 +50,8 @@ describe("PG views / query helpers", () => {
     db = drizzle(client);
     // Base tables (only once)
     await pgExec(client, PG_DDL.accounts);
+    await pgExec(client, PG_DDL.sessions);
+    await pgExec(client, PG_DDL.sessionsIndexes);
     await pgExec(client, PG_DDL.systems);
     await pgExec(client, PG_DDL.systemsIndexes);
     // Members (needed for groups)
@@ -80,6 +76,12 @@ describe("PG views / query helpers", () => {
     await pgExec(client, PG_DDL.groupsIndexes);
     await pgExec(client, PG_DDL.groupMemberships);
     await pgExec(client, PG_DDL.groupMembershipsIndexes);
+    // Device tokens
+    await pgExec(client, PG_DDL.deviceTokens);
+    await pgExec(client, PG_DDL.deviceTokensIndexes);
+    // Device transfer requests
+    await pgExec(client, PG_DDL.deviceTransferRequests);
+    await pgExec(client, PG_DDL.deviceTransferRequestsIndexes);
     // Webhooks
     await pgExec(client, PG_DDL.webhookConfigs);
     await pgExec(client, PG_DDL.webhookConfigsIndexes);
@@ -105,10 +107,42 @@ describe("PG views / query helpers", () => {
     await client.close();
   });
 
+  let accountId: string;
+  let systemId: string;
+
+  beforeEach(async () => {
+    // Clean up tables for each test (FK-safe order: children first)
+    for (const table of [
+      "fronting_comments",
+      "fronting_sessions",
+      "acknowledgements",
+      "webhook_deliveries",
+      "webhook_configs",
+      "device_tokens",
+      "device_transfer_requests",
+      "friend_connections",
+      "group_memberships",
+      "groups",
+      "api_keys",
+      "side_system_layer_links",
+      "subsystem_side_system_links",
+      "subsystem_layer_links",
+      "layers",
+      "side_systems",
+      "subsystems",
+      "members",
+      "sessions",
+      "systems",
+      "accounts",
+    ]) {
+      await client.exec(`DELETE FROM ${table}`);
+    }
+    accountId = await insertAccount();
+    systemId = await insertSystem(accountId);
+  });
+
   describe("getCurrentFronters", () => {
     it("returns sessions with null end_time", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const now = Date.now();
 
       await db.insert(frontingSessions).values({
@@ -134,12 +168,15 @@ describe("PG views / query helpers", () => {
       expect(fronters).toHaveLength(1);
       expect(fronters[0]?.startTime).toBe(now - 60000);
     });
+
+    it("returns empty array when no active sessions", async () => {
+      const fronters = await getCurrentFronters(db, systemId);
+      expect(fronters).toHaveLength(0);
+    });
   });
 
   describe("getCurrentFrontersWithDuration", () => {
     it("returns positive duration for active sessions", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const now = Date.now();
 
       await db.insert(frontingSessions).values({
@@ -156,12 +193,15 @@ describe("PG views / query helpers", () => {
       expect(fronters).toHaveLength(1);
       expect(fronters[0]?.durationMs).toBeGreaterThan(0);
     });
+
+    it("returns empty array when no active sessions", async () => {
+      const fronters = await getCurrentFrontersWithDuration(db, systemId);
+      expect(fronters).toHaveLength(0);
+    });
   });
 
   describe("getActiveApiKeys", () => {
     it("returns non-revoked keys", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const now = Date.now();
 
       await db.insert(apiKeys).values({
@@ -190,12 +230,15 @@ describe("PG views / query helpers", () => {
       expect(active).toHaveLength(1);
       expect(active[0]?.name).toBe("Active");
     });
+
+    it("returns empty array when no keys exist", async () => {
+      const active = await getActiveApiKeys(db, accountId);
+      expect(active).toHaveLength(0);
+    });
   });
 
   describe("getPendingFriendRequests", () => {
     it("returns only pending connections", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const otherAccountId1 = await insertAccount();
       const otherSystemId1 = await insertSystem(otherAccountId1);
       const otherAccountId2 = await insertAccount();
@@ -222,12 +265,15 @@ describe("PG views / query helpers", () => {
       const pending = await getPendingFriendRequests(db, systemId);
       expect(pending).toHaveLength(1);
     });
+
+    it("returns empty array when no pending requests", async () => {
+      const pending = await getPendingFriendRequests(db, systemId);
+      expect(pending).toHaveLength(0);
+    });
   });
 
   describe("getPendingWebhookRetries", () => {
     it("respects max_attempts parameter", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const now = Date.now();
       const webhookId = crypto.randomUUID();
       const maxAttempts = 3;
@@ -264,12 +310,15 @@ describe("PG views / query helpers", () => {
       expect(retries).toHaveLength(1);
       expect(retries[0]?.attemptCount).toBe(2);
     });
+
+    it("returns empty array when no retries needed", async () => {
+      const retries = await getPendingWebhookRetries(db, systemId, 3);
+      expect(retries).toHaveLength(0);
+    });
   });
 
   describe("getUnconfirmedAcknowledgements", () => {
     it("returns only unconfirmed", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const now = Date.now();
 
       await db.insert(acknowledgements).values({
@@ -291,12 +340,15 @@ describe("PG views / query helpers", () => {
       const unconfirmed = await getUnconfirmedAcknowledgements(db, systemId);
       expect(unconfirmed).toHaveLength(1);
     });
+
+    it("returns empty array when all confirmed", async () => {
+      const unconfirmed = await getUnconfirmedAcknowledgements(db, systemId);
+      expect(unconfirmed).toHaveLength(0);
+    });
   });
 
   describe("getMemberGroupSummary", () => {
     it("returns correct member count per group", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const now = Date.now();
       const memberId1 = crypto.randomUUID();
       const memberId2 = crypto.randomUUID();
@@ -335,12 +387,106 @@ describe("PG views / query helpers", () => {
       expect(summary).toHaveLength(1);
       expect(summary[0]?.memberCount).toBe(2);
     });
+
+    it("returns empty array when no groups", async () => {
+      const summary = await getMemberGroupSummary(db, systemId);
+      expect(summary).toHaveLength(0);
+    });
+  });
+
+  describe("getActiveFriendConnections", () => {
+    it("returns only accepted connections", async () => {
+      const otherAccountId = await insertAccount();
+      const otherSystemId = await insertSystem(otherAccountId);
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: crypto.randomUUID(),
+        systemId,
+        friendSystemId: otherSystemId,
+        status: "accepted",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const active = await getActiveFriendConnections(db, systemId);
+      expect(active).toHaveLength(1);
+    });
+
+    it("returns empty array when no accepted connections", async () => {
+      const active = await getActiveFriendConnections(db, systemId);
+      expect(active).toHaveLength(0);
+    });
+  });
+
+  describe("getActiveDeviceTokens", () => {
+    it("returns non-revoked tokens with token field", async () => {
+      const now = Date.now();
+      const tokenValue = `token_${crypto.randomUUID()}`;
+      await db.insert(deviceTokens).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        platform: "ios",
+        token: tokenValue,
+        createdAt: now,
+      });
+      await db.insert(deviceTokens).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        platform: "android",
+        token: `token_${crypto.randomUUID()}`,
+        createdAt: now,
+        revokedAt: now,
+      });
+
+      const active = await getActiveDeviceTokens(db, accountId);
+      expect(active).toHaveLength(1);
+      expect(active[0]?.platform).toBe("ios");
+      expect(active[0]?.token).toBe(tokenValue);
+    });
+
+    it("returns empty array when no tokens", async () => {
+      const active = await getActiveDeviceTokens(db, accountId);
+      expect(active).toHaveLength(0);
+    });
+  });
+
+  describe("getActiveDeviceTransfers", () => {
+    it("returns pending non-expired transfers", async () => {
+      const now = Date.now();
+      const sourceSession = crypto.randomUUID();
+      const targetSession = crypto.randomUUID();
+
+      await db.insert(sessions).values([
+        { id: sourceSession, accountId, createdAt: now },
+        { id: targetSession, accountId, createdAt: now },
+      ]);
+
+      await db.insert(deviceTransferRequests).values({
+        id: crypto.randomUUID(),
+        accountId,
+        sourceSessionId: sourceSession,
+        targetSessionId: targetSession,
+        status: "pending",
+        createdAt: now,
+        expiresAt: now + 3600000,
+      });
+
+      const active = await getActiveDeviceTransfers(db, accountId);
+      expect(active).toHaveLength(1);
+      expect(active[0]?.expiresAt).toBeGreaterThan(now);
+    });
+
+    it("returns empty array when no transfers", async () => {
+      const active = await getActiveDeviceTransfers(db, accountId);
+      expect(active).toHaveLength(0);
+    });
   });
 
   describe("getCurrentFrontingComments", () => {
     it("returns comments only for active sessions", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const now = Date.now();
       const activeSessionId = crypto.randomUUID();
       const endedSessionId = crypto.randomUUID();
@@ -388,45 +534,42 @@ describe("PG views / query helpers", () => {
       expect(comments).toHaveLength(1);
       expect(comments[0]?.sessionId).toBe(activeSessionId);
     });
+
+    it("returns empty array when no comments", async () => {
+      const comments = await getCurrentFrontingComments(db, systemId);
+      expect(comments).toHaveLength(0);
+    });
   });
 
   describe("getStructureCrossLinks", () => {
     it("returns UNION of all 3 link types", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
       const now = Date.now();
       const subsystemId = crypto.randomUUID();
       const sideSystemId = crypto.randomUUID();
       const layerId = crypto.randomUUID();
 
-      await db
-        .insert(subsystems)
-        .values({
-          id: subsystemId,
-          systemId,
-          encryptedData: new Uint8Array([1]),
-          createdAt: now,
-          updatedAt: now,
-        });
-      await db
-        .insert(sideSystems)
-        .values({
-          id: sideSystemId,
-          systemId,
-          encryptedData: new Uint8Array([1]),
-          createdAt: now,
-          updatedAt: now,
-        });
-      await db
-        .insert(layers)
-        .values({
-          id: layerId,
-          systemId,
-          sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
-          createdAt: now,
-          updatedAt: now,
-        });
+      await db.insert(subsystems).values({
+        id: subsystemId,
+        systemId,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(sideSystems).values({
+        id: sideSystemId,
+        systemId,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(layers).values({
+        id: layerId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: new Uint8Array([1]),
+        createdAt: now,
+        updatedAt: now,
+      });
 
       await db
         .insert(subsystemLayerLinks)
@@ -442,6 +585,11 @@ describe("PG views / query helpers", () => {
       expect(links).toHaveLength(3);
       const types = links.map((l) => l.linkType).sort();
       expect(types).toEqual(["side-system-layer", "subsystem-layer", "subsystem-side-system"]);
+    });
+
+    it("returns empty array when no links", async () => {
+      const links = await getStructureCrossLinks(db, systemId);
+      expect(links).toHaveLength(0);
     });
   });
 });

@@ -61,16 +61,51 @@ export function deleteSearchEntry(
   );
 }
 
-/** Drop and recreate the search index. */
+/** Drop and recreate the search index atomically within a transaction. */
 export function rebuildSearchIndex(db: BetterSQLite3Database): void {
-  dropSearchIndex(db);
-  createSearchIndex(db);
+  db.transaction(() => {
+    dropSearchIndex(db);
+    createSearchIndex(db);
+  });
+}
+
+/**
+ * Escape a user query for safe use with FTS5 MATCH.
+ *
+ * Splits on whitespace, wraps each token in double quotes (escaping internal
+ * double quotes by doubling them), then joins with spaces for implicit AND.
+ */
+export function escapeFts5Query(query: string): string {
+  return query
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t.length > 0)
+    .map((t) => `"${t.replace(/"/g, '""')}"`)
+    .join(" ");
 }
 
 /** Search options. */
 export interface SearchOptions {
   readonly entityType?: SearchableEntityType;
   readonly limit?: number;
+}
+
+interface RawSearchRow {
+  entity_type: string;
+  entity_id: string;
+  title: string;
+  content: string;
+  rank: number;
+}
+
+function mapSearchRow(r: RawSearchRow): SearchIndexResult {
+  return {
+    entityType: r.entity_type as SearchableEntityType,
+    entityId: r.entity_id,
+    title: r.title,
+    content: r.content,
+    rank: r.rank,
+  };
 }
 
 /** Search the index using FTS5 MATCH, returning ranked results. */
@@ -80,40 +115,17 @@ export function searchEntries(
   opts?: SearchOptions,
 ): SearchIndexResult[] {
   const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
+  const escaped = escapeFts5Query(query);
 
-  if (opts?.entityType) {
-    const results = db.all<{
-      entity_type: string;
-      entity_id: string;
-      title: string;
-      content: string;
-      rank: number;
-    }>(
-      sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${query} AND entity_type = ${opts.entityType} ORDER BY rank LIMIT ${limit}`,
-    );
-    return results.map((r) => ({
-      entityType: r.entity_type as SearchableEntityType,
-      entityId: r.entity_id,
-      title: r.title,
-      content: r.content,
-      rank: r.rank,
-    }));
+  if (escaped.length === 0) {
+    return [];
   }
 
-  const results = db.all<{
-    entity_type: string;
-    entity_id: string;
-    title: string;
-    content: string;
-    rank: number;
-  }>(
-    sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${query} ORDER BY rank LIMIT ${limit}`,
+  const entityTypeFilter = opts?.entityType ? sql` AND entity_type = ${opts.entityType}` : sql``;
+
+  const results = db.all<RawSearchRow>(
+    sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${escaped}${entityTypeFilter} ORDER BY rank LIMIT ${limit}`,
   );
-  return results.map((r) => ({
-    entityType: r.entity_type as SearchableEntityType,
-    entityId: r.entity_id,
-    title: r.title,
-    content: r.content,
-    rank: r.rank,
-  }));
+
+  return results.map(mapSearchRow);
 }

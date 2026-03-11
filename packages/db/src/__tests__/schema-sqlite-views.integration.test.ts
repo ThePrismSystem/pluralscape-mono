@@ -135,6 +135,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getCurrentFronters", () => {
+    it("returns empty array when no active sessions", () => {
+      const fronters = getCurrentFronters(db, systemId);
+      expect(fronters).toHaveLength(0);
+    });
+
     it("returns sessions with null end_time", () => {
       const now = Date.now();
       db.insert(frontingSessions)
@@ -167,6 +172,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getCurrentFrontersWithDuration", () => {
+    it("returns empty array when no active sessions", () => {
+      const fronters = getCurrentFrontersWithDuration(db, systemId);
+      expect(fronters).toHaveLength(0);
+    });
+
     it("returns positive duration for active sessions", () => {
       const now = Date.now();
       db.insert(frontingSessions)
@@ -188,6 +198,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getActiveApiKeys", () => {
+    it("returns empty array when no keys", () => {
+      const active = getActiveApiKeys(db, accountId);
+      expect(active).toHaveLength(0);
+    });
+
     it("returns non-revoked keys and excludes revoked", () => {
       const now = Date.now();
       db.insert(apiKeys)
@@ -223,6 +238,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getPendingFriendRequests", () => {
+    it("returns empty array when no requests", () => {
+      const pending = getPendingFriendRequests(db, systemId);
+      expect(pending).toHaveLength(0);
+    });
+
     it("returns only pending connections", () => {
       const now = Date.now();
       const otherAccountId1 = insertAccount();
@@ -257,6 +277,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getPendingWebhookRetries", () => {
+    it("returns empty array when no retries", () => {
+      const retries = getPendingWebhookRetries(db, systemId, 3);
+      expect(retries).toHaveLength(0);
+    });
+
     it("returns failed deliveries under max attempts and respects limit", () => {
       const now = Date.now();
       const webhookId = crypto.randomUUID();
@@ -304,6 +329,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getUnconfirmedAcknowledgements", () => {
+    it("returns empty array when none exist", () => {
+      const unconfirmed = getUnconfirmedAcknowledgements(db, systemId);
+      expect(unconfirmed).toHaveLength(0);
+    });
+
     it("returns only unconfirmed acknowledgements", () => {
       const now = Date.now();
       db.insert(acknowledgements)
@@ -332,6 +362,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getMemberGroupSummary", () => {
+    it("returns empty array when no groups", () => {
+      const summary = getMemberGroupSummary(db, systemId);
+      expect(summary).toHaveLength(0);
+    });
+
     it("returns groups with correct member counts", () => {
       const now = Date.now();
       const memberId1 = crypto.randomUUID();
@@ -380,6 +415,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getActiveFriendConnections", () => {
+    it("returns empty array when no accepted connections", () => {
+      const active = getActiveFriendConnections(db, systemId);
+      expect(active).toHaveLength(0);
+    });
+
     it("returns only accepted connections", () => {
       const now = Date.now();
       const otherAccountId = insertAccount();
@@ -402,15 +442,21 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getActiveDeviceTokens", () => {
-    it("returns non-revoked tokens", () => {
+    it("returns empty array when no tokens", () => {
+      const active = getActiveDeviceTokens(db, accountId);
+      expect(active).toHaveLength(0);
+    });
+
+    it("returns non-revoked tokens with token field", () => {
       const now = Date.now();
+      const tokenValue = `token_${crypto.randomUUID()}`;
       db.insert(deviceTokens)
         .values({
           id: crypto.randomUUID(),
           accountId,
           systemId,
           platform: "ios",
-          token: `token_${crypto.randomUUID()}`,
+          token: tokenValue,
           createdAt: now,
         })
         .run();
@@ -429,10 +475,16 @@ describe("SQLite views / query helpers", () => {
       const active = getActiveDeviceTokens(db, accountId);
       expect(active).toHaveLength(1);
       expect(active[0]?.platform).toBe("ios");
+      expect(active[0]?.token).toBe(tokenValue);
     });
   });
 
   describe("getCurrentFrontingComments", () => {
+    it("returns empty array when no comments", () => {
+      const comments = getCurrentFrontingComments(db, systemId);
+      expect(comments).toHaveLength(0);
+    });
+
     it("returns comments only for active sessions", () => {
       const now = Date.now();
       const activeSessionId = crypto.randomUUID();
@@ -488,6 +540,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getActiveDeviceTransfers", () => {
+    it("returns empty array when no transfers", () => {
+      const active = getActiveDeviceTransfers(db, accountId);
+      expect(active).toHaveLength(0);
+    });
+
     it("returns pending non-expired transfers", () => {
       const now = Date.now();
       const sourceSession = crypto.randomUUID();
@@ -541,6 +598,11 @@ describe("SQLite views / query helpers", () => {
   });
 
   describe("getStructureCrossLinks", () => {
+    it("returns empty array when no links", () => {
+      const links = getStructureCrossLinks(db, systemId);
+      expect(links).toHaveLength(0);
+    });
+
     it("returns UNION of all 3 link types", () => {
       const now = Date.now();
       const subsystemId = crypto.randomUUID();

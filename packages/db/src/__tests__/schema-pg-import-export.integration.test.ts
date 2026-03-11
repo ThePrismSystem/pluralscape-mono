@@ -68,7 +68,7 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.warningCount).toBe(3);
       expect(rows[0]?.chunksTotal).toBe(10);
       expect(rows[0]?.chunksCompleted).toBe(4);
-      expect(rows[0]?.completedAt).toBeTruthy();
+      expect(rows[0]?.completedAt).toBe(now);
     });
 
     it("applies default values for status, progressPercent, warningCount, chunksCompleted", async () => {
@@ -232,7 +232,7 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.format).toBe("json");
       expect(rows[0]?.status).toBe("completed");
       expect(rows[0]?.blobId).toBeNull();
-      expect(rows[0]?.completedAt).toBeTruthy();
+      expect(rows[0]?.completedAt).toBe(now);
     });
 
     it("applies default status of pending", async () => {
@@ -321,7 +321,7 @@ describe("PG import-export schema", () => {
         accountId,
         status: "completed",
         confirmationPhrase: "DELETE MY ACCOUNT",
-        scheduledPurgeAt: now,
+        scheduledPurgeAt: now + 86400000,
         requestedAt: now,
         confirmedAt: now,
         completedAt: now,
@@ -336,11 +336,11 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.accountId).toBe(accountId);
       expect(rows[0]?.status).toBe("completed");
       expect(rows[0]?.confirmationPhrase).toBe("DELETE MY ACCOUNT");
-      expect(rows[0]?.scheduledPurgeAt).toBeTruthy();
-      expect(rows[0]?.requestedAt).toBeTruthy();
-      expect(rows[0]?.confirmedAt).toBeTruthy();
-      expect(rows[0]?.completedAt).toBeTruthy();
-      expect(rows[0]?.cancelledAt).toBeTruthy();
+      expect(rows[0]?.scheduledPurgeAt).toBe(now + 86400000);
+      expect(rows[0]?.requestedAt).toBe(now);
+      expect(rows[0]?.confirmedAt).toBe(now);
+      expect(rows[0]?.completedAt).toBe(now);
+      expect(rows[0]?.cancelledAt).toBe(now);
     });
 
     it("rejects invalid status value", async () => {
@@ -369,7 +369,7 @@ describe("PG import-export schema", () => {
         accountId,
         status: "pending",
         confirmationPhrase: "DELETE MY ACCOUNT",
-        scheduledPurgeAt: now,
+        scheduledPurgeAt: now + 86400000,
         requestedAt: now,
       });
 
@@ -391,7 +391,7 @@ describe("PG import-export schema", () => {
         accountId,
         status: "pending",
         confirmationPhrase: "DELETE MY ACCOUNT",
-        scheduledPurgeAt: now,
+        scheduledPurgeAt: now + 86400000,
         requestedAt: now,
       });
 

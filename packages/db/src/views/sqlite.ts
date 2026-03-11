@@ -16,6 +16,8 @@ import {
 } from "../schema/sqlite/structure.js";
 import { webhookDeliveries } from "../schema/sqlite/webhooks.js";
 
+import { mapStructureCrossLinkRow } from "./types.js";
+
 import type {
   ActiveApiKey,
   ActiveDeviceToken,
@@ -45,7 +47,12 @@ export function getCurrentFronters(db: BetterSQLite3Database, systemId: string):
     .all();
 }
 
-/** Get currently fronting members with computed duration in milliseconds. */
+/**
+ * Get currently fronting members with computed duration in milliseconds.
+ *
+ * Note: SQLite `strftime('%s', ...)` has 1-second precision, so durations
+ * are accurate to ~1000ms. Use application-layer `Date.now()` for sub-second precision.
+ */
 export function getCurrentFrontersWithDuration(
   db: BetterSQLite3Database,
   systemId: string,
@@ -55,7 +62,7 @@ export function getCurrentFrontersWithDuration(
       id: frontingSessions.id,
       systemId: frontingSessions.systemId,
       startTime: frontingSessions.startTime,
-      durationMs: sql<number>`(strftime('%s', 'now') * 1000) - ${frontingSessions.startTime}`,
+      durationMs: sql<number>`MAX(0, (strftime('%s', 'now') * 1000) - ${frontingSessions.startTime})`,
     })
     .from(frontingSessions)
     .where(and(eq(frontingSessions.systemId, systemId), isNull(frontingSessions.endTime)))
@@ -185,6 +192,7 @@ export function getActiveDeviceTokens(
       accountId: deviceTokens.accountId,
       systemId: deviceTokens.systemId,
       platform: deviceTokens.platform,
+      token: deviceTokens.token,
       createdAt: deviceTokens.createdAt,
     })
     .from(deviceTokens)
@@ -261,12 +269,5 @@ export function getStructureCrossLinks(
     FROM ${sideSystemLayerLinks}
     WHERE system_id = ${systemId}
   `);
-  return rows.map((r) => ({
-    id: r.id,
-    systemId: r.system_id,
-    linkType: r.link_type as StructureCrossLink["linkType"],
-    sourceId: r.source_id,
-    targetId: r.target_id,
-    createdAt: r.created_at,
-  }));
+  return rows.map(mapStructureCrossLinkRow);
 }

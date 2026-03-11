@@ -1,4 +1,5 @@
-import { check, index, integer, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { check, index, integer, pgTable, text, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -65,7 +66,7 @@ export const syncConflicts = pgTable(
     resolution: varchar("resolution", { length: 255 }).$type<SyncResolution>(),
     createdAt: pgTimestamp("created_at").notNull(),
     resolvedAt: pgTimestamp("resolved_at"),
-    details: varchar("details", { length: 65535 }),
+    details: text("details"),
   },
   (t) => [
     index("sync_conflicts_system_id_entity_type_entity_id_idx").on(
@@ -74,5 +75,9 @@ export const syncConflicts = pgTable(
       t.entityId,
     ),
     check("sync_conflicts_resolution_check", enumCheck(t.resolution, SYNC_RESOLUTIONS)),
+    check(
+      "sync_conflicts_resolution_resolved_at_check",
+      sql`(${t.resolution} IS NULL) = (${t.resolvedAt} IS NULL)`,
+    ),
   ],
 );

@@ -22,6 +22,8 @@ import {
 } from "../schema/pg/structure.js";
 import { webhookDeliveries } from "../schema/pg/webhooks.js";
 
+import { mapStructureCrossLinkRow } from "./types.js";
+
 import type {
   ActiveApiKey,
   ActiveDeviceToken,
@@ -38,6 +40,12 @@ import type {
 } from "./types.js";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
+/**
+ * Database handle accepted by all PG query helpers.
+ *
+ * Typed as PgliteDatabase (used in tests) but structurally compatible with
+ * PostgresJsDatabase at runtime since both share the Drizzle PgDatabase API.
+ */
 type PgDb = PgliteDatabase;
 
 /** Get currently fronting members (end_time IS NULL). */
@@ -62,7 +70,7 @@ export async function getCurrentFrontersWithDuration(
       id: frontingSessions.id,
       systemId: frontingSessions.systemId,
       startTime: frontingSessions.startTime,
-      durationMs: sql<number>`(EXTRACT(EPOCH FROM (NOW() - ${frontingSessions.startTime})) * 1000)::int`,
+      durationMs: sql<number>`GREATEST(0, EXTRACT(EPOCH FROM (NOW() - ${frontingSessions.startTime})) * 1000)::int`,
     })
     .from(frontingSessions)
     .where(and(eq(frontingSessions.systemId, systemId), isNull(frontingSessions.endTime)));
@@ -185,6 +193,7 @@ export async function getActiveDeviceTokens(
       accountId: deviceTokens.accountId,
       systemId: deviceTokens.systemId,
       platform: deviceTokens.platform,
+      token: deviceTokens.token,
       createdAt: deviceTokens.createdAt,
     })
     .from(deviceTokens)
@@ -243,7 +252,7 @@ export async function getStructureCrossLinks(
     link_type: string;
     source_id: string;
     target_id: string;
-    created_at: number;
+    created_at: string;
   }>(sql`
     SELECT id, system_id, 'subsystem-layer' as link_type, subsystem_id as source_id, layer_id as target_id, created_at
     FROM ${subsystemLayerLinks}
@@ -257,12 +266,10 @@ export async function getStructureCrossLinks(
     FROM ${sideSystemLayerLinks}
     WHERE system_id = ${systemId}
   `);
-  return rows.rows.map((r) => ({
-    id: r.id,
-    systemId: r.system_id,
-    linkType: r.link_type as StructureCrossLink["linkType"],
-    sourceId: r.source_id,
-    targetId: r.target_id,
-    createdAt: r.created_at,
-  }));
+  return rows.rows.map((r) =>
+    mapStructureCrossLinkRow({
+      ...r,
+      created_at: Date.parse(r.created_at),
+    }),
+  );
 }

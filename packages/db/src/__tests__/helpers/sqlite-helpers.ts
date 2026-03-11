@@ -914,8 +914,8 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      source TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
+      source TEXT NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validating', 'importing', 'completed', 'failed')),
       progress_percent INTEGER NOT NULL DEFAULT 0,
       error_log TEXT,
       warning_count INTEGER NOT NULL DEFAULT 0,
@@ -923,7 +923,9 @@ export const SQLITE_DDL = {
       chunks_completed INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       updated_at INTEGER,
-      completed_at INTEGER
+      completed_at INTEGER,
+      CHECK (progress_percent >= 0 AND progress_percent <= 100),
+      CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total)
     )
   `,
   importJobsIndexes: `
@@ -935,8 +937,8 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      format TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending',
+      format TEXT NOT NULL CHECK (format IN ('json', 'csv')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
       blob_id TEXT REFERENCES blob_metadata(id) ON DELETE SET NULL,
       created_at INTEGER NOT NULL,
       completed_at INTEGER
@@ -950,13 +952,14 @@ export const SQLITE_DDL = {
     CREATE TABLE account_purge_requests (
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      status TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
       confirmation_phrase TEXT NOT NULL,
       scheduled_purge_at INTEGER NOT NULL,
       requested_at INTEGER NOT NULL,
       confirmed_at INTEGER,
       completed_at INTEGER,
-      cancelled_at INTEGER
+      cancelled_at INTEGER,
+      CHECK (scheduled_purge_at > requested_at)
     )
   `,
   accountPurgeRequestsIndexes: `
@@ -984,7 +987,7 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
-      operation TEXT NOT NULL,
+      operation TEXT NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
       change_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       synced_at INTEGER
@@ -1001,10 +1004,11 @@ export const SQLITE_DDL = {
       entity_id TEXT NOT NULL,
       local_version INTEGER NOT NULL,
       remote_version INTEGER NOT NULL,
-      resolution TEXT,
+      resolution TEXT CHECK (resolution IN ('local', 'remote', 'merged')),
       created_at INTEGER NOT NULL,
       resolved_at INTEGER,
-      details TEXT
+      details TEXT,
+      CHECK ((resolution IS NULL) = (resolved_at IS NULL))
     )
   `,
   syncConflictsIndexes: `
@@ -1015,7 +1019,7 @@ export const SQLITE_DDL = {
     CREATE TABLE jobs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       system_id TEXT REFERENCES systems(id) ON DELETE CASCADE,
-      type TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate')),
       payload TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
       attempts INTEGER NOT NULL DEFAULT 0,
