@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, integer, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgJsonb, pgTimestamp } from "../../columns/pg.js";
+import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import {
   ACCOUNT_PURGE_STATUSES,
@@ -39,7 +39,7 @@ export const importJobs = pgTable(
       .default("pending")
       .$type<ImportJobStatus>(),
     progressPercent: integer("progress_percent").notNull().default(0),
-    errorLog: pgJsonb("error_log"),
+    errorLog: jsonb("error_log"),
     warningCount: integer("warning_count").notNull().default(0),
     chunksTotal: integer("chunks_total"),
     chunksCompleted: integer("chunks_completed").notNull().default(0),
@@ -116,5 +116,8 @@ export const accountPurgeRequests = pgTable(
   (t) => [
     index("account_purge_requests_account_id_idx").on(t.accountId),
     check("account_purge_requests_status_check", enumCheck(t.status, ACCOUNT_PURGE_STATUSES)),
+    uniqueIndex("account_purge_requests_pending_unique_idx")
+      .on(t.accountId)
+      .where(sql`status = 'pending'`),
   ],
 );

@@ -119,8 +119,8 @@ Both dialects use `varchar`/`text` columns with CHECK constraints for enum valid
 import { FRIEND_CONNECTION_STATUSES } from "@pluralscape/db";
 
 // Schema definition (both dialects)
-// PG:     enumCheck("status", FRIEND_CONNECTION_STATUSES)
-// SQLite: enumCheck("status", FRIEND_CONNECTION_STATUSES)
+// PG:     check("status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES))
+// SQLite: check("status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES))
 
 // Application code — same validation regardless of dialect
 if (!FRIEND_CONNECTION_STATUSES.includes(input.status)) {
@@ -182,7 +182,7 @@ const timestampCol = caps.jsonb ? pgTimestamp("ts") : sqliteTimestamp("ts");
 ## Adding New Dialect-Specific Features
 
 1. **Define the interface** in a shared types file
-2. **Implement for each dialect** in separate files (`.pg.ts` / `.sqlite.ts`)
+2. **Implement for each dialect** in separate files (`pg.ts` / `sqlite.ts` for views, `.pg.ts` / `.sqlite.ts` for services)
 3. **Inject at startup** using `isPostgreSQL()` / `isSQLite()` — exactly once
 4. **Add to `DialectCapabilities`** only if API code needs to feature-gate at runtime
 5. **Document** in this guide and update the capability matrix

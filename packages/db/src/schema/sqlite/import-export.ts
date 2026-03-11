@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -53,10 +53,6 @@ export const importJobs = sqliteTable(
       "import_jobs_progress_percent_check",
       sql`${t.progressPercent} >= 0 AND ${t.progressPercent} <= 100`,
     ),
-    check(
-      "import_jobs_chunks_check",
-      sql`${t.chunksTotal} IS NULL OR ${t.chunksCompleted} <= ${t.chunksTotal}`,
-    ),
   ],
 );
 
@@ -105,5 +101,8 @@ export const accountPurgeRequests = sqliteTable(
   (t) => [
     index("account_purge_requests_account_id_idx").on(t.accountId),
     check("account_purge_requests_status_check", enumCheck(t.status, ACCOUNT_PURGE_STATUSES)),
+    uniqueIndex("account_purge_requests_pending_unique_idx")
+      .on(t.accountId)
+      .where(sql`status = 'pending'`),
   ],
 );
