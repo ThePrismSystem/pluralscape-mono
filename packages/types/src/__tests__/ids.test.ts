@@ -285,6 +285,8 @@ describe("EntityType", () => {
         case "fronting-report":
         case "friend-notification-preference":
         case "fronting-comment":
+        case "bucket-key-rotation":
+        case "bucket-rotation-item":
           return type;
         default: {
           const _exhaustive: never = type;

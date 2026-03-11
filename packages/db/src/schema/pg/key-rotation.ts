@@ -7,7 +7,7 @@ import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js"
 
 import { buckets } from "./privacy.js";
 
-import type { RotationItemStatus, RotationState } from "@pluralscape/types";
+import type { EntityType, RotationItemStatus, RotationState } from "@pluralscape/types";
 
 export const bucketKeyRotations = pgTable(
   "bucket_key_rotations",
@@ -43,7 +43,7 @@ export const bucketRotationItems = pgTable(
     rotationId: varchar("rotation_id", { length: 255 })
       .notNull()
       .references(() => bucketKeyRotations.id, { onDelete: "cascade" }),
-    entityType: varchar("entity_type", { length: 255 }).notNull(),
+    entityType: varchar("entity_type", { length: 255 }).notNull().$type<EntityType>(),
     entityId: varchar("entity_id", { length: 255 }).notNull(),
     status: varchar("status", { length: 255 })
       .notNull()
@@ -56,7 +56,7 @@ export const bucketRotationItems = pgTable(
   },
   (t) => [
     index("bucket_rotation_items_rotation_status_idx").on(t.rotationId, t.status),
-    index("bucket_rotation_items_status_claimed_idx").on(t.status, t.claimedAt),
+    index("bucket_rotation_items_status_claimed_by_idx").on(t.status, t.claimedBy),
     check("bucket_rotation_items_status_check", enumCheck(t.status, ROTATION_ITEM_STATUSES)),
   ],
 );

@@ -11,6 +11,7 @@ import {
   createPgKeyRotationTables,
   pgInsertAccount,
   pgInsertSystem,
+  testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -29,7 +30,7 @@ describe("PG key-rotation schema", () => {
     await db.insert(buckets).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -130,6 +131,51 @@ describe("PG key-rotation schema", () => {
           initiatedAt: Date.now(),
         }),
       ).rejects.toThrow();
+    });
+
+    it("rejects toKeyVersion == fromKeyVersion via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+
+      await expect(
+        db.insert(bucketKeyRotations).values({
+          id: crypto.randomUUID(),
+          bucketId,
+          fromKeyVersion: 2,
+          toKeyVersion: 2,
+          totalItems: 1,
+          initiatedAt: Date.now(),
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("allows updating state through valid progression", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const id = crypto.randomUUID();
+
+      await db.insert(bucketKeyRotations).values({
+        id,
+        bucketId,
+        fromKeyVersion: 1,
+        toKeyVersion: 2,
+        totalItems: 1,
+        initiatedAt: Date.now(),
+      });
+
+      for (const nextState of ["migrating", "sealing", "completed"] as const) {
+        await db
+          .update(bucketKeyRotations)
+          .set({ state: nextState })
+          .where(eq(bucketKeyRotations.id, id));
+        const rows = await db
+          .select()
+          .from(bucketKeyRotations)
+          .where(eq(bucketKeyRotations.id, id));
+        expect(rows[0]?.state).toBe(nextState);
+      }
     });
 
     it("rejects completedItems + failedItems > totalItems via CHECK", async () => {

@@ -13,10 +13,10 @@ describe("TimerConfig", () => {
   it("has correct field types", () => {
     expectTypeOf<TimerConfig["id"]>().toEqualTypeOf<TimerId>();
     expectTypeOf<TimerConfig["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<TimerConfig["intervalMinutes"]>().toEqualTypeOf<number>();
-    expectTypeOf<TimerConfig["wakingHoursOnly"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<TimerConfig["wakingStart"]>().toBeString();
-    expectTypeOf<TimerConfig["wakingEnd"]>().toBeString();
+    expectTypeOf<TimerConfig["intervalMinutes"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<TimerConfig["wakingHoursOnly"]>().toEqualTypeOf<boolean | null>();
+    expectTypeOf<TimerConfig["wakingStart"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<TimerConfig["wakingEnd"]>().toEqualTypeOf<string | null>();
     expectTypeOf<TimerConfig["promptText"]>().toBeString();
     expectTypeOf<TimerConfig["enabled"]>().toEqualTypeOf<boolean>();
   });

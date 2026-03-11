@@ -60,6 +60,8 @@ export type {
   FrontingReportId,
   FriendNotificationPreferenceId,
   FrontingCommentId,
+  BucketKeyRotationId,
+  BucketRotationItemId,
   HexColor,
   EntityType,
 } from "./ids.js";

@@ -20,6 +20,7 @@ export interface Account extends AuditMetadata {
   readonly emailHash: string;
   readonly emailSalt: string;
   readonly passwordHash: string;
+  readonly kdfSalt: string | null;
 }
 
 /** A cryptographic keypair associated with an account. Immutable after creation. */

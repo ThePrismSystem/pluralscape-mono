@@ -262,7 +262,7 @@ export type ClientChatMessage = ChatMessage;
 export interface ServerBoardMessage extends AuditMetadata {
   readonly id: BoardMessageId;
   readonly systemId: SystemId;
-  readonly senderId: MemberId;
+  readonly senderId: MemberId | null;
   readonly pinned: boolean;
   readonly sortOrder: number;
   readonly encryptedData: EncryptedBlob;
@@ -475,9 +475,9 @@ export interface ServerPollVote {
   readonly id: PollVoteId;
   readonly pollId: PollId;
   readonly optionId: PollOptionId | null;
-  readonly voter: EntityReference<"member" | "subsystem" | "side-system" | "layer">;
-  readonly isVeto: boolean;
-  readonly votedAt: UnixMillis;
+  readonly voter: EntityReference<"member" | "subsystem" | "side-system" | "layer"> | null;
+  readonly isVeto: boolean | null;
+  readonly votedAt: UnixMillis | null;
   readonly encryptedData: EncryptedBlob | null;
 }
 

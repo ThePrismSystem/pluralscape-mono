@@ -1,4 +1,4 @@
-import type { BucketId } from "./ids.js";
+import type { BucketId, BucketKeyRotationId, BucketRotationItemId, EntityType } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** State of a bucket key rotation operation. */
@@ -9,7 +9,7 @@ export type RotationItemStatus = "pending" | "claimed" | "completed" | "failed";
 
 /** Tracks a key rotation operation for a privacy bucket. */
 export interface BucketKeyRotation {
-  readonly id: string;
+  readonly id: BucketKeyRotationId;
   readonly bucketId: BucketId;
   readonly fromKeyVersion: number;
   readonly toKeyVersion: number;
@@ -23,9 +23,9 @@ export interface BucketKeyRotation {
 
 /** Tracks an individual entity being re-encrypted during a key rotation. */
 export interface BucketRotationItem {
-  readonly id: string;
-  readonly rotationId: string;
-  readonly entityType: string;
+  readonly id: BucketRotationItemId;
+  readonly rotationId: BucketKeyRotationId;
+  readonly entityType: EntityType;
   readonly entityId: string;
   readonly status: RotationItemStatus;
   readonly claimedBy: string | null;

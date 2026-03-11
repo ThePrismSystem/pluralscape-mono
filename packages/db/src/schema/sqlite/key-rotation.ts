@@ -7,7 +7,7 @@ import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js"
 
 import { buckets } from "./privacy.js";
 
-import type { RotationItemStatus, RotationState } from "@pluralscape/types";
+import type { EntityType, RotationItemStatus, RotationState } from "@pluralscape/types";
 
 export const bucketKeyRotations = sqliteTable(
   "bucket_key_rotations",
@@ -43,7 +43,7 @@ export const bucketRotationItems = sqliteTable(
     rotationId: text("rotation_id")
       .notNull()
       .references(() => bucketKeyRotations.id, { onDelete: "cascade" }),
-    entityType: text("entity_type").notNull(),
+    entityType: text("entity_type").notNull().$type<EntityType>(),
     entityId: text("entity_id").notNull(),
     status: text("status").notNull().default("pending").$type<RotationItemStatus>(),
     claimedBy: text("claimed_by"),
@@ -53,7 +53,7 @@ export const bucketRotationItems = sqliteTable(
   },
   (t) => [
     index("bucket_rotation_items_rotation_status_idx").on(t.rotationId, t.status),
-    index("bucket_rotation_items_status_claimed_idx").on(t.status, t.claimedAt),
+    index("bucket_rotation_items_status_claimed_by_idx").on(t.status, t.claimedBy),
     check("bucket_rotation_items_status_check", enumCheck(t.status, ROTATION_ITEM_STATUSES)),
   ],
 );

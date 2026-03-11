@@ -11,6 +11,7 @@ import {
   createSqliteKeyRotationTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -30,7 +31,7 @@ describe("SQLite key-rotation schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -143,6 +144,57 @@ describe("SQLite key-rotation schema", () => {
           })
           .run(),
       ).toThrow();
+    });
+
+    it("rejects toKeyVersion == fromKeyVersion via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const bucketId = insertBucket(systemId);
+
+      expect(() =>
+        db
+          .insert(bucketKeyRotations)
+          .values({
+            id: crypto.randomUUID(),
+            bucketId,
+            fromKeyVersion: 2,
+            toKeyVersion: 2,
+            totalItems: 1,
+            initiatedAt: Date.now(),
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("allows updating state through valid progression", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const bucketId = insertBucket(systemId);
+      const id = crypto.randomUUID();
+
+      db.insert(bucketKeyRotations)
+        .values({
+          id,
+          bucketId,
+          fromKeyVersion: 1,
+          toKeyVersion: 2,
+          totalItems: 1,
+          initiatedAt: Date.now(),
+        })
+        .run();
+
+      for (const nextState of ["migrating", "sealing", "completed"] as const) {
+        db.update(bucketKeyRotations)
+          .set({ state: nextState })
+          .where(eq(bucketKeyRotations.id, id))
+          .run();
+        const rows = db
+          .select()
+          .from(bucketKeyRotations)
+          .where(eq(bucketKeyRotations.id, id))
+          .all();
+        expect(rows[0]?.state).toBe(nextState);
+      }
     });
 
     it("rejects completedItems + failedItems > totalItems via CHECK", () => {

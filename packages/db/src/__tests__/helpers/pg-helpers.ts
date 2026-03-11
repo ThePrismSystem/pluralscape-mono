@@ -1116,7 +1116,7 @@ export const PG_DDL = {
   `,
   bucketRotationItemsIndexes: `
     CREATE INDEX bucket_rotation_items_rotation_status_idx ON bucket_rotation_items (rotation_id, status);
-    CREATE INDEX bucket_rotation_items_status_claimed_idx ON bucket_rotation_items (status, claimed_at)
+    CREATE INDEX bucket_rotation_items_status_claimed_by_idx ON bucket_rotation_items (status, claimed_by)
   `,
 } as const;
 
