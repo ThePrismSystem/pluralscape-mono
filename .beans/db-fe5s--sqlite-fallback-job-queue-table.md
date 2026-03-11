@@ -1,11 +1,11 @@
 ---
 # db-fe5s
 title: SQLite fallback job queue table
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:22:38Z
-updated_at: 2026-03-09T23:02:54Z
+updated_at: 2026-03-10T09:48:44Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -37,3 +37,10 @@ Simple job queue table for SQLite-backed minimal self-hosted tier (single-worker
 
 - ADR 010 (Background Jobs — SQLite fallback)
 - ADR 012 (Minimal self-hosted tier)
+
+## Summary of Changes
+
+- Added `jobs` table in `packages/db/src/schema/sqlite/jobs.ts` with autoincrement PK, JSON payload, status CHECK constraint, and idempotency key unique constraint
+- Added `JOB_TYPES` and `JOB_STATUSES` enum arrays to helpers
+- Added row types (JobRow, NewJob) to SQLite index barrel
+- Added 10 integration tests covering autoincrement, round-trip, defaults, nullable systemId, CHECK constraint, idempotency uniqueness, FK cascade, and lifecycle transitions

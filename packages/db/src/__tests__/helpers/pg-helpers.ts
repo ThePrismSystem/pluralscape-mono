@@ -628,6 +628,7 @@ export const PG_DDL = {
     CREATE TABLE acknowledgements (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      target_member_id VARCHAR(255),
       confirmed BOOLEAN NOT NULL DEFAULT false,
       confirmed_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
@@ -976,7 +977,7 @@ export const PG_DDL = {
       entity_type VARCHAR(255) NOT NULL,
       entity_id VARCHAR(255) NOT NULL,
       automerge_heads BYTEA,
-      version INTEGER NOT NULL DEFAULT 1,
+      version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
       created_at TIMESTAMPTZ NOT NULL,
       last_synced_at TIMESTAMPTZ
     )
@@ -997,7 +998,7 @@ export const PG_DDL = {
     )
   `,
   syncQueueIndexes: `
-    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
+    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at) WHERE synced_at IS NULL;
     CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id)
   `,
   syncConflicts: `

@@ -72,6 +72,7 @@ export const exportRequests = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     format: text("format").notNull().$type<ExportFormat>(),
     status: text("status").notNull().default("pending").$type<ExportRequestStatus>(),
+    // ON DELETE SET NULL can orphan completed exports; app logic must handle expired/orphaned state.
     blobId: text("blob_id").references(() => blobMetadata.id, { onDelete: "set null" }),
     createdAt: sqliteTimestamp("created_at").notNull(),
     updatedAt: sqliteTimestamp("updated_at"),
@@ -85,6 +86,7 @@ export const exportRequests = sqliteTable(
   ],
 );
 
+// App-level enforcement needed: only one active purge request per account at a time.
 export const accountPurgeRequests = sqliteTable(
   "account_purge_requests",
   {

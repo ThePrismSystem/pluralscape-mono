@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { accountPurgeRequests, exportRequests, importJobs } from "../schema/pg/import-export.js";
@@ -32,6 +32,12 @@ describe("PG import-export schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(importJobs);
+    await db.delete(exportRequests);
+    await db.delete(accountPurgeRequests);
   });
 
   describe("import_jobs", () => {
@@ -68,7 +74,7 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.warningCount).toBe(3);
       expect(rows[0]?.chunksTotal).toBe(10);
       expect(rows[0]?.chunksCompleted).toBe(4);
-      expect(rows[0]?.completedAt).toBeTruthy();
+      expect(rows[0]?.completedAt).toBe(now);
     });
 
     it("applies default values for status, progressPercent, warningCount, chunksCompleted", async () => {
@@ -164,7 +170,7 @@ describe("PG import-export schema", () => {
       ).rejects.toThrow();
     });
 
-    it("exercises validating status", async () => {
+    it.each(["validating", "failed"] as const)("exercises %s status", async (status) => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -175,31 +181,30 @@ describe("PG import-export schema", () => {
         accountId,
         systemId,
         source: "pluralkit",
-        status: "validating",
+        status,
         createdAt: now,
       });
 
       const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
-      expect(rows[0]?.status).toBe("validating");
+      expect(rows[0]?.status).toBe(status);
     });
 
-    it("exercises failed status", async () => {
+    it("rejects chunksCompleted exceeding chunksTotal", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
       const now = Date.now();
 
-      await db.insert(importJobs).values({
-        id,
-        accountId,
-        systemId,
-        source: "pluralscape",
-        status: "failed",
-        createdAt: now,
-      });
-
-      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
-      expect(rows[0]?.status).toBe("failed");
+      await expect(
+        db.insert(importJobs).values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          source: "pluralscape",
+          chunksCompleted: 5,
+          chunksTotal: 3,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
     });
 
     it("cascades on system deletion", async () => {
@@ -270,7 +275,7 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.format).toBe("json");
       expect(rows[0]?.status).toBe("completed");
       expect(rows[0]?.blobId).toBeNull();
-      expect(rows[0]?.completedAt).toBeTruthy();
+      expect(rows[0]?.completedAt).toBe(now);
     });
 
     it("applies default status of pending", async () => {
@@ -293,26 +298,7 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.completedAt).toBeNull();
     });
 
-    it("exercises processing status", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(exportRequests).values({
-        id,
-        accountId,
-        systemId,
-        format: "csv",
-        status: "processing",
-        createdAt: now,
-      });
-
-      const rows = await db.select().from(exportRequests).where(eq(exportRequests.id, id));
-      expect(rows[0]?.status).toBe("processing");
-    });
-
-    it("exercises failed status", async () => {
+    it.each(["processing", "failed"] as const)("exercises %s status", async (status) => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -323,12 +309,12 @@ describe("PG import-export schema", () => {
         accountId,
         systemId,
         format: "json",
-        status: "failed",
+        status,
         createdAt: now,
       });
 
       const rows = await db.select().from(exportRequests).where(eq(exportRequests.id, id));
-      expect(rows[0]?.status).toBe("failed");
+      expect(rows[0]?.status).toBe(status);
     });
 
     it("rejects invalid format value", async () => {
@@ -412,11 +398,31 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.accountId).toBe(accountId);
       expect(rows[0]?.status).toBe("completed");
       expect(rows[0]?.confirmationPhrase).toBe("DELETE MY ACCOUNT");
-      expect(rows[0]?.scheduledPurgeAt).toBeTruthy();
-      expect(rows[0]?.requestedAt).toBeTruthy();
-      expect(rows[0]?.confirmedAt).toBeTruthy();
-      expect(rows[0]?.completedAt).toBeTruthy();
-      expect(rows[0]?.cancelledAt).toBeTruthy();
+      expect(rows[0]?.scheduledPurgeAt).toBe(now);
+      expect(rows[0]?.requestedAt).toBe(now);
+      expect(rows[0]?.confirmedAt).toBe(now);
+      expect(rows[0]?.completedAt).toBe(now);
+      expect(rows[0]?.cancelledAt).toBe(now);
+    });
+
+    it("applies default status of pending", async () => {
+      const accountId = await insertAccount();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(accountPurgeRequests).values({
+        id,
+        accountId,
+        confirmationPhrase: "DELETE MY ACCOUNT",
+        scheduledPurgeAt: now,
+        requestedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(accountPurgeRequests)
+        .where(eq(accountPurgeRequests.id, id));
+      expect(rows[0]?.status).toBe("pending");
     });
 
     it("rejects invalid status value", async () => {

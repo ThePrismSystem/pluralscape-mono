@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { syncConflicts, syncDocuments, syncQueue } from "../schema/sqlite/sync.js";
@@ -34,6 +34,12 @@ describe("SQLite sync schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(syncConflicts).run();
+    db.delete(syncQueue).run();
+    db.delete(syncDocuments).run();
   });
 
   describe("sync_documents", () => {
@@ -105,6 +111,26 @@ describe("SQLite sync schema", () => {
       const rows = db.select().from(syncDocuments).where(eq(syncDocuments.id, id)).all();
       expect(rows[0]?.automergeHeads).toBeNull();
       expect(rows[0]?.lastSyncedAt).toBeNull();
+    });
+
+    it("rejects version less than 1", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(syncDocuments)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            entityType: "member",
+            entityId: crypto.randomUUID(),
+            version: 0,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
 
     it("rejects duplicate (system_id, entity_type, entity_id)", () => {
@@ -232,6 +258,34 @@ describe("SQLite sync schema", () => {
       ).toThrow();
     });
 
+    it("supports lifecycle: insert unsynced then mark synced", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(syncQueue)
+        .values({
+          id,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1, 2, 3]),
+          createdAt: now,
+        })
+        .run();
+
+      const before = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
+      expect(before[0]?.syncedAt).toBeNull();
+
+      const syncedAt = now + 5000;
+      db.update(syncQueue).set({ syncedAt }).where(eq(syncQueue.id, id)).run();
+
+      const after = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
+      expect(after[0]?.syncedAt).toBe(syncedAt);
+    });
+
     it("round-trips binary changeData accurately", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -335,7 +389,7 @@ describe("SQLite sync schema", () => {
       ).toThrow();
     });
 
-    it("exercises local resolution", () => {
+    it.each(["local", "remote"] as const)("exercises %s resolution", (resolution) => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -349,17 +403,17 @@ describe("SQLite sync schema", () => {
           entityId: crypto.randomUUID(),
           localVersion: 1,
           remoteVersion: 2,
-          resolution: "local",
+          resolution,
           createdAt: now,
           resolvedAt: now,
         })
         .run();
 
       const rows = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
-      expect(rows[0]?.resolution).toBe("local");
+      expect(rows[0]?.resolution).toBe(resolution);
     });
 
-    it("exercises remote resolution", () => {
+    it("supports conflict lifecycle: insert unresolved then resolve", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -369,18 +423,27 @@ describe("SQLite sync schema", () => {
         .values({
           id,
           systemId,
-          entityType: "group",
+          entityType: "member",
           entityId: crypto.randomUUID(),
           localVersion: 3,
           remoteVersion: 4,
-          resolution: "remote",
           createdAt: now,
-          resolvedAt: now,
         })
         .run();
 
-      const rows = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
-      expect(rows[0]?.resolution).toBe("remote");
+      const before = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
+      expect(before[0]?.resolution).toBeNull();
+      expect(before[0]?.resolvedAt).toBeNull();
+
+      const resolvedAt = now + 5000;
+      db.update(syncConflicts)
+        .set({ resolution: "local", resolvedAt })
+        .where(eq(syncConflicts.id, id))
+        .run();
+
+      const after = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
+      expect(after[0]?.resolution).toBe("local");
+      expect(after[0]?.resolvedAt).toBe(resolvedAt);
     });
 
     it("cascades on system deletion", () => {

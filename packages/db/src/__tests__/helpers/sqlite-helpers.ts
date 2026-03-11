@@ -628,6 +628,7 @@ export const SQLITE_DDL = {
     CREATE TABLE acknowledgements (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      target_member_id TEXT,
       confirmed INTEGER NOT NULL DEFAULT 0,
       confirmed_at INTEGER,
       encrypted_data BLOB NOT NULL,
@@ -972,7 +973,7 @@ export const SQLITE_DDL = {
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
       automerge_heads BLOB,
-      version INTEGER NOT NULL DEFAULT 1,
+      version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
       created_at INTEGER NOT NULL,
       last_synced_at INTEGER
     )
@@ -993,7 +994,7 @@ export const SQLITE_DDL = {
     )
   `,
   syncQueueIndexes: `
-    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
+    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at) WHERE synced_at IS NULL;
     CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id)
   `,
   syncConflicts: `
@@ -1012,6 +1013,30 @@ export const SQLITE_DDL = {
   `,
   syncConflictsIndexes: `
     CREATE INDEX sync_conflicts_system_id_entity_type_entity_id_idx ON sync_conflicts (system_id, entity_type, entity_id)
+  `,
+  // Jobs (SQLite-only)
+  jobs: `
+    CREATE TABLE jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      system_id TEXT REFERENCES systems(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate')),
+      payload TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+      attempts INTEGER NOT NULL DEFAULT 0,
+      max_attempts INTEGER NOT NULL DEFAULT 5,
+      next_retry_at INTEGER,
+      error TEXT,
+      created_at INTEGER NOT NULL,
+      started_at INTEGER,
+      completed_at INTEGER,
+      idempotency_key TEXT,
+      CHECK (attempts <= max_attempts)
+    )
+  `,
+  jobsIndexes: `
+    CREATE INDEX jobs_status_next_retry_at_idx ON jobs (status, next_retry_at);
+    CREATE INDEX jobs_type_idx ON jobs (type);
+    CREATE UNIQUE INDEX jobs_idempotency_key_idx ON jobs (idempotency_key)
   `,
 } as const;
 
@@ -1335,4 +1360,10 @@ export function createSqliteSyncTables(client: InstanceType<typeof Database>): v
   client.exec(SQLITE_DDL.syncQueueIndexes);
   client.exec(SQLITE_DDL.syncConflicts);
   client.exec(SQLITE_DDL.syncConflictsIndexes);
+}
+
+export function createSqliteJobsTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.jobs);
+  client.exec(SQLITE_DDL.jobsIndexes);
 }

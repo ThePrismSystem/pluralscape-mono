@@ -1,11 +1,11 @@
 ---
 # db-fvx4
 title: Client-side FTS5 search index schema
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T14:23:17Z
-updated_at: 2026-03-09T23:03:14Z
+updated_at: 2026-03-10T09:48:41Z
 parent: db-2je4
 blocked_by:
   - db-9f6f
@@ -34,3 +34,9 @@ FTS5 virtual table definitions for client-side full-text search over decrypted d
 ## References
 
 - features.md section 8 (Search)
+
+## Summary of Changes
+
+- Added FTS5 virtual table schema in `packages/db/src/schema/sqlite/search.ts` with typed helper functions: createSearchIndex, dropSearchIndex, insertSearchEntry, deleteSearchEntry, rebuildSearchIndex, searchEntries
+- Added `SEARCHABLE_ENTITY_TYPES` enum array to helpers
+- Added 12 integration tests covering MATCH queries, entity type filtering, limit, delete, rebuild, and special characters

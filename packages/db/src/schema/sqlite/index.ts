@@ -52,6 +52,18 @@ export { checkInRecords, timerConfigs } from "./timers.js";
 export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
 export { importJobs, exportRequests, accountPurgeRequests } from "./import-export.js";
 export { syncDocuments, syncQueue, syncConflicts } from "./sync.js";
+export {
+  SEARCH_INDEX_DDL,
+  createSearchIndex,
+  dropSearchIndex,
+  insertSearchEntry,
+  deleteSearchEntry,
+  rebuildSearchIndex,
+  sanitizeFtsQuery,
+  searchEntries,
+} from "./search.js";
+export type { SearchIndexEntry, SearchIndexResult, SearchOptions } from "./search.js";
+export { jobs } from "./jobs.js";
 
 import type { apiKeys } from "./api-keys.js";
 import type { auditLog } from "./audit-log.js";
@@ -71,6 +83,7 @@ import type { customFronts, frontingComments, frontingSessions, switches } from 
 import type { groupMemberships, groups } from "./groups.js";
 import type { accountPurgeRequests, exportRequests, importJobs } from "./import-export.js";
 import type { innerworldCanvas, innerworldEntities, innerworldRegions } from "./innerworld.js";
+import type { jobs } from "./jobs.js";
 import type { journalEntries, wikiPages } from "./journal.js";
 import type { lifecycleEvents } from "./lifecycle-events.js";
 import type { members, memberPhotos } from "./members.js";
@@ -284,3 +297,7 @@ export type SyncQueueRow = InferSelectModel<typeof syncQueue>;
 export type NewSyncQueue = InferInsertModel<typeof syncQueue>;
 export type SyncConflictRow = InferSelectModel<typeof syncConflicts>;
 export type NewSyncConflict = InferInsertModel<typeof syncConflicts>;
+
+// Jobs
+export type JobRow = InferSelectModel<typeof jobs>;
+export type NewJob = InferInsertModel<typeof jobs>;
