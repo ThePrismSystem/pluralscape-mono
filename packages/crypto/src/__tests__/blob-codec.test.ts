@@ -169,6 +169,43 @@ describe("blob-codec", () => {
       expect(deserialized.ciphertext).toEqual(blob.ciphertext);
       expect(deserialized.nonce).toEqual(blob.nonce);
     });
+
+    // ── Nonce and keyVersion wire-format verification (db-kveq, db-0d2a) ──
+
+    it("distinct nonces survive round-trip", () => {
+      const nonceA = makeNonce(0x11);
+      const nonceB = makeNonce(0x22);
+      const blobA = makeT1Blob({ nonce: nonceA });
+      const blobB = makeT1Blob({ nonce: nonceB });
+
+      const a = deserializeEncryptedBlob(serializeEncryptedBlob(blobA));
+      const b = deserializeEncryptedBlob(serializeEncryptedBlob(blobB));
+
+      expect(a.nonce).toEqual(nonceA);
+      expect(b.nonce).toEqual(nonceB);
+      expect(a.nonce).not.toEqual(b.nonce);
+    });
+
+    it("T2 blob preserves non-null keyVersion through round-trip", () => {
+      const blob: EncryptedBlob = {
+        ciphertext: new Uint8Array([1]),
+        nonce: makeNonce(),
+        tier: 2,
+        algorithm: "xchacha20-poly1305",
+        keyVersion: 42,
+        bucketId: makeBucketId("bucket-1"),
+      };
+
+      const result = deserializeEncryptedBlob(serializeEncryptedBlob(blob));
+      expect(result.keyVersion).toBe(42);
+    });
+
+    it("T1 blob keyVersion is null through round-trip", () => {
+      const blob = makeT1Blob({ keyVersion: null });
+
+      const result = deserializeEncryptedBlob(serializeEncryptedBlob(blob));
+      expect(result.keyVersion).toBeNull();
+    });
   });
 
   describe("serialize", () => {

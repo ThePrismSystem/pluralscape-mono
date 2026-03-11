@@ -74,7 +74,11 @@ export function encryptedBlobFromDriver(val: Uint8Array): EncryptedBlob {
   return deserializeEncryptedBlob(new Uint8Array(val.buffer, val.byteOffset, val.byteLength));
 }
 
-/** SQLite blob column that maps EncryptedBlob ↔ binary via blob-codec. */
+/**
+ * SQLite blob column that maps EncryptedBlob ↔ binary via blob-codec.
+ * Nonce, keyVersion, tier, and bucketId are embedded in the wire format —
+ * see blob-codec.ts for layout details.
+ */
 export const sqliteEncryptedBlob = customType<{ data: EncryptedBlob; driverData: Uint8Array }>({
   dataType() {
     return "blob";

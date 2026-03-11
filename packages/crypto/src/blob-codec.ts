@@ -6,6 +6,12 @@ import type { BucketId, EncryptedBlob, EncryptionAlgorithm } from "@pluralscape/
 /**
  * Binary wire format for EncryptedBlob ↔ Uint8Array.
  *
+ * Every `pgEncryptedBlob` / `sqliteEncryptedBlob` column stores a single blob
+ * encoded with this codec. The format is self-describing — **nonces and
+ * keyVersions are embedded per-blob**, so no separate DB columns are needed
+ * for either field. This resolves db-kveq (nonce storage) and db-0d2a
+ * (keyVersion on content tables).
+ *
  * Layout:
  *   [1B version=0x01]
  *   [1B tier]
