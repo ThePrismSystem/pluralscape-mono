@@ -78,6 +78,7 @@ export const exportRequests = pgTable(
       .notNull()
       .default("pending")
       .$type<ExportRequestStatus>(),
+    // ON DELETE SET NULL can orphan completed exports; app logic must handle expired/orphaned state.
     blobId: varchar("blob_id", { length: 255 }).references(() => blobMetadata.id, {
       onDelete: "set null",
     }),
@@ -93,6 +94,7 @@ export const exportRequests = pgTable(
   ],
 );
 
+// App-level enforcement needed: only one active purge request per account at a time.
 export const accountPurgeRequests = pgTable(
   "account_purge_requests",
   {

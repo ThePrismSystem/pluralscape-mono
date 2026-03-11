@@ -71,7 +71,7 @@ export const pgBinary = customType<{ data: Uint8Array; driverData: Buffer }>({
 });
 
 /** PG jsonb column that maps to/from parsed JSON. */
-export const pgJsonb = customType<{ data: unknown; driverData: string }>({
+export const pgJsonb = customType<{ data: unknown; driverData: unknown }>({
   dataType() {
     return "jsonb";
   },

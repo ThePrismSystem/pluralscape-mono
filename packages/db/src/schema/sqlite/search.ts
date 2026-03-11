@@ -1,6 +1,9 @@
 import { sql } from "drizzle-orm";
 
+import { SEARCHABLE_ENTITY_TYPES } from "../../helpers/enums.js";
+
 import type { SearchableEntityType } from "@pluralscape/types";
+// Intentionally typed for better-sqlite3 (self-hosted tier); mobile app will need its own FTS5 wrapper.
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const DEFAULT_SEARCH_LIMIT = 50;
@@ -8,7 +11,7 @@ const DEFAULT_SEARCH_LIMIT = 50;
 /** FTS5 virtual table DDL for client-side full-text search. */
 export const SEARCH_INDEX_DDL = `
   CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
-    entity_type,
+    entity_type UNINDEXED,
     entity_id UNINDEXED,
     title,
     content,
@@ -67,6 +70,26 @@ export function rebuildSearchIndex(db: BetterSQLite3Database): void {
   createSearchIndex(db);
 }
 
+/**
+ * Sanitize user input for safe FTS5 MATCH usage.
+ * Escapes double quotes and wraps in double quotes so FTS5 treats the input as a literal phrase.
+ * Returns null for empty/whitespace-only input.
+ */
+export function sanitizeFtsQuery(input: string): string | null {
+  const trimmed = input.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  return `"${trimmed.replace(/"/g, '""')}"`;
+}
+
+function validateEntityType(value: string): SearchableEntityType {
+  if (!(SEARCHABLE_ENTITY_TYPES as readonly string[]).includes(value)) {
+    throw new Error(`Invalid SearchableEntityType: "${value}"`);
+  }
+  return value as SearchableEntityType;
+}
+
 /** Search options. */
 export interface SearchOptions {
   readonly entityType?: SearchableEntityType;
@@ -79,26 +102,13 @@ export function searchEntries(
   query: string,
   opts?: SearchOptions,
 ): SearchIndexResult[] {
-  const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
-
-  if (opts?.entityType) {
-    const results = db.all<{
-      entity_type: string;
-      entity_id: string;
-      title: string;
-      content: string;
-      rank: number;
-    }>(
-      sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${query} AND entity_type = ${opts.entityType} ORDER BY rank LIMIT ${limit}`,
-    );
-    return results.map((r) => ({
-      entityType: r.entity_type as SearchableEntityType,
-      entityId: r.entity_id,
-      title: r.title,
-      content: r.content,
-      rank: r.rank,
-    }));
+  const sanitized = sanitizeFtsQuery(query);
+  if (sanitized === null) {
+    return [];
   }
+
+  const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
+  const entityType = opts?.entityType;
 
   const results = db.all<{
     entity_type: string;
@@ -107,10 +117,13 @@ export function searchEntries(
     content: string;
     rank: number;
   }>(
-    sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${query} ORDER BY rank LIMIT ${limit}`,
+    entityType
+      ? sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${sanitized} AND entity_type = ${entityType} ORDER BY rank LIMIT ${limit}`
+      : sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${sanitized} ORDER BY rank LIMIT ${limit}`,
   );
+
   return results.map((r) => ({
-    entityType: r.entity_type as SearchableEntityType,
+    entityType: validateEntityType(r.entity_type),
     entityId: r.entity_id,
     title: r.title,
     content: r.content,

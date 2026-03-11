@@ -59,6 +59,7 @@ export {
   insertSearchEntry,
   deleteSearchEntry,
   rebuildSearchIndex,
+  sanitizeFtsQuery,
   searchEntries,
 } from "./search.js";
 export type { SearchIndexEntry, SearchIndexResult, SearchOptions } from "./search.js";

@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { jobs } from "../schema/sqlite/jobs.js";
@@ -36,6 +36,10 @@ describe("SQLite jobs schema", () => {
     client.close();
   });
 
+  afterEach(() => {
+    db.delete(jobs).run();
+  });
+
   describe("autoincrement primary key", () => {
     it("assigns sequential integer IDs", () => {
       const now = Date.now();
@@ -67,8 +71,10 @@ describe("SQLite jobs schema", () => {
       // Second should be greater than first
       const firstId = ids[0];
       const lastId = ids[ids.length - 1];
-      expect(firstId).toBeDefined();
-      expect(lastId).toBeGreaterThan(firstId ?? 0);
+      if (firstId === undefined || lastId === undefined) {
+        throw new Error("Expected firstId and lastId to be defined");
+      }
+      expect(lastId).toBeGreaterThan(firstId);
     });
   });
 
@@ -159,6 +165,30 @@ describe("SQLite jobs schema", () => {
       expect(() =>
         db.run(
           sql`INSERT INTO jobs (type, payload, status, created_at) VALUES ('sync-push', '{}', 'invalid-status', ${now})`,
+        ),
+      ).toThrow();
+    });
+  });
+
+  describe("type CHECK constraint", () => {
+    it("rejects invalid job type", () => {
+      const now = Date.now();
+
+      expect(() =>
+        db.run(
+          sql`INSERT INTO jobs (type, payload, status, created_at) VALUES ('nonexistent', '{}', 'pending', ${now})`,
+        ),
+      ).toThrow();
+    });
+  });
+
+  describe("attempts CHECK constraint", () => {
+    it("rejects attempts exceeding max_attempts", () => {
+      const now = Date.now();
+
+      expect(() =>
+        db.run(
+          sql`INSERT INTO jobs (type, payload, status, attempts, max_attempts, created_at) VALUES ('sync-push', '{}', 'pending', 6, 5, ${now})`,
         ),
       ).toThrow();
     });

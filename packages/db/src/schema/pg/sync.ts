@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, text, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
@@ -28,9 +29,11 @@ export const syncDocuments = pgTable(
       t.entityType,
       t.entityId,
     ),
+    check("sync_documents_version_check", sql`${t.version} >= 1`),
   ],
 );
 
+// UUID PKs don't guarantee insertion order; consider UUIDv7 or autoincrement sequence for replay ordering.
 export const syncQueue = pgTable(
   "sync_queue",
   {
@@ -46,8 +49,9 @@ export const syncQueue = pgTable(
     syncedAt: pgTimestamp("synced_at"),
   },
   (t) => [
-    index("sync_queue_system_id_synced_at_idx").on(t.systemId, t.syncedAt),
-    // TODO: Add partial index on synced_at IS NULL when Drizzle supports it
+    index("sync_queue_system_id_synced_at_idx")
+      .on(t.systemId, t.syncedAt)
+      .where(sql`synced_at IS NULL`),
     index("sync_queue_system_id_entity_type_entity_id_idx").on(
       t.systemId,
       t.entityType,

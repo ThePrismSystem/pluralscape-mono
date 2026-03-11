@@ -62,5 +62,8 @@ export {
   EXPORT_FORMATS,
   EXPORT_REQUEST_STATUSES,
   ACCOUNT_PURGE_STATUSES,
+  SEARCHABLE_ENTITY_TYPES,
+  JOB_TYPES,
+  JOB_STATUSES,
 } from "./helpers/index.js";
 export type { DbAuditActor } from "./helpers/index.js";
