@@ -21,7 +21,7 @@
     "@pluralscape/types": "workspace:*",
     "@trpc/server": "^11.0.0-rc.730",
     "drizzle-orm": "^0.45.1",
-    "hono": "^4.7.2",
+    "hono": "^4.12.7",
     "postgres": "^3.4.5",
     "zod": "^4.3.6"
   },
