@@ -60,7 +60,7 @@ describe("PG notifications schema", () => {
         platform: "ios",
         token: "fcm-token-abc",
         createdAt: now,
-        lastUsedAt: now,
+        lastActiveAt: now,
       });
 
       const rows = await db.select().from(deviceTokens).where(eq(deviceTokens.id, id));
@@ -70,7 +70,7 @@ describe("PG notifications schema", () => {
       expect(rows[0]?.revokedAt).toBeNull();
     });
 
-    it("allows nullable lastUsedAt and revokedAt", async () => {
+    it("allows nullable lastActiveAt and revokedAt", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -86,7 +86,7 @@ describe("PG notifications schema", () => {
       });
 
       const rows = await db.select().from(deviceTokens).where(eq(deviceTokens.id, id));
-      expect(rows[0]?.lastUsedAt).toBeNull();
+      expect(rows[0]?.lastActiveAt).toBeNull();
       expect(rows[0]?.revokedAt).toBeNull();
     });
 

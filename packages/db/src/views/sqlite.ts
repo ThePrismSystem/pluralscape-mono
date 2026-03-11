@@ -143,7 +143,6 @@ export function getUnconfirmedAcknowledgements(
     .select({
       id: acknowledgements.id,
       systemId: acknowledgements.systemId,
-      targetMemberId: acknowledgements.targetMemberId,
       createdAt: acknowledgements.createdAt,
     })
     .from(acknowledgements)

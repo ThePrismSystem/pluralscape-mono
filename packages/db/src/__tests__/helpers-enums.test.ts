@@ -17,8 +17,6 @@ import {
   FRONTING_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
-  INNERWORLD_ENTITY_TYPES,
-  INNERWORLD_REGION_ACCESS_TYPES,
   JOB_STATUSES,
   JOB_TYPES,
   KNOWN_SATURATION_LEVELS,
@@ -111,16 +109,6 @@ describe("enum arrays", () => {
 
   it("POLL_KINDS matches PollKind union", () => {
     expect(POLL_KINDS).toEqual(["standard", "custom"]);
-  });
-
-  it("INNERWORLD_ENTITY_TYPES matches ServerInnerWorldEntity entityType union", () => {
-    expect(INNERWORLD_ENTITY_TYPES).toHaveLength(5);
-    expect(INNERWORLD_ENTITY_TYPES).toContain("member");
-    expect(INNERWORLD_ENTITY_TYPES).toContain("layer");
-  });
-
-  it("INNERWORLD_REGION_ACCESS_TYPES matches ServerInnerWorldRegion accessType union", () => {
-    expect(INNERWORLD_REGION_ACCESS_TYPES).toEqual(["open", "gatekept"]);
   });
 
   it("PK_SYNC_DIRECTIONS matches PKSyncDirection union", () => {
@@ -218,8 +206,6 @@ describe("enum arrays", () => {
     expect(CHANNEL_TYPES).toHaveLength(2);
     expect(POLL_STATUSES).toHaveLength(2);
     expect(POLL_KINDS).toHaveLength(2);
-    expect(INNERWORLD_ENTITY_TYPES).toHaveLength(5);
-    expect(INNERWORLD_REGION_ACCESS_TYPES).toHaveLength(2);
     expect(PK_SYNC_DIRECTIONS).toHaveLength(3);
     expect(DEVICE_TOKEN_PLATFORMS).toHaveLength(3);
     expect(NOTIFICATION_EVENT_TYPES).toHaveLength(6);

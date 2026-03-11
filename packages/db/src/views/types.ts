@@ -57,7 +57,6 @@ export interface PendingWebhookRetry {
 export interface UnconfirmedAcknowledgement {
   readonly id: string;
   readonly systemId: string;
-  readonly targetMemberId: string | null;
   readonly createdAt: number;
 }
 

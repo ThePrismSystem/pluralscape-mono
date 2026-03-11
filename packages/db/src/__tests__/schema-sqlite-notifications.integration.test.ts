@@ -63,7 +63,7 @@ describe("SQLite notifications schema", () => {
           platform: "ios",
           token: "fcm-token-abc",
           createdAt: now,
-          lastUsedAt: now,
+          lastActiveAt: now,
         })
         .run();
 
@@ -74,7 +74,7 @@ describe("SQLite notifications schema", () => {
       expect(rows[0]?.revokedAt).toBeNull();
     });
 
-    it("allows nullable lastUsedAt and revokedAt", () => {
+    it("allows nullable lastActiveAt and revokedAt", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -92,7 +92,7 @@ describe("SQLite notifications schema", () => {
         .run();
 
       const rows = db.select().from(deviceTokens).where(eq(deviceTokens.id, id)).all();
-      expect(rows[0]?.lastUsedAt).toBeNull();
+      expect(rows[0]?.lastActiveAt).toBeNull();
       expect(rows[0]?.revokedAt).toBeNull();
     });
 

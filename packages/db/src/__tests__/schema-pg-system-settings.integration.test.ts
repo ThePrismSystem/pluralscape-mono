@@ -46,7 +46,6 @@ describe("PG system_settings schema", () => {
       locale: "en-US",
       pinHash: "$argon2id$hash123",
       biometricEnabled: true,
-      littlesSafeModeEnabled: true,
       encryptedData: data,
       createdAt: now,
       updatedAt: now,
@@ -61,7 +60,6 @@ describe("PG system_settings schema", () => {
     expect(rows[0]?.locale).toBe("en-US");
     expect(rows[0]?.pinHash).toBe("$argon2id$hash123");
     expect(rows[0]?.biometricEnabled).toBe(true);
-    expect(rows[0]?.littlesSafeModeEnabled).toBe(true);
     expect(rows[0]?.encryptedData).toEqual(data);
   });
 
@@ -83,7 +81,6 @@ describe("PG system_settings schema", () => {
       .from(systemSettings)
       .where(eq(systemSettings.systemId, systemId));
     expect(rows[0]?.biometricEnabled).toBe(false);
-    expect(rows[0]?.littlesSafeModeEnabled).toBe(false);
   });
 
   it("allows nullable locale and pinHash", async () => {

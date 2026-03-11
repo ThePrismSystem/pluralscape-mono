@@ -1,4 +1,3 @@
-import type { EncryptedString } from "./encryption.js";
 import type {
   DeviceTokenId,
   FriendConnectionId,
@@ -17,7 +16,7 @@ export interface DeviceToken extends AuditMetadata {
   readonly id: DeviceTokenId;
   readonly systemId: SystemId;
   readonly platform: DeviceTokenPlatform;
-  readonly token: EncryptedString;
+  readonly token: string;
   readonly lastActiveAt: UnixMillis;
 }
 

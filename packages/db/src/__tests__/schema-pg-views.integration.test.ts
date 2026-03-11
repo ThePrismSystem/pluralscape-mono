@@ -347,7 +347,6 @@ describe("PG views / query helpers", () => {
         id: crypto.randomUUID(),
         systemId,
         confirmed: true,
-        confirmedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });

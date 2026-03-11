@@ -14,9 +14,6 @@ export const systemSettings = sqliteTable("system_settings", {
   locale: text("locale"),
   pinHash: text("pin_hash"),
   biometricEnabled: integer("biometric_enabled", { mode: "boolean" }).notNull().default(false),
-  littlesSafeModeEnabled: integer("littles_safe_mode_enabled", { mode: "boolean" })
-    .notNull()
-    .default(false),
   encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
   ...timestamps(),
   ...versioned(),

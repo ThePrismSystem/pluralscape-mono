@@ -1,10 +1,11 @@
 ---
 # db-bbzk
 title: Zero-knowledge and encryption contract hardening
-status: todo
+status: in-progress
 type: feature
+priority: normal
 created_at: 2026-03-11T19:39:26Z
-updated_at: 2026-03-11T19:39:26Z
+updated_at: 2026-03-11T21:49:18Z
 parent: db-2je4
 ---
 

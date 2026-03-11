@@ -48,7 +48,6 @@ describe("SQLite system_settings schema", () => {
         locale: "en-US",
         pinHash: "$argon2id$test-hash",
         biometricEnabled: true,
-        littlesSafeModeEnabled: true,
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -65,7 +64,6 @@ describe("SQLite system_settings schema", () => {
     expect(rows[0]?.locale).toBe("en-US");
     expect(rows[0]?.pinHash).toBe("$argon2id$test-hash");
     expect(rows[0]?.biometricEnabled).toBe(true);
-    expect(rows[0]?.littlesSafeModeEnabled).toBe(true);
     expect(rows[0]?.encryptedData).toEqual(data);
   });
 
@@ -90,7 +88,6 @@ describe("SQLite system_settings schema", () => {
       .where(eq(systemSettings.systemId, systemId))
       .all();
     expect(rows[0]?.biometricEnabled).toBe(false);
-    expect(rows[0]?.littlesSafeModeEnabled).toBe(false);
   });
 
   it("allows nullable locale and pinHash", () => {

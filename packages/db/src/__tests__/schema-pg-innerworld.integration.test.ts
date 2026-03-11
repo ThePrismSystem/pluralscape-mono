@@ -46,7 +46,6 @@ describe("PG Innerworld Schema", () => {
       id: regionId,
       systemId,
       parentRegionId: null,
-      accessType: "open",
       encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
@@ -62,7 +61,6 @@ describe("PG Innerworld Schema", () => {
     expect(rows[0]?.id).toBe(regionId);
     expect(rows[0]?.systemId).toBe(systemId);
     expect(rows[0]?.parentRegionId).toBeNull();
-    expect(rows[0]?.accessType).toBe("open");
     expect(rows[0]?.encryptedData).toEqual(testBlob());
     expect(rows[0]?.createdAt).toBe(now);
     expect(rows[0]?.updatedAt).toBe(now);
@@ -78,10 +76,7 @@ describe("PG Innerworld Schema", () => {
     await db.insert(innerworldEntities).values({
       id: entityId,
       systemId,
-      entityType: "member",
       regionId: null,
-      positionX: 100,
-      positionY: 200,
       encryptedData: testBlob(new Uint8Array([4, 5, 6])),
       createdAt: now,
       updatedAt: now,
@@ -96,10 +91,7 @@ describe("PG Innerworld Schema", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe(entityId);
     expect(rows[0]?.systemId).toBe(systemId);
-    expect(rows[0]?.entityType).toBe("member");
     expect(rows[0]?.regionId).toBeNull();
-    expect(rows[0]?.positionX).toBe(100);
-    expect(rows[0]?.positionY).toBe(200);
     expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([4, 5, 6])));
   });
 
@@ -133,7 +125,6 @@ describe("PG Innerworld Schema", () => {
     await db.insert(innerworldRegions).values({
       id: parentId,
       systemId,
-      accessType: "open",
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
@@ -143,7 +134,6 @@ describe("PG Innerworld Schema", () => {
       id: childId,
       systemId,
       parentRegionId: parentId,
-      accessType: "open",
       encryptedData: testBlob(new Uint8Array([2])),
       createdAt: now,
       updatedAt: now,
@@ -166,7 +156,6 @@ describe("PG Innerworld Schema", () => {
     await db.insert(innerworldRegions).values({
       id: regionId,
       systemId,
-      accessType: "open",
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
@@ -175,10 +164,7 @@ describe("PG Innerworld Schema", () => {
     await db.insert(innerworldEntities).values({
       id: entityId,
       systemId,
-      entityType: "landmark",
       regionId,
-      positionX: 50,
-      positionY: 75,
       encryptedData: testBlob(new Uint8Array([2])),
       createdAt: now,
       updatedAt: now,
@@ -195,70 +181,6 @@ describe("PG Innerworld Schema", () => {
     expect(rows[0]?.regionId).toBeNull();
   });
 
-  it("enforces entity_type CHECK constraint with all valid values", async () => {
-    const systemId = await setupSystem();
-    const now = Date.now();
-    const validTypes = ["member", "landmark", "subsystem", "side-system", "layer"] as const;
-
-    for (const entityType of validTypes) {
-      const entityId = crypto.randomUUID();
-      await db.insert(innerworldEntities).values({
-        id: entityId,
-        systemId,
-        entityType,
-        regionId: null,
-        positionX: 0,
-        positionY: 0,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db
-        .select()
-        .from(innerworldEntities)
-        .where(eq(innerworldEntities.id, entityId));
-      expect(rows[0]?.entityType).toBe(entityType);
-    }
-
-    await expect(
-      client.query(
-        `INSERT INTO innerworld_entities (id, system_id, entity_type, position_x, position_y, encrypted_data, created_at, updated_at, version) VALUES ($1, $2, 'invalid', 0, 0, $3, $4, $4, 1)`,
-        [crypto.randomUUID(), systemId, new Uint8Array([1]), now],
-      ),
-    ).rejects.toThrow();
-  });
-
-  it("enforces access_type CHECK constraint on regions", async () => {
-    const systemId = await setupSystem();
-    const now = Date.now();
-
-    for (const accessType of ["open", "gatekept"] as const) {
-      const regionId = crypto.randomUUID();
-      await db.insert(innerworldRegions).values({
-        id: regionId,
-        systemId,
-        accessType,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db
-        .select()
-        .from(innerworldRegions)
-        .where(eq(innerworldRegions.id, regionId));
-      expect(rows[0]?.accessType).toBe(accessType);
-    }
-
-    await expect(
-      client.query(
-        `INSERT INTO innerworld_regions (id, system_id, access_type, encrypted_data, created_at, updated_at, version) VALUES ($1, $2, 'invalid', $3, $4, $4, 1)`,
-        [crypto.randomUUID(), systemId, new Uint8Array([1]), now],
-      ),
-    ).rejects.toThrow();
-  });
-
   it("cascades system delete to all 3 innerworld tables", async () => {
     const systemId = await setupSystem();
     const now = Date.now();
@@ -267,7 +189,6 @@ describe("PG Innerworld Schema", () => {
     await db.insert(innerworldRegions).values({
       id: regionId,
       systemId,
-      accessType: "open",
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
@@ -276,10 +197,7 @@ describe("PG Innerworld Schema", () => {
     await db.insert(innerworldEntities).values({
       id: crypto.randomUUID(),
       systemId,
-      entityType: "member",
       regionId,
-      positionX: 10,
-      positionY: 20,
       encryptedData: testBlob(new Uint8Array([2])),
       createdAt: now,
       updatedAt: now,
@@ -332,38 +250,5 @@ describe("PG Innerworld Schema", () => {
         updatedAt: now,
       }),
     ).rejects.toThrow();
-  });
-
-  it("persists positionX/Y integer values including zero and negatives", async () => {
-    const systemId = await setupSystem();
-    const now = Date.now();
-    const testCases = [
-      { x: 0, y: 0 },
-      { x: -100, y: -200 },
-      { x: 999999, y: 888888 },
-      { x: -1, y: 1 },
-    ];
-
-    for (const { x, y } of testCases) {
-      const entityId = crypto.randomUUID();
-      await db.insert(innerworldEntities).values({
-        id: entityId,
-        systemId,
-        entityType: "landmark",
-        regionId: null,
-        positionX: x,
-        positionY: y,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      const rows = await db
-        .select()
-        .from(innerworldEntities)
-        .where(eq(innerworldEntities.id, entityId));
-      expect(rows[0]?.positionX).toBe(x);
-      expect(rows[0]?.positionY).toBe(y);
-    }
   });
 });

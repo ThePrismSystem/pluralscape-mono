@@ -1,6 +1,5 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { EncryptedString } from "../encryption.js";
 import type {
   DeviceTokenId,
   FriendConnectionId,
@@ -28,7 +27,7 @@ describe("DeviceToken", () => {
     expectTypeOf<DeviceToken["id"]>().toEqualTypeOf<DeviceTokenId>();
     expectTypeOf<DeviceToken["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<DeviceToken["platform"]>().toEqualTypeOf<"ios" | "android" | "web">();
-    expectTypeOf<DeviceToken["token"]>().toEqualTypeOf<EncryptedString>();
+    expectTypeOf<DeviceToken["token"]>().toEqualTypeOf<string>();
     expectTypeOf<DeviceToken["lastActiveAt"]>().toEqualTypeOf<UnixMillis>();
   });
 });

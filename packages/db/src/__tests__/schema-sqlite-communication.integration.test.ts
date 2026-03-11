@@ -183,7 +183,6 @@ describe("SQLite communication schema", () => {
           id,
           channelId,
           systemId,
-          senderId: "member-1",
           timestamp: now,
           encryptedData: data,
           createdAt: now,
@@ -210,7 +209,6 @@ describe("SQLite communication schema", () => {
           id: msgId,
           channelId,
           systemId,
-          senderId: "member-1",
           timestamp: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -235,7 +233,6 @@ describe("SQLite communication schema", () => {
           id: msgId,
           channelId,
           systemId,
-          senderId: "member-1",
           timestamp: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -336,49 +333,6 @@ describe("SQLite communication schema", () => {
       db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(boardMessages).where(eq(boardMessages.id, id)).all();
       expect(rows).toHaveLength(0);
-    });
-
-    it("round-trips senderId T3 column", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(boardMessages)
-        .values({
-          id,
-          systemId,
-          sortOrder: 0,
-          senderId: "member-1",
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(boardMessages).where(eq(boardMessages.id, id)).all();
-      expect(rows[0]?.senderId).toBe("member-1");
-    });
-
-    it("defaults senderId to null", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(boardMessages)
-        .values({
-          id,
-          systemId,
-          sortOrder: 0,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(boardMessages).where(eq(boardMessages.id, id)).all();
-      expect(rows[0]?.senderId).toBeNull();
     });
   });
 
@@ -784,7 +738,6 @@ describe("SQLite communication schema", () => {
       const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.confirmed).toBe(false);
-      expect(rows[0]?.confirmedAt).toBeNull();
     });
 
     it("round-trips confirmed state", () => {
@@ -798,7 +751,6 @@ describe("SQLite communication schema", () => {
           id,
           systemId,
           confirmed: true,
-          confirmedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
@@ -806,7 +758,6 @@ describe("SQLite communication schema", () => {
 
       const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
       expect(rows[0]?.confirmed).toBe(true);
-      expect(rows[0]?.confirmedAt).toBe(now);
     });
 
     it("cascades on system deletion", () => {

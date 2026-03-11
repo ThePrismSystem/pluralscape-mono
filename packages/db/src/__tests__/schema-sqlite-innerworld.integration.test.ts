@@ -49,7 +49,6 @@ describe("SQLite Innerworld Schema", () => {
         id: regionId,
         systemId,
         parentRegionId: null,
-        accessType: "gatekept",
         encryptedData: testBlob(new Uint8Array([10, 20, 30])),
         createdAt: now,
         updatedAt: now,
@@ -67,7 +66,6 @@ describe("SQLite Innerworld Schema", () => {
     expect(rows[0]?.id).toBe(regionId);
     expect(rows[0]?.systemId).toBe(systemId);
     expect(rows[0]?.parentRegionId).toBeNull();
-    expect(rows[0]?.accessType).toBe("gatekept");
     expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([10, 20, 30])));
     expect(rows[0]?.createdAt).toBe(now);
     expect(rows[0]?.updatedAt).toBe(now);
@@ -84,7 +82,6 @@ describe("SQLite Innerworld Schema", () => {
       .values({
         id: regionId,
         systemId,
-        accessType: "open",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -97,9 +94,6 @@ describe("SQLite Innerworld Schema", () => {
         id: entityId,
         systemId,
         regionId,
-        entityType: "landmark",
-        positionX: 150,
-        positionY: 300,
         encryptedData: testBlob(new Uint8Array([40, 50, 60])),
         createdAt: now,
         updatedAt: now,
@@ -117,9 +111,6 @@ describe("SQLite Innerworld Schema", () => {
     expect(rows[0]?.id).toBe(entityId);
     expect(rows[0]?.systemId).toBe(systemId);
     expect(rows[0]?.regionId).toBe(regionId);
-    expect(rows[0]?.entityType).toBe("landmark");
-    expect(rows[0]?.positionX).toBe(150);
-    expect(rows[0]?.positionY).toBe(300);
     expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([40, 50, 60])));
   });
 
@@ -157,7 +148,6 @@ describe("SQLite Innerworld Schema", () => {
       .values({
         id: parentId,
         systemId,
-        accessType: "open",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -169,7 +159,6 @@ describe("SQLite Innerworld Schema", () => {
         id: childId,
         systemId,
         parentRegionId: parentId,
-        accessType: "open",
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
@@ -193,7 +182,6 @@ describe("SQLite Innerworld Schema", () => {
       .values({
         id: regionId,
         systemId,
-        accessType: "open",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -204,10 +192,7 @@ describe("SQLite Innerworld Schema", () => {
       .values({
         id: entityId,
         systemId,
-        entityType: "landmark",
         regionId,
-        positionX: 10,
-        positionY: 20,
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
@@ -225,78 +210,6 @@ describe("SQLite Innerworld Schema", () => {
     expect(rows[0]?.regionId).toBeNull();
   });
 
-  it("enforces entity_type CHECK constraint with all valid values", () => {
-    const systemId = setupSystem();
-    const now = Date.now();
-    const validTypes = ["member", "landmark", "subsystem", "side-system", "layer"] as const;
-
-    for (const entityType of validTypes) {
-      const entityId = crypto.randomUUID();
-      db.insert(innerworldEntities)
-        .values({
-          id: entityId,
-          systemId,
-          entityType,
-          regionId: null,
-          positionX: 0,
-          positionY: 0,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
-
-      const rows = db
-        .select()
-        .from(innerworldEntities)
-        .where(eq(innerworldEntities.id, entityId))
-        .all();
-      expect(rows[0]?.entityType).toBe(entityType);
-    }
-
-    expect(() => {
-      client
-        .prepare(
-          `INSERT INTO innerworld_entities (id, system_id, entity_type, position_x, position_y, encrypted_data, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(crypto.randomUUID(), systemId, "invalid", 0, 0, new Uint8Array([1]), now, now, 1);
-    }).toThrow();
-  });
-
-  it("enforces access_type CHECK constraint on regions", () => {
-    const systemId = setupSystem();
-    const now = Date.now();
-
-    for (const accessType of ["open", "gatekept"] as const) {
-      const regionId = crypto.randomUUID();
-      db.insert(innerworldRegions)
-        .values({
-          id: regionId,
-          systemId,
-          accessType,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
-
-      const rows = db
-        .select()
-        .from(innerworldRegions)
-        .where(eq(innerworldRegions.id, regionId))
-        .all();
-      expect(rows[0]?.accessType).toBe(accessType);
-    }
-
-    expect(() => {
-      client
-        .prepare(
-          `INSERT INTO innerworld_regions (id, system_id, access_type, encrypted_data, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(crypto.randomUUID(), systemId, "invalid", new Uint8Array([1]), now, now, 1);
-    }).toThrow();
-  });
-
   it("cascades system delete to all 3 innerworld tables", () => {
     const systemId = setupSystem();
     const now = Date.now();
@@ -306,7 +219,6 @@ describe("SQLite Innerworld Schema", () => {
       .values({
         id: regionId,
         systemId,
-        accessType: "open",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -317,10 +229,7 @@ describe("SQLite Innerworld Schema", () => {
       .values({
         id: crypto.randomUUID(),
         systemId,
-        entityType: "member",
         regionId,
-        positionX: 5,
-        positionY: 10,
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
@@ -372,41 +281,5 @@ describe("SQLite Innerworld Schema", () => {
         })
         .run();
     }).toThrow();
-  });
-
-  it("persists positionX/Y integer values including zero and negatives", () => {
-    const systemId = setupSystem();
-    const now = Date.now();
-    const testCases = [
-      { x: 0, y: 0 },
-      { x: -100, y: -200 },
-      { x: 999999, y: 888888 },
-      { x: -1, y: 1 },
-    ];
-
-    for (const { x, y } of testCases) {
-      const entityId = crypto.randomUUID();
-      db.insert(innerworldEntities)
-        .values({
-          id: entityId,
-          systemId,
-          entityType: "landmark",
-          regionId: null,
-          positionX: x,
-          positionY: y,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
-
-      const rows = db
-        .select()
-        .from(innerworldEntities)
-        .where(eq(innerworldEntities.id, entityId))
-        .all();
-      expect(rows[0]?.positionX).toBe(x);
-      expect(rows[0]?.positionY).toBe(y);
-    }
   });
 });

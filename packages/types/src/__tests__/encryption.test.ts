@@ -238,9 +238,7 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerAcknowledgementRequest>().toBeObject();
     expectTypeOf<ServerAcknowledgementRequest["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<ServerAcknowledgementRequest["createdByMemberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<ServerAcknowledgementRequest["targetMemberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<ServerAcknowledgementRequest["confirmed"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ServerAcknowledgementRequest["confirmedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<ClientAcknowledgementRequest>().toEqualTypeOf<AcknowledgementRequest>();
   });
 
@@ -304,14 +302,12 @@ describe("Server/Client pairs exist for completed domains", () => {
   it("chat message pair", () => {
     expectTypeOf<ServerChatMessage>().toBeObject();
     expectTypeOf<ServerChatMessage["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerChatMessage["senderId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<ClientChatMessage>().toEqualTypeOf<ChatMessage>();
   });
 
   it("board message pair", () => {
     expectTypeOf<ServerBoardMessage>().toBeObject();
     expectTypeOf<ServerBoardMessage["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerBoardMessage["senderId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<ServerBoardMessage["pinned"]>().toEqualTypeOf<boolean>();
     expectTypeOf<ClientBoardMessage>().toEqualTypeOf<BoardMessage>();
   });
@@ -372,6 +368,46 @@ describe("T1 encrypted field absence on server types", () => {
   it("ServerLayer must not have accessType", () => {
     // @ts-expect-error - field moved to T1 encrypted
     expectTypeOf<ServerLayer["accessType"]>();
+  });
+
+  it("ServerChatMessage must not have senderId", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerChatMessage["senderId"]>();
+  });
+
+  it("ServerBoardMessage must not have senderId", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerBoardMessage["senderId"]>();
+  });
+
+  it("ServerInnerWorldEntity must not have entityType", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerInnerWorldEntity["entityType"]>();
+  });
+
+  it("ServerInnerWorldEntity must not have positionX", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerInnerWorldEntity["positionX"]>();
+  });
+
+  it("ServerInnerWorldEntity must not have positionY", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerInnerWorldEntity["positionY"]>();
+  });
+
+  it("ServerInnerWorldRegion must not have accessType", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerInnerWorldRegion["accessType"]>();
+  });
+
+  it("ServerAcknowledgementRequest must not have targetMemberId", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerAcknowledgementRequest["targetMemberId"]>();
+  });
+
+  it("ServerAcknowledgementRequest must not have confirmedAt", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerAcknowledgementRequest["confirmedAt"]>();
   });
 });
 

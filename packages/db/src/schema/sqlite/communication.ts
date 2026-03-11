@@ -54,7 +54,6 @@ export const messages = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    senderId: text("sender_id").notNull(),
     replyToId: text("reply_to_id"),
     timestamp: sqliteTimestamp("timestamp").notNull(),
     editedAt: sqliteTimestamp("edited_at"),
@@ -86,7 +85,6 @@ export const boardMessages = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    senderId: text("sender_id"),
     pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -184,15 +182,12 @@ export const acknowledgements = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     createdByMemberId: text("created_by_member_id"),
-    targetMemberId: text("target_member_id"),
     confirmed: integer("confirmed", { mode: "boolean" }).notNull().default(false),
-    confirmedAt: sqliteTimestamp("confirmed_at"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
     index("acknowledgements_system_id_idx").on(t.systemId),
     index("acknowledgements_confirmed_idx").on(t.confirmed),
-    index("acknowledgements_target_member_id_idx").on(t.targetMemberId),
   ],
 );

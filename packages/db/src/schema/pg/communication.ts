@@ -56,7 +56,6 @@ export const messages = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    senderId: varchar("sender_id", { length: 255 }).notNull(),
     replyToId: varchar("reply_to_id", { length: 255 }),
     timestamp: pgTimestamp("timestamp").notNull(),
     editedAt: pgTimestamp("edited_at"),
@@ -88,7 +87,6 @@ export const boardMessages = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    senderId: varchar("sender_id", { length: 255 }),
     pinned: boolean("pinned").notNull().default(false),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -189,15 +187,12 @@ export const acknowledgements = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     createdByMemberId: varchar("created_by_member_id", { length: 255 }),
-    targetMemberId: varchar("target_member_id", { length: 255 }),
     confirmed: boolean("confirmed").notNull().default(false),
-    confirmedAt: pgTimestamp("confirmed_at"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
     index("acknowledgements_system_id_idx").on(t.systemId),
     index("acknowledgements_confirmed_idx").on(t.confirmed),
-    index("acknowledgements_target_member_id_idx").on(t.targetMemberId),
   ],
 );

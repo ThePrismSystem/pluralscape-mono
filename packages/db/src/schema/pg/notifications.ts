@@ -37,7 +37,7 @@ export const deviceTokens = pgTable(
     platform: varchar("platform", { length: 255 }).notNull().$type<DeviceTokenPlatform>(),
     token: varchar("token", { length: 512 }).notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
-    lastUsedAt: pgTimestamp("last_used_at"),
+    lastActiveAt: pgTimestamp("last_active_at"),
     revokedAt: pgTimestamp("revoked_at"),
   },
   (t) => [
