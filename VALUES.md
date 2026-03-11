@@ -53,7 +53,7 @@ The features that help people survive and heal are never locked behind a paywall
 
 ## Non-Destructive by Design
 
-Data loss in the predecessor app caused real harm. We build systems that protect user data at every level.
+We build systems that protect user data at every level.
 
 - Archive instead of delete — historical data is preserved
 - Offline-first architecture — local data is the source of truth
