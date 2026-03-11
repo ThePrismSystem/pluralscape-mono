@@ -290,7 +290,7 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerPollVote["id"]>().toEqualTypeOf<PollVoteId>();
     expectTypeOf<ServerPollVote["pollId"]>().toEqualTypeOf<PollId>();
     expectTypeOf<ServerPollVote["optionId"]>().toEqualTypeOf<PollOptionId | null>();
-    expectTypeOf<ServerPollVote["isVeto"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<ServerPollVote["isVeto"]>().toEqualTypeOf<boolean | null>();
     expectTypeOf<ClientPollVote>().toEqualTypeOf<PollVote>();
   });
 
@@ -311,7 +311,7 @@ describe("Server/Client pairs exist for completed domains", () => {
   it("board message pair", () => {
     expectTypeOf<ServerBoardMessage>().toBeObject();
     expectTypeOf<ServerBoardMessage["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerBoardMessage["senderId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<ServerBoardMessage["senderId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<ServerBoardMessage["pinned"]>().toEqualTypeOf<boolean>();
     expectTypeOf<ClientBoardMessage>().toEqualTypeOf<BoardMessage>();
   });

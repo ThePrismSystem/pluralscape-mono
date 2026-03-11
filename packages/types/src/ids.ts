@@ -66,6 +66,8 @@ export type WebhookDeliveryId = Brand<string, "WebhookDeliveryId">;
 export type FrontingReportId = Brand<string, "FrontingReportId">;
 export type FriendNotificationPreferenceId = Brand<string, "FriendNotificationPreferenceId">;
 export type FrontingCommentId = Brand<string, "FrontingCommentId">;
+export type BucketKeyRotationId = Brand<string, "BucketKeyRotationId">;
+export type BucketRotationItemId = Brand<string, "BucketRotationItemId">;
 export type HexColor = Brand<string, "HexColor">;
 
 // ── ID prefix convention ────────────────────────────────────────────
@@ -128,6 +130,8 @@ export const ID_PREFIXES = {
   frontingReport: "fr_",
   friendNotificationPreference: "fnp_",
   frontingComment: "fcom_",
+  bucketKeyRotation: "bkr_",
+  bucketRotationItem: "bri_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -189,4 +193,6 @@ export type EntityType =
   | "webhook-delivery"
   | "fronting-report"
   | "friend-notification-preference"
-  | "fronting-comment";
+  | "fronting-comment"
+  | "bucket-key-rotation"
+  | "bucket-rotation-item";

@@ -241,6 +241,7 @@ describe("RLS_TABLE_POLICIES", () => {
       "account-pk",
       "dual",
       "join-system",
+      "join-system-chained",
     ]);
 
     for (const [table, scope] of Object.entries(RLS_TABLE_POLICIES)) {

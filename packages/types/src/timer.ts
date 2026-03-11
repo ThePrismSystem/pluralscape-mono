@@ -6,10 +6,10 @@ import type { AuditMetadata } from "./utility.js";
 export interface TimerConfig extends AuditMetadata {
   readonly id: TimerId;
   readonly systemId: SystemId;
-  readonly intervalMinutes: number;
-  readonly wakingHoursOnly: boolean;
-  readonly wakingStart: string;
-  readonly wakingEnd: string;
+  readonly intervalMinutes: number | null;
+  readonly wakingHoursOnly: boolean | null;
+  readonly wakingStart: string | null;
+  readonly wakingEnd: string | null;
   readonly promptText: string;
   readonly enabled: boolean;
 }

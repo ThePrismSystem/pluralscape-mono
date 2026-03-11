@@ -12,7 +12,8 @@ export type RlsScopeType =
   | "system-pk"
   | "account-pk"
   | "dual"
-  | "join-system";
+  | "join-system"
+  | "join-system-chained";
 
 /**
  * Returns a SQL expression for reading a GUC variable fail-closed.
@@ -84,6 +85,26 @@ export function joinSystemRlsPolicy(
   return `CREATE POLICY ${tableName}_system_isolation ON ${tableName} USING (${exists}) WITH CHECK (${exists})`;
 }
 
+/**
+ * Creates an RLS policy for tables two hops from a tenant column.
+ * Verifies ownership via a JOIN through an intermediate table to reach system_id.
+ */
+export function chainedJoinSystemRlsPolicy(
+  tableName: string,
+  intermediateTable: string,
+  joinColumn: string,
+  parentTable: string,
+  intermediateJoinColumn: string,
+): string {
+  const setting = currentSettingSql("app.current_system_id");
+  const exists =
+    `EXISTS (SELECT 1 FROM ${intermediateTable} ` +
+    `JOIN ${parentTable} ON ${parentTable}.id = ${intermediateTable}.${intermediateJoinColumn} ` +
+    `WHERE ${intermediateTable}.id = ${tableName}.${joinColumn} ` +
+    `AND ${parentTable}.system_id = ${setting})`;
+  return `CREATE POLICY ${tableName}_system_isolation ON ${tableName} USING (${exists}) WITH CHECK (${exists})`;
+}
+
 /** Configuration for join-based RLS tables: maps table name to parent table and join column. */
 const JOIN_SYSTEM_CONFIG: Readonly<Record<string, { parentTable: string; joinColumn: string }>> = {
   key_grants: { parentTable: "buckets", joinColumn: "bucket_id" },
@@ -93,6 +114,30 @@ const JOIN_SYSTEM_CONFIG: Readonly<Record<string, { parentTable: string; joinCol
     joinColumn: "friend_connection_id",
   },
   field_bucket_visibility: { parentTable: "field_definitions", joinColumn: "field_definition_id" },
+  bucket_key_rotations: { parentTable: "buckets", joinColumn: "bucket_id" },
+};
+
+/**
+ * Configuration for chained join-based RLS tables: tables that require a two-hop
+ * join to reach a tenant column (e.g. rotation_items → rotations → buckets).
+ */
+const CHAINED_JOIN_CONFIG: Readonly<
+  Record<
+    string,
+    {
+      intermediateTable: string;
+      joinColumn: string;
+      parentTable: string;
+      intermediateJoinColumn: string;
+    }
+  >
+> = {
+  bucket_rotation_items: {
+    intermediateTable: "bucket_key_rotations",
+    joinColumn: "rotation_id",
+    parentTable: "buckets",
+    intermediateJoinColumn: "bucket_id",
+  },
 };
 
 /**
@@ -123,6 +168,8 @@ export const RLS_TABLE_POLICIES = {
   bucket_content_tags: "join-system",
   friend_bucket_assignments: "join-system",
   field_bucket_visibility: "join-system",
+  bucket_key_rotations: "join-system",
+  bucket_rotation_items: "join-system-chained",
 
   // System-scoped (system_id column)
   members: "system",
@@ -222,6 +269,22 @@ export function generateRlsStatements(tableName: string): string[] {
         throw new Error(`No join config for table '${tableName}'`);
       }
       statements.push(joinSystemRlsPolicy(tableName, config.parentTable, config.joinColumn));
+      break;
+    }
+    case "join-system-chained": {
+      const chainConfig = CHAINED_JOIN_CONFIG[tableName];
+      if (chainConfig === undefined) {
+        throw new Error(`No chained join config for table '${tableName}'`);
+      }
+      statements.push(
+        chainedJoinSystemRlsPolicy(
+          tableName,
+          chainConfig.intermediateTable,
+          chainConfig.joinColumn,
+          chainConfig.parentTable,
+          chainConfig.intermediateJoinColumn,
+        ),
+      );
       break;
     }
     default: {

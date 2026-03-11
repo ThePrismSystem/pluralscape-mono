@@ -60,6 +60,8 @@ export type {
   FrontingReportId,
   FriendNotificationPreferenceId,
   FrontingCommentId,
+  BucketKeyRotationId,
+  BucketRotationItemId,
   HexColor,
   EntityType,
 } from "./ids.js";
@@ -432,6 +434,14 @@ export type {
 
 // ── Timer ─────────────────────────────────────────────────────────
 export type { TimerConfig, CheckInRecord } from "./timer.js";
+
+// ── Key Rotation ─────────────────────────────────────────────────
+export type {
+  RotationState,
+  RotationItemStatus,
+  BucketKeyRotation,
+  BucketRotationItem,
+} from "./key-rotation.js";
 
 // ── Analytics ─────────────────────────────────────────────────────
 export type {
