@@ -4,16 +4,16 @@ Pluralscape supports two database backends: **PostgreSQL** (cloud/hosted) and **
 
 ## Capability Matrix
 
-| Capability               | PostgreSQL                          | SQLite                                | Notes                                                             |
-| ------------------------ | ----------------------------------- | ------------------------------------- | ----------------------------------------------------------------- |
-| Row-Level Security (RLS) | Yes                                 | No                                    | PG uses `set_config` session variables; SQLite uses WHERE clauses |
-| Native JSONB             | Yes                                 | No                                    | SQLite stores JSON as TEXT with application-level parsing         |
-| Array columns            | Yes                                 | No                                    | SQLite uses JSON arrays or junction tables                        |
-| pgcrypto extension       | Yes                                 | No                                    | Defense-in-depth encryption at rest                               |
-| Native enum types        | Yes                                 | No                                    | Both use varchar + CHECK constraints for portability              |
-| Full-text search         | tsvector/tsquery (server-side)      | FTS5 virtual tables (client-side)     | Different APIs, same conceptual role                              |
-| Background jobs          | BullMQ + Valkey (server-side)       | SQLite `jobs` table (client-side)     | See ADR 010                                                       |
-| Views / query helpers    | `pgViews.*` (async, PgliteDatabase) | `sqliteViews.*` (sync, BetterSQLite3) | Identical function names, matching return types                   |
+| Capability               | PostgreSQL                                                                  | SQLite                                | Notes                                                             |
+| ------------------------ | --------------------------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------- |
+| Row-Level Security (RLS) | Yes                                                                         | No                                    | PG uses `set_config` session variables; SQLite uses WHERE clauses |
+| Native JSONB             | Yes                                                                         | No                                    | SQLite stores JSON as TEXT with application-level parsing         |
+| Array columns            | Yes                                                                         | No                                    | SQLite uses JSON arrays or junction tables                        |
+| pgcrypto extension       | Yes                                                                         | No                                    | Defense-in-depth encryption at rest                               |
+| Native enum types        | Yes                                                                         | No                                    | Both use varchar + CHECK constraints for portability              |
+| Full-text search         | tsvector/tsquery (server-side)                                              | FTS5 virtual tables (client-side)     | Different APIs, same conceptual role                              |
+| Background jobs          | BullMQ + Valkey (server-side)                                               | SQLite `jobs` table (client-side)     | See ADR 010                                                       |
+| Views / query helpers    | `pgViews.*` (async, PgDatabase; test: PgliteDatabase / prod: node-postgres) | `sqliteViews.*` (sync, BetterSQLite3) | Identical function names, matching return types                   |
 
 ## Runtime Detection
 
@@ -70,11 +70,14 @@ Session variables are transaction-scoped (`set_config` with `true` for is_local)
 
 RLS scope types:
 
-| Scope       | Session variable         | Tables                                                         |
-| ----------- | ------------------------ | -------------------------------------------------------------- |
-| `"system"`  | `app.current_system_id`  | Most data tables (members, fronting, groups, etc.)             |
-| `"account"` | `app.current_account_id` | Account-level tables (purge requests)                          |
-| `"dual"`    | Both                     | Tables scoped to both (API keys, import jobs, export requests) |
+| Scope           | Session variable         | Tables                                                         |
+| --------------- | ------------------------ | -------------------------------------------------------------- |
+| `"system"`      | `app.current_system_id`  | Most data tables (members, fronting, groups, etc.)             |
+| `"account"`     | `app.current_account_id` | Account-level tables (purge requests)                          |
+| `"dual"`        | Both                     | Tables scoped to both (API keys, import jobs, export requests) |
+| `"system-pk"`   | `app.current_system_id`  | Tables using system_id as primary key                          |
+| `"account-pk"`  | `app.current_account_id` | Tables using account_id as primary key                         |
+| `"join-system"` | `app.current_system_id`  | Join tables referencing system-scoped parents                  |
 
 The full mapping is in `RLS_TABLE_POLICIES` — see `src/rls/policies.ts`.
 
@@ -122,24 +125,24 @@ const fronters: CurrentFronter[] = sqliteViews.getCurrentFronters(db, systemId);
 
 Available query helpers:
 
-| Function                         | Scoping | Filter logic                                          |
-| -------------------------------- | ------- | ----------------------------------------------------- |
-| `getCurrentFronters`             | system  | `end_time IS NULL`                                    |
-| `getCurrentFrontersWithDuration` | system  | `end_time IS NULL` + computed duration (ms)           |
-| `getActiveApiKeys`               | account | `revoked_at IS NULL`                                  |
-| `getPendingFriendRequests`       | system  | `status = 'pending'`                                  |
-| `getPendingWebhookRetries`       | system  | `status = 'failed'` AND `attempt_count < maxAttempts` |
-| `getUnconfirmedAcknowledgements` | system  | `confirmed = false`                                   |
-| `getMemberGroupSummary`          | system  | GROUP BY with `count(*)`                              |
-| `getActiveFriendConnections`     | system  | `status = 'accepted'`                                 |
-| `getActiveDeviceTokens`          | account | `revoked_at IS NULL`                                  |
-| `getCurrentFrontingComments`     | system  | JOIN on active sessions (`end_time IS NULL`)          |
-| `getActiveDeviceTransfers`       | account | `status = 'pending'` AND `expires_at > NOW()`         |
-| `getStructureCrossLinks`         | system  | UNION ALL of 3 link tables                            |
+| Function                         | Scoping | Filter logic                                                                       |
+| -------------------------------- | ------- | ---------------------------------------------------------------------------------- |
+| `getCurrentFronters`             | system  | `end_time IS NULL`                                                                 |
+| `getCurrentFrontersWithDuration` | system  | `end_time IS NULL` + computed duration (ms)                                        |
+| `getActiveApiKeys`               | account | `revoked_at IS NULL`                                                               |
+| `getPendingFriendRequests`       | system  | `status = 'pending'`                                                               |
+| `getPendingWebhookRetries`       | system  | `status = 'failed'` AND `attempt_count < maxAttempts` AND `next_retry_at <= NOW()` |
+| `getUnconfirmedAcknowledgements` | system  | `confirmed = false`                                                                |
+| `getMemberGroupSummary`          | system  | GROUP BY with `count(*)`                                                           |
+| `getActiveFriendConnections`     | system  | `status = 'accepted'`                                                              |
+| `getActiveDeviceTokens`          | account | `revoked_at IS NULL`                                                               |
+| `getCurrentFrontingComments`     | system  | JOIN on active sessions (`end_time IS NULL`)                                       |
+| `getActiveDeviceTransfers`       | account | `status = 'pending'` AND `expires_at > NOW()`                                      |
+| `getStructureCrossLinks`         | system  | UNION ALL of 3 link tables                                                         |
 
 Duration calculation differs by dialect:
 
-- **PG**: `(EXTRACT(EPOCH FROM (NOW() - start_time)) * 1000)::int`
+- **PG**: `(EXTRACT(EPOCH FROM (NOW() - start_time)) * 1000)::bigint`
 - **SQLite**: `(strftime('%s', 'now') * 1000) - start_time`
 
 Both return milliseconds as an integer.
@@ -159,7 +162,7 @@ import {
   searchEntries,
 } from "@pluralscape/db/schema/sqlite/search";
 
-await createSearchIndex(db);
+createSearchIndex(db);
 insertSearchEntry(db, {
   entityType: "member",
   entityId: "...",

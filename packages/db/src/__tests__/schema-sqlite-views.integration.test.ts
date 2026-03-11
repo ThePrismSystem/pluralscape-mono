@@ -233,8 +233,8 @@ describe("SQLite views / query helpers", () => {
       db.insert(friendConnections)
         .values({
           id: crypto.randomUUID(),
-          systemId,
-          friendSystemId: otherSystemId1,
+          systemId: otherSystemId1,
+          friendSystemId: systemId,
           status: "pending",
           createdAt: now,
           updatedAt: now,
@@ -243,8 +243,8 @@ describe("SQLite views / query helpers", () => {
       db.insert(friendConnections)
         .values({
           id: crypto.randomUUID(),
-          systemId,
-          friendSystemId: otherSystemId2,
+          systemId: otherSystemId2,
+          friendSystemId: systemId,
           status: "accepted",
           createdAt: now,
           updatedAt: now,
@@ -272,7 +272,7 @@ describe("SQLite views / query helpers", () => {
           updatedAt: now,
         })
         .run();
-      // Under limit
+      // Under limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
           id: crypto.randomUUID(),
@@ -281,10 +281,11 @@ describe("SQLite views / query helpers", () => {
           eventType: "member.created",
           status: "failed",
           attemptCount: 2,
+          nextRetryAt: now - 60000,
           createdAt: now,
         })
         .run();
-      // Over limit
+      // Over limit, nextRetryAt in the past
       db.insert(webhookDeliveries)
         .values({
           id: crypto.randomUUID(),
@@ -293,6 +294,20 @@ describe("SQLite views / query helpers", () => {
           eventType: "member.created",
           status: "failed",
           attemptCount: 5,
+          nextRetryAt: now - 60000,
+          createdAt: now,
+        })
+        .run();
+      // Under limit but nextRetryAt in the future — should NOT be returned
+      db.insert(webhookDeliveries)
+        .values({
+          id: crypto.randomUUID(),
+          webhookId,
+          systemId,
+          eventType: "member.created",
+          status: "failed",
+          attemptCount: 2,
+          nextRetryAt: now + 60000,
           createdAt: now,
         })
         .run();

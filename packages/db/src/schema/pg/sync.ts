@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
@@ -48,6 +49,9 @@ export const syncQueue = pgTable(
   (t) => [
     index("sync_queue_system_id_synced_at_idx").on(t.systemId, t.syncedAt),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
+    index("sync_queue_unsynced_idx")
+      .on(t.systemId)
+      .where(sql`synced_at IS NULL`),
   ],
 );
 

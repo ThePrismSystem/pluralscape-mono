@@ -16,6 +16,8 @@ import {
 } from "../schema/sqlite/structure.js";
 import { webhookDeliveries } from "../schema/sqlite/webhooks.js";
 
+import { mapCrossLinkRow } from "./mappers.js";
+
 import type {
   ActiveApiKey,
   ActiveDeviceToken,
@@ -79,7 +81,7 @@ export function getActiveApiKeys(db: BetterSQLite3Database, accountId: string): 
     .all();
 }
 
-/** Get pending friend requests. */
+/** Get pending friend requests (received by this system). */
 export function getPendingFriendRequests(
   db: BetterSQLite3Database,
   systemId: string,
@@ -92,23 +94,26 @@ export function getPendingFriendRequests(
       createdAt: friendConnections.createdAt,
     })
     .from(friendConnections)
-    .where(and(eq(friendConnections.systemId, systemId), eq(friendConnections.status, "pending")))
+    .where(
+      and(eq(friendConnections.friendSystemId, systemId), eq(friendConnections.status, "pending")),
+    )
     .all();
 }
 
-/** Get webhook deliveries pending retry (status = 'failed', under max attempts). */
+/** Get webhook deliveries pending retry (status = 'failed', under max attempts, due for retry). */
 export function getPendingWebhookRetries(
   db: BetterSQLite3Database,
   systemId: string,
   maxAttempts: number,
 ): PendingWebhookRetry[] {
+  const now = Date.now();
   return db
     .select({
       id: webhookDeliveries.id,
       webhookId: webhookDeliveries.webhookId,
       systemId: webhookDeliveries.systemId,
       eventType: webhookDeliveries.eventType,
-      status: webhookDeliveries.status,
+      status: sql<"failed">`${webhookDeliveries.status}`,
       attemptCount: webhookDeliveries.attemptCount,
       nextRetryAt: webhookDeliveries.nextRetryAt,
     })
@@ -118,6 +123,7 @@ export function getPendingWebhookRetries(
         eq(webhookDeliveries.systemId, systemId),
         eq(webhookDeliveries.status, "failed"),
         sql`${webhookDeliveries.attemptCount} < ${maxAttempts}`,
+        sql`${webhookDeliveries.nextRetryAt} <= ${now}`,
       ),
     )
     .all();
@@ -261,12 +267,5 @@ export function getStructureCrossLinks(
     FROM ${sideSystemLayerLinks}
     WHERE system_id = ${systemId}
   `);
-  return rows.map((r) => ({
-    id: r.id,
-    systemId: r.system_id,
-    linkType: r.link_type as StructureCrossLink["linkType"],
-    sourceId: r.source_id,
-    targetId: r.target_id,
-    createdAt: r.created_at,
-  }));
+  return rows.map(mapCrossLinkRow);
 }

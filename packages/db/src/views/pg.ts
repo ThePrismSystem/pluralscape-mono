@@ -22,6 +22,8 @@ import {
 } from "../schema/pg/structure.js";
 import { webhookDeliveries } from "../schema/pg/webhooks.js";
 
+import { mapCrossLinkRow } from "./mappers.js";
+
 import type {
   ActiveApiKey,
   ActiveDeviceToken,
@@ -36,9 +38,9 @@ import type {
   StructureCrossLink,
   UnconfirmedAcknowledgement,
 } from "./types.js";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
-type PgDb = PgliteDatabase;
+type PgDb = PgDatabase<PgQueryResultHKT>;
 
 /** Get currently fronting members (end_time IS NULL). */
 export async function getCurrentFronters(db: PgDb, systemId: string): Promise<CurrentFronter[]> {
@@ -62,7 +64,7 @@ export async function getCurrentFrontersWithDuration(
       id: frontingSessions.id,
       systemId: frontingSessions.systemId,
       startTime: frontingSessions.startTime,
-      durationMs: sql<number>`(EXTRACT(EPOCH FROM (NOW() - ${frontingSessions.startTime})) * 1000)::int`,
+      durationMs: sql<number>`(EXTRACT(EPOCH FROM (NOW() - ${frontingSessions.startTime})) * 1000)::bigint`,
     })
     .from(frontingSessions)
     .where(and(eq(frontingSessions.systemId, systemId), isNull(frontingSessions.endTime)));
@@ -84,7 +86,7 @@ export async function getActiveApiKeys(db: PgDb, accountId: string): Promise<Act
     .where(and(eq(apiKeys.accountId, accountId), isNull(apiKeys.revokedAt)));
 }
 
-/** Get pending friend requests. */
+/** Get pending friend requests (received by this system). */
 export async function getPendingFriendRequests(
   db: PgDb,
   systemId: string,
@@ -97,10 +99,12 @@ export async function getPendingFriendRequests(
       createdAt: friendConnections.createdAt,
     })
     .from(friendConnections)
-    .where(and(eq(friendConnections.systemId, systemId), eq(friendConnections.status, "pending")));
+    .where(
+      and(eq(friendConnections.friendSystemId, systemId), eq(friendConnections.status, "pending")),
+    );
 }
 
-/** Get webhook deliveries pending retry (status = 'failed', under max attempts). */
+/** Get webhook deliveries pending retry (status = 'failed', under max attempts, due for retry). */
 export async function getPendingWebhookRetries(
   db: PgDb,
   systemId: string,
@@ -112,7 +116,7 @@ export async function getPendingWebhookRetries(
       webhookId: webhookDeliveries.webhookId,
       systemId: webhookDeliveries.systemId,
       eventType: webhookDeliveries.eventType,
-      status: webhookDeliveries.status,
+      status: sql<"failed">`${webhookDeliveries.status}`,
       attemptCount: webhookDeliveries.attemptCount,
       nextRetryAt: webhookDeliveries.nextRetryAt,
     })
@@ -122,6 +126,7 @@ export async function getPendingWebhookRetries(
         eq(webhookDeliveries.systemId, systemId),
         eq(webhookDeliveries.status, "failed"),
         sql`${webhookDeliveries.attemptCount} < ${maxAttempts}`,
+        sql`${webhookDeliveries.nextRetryAt} <= NOW()`,
       ),
     );
 }
@@ -227,7 +232,7 @@ export async function getActiveDeviceTransfers(
       and(
         eq(deviceTransferRequests.accountId, accountId),
         eq(deviceTransferRequests.status, "pending"),
-        sql`${deviceTransferRequests.expiresAt} > ${sql`now()`}`,
+        sql`${deviceTransferRequests.expiresAt} > NOW()`,
       ),
     );
 }
@@ -237,14 +242,15 @@ export async function getStructureCrossLinks(
   db: PgDb,
   systemId: string,
 ): Promise<StructureCrossLink[]> {
-  const rows = await db.execute<{
+  interface PgCrossLinkRow {
     id: string;
     system_id: string;
     link_type: string;
     source_id: string;
     target_id: string;
-    created_at: number;
-  }>(sql`
+    created_at: string;
+  }
+  const result: { rows: PgCrossLinkRow[] } = (await db.execute(sql`
     SELECT id, system_id, 'subsystem-layer' as link_type, subsystem_id as source_id, layer_id as target_id, created_at
     FROM ${subsystemLayerLinks}
     WHERE system_id = ${systemId}
@@ -256,13 +262,7 @@ export async function getStructureCrossLinks(
     SELECT id, system_id, 'side-system-layer' as link_type, side_system_id as source_id, layer_id as target_id, created_at
     FROM ${sideSystemLayerLinks}
     WHERE system_id = ${systemId}
-  `);
-  return rows.rows.map((r) => ({
-    id: r.id,
-    systemId: r.system_id,
-    linkType: r.link_type as StructureCrossLink["linkType"],
-    sourceId: r.source_id,
-    targetId: r.target_id,
-    createdAt: r.created_at,
-  }));
+  `)) as { rows: PgCrossLinkRow[] };
+  const { rows } = result;
+  return rows.map(mapCrossLinkRow);
 }

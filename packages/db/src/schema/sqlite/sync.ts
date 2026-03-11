@@ -1,6 +1,8 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
+import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
@@ -43,7 +45,10 @@ export const syncQueue = sqliteTable(
     createdAt: sqliteTimestamp("created_at").notNull(),
     syncedAt: sqliteTimestamp("synced_at"),
   },
-  (t) => [index("sync_queue_system_id_synced_at_idx").on(t.systemId, t.syncedAt)],
+  (t) => [
+    index("sync_queue_system_id_synced_at_idx").on(t.systemId, t.syncedAt),
+    check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
+  ],
 );
 
 export const syncConflicts = sqliteTable(
@@ -68,5 +73,6 @@ export const syncConflicts = sqliteTable(
       t.entityType,
       t.entityId,
     ),
+    check("sync_conflicts_resolution_check", enumCheck(t.resolution, SYNC_RESOLUTIONS)),
   ],
 );

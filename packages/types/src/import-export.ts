@@ -1,4 +1,5 @@
 import type {
+  AccountId,
   AccountPurgeRequestId,
   BlobId,
   BucketId,
@@ -268,6 +269,7 @@ export interface ExportManifest extends DownloadableReport {
 /** An export request tracking record. */
 export interface ExportRequest {
   readonly id: ExportRequestId;
+  readonly accountId: AccountId;
   readonly systemId: SystemId;
   readonly format: ExportFormat;
   readonly status: ExportRequestStatus;

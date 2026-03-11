@@ -73,6 +73,29 @@ export interface SearchOptions {
   readonly limit?: number;
 }
 
+interface RawSearchRow {
+  entity_type: string;
+  entity_id: string;
+  title: string;
+  content: string;
+  rank: number;
+}
+
+function mapSearchRow(r: RawSearchRow): SearchIndexResult {
+  return {
+    entityType: r.entity_type as SearchableEntityType,
+    entityId: r.entity_id,
+    title: r.title,
+    content: r.content,
+    rank: r.rank,
+  };
+}
+
+/** Sanitize a query string for FTS5 MATCH by wrapping in double quotes (phrase query). */
+function sanitizeFts5Query(query: string): string {
+  return '"' + query.replace(/"/g, '""') + '"';
+}
+
 /** Search the index using FTS5 MATCH, returning ranked results. */
 export function searchEntries(
   db: BetterSQLite3Database,
@@ -80,40 +103,12 @@ export function searchEntries(
   opts?: SearchOptions,
 ): SearchIndexResult[] {
   const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
+  const safeQuery = sanitizeFts5Query(query);
 
-  if (opts?.entityType) {
-    const results = db.all<{
-      entity_type: string;
-      entity_id: string;
-      title: string;
-      content: string;
-      rank: number;
-    }>(
-      sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${query} AND entity_type = ${opts.entityType} ORDER BY rank LIMIT ${limit}`,
-    );
-    return results.map((r) => ({
-      entityType: r.entity_type as SearchableEntityType,
-      entityId: r.entity_id,
-      title: r.title,
-      content: r.content,
-      rank: r.rank,
-    }));
-  }
+  const typeFilter = opts?.entityType ? sql` AND entity_type = ${opts.entityType}` : sql``;
 
-  const results = db.all<{
-    entity_type: string;
-    entity_id: string;
-    title: string;
-    content: string;
-    rank: number;
-  }>(
-    sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${query} ORDER BY rank LIMIT ${limit}`,
+  const results = db.all<RawSearchRow>(
+    sql`SELECT entity_type, entity_id, title, content, rank FROM search_index WHERE search_index MATCH ${safeQuery}${typeFilter} ORDER BY rank LIMIT ${limit}`,
   );
-  return results.map((r) => ({
-    entityType: r.entity_type as SearchableEntityType,
-    entityId: r.entity_id,
-    title: r.title,
-    content: r.content,
-    rank: r.rank,
-  }));
+  return results.map(mapSearchRow);
 }

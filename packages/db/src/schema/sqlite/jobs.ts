@@ -1,8 +1,8 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
-import { JOB_STATUSES } from "../../helpers/enums.js";
+import { JOB_STATUSES, JOB_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
@@ -31,8 +31,7 @@ export const jobs = sqliteTable(
     index("jobs_status_next_retry_at_idx").on(t.status, t.nextRetryAt),
     index("jobs_type_idx").on(t.type),
     uniqueIndex("jobs_idempotency_key_idx").on(t.idempotencyKey),
+    check("jobs_status_check", enumCheck(t.status, [...JOB_STATUSES])),
+    check("jobs_type_check", enumCheck(t.type, [...JOB_TYPES])),
   ],
 );
-
-/** CHECK constraint SQL for job status values. */
-export const jobStatusCheck = enumCheck(jobs.status, [...JOB_STATUSES]);

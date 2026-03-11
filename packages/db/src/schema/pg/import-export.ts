@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, integer, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -106,5 +106,8 @@ export const accountPurgeRequests = pgTable(
   (t) => [
     index("account_purge_requests_account_id_idx").on(t.accountId),
     check("account_purge_requests_status_check", enumCheck(t.status, ACCOUNT_PURGE_STATUSES)),
+    uniqueIndex("account_purge_requests_pending_unique_idx")
+      .on(t.accountId)
+      .where(sql`status = 'pending'`),
   ],
 );
