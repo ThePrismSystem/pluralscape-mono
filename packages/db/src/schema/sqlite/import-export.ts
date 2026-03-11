@@ -53,7 +53,10 @@ export const importJobs = sqliteTable(
       "import_jobs_progress_percent_check",
       sql`${t.progressPercent} >= 0 AND ${t.progressPercent} <= 100`,
     ),
-    check("import_jobs_chunks_check", sql`${t.chunksCompleted} <= ${t.chunksTotal}`),
+    check(
+      "import_jobs_chunks_check",
+      sql`${t.chunksTotal} IS NULL OR ${t.chunksCompleted} <= ${t.chunksTotal}`,
+    ),
   ],
 );
 

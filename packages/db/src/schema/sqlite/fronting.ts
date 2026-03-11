@@ -35,8 +35,8 @@ export const frontingSessions = sqliteTable(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
-    unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
+    unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
   ],
 );
 
@@ -51,7 +51,10 @@ export const switches = sqliteTable(
     memberIds: sqliteJson("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
-  (t) => [index("switches_system_timestamp_idx").on(t.systemId, t.timestamp)],
+  (t) => [
+    index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
+    check("switches_member_ids_check", sql`json_array_length(${t.memberIds}) >= 1`),
+  ],
 );
 
 export const customFronts = sqliteTable(

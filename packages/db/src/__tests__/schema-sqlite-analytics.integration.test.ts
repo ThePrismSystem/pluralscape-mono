@@ -152,6 +152,79 @@ describe("SQLite analytics schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("rejects nonexistent systemId FK", () => {
+      const now = Date.now();
+      expect(() =>
+        db
+          .insert(frontingReports)
+          .values({
+            id: crypto.randomUUID(),
+            systemId: "nonexistent",
+            dateRange: { start: now - 86400000, end: now },
+            memberBreakdowns: [],
+            chartData: [],
+            format: "html",
+            generatedAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("rejects duplicate primary key", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const values = {
+        id,
+        systemId,
+        dateRange: { start: now - 86400000, end: now },
+        memberBreakdowns: [],
+        chartData: [],
+        format: "html" as const,
+        generatedAt: now,
+      };
+
+      db.insert(frontingReports).values(values).run();
+      expect(() => db.insert(frontingReports).values(values).run()).toThrow();
+    });
+
+    it("queries multiple reports by systemId", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      db.insert(frontingReports)
+        .values([
+          {
+            id: crypto.randomUUID(),
+            systemId,
+            dateRange: { start: now - 86400000, end: now },
+            memberBreakdowns: [],
+            chartData: [],
+            format: "html",
+            generatedAt: now,
+          },
+          {
+            id: crypto.randomUUID(),
+            systemId,
+            dateRange: { start: now - 172800000, end: now - 86400000 },
+            memberBreakdowns: [],
+            chartData: [],
+            format: "pdf",
+            generatedAt: now,
+          },
+        ])
+        .run();
+
+      const rows = db
+        .select()
+        .from(frontingReports)
+        .where(eq(frontingReports.systemId, systemId))
+        .all();
+      expect(rows).toHaveLength(2);
+    });
+
     it("round-trips complex chart data with multiple datasets", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);

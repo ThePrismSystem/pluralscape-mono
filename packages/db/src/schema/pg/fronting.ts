@@ -52,7 +52,10 @@ export const switches = pgTable(
     memberIds: jsonb("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
-  (t) => [index("switches_system_timestamp_idx").on(t.systemId, t.timestamp)],
+  (t) => [
+    index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
+    check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
+  ],
 );
 
 export const customFronts = pgTable(

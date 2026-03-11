@@ -31,6 +31,7 @@ const TABLE_PAIRS: Array<{
   pgTable: Record<string, { name: string }>;
   sqliteTable: Record<string, { name: string }>;
 }> = [
+  // Auth
   {
     name: "accounts",
     pgTable: getTableColumns(pg.accounts),
@@ -56,6 +57,12 @@ const TABLE_PAIRS: Array<{
     pgTable: getTableColumns(pg.deviceTransferRequests),
     sqliteTable: getTableColumns(sqlite.deviceTransferRequests),
   },
+  // Systems & Members
+  {
+    name: "systems",
+    pgTable: getTableColumns(pg.systems),
+    sqliteTable: getTableColumns(sqlite.systems),
+  },
   {
     name: "members",
     pgTable: getTableColumns(pg.members),
@@ -66,6 +73,7 @@ const TABLE_PAIRS: Array<{
     pgTable: getTableColumns(pg.memberPhotos),
     sqliteTable: getTableColumns(sqlite.memberPhotos),
   },
+  // Fronting
   {
     name: "frontingSessions",
     pgTable: getTableColumns(pg.frontingSessions),
@@ -86,11 +94,13 @@ const TABLE_PAIRS: Array<{
     pgTable: getTableColumns(pg.frontingComments),
     sqliteTable: getTableColumns(sqlite.frontingComments),
   },
+  // Analytics
   {
     name: "frontingReports",
     pgTable: getTableColumns(pg.frontingReports),
     sqliteTable: getTableColumns(sqlite.frontingReports),
   },
+  // Privacy
   {
     name: "buckets",
     pgTable: getTableColumns(pg.buckets),
@@ -121,11 +131,224 @@ const TABLE_PAIRS: Array<{
     pgTable: getTableColumns(pg.friendBucketAssignments),
     sqliteTable: getTableColumns(sqlite.friendBucketAssignments),
   },
+  // Config & Settings
   {
     name: "systemSettings",
     pgTable: getTableColumns(pg.systemSettings),
     sqliteTable: getTableColumns(sqlite.systemSettings),
   },
+  {
+    name: "nomenclatureSettings",
+    pgTable: getTableColumns(pg.nomenclatureSettings),
+    sqliteTable: getTableColumns(sqlite.nomenclatureSettings),
+  },
+  // API Keys
+  {
+    name: "apiKeys",
+    pgTable: getTableColumns(pg.apiKeys),
+    sqliteTable: getTableColumns(sqlite.apiKeys),
+  },
+  // Audit & Lifecycle
+  {
+    name: "auditLog",
+    pgTable: getTableColumns(pg.auditLog),
+    sqliteTable: getTableColumns(sqlite.auditLog),
+  },
+  {
+    name: "lifecycleEvents",
+    pgTable: getTableColumns(pg.lifecycleEvents),
+    sqliteTable: getTableColumns(sqlite.lifecycleEvents),
+  },
+  // Communication
+  {
+    name: "channels",
+    pgTable: getTableColumns(pg.channels),
+    sqliteTable: getTableColumns(sqlite.channels),
+  },
+  {
+    name: "messages",
+    pgTable: getTableColumns(pg.messages),
+    sqliteTable: getTableColumns(sqlite.messages),
+  },
+  {
+    name: "boardMessages",
+    pgTable: getTableColumns(pg.boardMessages),
+    sqliteTable: getTableColumns(sqlite.boardMessages),
+  },
+  { name: "notes", pgTable: getTableColumns(pg.notes), sqliteTable: getTableColumns(sqlite.notes) },
+  { name: "polls", pgTable: getTableColumns(pg.polls), sqliteTable: getTableColumns(sqlite.polls) },
+  {
+    name: "pollVotes",
+    pgTable: getTableColumns(pg.pollVotes),
+    sqliteTable: getTableColumns(sqlite.pollVotes),
+  },
+  {
+    name: "acknowledgements",
+    pgTable: getTableColumns(pg.acknowledgements),
+    sqliteTable: getTableColumns(sqlite.acknowledgements),
+  },
+  // Custom Fields
+  {
+    name: "fieldDefinitions",
+    pgTable: getTableColumns(pg.fieldDefinitions),
+    sqliteTable: getTableColumns(sqlite.fieldDefinitions),
+  },
+  {
+    name: "fieldValues",
+    pgTable: getTableColumns(pg.fieldValues),
+    sqliteTable: getTableColumns(sqlite.fieldValues),
+  },
+  {
+    name: "fieldBucketVisibility",
+    pgTable: getTableColumns(pg.fieldBucketVisibility),
+    sqliteTable: getTableColumns(sqlite.fieldBucketVisibility),
+  },
+  // Groups
+  {
+    name: "groups",
+    pgTable: getTableColumns(pg.groups),
+    sqliteTable: getTableColumns(sqlite.groups),
+  },
+  {
+    name: "groupMemberships",
+    pgTable: getTableColumns(pg.groupMemberships),
+    sqliteTable: getTableColumns(sqlite.groupMemberships),
+  },
+  // Innerworld
+  {
+    name: "innerworldCanvas",
+    pgTable: getTableColumns(pg.innerworldCanvas),
+    sqliteTable: getTableColumns(sqlite.innerworldCanvas),
+  },
+  {
+    name: "innerworldEntities",
+    pgTable: getTableColumns(pg.innerworldEntities),
+    sqliteTable: getTableColumns(sqlite.innerworldEntities),
+  },
+  {
+    name: "innerworldRegions",
+    pgTable: getTableColumns(pg.innerworldRegions),
+    sqliteTable: getTableColumns(sqlite.innerworldRegions),
+  },
+  // Journal
+  {
+    name: "journalEntries",
+    pgTable: getTableColumns(pg.journalEntries),
+    sqliteTable: getTableColumns(sqlite.journalEntries),
+  },
+  {
+    name: "wikiPages",
+    pgTable: getTableColumns(pg.wikiPages),
+    sqliteTable: getTableColumns(sqlite.wikiPages),
+  },
+  // Notifications
+  {
+    name: "deviceTokens",
+    pgTable: getTableColumns(pg.deviceTokens),
+    sqliteTable: getTableColumns(sqlite.deviceTokens),
+  },
+  {
+    name: "friendNotificationPreferences",
+    pgTable: getTableColumns(pg.friendNotificationPreferences),
+    sqliteTable: getTableColumns(sqlite.friendNotificationPreferences),
+  },
+  {
+    name: "notificationConfigs",
+    pgTable: getTableColumns(pg.notificationConfigs),
+    sqliteTable: getTableColumns(sqlite.notificationConfigs),
+  },
+  // PK Bridge
+  {
+    name: "pkBridgeState",
+    pgTable: getTableColumns(pg.pkBridgeState),
+    sqliteTable: getTableColumns(sqlite.pkBridgeState),
+  },
+  // Safe Mode
+  {
+    name: "safeModeContent",
+    pgTable: getTableColumns(pg.safeModeContent),
+    sqliteTable: getTableColumns(sqlite.safeModeContent),
+  },
+  // Structure
+  {
+    name: "relationships",
+    pgTable: getTableColumns(pg.relationships),
+    sqliteTable: getTableColumns(sqlite.relationships),
+  },
+  {
+    name: "subsystems",
+    pgTable: getTableColumns(pg.subsystems),
+    sqliteTable: getTableColumns(sqlite.subsystems),
+  },
+  {
+    name: "subsystemMemberships",
+    pgTable: getTableColumns(pg.subsystemMemberships),
+    sqliteTable: getTableColumns(sqlite.subsystemMemberships),
+  },
+  {
+    name: "subsystemLayerLinks",
+    pgTable: getTableColumns(pg.subsystemLayerLinks),
+    sqliteTable: getTableColumns(sqlite.subsystemLayerLinks),
+  },
+  {
+    name: "subsystemSideSystemLinks",
+    pgTable: getTableColumns(pg.subsystemSideSystemLinks),
+    sqliteTable: getTableColumns(sqlite.subsystemSideSystemLinks),
+  },
+  {
+    name: "sideSystems",
+    pgTable: getTableColumns(pg.sideSystems),
+    sqliteTable: getTableColumns(sqlite.sideSystems),
+  },
+  {
+    name: "sideSystemMemberships",
+    pgTable: getTableColumns(pg.sideSystemMemberships),
+    sqliteTable: getTableColumns(sqlite.sideSystemMemberships),
+  },
+  {
+    name: "sideSystemLayerLinks",
+    pgTable: getTableColumns(pg.sideSystemLayerLinks),
+    sqliteTable: getTableColumns(sqlite.sideSystemLayerLinks),
+  },
+  {
+    name: "layers",
+    pgTable: getTableColumns(pg.layers),
+    sqliteTable: getTableColumns(sqlite.layers),
+  },
+  {
+    name: "layerMemberships",
+    pgTable: getTableColumns(pg.layerMemberships),
+    sqliteTable: getTableColumns(sqlite.layerMemberships),
+  },
+  // Blob Metadata
+  {
+    name: "blobMetadata",
+    pgTable: getTableColumns(pg.blobMetadata),
+    sqliteTable: getTableColumns(sqlite.blobMetadata),
+  },
+  // Timers
+  {
+    name: "timerConfigs",
+    pgTable: getTableColumns(pg.timerConfigs),
+    sqliteTable: getTableColumns(sqlite.timerConfigs),
+  },
+  {
+    name: "checkInRecords",
+    pgTable: getTableColumns(pg.checkInRecords),
+    sqliteTable: getTableColumns(sqlite.checkInRecords),
+  },
+  // Webhooks
+  {
+    name: "webhookConfigs",
+    pgTable: getTableColumns(pg.webhookConfigs),
+    sqliteTable: getTableColumns(sqlite.webhookConfigs),
+  },
+  {
+    name: "webhookDeliveries",
+    pgTable: getTableColumns(pg.webhookDeliveries),
+    sqliteTable: getTableColumns(sqlite.webhookDeliveries),
+  },
+  // Import/Export
   {
     name: "importJobs",
     pgTable: getTableColumns(pg.importJobs),
@@ -140,6 +363,33 @@ const TABLE_PAIRS: Array<{
     name: "accountPurgeRequests",
     pgTable: getTableColumns(pg.accountPurgeRequests),
     sqliteTable: getTableColumns(sqlite.accountPurgeRequests),
+  },
+  // Sync
+  {
+    name: "syncDocuments",
+    pgTable: getTableColumns(pg.syncDocuments),
+    sqliteTable: getTableColumns(sqlite.syncDocuments),
+  },
+  {
+    name: "syncQueue",
+    pgTable: getTableColumns(pg.syncQueue),
+    sqliteTable: getTableColumns(sqlite.syncQueue),
+  },
+  {
+    name: "syncConflicts",
+    pgTable: getTableColumns(pg.syncConflicts),
+    sqliteTable: getTableColumns(sqlite.syncConflicts),
+  },
+  // Key Rotation
+  {
+    name: "bucketKeyRotations",
+    pgTable: getTableColumns(pg.bucketKeyRotations),
+    sqliteTable: getTableColumns(sqlite.bucketKeyRotations),
+  },
+  {
+    name: "bucketRotationItems",
+    pgTable: getTableColumns(pg.bucketRotationItems),
+    sqliteTable: getTableColumns(sqlite.bucketRotationItems),
   },
 ];
 

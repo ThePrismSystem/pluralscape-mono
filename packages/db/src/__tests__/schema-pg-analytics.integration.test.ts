@@ -138,6 +138,73 @@ describe("PG analytics schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("rejects nonexistent systemId FK", async () => {
+      const now = Date.now();
+      await expect(
+        db.insert(frontingReports).values({
+          id: crypto.randomUUID(),
+          systemId: "nonexistent",
+          dateRange: { start: now - 86400000, end: now },
+          memberBreakdowns: [],
+          chartData: [],
+          format: "html",
+          generatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects duplicate primary key", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const values = {
+        id,
+        systemId,
+        dateRange: { start: now - 86400000, end: now },
+        memberBreakdowns: [],
+        chartData: [],
+        format: "html" as const,
+        generatedAt: now,
+      };
+
+      await db.insert(frontingReports).values(values);
+      await expect(db.insert(frontingReports).values(values)).rejects.toThrow();
+    });
+
+    it("queries multiple reports by systemId", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await db.insert(frontingReports).values([
+        {
+          id: crypto.randomUUID(),
+          systemId,
+          dateRange: { start: now - 86400000, end: now },
+          memberBreakdowns: [],
+          chartData: [],
+          format: "html",
+          generatedAt: now,
+        },
+        {
+          id: crypto.randomUUID(),
+          systemId,
+          dateRange: { start: now - 172800000, end: now - 86400000 },
+          memberBreakdowns: [],
+          chartData: [],
+          format: "pdf",
+          generatedAt: now,
+        },
+      ]);
+
+      const rows = await db
+        .select()
+        .from(frontingReports)
+        .where(eq(frontingReports.systemId, systemId));
+      expect(rows).toHaveLength(2);
+    });
+
     it("round-trips complex chart data with multiple datasets", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);

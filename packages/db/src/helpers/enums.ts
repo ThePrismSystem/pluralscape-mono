@@ -42,6 +42,7 @@ import type {
   SyncOperation,
   SyncResolution,
   WebhookDeliveryStatus,
+  ReportFormat,
   WebhookEventType,
 } from "@pluralscape/types";
 
@@ -381,4 +382,4 @@ export const ENTITY_TYPES = [
   "bucket-key-rotation",
   "bucket-rotation-item",
 ] as const satisfies readonly EntityType[];
-export const FRONTING_REPORT_FORMATS = ["html", "pdf"] as const;
+export const FRONTING_REPORT_FORMATS = ["html", "pdf"] as const satisfies readonly ReportFormat[];

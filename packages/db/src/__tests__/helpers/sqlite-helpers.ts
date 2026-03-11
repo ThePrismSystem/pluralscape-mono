@@ -253,7 +253,7 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       timestamp INTEGER NOT NULL,
-      member_ids TEXT NOT NULL,
+      member_ids TEXT NOT NULL CHECK (json_array_length(member_ids) >= 1),
       created_at INTEGER NOT NULL
     )
   `,
@@ -1027,7 +1027,7 @@ export const SQLITE_DDL = {
       error_log TEXT,
       warning_count INTEGER NOT NULL DEFAULT 0,
       chunks_total INTEGER,
-      chunks_completed INTEGER NOT NULL DEFAULT 0 CHECK (chunks_completed <= chunks_total),
+      chunks_completed INTEGER NOT NULL DEFAULT 0 CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total),
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       completed_at INTEGER
