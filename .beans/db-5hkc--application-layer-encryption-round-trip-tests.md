@@ -5,8 +5,8 @@ status: todo
 type: task
 priority: high
 created_at: 2026-03-11T08:09:02Z
-updated_at: 2026-03-11T08:09:02Z
-parent: db-2je4
+updated_at: 2026-03-11T19:39:42Z
+parent: db-bbzk
 ---
 
 DB integration tests use testBlob() (fake EncryptedBlob) to test schema round-trips. This verifies DB storage but cannot verify that fields survive a real encrypt/decrypt cycle. Need integration tests that exercise the actual crypto helpers to ensure T1 fields are correctly packed into and unpacked from encryptedData.
