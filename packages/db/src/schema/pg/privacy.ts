@@ -4,11 +4,11 @@ import { check, index, integer, pgTable, primaryKey, unique, varchar } from "dri
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { BUCKET_VISIBILITY_SCOPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
+import { ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { BucketVisibilityScope, FriendConnectionStatus } from "@pluralscape/types";
+import type { EntityType, FriendConnectionStatus } from "@pluralscape/types";
 
 export const buckets = pgTable(
   "buckets",
@@ -30,7 +30,7 @@ export const buckets = pgTable(
 export const bucketContentTags = pgTable(
   "bucket_content_tags",
   {
-    entityType: varchar("entity_type", { length: 255 }).notNull().$type<BucketVisibilityScope>(),
+    entityType: varchar("entity_type", { length: 255 }).notNull().$type<EntityType>(),
     entityId: varchar("entity_id", { length: 255 }).notNull(),
     bucketId: varchar("bucket_id", { length: 255 })
       .notNull()
@@ -40,10 +40,7 @@ export const bucketContentTags = pgTable(
     primaryKey({ columns: [t.entityType, t.entityId, t.bucketId] }),
     index("bucket_content_tags_entity_idx").on(t.entityType, t.entityId),
     index("bucket_content_tags_bucket_id_idx").on(t.bucketId),
-    check(
-      "bucket_content_tags_entity_type_check",
-      enumCheck(t.entityType, BUCKET_VISIBILITY_SCOPES),
-    ),
+    check("bucket_content_tags_entity_type_check", enumCheck(t.entityType, ENTITY_TYPES)),
   ],
 );
 

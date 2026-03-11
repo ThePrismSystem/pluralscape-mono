@@ -211,12 +211,12 @@ export function getCurrentFrontingComments(
   return db
     .select({
       commentId: frontingComments.id,
-      sessionId: frontingComments.sessionId,
+      frontingSessionId: frontingComments.frontingSessionId,
       systemId: frontingComments.systemId,
       commentCreatedAt: frontingComments.createdAt,
     })
     .from(frontingComments)
-    .innerJoin(frontingSessions, eq(frontingComments.sessionId, frontingSessions.id))
+    .innerJoin(frontingSessions, eq(frontingComments.frontingSessionId, frontingSessions.id))
     .where(and(eq(frontingComments.systemId, systemId), isNull(frontingSessions.endTime)))
     .all();
 }

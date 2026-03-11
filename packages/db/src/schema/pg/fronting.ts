@@ -49,10 +49,13 @@ export const switches = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     timestamp: pgTimestamp("timestamp").notNull(),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    memberIds: jsonb("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
-  (t) => [index("switches_system_timestamp_idx").on(t.systemId, t.timestamp)],
+  (t) => [
+    index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
+    check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
+  ],
 );
 
 export const customFronts = pgTable(
@@ -74,7 +77,7 @@ export const frontingComments = pgTable(
   "fronting_comments",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    sessionId: varchar("session_id", { length: 255 }).notNull(),
+    frontingSessionId: varchar("fronting_session_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -84,9 +87,9 @@ export const frontingComments = pgTable(
     ...versioned(),
   },
   (t) => [
-    index("fronting_comments_session_created_idx").on(t.sessionId, t.createdAt),
+    index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
     foreignKey({
-      columns: [t.sessionId, t.systemId],
+      columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
     }).onDelete("cascade"),
   ],

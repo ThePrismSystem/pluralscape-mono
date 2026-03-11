@@ -89,7 +89,7 @@ export interface ActiveDeviceToken {
 /** A fronting comment on a currently active session. */
 export interface CurrentFrontingComment {
   readonly commentId: string;
-  readonly sessionId: string;
+  readonly frontingSessionId: string;
   readonly systemId: string;
   readonly commentCreatedAt: number;
 }

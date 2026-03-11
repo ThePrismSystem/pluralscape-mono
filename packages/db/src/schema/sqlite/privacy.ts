@@ -12,11 +12,11 @@ import {
 import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
-import { BUCKET_VISIBILITY_SCOPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
+import { ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { BucketVisibilityScope, FriendConnectionStatus } from "@pluralscape/types";
+import type { EntityType, FriendConnectionStatus } from "@pluralscape/types";
 
 export const buckets = sqliteTable(
   "buckets",
@@ -38,7 +38,7 @@ export const buckets = sqliteTable(
 export const bucketContentTags = sqliteTable(
   "bucket_content_tags",
   {
-    entityType: text("entity_type").notNull().$type<BucketVisibilityScope>(),
+    entityType: text("entity_type").notNull().$type<EntityType>(),
     entityId: text("entity_id").notNull(),
     bucketId: text("bucket_id")
       .notNull()
@@ -48,10 +48,7 @@ export const bucketContentTags = sqliteTable(
     primaryKey({ columns: [t.entityType, t.entityId, t.bucketId] }),
     index("bucket_content_tags_entity_idx").on(t.entityType, t.entityId),
     index("bucket_content_tags_bucket_id_idx").on(t.bucketId),
-    check(
-      "bucket_content_tags_entity_type_check",
-      enumCheck(t.entityType, BUCKET_VISIBILITY_SCOPES),
-    ),
+    check("bucket_content_tags_entity_type_check", enumCheck(t.entityType, ENTITY_TYPES)),
   ],
 );
 

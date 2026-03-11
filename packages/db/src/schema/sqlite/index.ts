@@ -1,4 +1,5 @@
 export { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
+export { frontingReports } from "./analytics.js";
 export { apiKeys } from "./api-keys.js";
 export { auditLog } from "./audit-log.js";
 export {
@@ -66,6 +67,7 @@ export {
 export type { SearchIndexEntry, SearchIndexResult, SearchOptions } from "./search.js";
 export { jobs } from "./jobs.js";
 
+import type { frontingReports } from "./analytics.js";
 import type { apiKeys } from "./api-keys.js";
 import type { auditLog } from "./audit-log.js";
 import type { accounts, authKeys, deviceTransferRequests, recoveryKeys, sessions } from "./auth.js";
@@ -299,6 +301,10 @@ export type SyncQueueRow = InferSelectModel<typeof syncQueue>;
 export type NewSyncQueue = InferInsertModel<typeof syncQueue>;
 export type SyncConflictRow = InferSelectModel<typeof syncConflicts>;
 export type NewSyncConflict = InferInsertModel<typeof syncConflicts>;
+
+// Analytics
+export type FrontingReportRow = InferSelectModel<typeof frontingReports>;
+export type NewFrontingReport = InferInsertModel<typeof frontingReports>;
 
 // Key Rotation
 export type BucketKeyRotationRow = InferSelectModel<typeof bucketKeyRotations>;

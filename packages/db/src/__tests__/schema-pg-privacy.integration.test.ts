@@ -172,7 +172,7 @@ describe("PG privacy schema", () => {
       const entityId = crypto.randomUUID();
 
       await db.insert(bucketContentTags).values({
-        entityType: "members",
+        entityType: "member",
         entityId,
         bucketId,
       });
@@ -182,7 +182,7 @@ describe("PG privacy schema", () => {
         .from(bucketContentTags)
         .where(eq(bucketContentTags.bucketId, bucketId));
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.entityType).toBe("members");
+      expect(rows[0]?.entityType).toBe("member");
       expect(rows[0]?.entityId).toBe(entityId);
     });
 
@@ -192,7 +192,7 @@ describe("PG privacy schema", () => {
       const bucketId = await insertBucket(systemId);
 
       await db.insert(bucketContentTags).values({
-        entityType: "notes",
+        entityType: "note",
         entityId: crypto.randomUUID(),
         bucketId,
       });
@@ -224,14 +224,14 @@ describe("PG privacy schema", () => {
       const entityId = crypto.randomUUID();
 
       await db.insert(bucketContentTags).values({
-        entityType: "chat",
+        entityType: "channel",
         entityId,
         bucketId,
       });
 
       await expect(
         db.insert(bucketContentTags).values({
-          entityType: "chat",
+          entityType: "channel",
           entityId,
           bucketId,
         }),
@@ -241,7 +241,7 @@ describe("PG privacy schema", () => {
     it("rejects nonexistent bucketId FK", async () => {
       await expect(
         db.insert(bucketContentTags).values({
-          entityType: "members",
+          entityType: "member",
           entityId: crypto.randomUUID(),
           bucketId: "nonexistent",
         }),

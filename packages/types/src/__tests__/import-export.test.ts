@@ -298,7 +298,7 @@ describe("ImportJob", () => {
     expectTypeOf<ImportJob["chunksTotal"]>().toEqualTypeOf<number | null>();
     expectTypeOf<ImportJob["chunksCompleted"]>().toEqualTypeOf<number>();
     expectTypeOf<ImportJob["createdAt"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<ImportJob["updatedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<ImportJob["updatedAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<ImportJob["completedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });
 });

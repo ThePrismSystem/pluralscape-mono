@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
-import type { AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
+import type { AuthKeyType, DeviceInfo, DeviceTransferStatus } from "@pluralscape/types";
 
 export const accounts = pgTable(
   "accounts",
@@ -47,7 +47,7 @@ export const sessions = pgTable(
     accountId: varchar("account_id", { length: 255 })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    deviceInfo: varchar("device_info", { length: 255 }),
+    deviceInfo: jsonb("device_info").$type<DeviceInfo | null>(),
     createdAt: pgTimestamp("created_at").notNull(),
     lastActive: pgTimestamp("last_active"),
     revoked: boolean("revoked").notNull().default(false),

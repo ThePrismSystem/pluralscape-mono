@@ -43,6 +43,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId,
         locale: "en-US",
         pinHash: "$argon2id$test-hash",
@@ -75,6 +76,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -98,6 +100,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -121,6 +124,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -143,6 +147,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -154,6 +159,7 @@ describe("SQLite system_settings schema", () => {
       db
         .insert(systemSettings)
         .values({
+          id: `sset_${crypto.randomUUID()}`,
           systemId,
           encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
@@ -170,6 +176,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -192,6 +199,7 @@ describe("SQLite system_settings schema", () => {
       db
         .insert(systemSettings)
         .values({
+          id: `sset_${crypto.randomUUID()}`,
           systemId: "nonexistent",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -211,6 +219,7 @@ describe("SQLite system_settings schema", () => {
 
     db.insert(systemSettings)
       .values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId,
         encryptedData: blob,
         createdAt: now,

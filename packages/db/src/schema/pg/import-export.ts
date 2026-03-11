@@ -44,7 +44,7 @@ export const importJobs = pgTable(
     chunksTotal: integer("chunks_total"),
     chunksCompleted: integer("chunks_completed").notNull().default(0),
     createdAt: pgTimestamp("created_at").notNull(),
-    updatedAt: pgTimestamp("updated_at"),
+    updatedAt: pgTimestamp("updated_at").notNull(),
     completedAt: pgTimestamp("completed_at"),
   },
   (t) => [
@@ -83,7 +83,7 @@ export const exportRequests = pgTable(
       onDelete: "set null",
     }),
     createdAt: pgTimestamp("created_at").notNull(),
-    updatedAt: pgTimestamp("updated_at"),
+    updatedAt: pgTimestamp("updated_at").notNull(),
     completedAt: pgTimestamp("completed_at"),
   },
   (t) => [

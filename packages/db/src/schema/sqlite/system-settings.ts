@@ -6,8 +6,10 @@ import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { systems } from "./systems.js";
 
 export const systemSettings = sqliteTable("system_settings", {
+  id: text("id").primaryKey(),
   systemId: text("system_id")
-    .primaryKey()
+    .notNull()
+    .unique()
     .references(() => systems.id, { onDelete: "cascade" }),
   locale: text("locale"),
   pinHash: text("pin_hash"),

@@ -41,6 +41,7 @@ describe("PG system_settings schema", () => {
     const data = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(systemSettings).values({
+      id: `sset_${crypto.randomUUID()}`,
       systemId,
       locale: "en-US",
       pinHash: "$argon2id$hash123",
@@ -70,6 +71,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
+      id: `sset_${crypto.randomUUID()}`,
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -90,6 +92,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
+      id: `sset_${crypto.randomUUID()}`,
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -110,6 +113,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
+      id: `sset_${crypto.randomUUID()}`,
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -129,6 +133,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
+      id: `sset_${crypto.randomUUID()}`,
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -137,6 +142,7 @@ describe("PG system_settings schema", () => {
 
     await expect(
       db.insert(systemSettings).values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId,
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
@@ -151,6 +157,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
 
     await db.insert(systemSettings).values({
+      id: `sset_${crypto.randomUUID()}`,
       systemId,
       encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
@@ -169,6 +176,7 @@ describe("PG system_settings schema", () => {
     const now = Date.now();
     await expect(
       db.insert(systemSettings).values({
+        id: `sset_${crypto.randomUUID()}`,
         systemId: "nonexistent",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -198,6 +206,7 @@ describe("PG system_settings schema", () => {
     const blob = testBlob(blobCiphertext);
 
     await db.insert(systemSettings).values({
+      id: `sset_${crypto.randomUUID()}`,
       systemId,
       encryptedData: blob,
       createdAt: now,

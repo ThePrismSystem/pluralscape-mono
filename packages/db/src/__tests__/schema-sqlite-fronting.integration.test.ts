@@ -316,26 +316,26 @@ describe("SQLite fronting schema", () => {
   });
 
   describe("switches", () => {
-    it("inserts with encrypted_data and round-trips binary", () => {
+    it("inserts with memberIds and round-trips the array", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
+      const memberIds = ["mem_test1", "mem_test2"] as const;
 
       db.insert(switches)
         .values({
           id,
           systemId,
           timestamp: now,
-          encryptedData: data,
+          memberIds,
           createdAt: now,
         })
         .run();
 
       const rows = db.select().from(switches).where(eq(switches.id, id)).all();
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.encryptedData).toEqual(data);
+      expect(rows[0]?.memberIds).toEqual(memberIds);
       expect(rows[0]?.systemId).toBe(systemId);
       expect(rows[0]?.timestamp).toBe(now);
     });
@@ -351,7 +351,7 @@ describe("SQLite fronting schema", () => {
           id,
           systemId,
           timestamp: now,
-          encryptedData: testBlob(new Uint8Array([1])),
+          memberIds: ["mem_test1", "mem_test2"],
           createdAt: now,
         })
         .run();
@@ -370,7 +370,7 @@ describe("SQLite fronting schema", () => {
             id: crypto.randomUUID(),
             systemId: "nonexistent",
             timestamp: now,
-            encryptedData: testBlob(new Uint8Array([1])),
+            memberIds: ["mem_test1", "mem_test2"],
             createdAt: now,
           })
           .run(),
@@ -481,7 +481,7 @@ describe("SQLite fronting schema", () => {
       db.insert(frontingComments)
         .values({
           id,
-          sessionId,
+          frontingSessionId: sessionId,
           systemId,
           encryptedData: data,
           createdAt: now,
@@ -492,7 +492,7 @@ describe("SQLite fronting schema", () => {
       const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.sessionId).toBe(sessionId);
+      expect(rows[0]?.frontingSessionId).toBe(sessionId);
       expect(rows[0]?.systemId).toBe(systemId);
     });
 
@@ -506,7 +506,7 @@ describe("SQLite fronting schema", () => {
       db.insert(frontingComments)
         .values({
           id,
-          sessionId,
+          frontingSessionId: sessionId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -528,7 +528,7 @@ describe("SQLite fronting schema", () => {
       db.insert(frontingComments)
         .values({
           id: commentId,
-          sessionId,
+          frontingSessionId: sessionId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -555,7 +555,7 @@ describe("SQLite fronting schema", () => {
       db.insert(frontingComments)
         .values({
           id: commentId,
-          sessionId,
+          frontingSessionId: sessionId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -582,7 +582,7 @@ describe("SQLite fronting schema", () => {
           .insert(frontingComments)
           .values({
             id: crypto.randomUUID(),
-            sessionId: "nonexistent",
+            frontingSessionId: "nonexistent",
             systemId,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -602,7 +602,7 @@ describe("SQLite fronting schema", () => {
       db.insert(frontingComments)
         .values({
           id,
-          sessionId,
+          frontingSessionId: sessionId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -625,7 +625,7 @@ describe("SQLite fronting schema", () => {
       db.insert(frontingComments)
         .values({
           id,
-          sessionId,
+          frontingSessionId: sessionId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
