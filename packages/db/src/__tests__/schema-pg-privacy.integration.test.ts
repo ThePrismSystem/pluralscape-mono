@@ -19,6 +19,7 @@ import {
   pgInsertAccount,
   pgInsertSystem,
   testBlob,
+  testBlobT2,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -99,6 +100,26 @@ describe("PG privacy schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
       expect(rows[0]?.systemId).toBe(systemId);
+    });
+
+    it("round-trips T2 blob with keyVersion and bucketId", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const data = testBlobT2();
+
+      await db.insert(buckets).values({
+        id,
+        systemId,
+        encryptedData: data,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(buckets).where(eq(buckets.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedData).toEqual(data);
     });
 
     it("defaults version to 1", async () => {

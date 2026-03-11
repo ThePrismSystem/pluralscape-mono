@@ -6,6 +6,9 @@ import { AEAD_NONCE_BYTES } from "../constants.js";
 import type { EncryptedBlob } from "@pluralscape/types";
 import type { BucketId } from "@pluralscape/types";
 
+/** Header size: version(1) + tier(1) + algorithm(1) + keyVersion(4) + hasBucketId(1) */
+const HEADER_BYTES = 8;
+
 function makeBucketId(raw: string): BucketId {
   return raw as BucketId;
 }
@@ -14,6 +17,18 @@ function makeNonce(fill = 0xaa): Uint8Array {
   const nonce = new Uint8Array(AEAD_NONCE_BYTES);
   nonce.fill(fill);
   return nonce;
+}
+
+function makeT1Blob(overrides?: Partial<EncryptedBlob>): EncryptedBlob {
+  return {
+    ciphertext: new Uint8Array([1, 2, 3]),
+    nonce: makeNonce(),
+    tier: 1,
+    algorithm: "xchacha20-poly1305",
+    keyVersion: null,
+    bucketId: null,
+    ...overrides,
+  };
 }
 
 describe("blob-codec", () => {
@@ -142,6 +157,18 @@ describe("blob-codec", () => {
 
       expect(deserialized.bucketId).toBe("bucket-日本語-test");
     });
+
+    it("round-trips when input is a subarray with non-zero byteOffset", () => {
+      const blob = makeT1Blob({ ciphertext: new Uint8Array([7, 8, 9]) });
+      const serialized = serializeEncryptedBlob(blob);
+      // Embed in a larger buffer at a non-zero offset
+      const padded = new Uint8Array(10 + serialized.length + 10);
+      padded.set(serialized, 10);
+      const subarray = padded.subarray(10, 10 + serialized.length);
+      const deserialized = deserializeEncryptedBlob(subarray);
+      expect(deserialized.ciphertext).toEqual(blob.ciphertext);
+      expect(deserialized.nonce).toEqual(blob.nonce);
+    });
   });
 
   describe("serialize", () => {
@@ -201,6 +228,40 @@ describe("blob-codec", () => {
     });
   });
 
+  describe("serialize errors", () => {
+    it("throws on invalid tier", () => {
+      const blob = makeT1Blob({ tier: 3 as 1 | 2 });
+      expect(() => serializeEncryptedBlob(blob)).toThrow("tier");
+    });
+
+    it("throws on tier 0", () => {
+      const blob = makeT1Blob({ tier: 0 as 1 | 2 });
+      expect(() => serializeEncryptedBlob(blob)).toThrow("tier");
+    });
+
+    it("throws on wrong nonce length (too short)", () => {
+      const blob = makeT1Blob({ nonce: new Uint8Array(16) });
+      expect(() => serializeEncryptedBlob(blob)).toThrow("nonce length");
+    });
+
+    it("throws on wrong nonce length (too long)", () => {
+      const blob = makeT1Blob({ nonce: new Uint8Array(32) });
+      expect(() => serializeEncryptedBlob(blob)).toThrow("nonce length");
+    });
+
+    it("throws on keyVersion equal to null sentinel (0xFFFFFFFF)", () => {
+      const blob = makeT1Blob({ keyVersion: 0xffffffff });
+      expect(() => serializeEncryptedBlob(blob)).toThrow("reserved");
+    });
+
+    it("throws on unknown algorithm", () => {
+      const blob = makeT1Blob({
+        algorithm: "aes-256-gcm" as "xchacha20-poly1305",
+      });
+      expect(() => serializeEncryptedBlob(blob)).toThrow("algorithm");
+    });
+  });
+
   describe("deserialize errors", () => {
     it("throws on empty buffer", () => {
       expect(() => deserializeEncryptedBlob(new Uint8Array(0))).toThrow("too short");
@@ -216,6 +277,12 @@ describe("blob-codec", () => {
       expect(() => deserializeEncryptedBlob(buf)).toThrow("version");
     });
 
+    it("shows hex in version error message", () => {
+      const buf = new Uint8Array(HEADER_BYTES + AEAD_NONCE_BYTES);
+      buf[0] = 0x99;
+      expect(() => deserializeEncryptedBlob(buf)).toThrow("0x99");
+    });
+
     it("throws on invalid tier", () => {
       const buf = new Uint8Array(32 + AEAD_NONCE_BYTES);
       buf[0] = 0x01;
@@ -229,6 +296,17 @@ describe("blob-codec", () => {
       buf[1] = 1;
       buf[2] = 99; // invalid algorithm
       expect(() => deserializeEncryptedBlob(buf)).toThrow("algorithm");
+    });
+
+    it("throws on invalid hasBucketId flag", () => {
+      const buf = new Uint8Array(HEADER_BYTES + AEAD_NONCE_BYTES);
+      buf[0] = 0x01; // version
+      buf[1] = 1; // tier
+      buf[2] = 0; // algorithm
+      const view = new DataView(buf.buffer);
+      view.setUint32(3, 0xffffffff, true); // null keyVersion
+      buf[7] = 2; // invalid hasBucketId
+      expect(() => deserializeEncryptedBlob(buf)).toThrow("hasBucketId");
     });
 
     it("throws on truncated bucketId", () => {

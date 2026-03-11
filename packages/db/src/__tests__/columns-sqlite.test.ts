@@ -11,6 +11,7 @@ import {
 } from "../columns/sqlite.js";
 
 import type { EncryptedBlob } from "@pluralscape/types";
+import type { BucketId } from "@pluralscape/types";
 
 describe("sqliteTimestamp mapping", () => {
   it("passes through integer values", () => {
@@ -75,6 +76,22 @@ describe("sqliteEncryptedBlob mapping", () => {
     expect(result.algorithm).toBe(blob.algorithm);
     expect(result.keyVersion).toBe(blob.keyVersion);
     expect(result.bucketId).toBe(blob.bucketId);
+  });
+
+  it("round-trips T2 blob with keyVersion and bucketId", () => {
+    const blob: EncryptedBlob = {
+      ciphertext: new Uint8Array([40, 50, 60]),
+      nonce: makeBlob().nonce,
+      tier: 2,
+      algorithm: "xchacha20-poly1305",
+      keyVersion: 7,
+      bucketId: "bucket-xyz" as BucketId,
+    };
+    const result = encryptedBlobFromDriver(encryptedBlobToDriver(blob));
+    expect(result.ciphertext).toEqual(blob.ciphertext);
+    expect(result.tier).toBe(2);
+    expect(result.keyVersion).toBe(7);
+    expect(result.bucketId).toBe("bucket-xyz");
   });
 });
 

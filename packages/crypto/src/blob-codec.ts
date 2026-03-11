@@ -1,8 +1,7 @@
 import { AEAD_NONCE_BYTES } from "./constants.js";
 import { InvalidInputError } from "./errors.js";
 
-import type { EncryptedBlob, EncryptionAlgorithm } from "@pluralscape/types";
-import type { BucketId } from "@pluralscape/types";
+import type { BucketId, EncryptedBlob, EncryptionAlgorithm } from "@pluralscape/types";
 
 /**
  * Binary wire format for EncryptedBlob ↔ Uint8Array.
@@ -11,7 +10,7 @@ import type { BucketId } from "@pluralscape/types";
  *   [1B version=0x01]
  *   [1B tier]
  *   [1B algorithm]
- *   [4B keyVersion uint32le, 0xFFFFFFFF = null]
+ *   [4B keyVersion uint32le, 0xFFFFFFFF = null (reserved sentinel)]
  *   [1B hasBucketId]
  *   [if hasBucketId=1: 2B UTF-8 length uint16le + N bytes UTF-8 bucketId]
  *   [24B nonce]
@@ -24,7 +23,8 @@ const NULL_KEY_VERSION = 0xffffffff;
 const HEADER_BYTES = 8;
 const KEY_VERSION_BYTES = 4;
 const BUCKET_ID_LENGTH_BYTES = 2;
-const HEX_PAD_WIDTH = 2;
+const MAX_BUCKET_ID_BYTES = 0xffff;
+const HEX_RADIX = 16;
 
 const ALGORITHM_TO_BYTE = new Map<EncryptionAlgorithm, number>([["xchacha20-poly1305", 0]]);
 
@@ -40,10 +40,33 @@ export function serializeEncryptedBlob(blob: EncryptedBlob): Uint8Array {
     throw new InvalidInputError(`Unknown encryption algorithm: ${blob.algorithm}`);
   }
 
-  const hasBucketId = blob.bucketId !== null;
-  const bucketIdBytes = hasBucketId ? textEncoder.encode(blob.bucketId) : null;
+  const tierNum: number = blob.tier;
+  if (tierNum !== 1 && tierNum !== 2) {
+    throw new InvalidInputError(`Invalid EncryptedBlob tier: ${String(tierNum)}`);
+  }
+
+  if (blob.nonce.length !== AEAD_NONCE_BYTES) {
+    throw new InvalidInputError(
+      `Invalid nonce length: expected ${String(AEAD_NONCE_BYTES)}, got ${String(blob.nonce.length)}`,
+    );
+  }
+
+  if (blob.keyVersion === NULL_KEY_VERSION) {
+    throw new InvalidInputError(
+      `keyVersion ${String(NULL_KEY_VERSION)} (0xFFFFFFFF) is reserved as the null sentinel`,
+    );
+  }
+
+  const bucketIdBytes = blob.bucketId !== null ? textEncoder.encode(blob.bucketId) : null;
+
+  if (bucketIdBytes !== null && bucketIdBytes.length > MAX_BUCKET_ID_BYTES) {
+    throw new InvalidInputError(
+      `bucketId exceeds maximum length: ${String(bucketIdBytes.length)} bytes (max ${String(MAX_BUCKET_ID_BYTES)})`,
+    );
+  }
+
   const bucketIdSection =
-    hasBucketId && bucketIdBytes ? BUCKET_ID_LENGTH_BYTES + bucketIdBytes.length : 0;
+    bucketIdBytes !== null ? BUCKET_ID_LENGTH_BYTES + bucketIdBytes.length : 0;
 
   const totalLength = HEADER_BYTES + bucketIdSection + AEAD_NONCE_BYTES + blob.ciphertext.length;
   const out = new Uint8Array(totalLength);
@@ -57,10 +80,10 @@ export function serializeEncryptedBlob(blob: EncryptedBlob): Uint8Array {
   out[offset++] = algorithmByte;
   view.setUint32(offset, blob.keyVersion ?? NULL_KEY_VERSION, true);
   offset += KEY_VERSION_BYTES;
-  out[offset++] = hasBucketId ? 1 : 0;
+  out[offset++] = bucketIdBytes !== null ? 1 : 0;
 
   // BucketId section
-  if (hasBucketId && bucketIdBytes) {
+  if (bucketIdBytes !== null) {
     view.setUint16(offset, bucketIdBytes.length, true);
     offset += BUCKET_ID_LENGTH_BYTES;
     out.set(bucketIdBytes, offset);
@@ -101,7 +124,7 @@ export function deserializeEncryptedBlob(data: Uint8Array): EncryptedBlob {
   const version = readByte(data, offset++);
   if (version !== FORMAT_VERSION) {
     throw new InvalidInputError(
-      `Unknown EncryptedBlob version: 0x${version.toString(HEX_PAD_WIDTH).padStart(HEX_PAD_WIDTH, "0")}`,
+      `Unknown EncryptedBlob version: 0x${version.toString(HEX_RADIX).padStart(2, "0")}`,
     );
   }
 
@@ -125,6 +148,9 @@ export function deserializeEncryptedBlob(data: Uint8Array): EncryptedBlob {
 
   // BucketId
   const hasBucketId = readByte(data, offset++);
+  if (hasBucketId !== 0 && hasBucketId !== 1) {
+    throw new InvalidInputError(`Invalid hasBucketId flag: ${String(hasBucketId)}`);
+  }
   let bucketId: BucketId | null = null;
   if (hasBucketId === 1) {
     if (offset + BUCKET_ID_LENGTH_BYTES > data.length) {

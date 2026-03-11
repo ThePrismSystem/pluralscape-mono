@@ -80,7 +80,9 @@ export function encryptedBlobToDriver(val: EncryptedBlob): Buffer {
 
 /** Converts PG bytea Buffer back to EncryptedBlob. */
 export function encryptedBlobFromDriver(val: Buffer): EncryptedBlob {
-  return deserializeEncryptedBlob(new Uint8Array(val));
+  // Create a view over existing memory — deserializeEncryptedBlob makes defensive
+  // copies of nonce and ciphertext internally, so no shared-memory risk.
+  return deserializeEncryptedBlob(new Uint8Array(val.buffer, val.byteOffset, val.byteLength));
 }
 
 /** PG bytea column that maps EncryptedBlob ↔ binary via blob-codec. */

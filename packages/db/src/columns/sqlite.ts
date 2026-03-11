@@ -69,7 +69,9 @@ export function encryptedBlobToDriver(val: EncryptedBlob): Uint8Array {
 
 /** Converts SQLite blob back to EncryptedBlob. */
 export function encryptedBlobFromDriver(val: Uint8Array): EncryptedBlob {
-  return deserializeEncryptedBlob(new Uint8Array(val));
+  // better-sqlite3 returns Buffer — create a view; deserializeEncryptedBlob
+  // makes defensive copies of nonce and ciphertext internally.
+  return deserializeEncryptedBlob(new Uint8Array(val.buffer, val.byteOffset, val.byteLength));
 }
 
 /** SQLite blob column that maps EncryptedBlob ↔ binary via blob-codec. */
