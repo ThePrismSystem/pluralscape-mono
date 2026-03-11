@@ -523,14 +523,16 @@ export type ClientSideSystem = SideSystem;
 
 /**
  * Server-side layer representation.
- * T1 encrypted: name, description, color, imageSource, emoji
- * T3 plaintext: accessType, gatekeeperMemberIds
+ * T1 encrypted: name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds
+ *
+ * Note: accessType and gatekeeperMemberIds are semantically T3 (server-readable
+ * would enable server-side gating), but no DB column exists for either field.
+ * They live inside encryptedData for coherence with the zero-knowledge model.
+ * If server-side gating is needed later, add real columns and move them to T3.
  */
 export interface ServerLayer extends AuditMetadata {
   readonly id: LayerId;
   readonly systemId: SystemId;
-  readonly accessType: "open" | "gatekept";
-  readonly gatekeeperMemberIds: readonly MemberId[];
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -612,7 +614,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // PollVote: T1 (comment) | T3 (pollId, optionId, voter, isVeto, votedAt)
 // AcknowledgementRequest: T1 (message) | T3 (createdByMemberId, targetMemberId, confirmed, confirmedAt)
 // SideSystem: T1 (name, description, color, imageSource, emoji) | T3 (none)
-// Layer: T1 (name, description, color, imageSource, emoji) | T3 (accessType, gatekeeperMemberIds)
+// Layer: T1 (name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds) | T3 (none)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
 // AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
 //

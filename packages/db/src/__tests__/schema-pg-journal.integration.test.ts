@@ -67,6 +67,7 @@ describe("PG journal schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
       expect(rows[0]?.frontingSessionId).toBe(fsId);
+      expect(rows[0]).not.toHaveProperty("author");
     });
 
     it("allows nullable frontingSessionId", async () => {

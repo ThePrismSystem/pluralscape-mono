@@ -67,6 +67,7 @@ describe("PG Innerworld Schema", () => {
     expect(rows[0]?.createdAt).toBe(now);
     expect(rows[0]?.updatedAt).toBe(now);
     expect(rows[0]?.version).toBe(1);
+    expect(rows[0]).not.toHaveProperty("gatekeeperMemberIds");
   });
 
   it("round-trips innerworldEntities with all fields", async () => {

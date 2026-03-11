@@ -253,8 +253,6 @@ describe("Server/Client pairs exist for completed domains", () => {
   it("layer pair", () => {
     expectTypeOf<ServerLayer>().toBeObject();
     expectTypeOf<ServerLayer["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerLayer["accessType"]>().toEqualTypeOf<"open" | "gatekept">();
-    expectTypeOf<ServerLayer["gatekeeperMemberIds"]>().toEqualTypeOf<readonly MemberId[]>();
     expectTypeOf<ClientLayer>().toEqualTypeOf<Layer>();
   });
 
@@ -352,6 +350,28 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerInnerWorldRegion>().toBeObject();
     expectTypeOf<ServerInnerWorldRegion["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<ClientInnerWorldRegion>().toBeObject();
+  });
+});
+
+describe("T1 encrypted field absence on server types", () => {
+  it("ServerJournalEntry must not have author", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerJournalEntry["author"]>();
+  });
+
+  it("ServerInnerWorldRegion must not have gatekeeperMemberIds", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerInnerWorldRegion["gatekeeperMemberIds"]>();
+  });
+
+  it("ServerLayer must not have gatekeeperMemberIds", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerLayer["gatekeeperMemberIds"]>();
+  });
+
+  it("ServerLayer must not have accessType", () => {
+    // @ts-expect-error - field moved to T1 encrypted
+    expectTypeOf<ServerLayer["accessType"]>();
   });
 });
 
