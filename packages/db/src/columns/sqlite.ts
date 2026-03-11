@@ -62,17 +62,23 @@ export const sqliteBinary = customType<{ data: Uint8Array; driverData: Uint8Arra
   },
 });
 
+/** Converts EncryptedBlob to Uint8Array for SQLite blob storage. */
+export function encryptedBlobToDriver(val: EncryptedBlob): Uint8Array {
+  return serializeEncryptedBlob(val);
+}
+
+/** Converts SQLite blob back to EncryptedBlob. */
+export function encryptedBlobFromDriver(val: Uint8Array): EncryptedBlob {
+  return deserializeEncryptedBlob(new Uint8Array(val));
+}
+
 /** SQLite blob column that maps EncryptedBlob ↔ binary via blob-codec. */
 export const sqliteEncryptedBlob = customType<{ data: EncryptedBlob; driverData: Uint8Array }>({
   dataType() {
     return "blob";
   },
-  toDriver(val: EncryptedBlob): Uint8Array {
-    return serializeEncryptedBlob(val);
-  },
-  fromDriver(val: Uint8Array): EncryptedBlob {
-    return deserializeEncryptedBlob(new Uint8Array(val));
-  },
+  toDriver: encryptedBlobToDriver,
+  fromDriver: encryptedBlobFromDriver,
 });
 
 /** SQLite text column that stores JSON (stringify/parse). */

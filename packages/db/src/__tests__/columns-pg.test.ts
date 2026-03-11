@@ -1,13 +1,18 @@
+import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
 import { describe, expect, it } from "vitest";
 
 import {
   binaryFromDriver,
   binaryToDriver,
+  encryptedBlobFromDriver,
+  encryptedBlobToDriver,
   jsonFromDriver,
   jsonToDriver,
   timestampFromDriver,
   timestampToDriver,
 } from "../columns/pg.js";
+
+import type { EncryptedBlob } from "@pluralscape/types";
 
 describe("pgTimestamp mapping", () => {
   it("converts UnixMillis to ISO string", () => {
@@ -65,6 +70,39 @@ describe("pgBinary mapping", () => {
     const original = new Uint8Array([0, 127, 255]);
     const result = binaryFromDriver(binaryToDriver(original));
     expect([...result]).toEqual([...original]);
+  });
+});
+
+describe("pgEncryptedBlob mapping", () => {
+  function makeBlob(ciphertext = new Uint8Array([1, 2, 3])): EncryptedBlob {
+    const nonce = new Uint8Array(AEAD_NONCE_BYTES);
+    nonce.fill(0xbb);
+    return {
+      ciphertext,
+      nonce,
+      tier: 1,
+      algorithm: "xchacha20-poly1305",
+      keyVersion: null,
+      bucketId: null,
+    };
+  }
+
+  it("converts EncryptedBlob to Buffer", () => {
+    const blob = makeBlob();
+    const result = encryptedBlobToDriver(blob);
+    expect(Buffer.isBuffer(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it("round-trips through toDriver/fromDriver", () => {
+    const blob = makeBlob(new Uint8Array([10, 20, 30]));
+    const result = encryptedBlobFromDriver(encryptedBlobToDriver(blob));
+    expect(result.ciphertext).toEqual(blob.ciphertext);
+    expect(result.nonce).toEqual(blob.nonce);
+    expect(result.tier).toBe(blob.tier);
+    expect(result.algorithm).toBe(blob.algorithm);
+    expect(result.keyVersion).toBe(blob.keyVersion);
+    expect(result.bucketId).toBe(blob.bucketId);
   });
 });
 

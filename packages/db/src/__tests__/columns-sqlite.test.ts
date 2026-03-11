@@ -1,11 +1,16 @@
+import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
 import { describe, expect, it } from "vitest";
 
 import {
+  encryptedBlobFromDriver,
+  encryptedBlobToDriver,
   jsonFromDriver,
   jsonToDriver,
   timestampFromDriver,
   timestampToDriver,
 } from "../columns/sqlite.js";
+
+import type { EncryptedBlob } from "@pluralscape/types";
 
 describe("sqliteTimestamp mapping", () => {
   it("passes through integer values", () => {
@@ -37,6 +42,39 @@ describe("sqliteTimestamp mapping", () => {
 
   it("throws on Infinity in fromDriver", () => {
     expect(() => timestampFromDriver(Infinity)).toThrow("not a finite number");
+  });
+});
+
+describe("sqliteEncryptedBlob mapping", () => {
+  function makeBlob(ciphertext = new Uint8Array([1, 2, 3])): EncryptedBlob {
+    const nonce = new Uint8Array(AEAD_NONCE_BYTES);
+    nonce.fill(0xbb);
+    return {
+      ciphertext,
+      nonce,
+      tier: 1,
+      algorithm: "xchacha20-poly1305",
+      keyVersion: null,
+      bucketId: null,
+    };
+  }
+
+  it("converts EncryptedBlob to Uint8Array", () => {
+    const blob = makeBlob();
+    const result = encryptedBlobToDriver(blob);
+    expect(result).toBeInstanceOf(Uint8Array);
+    expect(result.length).toBeGreaterThan(0);
+  });
+
+  it("round-trips through toDriver/fromDriver", () => {
+    const blob = makeBlob(new Uint8Array([10, 20, 30]));
+    const result = encryptedBlobFromDriver(encryptedBlobToDriver(blob));
+    expect(result.ciphertext).toEqual(blob.ciphertext);
+    expect(result.nonce).toEqual(blob.nonce);
+    expect(result.tier).toBe(blob.tier);
+    expect(result.algorithm).toBe(blob.algorithm);
+    expect(result.keyVersion).toBe(blob.keyVersion);
+    expect(result.bucketId).toBe(blob.bucketId);
   });
 });
 

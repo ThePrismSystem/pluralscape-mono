@@ -73,17 +73,23 @@ export const pgBinary = customType<{ data: Uint8Array; driverData: Buffer }>({
   fromDriver: binaryFromDriver,
 });
 
+/** Converts EncryptedBlob to Buffer for PG bytea storage. */
+export function encryptedBlobToDriver(val: EncryptedBlob): Buffer {
+  return Buffer.from(serializeEncryptedBlob(val));
+}
+
+/** Converts PG bytea Buffer back to EncryptedBlob. */
+export function encryptedBlobFromDriver(val: Buffer): EncryptedBlob {
+  return deserializeEncryptedBlob(new Uint8Array(val));
+}
+
 /** PG bytea column that maps EncryptedBlob ↔ binary via blob-codec. */
 export const pgEncryptedBlob = customType<{ data: EncryptedBlob; driverData: Buffer }>({
   dataType() {
     return "bytea";
   },
-  toDriver(val: EncryptedBlob): Buffer {
-    return Buffer.from(serializeEncryptedBlob(val));
-  },
-  fromDriver(val: Buffer): EncryptedBlob {
-    return deserializeEncryptedBlob(new Uint8Array(val));
-  },
+  toDriver: encryptedBlobToDriver,
+  fromDriver: encryptedBlobFromDriver,
 });
 
 /** PG jsonb column that maps to/from parsed JSON. */
