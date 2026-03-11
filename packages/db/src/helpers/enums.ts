@@ -14,8 +14,10 @@ import type {
   BucketVisibilityScope,
   DeviceTokenPlatform,
   DeviceTransferStatus,
+  DiscoveryStatus,
   ExportFormat,
   ExportRequestStatus,
+  FieldType,
   FriendConnectionStatus,
   FrontingType,
   ImportJobStatus,
@@ -24,6 +26,7 @@ import type {
   JobType,
   KnownSaturationLevel,
   LayerAccessType,
+  LifecycleEventType,
   NotificationEventType,
   PKSyncDirection,
   PollKind,
@@ -65,6 +68,34 @@ export const LAYER_ACCESS_TYPES = [
   "open",
   "gatekept",
 ] as const satisfies readonly LayerAccessType[];
+export const DISCOVERY_STATUSES = [
+  "fully-mapped",
+  "partially-mapped",
+  "unknown",
+] as const satisfies readonly DiscoveryStatus[];
+export const FIELD_TYPES = [
+  "text",
+  "number",
+  "boolean",
+  "date",
+  "color",
+  "select",
+  "multi-select",
+  "url",
+] as const satisfies readonly FieldType[];
+export const LIFECYCLE_EVENT_TYPES = [
+  "split",
+  "fusion",
+  "merge",
+  "unmerge",
+  "dormancy-start",
+  "dormancy-end",
+  "discovery",
+  "archival",
+  "subsystem-formation",
+  "form-change",
+  "name-change",
+] as const satisfies readonly LifecycleEventType[];
 export const FRIEND_CONNECTION_STATUSES = [
   "pending",
   "accepted",

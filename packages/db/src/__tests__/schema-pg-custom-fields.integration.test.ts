@@ -162,6 +162,66 @@ describe("PG custom fields schema", () => {
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
     });
+
+    it("round-trips T3 metadata columns", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(fieldDefinitions).values({
+        id,
+        systemId,
+        fieldType: "text",
+        required: true,
+        sortOrder: 5,
+        encryptedData: testBlob(new Uint8Array([1, 2, 3])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id));
+      expect(rows[0]?.fieldType).toBe("text");
+      expect(rows[0]?.required).toBe(true);
+      expect(rows[0]?.sortOrder).toBe(5);
+    });
+
+    it("defaults T3 metadata to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(fieldDefinitions).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id));
+      expect(rows[0]?.fieldType).toBeNull();
+      expect(rows[0]?.required).toBeNull();
+      expect(rows[0]?.sortOrder).toBeNull();
+    });
+
+    it("rejects invalid fieldType via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(fieldDefinitions).values({
+          id: crypto.randomUUID(),
+          systemId,
+          fieldType: "invalid" as "text",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("field_values", () => {
@@ -266,6 +326,47 @@ describe("PG custom fields schema", () => {
           updatedAt: now,
         }),
       ).rejects.toThrow();
+    });
+
+    it("round-trips memberId T3 column", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id,
+        fieldDefinitionId: fieldDefId,
+        systemId,
+        memberId: "member-1",
+        encryptedData: testBlob(new Uint8Array([1, 2, 3])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(fieldValues).where(eq(fieldValues.id, id));
+      expect(rows[0]?.memberId).toBe("member-1");
+    });
+
+    it("defaults memberId to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id,
+        fieldDefinitionId: fieldDefId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(fieldValues).where(eq(fieldValues.id, id));
+      expect(rows[0]?.memberId).toBeNull();
     });
   });
 

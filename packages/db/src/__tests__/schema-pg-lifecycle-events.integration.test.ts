@@ -190,4 +190,58 @@ describe("PG lifecycle_events schema", () => {
     expect(rows[0]?.recordedAt).toBe(recordedAt);
     expect(rows[0]?.occurredAt).not.toBe(rows[0]?.recordedAt);
   });
+
+  it("round-trips eventType T3 column", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(lifecycleEvents).values({
+      id,
+      systemId,
+      eventType: "discovery",
+      occurredAt: now,
+      recordedAt: now,
+      encryptedData: testBlob(new Uint8Array([1, 2, 3])),
+    });
+
+    const rows = await db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id));
+    expect(rows[0]?.eventType).toBe("discovery");
+  });
+
+  it("defaults eventType to null", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(lifecycleEvents).values({
+      id,
+      systemId,
+      occurredAt: now,
+      recordedAt: now,
+      encryptedData: testBlob(new Uint8Array([1])),
+    });
+
+    const rows = await db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id));
+    expect(rows[0]?.eventType).toBeNull();
+  });
+
+  it("rejects invalid eventType via CHECK constraint", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+
+    await expect(
+      db.insert(lifecycleEvents).values({
+        id: crypto.randomUUID(),
+        systemId,
+        eventType: "invalid" as "discovery",
+        occurredAt: now,
+        recordedAt: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+      }),
+    ).rejects.toThrow();
+  });
 });

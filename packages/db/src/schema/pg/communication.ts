@@ -1,10 +1,19 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, foreignKey, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  foreignKey,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { CHANNEL_TYPES, POLL_STATUSES } from "../../helpers/enums.js";
+import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -74,6 +83,7 @@ export const boardMessages = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    senderId: varchar("sender_id", { length: 255 }),
     pinned: boolean("pinned").notNull().default(false),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -111,6 +121,8 @@ export const polls = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    createdByMemberId: varchar("created_by_member_id", { length: 255 }),
+    kind: varchar("kind", { length: 255 }).$type<ServerPoll["kind"]>(),
     status: varchar("status", { length: 255 })
       .notNull()
       .default("open")
@@ -128,6 +140,7 @@ export const polls = pgTable(
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
+    check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
   ],
 );
@@ -142,6 +155,10 @@ export const pollVotes = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    optionId: varchar("option_id", { length: 255 }),
+    voter: jsonb("voter"),
+    isVeto: boolean("is_veto"),
+    votedAt: pgTimestamp("voted_at"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
@@ -158,6 +175,7 @@ export const acknowledgements = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    createdByMemberId: varchar("created_by_member_id", { length: 255 }),
     targetMemberId: varchar("target_member_id", { length: 255 }),
     confirmed: boolean("confirmed").notNull().default(false),
     confirmedAt: pgTimestamp("confirmed_at"),

@@ -1,10 +1,14 @@
 import { sql } from "drizzle-orm";
 import { check, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
+import { FRONTING_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
+
+import type { ServerFrontingSession } from "@pluralscape/types";
 
 export const frontingSessions = sqliteTable(
   "fronting_sessions",
@@ -15,6 +19,10 @@ export const frontingSessions = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: sqliteTimestamp("start_time").notNull(),
     endTime: sqliteTimestamp("end_time"),
+    memberId: text("member_id"),
+    frontingType: text("fronting_type").$type<ServerFrontingSession["frontingType"]>(),
+    customFrontId: text("custom_front_id"),
+    linkedStructure: sqliteJson("linked_structure"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -26,6 +34,7 @@ export const frontingSessions = sqliteTable(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
+    check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
   ],
 );
 
@@ -68,6 +77,7 @@ export const frontingComments = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    memberId: text("member_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

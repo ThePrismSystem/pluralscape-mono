@@ -103,6 +103,56 @@ describe("SQLite timers schema", () => {
       const rows = db.select().from(timerConfigs).where(eq(timerConfigs.id, id)).all();
       expect(rows[0]?.enabled).toBe(false);
     });
+
+    it("round-trips T3 metadata columns", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id,
+          systemId,
+          intervalMinutes: 30,
+          wakingHoursOnly: true,
+          wakingStart: "08:00",
+          wakingEnd: "22:00",
+          encryptedData: testBlob(new Uint8Array([1, 2, 3])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(timerConfigs).where(eq(timerConfigs.id, id)).all();
+      expect(rows[0]?.intervalMinutes).toBe(30);
+      expect(rows[0]?.wakingHoursOnly).toBe(true);
+      expect(rows[0]?.wakingStart).toBe("08:00");
+      expect(rows[0]?.wakingEnd).toBe("22:00");
+    });
+
+    it("defaults T3 metadata to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(timerConfigs).where(eq(timerConfigs.id, id)).all();
+      expect(rows[0]?.intervalMinutes).toBeNull();
+      expect(rows[0]?.wakingHoursOnly).toBeNull();
+      expect(rows[0]?.wakingStart).toBeNull();
+      expect(rows[0]?.wakingEnd).toBeNull();
+    });
   });
 
   describe("check_in_records", () => {
@@ -266,6 +316,67 @@ describe("SQLite timers schema", () => {
 
       const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
       expect(rows[0]?.dismissed).toBe(false);
+    });
+
+    it("round-trips respondedByMemberId T3 column", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id: timerId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(checkInRecords)
+        .values({
+          id,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+          respondedByMemberId: "member-1",
+        })
+        .run();
+
+      const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
+      expect(rows[0]?.respondedByMemberId).toBe("member-1");
+    });
+
+    it("defaults respondedByMemberId to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id: timerId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(checkInRecords)
+        .values({
+          id,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
+      expect(rows[0]?.respondedByMemberId).toBeNull();
     });
   });
 });

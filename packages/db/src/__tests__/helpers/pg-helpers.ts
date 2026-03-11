@@ -227,6 +227,10 @@ export const PG_DDL = {
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       start_time TIMESTAMPTZ NOT NULL,
       end_time TIMESTAMPTZ,
+      member_id VARCHAR(255),
+      fronting_type VARCHAR(255) CHECK (fronting_type IS NULL OR fronting_type IN ('fronting', 'co-conscious')),
+      custom_front_id VARCHAR(255),
+      linked_structure JSONB,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -270,6 +274,7 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       session_id VARCHAR(255) NOT NULL REFERENCES fronting_sessions(id) ON DELETE CASCADE,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      member_id VARCHAR(255),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -284,6 +289,10 @@ export const PG_DDL = {
     CREATE TABLE relationships (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      source_member_id VARCHAR(255),
+      target_member_id VARCHAR(255),
+      type VARCHAR(255) CHECK (type IS NULL OR type IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
+      bidirectional BOOLEAN,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -298,6 +307,9 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       parent_subsystem_id VARCHAR(255) REFERENCES subsystems(id) ON DELETE SET NULL,
+      architecture_type JSONB,
+      has_core BOOLEAN,
+      discovery_status VARCHAR(255) CHECK (discovery_status IS NULL OR discovery_status IN ('fully-mapped', 'partially-mapped', 'unknown')),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -423,6 +435,9 @@ export const PG_DDL = {
     CREATE TABLE field_definitions (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      field_type VARCHAR(255) CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
+      required BOOLEAN,
+      sort_order INTEGER,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -438,6 +453,7 @@ export const PG_DDL = {
     CREATE TABLE field_values (
       id VARCHAR(255) PRIMARY KEY,
       field_definition_id VARCHAR(255) NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
+      member_id VARCHAR(255),
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -528,6 +544,7 @@ export const PG_DDL = {
     CREATE TABLE lifecycle_events (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type VARCHAR(255) CHECK (event_type IS NULL OR event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
       occurred_at TIMESTAMPTZ NOT NULL,
       recorded_at TIMESTAMPTZ NOT NULL,
       encrypted_data BYTEA NOT NULL
@@ -597,6 +614,7 @@ export const PG_DDL = {
     CREATE TABLE board_messages (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      sender_id VARCHAR(255),
       pinned BOOLEAN NOT NULL DEFAULT false,
       sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BYTEA NOT NULL,
@@ -629,6 +647,8 @@ export const PG_DDL = {
     CREATE TABLE polls (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_by_member_id VARCHAR(255),
+      kind VARCHAR(255) CHECK (kind IS NULL OR kind IN ('standard', 'custom')),
       status VARCHAR(255) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at TIMESTAMPTZ,
       ends_at TIMESTAMPTZ,
@@ -650,6 +670,10 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       poll_id VARCHAR(255) NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      option_id VARCHAR(255),
+      voter JSONB,
+      is_veto BOOLEAN,
+      voted_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL
     )
@@ -662,6 +686,7 @@ export const PG_DDL = {
     CREATE TABLE acknowledgements (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_by_member_id VARCHAR(255),
       target_member_id VARCHAR(255),
       confirmed BOOLEAN NOT NULL DEFAULT false,
       confirmed_at TIMESTAMPTZ,
@@ -919,6 +944,10 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       enabled BOOLEAN NOT NULL DEFAULT true,
+      interval_minutes INTEGER,
+      waking_hours_only BOOLEAN,
+      waking_start VARCHAR(255),
+      waking_end VARCHAR(255),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -936,6 +965,7 @@ export const PG_DDL = {
       scheduled_at TIMESTAMPTZ NOT NULL,
       responded_at TIMESTAMPTZ,
       dismissed BOOLEAN NOT NULL DEFAULT false,
+      responded_by_member_id VARCHAR(255),
       encrypted_data BYTEA
     )
   `,

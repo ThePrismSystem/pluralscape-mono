@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
-import { CHANNEL_TYPES, POLL_STATUSES } from "../../helpers/enums.js";
+import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -74,6 +74,7 @@ export const boardMessages = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    senderId: text("sender_id"),
     pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -109,6 +110,8 @@ export const polls = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    createdByMemberId: text("created_by_member_id"),
+    kind: text("kind").$type<ServerPoll["kind"]>(),
     status: text("status").notNull().default("open").$type<ServerPoll["status"]>(),
     closedAt: sqliteTimestamp("closed_at"),
     endsAt: sqliteTimestamp("ends_at"),
@@ -123,6 +126,7 @@ export const polls = sqliteTable(
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
+    check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
   ],
 );
@@ -137,6 +141,10 @@ export const pollVotes = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    optionId: text("option_id"),
+    voter: sqliteJson("voter"),
+    isVeto: integer("is_veto", { mode: "boolean" }),
+    votedAt: sqliteTimestamp("voted_at"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
@@ -153,6 +161,7 @@ export const acknowledgements = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    createdByMemberId: text("created_by_member_id"),
     targetMemberId: text("target_member_id"),
     confirmed: integer("confirmed", { mode: "boolean" }).notNull().default(false),
     confirmedAt: sqliteTimestamp("confirmed_at"),

@@ -1,9 +1,23 @@
-import { foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  foreignKey,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  unique,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
+import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
+
+import type { ServerRelationship, ServerSubsystem } from "@pluralscape/types";
 
 export const relationships = pgTable(
   "relationships",
@@ -12,11 +26,18 @@ export const relationships = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    sourceMemberId: varchar("source_member_id", { length: 255 }),
+    targetMemberId: varchar("target_member_id", { length: 255 }),
+    type: varchar("type", { length: 255 }).$type<ServerRelationship["type"]>(),
+    bidirectional: boolean("bidirectional"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("relationships_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("relationships_system_id_idx").on(t.systemId),
+    check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
+  ],
 );
 
 export const subsystems = pgTable(
@@ -27,6 +48,11 @@ export const subsystems = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: varchar("parent_subsystem_id", { length: 255 }),
+    architectureType: jsonb("architecture_type"),
+    hasCore: boolean("has_core"),
+    discoveryStatus: varchar("discovery_status", { length: 255 }).$type<
+      ServerSubsystem["discoveryStatus"]
+    >(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -37,6 +63,7 @@ export const subsystems = pgTable(
       columns: [t.parentSubsystemId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
+    check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
   ],
 );
 
@@ -67,7 +94,9 @@ export const layers = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("layers_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("layers_system_id_idx").on(t.systemId),
+  ],
 );
 
 // Member identity is inside encryptedData; uniqueness enforced at application layer

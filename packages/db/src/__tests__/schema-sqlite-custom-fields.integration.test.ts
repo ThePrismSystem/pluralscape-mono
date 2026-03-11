@@ -175,6 +175,73 @@ describe("SQLite custom fields schema", () => {
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
     });
+
+    it("round-trips T3 metadata columns", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldDefinitions)
+        .values({
+          id,
+          systemId,
+          fieldType: "text",
+          required: true,
+          sortOrder: 5,
+          encryptedData: testBlob(new Uint8Array([1, 2, 3])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id)).all();
+      expect(rows[0]?.fieldType).toBe("text");
+      expect(rows[0]?.required).toBe(true);
+      expect(rows[0]?.sortOrder).toBe(5);
+    });
+
+    it("defaults T3 metadata to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldDefinitions)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id)).all();
+      expect(rows[0]?.fieldType).toBeNull();
+      expect(rows[0]?.required).toBeNull();
+      expect(rows[0]?.sortOrder).toBeNull();
+    });
+
+    it("rejects invalid fieldType via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldDefinitions)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            fieldType: "invalid" as "text",
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 
   describe("field_values", () => {
@@ -290,6 +357,51 @@ describe("SQLite custom fields schema", () => {
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("round-trips memberId T3 column", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id,
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          memberId: "member-1",
+          encryptedData: testBlob(new Uint8Array([1, 2, 3])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(fieldValues).where(eq(fieldValues.id, id)).all();
+      expect(rows[0]?.memberId).toBe("member-1");
+    });
+
+    it("defaults memberId to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id,
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(fieldValues).where(eq(fieldValues.id, id)).all();
+      expect(rows[0]?.memberId).toBeNull();
     });
   });
 

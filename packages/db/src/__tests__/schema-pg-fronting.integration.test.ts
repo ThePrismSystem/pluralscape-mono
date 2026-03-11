@@ -218,6 +218,72 @@ describe("PG fronting schema", () => {
         .where(eq(frontingSessions.systemId, systemId));
       expect(rows).toHaveLength(2);
     });
+
+    it("round-trips T3 metadata columns", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingSessions).values({
+        id,
+        systemId,
+        startTime: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+        memberId: "member-1",
+        frontingType: "fronting",
+        customFrontId: "custom-1",
+        linkedStructure: { regionId: "r-1" },
+      });
+
+      const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
+      expect(rows[0]?.memberId).toBe("member-1");
+      expect(rows[0]?.frontingType).toBe("fronting");
+      expect(rows[0]?.customFrontId).toBe("custom-1");
+      expect(rows[0]?.linkedStructure).toEqual({ regionId: "r-1" });
+    });
+
+    it("defaults T3 metadata columns to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingSessions).values({
+        id,
+        systemId,
+        startTime: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.frontingType).toBeNull();
+      expect(rows[0]?.customFrontId).toBeNull();
+      expect(rows[0]?.linkedStructure).toBeNull();
+    });
+
+    it("rejects invalid frontingType via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(frontingSessions).values({
+          id: crypto.randomUUID(),
+          systemId,
+          startTime: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          frontingType: "invalid" as "fronting",
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("switches", () => {
@@ -467,6 +533,47 @@ describe("PG fronting schema", () => {
           updatedAt: now,
         }),
       ).rejects.toThrow();
+    });
+
+    it("round-trips memberId T3 column", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const sessionId = await insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingComments).values({
+        id,
+        sessionId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+        memberId: "member-1",
+      });
+
+      const rows = await db.select().from(frontingComments).where(eq(frontingComments.id, id));
+      expect(rows[0]?.memberId).toBe("member-1");
+    });
+
+    it("defaults memberId to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const sessionId = await insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingComments).values({
+        id,
+        sessionId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(frontingComments).where(eq(frontingComments.id, id));
+      expect(rows[0]?.memberId).toBeNull();
     });
   });
 });
