@@ -18,6 +18,8 @@ import {
   createSqlitePrivacyTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
+  testBlobT2,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -47,7 +49,7 @@ describe("SQLite privacy schema", () => {
       .values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -90,7 +92,7 @@ describe("SQLite privacy schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(buckets)
         .values({
@@ -108,6 +110,28 @@ describe("SQLite privacy schema", () => {
       expect(rows[0]?.systemId).toBe(systemId);
     });
 
+    it("round-trips T2 blob with keyVersion and bucketId", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const data = testBlobT2();
+
+      db.insert(buckets)
+        .values({
+          id,
+          systemId,
+          encryptedData: data,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.encryptedData).toEqual(data);
+    });
+
     it("defaults version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -118,7 +142,7 @@ describe("SQLite privacy schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -146,7 +170,7 @@ describe("SQLite privacy schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })

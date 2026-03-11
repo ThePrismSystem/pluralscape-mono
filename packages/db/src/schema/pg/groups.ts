@@ -9,7 +9,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { members } from "./members.js";
@@ -24,7 +24,7 @@ export const groups = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     parentGroupId: varchar("parent_group_id", { length: 255 }),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),

@@ -11,6 +11,7 @@ import {
   createPgNomenclatureSettingsTables,
   pgInsertAccount,
   pgInsertSystem,
+  testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -37,7 +38,7 @@ describe("PG nomenclature_settings schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const data = new Uint8Array([10, 20, 30]);
+    const data = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(nomenclatureSettings).values({
       systemId,
@@ -64,7 +65,7 @@ describe("PG nomenclature_settings schema", () => {
 
     await db.insert(nomenclatureSettings).values({
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -80,8 +81,9 @@ describe("PG nomenclature_settings schema", () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
-    const blob = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) blob[i] = i;
+    const blobCiphertext = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
+    const blob = testBlob(blobCiphertext);
 
     await db.insert(nomenclatureSettings).values({
       systemId,
@@ -104,7 +106,7 @@ describe("PG nomenclature_settings schema", () => {
 
     await db.insert(nomenclatureSettings).values({
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -112,7 +114,7 @@ describe("PG nomenclature_settings schema", () => {
     await expect(
       db.insert(nomenclatureSettings).values({
         systemId,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
       }),
@@ -126,7 +128,7 @@ describe("PG nomenclature_settings schema", () => {
 
     await db.insert(nomenclatureSettings).values({
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -144,7 +146,7 @@ describe("PG nomenclature_settings schema", () => {
     await expect(
       db.insert(nomenclatureSettings).values({
         systemId: "nonexistent",
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       }),
@@ -158,7 +160,7 @@ describe("PG nomenclature_settings schema", () => {
 
     await db.insert(nomenclatureSettings).values({
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });

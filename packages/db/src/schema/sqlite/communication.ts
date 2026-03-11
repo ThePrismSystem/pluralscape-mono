@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { CHANNEL_TYPES, POLL_STATUSES } from "../../helpers/enums.js";
@@ -21,7 +21,7 @@ export const channels = sqliteTable(
     type: text("type").notNull().$type<ServerChannel["type"]>(),
     parentId: text("parent_id"),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -51,7 +51,7 @@ export const messages = sqliteTable(
     replyToId: text("reply_to_id"),
     timestamp: sqliteTimestamp("timestamp").notNull(),
     editedAt: sqliteTimestamp("edited_at"),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -76,7 +76,7 @@ export const boardMessages = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     pinned: integer("pinned", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -94,7 +94,7 @@ export const notes = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     memberId: text("member_id").references(() => members.id, { onDelete: "set null" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -116,7 +116,7 @@ export const polls = sqliteTable(
     maxVotesPerMember: integer("max_votes_per_member").notNull(),
     allowAbstain: integer("allow_abstain", { mode: "boolean" }).notNull(),
     allowVeto: integer("allow_veto", { mode: "boolean" }).notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -137,7 +137,7 @@ export const pollVotes = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -156,7 +156,7 @@ export const acknowledgements = sqliteTable(
     targetMemberId: text("target_member_id"),
     confirmed: integer("confirmed", { mode: "boolean" }).notNull().default(false),
     confirmedAt: sqliteTimestamp("confirmed_at"),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [

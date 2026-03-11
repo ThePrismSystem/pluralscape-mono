@@ -9,7 +9,7 @@ import {
   text,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
 import { members } from "./members.js";
@@ -24,7 +24,7 @@ export const groups = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     parentGroupId: text("parent_group_id"),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),

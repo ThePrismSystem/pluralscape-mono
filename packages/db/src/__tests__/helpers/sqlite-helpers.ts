@@ -3,13 +3,47 @@
  * These must be manually synchronized with schema changes in src/schema/sqlite/.
  */
 
+import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
+
 import { accounts } from "../../schema/sqlite/auth.js";
 import { channels } from "../../schema/sqlite/communication.js";
 import { members } from "../../schema/sqlite/members.js";
 import { systems } from "../../schema/sqlite/systems.js";
 
+import type { BucketId, EncryptedBlob } from "@pluralscape/types";
 import type Database from "better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+
+/** Creates a minimal valid EncryptedBlob for test fixtures. */
+export function testBlob(ciphertext: Uint8Array = new Uint8Array([1, 2, 3])): EncryptedBlob {
+  const nonce = new Uint8Array(AEAD_NONCE_BYTES);
+  nonce.fill(0xaa);
+  return {
+    ciphertext,
+    nonce,
+    tier: 1,
+    algorithm: "xchacha20-poly1305",
+    keyVersion: null,
+    bucketId: null,
+  };
+}
+
+/** Creates a T2 EncryptedBlob with bucketId for test fixtures. */
+export function testBlobT2(
+  ciphertext: Uint8Array = new Uint8Array([4, 5, 6]),
+  bucketId = "test-bucket" as BucketId,
+): EncryptedBlob {
+  const nonce = new Uint8Array(AEAD_NONCE_BYTES);
+  nonce.fill(0xbb);
+  return {
+    ciphertext,
+    nonce,
+    tier: 2,
+    algorithm: "xchacha20-poly1305",
+    keyVersion: 1,
+    bucketId,
+  };
+}
 
 export const SQLITE_DDL = {
   accounts: `
@@ -1211,7 +1245,7 @@ export function sqliteInsertMember(
     .values({
       id: resolvedId,
       systemId,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
     })
@@ -1238,7 +1272,7 @@ export function sqliteInsertChannel(
       type: opts.type ?? "channel",
       parentId: opts.parentId ?? null,
       sortOrder: opts.sortOrder ?? 0,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
     })

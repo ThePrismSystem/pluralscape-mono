@@ -16,6 +16,7 @@ import {
   createPgCustomFieldsTables,
   pgInsertAccount,
   pgInsertSystem,
+  testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -41,7 +42,7 @@ describe("PG custom fields schema", () => {
     await db.insert(buckets).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -56,7 +57,7 @@ describe("PG custom fields schema", () => {
     await db.insert(fieldDefinitions).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -79,7 +80,7 @@ describe("PG custom fields schema", () => {
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(fieldDefinitions).values({
         id,
@@ -104,7 +105,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldDefinitions).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -134,7 +135,7 @@ describe("PG custom fields schema", () => {
         db.insert(fieldDefinitions).values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -150,7 +151,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldDefinitions).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
         archived: true,
@@ -170,7 +171,7 @@ describe("PG custom fields schema", () => {
       const fieldDefId = await insertFieldDefinition(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(fieldValues).values({
         id,
@@ -199,7 +200,7 @@ describe("PG custom fields schema", () => {
         id,
         fieldDefinitionId: fieldDefId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -219,7 +220,7 @@ describe("PG custom fields schema", () => {
         id: valueId,
         fieldDefinitionId: fieldDefId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -240,7 +241,7 @@ describe("PG custom fields schema", () => {
         id: valueId,
         fieldDefinitionId: fieldDefId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -260,7 +261,7 @@ describe("PG custom fields schema", () => {
           id: crypto.randomUUID(),
           fieldDefinitionId: "nonexistent",
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),

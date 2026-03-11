@@ -1,6 +1,6 @@
 import { check, foreignKey, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteJson } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteJson } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { INNERWORLD_ENTITY_TYPES, INNERWORLD_REGION_ACCESS_TYPES } from "../../helpers/enums.js";
@@ -20,7 +20,7 @@ export const innerworldRegions = sqliteTable(
     parentRegionId: text("parent_region_id"),
     accessType: text("access_type").notNull().$type<ServerInnerWorldRegion["accessType"]>(),
     gatekeeperMemberIds: sqliteJson("gatekeeper_member_ids").notNull().$type<readonly string[]>(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -48,7 +48,7 @@ export const innerworldEntities = sqliteTable(
     regionId: text("region_id").references(() => innerworldRegions.id, { onDelete: "set null" }),
     positionX: integer("position_x").notNull(),
     positionY: integer("position_y").notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -66,7 +66,7 @@ export const innerworldCanvas = sqliteTable("innerworld_canvas", {
   systemId: text("system_id")
     .primaryKey()
     .references(() => systems.id, { onDelete: "cascade" }),
-  encryptedData: sqliteBinary("encrypted_data").notNull(),
+  encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
   ...timestamps(),
   ...versioned(),
 });

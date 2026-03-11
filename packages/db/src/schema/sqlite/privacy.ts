@@ -9,7 +9,7 @@ import {
   unique,
 } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { BUCKET_VISIBILITY_SCOPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
@@ -25,7 +25,7 @@ export const buckets = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -87,7 +87,7 @@ export const friendConnections = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("pending").$type<FriendConnectionStatus>(),
-    encryptedData: sqliteBinary("encrypted_data"),
+    encryptedData: sqliteEncryptedBlob("encrypted_data"),
     ...timestamps(),
     ...versioned(),
   },

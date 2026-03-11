@@ -12,6 +12,7 @@
     "./helpers": "./src/helpers/index.ts"
   },
   "dependencies": {
+    "@pluralscape/crypto": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1",

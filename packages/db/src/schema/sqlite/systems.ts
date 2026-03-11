@@ -1,6 +1,6 @@
 import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
 import { accounts } from "./auth.js";
@@ -14,7 +14,7 @@ export const systems = sqliteTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     /** Nullable — system can exist before profile setup during onboarding. */
-    encryptedData: sqliteBinary("encrypted_data"),
+    encryptedData: sqliteEncryptedBlob("encrypted_data"),
     ...timestamps(),
     ...versioned(),
   },

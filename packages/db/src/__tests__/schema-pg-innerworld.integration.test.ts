@@ -9,7 +9,12 @@ import {
   innerworldRegions,
 } from "../schema/pg/innerworld.js";
 
-import { createPgInnerworldTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgInnerworldTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -43,7 +48,7 @@ describe("PG Innerworld Schema", () => {
       parentRegionId: null,
       accessType: "open",
       gatekeeperMemberIds: ["member-1", "member-2"],
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
       version: 1,
@@ -60,7 +65,7 @@ describe("PG Innerworld Schema", () => {
     expect(rows[0]?.parentRegionId).toBeNull();
     expect(rows[0]?.accessType).toBe("open");
     expect(rows[0]?.gatekeeperMemberIds).toEqual(["member-1", "member-2"]);
-    expect(rows[0]?.encryptedData).toEqual(new Uint8Array([1, 2, 3]));
+    expect(rows[0]?.encryptedData).toEqual(testBlob());
     expect(rows[0]?.createdAt).toBe(now);
     expect(rows[0]?.updatedAt).toBe(now);
     expect(rows[0]?.version).toBe(1);
@@ -78,7 +83,7 @@ describe("PG Innerworld Schema", () => {
       regionId: null,
       positionX: 100,
       positionY: 200,
-      encryptedData: new Uint8Array([4, 5, 6]),
+      encryptedData: testBlob(new Uint8Array([4, 5, 6])),
       createdAt: now,
       updatedAt: now,
       version: 1,
@@ -96,7 +101,7 @@ describe("PG Innerworld Schema", () => {
     expect(rows[0]?.regionId).toBeNull();
     expect(rows[0]?.positionX).toBe(100);
     expect(rows[0]?.positionY).toBe(200);
-    expect(rows[0]?.encryptedData).toEqual(new Uint8Array([4, 5, 6]));
+    expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([4, 5, 6])));
   });
 
   it("round-trips innerworldCanvas (1:1 pattern, systemId as PK)", async () => {
@@ -105,7 +110,7 @@ describe("PG Innerworld Schema", () => {
 
     await db.insert(innerworldCanvas).values({
       systemId,
-      encryptedData: new Uint8Array([10, 20, 30]),
+      encryptedData: testBlob(new Uint8Array([10, 20, 30])),
       createdAt: now,
       updatedAt: now,
     });
@@ -117,7 +122,7 @@ describe("PG Innerworld Schema", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.systemId).toBe(systemId);
-    expect(rows[0]?.encryptedData).toEqual(new Uint8Array([10, 20, 30]));
+    expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([10, 20, 30])));
   });
 
   it("sets parentRegionId to null when parent region is deleted (SET NULL)", async () => {
@@ -131,7 +136,7 @@ describe("PG Innerworld Schema", () => {
       systemId,
       accessType: "open",
       gatekeeperMemberIds: [],
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -142,7 +147,7 @@ describe("PG Innerworld Schema", () => {
       parentRegionId: parentId,
       accessType: "open",
       gatekeeperMemberIds: [],
-      encryptedData: new Uint8Array([2]),
+      encryptedData: testBlob(new Uint8Array([2])),
       createdAt: now,
       updatedAt: now,
     });
@@ -166,7 +171,7 @@ describe("PG Innerworld Schema", () => {
       systemId,
       accessType: "open",
       gatekeeperMemberIds: [],
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -178,7 +183,7 @@ describe("PG Innerworld Schema", () => {
       regionId,
       positionX: 50,
       positionY: 75,
-      encryptedData: new Uint8Array([2]),
+      encryptedData: testBlob(new Uint8Array([2])),
       createdAt: now,
       updatedAt: now,
     });
@@ -208,7 +213,7 @@ describe("PG Innerworld Schema", () => {
         regionId: null,
         positionX: 0,
         positionY: 0,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -239,7 +244,7 @@ describe("PG Innerworld Schema", () => {
         systemId,
         accessType,
         gatekeeperMemberIds: [],
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -269,7 +274,7 @@ describe("PG Innerworld Schema", () => {
       systemId,
       accessType: "open",
       gatekeeperMemberIds: [],
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -281,14 +286,14 @@ describe("PG Innerworld Schema", () => {
       regionId,
       positionX: 10,
       positionY: 20,
-      encryptedData: new Uint8Array([2]),
+      encryptedData: testBlob(new Uint8Array([2])),
       createdAt: now,
       updatedAt: now,
     });
 
     await db.insert(innerworldCanvas).values({
       systemId,
-      encryptedData: new Uint8Array([3]),
+      encryptedData: testBlob(new Uint8Array([3])),
       createdAt: now,
       updatedAt: now,
     });
@@ -320,7 +325,7 @@ describe("PG Innerworld Schema", () => {
 
     await db.insert(innerworldCanvas).values({
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -328,7 +333,7 @@ describe("PG Innerworld Schema", () => {
     await expect(
       db.insert(innerworldCanvas).values({
         systemId,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
       }),
@@ -352,7 +357,7 @@ describe("PG Innerworld Schema", () => {
       systemId,
       accessType: "gatekept",
       gatekeeperMemberIds: complexArray,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -385,7 +390,7 @@ describe("PG Innerworld Schema", () => {
         regionId: null,
         positionX: x,
         positionY: y,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });

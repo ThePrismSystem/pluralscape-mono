@@ -1,4 +1,7 @@
+import { deserializeEncryptedBlob, serializeEncryptedBlob } from "@pluralscape/crypto";
 import { customType } from "drizzle-orm/pg-core";
+
+import type { EncryptedBlob } from "@pluralscape/types";
 
 const JSON_PREVIEW_LENGTH = 100;
 
@@ -68,6 +71,27 @@ export const pgBinary = customType<{ data: Uint8Array; driverData: Buffer }>({
   },
   toDriver: binaryToDriver,
   fromDriver: binaryFromDriver,
+});
+
+/** Converts EncryptedBlob to Buffer for PG bytea storage. */
+export function encryptedBlobToDriver(val: EncryptedBlob): Buffer {
+  return Buffer.from(serializeEncryptedBlob(val));
+}
+
+/** Converts PG bytea Buffer back to EncryptedBlob. */
+export function encryptedBlobFromDriver(val: Buffer): EncryptedBlob {
+  // Create a view over existing memory — deserializeEncryptedBlob makes defensive
+  // copies of nonce and ciphertext internally, so no shared-memory risk.
+  return deserializeEncryptedBlob(new Uint8Array(val.buffer, val.byteOffset, val.byteLength));
+}
+
+/** PG bytea column that maps EncryptedBlob ↔ binary via blob-codec. */
+export const pgEncryptedBlob = customType<{ data: EncryptedBlob; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+  toDriver: encryptedBlobToDriver,
+  fromDriver: encryptedBlobFromDriver,
 });
 
 /** PG jsonb column that maps to/from parsed JSON. */

@@ -7,7 +7,12 @@ import { accounts } from "../schema/pg/auth.js";
 import { members, memberPhotos } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgMemberTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgMemberTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -25,7 +30,7 @@ describe("PG members schema", () => {
     await db.insert(members).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -48,7 +53,7 @@ describe("PG members schema", () => {
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(members).values({
         id,
@@ -73,7 +78,7 @@ describe("PG members schema", () => {
       await db.insert(members).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -92,7 +97,7 @@ describe("PG members schema", () => {
       await db.insert(members).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -117,7 +122,7 @@ describe("PG members schema", () => {
         db.insert(members).values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -133,13 +138,13 @@ describe("PG members schema", () => {
       await db.insert(members).values({
         id,
         systemId,
-        encryptedData: new Uint8Array(0),
+        encryptedData: testBlob(new Uint8Array(0)),
         createdAt: now,
         updatedAt: now,
       });
 
       const rows = await db.select().from(members).where(eq(members.id, id));
-      expect(rows[0]?.encryptedData).toEqual(new Uint8Array(0));
+      expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array(0)));
     });
 
     it("round-trips archived: true with archivedAt timestamp", async () => {
@@ -151,7 +156,7 @@ describe("PG members schema", () => {
       await db.insert(members).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
         archived: true,
@@ -172,7 +177,7 @@ describe("PG members schema", () => {
       await db.insert(members).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -196,7 +201,7 @@ describe("PG members schema", () => {
       const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([100, 200]);
+      const data = testBlob(new Uint8Array([100, 200]));
 
       await db.insert(memberPhotos).values({
         id,
@@ -225,7 +230,7 @@ describe("PG members schema", () => {
         id,
         memberId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -245,7 +250,7 @@ describe("PG members schema", () => {
         id,
         memberId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -265,7 +270,7 @@ describe("PG members schema", () => {
         id: photoId,
         memberId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -286,7 +291,7 @@ describe("PG members schema", () => {
         id: photoId,
         memberId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -306,7 +311,7 @@ describe("PG members schema", () => {
           id: crypto.randomUUID(),
           memberId: "nonexistent",
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -324,7 +329,7 @@ describe("PG members schema", () => {
           id: crypto.randomUUID(),
           memberId,
           systemId: "nonexistent",
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),

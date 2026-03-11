@@ -16,6 +16,7 @@ import {
   createSqliteFrontingTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -44,7 +45,7 @@ describe("SQLite fronting schema", () => {
         id,
         systemId,
         startTime: now,
-        encryptedData: new Uint8Array([1, 2, 3]),
+        encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
       })
@@ -69,7 +70,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(frontingSessions)
         .values({
@@ -102,7 +103,7 @@ describe("SQLite fronting schema", () => {
           id,
           systemId,
           startTime: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -123,7 +124,7 @@ describe("SQLite fronting schema", () => {
           id,
           systemId,
           startTime: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -156,7 +157,7 @@ describe("SQLite fronting schema", () => {
             id: crypto.randomUUID(),
             systemId: "nonexistent",
             startTime: now,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -177,7 +178,7 @@ describe("SQLite fronting schema", () => {
             systemId,
             startTime: now,
             endTime: now,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -192,7 +193,7 @@ describe("SQLite fronting schema", () => {
             systemId,
             startTime: now,
             endTime: now - 1,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })
@@ -214,7 +215,7 @@ describe("SQLite fronting schema", () => {
           systemId,
           startTime: now,
           endTime: now + 2000,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -226,7 +227,7 @@ describe("SQLite fronting schema", () => {
           systemId,
           startTime: now + 1000,
           endTime: now + 3000,
-          encryptedData: new Uint8Array([2]),
+          encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
           updatedAt: now,
         })
@@ -247,7 +248,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(switches)
         .values({
@@ -277,7 +278,7 @@ describe("SQLite fronting schema", () => {
           id,
           systemId,
           timestamp: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -296,7 +297,7 @@ describe("SQLite fronting schema", () => {
             id: crypto.randomUUID(),
             systemId: "nonexistent",
             timestamp: now,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
           })
           .run(),
@@ -310,7 +311,7 @@ describe("SQLite fronting schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(customFronts)
         .values({
@@ -338,7 +339,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -360,7 +361,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -381,7 +382,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
           archived: true,
@@ -402,7 +403,7 @@ describe("SQLite fronting schema", () => {
       const sessionId = insertFrontingSession(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(frontingComments)
         .values({
@@ -434,7 +435,7 @@ describe("SQLite fronting schema", () => {
           id,
           sessionId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -456,7 +457,7 @@ describe("SQLite fronting schema", () => {
           id: commentId,
           sessionId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -483,7 +484,7 @@ describe("SQLite fronting schema", () => {
           id: commentId,
           sessionId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -510,7 +511,7 @@ describe("SQLite fronting schema", () => {
             id: crypto.randomUUID(),
             sessionId: "nonexistent",
             systemId,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           })

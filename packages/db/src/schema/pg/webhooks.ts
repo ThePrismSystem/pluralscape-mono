@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, index, integer, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
@@ -49,7 +49,7 @@ export const webhookDeliveries = pgTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: pgTimestamp("last_attempt_at"),
     nextRetryAt: pgTimestamp("next_retry_at"),
-    encryptedData: pgBinary("encrypted_data"),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [

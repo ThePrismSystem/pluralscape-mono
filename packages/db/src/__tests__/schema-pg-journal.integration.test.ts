@@ -8,7 +8,12 @@ import { frontingSessions } from "../schema/pg/fronting.js";
 import { journalEntries, wikiPages } from "../schema/pg/journal.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgJournalTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgJournalTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -38,14 +43,14 @@ describe("PG journal schema", () => {
       const fsId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
       const author = { type: "member", id: "member-1" };
 
       await db.insert(frontingSessions).values({
         id: fsId,
         systemId,
         startTime: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -76,7 +81,7 @@ describe("PG journal schema", () => {
       await db.insert(journalEntries).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -95,7 +100,7 @@ describe("PG journal schema", () => {
       await db.insert(journalEntries).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -117,7 +122,7 @@ describe("PG journal schema", () => {
         systemId,
         archived: true,
         archivedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -136,7 +141,7 @@ describe("PG journal schema", () => {
       await db.insert(journalEntries).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -153,7 +158,7 @@ describe("PG journal schema", () => {
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
 
       await db.insert(wikiPages).values({
         id,
@@ -180,7 +185,7 @@ describe("PG journal schema", () => {
         id,
         systemId,
         slug: `slug-${crypto.randomUUID()}`,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -201,7 +206,7 @@ describe("PG journal schema", () => {
         id: crypto.randomUUID(),
         systemId,
         slug,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -211,7 +216,7 @@ describe("PG journal schema", () => {
           id: crypto.randomUUID(),
           systemId,
           slug,
-          encryptedData: new Uint8Array([2]),
+          encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -229,7 +234,7 @@ describe("PG journal schema", () => {
         id: crypto.randomUUID(),
         systemId: systemId1,
         slug,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -238,7 +243,7 @@ describe("PG journal schema", () => {
         id: crypto.randomUUID(),
         systemId: systemId2,
         slug,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
       });
@@ -259,7 +264,7 @@ describe("PG journal schema", () => {
         id,
         systemId,
         slug: `del-${crypto.randomUUID()}`,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });

@@ -12,6 +12,7 @@ import {
   createSqliteJournalTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -44,7 +45,7 @@ describe("SQLite journal schema", () => {
       const fsId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
       const author = { type: "member", id: "member-1" };
 
       db.insert(frontingSessions)
@@ -52,7 +53,7 @@ describe("SQLite journal schema", () => {
           id: fsId,
           systemId,
           startTime: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -87,7 +88,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -108,7 +109,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -132,7 +133,7 @@ describe("SQLite journal schema", () => {
           systemId,
           archived: true,
           archivedAt: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -153,7 +154,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -171,7 +172,7 @@ describe("SQLite journal schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
 
       db.insert(wikiPages)
         .values({
@@ -201,7 +202,7 @@ describe("SQLite journal schema", () => {
           id,
           systemId,
           slug: `slug-${crypto.randomUUID()}`,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -224,7 +225,7 @@ describe("SQLite journal schema", () => {
           id: crypto.randomUUID(),
           systemId,
           slug,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -237,7 +238,7 @@ describe("SQLite journal schema", () => {
             id: crypto.randomUUID(),
             systemId,
             slug,
-            encryptedData: new Uint8Array([2]),
+            encryptedData: testBlob(new Uint8Array([2])),
             createdAt: now,
             updatedAt: now,
           })
@@ -257,7 +258,7 @@ describe("SQLite journal schema", () => {
           id: crypto.randomUUID(),
           systemId: systemId1,
           slug,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -268,7 +269,7 @@ describe("SQLite journal schema", () => {
           id: crypto.randomUUID(),
           systemId: systemId2,
           slug,
-          encryptedData: new Uint8Array([2]),
+          encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
           updatedAt: now,
         })
@@ -291,7 +292,7 @@ describe("SQLite journal schema", () => {
           id,
           systemId,
           slug: `del-${crypto.randomUUID()}`,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })

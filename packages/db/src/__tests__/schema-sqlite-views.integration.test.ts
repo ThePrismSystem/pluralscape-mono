@@ -34,7 +34,12 @@ import {
   getUnconfirmedAcknowledgements,
 } from "../views/sqlite.js";
 
-import { SQLITE_DDL, sqliteInsertAccount, sqliteInsertSystem } from "./helpers/sqlite-helpers.js";
+import {
+  SQLITE_DDL,
+  sqliteInsertAccount,
+  sqliteInsertSystem,
+  testBlob,
+} from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -148,7 +153,7 @@ describe("SQLite views / query helpers", () => {
           systemId,
           startTime: now - 60000,
           endTime: null,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -159,7 +164,7 @@ describe("SQLite views / query helpers", () => {
           systemId,
           startTime: now - 120000,
           endTime: now - 30000,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -185,7 +190,7 @@ describe("SQLite views / query helpers", () => {
           systemId,
           startTime: now - 60000,
           endTime: null,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -356,7 +361,7 @@ describe("SQLite views / query helpers", () => {
           id: crypto.randomUUID(),
           systemId,
           confirmed: false,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -366,7 +371,7 @@ describe("SQLite views / query helpers", () => {
           systemId,
           confirmed: true,
           confirmedAt: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
@@ -393,14 +398,14 @@ describe("SQLite views / query helpers", () => {
           {
             id: memberId1,
             systemId,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           },
           {
             id: memberId2,
             systemId,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           },
@@ -411,7 +416,7 @@ describe("SQLite views / query helpers", () => {
           id: groupId,
           systemId,
           sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -511,7 +516,7 @@ describe("SQLite views / query helpers", () => {
             systemId,
             startTime: now - 60000,
             endTime: null,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           },
@@ -520,7 +525,7 @@ describe("SQLite views / query helpers", () => {
             systemId,
             startTime: now - 120000,
             endTime: now - 30000,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           },
@@ -532,7 +537,7 @@ describe("SQLite views / query helpers", () => {
             id: crypto.randomUUID(),
             sessionId: activeSessionId,
             systemId,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           },
@@ -540,7 +545,7 @@ describe("SQLite views / query helpers", () => {
             id: crypto.randomUUID(),
             sessionId: endedSessionId,
             systemId,
-            encryptedData: new Uint8Array([1]),
+            encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
           },
@@ -627,7 +632,7 @@ describe("SQLite views / query helpers", () => {
         .values({
           id: subsystemId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -636,7 +641,7 @@ describe("SQLite views / query helpers", () => {
         .values({
           id: sideSystemId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -646,7 +651,7 @@ describe("SQLite views / query helpers", () => {
           id: layerId,
           systemId,
           sortOrder: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })

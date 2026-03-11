@@ -7,7 +7,12 @@ import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 import { checkInRecords, timerConfigs } from "../schema/pg/timers.js";
 
-import { createPgTimerTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgTimerTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -36,7 +41,7 @@ describe("PG timers schema", () => {
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30]);
+      const data = testBlob(new Uint8Array([10, 20, 30]));
 
       await db.insert(timerConfigs).values({
         id,
@@ -62,7 +67,7 @@ describe("PG timers schema", () => {
       await db.insert(timerConfigs).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -82,7 +87,7 @@ describe("PG timers schema", () => {
         id,
         systemId,
         enabled: false,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -103,7 +108,7 @@ describe("PG timers schema", () => {
       await db.insert(timerConfigs).values({
         id: timerId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -128,12 +133,12 @@ describe("PG timers schema", () => {
       const timerId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([5, 6, 7]);
+      const data = testBlob(new Uint8Array([5, 6, 7]));
 
       await db.insert(timerConfigs).values({
         id: timerId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -164,7 +169,7 @@ describe("PG timers schema", () => {
       await db.insert(timerConfigs).values({
         id: timerId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -191,7 +196,7 @@ describe("PG timers schema", () => {
       await db.insert(timerConfigs).values({
         id: timerId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -218,7 +223,7 @@ describe("PG timers schema", () => {
       await db.insert(timerConfigs).values({
         id: timerId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });

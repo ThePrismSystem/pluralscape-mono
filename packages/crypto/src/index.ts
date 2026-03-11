@@ -72,6 +72,9 @@ export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
 export type { PwhashProfile } from "./master-key.js";
 export { deriveMasterKey, generateSalt } from "./master-key.js";
 
+// ── Blob codec ──────────────────────────────────────────────────────
+export { deserializeEncryptedBlob, serializeEncryptedBlob } from "./blob-codec.js";
+
 // ── Symmetric encryption ────────────────────────────────────────────
 export type { EncryptedPayload, StreamEncryptedPayload } from "./symmetric.js";
 export {

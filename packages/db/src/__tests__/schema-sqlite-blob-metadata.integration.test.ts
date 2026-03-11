@@ -12,6 +12,7 @@ import {
   createSqliteBlobMetadataTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -135,7 +136,7 @@ describe("SQLite blob_metadata schema", () => {
       .values({
         id: bucketId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })

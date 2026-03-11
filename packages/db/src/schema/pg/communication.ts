@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, foreignKey, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { CHANNEL_TYPES, POLL_STATUSES } from "../../helpers/enums.js";
@@ -21,7 +21,7 @@ export const channels = pgTable(
     type: varchar("type", { length: 255 }).notNull().$type<ServerChannel["type"]>(),
     parentId: varchar("parent_id", { length: 255 }),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -51,7 +51,7 @@ export const messages = pgTable(
     replyToId: varchar("reply_to_id", { length: 255 }),
     timestamp: pgTimestamp("timestamp").notNull(),
     editedAt: pgTimestamp("edited_at"),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -76,7 +76,7 @@ export const boardMessages = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     pinned: boolean("pinned").notNull().default(false),
     sortOrder: integer("sort_order").notNull(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -96,7 +96,7 @@ export const notes = pgTable(
     memberId: varchar("member_id", { length: 255 }).references(() => members.id, {
       onDelete: "set null",
     }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -121,7 +121,7 @@ export const polls = pgTable(
     maxVotesPerMember: integer("max_votes_per_member").notNull(),
     allowAbstain: boolean("allow_abstain").notNull(),
     allowVeto: boolean("allow_veto").notNull(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -142,7 +142,7 @@ export const pollVotes = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -161,7 +161,7 @@ export const acknowledgements = pgTable(
     targetMemberId: varchar("target_member_id", { length: 255 }),
     confirmed: boolean("confirmed").notNull().default(false),
     confirmedAt: pgTimestamp("confirmed_at"),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [

@@ -1,6 +1,6 @@
 import { boolean, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary } from "../../columns/pg.js";
+import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { systems } from "./systems.js";
@@ -13,7 +13,7 @@ export const systemSettings = pgTable("system_settings", {
   pinHash: varchar("pin_hash", { length: 512 }),
   biometricEnabled: boolean("biometric_enabled").notNull().default(false),
   littlesSafeModeEnabled: boolean("littles_safe_mode_enabled").notNull().default(false),
-  encryptedData: pgBinary("encrypted_data").notNull(),
+  encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
   ...timestamps(),
   ...versioned(),
 });

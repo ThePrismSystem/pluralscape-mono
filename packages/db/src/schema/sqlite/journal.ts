@@ -1,6 +1,6 @@
 import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteJson } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteJson } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
 import { frontingSessions } from "./fronting.js";
@@ -17,7 +17,7 @@ export const journalEntries = sqliteTable(
     frontingSessionId: text("fronting_session_id").references(() => frontingSessions.id, {
       onDelete: "set null",
     }),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -36,7 +36,7 @@ export const wikiPages = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     slug: text("slug").notNull(),
-    encryptedData: sqliteBinary("encrypted_data").notNull(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),

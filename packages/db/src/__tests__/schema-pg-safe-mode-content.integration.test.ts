@@ -11,6 +11,7 @@ import {
   createPgSafeModeContentTables,
   pgInsertAccount,
   pgInsertSystem,
+  testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -38,7 +39,7 @@ describe("PG safe_mode_content schema", () => {
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
     const id = crypto.randomUUID();
-    const data = new Uint8Array([10, 20, 30]);
+    const data = testBlob(new Uint8Array([10, 20, 30]));
 
     await db.insert(safeModeContent).values({
       id,
@@ -67,7 +68,7 @@ describe("PG safe_mode_content schema", () => {
     await db.insert(safeModeContent).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -85,7 +86,7 @@ describe("PG safe_mode_content schema", () => {
     await db.insert(safeModeContent).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -110,7 +111,7 @@ describe("PG safe_mode_content schema", () => {
         id: item.id,
         systemId,
         sortOrder: item.sortOrder,
-        encryptedData: new Uint8Array([item.sortOrder]),
+        encryptedData: testBlob(new Uint8Array([item.sortOrder])),
         createdAt: now,
         updatedAt: now,
       });
@@ -128,8 +129,9 @@ describe("PG safe_mode_content schema", () => {
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
     const id = crypto.randomUUID();
-    const blob = new Uint8Array(256);
-    for (let i = 0; i < 256; i++) blob[i] = i;
+    const blobCiphertext = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) blobCiphertext[i] = i;
+    const blob = testBlob(blobCiphertext);
 
     await db.insert(safeModeContent).values({
       id,
@@ -152,7 +154,7 @@ describe("PG safe_mode_content schema", () => {
     await db.insert(safeModeContent).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -168,7 +170,7 @@ describe("PG safe_mode_content schema", () => {
       db.insert(safeModeContent).values({
         id: crypto.randomUUID(),
         systemId: "nonexistent",
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       }),
@@ -196,7 +198,7 @@ describe("PG safe_mode_content schema", () => {
     await db.insert(safeModeContent).values({
       id,
       systemId,
-      encryptedData: new Uint8Array([1]),
+      encryptedData: testBlob(new Uint8Array([1])),
       createdAt: now,
       updatedAt: now,
     });
@@ -205,7 +207,7 @@ describe("PG safe_mode_content schema", () => {
       db.insert(safeModeContent).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
       }),

@@ -1,6 +1,11 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import {
+  sqliteBinary,
+  sqliteEncryptedBlob,
+  sqliteJson,
+  sqliteTimestamp,
+} from "../../columns/sqlite.js";
 import { timestamps } from "../../helpers/audit.sqlite.js";
 
 import { apiKeys } from "./api-keys.js";
@@ -43,7 +48,7 @@ export const webhookDeliveries = sqliteTable(
     attemptCount: integer("attempt_count").notNull().default(0),
     lastAttemptAt: sqliteTimestamp("last_attempt_at"),
     nextRetryAt: sqliteTimestamp("next_retry_at"),
-    encryptedData: sqliteBinary("encrypted_data"),
+    encryptedData: sqliteEncryptedBlob("encrypted_data"),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [

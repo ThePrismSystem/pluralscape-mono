@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 
 import { systems } from "./systems.js";
@@ -15,7 +15,7 @@ export const frontingSessions = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: pgTimestamp("start_time").notNull(),
     endTime: pgTimestamp("end_time"),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },
@@ -37,7 +37,7 @@ export const switches = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     timestamp: pgTimestamp("timestamp").notNull(),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [index("switches_system_timestamp_idx").on(t.systemId, t.timestamp)],
@@ -50,7 +50,7 @@ export const customFronts = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
@@ -68,7 +68,7 @@ export const frontingComments = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgBinary("encrypted_data").notNull(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
   },

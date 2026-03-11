@@ -17,6 +17,7 @@ import {
   createSqliteImportExportTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -304,7 +305,7 @@ describe("SQLite import-export schema", () => {
         .values({
           id: crypto.randomUUID(),
           systemId,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: testBlob(),
           createdAt: now,
           updatedAt: now,
         })
@@ -454,7 +455,7 @@ describe("SQLite import-export schema", () => {
         .values({
           id: crypto.randomUUID(),
           systemId,
-          encryptedData: new Uint8Array([1, 2, 3]),
+          encryptedData: testBlob(),
           createdAt: now,
           updatedAt: now,
         })

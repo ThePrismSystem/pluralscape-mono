@@ -12,7 +12,12 @@ import {
 } from "../schema/pg/fronting.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgFrontingTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgFrontingTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -41,7 +46,7 @@ describe("PG fronting schema", () => {
       id,
       systemId,
       startTime: now,
-      encryptedData: new Uint8Array([1, 2, 3]),
+      encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -64,7 +69,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(frontingSessions).values({
         id,
@@ -94,7 +99,7 @@ describe("PG fronting schema", () => {
         id,
         systemId,
         startTime: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -113,7 +118,7 @@ describe("PG fronting schema", () => {
         id,
         systemId,
         startTime: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -142,7 +147,7 @@ describe("PG fronting schema", () => {
           id: crypto.randomUUID(),
           systemId: "nonexistent",
           startTime: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -160,7 +165,7 @@ describe("PG fronting schema", () => {
           systemId,
           startTime: now,
           endTime: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -172,7 +177,7 @@ describe("PG fronting schema", () => {
           systemId,
           startTime: now,
           endTime: now - 1000,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),
@@ -192,7 +197,7 @@ describe("PG fronting schema", () => {
         systemId,
         startTime: now,
         endTime: now + 60000,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -202,7 +207,7 @@ describe("PG fronting schema", () => {
         systemId,
         startTime: now + 30000,
         endTime: now + 90000,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
       });
@@ -221,7 +226,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(switches).values({
         id,
@@ -248,7 +253,7 @@ describe("PG fronting schema", () => {
         id,
         systemId,
         timestamp: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 
@@ -264,7 +269,7 @@ describe("PG fronting schema", () => {
           id: crypto.randomUUID(),
           systemId: "nonexistent",
           timestamp: now,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -277,7 +282,7 @@ describe("PG fronting schema", () => {
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(customFronts).values({
         id,
@@ -302,7 +307,7 @@ describe("PG fronting schema", () => {
       await db.insert(customFronts).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -322,7 +327,7 @@ describe("PG fronting schema", () => {
       await db.insert(customFronts).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -341,7 +346,7 @@ describe("PG fronting schema", () => {
       await db.insert(customFronts).values({
         id,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
         archived: true,
@@ -361,7 +366,7 @@ describe("PG fronting schema", () => {
       const sessionId = await insertFrontingSession(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      const data = new Uint8Array([10, 20, 30, 40, 50]);
+      const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       await db.insert(frontingComments).values({
         id,
@@ -390,7 +395,7 @@ describe("PG fronting schema", () => {
         id,
         sessionId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -410,7 +415,7 @@ describe("PG fronting schema", () => {
         id: commentId,
         sessionId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -434,7 +439,7 @@ describe("PG fronting schema", () => {
         id: commentId,
         sessionId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -457,7 +462,7 @@ describe("PG fronting schema", () => {
           id: crypto.randomUUID(),
           sessionId: "nonexistent",
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         }),

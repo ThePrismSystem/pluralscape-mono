@@ -34,7 +34,7 @@ import {
   getUnconfirmedAcknowledgements,
 } from "../views/pg.js";
 
-import { PG_DDL, pgExec, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import { PG_DDL, pgExec, pgInsertAccount, pgInsertSystem, testBlob } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -150,7 +150,7 @@ describe("PG views / query helpers", () => {
         systemId,
         startTime: now - 60000,
         endTime: null,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -159,7 +159,7 @@ describe("PG views / query helpers", () => {
         systemId,
         startTime: now - 120000,
         endTime: now - 30000,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -184,7 +184,7 @@ describe("PG views / query helpers", () => {
         systemId,
         startTime: now - 60000,
         endTime: null,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -340,7 +340,7 @@ describe("PG views / query helpers", () => {
         id: crypto.randomUUID(),
         systemId,
         confirmed: false,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
       await db.insert(acknowledgements).values({
@@ -348,7 +348,7 @@ describe("PG views / query helpers", () => {
         systemId,
         confirmed: true,
         confirmedAt: now,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 
@@ -373,14 +373,14 @@ describe("PG views / query helpers", () => {
         {
           id: memberId1,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         },
         {
           id: memberId2,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         },
@@ -389,7 +389,7 @@ describe("PG views / query helpers", () => {
         id: groupId,
         systemId,
         sortOrder: 0,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -524,7 +524,7 @@ describe("PG views / query helpers", () => {
           systemId,
           startTime: now - 60000,
           endTime: null,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         },
@@ -533,7 +533,7 @@ describe("PG views / query helpers", () => {
           systemId,
           startTime: now - 120000,
           endTime: now - 30000,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         },
@@ -543,7 +543,7 @@ describe("PG views / query helpers", () => {
           id: crypto.randomUUID(),
           sessionId: activeSessionId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         },
@@ -551,7 +551,7 @@ describe("PG views / query helpers", () => {
           id: crypto.randomUUID(),
           sessionId: endedSessionId,
           systemId,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         },
@@ -578,14 +578,14 @@ describe("PG views / query helpers", () => {
       await db.insert(subsystems).values({
         id: subsystemId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
       await db.insert(sideSystems).values({
         id: sideSystemId,
         systemId,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
@@ -593,7 +593,7 @@ describe("PG views / query helpers", () => {
         id: layerId,
         systemId,
         sortOrder: 0,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });

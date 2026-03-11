@@ -13,6 +13,7 @@ import {
   createSqliteInnerworldTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type DatabaseConstructor from "better-sqlite3";
@@ -51,7 +52,7 @@ describe("SQLite Innerworld Schema", () => {
         parentRegionId: null,
         accessType: "gatekept",
         gatekeeperMemberIds: gatekeepers,
-        encryptedData: new Uint8Array([10, 20, 30]),
+        encryptedData: testBlob(new Uint8Array([10, 20, 30])),
         createdAt: now,
         updatedAt: now,
         version: 1,
@@ -70,7 +71,7 @@ describe("SQLite Innerworld Schema", () => {
     expect(rows[0]?.parentRegionId).toBeNull();
     expect(rows[0]?.accessType).toBe("gatekept");
     expect(rows[0]?.gatekeeperMemberIds).toEqual(gatekeepers);
-    expect(rows[0]?.encryptedData).toEqual(new Uint8Array([10, 20, 30]));
+    expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([10, 20, 30])));
     expect(rows[0]?.createdAt).toBe(now);
     expect(rows[0]?.updatedAt).toBe(now);
     expect(rows[0]?.version).toBe(1);
@@ -87,7 +88,7 @@ describe("SQLite Innerworld Schema", () => {
         systemId,
         accessType: "open",
         gatekeeperMemberIds: [],
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -102,7 +103,7 @@ describe("SQLite Innerworld Schema", () => {
         entityType: "landmark",
         positionX: 150,
         positionY: 300,
-        encryptedData: new Uint8Array([40, 50, 60]),
+        encryptedData: testBlob(new Uint8Array([40, 50, 60])),
         createdAt: now,
         updatedAt: now,
         version: 1,
@@ -122,7 +123,7 @@ describe("SQLite Innerworld Schema", () => {
     expect(rows[0]?.entityType).toBe("landmark");
     expect(rows[0]?.positionX).toBe(150);
     expect(rows[0]?.positionY).toBe(300);
-    expect(rows[0]?.encryptedData).toEqual(new Uint8Array([40, 50, 60]));
+    expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([40, 50, 60])));
   });
 
   it("round-trips innerworldCanvas (1:1 pattern, systemId as PK)", () => {
@@ -132,7 +133,7 @@ describe("SQLite Innerworld Schema", () => {
     db.insert(innerworldCanvas)
       .values({
         systemId,
-        encryptedData: new Uint8Array([100, 200, 255]),
+        encryptedData: testBlob(new Uint8Array([100, 200, 255])),
         createdAt: now,
         updatedAt: now,
       })
@@ -146,7 +147,7 @@ describe("SQLite Innerworld Schema", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.systemId).toBe(systemId);
-    expect(rows[0]?.encryptedData).toEqual(new Uint8Array([100, 200, 255]));
+    expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([100, 200, 255])));
   });
 
   it("sets parentRegionId to null when parent region is deleted (SET NULL)", () => {
@@ -161,7 +162,7 @@ describe("SQLite Innerworld Schema", () => {
         systemId,
         accessType: "open",
         gatekeeperMemberIds: [],
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -174,7 +175,7 @@ describe("SQLite Innerworld Schema", () => {
         parentRegionId: parentId,
         accessType: "open",
         gatekeeperMemberIds: [],
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
       })
@@ -199,7 +200,7 @@ describe("SQLite Innerworld Schema", () => {
         systemId,
         accessType: "open",
         gatekeeperMemberIds: [],
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -213,7 +214,7 @@ describe("SQLite Innerworld Schema", () => {
         regionId,
         positionX: 10,
         positionY: 20,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
       })
@@ -245,7 +246,7 @@ describe("SQLite Innerworld Schema", () => {
           regionId: null,
           positionX: 0,
           positionY: 0,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -280,7 +281,7 @@ describe("SQLite Innerworld Schema", () => {
           systemId,
           accessType,
           gatekeeperMemberIds: [],
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })
@@ -314,7 +315,7 @@ describe("SQLite Innerworld Schema", () => {
         systemId,
         accessType: "open",
         gatekeeperMemberIds: [],
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -328,14 +329,19 @@ describe("SQLite Innerworld Schema", () => {
         regionId,
         positionX: 5,
         positionY: 10,
-        encryptedData: new Uint8Array([2]),
+        encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
       })
       .run();
 
     db.insert(innerworldCanvas)
-      .values({ systemId, encryptedData: new Uint8Array([3]), createdAt: now, updatedAt: now })
+      .values({
+        systemId,
+        encryptedData: testBlob(new Uint8Array([3])),
+        createdAt: now,
+        updatedAt: now,
+      })
       .run();
 
     client.exec(`DELETE FROM systems WHERE id = '${systemId}'`);
@@ -356,12 +362,22 @@ describe("SQLite Innerworld Schema", () => {
     const now = Date.now();
 
     db.insert(innerworldCanvas)
-      .values({ systemId, encryptedData: new Uint8Array([1]), createdAt: now, updatedAt: now })
+      .values({
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      })
       .run();
 
     expect(() => {
       db.insert(innerworldCanvas)
-        .values({ systemId, encryptedData: new Uint8Array([2]), createdAt: now, updatedAt: now })
+        .values({
+          systemId,
+          encryptedData: testBlob(new Uint8Array([2])),
+          createdAt: now,
+          updatedAt: now,
+        })
         .run();
     }).toThrow();
   });
@@ -384,7 +400,7 @@ describe("SQLite Innerworld Schema", () => {
         systemId,
         accessType: "gatekept",
         gatekeeperMemberIds: complexArray,
-        encryptedData: new Uint8Array([1]),
+        encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       })
@@ -420,7 +436,7 @@ describe("SQLite Innerworld Schema", () => {
           regionId: null,
           positionX: x,
           positionY: y,
-          encryptedData: new Uint8Array([1]),
+          encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
         })

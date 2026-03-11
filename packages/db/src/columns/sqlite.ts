@@ -1,4 +1,7 @@
+import { deserializeEncryptedBlob, serializeEncryptedBlob } from "@pluralscape/crypto";
 import { customType } from "drizzle-orm/sqlite-core";
+
+import type { EncryptedBlob } from "@pluralscape/types";
 
 const JSON_PREVIEW_LENGTH = 100;
 
@@ -57,6 +60,27 @@ export const sqliteBinary = customType<{ data: Uint8Array; driverData: Uint8Arra
     // Convert to plain Uint8Array for consistent cross-dialect behavior.
     return new Uint8Array(val);
   },
+});
+
+/** Converts EncryptedBlob to Uint8Array for SQLite blob storage. */
+export function encryptedBlobToDriver(val: EncryptedBlob): Uint8Array {
+  return serializeEncryptedBlob(val);
+}
+
+/** Converts SQLite blob back to EncryptedBlob. */
+export function encryptedBlobFromDriver(val: Uint8Array): EncryptedBlob {
+  // better-sqlite3 returns Buffer — create a view; deserializeEncryptedBlob
+  // makes defensive copies of nonce and ciphertext internally.
+  return deserializeEncryptedBlob(new Uint8Array(val.buffer, val.byteOffset, val.byteLength));
+}
+
+/** SQLite blob column that maps EncryptedBlob ↔ binary via blob-codec. */
+export const sqliteEncryptedBlob = customType<{ data: EncryptedBlob; driverData: Uint8Array }>({
+  dataType() {
+    return "blob";
+  },
+  toDriver: encryptedBlobToDriver,
+  fromDriver: encryptedBlobFromDriver,
 });
 
 /** SQLite text column that stores JSON (stringify/parse). */
