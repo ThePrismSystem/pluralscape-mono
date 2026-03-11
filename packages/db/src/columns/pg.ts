@@ -36,7 +36,7 @@ export function jsonToDriver(val: unknown): string {
   return JSON.stringify(val);
 }
 
-/** Parses JSON string from storage. Some drivers (PGlite) return already-parsed objects. */
+/** Parses JSON string from storage. PGlite returns pre-parsed objects for JSONB; handle both. */
 export function jsonFromDriver(val: unknown): unknown {
   if (typeof val !== "string") {
     return val;
@@ -71,7 +71,7 @@ export const pgBinary = customType<{ data: Uint8Array; driverData: Buffer }>({
 });
 
 /** PG jsonb column that maps to/from parsed JSON. */
-export const pgJsonb = customType<{ data: unknown; driverData: unknown }>({
+export const pgJsonb = customType<{ data: unknown; driverData: string }>({
   dataType() {
     return "jsonb";
   },
