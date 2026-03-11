@@ -4,6 +4,7 @@ import {
   integer,
   sqliteTable,
   text,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
@@ -25,9 +26,7 @@ export const blobMetadata = sqliteTable(
     mimeType: text("mime_type"),
     sizeBytes: integer("size_bytes").notNull(),
     encryptionTier: integer("encryption_tier").notNull(),
-    bucketId: text("bucket_id").references(() => buckets.id, {
-      onDelete: "set null",
-    }),
+    bucketId: text("bucket_id"),
     purpose: text("purpose").notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: text("thumbnail_of_blob_id"),
     checksum: text("checksum"),
@@ -36,6 +35,11 @@ export const blobMetadata = sqliteTable(
   (t) => [
     index("blob_metadata_system_id_idx").on(t.systemId),
     uniqueIndex("blob_metadata_storage_key_idx").on(t.storageKey),
+    unique("blob_metadata_id_system_id_unique").on(t.id, t.systemId),
+    foreignKey({
+      columns: [t.bucketId],
+      foreignColumns: [buckets.id],
+    }).onDelete("set null"),
     foreignKey({
       columns: [t.thumbnailOfBlobId],
       foreignColumns: [t.id],

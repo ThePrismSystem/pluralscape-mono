@@ -59,6 +59,7 @@ export const subsystems = pgTable(
   },
   (t) => [
     index("subsystems_system_id_idx").on(t.systemId),
+    unique("subsystems_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentSubsystemId],
       foreignColumns: [t.id],
@@ -78,7 +79,10 @@ export const sideSystems = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("side_systems_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("side_systems_system_id_idx").on(t.systemId),
+    unique("side_systems_id_system_id_unique").on(t.id, t.systemId),
+  ],
 );
 
 export const layers = pgTable(
@@ -94,7 +98,10 @@ export const layers = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("layers_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("layers_system_id_idx").on(t.systemId),
+    unique("layers_id_system_id_unique").on(t.id, t.systemId),
+  ],
 );
 
 // Member identity is inside encryptedData; uniqueness enforced at application layer
@@ -102,9 +109,7 @@ export const subsystemMemberships = pgTable(
   "subsystem_memberships",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    subsystemId: varchar("subsystem_id", { length: 255 })
-      .notNull()
-      .references(() => subsystems.id, { onDelete: "cascade" }),
+    subsystemId: varchar("subsystem_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -114,6 +119,10 @@ export const subsystemMemberships = pgTable(
   (t) => [
     index("subsystem_memberships_subsystem_id_idx").on(t.subsystemId),
     index("subsystem_memberships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.subsystemId, t.systemId],
+      foreignColumns: [subsystems.id, subsystems.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -122,9 +131,7 @@ export const sideSystemMemberships = pgTable(
   "side_system_memberships",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    sideSystemId: varchar("side_system_id", { length: 255 })
-      .notNull()
-      .references(() => sideSystems.id, { onDelete: "cascade" }),
+    sideSystemId: varchar("side_system_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -134,6 +141,10 @@ export const sideSystemMemberships = pgTable(
   (t) => [
     index("side_system_memberships_side_system_id_idx").on(t.sideSystemId),
     index("side_system_memberships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.sideSystemId, t.systemId],
+      foreignColumns: [sideSystems.id, sideSystems.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -142,9 +153,7 @@ export const layerMemberships = pgTable(
   "layer_memberships",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    layerId: varchar("layer_id", { length: 255 })
-      .notNull()
-      .references(() => layers.id, { onDelete: "cascade" }),
+    layerId: varchar("layer_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -154,6 +163,10 @@ export const layerMemberships = pgTable(
   (t) => [
     index("layer_memberships_layer_id_idx").on(t.layerId),
     index("layer_memberships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.layerId, t.systemId],
+      foreignColumns: [layers.id, layers.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -161,12 +174,8 @@ export const subsystemLayerLinks = pgTable(
   "subsystem_layer_links",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    subsystemId: varchar("subsystem_id", { length: 255 })
-      .notNull()
-      .references(() => subsystems.id, { onDelete: "cascade" }),
-    layerId: varchar("layer_id", { length: 255 })
-      .notNull()
-      .references(() => layers.id, { onDelete: "cascade" }),
+    subsystemId: varchar("subsystem_id", { length: 255 }).notNull(),
+    layerId: varchar("layer_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -177,6 +186,14 @@ export const subsystemLayerLinks = pgTable(
     unique("subsystem_layer_links_uniq").on(t.subsystemId, t.layerId),
     index("subsystem_layer_links_subsystem_id_idx").on(t.subsystemId),
     index("subsystem_layer_links_layer_id_idx").on(t.layerId),
+    foreignKey({
+      columns: [t.subsystemId, t.systemId],
+      foreignColumns: [subsystems.id, subsystems.systemId],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.layerId, t.systemId],
+      foreignColumns: [layers.id, layers.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -184,12 +201,8 @@ export const subsystemSideSystemLinks = pgTable(
   "subsystem_side_system_links",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    subsystemId: varchar("subsystem_id", { length: 255 })
-      .notNull()
-      .references(() => subsystems.id, { onDelete: "cascade" }),
-    sideSystemId: varchar("side_system_id", { length: 255 })
-      .notNull()
-      .references(() => sideSystems.id, { onDelete: "cascade" }),
+    subsystemId: varchar("subsystem_id", { length: 255 }).notNull(),
+    sideSystemId: varchar("side_system_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -200,6 +213,14 @@ export const subsystemSideSystemLinks = pgTable(
     unique("subsystem_side_system_links_uniq").on(t.subsystemId, t.sideSystemId),
     index("subsystem_side_system_links_subsystem_id_idx").on(t.subsystemId),
     index("subsystem_side_system_links_side_system_id_idx").on(t.sideSystemId),
+    foreignKey({
+      columns: [t.subsystemId, t.systemId],
+      foreignColumns: [subsystems.id, subsystems.systemId],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.sideSystemId, t.systemId],
+      foreignColumns: [sideSystems.id, sideSystems.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -207,12 +228,8 @@ export const sideSystemLayerLinks = pgTable(
   "side_system_layer_links",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    sideSystemId: varchar("side_system_id", { length: 255 })
-      .notNull()
-      .references(() => sideSystems.id, { onDelete: "cascade" }),
-    layerId: varchar("layer_id", { length: 255 })
-      .notNull()
-      .references(() => layers.id, { onDelete: "cascade" }),
+    sideSystemId: varchar("side_system_id", { length: 255 }).notNull(),
+    layerId: varchar("layer_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -223,5 +240,13 @@ export const sideSystemLayerLinks = pgTable(
     unique("side_system_layer_links_uniq").on(t.sideSystemId, t.layerId),
     index("side_system_layer_links_side_system_id_idx").on(t.sideSystemId),
     index("side_system_layer_links_layer_id_idx").on(t.layerId),
+    foreignKey({
+      columns: [t.sideSystemId, t.systemId],
+      foreignColumns: [sideSystems.id, sideSystems.systemId],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.layerId, t.systemId],
+      foreignColumns: [layers.id, layers.systemId],
+    }).onDelete("cascade"),
   ],
 );

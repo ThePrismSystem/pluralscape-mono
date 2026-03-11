@@ -126,19 +126,21 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER
+      archived_at INTEGER,
+      UNIQUE (id, system_id)
     )
   `,
   memberPhotos: `
     CREATE TABLE member_photos (
       id TEXT PRIMARY KEY,
-      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      member_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       sort_order INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE
     )
   `,
   // Privacy
@@ -149,7 +151,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (id, system_id)
     )
   `,
   bucketsIndexes: `
@@ -194,6 +197,7 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (system_id, friend_system_id),
+      UNIQUE (id, system_id),
       CHECK (system_id != friend_system_id)
     )
   `,
@@ -236,7 +240,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      CHECK (end_time IS NULL OR end_time > start_time)
+      CHECK (end_time IS NULL OR end_time > start_time),
+      UNIQUE (id, system_id)
     )
   `,
   frontingSessionsIndexes: `
@@ -273,13 +278,14 @@ export const SQLITE_DDL = {
   frontingComments: `
     CREATE TABLE fronting_comments (
       id TEXT PRIMARY KEY,
-      session_id TEXT NOT NULL REFERENCES fronting_sessions(id) ON DELETE CASCADE,
+      session_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       member_id TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE
     )
   `,
   frontingCommentsIndexes: `
@@ -307,14 +313,16 @@ export const SQLITE_DDL = {
     CREATE TABLE subsystems (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      parent_subsystem_id TEXT REFERENCES subsystems(id) ON DELETE SET NULL,
+      parent_subsystem_id TEXT,
       architecture_type TEXT,
       has_core INTEGER,
       discovery_status TEXT CHECK (discovery_status IS NULL OR discovery_status IN ('fully-mapped', 'partially-mapped', 'unknown')),
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (id, system_id),
+      FOREIGN KEY (parent_subsystem_id) REFERENCES subsystems(id) ON DELETE SET NULL
     )
   `,
   subsystemsIndexes: `
@@ -327,7 +335,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (id, system_id)
     )
   `,
   sideSystemsIndexes: `
@@ -341,7 +350,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (id, system_id)
     )
   `,
   layersIndexes: `
@@ -350,10 +360,11 @@ export const SQLITE_DDL = {
   subsystemMemberships: `
     CREATE TABLE subsystem_memberships (
       id TEXT PRIMARY KEY,
-      subsystem_id TEXT NOT NULL REFERENCES subsystems(id) ON DELETE CASCADE,
+      subsystem_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE CASCADE
     )
   `,
   subsystemMembershipsIndexes: `
@@ -363,10 +374,11 @@ export const SQLITE_DDL = {
   sideSystemMemberships: `
     CREATE TABLE side_system_memberships (
       id TEXT PRIMARY KEY,
-      side_system_id TEXT NOT NULL REFERENCES side_systems(id) ON DELETE CASCADE,
+      side_system_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE CASCADE
     )
   `,
   sideSystemMembershipsIndexes: `
@@ -376,10 +388,11 @@ export const SQLITE_DDL = {
   layerMemberships: `
     CREATE TABLE layer_memberships (
       id TEXT PRIMARY KEY,
-      layer_id TEXT NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
+      layer_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE CASCADE
     )
   `,
   layerMembershipsIndexes: `
@@ -389,12 +402,14 @@ export const SQLITE_DDL = {
   subsystemLayerLinks: `
     CREATE TABLE subsystem_layer_links (
       id TEXT PRIMARY KEY,
-      subsystem_id TEXT NOT NULL REFERENCES subsystems(id) ON DELETE CASCADE,
-      layer_id TEXT NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
+      subsystem_id TEXT NOT NULL,
+      layer_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
-      UNIQUE (subsystem_id, layer_id)
+      UNIQUE (subsystem_id, layer_id),
+      FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE CASCADE
     )
   `,
   subsystemLayerLinksIndexes: `
@@ -404,12 +419,14 @@ export const SQLITE_DDL = {
   subsystemSideSystemLinks: `
     CREATE TABLE subsystem_side_system_links (
       id TEXT PRIMARY KEY,
-      subsystem_id TEXT NOT NULL REFERENCES subsystems(id) ON DELETE CASCADE,
-      side_system_id TEXT NOT NULL REFERENCES side_systems(id) ON DELETE CASCADE,
+      subsystem_id TEXT NOT NULL,
+      side_system_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
-      UNIQUE (subsystem_id, side_system_id)
+      UNIQUE (subsystem_id, side_system_id),
+      FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE CASCADE
     )
   `,
   subsystemSideSystemLinksIndexes: `
@@ -419,12 +436,14 @@ export const SQLITE_DDL = {
   sideSystemLayerLinks: `
     CREATE TABLE side_system_layer_links (
       id TEXT PRIMARY KEY,
-      side_system_id TEXT NOT NULL REFERENCES side_systems(id) ON DELETE CASCADE,
-      layer_id TEXT NOT NULL REFERENCES layers(id) ON DELETE CASCADE,
+      side_system_id TEXT NOT NULL,
+      layer_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
-      UNIQUE (side_system_id, layer_id)
+      UNIQUE (side_system_id, layer_id),
+      FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE CASCADE
     )
   `,
   sideSystemLayerLinksIndexes: `
@@ -444,7 +463,8 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER
+      archived_at INTEGER,
+      UNIQUE (id, system_id)
     )
   `,
   fieldDefinitionsIndexes: `
@@ -453,13 +473,15 @@ export const SQLITE_DDL = {
   fieldValues: `
     CREATE TABLE field_values (
       id TEXT PRIMARY KEY,
-      field_definition_id TEXT NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
+      field_definition_id TEXT NOT NULL,
       member_id TEXT,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   fieldValuesIndexes: `
@@ -576,14 +598,16 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       type TEXT NOT NULL CHECK (type IN ('category', 'channel')),
-      parent_id TEXT REFERENCES channels(id) ON DELETE SET NULL,
+      parent_id TEXT,
       sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER
+      archived_at INTEGER,
+      UNIQUE (id, system_id),
+      FOREIGN KEY (parent_id) REFERENCES channels(id) ON DELETE SET NULL
     )
   `,
   channelsIndexes: `
@@ -592,10 +616,10 @@ export const SQLITE_DDL = {
   messages: `
     CREATE TABLE messages (
       id TEXT PRIMARY KEY,
-      channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+      channel_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       sender_id TEXT NOT NULL,
-      reply_to_id TEXT REFERENCES messages(id) ON DELETE SET NULL,
+      reply_to_id TEXT,
       timestamp INTEGER NOT NULL,
       edited_at INTEGER,
       encrypted_data BLOB NOT NULL,
@@ -603,7 +627,10 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER
+      archived_at INTEGER,
+      UNIQUE (id, system_id),
+      FOREIGN KEY (channel_id, system_id) REFERENCES channels(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL
     )
   `,
   messagesIndexes: `
@@ -631,13 +658,14 @@ export const SQLITE_DDL = {
     CREATE TABLE notes (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      member_id TEXT REFERENCES members(id) ON DELETE SET NULL,
+      member_id TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER
+      archived_at INTEGER,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   notesIndexes: `
@@ -660,7 +688,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (id, system_id)
     )
   `,
   pollsIndexes: `
@@ -669,14 +698,15 @@ export const SQLITE_DDL = {
   pollVotes: `
     CREATE TABLE poll_votes (
       id TEXT PRIMARY KEY,
-      poll_id TEXT NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+      poll_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       option_id TEXT,
       voter TEXT,
       is_veto INTEGER,
       voted_at INTEGER,
       encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (poll_id, system_id) REFERENCES polls(id, system_id) ON DELETE CASCADE
     )
   `,
   pollVotesIndexes: `
@@ -705,13 +735,14 @@ export const SQLITE_DDL = {
     CREATE TABLE journal_entries (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      fronting_session_id TEXT REFERENCES fronting_sessions(id) ON DELETE SET NULL,
+      fronting_session_id TEXT,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER
+      archived_at INTEGER,
+      FOREIGN KEY (fronting_session_id) REFERENCES fronting_sessions(id) ON DELETE SET NULL
     )
   `,
   journalEntriesIndexes: `
@@ -750,6 +781,7 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
+      UNIQUE (id, system_id),
       FOREIGN KEY (parent_group_id) REFERENCES groups(id) ON DELETE SET NULL
     )
   `,
@@ -758,11 +790,13 @@ export const SQLITE_DDL = {
   `,
   groupMemberships: `
     CREATE TABLE group_memberships (
-      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
-      member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+      group_id TEXT NOT NULL,
+      member_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       created_at INTEGER NOT NULL,
-      PRIMARY KEY (group_id, member_id)
+      PRIMARY KEY (group_id, member_id),
+      FOREIGN KEY (group_id, system_id) REFERENCES groups(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE
     )
   `,
   groupMembershipsIndexes: `
@@ -780,6 +814,7 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (id, system_id),
       FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL
     )
   `,
@@ -791,13 +826,14 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       entity_type TEXT NOT NULL CHECK (entity_type IN ('member', 'landmark', 'subsystem', 'side-system', 'layer')),
-      region_id TEXT REFERENCES innerworld_regions(id) ON DELETE SET NULL,
+      region_id TEXT,
       position_x INTEGER NOT NULL,
       position_y INTEGER NOT NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL
     )
   `,
   innerworldEntitiesIndexes: `
@@ -868,10 +904,11 @@ export const SQLITE_DDL = {
     CREATE TABLE friend_notification_preferences (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      friend_connection_id TEXT NOT NULL REFERENCES friend_connections(id) ON DELETE CASCADE,
+      friend_connection_id TEXT NOT NULL,
       enabled_event_types TEXT NOT NULL,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      FOREIGN KEY (friend_connection_id, system_id) REFERENCES friend_connections(id, system_id) ON DELETE CASCADE
     )
   `,
   friendNotificationPreferencesIndexes: `
@@ -888,7 +925,8 @@ export const SQLITE_DDL = {
       enabled INTEGER NOT NULL DEFAULT 1,
       crypto_key_id TEXT REFERENCES api_keys(id) ON DELETE SET NULL,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      UNIQUE (id, system_id)
     )
   `,
   webhookConfigsIndexes: `
@@ -897,7 +935,7 @@ export const SQLITE_DDL = {
   webhookDeliveries: `
     CREATE TABLE webhook_deliveries (
       id TEXT PRIMARY KEY,
-      webhook_id TEXT NOT NULL REFERENCES webhook_configs(id) ON DELETE CASCADE,
+      webhook_id TEXT NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       event_type TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending',
@@ -906,7 +944,8 @@ export const SQLITE_DDL = {
       last_attempt_at INTEGER,
       next_retry_at INTEGER,
       encrypted_data BLOB,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE
     )
   `,
   webhookDeliveriesIndexes: `
@@ -923,11 +962,13 @@ export const SQLITE_DDL = {
       mime_type TEXT,
       size_bytes INTEGER NOT NULL,
       encryption_tier INTEGER NOT NULL,
-      bucket_id TEXT REFERENCES buckets(id) ON DELETE SET NULL,
+      bucket_id TEXT,
       purpose TEXT NOT NULL,
       thumbnail_of_blob_id TEXT,
       checksum TEXT,
       uploaded_at INTEGER NOT NULL,
+      UNIQUE (id, system_id),
+      FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
       FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL
     )
   `,
@@ -948,7 +989,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (id, system_id)
     )
   `,
   timerConfigsIndexes: `
@@ -958,12 +1000,13 @@ export const SQLITE_DDL = {
     CREATE TABLE check_in_records (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      timer_config_id TEXT NOT NULL REFERENCES timer_configs(id) ON DELETE CASCADE,
+      timer_config_id TEXT NOT NULL,
       scheduled_at INTEGER NOT NULL,
       responded_at INTEGER,
       dismissed INTEGER NOT NULL DEFAULT 0,
       responded_by_member_id TEXT,
-      encrypted_data BLOB
+      encrypted_data BLOB,
+      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE
     )
   `,
   checkInRecordsIndexes: `
@@ -1254,6 +1297,7 @@ export function createSqliteStructureTables(client: InstanceType<typeof Database
 
 export function createSqliteCustomFieldsTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.buckets);
   client.exec(SQLITE_DDL.bucketsIndexes);
   client.exec(SQLITE_DDL.fieldDefinitions);

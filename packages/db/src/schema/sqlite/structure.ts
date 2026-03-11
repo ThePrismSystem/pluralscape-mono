@@ -55,6 +55,7 @@ export const subsystems = sqliteTable(
   },
   (t) => [
     index("subsystems_system_id_idx").on(t.systemId),
+    unique("subsystems_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentSubsystemId],
       foreignColumns: [t.id],
@@ -74,7 +75,10 @@ export const sideSystems = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("side_systems_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("side_systems_system_id_idx").on(t.systemId),
+    unique("side_systems_id_system_id_unique").on(t.id, t.systemId),
+  ],
 );
 
 export const layers = sqliteTable(
@@ -90,7 +94,10 @@ export const layers = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("layers_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("layers_system_id_idx").on(t.systemId),
+    unique("layers_id_system_id_unique").on(t.id, t.systemId),
+  ],
 );
 
 // Member identity is inside encryptedData; uniqueness enforced at application layer
@@ -98,9 +105,7 @@ export const subsystemMemberships = sqliteTable(
   "subsystem_memberships",
   {
     id: text("id").primaryKey(),
-    subsystemId: text("subsystem_id")
-      .notNull()
-      .references(() => subsystems.id, { onDelete: "cascade" }),
+    subsystemId: text("subsystem_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -110,6 +115,10 @@ export const subsystemMemberships = sqliteTable(
   (t) => [
     index("subsystem_memberships_subsystem_id_idx").on(t.subsystemId),
     index("subsystem_memberships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.subsystemId, t.systemId],
+      foreignColumns: [subsystems.id, subsystems.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -118,9 +127,7 @@ export const sideSystemMemberships = sqliteTable(
   "side_system_memberships",
   {
     id: text("id").primaryKey(),
-    sideSystemId: text("side_system_id")
-      .notNull()
-      .references(() => sideSystems.id, { onDelete: "cascade" }),
+    sideSystemId: text("side_system_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -130,6 +137,10 @@ export const sideSystemMemberships = sqliteTable(
   (t) => [
     index("side_system_memberships_side_system_id_idx").on(t.sideSystemId),
     index("side_system_memberships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.sideSystemId, t.systemId],
+      foreignColumns: [sideSystems.id, sideSystems.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -138,9 +149,7 @@ export const layerMemberships = sqliteTable(
   "layer_memberships",
   {
     id: text("id").primaryKey(),
-    layerId: text("layer_id")
-      .notNull()
-      .references(() => layers.id, { onDelete: "cascade" }),
+    layerId: text("layer_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -150,6 +159,10 @@ export const layerMemberships = sqliteTable(
   (t) => [
     index("layer_memberships_layer_id_idx").on(t.layerId),
     index("layer_memberships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.layerId, t.systemId],
+      foreignColumns: [layers.id, layers.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -157,12 +170,8 @@ export const subsystemLayerLinks = sqliteTable(
   "subsystem_layer_links",
   {
     id: text("id").primaryKey(),
-    subsystemId: text("subsystem_id")
-      .notNull()
-      .references(() => subsystems.id, { onDelete: "cascade" }),
-    layerId: text("layer_id")
-      .notNull()
-      .references(() => layers.id, { onDelete: "cascade" }),
+    subsystemId: text("subsystem_id").notNull(),
+    layerId: text("layer_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -173,6 +182,14 @@ export const subsystemLayerLinks = sqliteTable(
     unique("subsystem_layer_links_uniq").on(t.subsystemId, t.layerId),
     index("subsystem_layer_links_subsystem_id_idx").on(t.subsystemId),
     index("subsystem_layer_links_layer_id_idx").on(t.layerId),
+    foreignKey({
+      columns: [t.subsystemId, t.systemId],
+      foreignColumns: [subsystems.id, subsystems.systemId],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.layerId, t.systemId],
+      foreignColumns: [layers.id, layers.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -180,12 +197,8 @@ export const subsystemSideSystemLinks = sqliteTable(
   "subsystem_side_system_links",
   {
     id: text("id").primaryKey(),
-    subsystemId: text("subsystem_id")
-      .notNull()
-      .references(() => subsystems.id, { onDelete: "cascade" }),
-    sideSystemId: text("side_system_id")
-      .notNull()
-      .references(() => sideSystems.id, { onDelete: "cascade" }),
+    subsystemId: text("subsystem_id").notNull(),
+    sideSystemId: text("side_system_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -196,6 +209,14 @@ export const subsystemSideSystemLinks = sqliteTable(
     unique("subsystem_side_system_links_uniq").on(t.subsystemId, t.sideSystemId),
     index("subsystem_side_system_links_subsystem_id_idx").on(t.subsystemId),
     index("subsystem_side_system_links_side_system_id_idx").on(t.sideSystemId),
+    foreignKey({
+      columns: [t.subsystemId, t.systemId],
+      foreignColumns: [subsystems.id, subsystems.systemId],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.sideSystemId, t.systemId],
+      foreignColumns: [sideSystems.id, sideSystems.systemId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -203,12 +224,8 @@ export const sideSystemLayerLinks = sqliteTable(
   "side_system_layer_links",
   {
     id: text("id").primaryKey(),
-    sideSystemId: text("side_system_id")
-      .notNull()
-      .references(() => sideSystems.id, { onDelete: "cascade" }),
-    layerId: text("layer_id")
-      .notNull()
-      .references(() => layers.id, { onDelete: "cascade" }),
+    sideSystemId: text("side_system_id").notNull(),
+    layerId: text("layer_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -219,5 +236,13 @@ export const sideSystemLayerLinks = sqliteTable(
     unique("side_system_layer_links_uniq").on(t.sideSystemId, t.layerId),
     index("side_system_layer_links_side_system_id_idx").on(t.sideSystemId),
     index("side_system_layer_links_layer_id_idx").on(t.layerId),
+    foreignKey({
+      columns: [t.sideSystemId, t.systemId],
+      foreignColumns: [sideSystems.id, sideSystems.systemId],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.layerId, t.systemId],
+      foreignColumns: [layers.id, layers.systemId],
+    }).onDelete("cascade"),
   ],
 );

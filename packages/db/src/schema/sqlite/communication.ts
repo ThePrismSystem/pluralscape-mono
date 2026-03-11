@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
@@ -28,6 +36,7 @@ export const channels = sqliteTable(
   },
   (t) => [
     index("channels_system_id_idx").on(t.systemId),
+    unique("channels_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentId],
       foreignColumns: [t.id],
@@ -41,9 +50,7 @@ export const messages = sqliteTable(
   "messages",
   {
     id: text("id").primaryKey(),
-    channelId: text("channel_id")
-      .notNull()
-      .references(() => channels.id, { onDelete: "cascade" }),
+    channelId: text("channel_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -60,6 +67,11 @@ export const messages = sqliteTable(
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_id_idx").on(t.systemId),
     index("messages_reply_to_id_idx").on(t.replyToId),
+    unique("messages_id_system_id_unique").on(t.id, t.systemId),
+    foreignKey({
+      columns: [t.channelId, t.systemId],
+      foreignColumns: [channels.id, channels.systemId],
+    }).onDelete("cascade"),
     foreignKey({
       columns: [t.replyToId],
       foreignColumns: [t.id],
@@ -94,13 +106,20 @@ export const notes = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    memberId: text("member_id").references(() => members.id, { onDelete: "set null" }),
+    memberId: text("member_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
   },
-  (t) => [index("notes_system_id_idx").on(t.systemId), index("notes_member_id_idx").on(t.memberId)],
+  (t) => [
+    index("notes_system_id_idx").on(t.systemId),
+    index("notes_member_id_idx").on(t.memberId),
+    foreignKey({
+      columns: [t.memberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
+  ],
 );
 
 export const polls = sqliteTable(
@@ -125,6 +144,7 @@ export const polls = sqliteTable(
   },
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
+    unique("polls_id_system_id_unique").on(t.id, t.systemId),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
@@ -135,9 +155,7 @@ export const pollVotes = sqliteTable(
   "poll_votes",
   {
     id: text("id").primaryKey(),
-    pollId: text("poll_id")
-      .notNull()
-      .references(() => polls.id, { onDelete: "cascade" }),
+    pollId: text("poll_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -151,6 +169,10 @@ export const pollVotes = sqliteTable(
   (t) => [
     index("poll_votes_poll_id_idx").on(t.pollId),
     index("poll_votes_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.pollId, t.systemId],
+      foreignColumns: [polls.id, polls.systemId],
+    }).onDelete("cascade"),
   ],
 );
 

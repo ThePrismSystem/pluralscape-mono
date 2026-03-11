@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
@@ -21,6 +21,7 @@ export const members = sqliteTable(
     index("members_system_id_idx").on(t.systemId),
     index("members_archived_idx").on(t.archived),
     index("members_created_at_idx").on(t.createdAt),
+    unique("members_id_system_id_unique").on(t.id, t.systemId),
   ],
 );
 
@@ -28,9 +29,7 @@ export const memberPhotos = sqliteTable(
   "member_photos",
   {
     id: text("id").primaryKey(),
-    memberId: text("member_id")
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
+    memberId: text("member_id").notNull(),
     /** Denormalized from members — avoids join through members for RLS queries. */
     systemId: text("system_id")
       .notNull()
@@ -43,5 +42,9 @@ export const memberPhotos = sqliteTable(
   (t) => [
     index("member_photos_system_id_idx").on(t.systemId),
     index("member_photos_member_sort_idx").on(t.memberId, t.sortOrder),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
+    }).onDelete("cascade"),
   ],
 );

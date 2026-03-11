@@ -29,7 +29,10 @@ export const buckets = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("buckets_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("buckets_system_id_idx").on(t.systemId),
+    unique("buckets_id_system_id_unique").on(t.id, t.systemId),
+  ],
 );
 
 export const bucketContentTags = sqliteTable(
@@ -95,6 +98,7 @@ export const friendConnections = sqliteTable(
     index("friend_connections_system_status_idx").on(t.systemId, t.status),
     index("friend_connections_friend_system_id_idx").on(t.friendSystemId),
     unique("friend_connections_system_friend_uniq").on(t.systemId, t.friendSystemId),
+    unique("friend_connections_id_system_id_unique").on(t.id, t.systemId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.systemId} != ${t.friendSystemId}`),
   ],

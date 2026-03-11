@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, foreignKey, index, jsonb, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
@@ -37,6 +37,7 @@ export const frontingSessions = pgTable(
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
+    unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
   ],
 );
 
@@ -73,9 +74,7 @@ export const frontingComments = pgTable(
   "fronting_comments",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    sessionId: varchar("session_id", { length: 255 })
-      .notNull()
-      .references(() => frontingSessions.id, { onDelete: "cascade" }),
+    sessionId: varchar("session_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -84,5 +83,11 @@ export const frontingComments = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("fronting_comments_session_created_idx").on(t.sessionId, t.createdAt)],
+  (t) => [
+    index("fronting_comments_session_created_idx").on(t.sessionId, t.createdAt),
+    foreignKey({
+      columns: [t.sessionId, t.systemId],
+      foreignColumns: [frontingSessions.id, frontingSessions.systemId],
+    }).onDelete("cascade"),
+  ],
 );

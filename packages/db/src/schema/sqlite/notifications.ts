@@ -1,4 +1,11 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  foreignKey,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps } from "../../helpers/audit.sqlite.js";
@@ -58,9 +65,7 @@ export const friendNotificationPreferences = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    friendConnectionId: text("friend_connection_id")
-      .notNull()
-      .references(() => friendConnections.id, { onDelete: "cascade" }),
+    friendConnectionId: text("friend_connection_id").notNull(),
     enabledEventTypes: sqliteJson("enabled_event_types")
       .notNull()
       .$type<readonly FriendNotificationEventType[]>(),
@@ -71,5 +76,9 @@ export const friendNotificationPreferences = sqliteTable(
       t.systemId,
       t.friendConnectionId,
     ),
+    foreignKey({
+      columns: [t.friendConnectionId, t.systemId],
+      foreignColumns: [friendConnections.id, friendConnections.systemId],
+    }).onDelete("cascade"),
   ],
 );
