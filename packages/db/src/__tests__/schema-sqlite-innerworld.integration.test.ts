@@ -39,11 +39,10 @@ describe("SQLite Innerworld Schema", () => {
     return sqliteInsertSystem(db, accountId);
   }
 
-  it("round-trips innerworldRegions with all fields including JSON", () => {
+  it("round-trips innerworldRegions with all fields", () => {
     const systemId = setupSystem();
     const now = Date.now();
     const regionId = crypto.randomUUID();
-    const gatekeepers = ["member-a", "member-b", "member-c"];
 
     db.insert(innerworldRegions)
       .values({
@@ -51,7 +50,6 @@ describe("SQLite Innerworld Schema", () => {
         systemId,
         parentRegionId: null,
         accessType: "gatekept",
-        gatekeeperMemberIds: gatekeepers,
         encryptedData: testBlob(new Uint8Array([10, 20, 30])),
         createdAt: now,
         updatedAt: now,
@@ -70,11 +68,11 @@ describe("SQLite Innerworld Schema", () => {
     expect(rows[0]?.systemId).toBe(systemId);
     expect(rows[0]?.parentRegionId).toBeNull();
     expect(rows[0]?.accessType).toBe("gatekept");
-    expect(rows[0]?.gatekeeperMemberIds).toEqual(gatekeepers);
     expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([10, 20, 30])));
     expect(rows[0]?.createdAt).toBe(now);
     expect(rows[0]?.updatedAt).toBe(now);
     expect(rows[0]?.version).toBe(1);
+    expect(rows[0]).not.toHaveProperty("gatekeeperMemberIds");
   });
 
   it("round-trips innerworldEntities with all fields", () => {
@@ -87,7 +85,6 @@ describe("SQLite Innerworld Schema", () => {
         id: regionId,
         systemId,
         accessType: "open",
-        gatekeeperMemberIds: [],
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -161,7 +158,6 @@ describe("SQLite Innerworld Schema", () => {
         id: parentId,
         systemId,
         accessType: "open",
-        gatekeeperMemberIds: [],
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -174,7 +170,6 @@ describe("SQLite Innerworld Schema", () => {
         systemId,
         parentRegionId: parentId,
         accessType: "open",
-        gatekeeperMemberIds: [],
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
@@ -199,7 +194,6 @@ describe("SQLite Innerworld Schema", () => {
         id: regionId,
         systemId,
         accessType: "open",
-        gatekeeperMemberIds: [],
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -280,7 +274,6 @@ describe("SQLite Innerworld Schema", () => {
           id: regionId,
           systemId,
           accessType,
-          gatekeeperMemberIds: [],
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -298,9 +291,9 @@ describe("SQLite Innerworld Schema", () => {
     expect(() => {
       client
         .prepare(
-          `INSERT INTO innerworld_regions (id, system_id, access_type, gatekeeper_member_ids, encrypted_data, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO innerworld_regions (id, system_id, access_type, encrypted_data, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(crypto.randomUUID(), systemId, "invalid", "[]", new Uint8Array([1]), now, now, 1);
+        .run(crypto.randomUUID(), systemId, "invalid", new Uint8Array([1]), now, now, 1);
     }).toThrow();
   });
 
@@ -314,7 +307,6 @@ describe("SQLite Innerworld Schema", () => {
         id: regionId,
         systemId,
         accessType: "open",
-        gatekeeperMemberIds: [],
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -380,40 +372,6 @@ describe("SQLite Innerworld Schema", () => {
         })
         .run();
     }).toThrow();
-  });
-
-  it("round-trips complex gatekeeperMemberIds JSON array", () => {
-    const systemId = setupSystem();
-    const now = Date.now();
-    const regionId = crypto.randomUUID();
-    const complexArray = [
-      "member-aaa-111",
-      "member-bbb-222",
-      "member-ccc-333",
-      "member-ddd-444",
-      "member-eee-555",
-    ];
-
-    db.insert(innerworldRegions)
-      .values({
-        id: regionId,
-        systemId,
-        accessType: "gatekept",
-        gatekeeperMemberIds: complexArray,
-        encryptedData: testBlob(new Uint8Array([1])),
-        createdAt: now,
-        updatedAt: now,
-      })
-      .run();
-
-    const rows = db
-      .select()
-      .from(innerworldRegions)
-      .where(eq(innerworldRegions.id, regionId))
-      .all();
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0]?.gatekeeperMemberIds).toEqual(complexArray);
   });
 
   it("persists positionX/Y integer values including zero and negatives", () => {

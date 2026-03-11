@@ -1,4 +1,4 @@
-import { index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
@@ -13,7 +13,6 @@ export const journalEntries = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    author: jsonb("author"),
     frontingSessionId: varchar("fronting_session_id", { length: 255 }).references(
       () => frontingSessions.id,
       { onDelete: "set null" },

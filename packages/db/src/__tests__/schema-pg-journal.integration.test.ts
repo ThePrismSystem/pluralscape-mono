@@ -37,14 +37,13 @@ describe("PG journal schema", () => {
   });
 
   describe("journal_entries", () => {
-    it("round-trips with encrypted_data and author JSON", async () => {
+    it("round-trips with encrypted_data and frontingSessionId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const fsId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
-      const author = { type: "member", id: "member-1" };
 
       await db.insert(frontingSessions).values({
         id: fsId,
@@ -58,7 +57,6 @@ describe("PG journal schema", () => {
       await db.insert(journalEntries).values({
         id,
         systemId,
-        author,
         frontingSessionId: fsId,
         encryptedData: data,
         createdAt: now,
@@ -68,11 +66,11 @@ describe("PG journal schema", () => {
       const rows = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.author).toEqual(author);
       expect(rows[0]?.frontingSessionId).toBe(fsId);
+      expect(rows[0]).not.toHaveProperty("author");
     });
 
-    it("allows nullable author and frontingSessionId", async () => {
+    it("allows nullable frontingSessionId", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -87,7 +85,6 @@ describe("PG journal schema", () => {
       });
 
       const rows = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
-      expect(rows[0]?.author).toBeNull();
       expect(rows[0]?.frontingSessionId).toBeNull();
     });
 

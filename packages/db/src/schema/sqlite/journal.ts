@@ -1,6 +1,6 @@
 import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteJson } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
 
 import { frontingSessions } from "./fronting.js";
@@ -13,7 +13,6 @@ export const journalEntries = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    author: sqliteJson("author"),
     frontingSessionId: text("fronting_session_id").references(() => frontingSessions.id, {
       onDelete: "set null",
     }),

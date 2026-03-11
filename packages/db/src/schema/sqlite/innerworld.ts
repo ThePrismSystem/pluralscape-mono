@@ -1,6 +1,6 @@
 import { check, foreignKey, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteEncryptedBlob, sqliteJson } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { INNERWORLD_ENTITY_TYPES, INNERWORLD_REGION_ACCESS_TYPES } from "../../helpers/enums.js";
@@ -19,7 +19,6 @@ export const innerworldRegions = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     parentRegionId: text("parent_region_id"),
     accessType: text("access_type").notNull().$type<ServerInnerWorldRegion["accessType"]>(),
-    gatekeeperMemberIds: sqliteJson("gatekeeper_member_ids").notNull().$type<readonly string[]>(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

@@ -338,14 +338,14 @@ export type ClientInnerWorldEntity = InnerWorldEntity;
 
 /**
  * Server-side innerworld region representation.
- * T1 encrypted: name, description, boundaryData, visual
+ * T1 encrypted: name, description, boundaryData, visual, gatekeeperMemberIds
+ * T3 plaintext: parentRegionId, accessType
  */
 export interface ServerInnerWorldRegion extends AuditMetadata {
   readonly id: InnerWorldRegionId;
   readonly systemId: SystemId;
   readonly parentRegionId: InnerWorldRegionId | null;
   readonly accessType: "open" | "gatekept";
-  readonly gatekeeperMemberIds: readonly MemberId[];
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -391,13 +391,12 @@ export type ClientCustomFront = CustomFront;
 
 /**
  * Server-side journal entry representation.
- * T1 encrypted: title, blocks, tags, linkedEntities
- * T3 plaintext: author, frontingSessionId, archived
+ * T1 encrypted: title, blocks, tags, linkedEntities, author
+ * T3 plaintext: frontingSessionId, archived
  */
 export interface ServerJournalEntry extends AuditMetadata {
   readonly id: JournalEntryId;
   readonly systemId: SystemId;
-  readonly author: EntityReference<"member" | "subsystem" | "side-system" | "layer"> | null;
   readonly frontingSessionId: FrontingSessionId | null;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
@@ -524,14 +523,16 @@ export type ClientSideSystem = SideSystem;
 
 /**
  * Server-side layer representation.
- * T1 encrypted: name, description, color, imageSource, emoji
- * T3 plaintext: accessType, gatekeeperMemberIds
+ * T1 encrypted: name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds
+ *
+ * Note: accessType and gatekeeperMemberIds are semantically T3 (server-readable
+ * would enable server-side gating), but no DB column exists for either field.
+ * They live inside encryptedData for coherence with the zero-knowledge model.
+ * If server-side gating is needed later, add real columns and move them to T3.
  */
 export interface ServerLayer extends AuditMetadata {
   readonly id: LayerId;
   readonly systemId: SystemId;
-  readonly accessType: "open" | "gatekept";
-  readonly gatekeeperMemberIds: readonly MemberId[];
   readonly encryptedData: EncryptedBlob;
 }
 
@@ -603,17 +604,17 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // FieldDefinition: T1 (name, description, options) | T3 (fieldType, required, sortOrder)
 // FieldValue: T1 (value) | T3 (fieldDefinitionId, memberId)
 // InnerWorldEntity: T1 (linked entity refs, description, visual) | T3 (positionX/Y, regionId, entityType)
-// InnerWorldRegion: T1 (name, description, boundaryData, visual) | T3 (parentRegionId, accessType, gatekeeperMemberIds)
+// InnerWorldRegion: T1 (name, description, boundaryData, visual, gatekeeperMemberIds) | T3 (parentRegionId, accessType)
 // LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
 // CustomFront: T1 (name, description, color, emoji) | T3 (archived)
-// JournalEntry: T1 (title, blocks, tags, linkedEntities) | T3 (author, frontingSessionId, archived)
+// JournalEntry: T1 (title, blocks, tags, linkedEntities, author) | T3 (frontingSessionId, archived)
 // WikiPage: T1 (title, slug, blocks, tags, linkedEntities, linkedFromPages) | T3 (archived)
 // MemberPhoto: T1 (imageSource, caption) | T3 (memberId, sortOrder)
 // Poll: T1 (title, options, description) | T3 (createdByMemberId, kind, status, closedAt, endsAt, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto)
 // PollVote: T1 (comment) | T3 (pollId, optionId, voter, isVeto, votedAt)
 // AcknowledgementRequest: T1 (message) | T3 (createdByMemberId, targetMemberId, confirmed, confirmedAt)
 // SideSystem: T1 (name, description, color, imageSource, emoji) | T3 (none)
-// Layer: T1 (name, description, color, imageSource, emoji) | T3 (accessType, gatekeeperMemberIds)
+// Layer: T1 (name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds) | T3 (none)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
 // AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
 //

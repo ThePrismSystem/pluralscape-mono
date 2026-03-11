@@ -39,14 +39,13 @@ describe("SQLite journal schema", () => {
   });
 
   describe("journal_entries", () => {
-    it("round-trips with encrypted_data and author JSON", () => {
+    it("round-trips with encrypted_data and frontingSessionId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const fsId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
-      const author = { type: "member", id: "member-1" };
 
       db.insert(frontingSessions)
         .values({
@@ -63,7 +62,6 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
-          author,
           frontingSessionId: fsId,
           encryptedData: data,
           createdAt: now,
@@ -74,11 +72,11 @@ describe("SQLite journal schema", () => {
       const rows = db.select().from(journalEntries).where(eq(journalEntries.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.author).toEqual(author);
       expect(rows[0]?.frontingSessionId).toBe(fsId);
+      expect(rows[0]).not.toHaveProperty("author");
     });
 
-    it("allows nullable author and frontingSessionId", () => {
+    it("allows nullable frontingSessionId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -95,7 +93,6 @@ describe("SQLite journal schema", () => {
         .run();
 
       const rows = db.select().from(journalEntries).where(eq(journalEntries.id, id)).all();
-      expect(rows[0]?.author).toBeNull();
       expect(rows[0]?.frontingSessionId).toBeNull();
     });
 
