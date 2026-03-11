@@ -13,7 +13,20 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import * as pg from "../schema/pg/index.js";
 import * as sqlite from "../schema/sqlite/index.js";
 
-import type { DeviceInfo, EntityType } from "@pluralscape/types";
+import type {
+  DbChartData,
+  DbChartDataset,
+  DbDateRange,
+  DbMemberFrontingBreakdown,
+} from "../schema/shared/analytics-types.js";
+import type {
+  ChartData,
+  ChartDataset,
+  DateRange,
+  DeviceInfo,
+  EntityType,
+  MemberFrontingBreakdown,
+} from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
@@ -777,5 +790,26 @@ describe("Type-level assertions", () => {
   it("PG frontingReports.generatedAt infers as number", () => {
     type Row = InferSelectModel<typeof pg.frontingReports>;
     expectTypeOf<Row["generatedAt"]>().toEqualTypeOf<number>();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. Analytics type structural parity
+// ---------------------------------------------------------------------------
+describe("analytics type structural parity", () => {
+  it("DbDateRange has same keys as DateRange", () => {
+    expectTypeOf<keyof DbDateRange>().toEqualTypeOf<keyof DateRange>();
+  });
+
+  it("DbMemberFrontingBreakdown has same keys as MemberFrontingBreakdown", () => {
+    expectTypeOf<keyof DbMemberFrontingBreakdown>().toEqualTypeOf<keyof MemberFrontingBreakdown>();
+  });
+
+  it("DbChartDataset has same keys as ChartDataset", () => {
+    expectTypeOf<keyof DbChartDataset>().toEqualTypeOf<keyof ChartDataset>();
+  });
+
+  it("DbChartData has same keys as ChartData", () => {
+    expectTypeOf<keyof DbChartData>().toEqualTypeOf<keyof ChartData>();
   });
 });

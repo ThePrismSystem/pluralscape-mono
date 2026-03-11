@@ -11,7 +11,6 @@ import type {
   AuditEventType,
   AuthKeyType,
   BlobPurpose,
-  BucketVisibilityScope,
   DeviceTokenPlatform,
   DeviceTransferStatus,
   DiscoveryStatus,
@@ -32,6 +31,7 @@ import type {
   PKSyncDirection,
   PollKind,
   RelationshipType,
+  ReportFormat,
   RotationItemStatus,
   RotationState,
   SearchableEntityType,
@@ -40,7 +40,6 @@ import type {
   SyncOperation,
   SyncResolution,
   WebhookDeliveryStatus,
-  ReportFormat,
   WebhookEventType,
 } from "@pluralscape/types";
 
@@ -117,17 +116,6 @@ export const FRIEND_CONNECTION_STATUSES = [
   "blocked",
   "removed",
 ] as const satisfies readonly FriendConnectionStatus[];
-export const BUCKET_VISIBILITY_SCOPES = [
-  "members",
-  "custom-fields",
-  "fronting-status",
-  "custom-fronts",
-  "notes",
-  "chat",
-  "journal-entries",
-  "member-photos",
-  "groups",
-] as const satisfies readonly BucketVisibilityScope[];
 export const AUTH_KEY_TYPES = ["encryption", "signing"] as const satisfies readonly AuthKeyType[];
 export const DEVICE_TRANSFER_STATUSES = [
   "pending",

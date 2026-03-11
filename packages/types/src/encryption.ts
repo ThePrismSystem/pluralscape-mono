@@ -85,16 +85,28 @@ export type EncryptionAlgorithm = "xchacha20-poly1305";
 
 // ── EncryptedBlob ──────────────────────────────────────────────
 
-/** Wire format for encrypted data. Carried in server-side entity representations. */
-export interface EncryptedBlob {
+/** Shared fields across all encrypted blob tiers. */
+interface EncryptedBlobBase {
   readonly ciphertext: Uint8Array;
   readonly nonce: Uint8Array;
-  readonly tier: 1 | 2;
   readonly algorithm: EncryptionAlgorithm;
   readonly keyVersion: number | null;
-  /** Present for T2 blobs — identifies which bucket key was used. */
-  readonly bucketId: BucketId | null;
 }
+
+/** T1 zero-knowledge blob — encrypted with the system master key. No bucket association. */
+export interface T1EncryptedBlob extends EncryptedBlobBase {
+  readonly tier: 1;
+  readonly bucketId: null;
+}
+
+/** T2 per-bucket blob — encrypted with a bucket-specific key. Always has a bucketId. */
+export interface T2EncryptedBlob extends EncryptedBlobBase {
+  readonly tier: 2;
+  readonly bucketId: BucketId;
+}
+
+/** Wire format for encrypted data. Discriminated union on `tier`. */
+export type EncryptedBlob = T1EncryptedBlob | T2EncryptedBlob;
 
 // ── EncryptedString ────────────────────────────────────────────
 
@@ -611,10 +623,13 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
 // AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
 //
+// Switch: T3 (memberIds, timestamp — immutable event metadata; member IDs are non-identifying opaque tokens)
+// FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side
+//
 // ApiKey: T3 (all fields — server metadata, no user content)
 // BlobMetadata: T3 (all fields — metadata only, blob content encrypted at storage layer)
 // JobDefinition: T3 (all fields — server-internal job metadata)
-// DeviceToken: T3 (token, platform, lastActiveAt)
+// DeviceToken: T3 (token, platform, lastActiveAt — server must read push tokens to deliver notifications)
 // NotificationConfig: T3 (all fields — user preferences, no sensitive content)
 // NotificationPayload: T1 (title, body, data) | T3 (eventType, systemId)
 // WebhookConfig: T1 (secret via EncryptedString) | T3 (url, eventTypes, enabled, cryptoKeyId)

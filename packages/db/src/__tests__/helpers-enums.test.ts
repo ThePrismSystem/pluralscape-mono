@@ -7,13 +7,15 @@ import {
   AUDIT_EVENT_TYPES,
   AUTH_KEY_TYPES,
   BLOB_PURPOSES,
-  BUCKET_VISIBILITY_SCOPES,
   CHANNEL_TYPES,
   DEVICE_TOKEN_PLATFORMS,
   DEVICE_TRANSFER_STATUSES,
+  DISCOVERY_STATUSES,
+  ENTITY_TYPES,
   EXPORT_FORMATS,
   EXPORT_REQUEST_STATUSES,
   FRIEND_CONNECTION_STATUSES,
+  FRONTING_REPORT_FORMATS,
   FRONTING_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
@@ -26,6 +28,8 @@ import {
   POLL_KINDS,
   POLL_STATUSES,
   RELATIONSHIP_TYPES,
+  ROTATION_ITEM_STATUSES,
+  ROTATION_STATES,
   SEARCHABLE_ENTITY_TYPES,
   SYNC_OPERATIONS,
   SYNC_RESOLUTIONS,
@@ -59,12 +63,6 @@ describe("enum arrays", () => {
 
   it("FRIEND_CONNECTION_STATUSES matches FriendConnectionStatus union", () => {
     expect(FRIEND_CONNECTION_STATUSES).toEqual(["pending", "accepted", "blocked", "removed"]);
-  });
-
-  it("BUCKET_VISIBILITY_SCOPES matches BucketVisibilityScope union", () => {
-    expect(BUCKET_VISIBILITY_SCOPES).toHaveLength(9);
-    expect(BUCKET_VISIBILITY_SCOPES).toContain("members");
-    expect(BUCKET_VISIBILITY_SCOPES).toContain("groups");
   });
 
   it("AUTH_KEY_TYPES matches AuthKeyType union", () => {
@@ -189,13 +187,40 @@ describe("enum arrays", () => {
     expect(JOB_STATUSES).toEqual(["pending", "running", "completed", "failed", "cancelled"]);
   });
 
+  it("ENTITY_TYPES matches EntityType union", () => {
+    expect(ENTITY_TYPES).toHaveLength(59);
+    expect(ENTITY_TYPES).toContain("member");
+    expect(ENTITY_TYPES).toContain("system");
+    expect(ENTITY_TYPES).toContain("fronting-report");
+    expect(ENTITY_TYPES).toContain("bucket-rotation-item");
+  });
+
+  it("FRONTING_REPORT_FORMATS matches ReportFormat union", () => {
+    expect(FRONTING_REPORT_FORMATS).toEqual(["html", "pdf"]);
+  });
+
+  it("DISCOVERY_STATUSES matches DiscoveryStatus union", () => {
+    expect(DISCOVERY_STATUSES).toEqual(["fully-mapped", "partially-mapped", "unknown"]);
+  });
+
+  it("ROTATION_STATES matches RotationState union", () => {
+    expect(ROTATION_STATES).toHaveLength(5);
+    expect(ROTATION_STATES).toContain("initiated");
+    expect(ROTATION_STATES).toContain("failed");
+  });
+
+  it("ROTATION_ITEM_STATUSES matches RotationItemStatus union", () => {
+    expect(ROTATION_ITEM_STATUSES).toHaveLength(4);
+    expect(ROTATION_ITEM_STATUSES).toContain("pending");
+    expect(ROTATION_ITEM_STATUSES).toContain("failed");
+  });
+
   it("all arrays have correct element counts", () => {
     expect(KNOWN_SATURATION_LEVELS).toHaveLength(4);
     expect(FRONTING_TYPES).toHaveLength(2);
     expect(RELATIONSHIP_TYPES).toHaveLength(10);
     expect(LAYER_ACCESS_TYPES).toHaveLength(2);
     expect(FRIEND_CONNECTION_STATUSES).toHaveLength(4);
-    expect(BUCKET_VISIBILITY_SCOPES).toHaveLength(9);
     expect(AUTH_KEY_TYPES).toHaveLength(2);
     expect(DEVICE_TRANSFER_STATUSES).toHaveLength(3);
     expect(SYNC_OPERATIONS).toHaveLength(3);
@@ -220,5 +245,10 @@ describe("enum arrays", () => {
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
     expect(JOB_TYPES).toHaveLength(12);
     expect(JOB_STATUSES).toHaveLength(5);
+    expect(ENTITY_TYPES).toHaveLength(59);
+    expect(FRONTING_REPORT_FORMATS).toHaveLength(2);
+    expect(DISCOVERY_STATUSES).toHaveLength(3);
+    expect(ROTATION_STATES).toHaveLength(5);
+    expect(ROTATION_ITEM_STATUSES).toHaveLength(4);
   });
 });

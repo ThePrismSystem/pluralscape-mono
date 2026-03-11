@@ -71,6 +71,8 @@ import type {
   ServerPollVote,
   ClientPollVote,
   ServerWikiPage,
+  T1EncryptedBlob,
+  T2EncryptedBlob,
 } from "../encryption.js";
 import type { CustomFront, FrontingComment, FrontingSession } from "../fronting.js";
 import type { Group } from "../groups.js";
@@ -126,6 +128,13 @@ describe("EncryptedBlob", () => {
     expectTypeOf<EncryptedBlob["algorithm"]>().toEqualTypeOf<EncryptionAlgorithm>();
     expectTypeOf<EncryptedBlob["keyVersion"]>().toEqualTypeOf<number | null>();
     expectTypeOf<EncryptedBlob["bucketId"]>().toEqualTypeOf<BucketId | null>();
+  });
+
+  it("discriminates T1 (bucketId: null) from T2 (bucketId: BucketId)", () => {
+    expectTypeOf<T1EncryptedBlob["tier"]>().toEqualTypeOf<1>();
+    expectTypeOf<T1EncryptedBlob["bucketId"]>().toEqualTypeOf<null>();
+    expectTypeOf<T2EncryptedBlob["tier"]>().toEqualTypeOf<2>();
+    expectTypeOf<T2EncryptedBlob["bucketId"]>().toEqualTypeOf<BucketId>();
   });
 });
 

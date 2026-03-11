@@ -1,3 +1,10 @@
+/**
+ * DB-layer analytics types — unbranded equivalents of the domain types in @pluralscape/types.
+ *
+ * Fronting reports are generated client-side. Member names appearing in chart labels
+ * are T1 encrypted before storage. Member IDs are non-identifying opaque tokens (T3).
+ */
+
 /** Unbranded DB-layer equivalent of DateRange (avoids branded UnixMillis in Drizzle types). */
 export interface DbDateRange {
   readonly start: number;

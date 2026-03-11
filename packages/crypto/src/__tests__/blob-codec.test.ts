@@ -3,8 +3,7 @@ import { describe, expect, it } from "vitest";
 import { deserializeEncryptedBlob, serializeEncryptedBlob } from "../blob-codec.js";
 import { AEAD_NONCE_BYTES } from "../constants.js";
 
-import type { EncryptedBlob } from "@pluralscape/types";
-import type { BucketId } from "@pluralscape/types";
+import type { BucketId, EncryptedBlob, T1EncryptedBlob } from "@pluralscape/types";
 
 /** Header size: version(1) + tier(1) + algorithm(1) + keyVersion(4) + hasBucketId(1) */
 const HEADER_BYTES = 8;
@@ -19,7 +18,7 @@ function makeNonce(fill = 0xaa): Uint8Array {
   return nonce;
 }
 
-function makeT1Blob(overrides?: Partial<EncryptedBlob>): EncryptedBlob {
+function makeT1Blob(overrides?: Partial<T1EncryptedBlob>): T1EncryptedBlob {
   return {
     ciphertext: new Uint8Array([1, 2, 3]),
     nonce: makeNonce(),
@@ -267,12 +266,12 @@ describe("blob-codec", () => {
 
   describe("serialize errors", () => {
     it("throws on invalid tier", () => {
-      const blob = makeT1Blob({ tier: 3 as 1 | 2 });
+      const blob = makeT1Blob({ tier: 3 as 1 });
       expect(() => serializeEncryptedBlob(blob)).toThrow("tier");
     });
 
     it("throws on tier 0", () => {
-      const blob = makeT1Blob({ tier: 0 as 1 | 2 });
+      const blob = makeT1Blob({ tier: 0 as 1 });
       expect(() => serializeEncryptedBlob(blob)).toThrow("tier");
     });
 
