@@ -52,6 +52,7 @@ export { checkInRecords, timerConfigs } from "./timers.js";
 export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
 export { importJobs, exportRequests, accountPurgeRequests } from "./import-export.js";
 export { syncDocuments, syncQueue, syncConflicts } from "./sync.js";
+export { bucketKeyRotations, bucketRotationItems } from "./key-rotation.js";
 export {
   SEARCH_INDEX_DDL,
   createSearchIndex,
@@ -85,6 +86,7 @@ import type { accountPurgeRequests, exportRequests, importJobs } from "./import-
 import type { innerworldCanvas, innerworldEntities, innerworldRegions } from "./innerworld.js";
 import type { jobs } from "./jobs.js";
 import type { journalEntries, wikiPages } from "./journal.js";
+import type { bucketKeyRotations, bucketRotationItems } from "./key-rotation.js";
 import type { lifecycleEvents } from "./lifecycle-events.js";
 import type { members, memberPhotos } from "./members.js";
 import type { nomenclatureSettings } from "./nomenclature-settings.js";
@@ -297,6 +299,12 @@ export type SyncQueueRow = InferSelectModel<typeof syncQueue>;
 export type NewSyncQueue = InferInsertModel<typeof syncQueue>;
 export type SyncConflictRow = InferSelectModel<typeof syncConflicts>;
 export type NewSyncConflict = InferInsertModel<typeof syncConflicts>;
+
+// Key Rotation
+export type BucketKeyRotationRow = InferSelectModel<typeof bucketKeyRotations>;
+export type NewBucketKeyRotation = InferInsertModel<typeof bucketKeyRotations>;
+export type BucketRotationItemRow = InferSelectModel<typeof bucketRotationItems>;
+export type NewBucketRotationItem = InferInsertModel<typeof bucketRotationItems>;
 
 // Jobs
 export type JobRow = InferSelectModel<typeof jobs>;

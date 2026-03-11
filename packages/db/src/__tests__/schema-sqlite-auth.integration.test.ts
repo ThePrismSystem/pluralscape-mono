@@ -112,6 +112,20 @@ describe("SQLite auth schema", () => {
       insertAccount({ id });
       expect(() => insertAccount({ id })).toThrow(/UNIQUE|constraint/i);
     });
+
+    it("round-trips kdfSalt when provided", () => {
+      const kdfSalt = `salt_${crypto.randomUUID()}`;
+      const account = insertAccount();
+      db.update(accounts).set({ kdfSalt }).where(eq(accounts.id, account.id)).run();
+      const rows = db.select().from(accounts).where(eq(accounts.id, account.id)).all();
+      expect(rows[0]?.kdfSalt).toBe(kdfSalt);
+    });
+
+    it("defaults kdfSalt to null", () => {
+      const account = insertAccount();
+      const rows = db.select().from(accounts).where(eq(accounts.id, account.id)).all();
+      expect(rows[0]?.kdfSalt).toBeNull();
+    });
   });
 
   describe("auth_keys", () => {

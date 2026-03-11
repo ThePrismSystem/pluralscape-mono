@@ -31,6 +31,8 @@ import type {
   PKSyncDirection,
   PollKind,
   RelationshipType,
+  RotationItemStatus,
+  RotationState,
   SearchableEntityType,
   ServerChannel,
   ServerInnerWorldEntity,
@@ -96,6 +98,19 @@ export const LIFECYCLE_EVENT_TYPES = [
   "form-change",
   "name-change",
 ] as const satisfies readonly LifecycleEventType[];
+export const ROTATION_STATES = [
+  "initiated",
+  "migrating",
+  "sealing",
+  "completed",
+  "failed",
+] as const satisfies readonly RotationState[];
+export const ROTATION_ITEM_STATUSES = [
+  "pending",
+  "claimed",
+  "completed",
+  "failed",
+] as const satisfies readonly RotationItemStatus[];
 export const FRIEND_CONNECTION_STATUSES = [
   "pending",
   "accepted",

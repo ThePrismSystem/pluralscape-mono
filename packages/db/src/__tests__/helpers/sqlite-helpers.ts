@@ -52,6 +52,7 @@ export const SQLITE_DDL = {
       email_hash TEXT NOT NULL UNIQUE,
       email_salt TEXT NOT NULL,
       password_hash TEXT NOT NULL,
+      kdf_salt TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1
@@ -1099,6 +1100,42 @@ export const SQLITE_DDL = {
     CREATE INDEX jobs_type_idx ON jobs (type);
     CREATE UNIQUE INDEX jobs_idempotency_key_idx ON jobs (idempotency_key)
   `,
+  bucketKeyRotations: `
+    CREATE TABLE bucket_key_rotations (
+      id TEXT PRIMARY KEY,
+      bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      from_key_version INTEGER NOT NULL,
+      to_key_version INTEGER NOT NULL,
+      state TEXT NOT NULL DEFAULT 'initiated' CHECK (state IN ('initiated', 'migrating', 'sealing', 'completed', 'failed')),
+      initiated_at INTEGER NOT NULL,
+      completed_at INTEGER,
+      total_items INTEGER NOT NULL,
+      completed_items INTEGER NOT NULL DEFAULT 0,
+      failed_items INTEGER NOT NULL DEFAULT 0,
+      CHECK (to_key_version > from_key_version),
+      CHECK (completed_items + failed_items <= total_items)
+    )
+  `,
+  bucketKeyRotationsIndexes: `
+    CREATE INDEX bucket_key_rotations_bucket_state_idx ON bucket_key_rotations (bucket_id, state)
+  `,
+  bucketRotationItems: `
+    CREATE TABLE bucket_rotation_items (
+      id TEXT PRIMARY KEY,
+      rotation_id TEXT NOT NULL REFERENCES bucket_key_rotations(id) ON DELETE CASCADE,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'claimed', 'completed', 'failed')),
+      claimed_by TEXT,
+      claimed_at INTEGER,
+      completed_at INTEGER,
+      attempts INTEGER NOT NULL DEFAULT 0
+    )
+  `,
+  bucketRotationItemsIndexes: `
+    CREATE INDEX bucket_rotation_items_rotation_status_idx ON bucket_rotation_items (rotation_id, status);
+    CREATE INDEX bucket_rotation_items_status_claimed_idx ON bucket_rotation_items (status, claimed_at)
+  `,
 } as const;
 
 function createSqliteBaseTables(client: InstanceType<typeof Database>): void {
@@ -1450,4 +1487,14 @@ export function createSqliteJobsTables(client: InstanceType<typeof Database>): v
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.jobs);
   client.exec(SQLITE_DDL.jobsIndexes);
+}
+
+export function createSqliteKeyRotationTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.buckets);
+  client.exec(SQLITE_DDL.bucketsIndexes);
+  client.exec(SQLITE_DDL.bucketKeyRotations);
+  client.exec(SQLITE_DDL.bucketKeyRotationsIndexes);
+  client.exec(SQLITE_DDL.bucketRotationItems);
+  client.exec(SQLITE_DDL.bucketRotationItemsIndexes);
 }

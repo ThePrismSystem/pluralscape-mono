@@ -151,6 +151,7 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
         email_hash VARCHAR(255) NOT NULL UNIQUE,
         email_salt VARCHAR(255) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -323,6 +324,7 @@ describe("RLS cross-tenant isolation — account scope (PGlite)", () => {
         email_hash VARCHAR(255) NOT NULL UNIQUE,
         email_salt VARCHAR(255) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -414,6 +416,7 @@ describe("RLS cross-tenant isolation — account-pk scope (PGlite)", () => {
         email_hash VARCHAR(255) NOT NULL UNIQUE,
         email_salt VARCHAR(255) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1
@@ -477,6 +480,7 @@ describe("RLS cross-tenant isolation — system-pk scope (PGlite)", () => {
         email_hash VARCHAR(255) NOT NULL UNIQUE,
         email_salt VARCHAR(255) NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
         created_at TIMESTAMPTZ NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1

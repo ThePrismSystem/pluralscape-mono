@@ -58,6 +58,7 @@ export default defineConfig({
         "packages/types/src/journal.ts",
         "packages/types/src/lifecycle.ts",
         "packages/types/src/timer.ts",
+        "packages/types/src/key-rotation.ts",
         "packages/crypto/src/types.ts",
         "packages/crypto/src/adapter/interface.ts",
         "packages/db/src/client/types.ts",

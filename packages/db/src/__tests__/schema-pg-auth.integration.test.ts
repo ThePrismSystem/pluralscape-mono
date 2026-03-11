@@ -111,6 +111,20 @@ describe("PG auth schema", () => {
       await insertAccount({ id });
       await expect(insertAccount({ id })).rejects.toThrow();
     });
+
+    it("round-trips kdfSalt when provided", async () => {
+      const kdfSalt = `salt_${crypto.randomUUID()}`;
+      const account = await insertAccount();
+      await db.update(accounts).set({ kdfSalt }).where(eq(accounts.id, account.id));
+      const rows = await db.select().from(accounts).where(eq(accounts.id, account.id));
+      expect(rows[0]?.kdfSalt).toBe(kdfSalt);
+    });
+
+    it("defaults kdfSalt to null", async () => {
+      const account = await insertAccount();
+      const rows = await db.select().from(accounts).where(eq(accounts.id, account.id));
+      expect(rows[0]?.kdfSalt).toBeNull();
+    });
   });
 
   describe("auth_keys", () => {
