@@ -1,4 +1,4 @@
-import { index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
@@ -13,9 +13,7 @@ export const journalEntries = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    frontingSessionId: text("fronting_session_id").references(() => frontingSessions.id, {
-      onDelete: "set null",
-    }),
+    frontingSessionId: text("fronting_session_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -24,6 +22,10 @@ export const journalEntries = sqliteTable(
   (t) => [
     index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt),
     index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
+    foreignKey({
+      columns: [t.frontingSessionId],
+      foreignColumns: [frontingSessions.id],
+    }).onDelete("set null"),
   ],
 );
 

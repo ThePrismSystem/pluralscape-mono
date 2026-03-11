@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
@@ -21,7 +21,10 @@ export const timerConfigs = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("timer_configs_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("timer_configs_system_id_idx").on(t.systemId),
+    unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
+  ],
 );
 
 export const checkInRecords = sqliteTable(
@@ -31,9 +34,7 @@ export const checkInRecords = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    timerConfigId: text("timer_config_id")
-      .notNull()
-      .references(() => timerConfigs.id, { onDelete: "cascade" }),
+    timerConfigId: text("timer_config_id").notNull(),
     scheduledAt: sqliteTimestamp("scheduled_at").notNull(),
     respondedAt: sqliteTimestamp("responded_at"),
     dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),
@@ -44,5 +45,9 @@ export const checkInRecords = sqliteTable(
     index("check_in_records_system_id_idx").on(t.systemId),
     index("check_in_records_timer_config_id_idx").on(t.timerConfigId),
     index("check_in_records_scheduled_at_idx").on(t.scheduledAt),
+    foreignKey({
+      columns: [t.timerConfigId, t.systemId],
+      foreignColumns: [timerConfigs.id, timerConfigs.systemId],
+    }).onDelete("cascade"),
   ],
 );

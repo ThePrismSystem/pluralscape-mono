@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
+import { boolean, foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
@@ -21,7 +21,10 @@ export const timerConfigs = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("timer_configs_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("timer_configs_system_id_idx").on(t.systemId),
+    unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
+  ],
 );
 
 export const checkInRecords = pgTable(
@@ -31,9 +34,7 @@ export const checkInRecords = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    timerConfigId: varchar("timer_config_id", { length: 255 })
-      .notNull()
-      .references(() => timerConfigs.id, { onDelete: "cascade" }),
+    timerConfigId: varchar("timer_config_id", { length: 255 }).notNull(),
     scheduledAt: pgTimestamp("scheduled_at").notNull(),
     respondedAt: pgTimestamp("responded_at"),
     dismissed: boolean("dismissed").notNull().default(false),
@@ -44,5 +45,9 @@ export const checkInRecords = pgTable(
     index("check_in_records_system_id_idx").on(t.systemId),
     index("check_in_records_timer_config_id_idx").on(t.timerConfigId),
     index("check_in_records_scheduled_at_idx").on(t.scheduledAt),
+    foreignKey({
+      columns: [t.timerConfigId, t.systemId],
+      foreignColumns: [timerConfigs.id, timerConfigs.systemId],
+    }).onDelete("cascade"),
   ],
 );

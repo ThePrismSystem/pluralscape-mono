@@ -176,7 +176,8 @@ describe("RLS cross-tenant isolation — system scope (PGlite)", () => {
         updated_at TIMESTAMPTZ NOT NULL,
         version INTEGER NOT NULL DEFAULT 1,
         archived BOOLEAN NOT NULL DEFAULT false,
-        archived_at TIMESTAMPTZ
+        archived_at TIMESTAMPTZ,
+        UNIQUE (id, system_id)
       )
     `);
 

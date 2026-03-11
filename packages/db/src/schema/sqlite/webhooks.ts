@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import {
   sqliteBinary,
@@ -29,16 +29,17 @@ export const webhookConfigs = sqliteTable(
     }),
     ...timestamps(),
   },
-  (t) => [index("webhook_configs_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("webhook_configs_system_id_idx").on(t.systemId),
+    unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
+  ],
 );
 
 export const webhookDeliveries = sqliteTable(
   "webhook_deliveries",
   {
     id: text("id").primaryKey(),
-    webhookId: text("webhook_id")
-      .notNull()
-      .references(() => webhookConfigs.id, { onDelete: "cascade" }),
+    webhookId: text("webhook_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -55,5 +56,9 @@ export const webhookDeliveries = sqliteTable(
     index("webhook_deliveries_webhook_id_idx").on(t.webhookId),
     index("webhook_deliveries_system_id_idx").on(t.systemId),
     index("webhook_deliveries_status_next_retry_at_idx").on(t.status, t.nextRetryAt),
+    foreignKey({
+      columns: [t.webhookId, t.systemId],
+      foreignColumns: [webhookConfigs.id, webhookConfigs.systemId],
+    }).onDelete("cascade"),
   ],
 );

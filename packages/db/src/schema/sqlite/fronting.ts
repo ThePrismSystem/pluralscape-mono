@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
@@ -35,6 +35,7 @@ export const frontingSessions = sqliteTable(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
+    unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
   ],
 );
@@ -72,9 +73,7 @@ export const frontingComments = sqliteTable(
   "fronting_comments",
   {
     id: text("id").primaryKey(),
-    sessionId: text("session_id")
-      .notNull()
-      .references(() => frontingSessions.id, { onDelete: "cascade" }),
+    sessionId: text("session_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -83,5 +82,11 @@ export const frontingComments = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("fronting_comments_session_created_idx").on(t.sessionId, t.createdAt)],
+  (t) => [
+    index("fronting_comments_session_created_idx").on(t.sessionId, t.createdAt),
+    foreignKey({
+      columns: [t.sessionId, t.systemId],
+      foreignColumns: [frontingSessions.id, frontingSessions.systemId],
+    }).onDelete("cascade"),
+  ],
 );

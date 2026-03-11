@@ -6,6 +6,7 @@ import {
   index,
   integer,
   pgTable,
+  unique,
   uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -30,9 +31,7 @@ export const blobMetadata = pgTable(
     mimeType: varchar("mime_type", { length: 255 }),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     encryptionTier: integer("encryption_tier").notNull(),
-    bucketId: varchar("bucket_id", { length: 255 }).references(() => buckets.id, {
-      onDelete: "set null",
-    }),
+    bucketId: varchar("bucket_id", { length: 255 }),
     purpose: varchar("purpose", { length: 255 }).notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: varchar("thumbnail_of_blob_id", { length: 255 }),
     checksum: varchar("checksum", { length: 255 }),
@@ -41,6 +40,11 @@ export const blobMetadata = pgTable(
   (t) => [
     index("blob_metadata_system_id_idx").on(t.systemId),
     uniqueIndex("blob_metadata_storage_key_idx").on(t.storageKey),
+    unique("blob_metadata_id_system_id_unique").on(t.id, t.systemId),
+    foreignKey({
+      columns: [t.bucketId],
+      foreignColumns: [buckets.id],
+    }).onDelete("set null"),
     foreignKey({
       columns: [t.thumbnailOfBlobId],
       foreignColumns: [t.id],

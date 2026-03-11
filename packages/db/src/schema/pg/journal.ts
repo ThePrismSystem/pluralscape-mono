@@ -1,4 +1,4 @@
-import { index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { foreignKey, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
@@ -13,10 +13,7 @@ export const journalEntries = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    frontingSessionId: varchar("fronting_session_id", { length: 255 }).references(
-      () => frontingSessions.id,
-      { onDelete: "set null" },
-    ),
+    frontingSessionId: varchar("fronting_session_id", { length: 255 }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -25,6 +22,10 @@ export const journalEntries = pgTable(
   (t) => [
     index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt),
     index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
+    foreignKey({
+      columns: [t.frontingSessionId],
+      foreignColumns: [frontingSessions.id],
+    }).onDelete("set null"),
   ],
 );
 

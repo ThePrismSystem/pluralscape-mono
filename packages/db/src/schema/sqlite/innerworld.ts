@@ -1,4 +1,12 @@
-import { check, foreignKey, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
@@ -25,6 +33,7 @@ export const innerworldRegions = sqliteTable(
   },
   (t) => [
     index("innerworld_regions_system_id_idx").on(t.systemId),
+    unique("innerworld_regions_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentRegionId],
       foreignColumns: [t.id],
@@ -44,7 +53,7 @@ export const innerworldEntities = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     entityType: text("entity_type").notNull().$type<ServerInnerWorldEntity["entityType"]>(),
-    regionId: text("region_id").references(() => innerworldRegions.id, { onDelete: "set null" }),
+    regionId: text("region_id"),
     positionX: integer("position_x").notNull(),
     positionY: integer("position_y").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -54,6 +63,10 @@ export const innerworldEntities = sqliteTable(
   (t) => [
     index("innerworld_entities_system_id_idx").on(t.systemId),
     index("innerworld_entities_region_id_idx").on(t.regionId),
+    foreignKey({
+      columns: [t.regionId],
+      foreignColumns: [innerworldRegions.id],
+    }).onDelete("set null"),
     check(
       "innerworld_entities_entity_type_check",
       enumCheck(t.entityType, INNERWORLD_ENTITY_TYPES),

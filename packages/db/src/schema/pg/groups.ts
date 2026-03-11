@@ -6,6 +6,7 @@ import {
   integer,
   pgTable,
   primaryKey,
+  unique,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -31,6 +32,7 @@ export const groups = pgTable(
   },
   (t) => [
     index("groups_system_id_idx").on(t.systemId),
+    unique("groups_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentGroupId],
       foreignColumns: [t.id],
@@ -42,12 +44,8 @@ export const groups = pgTable(
 export const groupMemberships = pgTable(
   "group_memberships",
   {
-    groupId: varchar("group_id", { length: 255 })
-      .notNull()
-      .references(() => groups.id, { onDelete: "cascade" }),
-    memberId: varchar("member_id", { length: 255 })
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
+    groupId: varchar("group_id", { length: 255 }).notNull(),
+    memberId: varchar("member_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -57,5 +55,13 @@ export const groupMemberships = pgTable(
     primaryKey({ columns: [t.groupId, t.memberId] }),
     index("group_memberships_member_id_idx").on(t.memberId),
     index("group_memberships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.groupId, t.systemId],
+      foreignColumns: [groups.id, groups.systemId],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
+    }).onDelete("cascade"),
   ],
 );

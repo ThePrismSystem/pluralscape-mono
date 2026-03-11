@@ -7,6 +7,7 @@ import {
   primaryKey,
   sqliteTable,
   text,
+  unique,
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
@@ -31,6 +32,7 @@ export const groups = sqliteTable(
   },
   (t) => [
     index("groups_system_id_idx").on(t.systemId),
+    unique("groups_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentGroupId],
       foreignColumns: [t.id],
@@ -42,12 +44,8 @@ export const groups = sqliteTable(
 export const groupMemberships = sqliteTable(
   "group_memberships",
   {
-    groupId: text("group_id")
-      .notNull()
-      .references(() => groups.id, { onDelete: "cascade" }),
-    memberId: text("member_id")
-      .notNull()
-      .references(() => members.id, { onDelete: "cascade" }),
+    groupId: text("group_id").notNull(),
+    memberId: text("member_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -57,5 +55,13 @@ export const groupMemberships = sqliteTable(
     primaryKey({ columns: [t.groupId, t.memberId] }),
     index("group_memberships_member_id_idx").on(t.memberId),
     index("group_memberships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.groupId, t.systemId],
+      foreignColumns: [groups.id, groups.systemId],
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
+    }).onDelete("cascade"),
   ],
 );

@@ -1,4 +1,13 @@
-import { check, index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
@@ -27,6 +36,7 @@ export const fieldDefinitions = sqliteTable(
   },
   (t) => [
     index("field_definitions_system_id_idx").on(t.systemId),
+    unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
   ],
 );
@@ -35,9 +45,7 @@ export const fieldValues = sqliteTable(
   "field_values",
   {
     id: text("id").primaryKey(),
-    fieldDefinitionId: text("field_definition_id")
-      .notNull()
-      .references(() => fieldDefinitions.id, { onDelete: "cascade" }),
+    fieldDefinitionId: text("field_definition_id").notNull(),
     memberId: text("member_id"),
     systemId: text("system_id")
       .notNull()
@@ -46,7 +54,13 @@ export const fieldValues = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("field_values_definition_system_idx").on(t.fieldDefinitionId, t.systemId)],
+  (t) => [
+    index("field_values_definition_system_idx").on(t.fieldDefinitionId, t.systemId),
+    foreignKey({
+      columns: [t.fieldDefinitionId, t.systemId],
+      foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
+    }).onDelete("cascade"),
+  ],
 );
 
 export const fieldBucketVisibility = sqliteTable(

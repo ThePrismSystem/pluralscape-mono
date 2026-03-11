@@ -7,6 +7,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  unique,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -37,6 +38,7 @@ export const channels = pgTable(
   },
   (t) => [
     index("channels_system_id_idx").on(t.systemId),
+    unique("channels_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentId],
       foreignColumns: [t.id],
@@ -50,9 +52,7 @@ export const messages = pgTable(
   "messages",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    channelId: varchar("channel_id", { length: 255 })
-      .notNull()
-      .references(() => channels.id, { onDelete: "cascade" }),
+    channelId: varchar("channel_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -69,6 +69,11 @@ export const messages = pgTable(
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_id_idx").on(t.systemId),
     index("messages_reply_to_id_idx").on(t.replyToId),
+    unique("messages_id_system_id_unique").on(t.id, t.systemId),
+    foreignKey({
+      columns: [t.channelId, t.systemId],
+      foreignColumns: [channels.id, channels.systemId],
+    }).onDelete("cascade"),
     foreignKey({
       columns: [t.replyToId],
       foreignColumns: [t.id],
@@ -103,15 +108,20 @@ export const notes = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    memberId: varchar("member_id", { length: 255 }).references(() => members.id, {
-      onDelete: "set null",
-    }),
+    memberId: varchar("member_id", { length: 255 }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
     ...archivable(),
   },
-  (t) => [index("notes_system_id_idx").on(t.systemId), index("notes_member_id_idx").on(t.memberId)],
+  (t) => [
+    index("notes_system_id_idx").on(t.systemId),
+    index("notes_member_id_idx").on(t.memberId),
+    foreignKey({
+      columns: [t.memberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
+  ],
 );
 
 export const polls = pgTable(
@@ -139,6 +149,7 @@ export const polls = pgTable(
   },
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
+    unique("polls_id_system_id_unique").on(t.id, t.systemId),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
@@ -149,9 +160,7 @@ export const pollVotes = pgTable(
   "poll_votes",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    pollId: varchar("poll_id", { length: 255 })
-      .notNull()
-      .references(() => polls.id, { onDelete: "cascade" }),
+    pollId: varchar("poll_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -165,6 +174,10 @@ export const pollVotes = pgTable(
   (t) => [
     index("poll_votes_poll_id_idx").on(t.pollId),
     index("poll_votes_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.pollId, t.systemId],
+      foreignColumns: [polls.id, polls.systemId],
+    }).onDelete("cascade"),
   ],
 );
 

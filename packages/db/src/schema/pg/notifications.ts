@@ -1,4 +1,13 @@
-import { boolean, check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  foreignKey,
+  index,
+  jsonb,
+  pgTable,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { timestamps } from "../../helpers/audit.pg.js";
@@ -67,9 +76,7 @@ export const friendNotificationPreferences = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    friendConnectionId: varchar("friend_connection_id", { length: 255 })
-      .notNull()
-      .references(() => friendConnections.id, { onDelete: "cascade" }),
+    friendConnectionId: varchar("friend_connection_id", { length: 255 }).notNull(),
     enabledEventTypes: jsonb("enabled_event_types")
       .notNull()
       .$type<readonly FriendNotificationEventType[]>(),
@@ -80,5 +87,9 @@ export const friendNotificationPreferences = pgTable(
       t.systemId,
       t.friendConnectionId,
     ),
+    foreignKey({
+      columns: [t.friendConnectionId, t.systemId],
+      foreignColumns: [friendConnections.id, friendConnections.systemId],
+    }).onDelete("cascade"),
   ],
 );

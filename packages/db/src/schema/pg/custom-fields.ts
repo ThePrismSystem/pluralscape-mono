@@ -1,4 +1,4 @@
-import { boolean, check, index, integer, pgTable, primaryKey, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, foreignKey, index, integer, pgTable, primaryKey, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
@@ -27,6 +27,7 @@ export const fieldDefinitions = pgTable(
   },
   (t) => [
     index("field_definitions_system_id_idx").on(t.systemId),
+    unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
   ],
 );
@@ -35,10 +36,7 @@ export const fieldValues = pgTable(
   "field_values",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
-    fieldDefinitionId: varchar("field_definition_id", { length: 255 })
-      .notNull()
-      .references(() => fieldDefinitions.id, { onDelete: "cascade" }),
-    memberId: varchar("member_id", { length: 255 }),
+    fieldDefinitionId: varchar("field_definition_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -46,7 +44,13 @@ export const fieldValues = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("field_values_definition_system_idx").on(t.fieldDefinitionId, t.systemId)],
+  (t) => [
+    index("field_values_definition_system_idx").on(t.fieldDefinitionId, t.systemId),
+    foreignKey({
+      columns: [t.fieldDefinitionId, t.systemId],
+      foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
+    }).onDelete("cascade"),
+  ],
 );
 
 export const fieldBucketVisibility = pgTable(

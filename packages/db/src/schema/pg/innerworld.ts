@@ -1,4 +1,4 @@
-import { check, foreignKey, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
@@ -27,6 +27,7 @@ export const innerworldRegions = pgTable(
   },
   (t) => [
     index("innerworld_regions_system_id_idx").on(t.systemId),
+    unique("innerworld_regions_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentRegionId],
       foreignColumns: [t.id],
@@ -48,9 +49,7 @@ export const innerworldEntities = pgTable(
     entityType: varchar("entity_type", { length: 255 })
       .notNull()
       .$type<ServerInnerWorldEntity["entityType"]>(),
-    regionId: varchar("region_id", { length: 255 }).references(() => innerworldRegions.id, {
-      onDelete: "set null",
-    }),
+    regionId: varchar("region_id", { length: 255 }),
     positionX: integer("position_x").notNull(),
     positionY: integer("position_y").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -60,6 +59,10 @@ export const innerworldEntities = pgTable(
   (t) => [
     index("innerworld_entities_system_id_idx").on(t.systemId),
     index("innerworld_entities_region_id_idx").on(t.regionId),
+    foreignKey({
+      columns: [t.regionId],
+      foreignColumns: [innerworldRegions.id],
+    }).onDelete("set null"),
     check(
       "innerworld_entities_entity_type_check",
       enumCheck(t.entityType, INNERWORLD_ENTITY_TYPES),
