@@ -80,6 +80,11 @@ export const switches = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     timestamp: sqliteTimestamp("timestamp").notNull(),
+    /**
+     * T3 plaintext: member IDs are opaque tokens (see tier map at encryption.ts:626).
+     * Known limitation: JSON arrays cannot have FK constraints — cross-system
+     * member ID validation is enforced at the application layer.
+     */
     memberIds: sqliteJson("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     ...versioned(),

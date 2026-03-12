@@ -20,7 +20,12 @@ export interface DbMemberFrontingBreakdown {
   readonly percentageOfTotal: number;
 }
 
-/** Unbranded DB-layer equivalent of ChartDataset. */
+/**
+ * Unbranded DB-layer equivalent of ChartDataset.
+ * `label` is `string` (not EncryptedString) because these types describe the
+ * plaintext structure inside frontingReport.encryptedData — the entire container
+ * is T1 encrypted at the entity level.
+ */
 export interface DbChartDataset {
   readonly label: string;
   readonly data: readonly number[];

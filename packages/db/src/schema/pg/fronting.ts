@@ -81,6 +81,11 @@ export const switches = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     timestamp: pgTimestamp("timestamp").notNull(),
+    /**
+     * T3 plaintext: member IDs are opaque tokens (see tier map at encryption.ts:626).
+     * Known limitation: JSONB arrays cannot have FK constraints — cross-system
+     * member ID validation is enforced at the application layer.
+     */
     memberIds: jsonb("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: pgTimestamp("created_at").notNull(),
     ...versioned(),
