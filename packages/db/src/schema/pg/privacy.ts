@@ -39,7 +39,6 @@ export const bucketContentTags = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.entityType, t.entityId, t.bucketId] }),
-    index("bucket_content_tags_entity_idx").on(t.entityType, t.entityId),
     index("bucket_content_tags_bucket_id_idx").on(t.bucketId),
     check(
       "bucket_content_tags_entity_type_check",
@@ -131,5 +130,8 @@ export const friendBucketAssignments = pgTable(
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
   },
-  (t) => [primaryKey({ columns: [t.friendConnectionId, t.bucketId] })],
+  (t) => [
+    primaryKey({ columns: [t.friendConnectionId, t.bucketId] }),
+    index("friend_bucket_assignments_bucket_id_idx").on(t.bucketId),
+  ],
 );

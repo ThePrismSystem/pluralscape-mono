@@ -35,6 +35,7 @@ export const auditLog = pgTable(
     index("audit_log_account_timestamp_idx").on(t.accountId, t.timestamp),
     index("audit_log_system_timestamp_idx").on(t.systemId, t.timestamp),
     index("audit_log_event_type_idx").on(t.eventType),
+    index("audit_log_timestamp_idx").on(t.timestamp),
     check("audit_log_event_type_check", enumCheck(t.eventType, AUDIT_EVENT_TYPES)),
   ],
 );

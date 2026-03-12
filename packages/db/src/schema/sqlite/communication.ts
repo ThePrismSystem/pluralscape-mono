@@ -205,8 +205,7 @@ export const acknowledgements = sqliteTable(
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
-    index("acknowledgements_system_id_idx").on(t.systemId),
-    index("acknowledgements_confirmed_idx").on(t.confirmed),
+    index("acknowledgements_system_id_confirmed_idx").on(t.systemId, t.confirmed),
     foreignKey({
       columns: [t.createdByMemberId],
       foreignColumns: [members.id],
