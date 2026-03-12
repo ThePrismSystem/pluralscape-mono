@@ -8,7 +8,7 @@
  * original payload is recovered intact.
  */
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import { deserializeEncryptedBlob, serializeEncryptedBlob } from "../blob-codec.js";
@@ -23,9 +23,28 @@ beforeAll(async () => {
   await adapter.init();
 });
 
-afterAll(() => {
-  // No cleanup needed
-});
+/** Encrypt fields as T1, serialize → deserialize → decrypt, assert equality. */
+function t1RoundTrip(fields: Record<string, unknown>): void {
+  const plaintext = new TextEncoder().encode(JSON.stringify(fields));
+  const key = adapter.aeadKeygen();
+  const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
+  const blob: T1EncryptedBlob = {
+    ciphertext,
+    nonce,
+    tier: 1,
+    algorithm: "xchacha20-poly1305",
+    keyVersion: null,
+    bucketId: null,
+  };
+  const serialized = serializeEncryptedBlob(blob);
+  const deserialized = deserializeEncryptedBlob(serialized);
+  const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
+  const result = JSON.parse(new TextDecoder().decode(decrypted));
+  expect(result).toEqual(fields);
+  expect(deserialized.tier).toBe(1);
+  expect(deserialized.keyVersion).toBeNull();
+  expect(deserialized.bucketId).toBeNull();
+}
 
 describe("entity encryption round-trip", () => {
   it("blob-codec + real AEAD encrypt/decrypt round-trips end-to-end", () => {
@@ -67,7 +86,7 @@ describe("entity encryption round-trip", () => {
 
   describe("Member round-trip", () => {
     it("round-trips Member encrypted fields end-to-end", () => {
-      const fields = {
+      t1RoundTrip({
         name: "Test Member",
         pronouns: "they/them",
         description: "A test member",
@@ -77,474 +96,218 @@ describe("entity encryption round-trip", () => {
         saturationLevel: "highly-elaborated",
         suppressFriendFrontNotification: false,
         boardMessageNotificationOnFront: true,
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      });
     });
   });
 
   describe("FrontingSession round-trip", () => {
     it("round-trips FrontingSession encrypted fields end-to-end", () => {
-      const fields = {
-        comment: "feeling good",
-        positionality: "close",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      t1RoundTrip({ comment: "feeling good", positionality: "close" });
     });
   });
 
   describe("FrontingComment round-trip", () => {
     it("round-trips FrontingComment encrypted fields end-to-end", () => {
-      const fields = {
-        content: "This is a fronting comment",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      t1RoundTrip({ content: "This is a fronting comment" });
     });
   });
 
   describe("Group round-trip", () => {
     it("round-trips Group encrypted fields end-to-end", () => {
-      const fields = {
+      t1RoundTrip({
         name: "Test Group",
         description: "A group",
         imageSource: null,
         color: "#00ff00",
         emoji: null,
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      });
     });
   });
 
   describe("Channel round-trip", () => {
     it("round-trips Channel encrypted fields end-to-end", () => {
-      const fields = {
-        name: "general",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      t1RoundTrip({ name: "general" });
     });
   });
 
   describe("ChatMessage round-trip", () => {
     it("round-trips ChatMessage encrypted fields end-to-end", () => {
-      const fields = {
+      t1RoundTrip({
         content: "Hello everyone",
         attachments: [],
         mentions: [],
         senderId: "mem_abc",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      });
     });
   });
 
   describe("BoardMessage round-trip", () => {
     it("round-trips BoardMessage encrypted fields end-to-end", () => {
-      const fields = {
-        content: "Announcement",
-        senderId: "mem_abc",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      t1RoundTrip({ content: "Announcement", senderId: "mem_abc" });
     });
   });
 
   describe("Note round-trip", () => {
     it("round-trips Note encrypted fields end-to-end", () => {
-      const fields = {
-        title: "My Note",
-        content: "Note body",
-        backgroundColor: "#ffffcc",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      t1RoundTrip({ title: "My Note", content: "Note body", backgroundColor: "#ffffcc" });
     });
   });
 
   describe("JournalEntry round-trip", () => {
     it("round-trips JournalEntry encrypted fields end-to-end", () => {
-      const fields = {
+      t1RoundTrip({
         title: "Today",
         blocks: [],
         tags: ["daily"],
         linkedEntities: [],
         author: "mem_abc",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      });
     });
   });
 
   describe("InnerWorldEntity round-trip", () => {
     it("round-trips InnerWorldEntity encrypted fields end-to-end", () => {
-      const fields = {
+      t1RoundTrip({
         name: "Castle",
         description: "A castle in the inner world",
         visual: null,
         entityType: "landmark",
         positionX: 100,
         positionY: 200,
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      });
     });
   });
 
   describe("InnerWorldRegion round-trip", () => {
     it("round-trips InnerWorldRegion encrypted fields end-to-end", () => {
-      const fields = {
+      t1RoundTrip({
         name: "Forest",
         description: "Dense forest",
         boundaryData: null,
         visual: null,
         gatekeeperMemberIds: [],
         accessType: "open",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      });
     });
   });
 
   describe("CustomFront round-trip", () => {
     it("round-trips CustomFront encrypted fields end-to-end", () => {
-      const fields = {
+      t1RoundTrip({
         name: "Dissociated",
         description: "Feeling disconnected",
         color: "#808080",
         emoji: null,
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      });
     });
   });
 
   describe("AcknowledgementRequest round-trip", () => {
     it("round-trips AcknowledgementRequest encrypted fields end-to-end", () => {
-      const fields = {
+      t1RoundTrip({
         message: "Please confirm",
         targetMemberId: "mem_target",
         confirmedAt: 1700000000000,
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-      expect(result).toEqual(fields);
+      });
     });
   });
 
-  // ── Remaining entity stubs (simple T1 fields, pending helpers) ───
-
   describe("Subsystem round-trip", () => {
-    it("encrypts and decrypts T1 fields", () => {
-      const fields = { name: "The Littles", description: "Our younger headmates" };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-
-      expect(result).toEqual(fields);
-      expect(deserialized.tier).toBe(1);
-      expect(deserialized.keyVersion).toBeNull();
-      expect(deserialized.bucketId).toBeNull();
+    it("round-trips Subsystem encrypted fields end-to-end", () => {
+      t1RoundTrip({ name: "The Littles", description: "Our younger headmates" });
     });
   });
 
   describe("SideSystem round-trip", () => {
-    it("encrypts and decrypts T1 fields", () => {
-      const fields = { name: "External Side", description: "A connected side system" };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-
-      expect(result).toEqual(fields);
-      expect(deserialized.tier).toBe(1);
-      expect(deserialized.keyVersion).toBeNull();
-      expect(deserialized.bucketId).toBeNull();
+    it("round-trips SideSystem encrypted fields end-to-end", () => {
+      t1RoundTrip({ name: "External Side", description: "A connected side system" });
     });
   });
 
   describe("Layer round-trip", () => {
-    it("encrypts and decrypts T1 fields", () => {
-      const fields = {
+    it("round-trips Layer encrypted fields end-to-end", () => {
+      t1RoundTrip({
         name: "Inner Layer",
         description: "Deep protected space",
         accessType: "gatekept",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-
-      expect(result).toEqual(fields);
-      expect(deserialized.tier).toBe(1);
-      expect(deserialized.keyVersion).toBeNull();
-      expect(deserialized.bucketId).toBeNull();
+      });
     });
   });
 
   describe("Relationship round-trip", () => {
-    it("encrypts and decrypts T1 fields", () => {
-      const fields = {
-        type: "protector-of",
-        description: "Protects the littles",
-        notes: "Long-standing dynamic",
-      };
-      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
-      const key = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
-
-      const blob: T1EncryptedBlob = {
-        ciphertext,
-        nonce,
-        tier: 1,
-        algorithm: "xchacha20-poly1305",
-        keyVersion: null,
-        bucketId: null,
-      };
-
-      const serialized = serializeEncryptedBlob(blob);
-      const deserialized = deserializeEncryptedBlob(serialized);
-      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
-      const result = JSON.parse(new TextDecoder().decode(decrypted));
-
-      expect(result).toEqual(fields);
-      expect(deserialized.tier).toBe(1);
-      expect(deserialized.keyVersion).toBeNull();
-      expect(deserialized.bucketId).toBeNull();
+    it("round-trips Relationship encrypted fields end-to-end", () => {
+      t1RoundTrip({ label: "protects" });
     });
   });
-  describe.todo("FieldDefinition round-trip");
-  describe.todo("FieldValue round-trip");
-  describe.todo("LifecycleEvent round-trip");
-  describe.todo("WikiPage round-trip");
-  describe.todo("MemberPhoto round-trip");
-  describe.todo("Poll round-trip");
-  describe.todo("PollVote round-trip");
-  describe.todo("TimerConfig round-trip");
-  describe.todo("AuditLogEntry round-trip");
+
+  describe("FieldDefinition round-trip", () => {
+    it("round-trips FieldDefinition encrypted fields end-to-end", () => {
+      t1RoundTrip({
+        name: "Pronouns",
+        description: "Preferred pronouns",
+        options: ["he/him", "she/her", "they/them"],
+      });
+    });
+  });
+
+  describe("FieldValue round-trip", () => {
+    it("round-trips FieldValue encrypted fields end-to-end", () => {
+      t1RoundTrip({ value: "they/them" });
+    });
+  });
+
+  describe("LifecycleEvent round-trip", () => {
+    it("round-trips LifecycleEvent encrypted fields end-to-end", () => {
+      t1RoundTrip({ notes: "Formed during early childhood" });
+    });
+  });
+
+  describe("WikiPage round-trip", () => {
+    it("round-trips WikiPage encrypted fields end-to-end", () => {
+      t1RoundTrip({
+        title: "System History",
+        slug: "system-history",
+        blocks: [],
+        tags: ["lore"],
+        linkedEntities: [],
+        linkedFromPages: [],
+      });
+    });
+  });
+
+  describe("MemberPhoto round-trip", () => {
+    it("round-trips MemberPhoto encrypted fields end-to-end", () => {
+      t1RoundTrip({ imageSource: "blob:photo-001", caption: "Recent photo" });
+    });
+  });
+
+  describe("Poll round-trip", () => {
+    it("round-trips Poll encrypted fields end-to-end", () => {
+      t1RoundTrip({
+        title: "Dinner plans?",
+        options: ["pizza", "tacos"],
+        description: "Vote for tonight",
+      });
+    });
+  });
+
+  describe("PollVote round-trip", () => {
+    it("round-trips PollVote encrypted fields end-to-end", () => {
+      t1RoundTrip({ comment: "I prefer tacos" });
+    });
+  });
+
+  describe("TimerConfig round-trip", () => {
+    it("round-trips TimerConfig encrypted fields end-to-end", () => {
+      t1RoundTrip({ promptText: "Who is fronting?" });
+    });
+  });
+
+  describe("AuditLogEntry round-trip", () => {
+    it("round-trips AuditLogEntry encrypted fields end-to-end", () => {
+      t1RoundTrip({ detail: "Member name updated" });
+    });
+  });
 });
 
 // ── T2 bucket-encrypted round-trip ────────────────────────────────
