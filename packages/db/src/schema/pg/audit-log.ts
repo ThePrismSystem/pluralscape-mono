@@ -30,7 +30,9 @@ export const auditLog = pgTable(
     eventType: varchar("event_type", { length: ENUM_MAX_LENGTH }).notNull().$type<AuditEventType>(),
     /** Named "timestamp" (not "createdAt") to reflect when the event occurred, not row creation. */
     timestamp: pgTimestamp("timestamp").notNull(),
+    /** Wider than ID_MAX_LENGTH: stores external IPv6 addresses (up to 45 chars + port/zone). */
     ipAddress: varchar("ip_address", { length: 255 }),
+    /** Wider than ID_MAX_LENGTH: stores browser User-Agent strings which are routinely >100 chars. */
     userAgent: varchar("user_agent", { length: 1024 }),
     actor: jsonb("actor").notNull().$type<DbAuditActor>(),
     detail: text("detail"),

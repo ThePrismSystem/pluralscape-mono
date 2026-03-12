@@ -11,8 +11,6 @@ import {
   pgInsertSystem,
 } from "./helpers/pg-helpers.js";
 
-import type { PgSearchIndexResult } from "../schema/pg/search.js";
-
 describe("PG search_index full-text search", () => {
   let client: PGlite;
   let db: ReturnType<typeof drizzle>;
@@ -256,15 +254,19 @@ describe("PG search_index full-text search", () => {
     ];
 
     for (const query of testCases) {
-      let results: PgSearchIndexResult[] = [];
-      try {
-        results = await searchEntries(db, systemId, query);
-      } catch {
-        // Some special character combinations may cause websearch_to_tsquery to throw;
-        // that's acceptable — the important thing is no SQL injection
+      const result = await searchEntries(db, systemId, query).catch((err: unknown) => {
+        // websearch_to_tsquery may reject some special character combinations —
+        // that's acceptable. Verify it's a PG parse error, not an injection.
+        expect(err).toBeInstanceOf(Error);
+        return null;
+      });
+      if (result !== null) {
+        expect(Array.isArray(result)).toBe(true);
+        for (const entry of result) {
+          expect(entry).toHaveProperty("entityType");
+          expect(entry).toHaveProperty("entityId");
+        }
       }
-      // Results should be an array (possibly empty) — no errors from injection
-      expect(Array.isArray(results)).toBe(true);
     }
   });
 

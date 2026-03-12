@@ -1,9 +1,12 @@
 import { sql } from "drizzle-orm";
 
+import { parseSearchableEntityType } from "../../helpers/enums.js";
+
 import type { SearchableEntityType } from "@pluralscape/types";
 import type { SQL } from "drizzle-orm";
 
 const DEFAULT_SEARCH_LIMIT = 50;
+const MAX_SEARCH_LIMIT = 1000;
 
 /**
  * DDL for PG full-text search index table.
@@ -17,9 +20,9 @@ const DEFAULT_SEARCH_LIMIT = 50;
  */
 export const SEARCH_INDEX_DDL = `
   CREATE TABLE IF NOT EXISTS search_index (
-    system_id VARCHAR(255) NOT NULL,
+    system_id VARCHAR(50) NOT NULL,
     entity_type VARCHAR(50) NOT NULL,
-    entity_id VARCHAR(255) NOT NULL,
+    entity_id VARCHAR(50) NOT NULL,
     title TEXT NOT NULL DEFAULT '',
     content TEXT NOT NULL DEFAULT '',
     search_vector tsvector GENERATED ALWAYS AS (
@@ -30,30 +33,9 @@ export const SEARCH_INDEX_DDL = `
   )
 `;
 
-/** GIN index on the tsvector column for fast full-text queries. */
+/** GIN index on tsvector and composite B-tree index on (system_id, entity_type). */
 export const SEARCH_INDEX_INDEXES_DDL = `
   CREATE INDEX IF NOT EXISTS search_index_vector_idx ON search_index USING GIN (search_vector);
-  CREATE INDEX IF NOT EXISTS search_index_system_entity_type_idx ON search_index (system_id, entity_type)
-`;
-
-/**
- * Fallback DDL for PGlite tests (no GENERATED ALWAYS AS support for tsvector).
- * search_vector is a plain nullable column; the search query falls back to
- * computing tsvector inline via COALESCE when it is NULL.
- */
-export const SEARCH_INDEX_TEST_DDL = `
-  CREATE TABLE IF NOT EXISTS search_index (
-    system_id VARCHAR(255) NOT NULL,
-    entity_type VARCHAR(50) NOT NULL,
-    entity_id VARCHAR(255) NOT NULL,
-    title TEXT NOT NULL DEFAULT '',
-    content TEXT NOT NULL DEFAULT '',
-    search_vector tsvector,
-    PRIMARY KEY (system_id, entity_type, entity_id)
-  )
-`;
-
-export const SEARCH_INDEX_TEST_INDEXES_DDL = `
   CREATE INDEX IF NOT EXISTS search_index_system_entity_type_idx ON search_index (system_id, entity_type)
 `;
 
@@ -129,10 +111,11 @@ export async function deleteSearchEntry(
   );
 }
 
-/** Drop and recreate the search index (full rebuild). */
+/** Drop and recreate the search index with indexes (full rebuild). */
 export async function rebuildSearchIndex(db: PgExecutable): Promise<void> {
   await dropSearchIndex(db);
   await createSearchIndex(db);
+  await createSearchIndexIndexes(db);
 }
 
 /**
@@ -141,8 +124,8 @@ export async function rebuildSearchIndex(db: PgExecutable): Promise<void> {
  * Uses `websearch_to_tsquery` for safe input parsing (handles quotes, AND/OR, -negation).
  * Returns results ranked by `ts_rank` with highlighted snippets via `ts_headline`.
  *
- * For PGlite tests (no tsvector GENERATED column), falls back to computing
- * tsvector inline in the query.
+ * The search_vector column is always populated (GENERATED in production, trigger in PGlite tests),
+ * so the query hits the GIN index directly.
  */
 export async function searchEntries(
   db: PgExecutable,
@@ -155,14 +138,11 @@ export async function searchEntries(
     return [];
   }
 
-  const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
-  const offset = opts?.offset ?? 0;
+  const limit = Math.max(1, Math.min(opts?.limit ?? DEFAULT_SEARCH_LIMIT, MAX_SEARCH_LIMIT));
+  const offset = Math.max(0, opts?.offset ?? 0);
 
   const typeFilter = opts?.entityType ? sql` AND entity_type = ${opts.entityType}` : sql``;
 
-  // Use COALESCE on search_vector to handle PGlite (where it's NULL / missing).
-  // When search_vector is NULL (PGlite test DDL omits GENERATED column),
-  // compute inline from title + content.
   const results = await db.execute(sql`
     SELECT
       entity_type,
@@ -170,11 +150,7 @@ export async function searchEntries(
       title,
       content,
       ts_rank(
-        COALESCE(
-          search_vector,
-          setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-          setweight(to_tsvector('english', coalesce(content, '')), 'B')
-        ),
+        search_vector,
         websearch_to_tsquery('english', ${trimmed})
       ) AS rank,
       ts_headline(
@@ -184,11 +160,7 @@ export async function searchEntries(
       ) AS headline
     FROM search_index
     WHERE
-      COALESCE(
-        search_vector,
-        setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
-        setweight(to_tsvector('english', coalesce(content, '')), 'B')
-      ) @@ websearch_to_tsquery('english', ${trimmed})
+      search_vector @@ websearch_to_tsquery('english', ${trimmed})
       AND system_id = ${systemId}
       ${typeFilter}
     ORDER BY rank DESC
@@ -196,12 +168,18 @@ export async function searchEntries(
     OFFSET ${offset}
   `);
 
-  return results.rows.map((r) => ({
-    entityType: String(r["entity_type"]) as SearchableEntityType,
-    entityId: String(r["entity_id"]),
-    title: String(r["title"]),
-    content: String(r["content"]),
-    rank: Number(r["rank"]),
-    headline: String(r["headline"]),
-  }));
+  return results.rows.map((r) => {
+    const entityId = r["entity_id"];
+    const title = r["title"];
+    const content = r["content"];
+    const headline = r["headline"];
+    return {
+      entityType: parseSearchableEntityType(r["entity_type"]),
+      entityId: typeof entityId === "string" ? entityId : "",
+      title: typeof title === "string" ? title : "",
+      content: typeof content === "string" ? content : "",
+      rank: Number(r["rank"]),
+      headline: typeof headline === "string" ? headline : "",
+    };
+  });
 }

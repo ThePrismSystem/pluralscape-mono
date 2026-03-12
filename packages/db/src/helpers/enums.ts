@@ -273,6 +273,18 @@ export const SEARCHABLE_ENTITY_TYPES = [
   "chat-message",
   "board-message",
 ] as const satisfies readonly SearchableEntityType[];
+
+/** Runtime validation for SearchableEntityType — rejects unknown strings at the trust boundary. */
+export function parseSearchableEntityType(value: unknown): SearchableEntityType {
+  if (typeof value !== "string") {
+    throw new Error(`Expected entity_type string, got ${typeof value}`);
+  }
+  const types: readonly string[] = SEARCHABLE_ENTITY_TYPES;
+  if (!types.includes(value)) {
+    throw new Error(`Unknown SearchableEntityType: ${value}`);
+  }
+  return value as SearchableEntityType;
+}
 export const JOB_TYPES = [
   "sync-push",
   "sync-pull",

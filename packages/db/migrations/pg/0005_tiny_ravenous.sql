@@ -251,6 +251,7 @@ CREATE TABLE "audit_log" (
     "id" varchar(50) NOT NULL,
     "account_id" varchar(50) REFERENCES "accounts"("id") ON DELETE SET NULL,
     "system_id" varchar(50) REFERENCES "systems"("id") ON DELETE SET NULL,
+    -- Authoritative enum source: AUDIT_EVENT_TYPES in packages/db/src/helpers/enums.ts
     "event_type" varchar(50) NOT NULL CHECK (event_type IN ('auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown')),
     "timestamp" timestamptz NOT NULL,
     "ip_address" varchar(255),

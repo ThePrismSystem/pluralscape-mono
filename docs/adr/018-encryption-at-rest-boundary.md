@@ -16,7 +16,7 @@ in-depth, and what remains to be implemented.
 
 ### Layer 1: End-to-End Encryption (Application Level)
 
-Already implemented. 47 columns across the schema store `EncryptedBlob` values
+Already implemented. Over 40 columns across the schema store `EncryptedBlob` values
 (XChaCha20-Poly1305, X25519, Argon2id via libsodium). The server never sees
 plaintext for these columns — it stores and returns opaque ciphertext blobs.
 This is the primary privacy guarantee.

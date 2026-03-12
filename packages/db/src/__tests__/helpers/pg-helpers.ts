@@ -1252,19 +1252,35 @@ export const PG_DDL = {
   frontingReportsIndexes: `
     CREATE INDEX fronting_reports_system_id_idx ON fronting_reports (system_id)
   `,
-  // Search Index (PGlite test DDL — search_vector is a plain nullable column, not GENERATED)
+  // Search Index (PGlite test DDL — search_vector populated via trigger, not GENERATED)
   searchIndex: `
     CREATE TABLE IF NOT EXISTS search_index (
-      system_id VARCHAR(255) NOT NULL,
+      system_id VARCHAR(50) NOT NULL,
       entity_type VARCHAR(50) NOT NULL,
-      entity_id VARCHAR(255) NOT NULL,
+      entity_id VARCHAR(50) NOT NULL,
       title TEXT NOT NULL DEFAULT '',
       content TEXT NOT NULL DEFAULT '',
       search_vector tsvector,
       PRIMARY KEY (system_id, entity_type, entity_id)
     )
   `,
+  searchIndexTrigger: `
+    CREATE OR REPLACE FUNCTION search_index_vector_update() RETURNS trigger AS $$
+    BEGIN
+      NEW.search_vector :=
+        setweight(to_tsvector('english', coalesce(NEW.title, '')), 'A') ||
+        setweight(to_tsvector('english', coalesce(NEW.content, '')), 'B');
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+  `,
+  searchIndexTriggerAttach: `
+    CREATE TRIGGER search_index_vector_trigger
+      BEFORE INSERT OR UPDATE ON search_index
+      FOR EACH ROW EXECUTE FUNCTION search_index_vector_update()
+  `,
   searchIndexIndexes: `
+    CREATE INDEX IF NOT EXISTS search_index_vector_idx ON search_index USING GIN (search_vector);
     CREATE INDEX IF NOT EXISTS search_index_system_entity_type_idx ON search_index (system_id, entity_type)
   `,
 } as const;
@@ -1639,6 +1655,9 @@ export async function createPgAnalyticsTables(client: PGlite): Promise<void> {
 export async function createPgSearchIndexTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.searchIndex);
+  // Trigger DDL contains $$ blocks with semicolons — execute directly to avoid pgExec splitting.
+  await client.query(PG_DDL.searchIndexTrigger);
+  await client.query(PG_DDL.searchIndexTriggerAttach);
   await pgExec(client, PG_DDL.searchIndexIndexes);
 }
 

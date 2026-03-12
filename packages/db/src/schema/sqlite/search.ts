@@ -1,10 +1,13 @@
 import { sql } from "drizzle-orm";
 
+import { parseSearchableEntityType } from "../../helpers/enums.js";
+
 import type { SearchableEntityType } from "@pluralscape/types";
 // Intentionally typed for better-sqlite3 (self-hosted tier); mobile app will need its own FTS5 wrapper.
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const DEFAULT_SEARCH_LIMIT = 50;
+const MAX_SEARCH_LIMIT = 1000;
 
 /**
  * FTS5 virtual table DDL for client-side full-text search.
@@ -102,7 +105,7 @@ interface RawSearchRow {
 
 function mapSearchRow(r: RawSearchRow): SearchIndexResult {
   return {
-    entityType: r.entity_type as SearchableEntityType,
+    entityType: parseSearchableEntityType(r.entity_type),
     entityId: r.entity_id,
     title: r.title,
     content: r.content,
@@ -121,7 +124,7 @@ export function searchEntries(
   query: string,
   opts?: SearchOptions,
 ): SearchIndexResult[] {
-  const limit = opts?.limit ?? DEFAULT_SEARCH_LIMIT;
+  const limit = Math.max(1, Math.min(opts?.limit ?? DEFAULT_SEARCH_LIMIT, MAX_SEARCH_LIMIT));
   const safeQuery = sanitizeFts5Query(query);
 
   const typeFilter = opts?.entityType ? sql` AND entity_type = ${opts.entityType}` : sql``;
