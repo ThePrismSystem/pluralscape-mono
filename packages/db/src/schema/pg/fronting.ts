@@ -73,6 +73,7 @@ export const frontingSessions = pgTable(
   ],
 );
 
+// Switches are immutable timeline events and are not archivable.
 export const switches = pgTable(
   "switches",
   {

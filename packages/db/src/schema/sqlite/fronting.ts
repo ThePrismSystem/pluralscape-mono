@@ -72,6 +72,7 @@ export const frontingSessions = sqliteTable(
   ],
 );
 
+// Switches are immutable timeline events and are not archivable.
 export const switches = sqliteTable(
   "switches",
   {
