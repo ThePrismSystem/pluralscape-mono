@@ -52,6 +52,7 @@ export const wikiPages = pgTable(
   },
   (t) => [
     index("wiki_pages_system_id_idx").on(t.systemId),
+    index("wiki_pages_system_archived_idx").on(t.systemId, t.archived),
     uniqueIndex("wiki_pages_system_id_slug_hash_idx").on(t.systemId, t.slugHash),
     check("wiki_pages_version_check", versionCheck(t.version)),
     check(

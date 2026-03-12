@@ -53,6 +53,7 @@ export const frontingSessions = sqliteTable(
   },
   (t) => [
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
+    index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
     index("fronting_sessions_active_idx")
       .on(t.systemId)

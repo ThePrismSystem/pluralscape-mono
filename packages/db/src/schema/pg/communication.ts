@@ -42,8 +42,8 @@ export const channels = pgTable(
     index("channels_system_id_idx").on(t.systemId),
     unique("channels_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.parentId],
-      foreignColumns: [t.id],
+      columns: [t.parentId, t.systemId],
+      foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("channels_type_check", enumCheck(t.type, CHANNEL_TYPES)),
     check("channels_sort_order_check", sql`${t.sortOrder} >= 0`),
@@ -76,6 +76,7 @@ export const messages = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.id, t.timestamp] }),
+    unique("messages_id_unique").on(t.id),
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_id_idx").on(t.systemId),
     index("messages_reply_to_id_idx").on(t.replyToId),
@@ -129,8 +130,8 @@ export const notes = pgTable(
     index("notes_system_id_idx").on(t.systemId),
     index("notes_member_id_idx").on(t.memberId),
     foreignKey({
-      columns: [t.memberId],
-      foreignColumns: [members.id],
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("notes_version_check", versionCheck(t.version)),
     check("notes_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
@@ -164,8 +165,8 @@ export const polls = pgTable(
     index("polls_system_id_idx").on(t.systemId),
     unique("polls_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.createdByMemberId],
-      foreignColumns: [members.id],
+      columns: [t.createdByMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
@@ -214,8 +215,8 @@ export const acknowledgements = pgTable(
   (t) => [
     index("acknowledgements_system_id_confirmed_idx").on(t.systemId, t.confirmed),
     foreignKey({
-      columns: [t.createdByMemberId],
-      foreignColumns: [members.id],
+      columns: [t.createdByMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
   ],
 );

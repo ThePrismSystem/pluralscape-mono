@@ -5,6 +5,7 @@ import {
   integer,
   sqliteTable,
   text,
+  unique,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
@@ -43,6 +44,7 @@ export const deviceTokens = sqliteTable(
     index("device_tokens_account_id_idx").on(t.accountId),
     index("device_tokens_system_id_idx").on(t.systemId),
     index("device_tokens_revoked_at_idx").on(t.revokedAt),
+    unique("device_tokens_token_platform_unique").on(t.token, t.platform),
     check("device_tokens_platform_check", enumCheck(t.platform, DEVICE_TOKEN_PLATFORMS)),
   ],
 );

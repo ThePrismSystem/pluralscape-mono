@@ -24,8 +24,8 @@ export const innerworldRegions = pgTable(
     index("innerworld_regions_system_id_idx").on(t.systemId),
     unique("innerworld_regions_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.parentRegionId],
-      foreignColumns: [t.id],
+      columns: [t.parentRegionId, t.systemId],
+      foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("innerworld_regions_version_check", versionCheck(t.version)),
   ],

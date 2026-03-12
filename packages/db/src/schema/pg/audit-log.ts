@@ -1,4 +1,13 @@
-import { check, index, jsonb, pgTable, primaryKey, text, varchar } from "drizzle-orm/pg-core";
+import {
+  check,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  unique,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -39,6 +48,7 @@ export const auditLog = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.id, t.timestamp] }),
+    unique("audit_log_id_unique").on(t.id),
     index("audit_log_account_timestamp_idx").on(t.accountId, t.timestamp),
     index("audit_log_system_timestamp_idx").on(t.systemId, t.timestamp),
     index("audit_log_event_type_idx").on(t.eventType),

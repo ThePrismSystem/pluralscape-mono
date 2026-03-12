@@ -177,6 +177,7 @@ export const RLS_TABLE_POLICIES = {
   fronting_sessions: "system",
   switches: "system",
   custom_fronts: "system",
+  fronting_reports: "system",
   fronting_comments: "system",
   journal_entries: "system",
   wiki_pages: "system",

@@ -65,6 +65,7 @@ export const keyGrants = pgTable(
   },
   (t) => [
     index("key_grants_friend_bucket_idx").on(t.friendSystemId, t.bucketId),
+    index("key_grants_friend_revoked_idx").on(t.friendSystemId, t.revokedAt),
     index("key_grants_revoked_at_idx").on(t.revokedAt),
     unique("key_grants_bucket_friend_version_uniq").on(t.bucketId, t.friendSystemId, t.keyVersion),
     check("key_grants_key_version_check", sql`${t.keyVersion} >= 1`),
@@ -92,6 +93,7 @@ export const friendConnections = pgTable(
   },
   (t) => [
     index("friend_connections_system_status_idx").on(t.systemId, t.status),
+    index("friend_connections_friend_status_idx").on(t.friendSystemId, t.status),
     index("friend_connections_friend_system_id_idx").on(t.friendSystemId),
     unique("friend_connections_system_friend_uniq").on(t.systemId, t.friendSystemId),
     unique("friend_connections_id_system_id_unique").on(t.id, t.systemId),
@@ -118,6 +120,7 @@ export const friendCodes = pgTable(
       "friend_codes_expires_at_check",
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
     ),
+    check("friend_codes_code_min_length_check", sql`length(${t.code}) >= 8`),
   ],
 );
 

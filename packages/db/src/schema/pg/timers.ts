@@ -63,8 +63,8 @@ export const checkInRecords = pgTable(
       foreignColumns: [timerConfigs.id, timerConfigs.systemId],
     }).onDelete("cascade"),
     foreignKey({
-      columns: [t.respondedByMemberId],
-      foreignColumns: [members.id],
+      columns: [t.respondedByMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
   ],
 );

@@ -77,7 +77,6 @@ export async function getActiveApiKeys(db: PgDb, accountId: string): Promise<Act
       id: apiKeys.id,
       accountId: apiKeys.accountId,
       systemId: apiKeys.systemId,
-      name: apiKeys.name,
       keyType: apiKeys.keyType,
       createdAt: apiKeys.createdAt,
       expiresAt: apiKeys.expiresAt,

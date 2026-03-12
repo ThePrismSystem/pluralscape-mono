@@ -14,6 +14,7 @@ import {
   createPgWebhookTables,
   pgInsertAccount,
   pgInsertSystem,
+  testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -117,7 +118,7 @@ describe("PG webhooks schema", () => {
         id: keyId,
         accountId,
         systemId,
-        name: "test-key",
+        encryptedData: testBlob(),
         keyType: "metadata",
         tokenHash: `hash-${crypto.randomUUID()}`,
         scopes: ["read:members"],

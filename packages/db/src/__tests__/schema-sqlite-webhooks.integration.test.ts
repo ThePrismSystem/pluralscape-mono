@@ -14,6 +14,7 @@ import {
   createSqliteWebhookTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -131,7 +132,7 @@ describe("SQLite webhooks schema", () => {
           id: keyId,
           accountId,
           systemId,
-          name: "test-key",
+          encryptedData: testBlob(),
           keyType: "metadata",
           tokenHash: `hash-${crypto.randomUUID()}`,
           scopes: ["read:members"],
