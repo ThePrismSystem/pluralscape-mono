@@ -328,6 +328,7 @@ describe("SQLite import-export schema", () => {
           sizeBytes: 1024,
           encryptionTier: 1,
           purpose: "export",
+          checksum: "sha256:test",
           uploadedAt: now,
         })
         .run();
@@ -483,6 +484,7 @@ describe("SQLite import-export schema", () => {
           sizeBytes: 1024,
           encryptionTier: 1,
           purpose: "export",
+          checksum: "sha256:test",
           uploadedAt: now,
         })
         .run();

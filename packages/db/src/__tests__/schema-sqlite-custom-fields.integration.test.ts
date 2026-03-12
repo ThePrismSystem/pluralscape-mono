@@ -243,6 +243,34 @@ describe("SQLite custom fields schema", () => {
           .run(),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO field_definitions (id, system_id, field_type, required, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, 'text', 0, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO field_definitions (id, system_id, field_type, required, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, 'text', 0, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 
   describe("field_values", () => {
@@ -382,6 +410,149 @@ describe("SQLite custom fields schema", () => {
 
       const rows = db.select().from(fieldValues).where(eq(fieldValues.id, id)).all();
       expect(rows[0]?.memberId).toBe(memberId);
+    });
+
+    it("allows same fieldDefinitionId for different members", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId1 = sqliteInsertMember(db, systemId);
+      const memberId2 = sqliteInsertMember(db, systemId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          memberId: memberId1,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          memberId: memberId2,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(fieldValues)
+        .where(eq(fieldValues.fieldDefinitionId, fieldDefId))
+        .all();
+      expect(rows).toHaveLength(2);
+    });
+
+    it("rejects duplicate (fieldDefinitionId, memberId)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = sqliteInsertMember(db, systemId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          memberId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            systemId,
+            memberId,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("rejects duplicate system-level value where memberId IS NULL", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            systemId,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("allows member-level and system-level values for same fieldDefinitionId", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = sqliteInsertMember(db, systemId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          memberId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(fieldValues)
+        .where(eq(fieldValues.fieldDefinitionId, fieldDefId))
+        .all();
+      expect(rows).toHaveLength(2);
     });
 
     it("defaults memberId to null", () => {

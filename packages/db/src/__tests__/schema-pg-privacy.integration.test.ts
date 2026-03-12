@@ -247,6 +247,18 @@ describe("PG privacy schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("rejects infrastructure entity type via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+
+      await expect(
+        db.execute(
+          sql`INSERT INTO bucket_content_tags (entity_type, entity_id, bucket_id) VALUES ('session', ${crypto.randomUUID()}, ${bucketId})`,
+        ),
+      ).rejects.toThrow();
+    });
   });
 
   describe("key_grants", () => {

@@ -35,6 +35,7 @@ export {
   ROTATION_ITEM_STATUSES,
   ENTITY_TYPES,
   FRONTING_REPORT_FORMATS,
+  BUCKET_CONTENT_ENTITY_TYPES,
 } from "./enums.js";
-export { enumCheck } from "./check.js";
+export { enumCheck, versionCheck, archivableConsistencyCheck, nullPairCheck } from "./check.js";
 export type { DbAuditActor } from "./types.js";

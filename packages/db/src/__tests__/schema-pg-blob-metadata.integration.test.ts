@@ -77,6 +77,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "attachment",
+      checksum: "sha256:test",
       uploadedAt: now,
     });
 
@@ -88,6 +89,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 200,
         encryptionTier: 1,
         purpose: "attachment",
+        checksum: "sha256:test",
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -106,6 +108,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 0,
         encryptionTier: 1,
         purpose: "avatar",
+        checksum: "sha256:test",
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -124,6 +127,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 3,
         purpose: "avatar",
+        checksum: "sha256:test",
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -142,6 +146,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "invalid" as "avatar",
+        checksum: "sha256:test",
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -160,6 +165,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 2,
       purpose: "member-photo",
+      checksum: "sha256:test",
       uploadedAt: now,
     });
 
@@ -190,6 +196,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "attachment",
+      checksum: "sha256:test",
       bucketId,
       uploadedAt: now,
     });
@@ -198,5 +205,21 @@ describe("PG blob_metadata schema", () => {
     const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
     expect(rows).toHaveLength(1);
     expect(rows[0]?.bucketId).toBeNull();
+  });
+
+  it("rejects null checksum", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    // Use raw SQL to bypass Drizzle's type checking and test the DB constraint
+    await expect(
+      client.query(
+        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NULL, $7)`,
+        [id, systemId, `blobs/${crypto.randomUUID()}`, 100, 1, "avatar", now],
+      ),
+    ).rejects.toThrow();
   });
 });

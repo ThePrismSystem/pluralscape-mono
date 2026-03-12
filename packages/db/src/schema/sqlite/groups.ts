@@ -12,6 +12,7 @@ import {
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { archivableConsistencyCheck, versionCheck } from "../../helpers/check.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -38,6 +39,11 @@ export const groups = sqliteTable(
       foreignColumns: [t.id],
     }).onDelete("set null"),
     check("groups_sort_order_check", sql`${t.sortOrder} >= 0`),
+    check("groups_version_check", versionCheck(t.version)),
+    check(
+      "groups_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

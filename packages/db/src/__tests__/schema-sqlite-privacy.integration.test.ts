@@ -282,6 +282,23 @@ describe("SQLite privacy schema", () => {
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
+
+    it("rejects infrastructure entity type via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const bucketId = insertBucket(systemId);
+
+      expect(() =>
+        db
+          .insert(bucketContentTags)
+          .values({
+            entityType: "session" as "member",
+            entityId: crypto.randomUUID(),
+            bucketId,
+          })
+          .run(),
+      ).toThrow();
+    });
   });
 
   describe("key_grants", () => {

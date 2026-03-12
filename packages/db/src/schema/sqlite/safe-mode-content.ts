@@ -1,7 +1,8 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { versionCheck } from "../../helpers/check.js";
 
 import { systems } from "./systems.js";
 
@@ -17,5 +18,8 @@ export const safeModeContent = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("safe_mode_content_system_sort_idx").on(t.systemId, t.sortOrder)],
+  (t) => [
+    index("safe_mode_content_system_sort_idx").on(t.systemId, t.sortOrder),
+    check("safe_mode_content_version_check", versionCheck(t.version)),
+  ],
 );

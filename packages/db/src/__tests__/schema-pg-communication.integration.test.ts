@@ -178,6 +178,32 @@ describe("PG communication schema", () => {
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO channels (id, system_id, type, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 'channel', 0, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO channels (id, system_id, type, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 'channel', 0, '\\x0102'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("messages", () => {
@@ -296,6 +322,34 @@ describe("PG communication schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(messages).where(eq(messages.id, msgId));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const channelId = await insertChannel(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO messages (id, channel_id, system_id, timestamp, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, $4, '\\x0102'::bytea, $5, $6, 1, true, NULL)",
+          [crypto.randomUUID(), channelId, systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const channelId = await insertChannel(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO messages (id, channel_id, system_id, timestamp, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, $4, '\\x0102'::bytea, $5, $6, 1, false, $7)",
+          [crypto.randomUUID(), channelId, systemId, now, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
   });
 
@@ -479,6 +533,32 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(notes).where(eq(notes.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO notes (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO notes (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("polls", () => {
@@ -550,13 +630,14 @@ describe("PG communication schema", () => {
     it("round-trips T3 metadata columns", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(polls).values({
         id,
         systemId,
-        createdByMemberId: "member-1",
+        createdByMemberId: memberId,
         kind: "standard",
         allowMultipleVotes: false,
         maxVotesPerMember: 1,
@@ -568,7 +649,7 @@ describe("PG communication schema", () => {
       });
 
       const rows = await db.select().from(polls).where(eq(polls.id, id));
-      expect(rows[0]?.createdByMemberId).toBe("member-1");
+      expect(rows[0]?.createdByMemberId).toBe(memberId);
       expect(rows[0]?.kind).toBe("standard");
     });
 
@@ -601,6 +682,52 @@ describe("PG communication schema", () => {
           updatedAt: now,
         }),
       ).rejects.toThrow(/check|constraint|failed query/i);
+    });
+
+    it("sets createdByMemberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(polls).values({
+        id,
+        systemId,
+        createdByMemberId: memberId,
+        allowMultipleVotes: false,
+        maxVotesPerMember: 1,
+        allowAbstain: false,
+        allowVeto: false,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(polls).where(eq(polls.id, id));
+      expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent createdByMemberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(polls).values({
+          id: crypto.randomUUID(),
+          systemId,
+          createdByMemberId: "nonexistent",
+          allowMultipleVotes: false,
+          maxVotesPerMember: 1,
+          allowAbstain: false,
+          allowVeto: false,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -790,19 +917,20 @@ describe("PG communication schema", () => {
     it("round-trips createdByMemberId T3 column", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(acknowledgements).values({
         id,
         systemId,
-        createdByMemberId: "member-1",
+        createdByMemberId: memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
-      expect(rows[0]?.createdByMemberId).toBe("member-1");
+      expect(rows[0]?.createdByMemberId).toBe(memberId);
     });
 
     it("defaults createdByMemberId to null", async () => {
@@ -820,6 +948,42 @@ describe("PG communication schema", () => {
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
       expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("sets createdByMemberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(acknowledgements).values({
+        id,
+        systemId,
+        createdByMemberId: memberId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
+      expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent createdByMemberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(acknowledgements).values({
+          id: crypto.randomUUID(),
+          systemId,
+          createdByMemberId: "nonexistent",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 });

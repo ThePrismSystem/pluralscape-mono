@@ -57,6 +57,11 @@ export function serializeEncryptedBlob(blob: EncryptedBlob): Uint8Array {
     throw new InvalidInputError(`Invalid EncryptedBlob tier: ${String(tierNum)}`);
   }
 
+  const hasBucketId = blob.bucketId !== null;
+  if (tierNum === 2 && !hasBucketId) {
+    throw new InvalidInputError("T2 EncryptedBlob requires a bucketId");
+  }
+
   if (blob.nonce.length !== AEAD_NONCE_BYTES) {
     throw new InvalidInputError(
       `Invalid nonce length: expected ${String(AEAD_NONCE_BYTES)}, got ${String(blob.nonce.length)}`,
@@ -69,7 +74,7 @@ export function serializeEncryptedBlob(blob: EncryptedBlob): Uint8Array {
     );
   }
 
-  const bucketIdBytes = blob.bucketId !== null ? textEncoder.encode(blob.bucketId) : null;
+  const bucketIdBytes = hasBucketId ? textEncoder.encode(blob.bucketId) : null;
 
   if (bucketIdBytes !== null && bucketIdBytes.length > MAX_BUCKET_ID_BYTES) {
     throw new InvalidInputError(
@@ -190,12 +195,18 @@ export function deserializeEncryptedBlob(data: Uint8Array): EncryptedBlob {
   const ciphertext = new Uint8Array(data.subarray(offset));
 
   if (tier === 1) {
+    if (keyVersion !== null) {
+      throw new InvalidInputError("T1 EncryptedBlob must not contain a keyVersion");
+    }
+    if (bucketId !== null) {
+      throw new InvalidInputError("T1 EncryptedBlob must not contain a bucketId");
+    }
     return {
       ciphertext,
       nonce,
       tier,
       algorithm,
-      keyVersion,
+      keyVersion: null,
       bucketId: null,
     } satisfies T1EncryptedBlob;
   }

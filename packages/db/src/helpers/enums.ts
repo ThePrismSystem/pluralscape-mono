@@ -356,3 +356,33 @@ export const ENTITY_TYPES = [
   "bucket-rotation-item",
 ] as const satisfies readonly EntityType[];
 export const FRONTING_REPORT_FORMATS = ["html", "pdf"] as const satisfies readonly ReportFormat[];
+
+/**
+ * Entity types that can be tagged in privacy buckets.
+ * Subset of ENTITY_TYPES — infrastructure types excluded because they are
+ * not user content subject to bucket-level privacy controls.
+ */
+export const BUCKET_CONTENT_ENTITY_TYPES = [
+  "member",
+  "group",
+  "channel",
+  "message",
+  "note",
+  "poll",
+  "relationship",
+  "subsystem",
+  "side-system",
+  "layer",
+  "journal-entry",
+  "wiki-page",
+  "custom-front",
+  "fronting-session",
+  "board-message",
+  "acknowledgement",
+  "innerworld-entity",
+  "innerworld-region",
+  "field-definition",
+  "field-value",
+  "member-photo",
+  "fronting-comment",
+] as const satisfies readonly EntityType[];

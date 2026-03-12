@@ -655,9 +655,11 @@ describe("Column existence", () => {
 //    tables that should be plaintext/simple records.
 // ---------------------------------------------------------------------------
 describe("DB-only column allowlist", () => {
-  it("switches does not have any DB-only columns (it is a simple event record)", () => {
+  it("switches has version but no other DB-only columns (versioned event record)", () => {
     const cols = getTableColumns(pg.switches);
+    expect(cols).toHaveProperty("version");
     for (const dbOnly of DB_ONLY_COLUMNS) {
+      if (dbOnly === "version") continue;
       expect(cols, `switches should not have ${dbOnly}`).not.toHaveProperty(dbOnly);
     }
   });

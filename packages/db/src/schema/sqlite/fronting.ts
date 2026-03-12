@@ -3,12 +3,35 @@ import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
+import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
+import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type { ServerFrontingSession } from "@pluralscape/types";
+
+export const customFronts = sqliteTable(
+  "custom_fronts",
+  {
+    id: text("id").primaryKey(),
+    systemId: text("system_id")
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...timestamps(),
+    ...versioned(),
+    ...archivable(),
+  },
+  (t) => [
+    index("custom_fronts_system_id_idx").on(t.systemId),
+    check("custom_fronts_version_check", versionCheck(t.version)),
+    check(
+      "custom_fronts_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
+  ],
+);
 
 export const frontingSessions = sqliteTable(
   "fronting_sessions",
@@ -37,9 +60,19 @@ export const frontingSessions = sqliteTable(
     ),
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
+    foreignKey({
+      columns: [t.memberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [t.customFrontId],
+      foreignColumns: [customFronts.id],
+    }).onDelete("set null"),
+    check("fronting_sessions_version_check", versionCheck(t.version)),
   ],
 );
 
+// Switches are immutable timeline events and are not archivable.
 export const switches = sqliteTable(
   "switches",
   {
@@ -48,28 +81,20 @@ export const switches = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     timestamp: sqliteTimestamp("timestamp").notNull(),
+    /**
+     * T3 plaintext: member IDs are opaque tokens (see tier map at encryption.ts:626).
+     * Known limitation: JSON arrays cannot have FK constraints — cross-system
+     * member ID validation is enforced at the application layer.
+     */
     memberIds: sqliteJson("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
+    ...versioned(),
   },
   (t) => [
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
     check("switches_member_ids_check", sql`json_array_length(${t.memberIds}) >= 1`),
+    check("switches_version_check", versionCheck(t.version)),
   ],
-);
-
-export const customFronts = sqliteTable(
-  "custom_fronts",
-  {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
-    ...timestamps(),
-    ...versioned(),
-    ...archivable(),
-  },
-  (t) => [index("custom_fronts_system_id_idx").on(t.systemId)],
 );
 
 export const frontingComments = sqliteTable(
@@ -91,5 +116,10 @@ export const frontingComments = sqliteTable(
       columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
     }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.memberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
+    check("fronting_comments_version_check", versionCheck(t.version)),
   ],
 );

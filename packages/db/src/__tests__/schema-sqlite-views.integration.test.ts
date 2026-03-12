@@ -65,6 +65,8 @@ describe("SQLite views / query helpers", () => {
     client.exec(SQLITE_DDL.systems);
     client.exec(SQLITE_DDL.systemsIndexes);
     client.exec(SQLITE_DDL.members);
+    client.exec(SQLITE_DDL.customFronts);
+    client.exec(SQLITE_DDL.customFrontsIndexes);
     client.exec(SQLITE_DDL.frontingSessions);
     client.exec(SQLITE_DDL.frontingSessionsIndexes);
     client.exec(SQLITE_DDL.frontingComments);
@@ -129,6 +131,7 @@ describe("SQLite views / query helpers", () => {
       "layers",
       "side_systems",
       "subsystems",
+      "custom_fronts",
       "members",
       "systems",
       "accounts",

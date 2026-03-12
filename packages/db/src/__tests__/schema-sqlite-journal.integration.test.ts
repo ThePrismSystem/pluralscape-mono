@@ -161,6 +161,34 @@ describe("SQLite journal schema", () => {
       const rows = db.select().from(journalEntries).where(eq(journalEntries.id, id)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO journal_entries (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO journal_entries (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 
   describe("wiki_pages", () => {
@@ -298,6 +326,34 @@ describe("SQLite journal schema", () => {
       db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(wikiPages).where(eq(wikiPages.id, id)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO wiki_pages (id, system_id, slug, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), systemId, `slug-${crypto.randomUUID()}`, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO wiki_pages (id, system_id, slug, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), systemId, `slug-${crypto.randomUUID()}`, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
     });
   });
 });

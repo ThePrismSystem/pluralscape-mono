@@ -69,6 +69,7 @@ export {
   ROTATION_ITEM_STATUSES,
   ENTITY_TYPES,
   FRONTING_REPORT_FORMATS,
+  BUCKET_CONTENT_ENTITY_TYPES,
 } from "./helpers/index.js";
 export type { DbAuditActor } from "./helpers/index.js";
 

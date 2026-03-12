@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { enumCheck } from "../helpers/check.js";
 import {
   ACCOUNT_PURGE_STATUSES,
   API_KEY_KEY_TYPES,
@@ -11,6 +12,7 @@ import {
   DEVICE_TOKEN_PLATFORMS,
   DEVICE_TRANSFER_STATUSES,
   DISCOVERY_STATUSES,
+  BUCKET_CONTENT_ENTITY_TYPES,
   ENTITY_TYPES,
   EXPORT_FORMATS,
   EXPORT_REQUEST_STATUSES,
@@ -36,6 +38,15 @@ import {
   WEBHOOK_DELIVERY_STATUSES,
   WEBHOOK_EVENT_TYPES,
 } from "../helpers/enums.js";
+
+import type { AnyColumn } from "drizzle-orm";
+
+describe("enumCheck", () => {
+  it("throws when called with an empty values array", () => {
+    const fakeColumn = {} as AnyColumn;
+    expect(() => enumCheck(fakeColumn, [])).toThrow("at least one value");
+  });
+});
 
 describe("enum arrays", () => {
   it("KNOWN_SATURATION_LEVELS matches KnownSaturationLevel union", () => {
@@ -197,6 +208,22 @@ describe("enum arrays", () => {
 
   it("FRONTING_REPORT_FORMATS matches ReportFormat union", () => {
     expect(FRONTING_REPORT_FORMATS).toEqual(["html", "pdf"]);
+  });
+
+  it("BUCKET_CONTENT_ENTITY_TYPES is a subset of ENTITY_TYPES", () => {
+    for (const t of BUCKET_CONTENT_ENTITY_TYPES) {
+      expect(ENTITY_TYPES).toContain(t);
+    }
+  });
+
+  it("BUCKET_CONTENT_ENTITY_TYPES excludes infrastructure types", () => {
+    const set = new Set<string>(BUCKET_CONTENT_ENTITY_TYPES);
+    expect(set.has("session")).toBe(false);
+    expect(set.has("job")).toBe(false);
+    expect(set.has("auth-key")).toBe(false);
+    expect(set.has("recovery-key")).toBe(false);
+    expect(set.has("api-key")).toBe(false);
+    expect(set.has("account")).toBe(false);
   });
 
   it("DISCOVERY_STATUSES matches DiscoveryStatus union", () => {

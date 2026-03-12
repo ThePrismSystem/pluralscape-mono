@@ -34,7 +34,7 @@ export const blobMetadata = pgTable(
     bucketId: varchar("bucket_id", { length: 255 }),
     purpose: varchar("purpose", { length: 255 }).notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: varchar("thumbnail_of_blob_id", { length: 255 }),
-    checksum: varchar("checksum", { length: 255 }),
+    checksum: varchar("checksum", { length: 255 }).notNull(),
     uploadedAt: pgTimestamp("uploaded_at").notNull(),
   },
   (t) => [

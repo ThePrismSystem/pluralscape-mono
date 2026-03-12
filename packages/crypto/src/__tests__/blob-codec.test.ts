@@ -94,10 +94,10 @@ describe("blob-codec", () => {
       const blob: EncryptedBlob = {
         ciphertext: new Uint8Array([1]),
         nonce: makeNonce(),
-        tier: 1,
+        tier: 2,
         algorithm: "xchacha20-poly1305",
         keyVersion: 0xfffffffe,
-        bucketId: null,
+        bucketId: makeBucketId("maxkv"),
       };
 
       const serialized = serializeEncryptedBlob(blob);
@@ -131,7 +131,7 @@ describe("blob-codec", () => {
         nonce: makeNonce(),
         tier: 1,
         algorithm: "xchacha20-poly1305",
-        keyVersion: 1,
+        keyVersion: null,
         bucketId: null,
       };
 
@@ -286,8 +286,29 @@ describe("blob-codec", () => {
     });
 
     it("throws on keyVersion equal to null sentinel (0xFFFFFFFF)", () => {
-      const blob = makeT1Blob({ keyVersion: 0xffffffff });
+      // T2 blobs accept numeric keyVersion — use one to test the sentinel guard
+      const blob: EncryptedBlob = {
+        ciphertext: new Uint8Array([1]),
+        nonce: makeNonce(),
+        tier: 2,
+        algorithm: "xchacha20-poly1305",
+        keyVersion: 0xffffffff,
+        bucketId: makeBucketId("sentinel"),
+      };
       expect(() => serializeEncryptedBlob(blob)).toThrow("reserved");
+    });
+
+    it("throws when T2 blob has null bucketId", () => {
+      const blob = {
+        ciphertext: new Uint8Array([1]),
+        nonce: makeNonce(),
+        tier: 2,
+        algorithm: "xchacha20-poly1305" as const,
+        keyVersion: 1,
+        bucketId: null,
+      };
+      // @ts-expect-error -- deliberate T2 + null bucketId to test runtime guard
+      expect(() => serializeEncryptedBlob(blob)).toThrow("bucketId");
     });
 
     it("throws on unknown algorithm", () => {
@@ -356,6 +377,38 @@ describe("blob-codec", () => {
       const view = new DataView(buf.buffer);
       view.setUint16(8, 100, true);
       expect(() => deserializeEncryptedBlob(buf)).toThrow();
+    });
+
+    it("throws when T1 blob contains a bucketId", () => {
+      const bucketIdStr = "bucket-sneaky";
+      const bucketIdBytes = new TextEncoder().encode(bucketIdStr);
+      const nonce = makeNonce(0x00);
+      const ciphertext = new Uint8Array([0xab]);
+
+      // Build raw binary: version=1, tier=1, algo=0, keyVersion=null, hasBucketId=1 + bucketId + nonce + ciphertext
+      const totalLength =
+        HEADER_BYTES + 2 + bucketIdBytes.length + AEAD_NONCE_BYTES + ciphertext.length;
+      const buf = new Uint8Array(totalLength);
+      const view = new DataView(buf.buffer);
+
+      let offset = 0;
+      buf[offset++] = 0x01; // version
+      buf[offset++] = 1; // tier = T1
+      buf[offset++] = 0; // algorithm
+      view.setUint32(offset, 0xffffffff, true); // null keyVersion
+      offset += 4;
+      buf[offset++] = 1; // hasBucketId = 1
+
+      view.setUint16(offset, bucketIdBytes.length, true);
+      offset += 2;
+      buf.set(bucketIdBytes, offset);
+      offset += bucketIdBytes.length;
+
+      buf.set(nonce, offset);
+      offset += AEAD_NONCE_BYTES;
+      buf.set(ciphertext, offset);
+
+      expect(() => deserializeEncryptedBlob(buf)).toThrow("T1 EncryptedBlob must not contain");
     });
 
     it("throws on truncated nonce", () => {

@@ -1,7 +1,8 @@
-import { index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
+import { versionCheck } from "../../helpers/check.js";
 
 import { systems } from "./systems.js";
 
@@ -17,5 +18,8 @@ export const safeModeContent = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("safe_mode_content_system_sort_idx").on(t.systemId, t.sortOrder)],
+  (t) => [
+    index("safe_mode_content_system_sort_idx").on(t.systemId, t.sortOrder),
+    check("safe_mode_content_version_check", versionCheck(t.version)),
+  ],
 );

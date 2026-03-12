@@ -4,19 +4,21 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
+import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 import { checkInRecords, timerConfigs } from "../schema/sqlite/timers.js";
 
 import {
   createSqliteTimerTables,
   sqliteInsertAccount,
+  sqliteInsertMember,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-const schema = { accounts, systems, timerConfigs, checkInRecords };
+const schema = { accounts, systems, members, timerConfigs, checkInRecords };
 
 describe("SQLite timers schema", () => {
   let client: InstanceType<typeof Database>;
@@ -25,6 +27,8 @@ describe("SQLite timers schema", () => {
   const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string): string =>
     sqliteInsertSystem(db, accountId, id);
+  const insertMember = (systemId: string, id?: string): string =>
+    sqliteInsertMember(db, systemId, id);
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -321,6 +325,7 @@ describe("SQLite timers schema", () => {
     it("round-trips respondedByMemberId T3 column", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const timerId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -341,12 +346,12 @@ describe("SQLite timers schema", () => {
           systemId,
           timerConfigId: timerId,
           scheduledAt: now,
-          respondedByMemberId: "member-1",
+          respondedByMemberId: memberId,
         })
         .run();
 
       const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
-      expect(rows[0]?.respondedByMemberId).toBe("member-1");
+      expect(rows[0]?.respondedByMemberId).toBe(memberId);
     });
 
     it("defaults respondedByMemberId to null", () => {
@@ -377,6 +382,69 @@ describe("SQLite timers schema", () => {
 
       const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
       expect(rows[0]?.respondedByMemberId).toBeNull();
+    });
+
+    it("sets respondedByMemberId to null on member deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id: timerId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(checkInRecords)
+        .values({
+          id,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+          respondedByMemberId: memberId,
+        })
+        .run();
+
+      db.delete(members).where(eq(members.id, memberId)).run();
+      const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
+      expect(rows[0]?.respondedByMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent respondedByMemberId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id: timerId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(checkInRecords)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            timerConfigId: timerId,
+            scheduledAt: now,
+            respondedByMemberId: "nonexistent",
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 });

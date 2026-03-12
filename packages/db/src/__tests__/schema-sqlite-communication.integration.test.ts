@@ -167,6 +167,34 @@ describe("SQLite communication schema", () => {
       expect(rows[0]?.archivedAt).toBeNull();
       expect(rows[0]?.version).toBe(1);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO channels (id, system_id, type, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, 'channel', 0, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO channels (id, system_id, type, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, 'channel', 0, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 
   describe("messages", () => {
@@ -243,6 +271,36 @@ describe("SQLite communication schema", () => {
       db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(messages).where(eq(messages.id, msgId)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const channelId = insertChannel(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO messages (id, channel_id, system_id, timestamp, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, ?, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), channelId, systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const channelId = insertChannel(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO messages (id, channel_id, system_id, timestamp, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), channelId, systemId, now, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
     });
   });
 
@@ -445,6 +503,34 @@ describe("SQLite communication schema", () => {
       const rows = db.select().from(notes).where(eq(notes.id, id)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO notes (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO notes (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 
   describe("polls", () => {
@@ -521,6 +607,7 @@ describe("SQLite communication schema", () => {
     it("round-trips T3 metadata columns", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -528,7 +615,7 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          createdByMemberId: "member-1",
+          createdByMemberId: memberId,
           kind: "standard",
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
@@ -541,7 +628,7 @@ describe("SQLite communication schema", () => {
         .run();
 
       const rows = db.select().from(polls).where(eq(polls.id, id)).all();
-      expect(rows[0]?.createdByMemberId).toBe("member-1");
+      expect(rows[0]?.createdByMemberId).toBe(memberId);
       expect(rows[0]?.kind).toBe("standard");
     });
 
@@ -577,6 +664,57 @@ describe("SQLite communication schema", () => {
           })
           .run(),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("sets createdByMemberId to null on member deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(polls)
+        .values({
+          id,
+          systemId,
+          createdByMemberId: memberId,
+          allowMultipleVotes: false,
+          maxVotesPerMember: 1,
+          allowAbstain: false,
+          allowVeto: false,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(members).where(eq(members.id, memberId)).run();
+      const rows = db.select().from(polls).where(eq(polls.id, id)).all();
+      expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent createdByMemberId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(polls)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            createdByMemberId: "nonexistent",
+            allowMultipleVotes: false,
+            maxVotesPerMember: 1,
+            allowAbstain: false,
+            allowVeto: false,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 
@@ -783,6 +921,7 @@ describe("SQLite communication schema", () => {
     it("round-trips createdByMemberId T3 column", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -790,14 +929,14 @@ describe("SQLite communication schema", () => {
         .values({
           id,
           systemId,
-          createdByMemberId: "member-1",
+          createdByMemberId: memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
         })
         .run();
 
       const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
-      expect(rows[0]?.createdByMemberId).toBe("member-1");
+      expect(rows[0]?.createdByMemberId).toBe(memberId);
     });
 
     it("defaults createdByMemberId to null", () => {
@@ -817,6 +956,47 @@ describe("SQLite communication schema", () => {
 
       const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
       expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("sets createdByMemberId to null on member deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(acknowledgements)
+        .values({
+          id,
+          systemId,
+          createdByMemberId: memberId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(members).where(eq(members.id, memberId)).run();
+      const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
+      expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent createdByMemberId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(acknowledgements)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            createdByMemberId: "nonexistent",
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 });

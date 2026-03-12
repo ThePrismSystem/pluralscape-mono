@@ -1,7 +1,8 @@
-import { foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { versionCheck } from "../../helpers/check.js";
 
 import { systems } from "./systems.js";
 
@@ -25,6 +26,7 @@ export const innerworldRegions = sqliteTable(
       columns: [t.parentRegionId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
+    check("innerworld_regions_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -47,14 +49,19 @@ export const innerworldEntities = sqliteTable(
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
+    check("innerworld_entities_version_check", versionCheck(t.version)),
   ],
 );
 
-export const innerworldCanvas = sqliteTable("innerworld_canvas", {
-  systemId: text("system_id")
-    .primaryKey()
-    .references(() => systems.id, { onDelete: "cascade" }),
-  encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
-  ...timestamps(),
-  ...versioned(),
-});
+export const innerworldCanvas = sqliteTable(
+  "innerworld_canvas",
+  {
+    systemId: text("system_id")
+      .primaryKey()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    ...timestamps(),
+    ...versioned(),
+  },
+  (t) => [check("innerworld_canvas_version_check", versionCheck(t.version))],
+);

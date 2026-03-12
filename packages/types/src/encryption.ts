@@ -96,6 +96,7 @@ interface EncryptedBlobBase {
 /** T1 zero-knowledge blob — encrypted with the system master key. No bucket association. */
 export interface T1EncryptedBlob extends EncryptedBlobBase {
   readonly tier: 1;
+  readonly keyVersion: null;
   readonly bucketId: null;
 }
 
@@ -501,7 +502,7 @@ export type ClientPollVote = PollVote;
 export interface ServerAcknowledgementRequest extends AuditMetadata {
   readonly id: AcknowledgementId;
   readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId;
+  readonly createdByMemberId: MemberId | null;
   readonly confirmed: boolean;
   readonly encryptedData: EncryptedBlob;
 }

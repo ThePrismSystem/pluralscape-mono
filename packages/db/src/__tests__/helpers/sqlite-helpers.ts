@@ -55,7 +55,8 @@ export const SQLITE_DDL = {
       kdf_salt TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   authKeys: `
@@ -111,7 +112,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   systemsIndexes: `
@@ -127,7 +129,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   memberPhotos: `
@@ -140,7 +144,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE,
+      CHECK (version >= 1)
     )
   `,
   // Privacy
@@ -152,7 +157,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   bucketsIndexes: `
@@ -160,7 +166,7 @@ export const SQLITE_DDL = {
   `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
-      entity_type TEXT NOT NULL CHECK (entity_type IN ('system', 'member', 'group', 'bucket', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'blob', 'webhook', 'timer', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'api-key', 'audit-log-entry', 'check-in-record', 'friend-connection', 'key-grant', 'device-token', 'poll-vote', 'session', 'event', 'account', 'friend-code', 'notification-config', 'system-settings', 'poll-option', 'member-photo', 'switch', 'auth-key', 'recovery-key', 'device-transfer-request', 'sync-document', 'sync-queue-item', 'sync-conflict', 'import-job', 'pk-bridge-config', 'account-purge-request', 'export-request', 'job', 'subscription', 'webhook-delivery', 'fronting-report', 'friend-notification-preference', 'fronting-comment', 'bucket-key-rotation', 'bucket-rotation-item')),
+      entity_type TEXT NOT NULL CHECK (entity_type IS NULL OR entity_type IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')),
       entity_id TEXT NOT NULL,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       PRIMARY KEY (entity_type, entity_id, bucket_id)
@@ -198,7 +204,8 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (system_id, friend_system_id),
       UNIQUE (id, system_id),
-      CHECK (system_id != friend_system_id)
+      CHECK (system_id != friend_system_id),
+      CHECK (version >= 1)
     )
   `,
   friendConnectionsIndexes: `
@@ -241,7 +248,10 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       CHECK (end_time IS NULL OR end_time > start_time),
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   frontingSessionsIndexes: `
@@ -254,7 +264,9 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       timestamp INTEGER NOT NULL,
       member_ids TEXT NOT NULL CHECK (json_array_length(member_ids) >= 1),
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   switchesIndexes: `
@@ -269,7 +281,9 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER
+      archived_at INTEGER,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   customFrontsIndexes: `
@@ -285,7 +299,9 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   frontingCommentsIndexes: `
@@ -303,7 +319,10 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (source_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      FOREIGN KEY (target_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   relationshipsIndexes: `
@@ -322,7 +341,8 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (id, system_id),
-      FOREIGN KEY (parent_subsystem_id) REFERENCES subsystems(id) ON DELETE SET NULL
+      FOREIGN KEY (parent_subsystem_id) REFERENCES subsystems(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   subsystemsIndexes: `
@@ -336,7 +356,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   sideSystemsIndexes: `
@@ -351,7 +372,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   layersIndexes: `
@@ -464,7 +486,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   fieldDefinitionsIndexes: `
@@ -481,11 +505,14 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   fieldValuesIndexes: `
-    CREATE INDEX field_values_definition_system_idx ON field_values (field_definition_id, system_id)
+    CREATE INDEX field_values_definition_system_idx ON field_values (field_definition_id, system_id);
+    CREATE UNIQUE INDEX field_values_definition_member_uniq ON field_values (field_definition_id, member_id) WHERE member_id IS NOT NULL;
+    CREATE UNIQUE INDEX field_values_definition_system_uniq ON field_values (field_definition_id, system_id) WHERE member_id IS NULL
   `,
   fieldBucketVisibility: `
     CREATE TABLE field_bucket_visibility (
@@ -501,7 +528,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   // System Settings
@@ -515,7 +543,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   // API Keys
@@ -586,7 +615,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   safeModeContentIndexes: `
@@ -607,7 +637,9 @@ export const SQLITE_DDL = {
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       UNIQUE (id, system_id),
-      FOREIGN KEY (parent_id) REFERENCES channels(id) ON DELETE SET NULL
+      FOREIGN KEY (parent_id) REFERENCES channels(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   channelsIndexes: `
@@ -629,7 +661,9 @@ export const SQLITE_DDL = {
       archived_at INTEGER,
       UNIQUE (id, system_id),
       FOREIGN KEY (channel_id, system_id) REFERENCES channels(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL
+      FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   messagesIndexes: `
@@ -646,7 +680,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   boardMessagesIndexes: `
@@ -663,7 +698,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   notesIndexes: `
@@ -687,7 +724,9 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   pollsIndexes: `
@@ -718,7 +757,8 @@ export const SQLITE_DDL = {
       created_by_member_id TEXT,
       confirmed INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   acknowledgementsIndexes: `
@@ -737,7 +777,9 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      FOREIGN KEY (fronting_session_id) REFERENCES fronting_sessions(id) ON DELETE SET NULL
+      FOREIGN KEY (fronting_session_id) REFERENCES fronting_sessions(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   journalEntriesIndexes: `
@@ -754,7 +796,9 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER
+      archived_at INTEGER,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   wikiPagesIndexes: `
@@ -777,7 +821,9 @@ export const SQLITE_DDL = {
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       UNIQUE (id, system_id),
-      FOREIGN KEY (parent_group_id) REFERENCES groups(id) ON DELETE SET NULL
+      FOREIGN KEY (parent_group_id) REFERENCES groups(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   groupsIndexes: `
@@ -809,7 +855,8 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (id, system_id),
-      FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL
+      FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   innerworldRegionsIndexes: `
@@ -824,7 +871,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL
+      FOREIGN KEY (region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   innerworldEntitiesIndexes: `
@@ -837,7 +885,8 @@ export const SQLITE_DDL = {
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   // PK Bridge
@@ -853,7 +902,8 @@ export const SQLITE_DDL = {
       last_sync_at INTEGER,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   pkBridgeStateIndexes: `
@@ -956,7 +1006,7 @@ export const SQLITE_DDL = {
       bucket_id TEXT,
       purpose TEXT NOT NULL,
       thumbnail_of_blob_id TEXT,
-      checksum TEXT,
+      checksum TEXT NOT NULL,
       uploaded_at INTEGER NOT NULL,
       UNIQUE (id, system_id),
       FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
@@ -981,7 +1031,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   timerConfigsIndexes: `
@@ -997,7 +1048,8 @@ export const SQLITE_DDL = {
       dismissed INTEGER NOT NULL DEFAULT 0,
       responded_by_member_id TEXT,
       encrypted_data BLOB,
-      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   checkInRecordsIndexes: `
@@ -1104,7 +1156,8 @@ export const SQLITE_DDL = {
       resolution TEXT CHECK (resolution IN ('local', 'remote', 'merged') OR resolution IS NULL),
       created_at INTEGER NOT NULL,
       resolved_at INTEGER,
-      details TEXT
+      details TEXT,
+      CHECK ((resolution IS NULL) = (resolved_at IS NULL))
     )
   `,
   syncConflictsIndexes: `
@@ -1267,18 +1320,20 @@ export function createSqlitePrivacyTables(client: InstanceType<typeof Database>)
 
 export function createSqliteFrontingTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.customFronts);
+  client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
   client.exec(SQLITE_DDL.frontingSessionsIndexes);
   client.exec(SQLITE_DDL.switches);
   client.exec(SQLITE_DDL.switchesIndexes);
-  client.exec(SQLITE_DDL.customFronts);
-  client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingComments);
   client.exec(SQLITE_DDL.frontingCommentsIndexes);
 }
 
 export function createSqliteStructureTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.relationships);
   client.exec(SQLITE_DDL.relationshipsIndexes);
   client.exec(SQLITE_DDL.subsystems);
@@ -1439,6 +1494,9 @@ export function createSqliteCommunicationTables(client: InstanceType<typeof Data
 
 export function createSqliteJournalTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.customFronts);
+  client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
   client.exec(SQLITE_DDL.frontingSessionsIndexes);
   client.exec(SQLITE_DDL.journalEntries);
@@ -1504,6 +1562,7 @@ export function createSqliteBlobMetadataTables(client: InstanceType<typeof Datab
 
 export function createSqliteTimerTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.timerConfigs);
   client.exec(SQLITE_DDL.timerConfigsIndexes);
   client.exec(SQLITE_DDL.checkInRecords);

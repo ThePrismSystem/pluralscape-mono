@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
+import { members } from "../schema/sqlite/members.js";
 import {
   layers,
   layerMemberships,
@@ -21,6 +22,7 @@ import { systems } from "../schema/sqlite/systems.js";
 import {
   createSqliteStructureTables,
   sqliteInsertAccount,
+  sqliteInsertMember,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
@@ -30,6 +32,7 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 const schema = {
   accounts,
   systems,
+  members,
   relationships,
   subsystems,
   sideSystems,
@@ -47,6 +50,8 @@ describe("SQLite structure schema", () => {
   let db: BetterSQLite3Database<typeof schema>;
 
   const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
+  const insertMember = (systemId: string, id?: string): string =>
+    sqliteInsertMember(db, systemId, id);
   const insertSystem = (accountId: string, id?: string): string =>
     sqliteInsertSystem(db, accountId, id);
 
@@ -193,6 +198,8 @@ describe("SQLite structure schema", () => {
     it("round-trips T3 metadata columns", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const sourceMemberId = insertMember(systemId);
+      const targetMemberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -200,8 +207,8 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
-          sourceMemberId: "member-1",
-          targetMemberId: "member-2",
+          sourceMemberId,
+          targetMemberId,
           type: "sibling",
           bidirectional: true,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -211,8 +218,8 @@ describe("SQLite structure schema", () => {
         .run();
 
       const rows = db.select().from(relationships).where(eq(relationships.id, id)).all();
-      expect(rows[0]?.sourceMemberId).toBe("member-1");
-      expect(rows[0]?.targetMemberId).toBe("member-2");
+      expect(rows[0]?.sourceMemberId).toBe(sourceMemberId);
+      expect(rows[0]?.targetMemberId).toBe(targetMemberId);
       expect(rows[0]?.type).toBe("sibling");
       expect(rows[0]?.bidirectional).toBe(true);
     });
@@ -258,6 +265,92 @@ describe("SQLite structure schema", () => {
           })
           .run(),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("sets sourceMemberId to null on member deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(relationships)
+        .values({
+          id,
+          systemId,
+          sourceMemberId: memberId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(members).where(eq(members.id, memberId)).run();
+      const rows = db.select().from(relationships).where(eq(relationships.id, id)).all();
+      expect(rows[0]?.sourceMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent sourceMemberId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(relationships)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            sourceMemberId: "nonexistent",
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("sets targetMemberId to null on member deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(relationships)
+        .values({
+          id,
+          systemId,
+          targetMemberId: memberId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(members).where(eq(members.id, memberId)).run();
+      const rows = db.select().from(relationships).where(eq(relationships.id, id)).all();
+      expect(rows[0]?.targetMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent targetMemberId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(relationships)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            targetMemberId: "nonexistent",
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 

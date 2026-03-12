@@ -201,6 +201,32 @@ describe("PG groups schema", () => {
       const rows = await db.select().from(groups).where(eq(groups.id, groupId));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO groups (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO groups (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   // ── group_memberships ───────────────────────────────────────────────

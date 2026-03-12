@@ -3,7 +3,7 @@ import { boolean, check, index, jsonb, pgTable, uniqueIndex, varchar } from "dri
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
+import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
 import type { AuthKeyType, DeviceInfo, DeviceTransferStatus } from "@pluralscape/types";
@@ -19,7 +19,10 @@ export const accounts = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [uniqueIndex("accounts_email_hash_idx").on(t.emailHash)],
+  (t) => [
+    uniqueIndex("accounts_email_hash_idx").on(t.emailHash),
+    check("accounts_version_check", versionCheck(t.version)),
+  ],
 );
 
 export const authKeys = pgTable(

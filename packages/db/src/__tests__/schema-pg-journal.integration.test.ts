@@ -147,6 +147,32 @@ describe("PG journal schema", () => {
       const rows = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO journal_entries (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO journal_entries (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("wiki_pages", () => {
@@ -269,6 +295,32 @@ describe("PG journal schema", () => {
       await db.delete(systems).where(eq(systems.id, systemId));
       const rows = await db.select().from(wikiPages).where(eq(wikiPages.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO wiki_pages (id, system_id, slug, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, `slug-${crypto.randomUUID()}`, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO wiki_pages (id, system_id, slug, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, 1, false, $6)",
+          [crypto.randomUUID(), systemId, `slug-${crypto.randomUUID()}`, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
   });
 });
