@@ -16,7 +16,8 @@ import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../h
 
 import { systems } from "./systems.js";
 
-import type { EntityType, FriendConnectionStatus } from "@pluralscape/types";
+import type { BucketContentEntityType } from "../../helpers/enums.js";
+import type { FriendConnectionStatus } from "@pluralscape/types";
 
 export const buckets = sqliteTable(
   "buckets",
@@ -39,7 +40,7 @@ export const buckets = sqliteTable(
 export const bucketContentTags = sqliteTable(
   "bucket_content_tags",
   {
-    entityType: text("entity_type").notNull().$type<EntityType>(),
+    entityType: text("entity_type").notNull().$type<BucketContentEntityType>(),
     entityId: text("entity_id").notNull(),
     bucketId: text("bucket_id")
       .notNull()

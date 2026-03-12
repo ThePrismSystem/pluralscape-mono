@@ -401,3 +401,4 @@ export const BUCKET_CONTENT_ENTITY_TYPES = [
   "member-photo",
   "fronting-comment",
 ] as const satisfies readonly EntityType[];
+export type BucketContentEntityType = (typeof BUCKET_CONTENT_ENTITY_TYPES)[number];

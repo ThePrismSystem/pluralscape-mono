@@ -13,6 +13,7 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import * as pg from "../schema/pg/index.js";
 import * as sqlite from "../schema/sqlite/index.js";
 
+import type { BucketContentEntityType } from "../helpers/enums.js";
 import type {
   DbChartData,
   DbChartDataset,
@@ -24,7 +25,6 @@ import type {
   ChartDataset,
   DateRange,
   DeviceInfo,
-  EntityType,
   MemberFrontingBreakdown,
 } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
@@ -692,15 +692,15 @@ describe("DB-only column allowlist", () => {
 //    for the columns changed in Fixes 1-8.
 // ---------------------------------------------------------------------------
 describe("Type-level assertions", () => {
-  // Fix 1 — bucketContentTags.entityType is EntityType
-  it("PG bucketContentTags.entityType infers as EntityType", () => {
+  // Fix 1 — bucketContentTags.entityType is BucketContentEntityType
+  it("PG bucketContentTags.entityType infers as BucketContentEntityType", () => {
     type Row = InferSelectModel<typeof pg.bucketContentTags>;
-    expectTypeOf<Row["entityType"]>().toEqualTypeOf<EntityType>();
+    expectTypeOf<Row["entityType"]>().toEqualTypeOf<BucketContentEntityType>();
   });
 
-  it("SQLite bucketContentTags.entityType infers as EntityType", () => {
+  it("SQLite bucketContentTags.entityType infers as BucketContentEntityType", () => {
     type Row = InferSelectModel<typeof sqlite.bucketContentTags>;
-    expectTypeOf<Row["entityType"]>().toEqualTypeOf<EntityType>();
+    expectTypeOf<Row["entityType"]>().toEqualTypeOf<BucketContentEntityType>();
   });
 
   // Fix 2 — memberPhotos.sortOrder is number (non-nullable)
