@@ -243,6 +243,28 @@ describe("SQLite views / query helpers", () => {
       expect(active).toHaveLength(1);
       expect(active[0]?.name).toBe("Active key");
     });
+
+    it("includes key with null name and encryptedData", () => {
+      const now = Date.now();
+
+      db.insert(apiKeys)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          name: null,
+          keyType: "metadata",
+          tokenHash: `hash_${crypto.randomUUID()}`,
+          scopes: ["read:members"],
+          encryptedData: testBlob(),
+          createdAt: now,
+        })
+        .run();
+
+      const active = getActiveApiKeys(db, accountId);
+      expect(active).toHaveLength(1);
+      expect(active[0]?.name).toBeNull();
+    });
   });
 
   describe("getPendingFriendRequests", () => {

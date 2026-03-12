@@ -11,7 +11,7 @@ import {
   sessions,
 } from "../schema/sqlite/auth.js";
 
-import { createSqliteAuthTables } from "./helpers/sqlite-helpers.js";
+import { createSqliteAuthTables, testBlob } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
@@ -456,6 +456,40 @@ describe("SQLite auth schema", () => {
 
       const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
       expect(rows[0]?.expiresAt).toBe(expiresAt);
+    });
+
+    it("defaults encryptedData to null", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+
+      db.insert(sessions)
+        .values({
+          id,
+          accountId: account.id,
+          createdAt: Date.now(),
+        })
+        .run();
+
+      const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
+      expect(rows[0]?.encryptedData).toBeNull();
+    });
+
+    it("round-trips encryptedData blob", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+      const blob = testBlob(new Uint8Array([10, 20, 30]));
+
+      db.insert(sessions)
+        .values({
+          id,
+          accountId: account.id,
+          encryptedData: blob,
+          createdAt: Date.now(),
+        })
+        .run();
+
+      const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
+      expect(rows[0]?.encryptedData).toEqual(blob);
     });
   });
 

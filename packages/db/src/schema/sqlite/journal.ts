@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
@@ -42,7 +43,7 @@ export const wikiPages = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    slug: text("slug").notNull(),
+    slugHash: text("slug_hash").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -50,11 +51,12 @@ export const wikiPages = sqliteTable(
   },
   (t) => [
     index("wiki_pages_system_id_idx").on(t.systemId),
-    uniqueIndex("wiki_pages_system_id_slug_idx").on(t.systemId, t.slug),
+    uniqueIndex("wiki_pages_system_id_slug_hash_idx").on(t.systemId, t.slugHash),
     check("wiki_pages_version_check", versionCheck(t.version)),
     check(
       "wiki_pages_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
     ),
+    check("wiki_pages_slug_hash_length_check", sql`length(${t.slugHash}) = 64`),
   ],
 );

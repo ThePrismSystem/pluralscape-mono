@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, foreignKey, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
@@ -42,7 +43,7 @@ export const wikiPages = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    slug: varchar("slug", { length: 255 }).notNull(),
+    slugHash: varchar("slug_hash", { length: 64 }).notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -50,11 +51,12 @@ export const wikiPages = pgTable(
   },
   (t) => [
     index("wiki_pages_system_id_idx").on(t.systemId),
-    uniqueIndex("wiki_pages_system_id_slug_idx").on(t.systemId, t.slug),
+    uniqueIndex("wiki_pages_system_id_slug_hash_idx").on(t.systemId, t.slugHash),
     check("wiki_pages_version_check", versionCheck(t.version)),
     check(
       "wiki_pages_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
     ),
+    check("wiki_pages_slug_hash_length_check", sql`length(${t.slugHash}) = 64`),
   ],
 );

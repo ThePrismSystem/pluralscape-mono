@@ -237,6 +237,26 @@ describe("PG views / query helpers", () => {
       const active = await getActiveApiKeys(db, accountId);
       expect(active).toHaveLength(0);
     });
+
+    it("includes key with null name and encryptedData", async () => {
+      const now = Date.now();
+
+      await db.insert(apiKeys).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        name: null,
+        keyType: "metadata",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["read:members"],
+        encryptedData: testBlob(),
+        createdAt: now,
+      });
+
+      const active = await getActiveApiKeys(db, accountId);
+      expect(active).toHaveLength(1);
+      expect(active[0]?.name).toBeNull();
+    });
   });
 
   describe("getPendingFriendRequests", () => {

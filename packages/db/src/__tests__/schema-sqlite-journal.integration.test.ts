@@ -192,18 +192,19 @@ describe("SQLite journal schema", () => {
   });
 
   describe("wiki_pages", () => {
-    it("round-trips with encrypted_data and slug", () => {
+    it("round-trips with encrypted_data and slugHash", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
+      const hash = "a".repeat(64);
 
       db.insert(wikiPages)
         .values({
           id,
           systemId,
-          slug: "test-page",
+          slugHash: hash,
           encryptedData: data,
           createdAt: now,
           updatedAt: now,
@@ -213,7 +214,7 @@ describe("SQLite journal schema", () => {
       const rows = db.select().from(wikiPages).where(eq(wikiPages.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.slug).toBe("test-page");
+      expect(rows[0]?.slugHash).toBe(hash);
     });
 
     it("defaults archived to false and version to 1", () => {
@@ -226,7 +227,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
-          slug: `slug-${crypto.randomUUID()}`,
+          slugHash: "a".repeat(64),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -239,17 +240,17 @@ describe("SQLite journal schema", () => {
       expect(rows[0]?.version).toBe(1);
     });
 
-    it("enforces unique (system_id, slug)", () => {
+    it("enforces unique (system_id, slug_hash)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const slug = `unique-${crypto.randomUUID()}`;
+      const slugHash = "b".repeat(64);
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
           id: crypto.randomUUID(),
           systemId,
-          slug,
+          slugHash,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -262,7 +263,7 @@ describe("SQLite journal schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId,
-            slug,
+            slugHash,
             encryptedData: testBlob(new Uint8Array([2])),
             createdAt: now,
             updatedAt: now,
@@ -271,18 +272,18 @@ describe("SQLite journal schema", () => {
       ).toThrow();
     });
 
-    it("allows same slug in different systems", () => {
+    it("allows same slugHash in different systems", () => {
       const accountId = insertAccount();
       const systemId1 = insertSystem(accountId);
       const systemId2 = insertSystem(accountId);
-      const slug = `shared-${crypto.randomUUID()}`;
+      const slugHash = "c".repeat(64);
       const now = Date.now();
 
       db.insert(wikiPages)
         .values({
           id: crypto.randomUUID(),
           systemId: systemId1,
-          slug,
+          slugHash,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -293,7 +294,7 @@ describe("SQLite journal schema", () => {
         .values({
           id: crypto.randomUUID(),
           systemId: systemId2,
-          slug,
+          slugHash,
           encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
           updatedAt: now,
@@ -316,7 +317,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
-          slug: `del-${crypto.randomUUID()}`,
+          slugHash: "d".repeat(64),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -336,9 +337,9 @@ describe("SQLite journal schema", () => {
       expect(() =>
         client
           .prepare(
-            "INSERT INTO wiki_pages (id, system_id, slug, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 1, NULL)",
+            "INSERT INTO wiki_pages (id, system_id, slug_hash, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 1, NULL)",
           )
-          .run(crypto.randomUUID(), systemId, `slug-${crypto.randomUUID()}`, now, now),
+          .run(crypto.randomUUID(), systemId, "e".repeat(64), now, now),
       ).toThrow(/CHECK|constraint/i);
     });
 
@@ -350,9 +351,29 @@ describe("SQLite journal schema", () => {
       expect(() =>
         client
           .prepare(
-            "INSERT INTO wiki_pages (id, system_id, slug, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
+            "INSERT INTO wiki_pages (id, system_id, slug_hash, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
           )
-          .run(crypto.randomUUID(), systemId, `slug-${crypto.randomUUID()}`, now, now, now),
+          .run(crypto.randomUUID(), systemId, "f".repeat(64), now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects slug_hash shorter than 64 chars", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(wikiPages)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            slugHash: "a".repeat(32),
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
       ).toThrow(/CHECK|constraint/i);
     });
   });

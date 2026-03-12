@@ -7,7 +7,12 @@ import { apiKeys } from "../schema/pg/api-keys.js";
 import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgApiKeysTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgApiKeysTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -320,6 +325,89 @@ describe("PG api_keys schema", () => {
         accountId,
         systemId: "nonexistent",
         name: "Bad FK",
+        keyType: "metadata",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["full"],
+        createdAt: now,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("allows nullable name for encrypted migration", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    await db.insert(apiKeys).values({
+      id,
+      accountId,
+      systemId,
+      keyType: "metadata",
+      tokenHash: `hash_${crypto.randomUUID()}`,
+      scopes: ["read:members"],
+      encryptedData: testBlob(),
+      createdAt: now,
+    });
+
+    const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
+    expect(rows[0]?.name).toBeNull();
+  });
+
+  it("round-trips encryptedData blob", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+    const id = crypto.randomUUID();
+    const blob = testBlob(new Uint8Array([10, 20, 30]));
+
+    await db.insert(apiKeys).values({
+      id,
+      accountId,
+      systemId,
+      name: "Encrypted Key",
+      keyType: "metadata",
+      tokenHash: `hash_${crypto.randomUUID()}`,
+      scopes: ["full"],
+      encryptedData: blob,
+      createdAt: now,
+    });
+
+    const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
+    expect(rows[0]?.encryptedData).toEqual(blob);
+  });
+
+  it("defaults encryptedData to null", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    await db.insert(apiKeys).values({
+      id,
+      accountId,
+      systemId,
+      name: "No Blob Key",
+      keyType: "metadata",
+      tokenHash: `hash_${crypto.randomUUID()}`,
+      scopes: ["full"],
+      createdAt: now,
+    });
+
+    const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
+    expect(rows[0]?.encryptedData).toBeNull();
+  });
+
+  it("rejects both name and encryptedData null", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+
+    await expect(
+      db.insert(apiKeys).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["full"],

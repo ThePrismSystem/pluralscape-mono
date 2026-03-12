@@ -1,7 +1,12 @@
 import { sql } from "drizzle-orm";
 import { check, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import {
+  sqliteBinary,
+  sqliteEncryptedBlob,
+  sqliteJson,
+  sqliteTimestamp,
+} from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { API_KEY_KEY_TYPES } from "../../helpers/enums.js";
 
@@ -21,10 +26,11 @@ export const apiKeys = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
+    name: text("name"),
     keyType: text("key_type").notNull().$type<ApiKey["keyType"]>(),
     tokenHash: text("token_hash").notNull(),
     scopes: sqliteJson("scopes").notNull().$type<readonly ApiKeyScope[]>(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data"),
     encryptedKeyMaterial: sqliteBinary("encrypted_key_material"),
     createdAt: sqliteTimestamp("created_at").notNull(),
     lastUsedAt: sqliteTimestamp("last_used_at"),
@@ -42,6 +48,10 @@ export const apiKeys = sqliteTable(
     check(
       "api_keys_key_material_check",
       sql`(${t.keyType} = 'crypto' AND ${t.encryptedKeyMaterial} IS NOT NULL) OR (${t.keyType} = 'metadata' AND ${t.encryptedKeyMaterial} IS NULL)`,
+    ),
+    check(
+      "api_keys_name_or_encrypted_data_check",
+      sql`${t.name} IS NOT NULL OR ${t.encryptedData} IS NOT NULL`,
     ),
   ],
 );
