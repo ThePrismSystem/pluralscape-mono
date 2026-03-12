@@ -17,7 +17,13 @@ export type JobType =
   | "report-generate";
 
 /** Current status of a background job. */
-export type JobStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
+export type JobStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "dead-letter";
 
 /** Retry policy for failed jobs. */
 export interface RetryPolicy {

@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm";
 import {
+  check,
   foreignKey,
   index,
   integer,
@@ -9,6 +11,8 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteTimestamp } from "../../columns/sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
+import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
@@ -44,5 +48,8 @@ export const blobMetadata = sqliteTable(
       columns: [t.thumbnailOfBlobId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
+    check("blob_metadata_purpose_check", enumCheck(t.purpose, BLOB_PURPOSES)),
+    check("blob_metadata_size_bytes_check", sql`${t.sizeBytes} > 0`),
+    check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
   ],
 );

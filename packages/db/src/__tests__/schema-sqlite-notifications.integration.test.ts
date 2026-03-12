@@ -96,6 +96,21 @@ describe("SQLite notifications schema", () => {
       expect(rows[0]?.revokedAt).toBeNull();
     });
 
+    it("rejects invalid platform", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO device_tokens (id, account_id, system_id, platform, token, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), accountId, systemId, "invalid-platform", "tok", now),
+      ).toThrow();
+    });
+
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -194,6 +209,21 @@ describe("SQLite notifications schema", () => {
             updatedAt: now,
           })
           .run(),
+      ).toThrow();
+    });
+
+    it("rejects invalid event_type", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO notification_configs (id, system_id, event_type, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), systemId, "invalid-event-type", now, now),
       ).toThrow();
     });
 

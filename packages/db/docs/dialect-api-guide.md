@@ -179,6 +179,30 @@ const timestampCol = caps.jsonb ? pgTimestamp("ts") : sqliteTimestamp("ts");
 // SQLite schema: import { members } from "schema/sqlite/members"
 ```
 
+## SQLite Single-Tenant Isolation Model
+
+SQLite is designed for the minimal self-hosted tier (ADR 012): one user, one system, one database file. Tenant isolation works fundamentally differently from PostgreSQL:
+
+- **PG**: Row-Level Security (RLS) enforces isolation at the database layer. Even buggy application code cannot leak data across tenants.
+- **SQLite**: Isolation is advisory. `systemScope()` and `accountScope()` add `WHERE system_id = ?` clauses, but nothing prevents a query from omitting them.
+
+This is acceptable because the SQLite deployment model is inherently single-tenant — the database file belongs to one user. The WHERE clauses exist for code consistency with the PG path, not for security enforcement.
+
+### FTS5 search_index
+
+The `search_index` FTS5 virtual table has no `system_id` column. This is safe because:
+
+- SQLite is single-tenant: all rows belong to the same system
+- Adding `system_id` would waste storage and complicate queries for no security benefit
+
+If SQLite is ever used in a multi-tenant context, the FTS5 table and all raw-SQL query paths would need tenant columns added. This is a documented architectural boundary, not a bug.
+
+### Implications for contributors
+
+- Do not rely on SQLite WHERE clauses for security — they are for API parity, not enforcement
+- Do not add `system_id` to FTS5 unless the single-tenant assumption changes
+- If building a multi-tenant SQLite deployment, audit every raw SQL path for tenant leakage
+
 ## Adding New Dialect-Specific Features
 
 1. **Define the interface** in a shared types file
