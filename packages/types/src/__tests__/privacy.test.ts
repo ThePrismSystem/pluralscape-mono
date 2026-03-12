@@ -1,15 +1,9 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type {
-  BucketId,
-  EntityType,
-  FriendCodeId,
-  FriendConnectionId,
-  KeyGrantId,
-  SystemId,
-} from "../ids.js";
+import type { BucketId, FriendCodeId, FriendConnectionId, KeyGrantId, SystemId } from "../ids.js";
 import type {
   BucketAccessCheck,
+  BucketContentEntityType,
   BucketContentTag,
   BucketVisibilityScope,
   FriendCode,
@@ -36,8 +30,8 @@ describe("PrivacyBucket", () => {
 });
 
 describe("BucketContentTag", () => {
-  it("has entityType as EntityType, entityId, and bucketId", () => {
-    expectTypeOf<BucketContentTag["entityType"]>().toEqualTypeOf<EntityType>();
+  it("has entityType as BucketContentEntityType, entityId, and bucketId", () => {
+    expectTypeOf<BucketContentTag["entityType"]>().toEqualTypeOf<BucketContentEntityType>();
     expectTypeOf<BucketContentTag["entityId"]>().toBeString();
     expectTypeOf<BucketContentTag["bucketId"]>().toEqualTypeOf<BucketId>();
   });

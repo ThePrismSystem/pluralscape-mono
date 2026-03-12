@@ -10,6 +10,7 @@
 import { getTableColumns } from "drizzle-orm";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
+import { BUCKET_CONTENT_ENTITY_TYPES } from "../helpers/enums.js";
 import * as pg from "../schema/pg/index.js";
 import * as sqlite from "../schema/sqlite/index.js";
 
@@ -20,6 +21,7 @@ import type {
   DbMemberFrontingBreakdown,
 } from "../schema/shared/analytics-types.js";
 import type {
+  BucketContentEntityType,
   ChartData,
   ChartDataset,
   DateRange,
@@ -692,15 +694,25 @@ describe("DB-only column allowlist", () => {
 //    for the columns changed in Fixes 1-8.
 // ---------------------------------------------------------------------------
 describe("Type-level assertions", () => {
-  // Fix 1 — bucketContentTags.entityType is EntityType
-  it("PG bucketContentTags.entityType infers as EntityType", () => {
+  // Fix 1 — bucketContentTags.entityType is BucketContentEntityType
+  it("PG bucketContentTags.entityType infers as BucketContentEntityType", () => {
     type Row = InferSelectModel<typeof pg.bucketContentTags>;
-    expectTypeOf<Row["entityType"]>().toEqualTypeOf<EntityType>();
+    expectTypeOf<Row["entityType"]>().toEqualTypeOf<BucketContentEntityType>();
   });
 
-  it("SQLite bucketContentTags.entityType infers as EntityType", () => {
+  it("SQLite bucketContentTags.entityType infers as BucketContentEntityType", () => {
     type Row = InferSelectModel<typeof sqlite.bucketContentTags>;
-    expectTypeOf<Row["entityType"]>().toEqualTypeOf<EntityType>();
+    expectTypeOf<Row["entityType"]>().toEqualTypeOf<BucketContentEntityType>();
+  });
+
+  it("BucketContentEntityType is a subset of EntityType", () => {
+    expectTypeOf<BucketContentEntityType>().toExtend<EntityType>();
+  });
+
+  it("infrastructure types are not assignable to BucketContentEntityType", () => {
+    expectTypeOf<"session">().not.toExtend<BucketContentEntityType>();
+    expectTypeOf<"account">().not.toExtend<BucketContentEntityType>();
+    expectTypeOf<"job">().not.toExtend<BucketContentEntityType>();
   });
 
   // Fix 2 — memberPhotos.sortOrder is number (non-nullable)
@@ -835,5 +847,19 @@ describe("analytics type structural parity", () => {
 
   it("DbChartData has same keys as ChartData", () => {
     expectTypeOf<keyof DbChartData>().toEqualTypeOf<keyof ChartData>();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. BUCKET_CONTENT_ENTITY_TYPES array invariants
+// ---------------------------------------------------------------------------
+describe("BUCKET_CONTENT_ENTITY_TYPES invariants", () => {
+  it("has exactly 22 entries", () => {
+    expect(BUCKET_CONTENT_ENTITY_TYPES).toHaveLength(22);
+  });
+
+  it("has no duplicate values", () => {
+    const unique = new Set(BUCKET_CONTENT_ENTITY_TYPES);
+    expect(unique.size).toBe(BUCKET_CONTENT_ENTITY_TYPES.length);
   });
 });

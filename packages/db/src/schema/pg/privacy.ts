@@ -9,7 +9,7 @@ import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../h
 
 import { systems } from "./systems.js";
 
-import type { EntityType, FriendConnectionStatus } from "@pluralscape/types";
+import type { BucketContentEntityType, FriendConnectionStatus } from "@pluralscape/types";
 
 export const buckets = pgTable(
   "buckets",
@@ -32,7 +32,9 @@ export const buckets = pgTable(
 export const bucketContentTags = pgTable(
   "bucket_content_tags",
   {
-    entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
+    entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<BucketContentEntityType>(),
     entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
