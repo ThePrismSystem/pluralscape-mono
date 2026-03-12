@@ -8,6 +8,7 @@ import { LIFECYCLE_EVENT_TYPES } from "../../helpers/enums.js";
 import { systems } from "./systems.js";
 
 import type { ServerLifecycleEvent } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const lifecycleEvents = pgTable(
   "lifecycle_events",
@@ -29,3 +30,6 @@ export const lifecycleEvents = pgTable(
     check("lifecycle_events_event_type_check", enumCheck(t.eventType, LIFECYCLE_EVENT_TYPES)),
   ],
 );
+
+export type LifecycleEventRow = InferSelectModel<typeof lifecycleEvents>;
+export type NewLifecycleEvent = InferInsertModel<typeof lifecycleEvents>;

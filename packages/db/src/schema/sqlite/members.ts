@@ -14,6 +14,8 @@ import { archivableConsistencyCheck } from "../../helpers/check.js";
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const members = sqliteTable(
   "members",
   {
@@ -62,3 +64,8 @@ export const memberPhotos = sqliteTable(
     versionCheckFor("member_photos", t.version),
   ],
 );
+
+export type MemberRow = InferSelectModel<typeof members>;
+export type NewMember = InferInsertModel<typeof members>;
+export type MemberPhotoRow = InferSelectModel<typeof memberPhotos>;
+export type NewMemberPhoto = InferInsertModel<typeof memberPhotos>;

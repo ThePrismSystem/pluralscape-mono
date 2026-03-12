@@ -5,6 +5,8 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqli
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const systemSettings = sqliteTable(
   "system_settings",
   {
@@ -22,3 +24,6 @@ export const systemSettings = sqliteTable(
   },
   (t) => [versionCheckFor("system_settings", t.version)],
 );
+
+export type SystemSettingsRow = InferSelectModel<typeof systemSettings>;
+export type NewSystemSettings = InferInsertModel<typeof systemSettings>;

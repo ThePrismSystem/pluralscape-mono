@@ -17,6 +17,7 @@ import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../h
 import { systems } from "./systems.js";
 
 import type { BucketContentEntityType, FriendConnectionStatus } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const buckets = sqliteTable(
   "buckets",
@@ -142,3 +143,16 @@ export const friendBucketAssignments = sqliteTable(
     index("friend_bucket_assignments_bucket_id_idx").on(t.bucketId),
   ],
 );
+
+export type BucketRow = InferSelectModel<typeof buckets>;
+export type NewBucket = InferInsertModel<typeof buckets>;
+export type BucketContentTagRow = InferSelectModel<typeof bucketContentTags>;
+export type NewBucketContentTag = InferInsertModel<typeof bucketContentTags>;
+export type KeyGrantRow = InferSelectModel<typeof keyGrants>;
+export type NewKeyGrant = InferInsertModel<typeof keyGrants>;
+export type FriendConnectionRow = InferSelectModel<typeof friendConnections>;
+export type NewFriendConnection = InferInsertModel<typeof friendConnections>;
+export type FriendCodeRow = InferSelectModel<typeof friendCodes>;
+export type NewFriendCode = InferInsertModel<typeof friendCodes>;
+export type FriendBucketAssignmentRow = InferSelectModel<typeof friendBucketAssignments>;
+export type NewFriendBucketAssignment = InferInsertModel<typeof friendBucketAssignments>;

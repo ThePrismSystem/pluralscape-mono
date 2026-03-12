@@ -10,6 +10,7 @@ import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type { ServerFrontingSession } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const customFronts = sqliteTable(
   "custom_fronts",
@@ -139,3 +140,12 @@ export const frontingComments = sqliteTable(
     versionCheckFor("fronting_comments", t.version),
   ],
 );
+
+export type FrontingSessionRow = InferSelectModel<typeof frontingSessions>;
+export type NewFrontingSession = InferInsertModel<typeof frontingSessions>;
+export type SwitchRow = InferSelectModel<typeof switches>;
+export type NewSwitch = InferInsertModel<typeof switches>;
+export type CustomFrontRow = InferSelectModel<typeof customFronts>;
+export type NewCustomFront = InferInsertModel<typeof customFronts>;
+export type FrontingCommentRow = InferSelectModel<typeof frontingComments>;
+export type NewFrontingComment = InferInsertModel<typeof frontingComments>;

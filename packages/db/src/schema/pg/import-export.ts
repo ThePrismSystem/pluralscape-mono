@@ -23,6 +23,7 @@ import type {
   ImportJobStatus,
   ImportSource,
 } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const importJobs = pgTable(
   "import_jobs",
@@ -126,3 +127,10 @@ export const accountPurgeRequests = pgTable(
       .where(sql`status IN ('pending', 'confirmed', 'processing')`),
   ],
 );
+
+export type ImportJobRow = InferSelectModel<typeof importJobs>;
+export type NewImportJob = InferInsertModel<typeof importJobs>;
+export type ExportRequestRow = InferSelectModel<typeof exportRequests>;
+export type NewExportRequest = InferInsertModel<typeof exportRequests>;
+export type AccountPurgeRequestRow = InferSelectModel<typeof accountPurgeRequests>;
+export type NewAccountPurgeRequest = InferInsertModel<typeof accountPurgeRequests>;

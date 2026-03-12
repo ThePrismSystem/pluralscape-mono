@@ -6,6 +6,8 @@ import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const nomenclatureSettings = pgTable(
   "nomenclature_settings",
   {
@@ -18,3 +20,6 @@ export const nomenclatureSettings = pgTable(
   },
   (t) => [versionCheckFor("nomenclature_settings", t.version)],
 );
+
+export type NomenclatureSettingsRow = InferSelectModel<typeof nomenclatureSettings>;
+export type NewNomenclatureSettings = InferInsertModel<typeof nomenclatureSettings>;

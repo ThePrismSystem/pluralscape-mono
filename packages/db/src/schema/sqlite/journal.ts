@@ -8,6 +8,8 @@ import { archivableConsistencyCheck } from "../../helpers/check.js";
 import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const journalEntries = sqliteTable(
   "journal_entries",
   {
@@ -61,3 +63,8 @@ export const wikiPages = sqliteTable(
     check("wiki_pages_slug_hash_length_check", sql`length(${t.slugHash}) = 64`),
   ],
 );
+
+export type JournalEntryRow = InferSelectModel<typeof journalEntries>;
+export type NewJournalEntry = InferInsertModel<typeof journalEntries>;
+export type WikiPageRow = InferSelectModel<typeof wikiPages>;
+export type NewWikiPage = InferInsertModel<typeof wikiPages>;

@@ -6,6 +6,8 @@ import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const safeModeContent = pgTable(
   "safe_mode_content",
   {
@@ -23,3 +25,6 @@ export const safeModeContent = pgTable(
     versionCheckFor("safe_mode_content", t.version),
   ],
 );
+
+export type SafeModeContentRow = InferSelectModel<typeof safeModeContent>;
+export type NewSafeModeContent = InferInsertModel<typeof safeModeContent>;

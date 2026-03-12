@@ -8,6 +8,7 @@ import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js"
 import { buckets } from "./privacy.js";
 
 import type { EntityType, RotationItemStatus, RotationState } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const bucketKeyRotations = sqliteTable(
   "bucket_key_rotations",
@@ -57,3 +58,8 @@ export const bucketRotationItems = sqliteTable(
     check("bucket_rotation_items_status_check", enumCheck(t.status, ROTATION_ITEM_STATUSES)),
   ],
 );
+
+export type BucketKeyRotationRow = InferSelectModel<typeof bucketKeyRotations>;
+export type NewBucketKeyRotation = InferInsertModel<typeof bucketKeyRotations>;
+export type BucketRotationItemRow = InferSelectModel<typeof bucketRotationItems>;
+export type NewBucketRotationItem = InferInsertModel<typeof bucketRotationItems>;

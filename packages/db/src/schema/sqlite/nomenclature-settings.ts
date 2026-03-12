@@ -5,6 +5,8 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqli
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const nomenclatureSettings = sqliteTable(
   "nomenclature_settings",
   {
@@ -17,3 +19,6 @@ export const nomenclatureSettings = sqliteTable(
   },
   (t) => [versionCheckFor("nomenclature_settings", t.version)],
 );
+
+export type NomenclatureSettingsRow = InferSelectModel<typeof nomenclatureSettings>;
+export type NewNomenclatureSettings = InferInsertModel<typeof nomenclatureSettings>;

@@ -12,6 +12,7 @@ import type {
   DbMemberFrontingBreakdown,
 } from "../shared/analytics-types.js";
 import type { ReportFormat } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const frontingReports = sqliteTable(
   "fronting_reports",
@@ -33,3 +34,6 @@ export const frontingReports = sqliteTable(
     check("fronting_reports_format_check", enumCheck(t.format, FRONTING_REPORT_FORMATS)),
   ],
 );
+
+export type FrontingReportRow = InferSelectModel<typeof frontingReports>;
+export type NewFrontingReport = InferInsertModel<typeof frontingReports>;

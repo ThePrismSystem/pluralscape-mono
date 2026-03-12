@@ -14,6 +14,7 @@ import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
 import type { ApiKey, ApiKeyScope } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /** Account-system ownership (ensuring the account owns the system) is enforced at the app layer. */
 export const apiKeys = sqliteTable(
@@ -50,3 +51,6 @@ export const apiKeys = sqliteTable(
     ),
   ],
 );
+
+export type ApiKeyRow = InferSelectModel<typeof apiKeys>;
+export type NewApiKey = InferInsertModel<typeof apiKeys>;

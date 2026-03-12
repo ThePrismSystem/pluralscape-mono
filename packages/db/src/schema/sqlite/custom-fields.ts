@@ -21,6 +21,7 @@ import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
 import type { ServerFieldDefinition } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const fieldDefinitions = sqliteTable(
   "field_definitions",
@@ -94,3 +95,10 @@ export const fieldBucketVisibility = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.fieldDefinitionId, t.bucketId] })],
 );
+
+export type FieldDefinitionRow = InferSelectModel<typeof fieldDefinitions>;
+export type NewFieldDefinition = InferInsertModel<typeof fieldDefinitions>;
+export type FieldValueRow = InferSelectModel<typeof fieldValues>;
+export type NewFieldValue = InferInsertModel<typeof fieldValues>;
+export type FieldBucketVisibilityRow = InferSelectModel<typeof fieldBucketVisibility>;
+export type NewFieldBucketVisibility = InferInsertModel<typeof fieldBucketVisibility>;

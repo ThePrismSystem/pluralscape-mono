@@ -18,6 +18,8 @@ import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const groups = pgTable(
   "groups",
   {
@@ -72,3 +74,8 @@ export const groupMemberships = pgTable(
     }).onDelete("cascade"),
   ],
 );
+
+export type GroupRow = InferSelectModel<typeof groups>;
+export type NewGroup = InferInsertModel<typeof groups>;
+export type GroupMembershipRow = InferSelectModel<typeof groupMemberships>;
+export type NewGroupMembership = InferInsertModel<typeof groupMemberships>;

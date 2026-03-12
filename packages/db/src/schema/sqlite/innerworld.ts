@@ -5,6 +5,8 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqli
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 // Regions must be declared before entities (entities FK to regions)
 export const innerworldRegions = sqliteTable(
   "innerworld_regions",
@@ -64,3 +66,10 @@ export const innerworldCanvas = sqliteTable(
   },
   (t) => [versionCheckFor("innerworld_canvas", t.version)],
 );
+
+export type InnerworldRegionRow = InferSelectModel<typeof innerworldRegions>;
+export type NewInnerworldRegion = InferInsertModel<typeof innerworldRegions>;
+export type InnerworldEntityRow = InferSelectModel<typeof innerworldEntities>;
+export type NewInnerworldEntity = InferInsertModel<typeof innerworldEntities>;
+export type InnerworldCanvasRow = InferSelectModel<typeof innerworldCanvas>;
+export type NewInnerworldCanvas = InferInsertModel<typeof innerworldCanvas>;

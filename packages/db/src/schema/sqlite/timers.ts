@@ -15,6 +15,8 @@ import { sqliteTimeFormatCheck } from "../../helpers/check.js";
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const timerConfigs = sqliteTable(
   "timer_configs",
   {
@@ -68,3 +70,8 @@ export const checkInRecords = sqliteTable(
     }).onDelete("set null"),
   ],
 );
+
+export type TimerConfigRow = InferSelectModel<typeof timerConfigs>;
+export type NewTimerConfig = InferInsertModel<typeof timerConfigs>;
+export type CheckInRecordRow = InferSelectModel<typeof checkInRecords>;
+export type NewCheckInRecord = InferInsertModel<typeof checkInRecords>;

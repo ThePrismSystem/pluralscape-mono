@@ -8,6 +8,7 @@ import { JOB_STATUSES, JOB_TYPES } from "../../helpers/enums.js";
 import { systems } from "./systems.js";
 
 import type { JobResult, JobStatus, JobType } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
 /** Conservative baseline timeout; job types with long-running work should override per-job. */
@@ -49,3 +50,6 @@ export const jobs = sqliteTable(
     check("jobs_timeout_ms_check", sql`${t.timeoutMs} > 0`),
   ],
 );
+
+export type JobRow = InferSelectModel<typeof jobs>;
+export type NewJob = InferInsertModel<typeof jobs>;

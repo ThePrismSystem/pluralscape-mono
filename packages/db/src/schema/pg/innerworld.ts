@@ -6,6 +6,8 @@ import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 // Regions must be declared before entities (entities FK to regions)
 export const innerworldRegions = pgTable(
   "innerworld_regions",
@@ -65,3 +67,10 @@ export const innerworldCanvas = pgTable(
   },
   (t) => [versionCheckFor("innerworld_canvas", t.version)],
 );
+
+export type InnerworldRegionRow = InferSelectModel<typeof innerworldRegions>;
+export type NewInnerworldRegion = InferInsertModel<typeof innerworldRegions>;
+export type InnerworldEntityRow = InferSelectModel<typeof innerworldEntities>;
+export type NewInnerworldEntity = InferInsertModel<typeof innerworldEntities>;
+export type InnerworldCanvasRow = InferSelectModel<typeof innerworldCanvas>;
+export type NewInnerworldCanvas = InferInsertModel<typeof innerworldCanvas>;

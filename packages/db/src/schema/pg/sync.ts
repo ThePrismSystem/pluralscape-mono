@@ -23,6 +23,7 @@ import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 import { systems } from "./systems.js";
 
 import type { EntityType, SyncOperation, SyncResolution } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const syncDocuments = pgTable(
   "sync_documents",
@@ -110,3 +111,10 @@ export const syncConflicts = pgTable(
     check("sync_conflicts_resolution_resolved_at_check", nullPairCheck(t.resolution, t.resolvedAt)),
   ],
 );
+
+export type SyncDocumentRow = InferSelectModel<typeof syncDocuments>;
+export type NewSyncDocument = InferInsertModel<typeof syncDocuments>;
+export type SyncQueueRow = InferSelectModel<typeof syncQueue>;
+export type NewSyncQueue = InferInsertModel<typeof syncQueue>;
+export type SyncConflictRow = InferSelectModel<typeof syncConflicts>;
+export type NewSyncConflict = InferInsertModel<typeof syncConflicts>;

@@ -8,6 +8,7 @@ import { PK_SYNC_DIRECTIONS } from "../../helpers/enums.js";
 import { systems } from "./systems.js";
 
 import type { PKSyncDirection } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const pkBridgeState = sqliteTable(
   "pk_bridge_state",
@@ -31,3 +32,6 @@ export const pkBridgeState = sqliteTable(
     versionCheckFor("pk_bridge_state", t.version),
   ],
 );
+
+export type PkBridgeStateRow = InferSelectModel<typeof pkBridgeState>;
+export type NewPkBridgeState = InferInsertModel<typeof pkBridgeState>;

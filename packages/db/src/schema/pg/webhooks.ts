@@ -21,6 +21,7 @@ import { apiKeys } from "./api-keys.js";
 import { systems } from "./systems.js";
 
 import type { WebhookDeliveryStatus, WebhookEventType } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const webhookConfigs = pgTable(
   "webhook_configs",
@@ -94,3 +95,8 @@ export const webhookDeliveries = pgTable(
     ),
   ],
 );
+
+export type WebhookConfigRow = InferSelectModel<typeof webhookConfigs>;
+export type NewWebhookConfig = InferInsertModel<typeof webhookConfigs>;
+export type WebhookDeliveryRow = InferSelectModel<typeof webhookDeliveries>;
+export type NewWebhookDelivery = InferInsertModel<typeof webhookDeliveries>;

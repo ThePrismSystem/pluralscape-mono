@@ -9,6 +9,8 @@ import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const journalEntries = pgTable(
   "journal_entries",
   {
@@ -62,3 +64,8 @@ export const wikiPages = pgTable(
     check("wiki_pages_slug_hash_length_check", sql`length(${t.slugHash}) = 64`),
   ],
 );
+
+export type JournalEntryRow = InferSelectModel<typeof journalEntries>;
+export type NewJournalEntry = InferInsertModel<typeof journalEntries>;
+export type WikiPageRow = InferSelectModel<typeof wikiPages>;
+export type NewWikiPage = InferInsertModel<typeof wikiPages>;

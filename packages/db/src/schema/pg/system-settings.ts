@@ -6,6 +6,8 @@ import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const systemSettings = pgTable(
   "system_settings",
   {
@@ -23,3 +25,6 @@ export const systemSettings = pgTable(
   },
   (t) => [versionCheckFor("system_settings", t.version)],
 );
+
+export type SystemSettingsRow = InferSelectModel<typeof systemSettings>;
+export type NewSystemSettings = InferInsertModel<typeof systemSettings>;

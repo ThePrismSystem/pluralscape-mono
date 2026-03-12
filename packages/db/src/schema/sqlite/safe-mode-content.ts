@@ -5,6 +5,8 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqli
 
 import { systems } from "./systems.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 export const safeModeContent = sqliteTable(
   "safe_mode_content",
   {
@@ -22,3 +24,6 @@ export const safeModeContent = sqliteTable(
     versionCheckFor("safe_mode_content", t.version),
   ],
 );
+
+export type SafeModeContentRow = InferSelectModel<typeof safeModeContent>;
+export type NewSafeModeContent = InferInsertModel<typeof safeModeContent>;

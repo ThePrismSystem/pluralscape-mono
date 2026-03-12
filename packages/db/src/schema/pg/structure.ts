@@ -20,6 +20,7 @@ import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type { ServerRelationship, ServerSubsystem } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = pgTable(
   "relationships",
@@ -266,3 +267,24 @@ export const sideSystemLayerLinks = pgTable(
     }).onDelete("cascade"),
   ],
 );
+
+export type RelationshipRow = InferSelectModel<typeof relationships>;
+export type NewRelationship = InferInsertModel<typeof relationships>;
+export type SubsystemRow = InferSelectModel<typeof subsystems>;
+export type NewSubsystem = InferInsertModel<typeof subsystems>;
+export type SideSystemRow = InferSelectModel<typeof sideSystems>;
+export type NewSideSystem = InferInsertModel<typeof sideSystems>;
+export type LayerRow = InferSelectModel<typeof layers>;
+export type NewLayer = InferInsertModel<typeof layers>;
+export type SubsystemMembershipRow = InferSelectModel<typeof subsystemMemberships>;
+export type NewSubsystemMembership = InferInsertModel<typeof subsystemMemberships>;
+export type SideSystemMembershipRow = InferSelectModel<typeof sideSystemMemberships>;
+export type NewSideSystemMembership = InferInsertModel<typeof sideSystemMemberships>;
+export type LayerMembershipRow = InferSelectModel<typeof layerMemberships>;
+export type NewLayerMembership = InferInsertModel<typeof layerMemberships>;
+export type SubsystemLayerLinkRow = InferSelectModel<typeof subsystemLayerLinks>;
+export type NewSubsystemLayerLink = InferInsertModel<typeof subsystemLayerLinks>;
+export type SubsystemSideSystemLinkRow = InferSelectModel<typeof subsystemSideSystemLinks>;
+export type NewSubsystemSideSystemLink = InferInsertModel<typeof subsystemSideSystemLinks>;
+export type SideSystemLayerLinkRow = InferSelectModel<typeof sideSystemLayerLinks>;
+export type NewSideSystemLayerLink = InferInsertModel<typeof sideSystemLayerLinks>;

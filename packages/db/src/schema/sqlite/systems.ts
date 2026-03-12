@@ -5,6 +5,8 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqli
 
 import { accounts } from "./auth.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 /** SQLite systems table — top-level entity for a plural system. */
 export const systems = sqliteTable(
   "systems",
@@ -20,3 +22,6 @@ export const systems = sqliteTable(
   },
   (t) => [index("systems_account_id_idx").on(t.accountId), versionCheckFor("systems", t.version)],
 );
+
+export type SystemRow = InferSelectModel<typeof systems>;
+export type NewSystem = InferInsertModel<typeof systems>;

@@ -6,6 +6,8 @@ import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { accounts } from "./auth.js";
 
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+
 /** PG systems table — top-level entity for a plural system. */
 export const systems = pgTable(
   "systems",
@@ -21,3 +23,6 @@ export const systems = pgTable(
   },
   (t) => [index("systems_account_id_idx").on(t.accountId), versionCheckFor("systems", t.version)],
 );
+
+export type SystemRow = InferSelectModel<typeof systems>;
+export type NewSystem = InferInsertModel<typeof systems>;

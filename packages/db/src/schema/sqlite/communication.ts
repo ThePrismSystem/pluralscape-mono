@@ -18,6 +18,7 @@ import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type { ServerChannel, ServerPoll, ServerPollVote } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const channels = sqliteTable(
   "channels",
@@ -210,3 +211,18 @@ export const acknowledgements = sqliteTable(
     }).onDelete("set null"),
   ],
 );
+
+export type ChannelRow = InferSelectModel<typeof channels>;
+export type NewChannel = InferInsertModel<typeof channels>;
+export type MessageRow = InferSelectModel<typeof messages>;
+export type NewMessage = InferInsertModel<typeof messages>;
+export type BoardMessageRow = InferSelectModel<typeof boardMessages>;
+export type NewBoardMessage = InferInsertModel<typeof boardMessages>;
+export type NoteRow = InferSelectModel<typeof notes>;
+export type NewNote = InferInsertModel<typeof notes>;
+export type PollRow = InferSelectModel<typeof polls>;
+export type NewPoll = InferInsertModel<typeof polls>;
+export type PollVoteRow = InferSelectModel<typeof pollVotes>;
+export type NewPollVote = InferInsertModel<typeof pollVotes>;
+export type AcknowledgementRow = InferSelectModel<typeof acknowledgements>;
+export type NewAcknowledgement = InferInsertModel<typeof acknowledgements>;
