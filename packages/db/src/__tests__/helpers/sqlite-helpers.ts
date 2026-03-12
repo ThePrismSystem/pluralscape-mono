@@ -87,7 +87,7 @@ export const SQLITE_DDL = {
   `,
   sessionsIndexes: `
     CREATE INDEX sessions_revoked_last_active_idx ON sessions (revoked, last_active);
-    CREATE INDEX sessions_expires_at_idx ON sessions (expires_at)
+    CREATE INDEX sessions_expires_at_idx ON sessions (expires_at) WHERE expires_at IS NOT NULL
   `,
   recoveryKeys: `
     CREATE TABLE recovery_keys (
@@ -100,7 +100,7 @@ export const SQLITE_DDL = {
   `,
   recoveryKeysIndexes: `
     CREATE INDEX recovery_keys_account_id_idx ON recovery_keys (account_id);
-    CREATE INDEX recovery_keys_revoked_at_idx ON recovery_keys (revoked_at)
+    CREATE INDEX recovery_keys_revoked_at_idx ON recovery_keys (revoked_at) WHERE revoked_at IS NULL
   `,
   deviceTransferRequests: `
     CREATE TABLE device_transfer_requests (

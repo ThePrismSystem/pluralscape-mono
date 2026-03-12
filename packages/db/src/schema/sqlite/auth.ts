@@ -65,7 +65,9 @@ export const sessions = sqliteTable(
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
-    index("sessions_expires_at_idx").on(t.expiresAt),
+    index("sessions_expires_at_idx")
+      .on(t.expiresAt)
+      .where(sql`${t.expiresAt} IS NOT NULL`),
     check(
       "sessions_expires_at_check",
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
@@ -86,7 +88,9 @@ export const recoveryKeys = sqliteTable(
   },
   (t) => [
     index("recovery_keys_account_id_idx").on(t.accountId),
-    index("recovery_keys_revoked_at_idx").on(t.revokedAt),
+    index("recovery_keys_revoked_at_idx")
+      .on(t.revokedAt)
+      .where(sql`${t.revokedAt} IS NULL`),
   ],
 );
 
