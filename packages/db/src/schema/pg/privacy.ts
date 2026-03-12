@@ -94,7 +94,6 @@ export const friendConnections = pgTable(
   (t) => [
     index("friend_connections_system_status_idx").on(t.systemId, t.status),
     index("friend_connections_friend_status_idx").on(t.friendSystemId, t.status),
-    index("friend_connections_friend_system_id_idx").on(t.friendSystemId),
     unique("friend_connections_system_friend_uniq").on(t.systemId, t.friendSystemId),
     unique("friend_connections_id_system_id_unique").on(t.id, t.systemId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),

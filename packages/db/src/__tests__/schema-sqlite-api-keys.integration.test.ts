@@ -392,6 +392,29 @@ describe("SQLite api_keys schema", () => {
     expect(rows[0]?.encryptedKeyMaterial).toEqual(emptyMaterial);
   });
 
+  it("rejects insert without encryptedData", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          `INSERT INTO api_keys (id, account_id, system_id, key_type, token_hash, scopes, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          crypto.randomUUID(),
+          accountId,
+          systemId,
+          "metadata",
+          `hash_${crypto.randomUUID()}`,
+          '["full"]',
+          now,
+        ),
+    ).toThrow();
+  });
+
   it("round-trips encryptedData blob", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);

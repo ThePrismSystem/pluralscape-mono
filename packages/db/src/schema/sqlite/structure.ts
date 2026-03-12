@@ -36,12 +36,12 @@ export const relationships = sqliteTable(
   (t) => [
     index("relationships_system_id_idx").on(t.systemId),
     foreignKey({
-      columns: [t.sourceMemberId],
-      foreignColumns: [members.id],
+      columns: [t.sourceMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     foreignKey({
-      columns: [t.targetMemberId],
-      foreignColumns: [members.id],
+      columns: [t.targetMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
     check("relationships_version_check", versionCheck(t.version)),

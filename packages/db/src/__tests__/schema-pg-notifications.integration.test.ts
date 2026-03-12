@@ -107,6 +107,58 @@ describe("PG notifications schema", () => {
       ).rejects.toThrow();
     });
 
+    it("rejects duplicate token+platform pair", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+      const token = `token-${crypto.randomUUID()}`;
+
+      await db.insert(deviceTokens).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        platform: "ios",
+        token,
+        createdAt: now,
+      });
+
+      await expect(
+        db.insert(deviceTokens).values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          platform: "ios",
+          token,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("allows same token on different platforms", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+      const token = `token-${crypto.randomUUID()}`;
+
+      await db.insert(deviceTokens).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        platform: "ios",
+        token,
+        createdAt: now,
+      });
+
+      await db.insert(deviceTokens).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        platform: "android",
+        token,
+        createdAt: now,
+      });
+    });
+
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);

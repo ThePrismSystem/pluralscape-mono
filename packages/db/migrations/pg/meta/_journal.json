@@ -50,6 +50,13 @@
       "when": 1773341641870,
       "tag": "0006_boring_blackheart",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773342967916,
+      "tag": "0007_brainy_forgotten_one",
+      "breakpoints": true
     }
   ]
 }

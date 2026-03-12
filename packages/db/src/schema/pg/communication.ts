@@ -76,7 +76,7 @@ export const messages = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.id, t.timestamp] }),
-    unique("messages_id_unique").on(t.id),
+    unique("messages_id_unique").on(t.id, t.timestamp),
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_id_idx").on(t.systemId),
     index("messages_reply_to_id_idx").on(t.replyToId),

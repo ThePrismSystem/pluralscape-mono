@@ -57,6 +57,13 @@
       "when": 1773341644485,
       "tag": "0007_dusty_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1773342975266,
+      "tag": "0008_square_magma",
+      "breakpoints": true
     }
   ]
 }

@@ -73,8 +73,8 @@ export const fieldValues = pgTable(
       foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
     }).onDelete("cascade"),
     foreignKey({
-      columns: [t.memberId],
-      foreignColumns: [members.id],
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("field_values_version_check", versionCheck(t.version)),
     uniqueIndex("field_values_definition_member_uniq")

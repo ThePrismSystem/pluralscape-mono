@@ -576,8 +576,11 @@ export type ClientTimerConfig = TimerConfig;
 
 /**
  * Server-side audit log entry representation.
- * T3 plaintext: detail (server-readable for security monitoring; tier under review),
- *   eventType, actor, ipAddress, userAgent, timestamp
+ * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
+ *
+ * Unlike other Server* types, this has no `encryptedData` field — all fields are T3
+ * (server-readable) because the server needs detail for security monitoring
+ * (failed login detection, IP pattern analysis).
  *
  * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
  * The audit_log table intentionally uses `timestamp` to reflect when the
@@ -633,7 +636,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // SideSystem: T1 (name, description, color, imageSource, emoji) | T3 (none)
 // Layer: T1 (name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds) | T3 (none)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
-// AuditLogEntry: T3 (detail — server-readable for security monitoring; tier under review) | T3 (eventType, actor, ipAddress, userAgent, timestamp)
+// AuditLogEntry: T3 (all fields — detail, eventType, actor, ipAddress, userAgent, timestamp; server-readable for security monitoring)
 //
 // Switch: T3 (memberIds, timestamp — immutable event metadata; member IDs are non-identifying opaque tokens)
 // FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side

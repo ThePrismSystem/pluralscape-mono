@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -329,6 +329,19 @@ describe("PG api_keys schema", () => {
         scopes: ["full"],
         createdAt: now,
       }),
+    ).rejects.toThrow();
+  });
+
+  it("rejects insert without encryptedData", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = new Date().toISOString();
+
+    await expect(
+      db.execute(
+        sql`INSERT INTO api_keys (id, account_id, system_id, key_type, token_hash, scopes, created_at)
+            VALUES (${crypto.randomUUID()}, ${accountId}, ${systemId}, 'metadata', ${`hash_${crypto.randomUUID()}`}, '["full"]'::jsonb, ${now}::timestamptz)`,
+      ),
     ).rejects.toThrow();
   });
 

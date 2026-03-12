@@ -67,8 +67,8 @@ export const frontingSessions = pgTable(
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.memberId],
-      foreignColumns: [members.id],
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     foreignKey({
       columns: [t.customFrontId],
@@ -123,8 +123,8 @@ export const frontingComments = pgTable(
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
     }).onDelete("cascade"),
     foreignKey({
-      columns: [t.memberId],
-      foreignColumns: [members.id],
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("fronting_comments_version_check", versionCheck(t.version)),
   ],
