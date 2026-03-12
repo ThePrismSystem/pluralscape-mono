@@ -298,6 +298,19 @@ describe("blob-codec", () => {
       expect(() => serializeEncryptedBlob(blob)).toThrow("reserved");
     });
 
+    it("throws when T2 blob has null bucketId", () => {
+      const blob = {
+        ciphertext: new Uint8Array([1]),
+        nonce: makeNonce(),
+        tier: 2,
+        algorithm: "xchacha20-poly1305" as const,
+        keyVersion: 1,
+        bucketId: null,
+      };
+      // @ts-expect-error -- deliberate T2 + null bucketId to test runtime guard
+      expect(() => serializeEncryptedBlob(blob)).toThrow("bucketId");
+    });
+
     it("throws on unknown algorithm", () => {
       const blob = makeT1Blob({
         algorithm: "aes-256-gcm" as "xchacha20-poly1305",
