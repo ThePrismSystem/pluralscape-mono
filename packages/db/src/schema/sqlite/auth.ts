@@ -54,11 +54,13 @@ export const sessions = sqliteTable(
     createdAt: sqliteTimestamp("created_at").notNull(),
     lastActive: sqliteTimestamp("last_active"),
     revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),
+    expiresAt: sqliteTimestamp("expires_at"),
   },
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
     index("sessions_revoked_idx").on(t.revoked),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
+    index("sessions_expires_at_idx").on(t.expiresAt),
   ],
 );
 
@@ -71,8 +73,12 @@ export const recoveryKeys = sqliteTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: sqliteBinary("encrypted_master_key").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
+    revokedAt: sqliteTimestamp("revoked_at"),
   },
-  (t) => [index("recovery_keys_account_id_idx").on(t.accountId)],
+  (t) => [
+    index("recovery_keys_account_id_idx").on(t.accountId),
+    index("recovery_keys_revoked_at_idx").on(t.revokedAt),
+  ],
 );
 
 export const deviceTransferRequests = sqliteTable(
@@ -89,6 +95,7 @@ export const deviceTransferRequests = sqliteTable(
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("pending").$type<DeviceTransferStatus>(),
+    encryptedKeyMaterial: sqliteBinary("encrypted_key_material"),
     createdAt: sqliteTimestamp("created_at").notNull(),
     expiresAt: sqliteTimestamp("expires_at").notNull(),
   },

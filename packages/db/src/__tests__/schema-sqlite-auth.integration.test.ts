@@ -262,6 +262,7 @@ describe("SQLite auth schema", () => {
       const now = Date.now();
       const id = crypto.randomUUID();
 
+      const expiresAt = now + 86400000;
       db.insert(sessions)
         .values({
           id,
@@ -270,6 +271,7 @@ describe("SQLite auth schema", () => {
           createdAt: now,
           lastActive: now,
           revoked: false,
+          expiresAt,
         })
         .run();
 
@@ -284,6 +286,7 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.createdAt).toBe(now);
       expect(rows[0]?.lastActive).toBe(now);
       expect(rows[0]?.revoked).toBe(false);
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
     it("defaults revoked to false", () => {
@@ -300,6 +303,40 @@ describe("SQLite auth schema", () => {
 
       const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
       expect(rows[0]?.revoked).toBe(false);
+    });
+
+    it("defaults expiresAt to null", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+
+      db.insert(sessions)
+        .values({
+          id,
+          accountId: account.id,
+          createdAt: Date.now(),
+        })
+        .run();
+
+      const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
+      expect(rows[0]?.expiresAt).toBeNull();
+    });
+
+    it("round-trips expiresAt when provided", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+      const expiresAt = Date.now() + 86400000;
+
+      db.insert(sessions)
+        .values({
+          id,
+          accountId: account.id,
+          createdAt: Date.now(),
+          expiresAt,
+        })
+        .run();
+
+      const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
     it("handles nullable deviceInfo and lastActive", () => {
@@ -370,6 +407,42 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.encryptedMasterKey).toEqual(masterKey);
     });
 
+    it("defaults revokedAt to null", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+
+      db.insert(recoveryKeys)
+        .values({
+          id,
+          accountId: account.id,
+          encryptedMasterKey: new Uint8Array([1, 2, 3]),
+          createdAt: Date.now(),
+        })
+        .run();
+
+      const rows = db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id)).all();
+      expect(rows[0]?.revokedAt).toBeNull();
+    });
+
+    it("round-trips revokedAt when set", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+      const revokedAt = Date.now();
+
+      db.insert(recoveryKeys)
+        .values({
+          id,
+          accountId: account.id,
+          encryptedMasterKey: new Uint8Array([1, 2, 3]),
+          createdAt: Date.now(),
+          revokedAt,
+        })
+        .run();
+
+      const rows = db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id)).all();
+      expect(rows[0]?.revokedAt).toBe(revokedAt);
+    });
+
     it("cascades on account deletion", () => {
       const account = insertAccount();
       const id = crypto.randomUUID();
@@ -432,6 +505,60 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.sourceSessionId).toBe(source.id);
       expect(rows[0]?.targetSessionId).toBe(target.id);
       expect(rows[0]?.expiresAt).toBe(now + 3600000);
+    });
+
+    it("defaults encryptedKeyMaterial to null", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          createdAt: now,
+          expiresAt: now + 3600000,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows[0]?.encryptedKeyMaterial).toBeNull();
+    });
+
+    it("round-trips encryptedKeyMaterial binary data", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+      const keyMaterial = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          encryptedKeyMaterial: keyMaterial,
+          createdAt: now,
+          expiresAt: now + 3600000,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows[0]?.encryptedKeyMaterial).toEqual(keyMaterial);
     });
 
     it("defaults status to pending", () => {

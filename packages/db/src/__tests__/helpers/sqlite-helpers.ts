@@ -76,7 +76,8 @@ export const SQLITE_DDL = {
       device_info TEXT,
       created_at INTEGER NOT NULL,
       last_active INTEGER,
-      revoked INTEGER NOT NULL DEFAULT 0
+      revoked INTEGER NOT NULL DEFAULT 0,
+      expires_at INTEGER
     )
   `,
   sessionsIndexes: `
@@ -87,7 +88,8 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       encrypted_master_key BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      revoked_at INTEGER
     )
   `,
   deviceTransferRequests: `
@@ -97,6 +99,7 @@ export const SQLITE_DDL = {
       source_session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
       target_session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'expired')),
+      encrypted_key_material BLOB,
       created_at INTEGER NOT NULL,
       expires_at INTEGER NOT NULL,
       CHECK (expires_at > created_at)

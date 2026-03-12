@@ -54,11 +54,13 @@ export const sessions = pgTable(
     createdAt: pgTimestamp("created_at").notNull(),
     lastActive: pgTimestamp("last_active"),
     revoked: boolean("revoked").notNull().default(false),
+    expiresAt: pgTimestamp("expires_at"),
   },
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
     index("sessions_revoked_idx").on(t.revoked),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
+    index("sessions_expires_at_idx").on(t.expiresAt),
   ],
 );
 
@@ -71,8 +73,12 @@ export const recoveryKeys = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
+    revokedAt: pgTimestamp("revoked_at"),
   },
-  (t) => [index("recovery_keys_account_id_idx").on(t.accountId)],
+  (t) => [
+    index("recovery_keys_account_id_idx").on(t.accountId),
+    index("recovery_keys_revoked_at_idx").on(t.revokedAt),
+  ],
 );
 
 export const deviceTransferRequests = pgTable(
@@ -92,6 +98,7 @@ export const deviceTransferRequests = pgTable(
       .notNull()
       .default("pending")
       .$type<DeviceTransferStatus>(),
+    encryptedKeyMaterial: pgBinary("encrypted_key_material"),
     createdAt: pgTimestamp("created_at").notNull(),
     expiresAt: pgTimestamp("expires_at").notNull(),
   },

@@ -76,7 +76,8 @@ export const PG_DDL = {
       device_info JSONB,
       created_at TIMESTAMPTZ NOT NULL,
       last_active TIMESTAMPTZ,
-      revoked BOOLEAN NOT NULL DEFAULT false
+      revoked BOOLEAN NOT NULL DEFAULT false,
+      expires_at TIMESTAMPTZ
     )
   `,
   sessionsIndexes: `
@@ -87,7 +88,8 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       encrypted_master_key BYTEA NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL
+      created_at TIMESTAMPTZ NOT NULL,
+      revoked_at TIMESTAMPTZ
     )
   `,
   deviceTransferRequests: `
@@ -97,6 +99,7 @@ export const PG_DDL = {
       source_session_id VARCHAR(255) NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
       target_session_id VARCHAR(255) NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
       status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'expired')),
+      encrypted_key_material BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       expires_at TIMESTAMPTZ NOT NULL,
       CHECK (expires_at > created_at)

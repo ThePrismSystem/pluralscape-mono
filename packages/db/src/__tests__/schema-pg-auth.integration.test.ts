@@ -247,6 +247,7 @@ describe("PG auth schema", () => {
       const now = Date.now();
       const id = crypto.randomUUID();
 
+      const expiresAt = now + 86400000;
       await db.insert(sessions).values({
         id,
         accountId: account.id,
@@ -254,6 +255,7 @@ describe("PG auth schema", () => {
         createdAt: now,
         lastActive: now,
         revoked: false,
+        expiresAt,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -267,6 +269,7 @@ describe("PG auth schema", () => {
       expect(rows[0]?.createdAt).toBe(now);
       expect(rows[0]?.lastActive).toBe(now);
       expect(rows[0]?.revoked).toBe(false);
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
     it("defaults revoked to false", async () => {
@@ -281,6 +284,36 @@ describe("PG auth schema", () => {
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
       expect(rows[0]?.revoked).toBe(false);
+    });
+
+    it("defaults expiresAt to null", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+
+      await db.insert(sessions).values({
+        id,
+        accountId: account.id,
+        createdAt: Date.now(),
+      });
+
+      const rows = await db.select().from(sessions).where(eq(sessions.id, id));
+      expect(rows[0]?.expiresAt).toBeNull();
+    });
+
+    it("round-trips expiresAt when provided", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+      const expiresAt = Date.now() + 86400000;
+
+      await db.insert(sessions).values({
+        id,
+        accountId: account.id,
+        createdAt: Date.now(),
+        expiresAt,
+      });
+
+      const rows = await db.select().from(sessions).where(eq(sessions.id, id));
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
     it("handles nullable deviceInfo and lastActive", async () => {
@@ -342,6 +375,38 @@ describe("PG auth schema", () => {
       expect(rows[0]?.encryptedMasterKey).toEqual(masterKey);
     });
 
+    it("defaults revokedAt to null", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+
+      await db.insert(recoveryKeys).values({
+        id,
+        accountId: account.id,
+        encryptedMasterKey: new Uint8Array([1, 2, 3]),
+        createdAt: Date.now(),
+      });
+
+      const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
+      expect(rows[0]?.revokedAt).toBeNull();
+    });
+
+    it("round-trips revokedAt when set", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+      const revokedAt = Date.now();
+
+      await db.insert(recoveryKeys).values({
+        id,
+        accountId: account.id,
+        encryptedMasterKey: new Uint8Array([1, 2, 3]),
+        createdAt: Date.now(),
+        revokedAt,
+      });
+
+      const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
+      expect(rows[0]?.revokedAt).toBe(revokedAt);
+    });
+
     it("cascades on account deletion", async () => {
       const account = await insertAccount();
       const id = crypto.randomUUID();
@@ -396,6 +461,54 @@ describe("PG auth schema", () => {
       expect(rows[0]?.sourceSessionId).toBe(source.id);
       expect(rows[0]?.targetSessionId).toBe(target.id);
       expect(rows[0]?.expiresAt).toBe(now + 3600000);
+    });
+
+    it("defaults encryptedKeyMaterial to null", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: target.id,
+        createdAt: now,
+        expiresAt: now + 3600000,
+      });
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows[0]?.encryptedKeyMaterial).toBeNull();
+    });
+
+    it("round-trips encryptedKeyMaterial binary data", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+      const keyMaterial = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: target.id,
+        encryptedKeyMaterial: keyMaterial,
+        createdAt: now,
+        expiresAt: now + 3600000,
+      });
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows[0]?.encryptedKeyMaterial).toEqual(keyMaterial);
     });
 
     it("defaults status to pending", async () => {
