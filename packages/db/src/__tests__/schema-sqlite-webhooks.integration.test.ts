@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { apiKeys } from "../schema/sqlite/api-keys.js";
 import { accounts } from "../schema/sqlite/auth.js";
@@ -35,6 +35,11 @@ describe("SQLite webhooks schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(webhookDeliveries).run();
+    db.delete(webhookConfigs).run();
   });
 
   describe("webhook_configs", () => {
@@ -176,17 +181,19 @@ describe("SQLite webhooks schema", () => {
   });
 
   describe("webhook_deliveries", () => {
-    it("round-trips with defaults", () => {
+    let deliverySystemId: string;
+    let deliveryWhId: string;
+
+    beforeEach(() => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const whId = crypto.randomUUID();
-      const id = crypto.randomUUID();
+      deliverySystemId = insertSystem(accountId);
+      deliveryWhId = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(webhookConfigs)
         .values({
-          id: whId,
-          systemId,
+          id: deliveryWhId,
+          systemId: deliverySystemId,
           url: "https://example.com/hook",
           secret: new Uint8Array([1]),
           eventTypes: ["member.created"],
@@ -194,12 +201,17 @@ describe("SQLite webhooks schema", () => {
           updatedAt: now,
         })
         .run();
+    });
+
+    it("round-trips with defaults", () => {
+      const id = crypto.randomUUID();
+      const now = Date.now();
 
       db.insert(webhookDeliveries)
         .values({
           id,
-          webhookId: whId,
-          systemId,
+          webhookId: deliveryWhId,
+          systemId: deliverySystemId,
           eventType: "member.created",
           createdAt: now,
         })
@@ -214,22 +226,7 @@ describe("SQLite webhooks schema", () => {
     });
 
     it("rejects invalid event_type", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const whId = crypto.randomUUID();
       const now = Date.now();
-
-      db.insert(webhookConfigs)
-        .values({
-          id: whId,
-          systemId,
-          url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
-          eventTypes: ["member.created"],
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
 
       expect(() =>
         client
@@ -237,27 +234,12 @@ describe("SQLite webhooks schema", () => {
             `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, created_at)
              VALUES (?, ?, ?, ?, ?)`,
           )
-          .run(crypto.randomUUID(), whId, systemId, "invalid-event", now),
+          .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, "invalid-event", now),
       ).toThrow();
     });
 
     it("rejects invalid status", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const whId = crypto.randomUUID();
       const now = Date.now();
-
-      db.insert(webhookConfigs)
-        .values({
-          id: whId,
-          systemId,
-          url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
-          eventTypes: ["member.created"],
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
 
       expect(() =>
         client
@@ -265,27 +247,19 @@ describe("SQLite webhooks schema", () => {
             `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, status, created_at)
              VALUES (?, ?, ?, ?, ?, ?)`,
           )
-          .run(crypto.randomUUID(), whId, systemId, "member.created", "invalid-status", now),
+          .run(
+            crypto.randomUUID(),
+            deliveryWhId,
+            deliverySystemId,
+            "member.created",
+            "invalid-status",
+            now,
+          ),
       ).toThrow();
     });
 
     it("rejects negative attempt_count", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const whId = crypto.randomUUID();
       const now = Date.now();
-
-      db.insert(webhookConfigs)
-        .values({
-          id: whId,
-          systemId,
-          url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
-          eventTypes: ["member.created"],
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
 
       expect(() =>
         client
@@ -293,27 +267,12 @@ describe("SQLite webhooks schema", () => {
             `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, attempt_count, created_at)
              VALUES (?, ?, ?, ?, ?, ?)`,
           )
-          .run(crypto.randomUUID(), whId, systemId, "member.created", -1, now),
+          .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, "member.created", -1, now),
       ).toThrow();
     });
 
     it("rejects http_status outside 100-599", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const whId = crypto.randomUUID();
       const now = Date.now();
-
-      db.insert(webhookConfigs)
-        .values({
-          id: whId,
-          systemId,
-          url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
-          eventTypes: ["member.created"],
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
 
       expect(() =>
         client
@@ -321,7 +280,7 @@ describe("SQLite webhooks schema", () => {
             `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, http_status, created_at)
              VALUES (?, ?, ?, ?, ?, ?)`,
           )
-          .run(crypto.randomUUID(), whId, systemId, "member.created", 99, now),
+          .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, "member.created", 99, now),
       ).toThrow();
 
       expect(() =>
@@ -330,74 +289,44 @@ describe("SQLite webhooks schema", () => {
             `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, http_status, created_at)
              VALUES (?, ?, ?, ?, ?, ?)`,
           )
-          .run(crypto.randomUUID(), whId, systemId, "member.created", 600, now),
+          .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, "member.created", 600, now),
       ).toThrow();
     });
 
     it("cascades on system deletion", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const whId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
-
-      db.insert(webhookConfigs)
-        .values({
-          id: whId,
-          systemId,
-          url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
-          eventTypes: [],
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
 
       db.insert(webhookDeliveries)
         .values({
           id,
-          webhookId: whId,
-          systemId,
+          webhookId: deliveryWhId,
+          systemId: deliverySystemId,
           eventType: "member.created",
           createdAt: now,
         })
         .run();
 
-      db.delete(systems).where(eq(systems.id, systemId)).run();
+      db.delete(systems).where(eq(systems.id, deliverySystemId)).run();
       const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id)).all();
       expect(rows).toHaveLength(0);
     });
 
     it("cascades on webhook config deletion", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const whId = crypto.randomUUID();
       const delId = crypto.randomUUID();
       const now = Date.now();
-
-      db.insert(webhookConfigs)
-        .values({
-          id: whId,
-          systemId,
-          url: "https://example.com/hook",
-          secret: new Uint8Array([1]),
-          eventTypes: [],
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
 
       db.insert(webhookDeliveries)
         .values({
           id: delId,
-          webhookId: whId,
-          systemId,
+          webhookId: deliveryWhId,
+          systemId: deliverySystemId,
           eventType: "member.created",
           createdAt: now,
         })
         .run();
 
-      db.delete(webhookConfigs).where(eq(webhookConfigs.id, whId)).run();
+      db.delete(webhookConfigs).where(eq(webhookConfigs.id, deliveryWhId)).run();
       const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, delId)).all();
       expect(rows).toHaveLength(0);
     });

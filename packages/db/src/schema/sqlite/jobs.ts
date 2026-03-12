@@ -10,6 +10,7 @@ import { systems } from "./systems.js";
 import type { JobResult, JobStatus, JobType } from "@pluralscape/types";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
+/** Conservative baseline timeout; job types with long-running work should override per-job. */
 const DEFAULT_TIMEOUT_MS = 30000;
 
 export const jobs = sqliteTable(
@@ -30,8 +31,10 @@ export const jobs = sqliteTable(
     idempotencyKey: text("idempotency_key"),
     lastHeartbeatAt: sqliteTimestamp("last_heartbeat_at"),
     timeoutMs: integer("timeout_ms").notNull().default(DEFAULT_TIMEOUT_MS),
+    /** JSON-serialized result; branded types (e.g. UnixMillis) lose their brand on round-trip. */
     result: sqliteJson("result").$type<JobResult | null>(),
     scheduledFor: sqliteTimestamp("scheduled_for"),
+    /** Lower value = higher priority (0 is highest). Matches BullMQ convention. */
     priority: integer("priority").notNull().default(0),
   },
   (t) => [

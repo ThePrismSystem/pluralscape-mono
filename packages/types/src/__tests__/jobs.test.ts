@@ -1,7 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { JobId, SystemId } from "../ids.js";
-import type { JobDefinition, JobResult, JobStatus, JobType, RetryPolicy } from "../jobs.js";
+import type { JobDefinition, JobResult, JobStatus, JobType } from "../jobs.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("JobId", () => {
@@ -91,10 +91,16 @@ describe("JobStatus", () => {
 
 describe("RetryPolicy", () => {
   it("has correct field types", () => {
-    expectTypeOf<RetryPolicy["maxRetries"]>().toEqualTypeOf<number>();
-    expectTypeOf<RetryPolicy["backoffMs"]>().toEqualTypeOf<number>();
-    expectTypeOf<RetryPolicy["backoffMultiplier"]>().toEqualTypeOf<number>();
-    expectTypeOf<RetryPolicy["maxBackoffMs"]>().toEqualTypeOf<number>();
+    const policy: import("../jobs.js").RetryPolicy = {
+      maxRetries: 3,
+      backoffMs: 1000,
+      backoffMultiplier: 2,
+      maxBackoffMs: 30000,
+    };
+    expectTypeOf(policy.maxRetries).toEqualTypeOf<number>();
+    expectTypeOf(policy.backoffMs).toEqualTypeOf<number>();
+    expectTypeOf(policy.backoffMultiplier).toEqualTypeOf<number>();
+    expectTypeOf(policy.maxBackoffMs).toEqualTypeOf<number>();
   });
 });
 
@@ -109,15 +115,22 @@ describe("JobResult", () => {
 describe("JobDefinition", () => {
   it("has correct field types", () => {
     expectTypeOf<JobDefinition["id"]>().toEqualTypeOf<JobId>();
-    expectTypeOf<JobDefinition["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<JobDefinition["systemId"]>().toEqualTypeOf<SystemId | null>();
     expectTypeOf<JobDefinition["type"]>().toEqualTypeOf<JobType>();
     expectTypeOf<JobDefinition["status"]>().toEqualTypeOf<JobStatus>();
     expectTypeOf<JobDefinition["payload"]>().toEqualTypeOf<Readonly<Record<string, unknown>>>();
-    expectTypeOf<JobDefinition["retryPolicy"]>().toEqualTypeOf<RetryPolicy>();
     expectTypeOf<JobDefinition["attempts"]>().toEqualTypeOf<number>();
+    expectTypeOf<JobDefinition["maxAttempts"]>().toEqualTypeOf<number>();
+    expectTypeOf<JobDefinition["nextRetryAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<JobDefinition["error"]>().toEqualTypeOf<string | null>();
     expectTypeOf<JobDefinition["result"]>().toEqualTypeOf<JobResult | null>();
-    expectTypeOf<JobDefinition["scheduledAt"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<JobDefinition["startedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<JobDefinition["createdAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<JobDefinition["startedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<JobDefinition["completedAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<JobDefinition["idempotencyKey"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<JobDefinition["lastHeartbeatAt"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<JobDefinition["timeoutMs"]>().toEqualTypeOf<number>();
+    expectTypeOf<JobDefinition["scheduledFor"]>().toEqualTypeOf<UnixMillis | null>();
+    expectTypeOf<JobDefinition["priority"]>().toEqualTypeOf<number>();
   });
 });

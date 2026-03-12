@@ -323,7 +323,13 @@ export type {
 export type { JobType, JobStatus, RetryPolicy, JobResult, JobDefinition } from "./jobs.js";
 
 // ── Blob ──────────────────────────────────────────────────────
-export type { BlobPurpose, BlobMetadata, BlobUploadRequest, BlobDownloadRef } from "./blob.js";
+export type {
+  EncryptionTier,
+  BlobPurpose,
+  BlobMetadata,
+  BlobUploadRequest,
+  BlobDownloadRef,
+} from "./blob.js";
 
 // ── Audit log ─────────────────────────────────────────────────
 export type { AuditEventType, AuditActor, AuditLogEntry } from "./audit-log.js";

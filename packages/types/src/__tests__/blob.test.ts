@@ -1,6 +1,12 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { BlobDownloadRef, BlobMetadata, BlobPurpose, BlobUploadRequest } from "../blob.js";
+import type {
+  BlobDownloadRef,
+  BlobMetadata,
+  BlobPurpose,
+  BlobUploadRequest,
+  EncryptionTier,
+} from "../blob.js";
 import type { BlobId, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 
@@ -35,6 +41,20 @@ describe("BlobPurpose", () => {
       }
     }
     expectTypeOf(handlePurpose).toBeFunction();
+  });
+});
+
+describe("EncryptionTier", () => {
+  it("accepts valid tiers", () => {
+    assertType<EncryptionTier>(1);
+    assertType<EncryptionTier>(2);
+  });
+
+  it("rejects invalid tiers", () => {
+    // @ts-expect-error 0 is not a valid encryption tier
+    assertType<EncryptionTier>(0);
+    // @ts-expect-error 3 is not a valid encryption tier
+    assertType<EncryptionTier>(3);
   });
 });
 

@@ -412,6 +412,28 @@ describe("SQLite jobs schema", () => {
       expect(dlq?.error).toBe("Max retries exceeded");
     });
 
+    it("accepts attempts equal to maxAttempts for terminal states", () => {
+      const now = Date.now();
+
+      const inserted = db
+        .insert(jobs)
+        .values({
+          type: "sync-push",
+          payload: {},
+          status: "dead-letter",
+          attempts: 5,
+          maxAttempts: 5,
+          error: "Exhausted all retries",
+          createdAt: now,
+        })
+        .returning()
+        .get();
+
+      expect(inserted.attempts).toBe(5);
+      expect(inserted.maxAttempts).toBe(5);
+      expect(inserted.status).toBe("dead-letter");
+    });
+
     it("replays dead-letter -> pending with reset", () => {
       const now = Date.now();
 

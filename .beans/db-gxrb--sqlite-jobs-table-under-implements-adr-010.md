@@ -11,4 +11,6 @@ parent: db-q3r3
 
 ADR 010 expects retry/backoff, DLQ semantics, heartbeat/timeout. SQLite jobs table lacks heartbeat, result, scheduling fields. systemId is nullable — weakens tenant attribution. Decide if minimal-and-lossy or should satisfy ADR 010. Ref: audit H13
 
-## Summary of Changes\n\nAdded dead-letter status to JobStatus union and JOB_STATUSES enum. Added 5 new columns to SQLite jobs table (lastHeartbeatAt, timeoutMs, result, scheduledFor, priority) with appropriate defaults. Added 2 CHECK constraints (attempts <= maxAttempts, timeoutMs > 0) and 2 indexes (priority/status/scheduled, heartbeat). Updated DDL helpers and integration tests.
+## Summary of Changes
+
+Added dead-letter status to JobStatus union and JOB_STATUSES enum. Added 5 new columns to SQLite jobs table (lastHeartbeatAt, timeoutMs, result, scheduledFor, priority) with appropriate defaults. Added 2 CHECK constraints (attempts <= maxAttempts, timeoutMs > 0) and 2 indexes (priority/status/scheduled, heartbeat). Updated DDL helpers and integration tests.

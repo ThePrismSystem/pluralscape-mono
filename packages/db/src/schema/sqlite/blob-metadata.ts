@@ -17,7 +17,7 @@ import { BLOB_PURPOSES } from "../../helpers/enums.js";
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
-import type { BlobPurpose } from "@pluralscape/types";
+import type { BlobPurpose, EncryptionTier } from "@pluralscape/types";
 
 export const blobMetadata = sqliteTable(
   "blob_metadata",
@@ -29,7 +29,7 @@ export const blobMetadata = sqliteTable(
     storageKey: text("storage_key").notNull(),
     mimeType: text("mime_type"),
     sizeBytes: integer("size_bytes").notNull(),
-    encryptionTier: integer("encryption_tier").notNull(),
+    encryptionTier: integer("encryption_tier").notNull().$type<EncryptionTier>(),
     bucketId: text("bucket_id"),
     purpose: text("purpose").notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: text("thumbnail_of_blob_id"),

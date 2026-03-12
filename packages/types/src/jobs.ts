@@ -43,14 +43,23 @@ export interface JobResult {
 /** A background job definition. */
 export interface JobDefinition {
   readonly id: JobId;
-  readonly systemId: SystemId;
+  readonly systemId: SystemId | null;
   readonly type: JobType;
   readonly status: JobStatus;
   readonly payload: Readonly<Record<string, unknown>>;
-  readonly retryPolicy: RetryPolicy;
   readonly attempts: number;
+  readonly maxAttempts: number;
+  readonly nextRetryAt: UnixMillis | null;
+  readonly error: string | null;
   readonly result: JobResult | null;
-  readonly scheduledAt: UnixMillis;
-  readonly startedAt: UnixMillis | null;
   readonly createdAt: UnixMillis;
+  readonly startedAt: UnixMillis | null;
+  readonly completedAt: UnixMillis | null;
+  readonly idempotencyKey: string | null;
+  readonly lastHeartbeatAt: UnixMillis | null;
+  /** Conservative baseline timeout in ms; job types with long-running work should override. */
+  readonly timeoutMs: number;
+  readonly scheduledFor: UnixMillis | null;
+  /** Lower value = higher priority (0 is highest). Matches BullMQ convention. */
+  readonly priority: number;
 }
