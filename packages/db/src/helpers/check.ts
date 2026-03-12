@@ -12,6 +12,9 @@ import type { AnyColumn } from "drizzle-orm";
  * is enforced by the NOT NULL constraint, not the CHECK.
  */
 export function enumCheck(column: AnyColumn, values: readonly string[]): SQL {
+  if (values.length === 0) {
+    throw new Error("enumCheck requires at least one value");
+  }
   const params = values.map((v) => sql`${v}`);
   return sql`${column} IS NULL OR ${column} IN (${sql.join(params, sql`, `)})`;
 }
@@ -27,7 +30,7 @@ export function versionCheck(versionCol: AnyColumn): SQL {
  * Pair with `archivable()` helper columns.
  */
 export function archivableConsistencyCheck(archivedCol: AnyColumn, archivedAtCol: AnyColumn): SQL {
-  return sql`CASE WHEN ${archivedCol} THEN (${archivedAtCol} IS NOT NULL) ELSE (${archivedAtCol} IS NULL) END`;
+  return sql`(${archivedCol} = true) = (${archivedAtCol} IS NOT NULL)`;
 }
 
 /** CHECK: two nullable columns must be NULL together or non-NULL together. */

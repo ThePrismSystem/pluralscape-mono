@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { enumCheck } from "../helpers/check.js";
 import {
   ACCOUNT_PURGE_STATUSES,
   API_KEY_KEY_TYPES,
@@ -37,6 +38,15 @@ import {
   WEBHOOK_DELIVERY_STATUSES,
   WEBHOOK_EVENT_TYPES,
 } from "../helpers/enums.js";
+
+import type { AnyColumn } from "drizzle-orm";
+
+describe("enumCheck", () => {
+  it("throws when called with an empty values array", () => {
+    const fakeColumn = {} as AnyColumn;
+    expect(() => enumCheck(fakeColumn, [])).toThrow("at least one value");
+  });
+});
 
 describe("enum arrays", () => {
   it("KNOWN_SATURATION_LEVELS matches KnownSaturationLevel union", () => {
