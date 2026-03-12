@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -45,7 +45,7 @@ describe("PG api_keys schema", () => {
       id,
       accountId,
       systemId,
-      name: "My API Key",
+      encryptedData: testBlob(),
       keyType: "metadata",
       tokenHash,
       scopes: ["read:members", "read:fronting"],
@@ -56,7 +56,6 @@ describe("PG api_keys schema", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.accountId).toBe(accountId);
     expect(rows[0]?.systemId).toBe(systemId);
-    expect(rows[0]?.name).toBe("My API Key");
     expect(rows[0]?.keyType).toBe("metadata");
     expect(rows[0]?.tokenHash).toBe(tokenHash);
     expect(rows[0]?.scopes).toEqual(["read:members", "read:fronting"]);
@@ -75,7 +74,7 @@ describe("PG api_keys schema", () => {
       id,
       accountId,
       systemId,
-      name: "Crypto Key",
+      encryptedData: testBlob(),
       keyType: "crypto",
       tokenHash,
       scopes: ["full"],
@@ -100,7 +99,7 @@ describe("PG api_keys schema", () => {
         id: crypto.randomUUID(),
         accountId,
         systemId,
-        name: "Bad Key",
+        encryptedData: testBlob(),
         keyType: "invalid" as "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["full"],
@@ -119,7 +118,7 @@ describe("PG api_keys schema", () => {
       id: crypto.randomUUID(),
       accountId,
       systemId,
-      name: "Key 1",
+      encryptedData: testBlob(),
       keyType: "metadata",
       tokenHash,
       scopes: ["full"],
@@ -131,7 +130,7 @@ describe("PG api_keys schema", () => {
         id: crypto.randomUUID(),
         accountId,
         systemId,
-        name: "Key 2",
+        encryptedData: testBlob(),
         keyType: "metadata",
         tokenHash,
         scopes: ["full"],
@@ -150,7 +149,7 @@ describe("PG api_keys schema", () => {
       id,
       accountId,
       systemId,
-      name: "Minimal Key",
+      encryptedData: testBlob(),
       keyType: "metadata",
       tokenHash: `hash_${crypto.randomUUID()}`,
       scopes: ["read:members"],
@@ -176,7 +175,7 @@ describe("PG api_keys schema", () => {
       id,
       accountId,
       systemId,
-      name: "Timed Key",
+      encryptedData: testBlob(),
       keyType: "metadata",
       tokenHash: `hash_${crypto.randomUUID()}`,
       scopes: ["full"],
@@ -202,7 +201,7 @@ describe("PG api_keys schema", () => {
       id,
       accountId,
       systemId,
-      name: "Cascade Test",
+      encryptedData: testBlob(),
       keyType: "metadata",
       tokenHash: `hash_${crypto.randomUUID()}`,
       scopes: ["full"],
@@ -224,7 +223,7 @@ describe("PG api_keys schema", () => {
       id,
       accountId,
       systemId,
-      name: "System Cascade Test",
+      encryptedData: testBlob(),
       keyType: "metadata",
       tokenHash: `hash_${crypto.randomUUID()}`,
       scopes: ["full"],
@@ -246,7 +245,7 @@ describe("PG api_keys schema", () => {
         id: crypto.randomUUID(),
         accountId: "nonexistent",
         systemId,
-        name: "Bad FK",
+        encryptedData: testBlob(),
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["full"],
@@ -265,7 +264,7 @@ describe("PG api_keys schema", () => {
         id: crypto.randomUUID(),
         accountId,
         systemId,
-        name: "Bad Metadata Key",
+        encryptedData: testBlob(),
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["full"],
@@ -285,7 +284,7 @@ describe("PG api_keys schema", () => {
         id: crypto.randomUUID(),
         accountId,
         systemId,
-        name: "Bad Crypto Key",
+        encryptedData: testBlob(),
         keyType: "crypto",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["full"],
@@ -304,7 +303,7 @@ describe("PG api_keys schema", () => {
       id,
       accountId,
       systemId,
-      name: "Empty Scopes Key",
+      encryptedData: testBlob(),
       keyType: "metadata",
       tokenHash: `hash_${crypto.randomUUID()}`,
       scopes: [],
@@ -324,7 +323,7 @@ describe("PG api_keys schema", () => {
         id: crypto.randomUUID(),
         accountId,
         systemId: "nonexistent",
-        name: "Bad FK",
+        encryptedData: testBlob(),
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["full"],
@@ -333,25 +332,17 @@ describe("PG api_keys schema", () => {
     ).rejects.toThrow();
   });
 
-  it("allows nullable name for encrypted migration", async () => {
+  it("rejects insert without encryptedData", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
-    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
 
-    await db.insert(apiKeys).values({
-      id,
-      accountId,
-      systemId,
-      keyType: "metadata",
-      tokenHash: `hash_${crypto.randomUUID()}`,
-      scopes: ["read:members"],
-      encryptedData: testBlob(),
-      createdAt: now,
-    });
-
-    const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
-    expect(rows[0]?.name).toBeNull();
+    await expect(
+      db.execute(
+        sql`INSERT INTO api_keys (id, account_id, system_id, key_type, token_hash, scopes, created_at)
+            VALUES (${crypto.randomUUID()}, ${accountId}, ${systemId}, 'metadata', ${`hash_${crypto.randomUUID()}`}, '["full"]'::jsonb, ${now}::timestamptz)`,
+      ),
+    ).rejects.toThrow();
   });
 
   it("round-trips encryptedData blob", async () => {
@@ -365,7 +356,6 @@ describe("PG api_keys schema", () => {
       id,
       accountId,
       systemId,
-      name: "Encrypted Key",
       keyType: "metadata",
       tokenHash: `hash_${crypto.randomUUID()}`,
       scopes: ["full"],
@@ -375,44 +365,5 @@ describe("PG api_keys schema", () => {
 
     const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
     expect(rows[0]?.encryptedData).toEqual(blob);
-  });
-
-  it("defaults encryptedData to null", async () => {
-    const accountId = await insertAccount();
-    const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
-    const id = crypto.randomUUID();
-
-    await db.insert(apiKeys).values({
-      id,
-      accountId,
-      systemId,
-      name: "No Blob Key",
-      keyType: "metadata",
-      tokenHash: `hash_${crypto.randomUUID()}`,
-      scopes: ["full"],
-      createdAt: now,
-    });
-
-    const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
-    expect(rows[0]?.encryptedData).toBeNull();
-  });
-
-  it("rejects both name and encryptedData null", async () => {
-    const accountId = await insertAccount();
-    const systemId = await pgInsertSystem(db, accountId);
-    const now = Date.now();
-
-    await expect(
-      db.insert(apiKeys).values({
-        id: crypto.randomUUID(),
-        accountId,
-        systemId,
-        keyType: "metadata",
-        tokenHash: `hash_${crypto.randomUUID()}`,
-        scopes: ["full"],
-        createdAt: now,
-      }),
-    ).rejects.toThrow();
   });
 });

@@ -117,6 +117,67 @@ describe("SQLite notifications schema", () => {
       ).toThrow();
     });
 
+    it("rejects duplicate token+platform pair", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const token = `token-${crypto.randomUUID()}`;
+
+      db.insert(deviceTokens)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          platform: "ios",
+          token,
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(deviceTokens)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            platform: "ios",
+            token,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("allows same token on different platforms", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const token = `token-${crypto.randomUUID()}`;
+
+      db.insert(deviceTokens)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          platform: "ios",
+          token,
+          createdAt: now,
+        })
+        .run();
+
+      db.insert(deviceTokens)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          platform: "android",
+          token,
+          createdAt: now,
+        })
+        .run();
+    });
+
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);

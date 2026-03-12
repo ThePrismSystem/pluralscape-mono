@@ -36,12 +36,12 @@ export const relationships = sqliteTable(
   (t) => [
     index("relationships_system_id_idx").on(t.systemId),
     foreignKey({
-      columns: [t.sourceMemberId],
-      foreignColumns: [members.id],
+      columns: [t.sourceMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     foreignKey({
-      columns: [t.targetMemberId],
-      foreignColumns: [members.id],
+      columns: [t.targetMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
     check("relationships_version_check", versionCheck(t.version)),
@@ -67,8 +67,8 @@ export const subsystems = sqliteTable(
     index("subsystems_system_id_idx").on(t.systemId),
     unique("subsystems_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.parentSubsystemId],
-      foreignColumns: [t.id],
+      columns: [t.parentSubsystemId, t.systemId],
+      foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
     check("subsystems_version_check", versionCheck(t.version)),

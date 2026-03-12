@@ -577,6 +577,34 @@ describe("PG privacy schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("rejects code shorter than 8 characters via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(friendCodes).values({
+          id: crypto.randomUUID(),
+          systemId,
+          code: "SHORT",
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("accepts code exactly 8 characters", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await db.insert(friendCodes).values({
+        id: crypto.randomUUID(),
+        systemId,
+        code: "ABCD1234",
+        createdAt: now,
+      });
+    });
+
     it("rejects expiresAt <= createdAt via CHECK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);

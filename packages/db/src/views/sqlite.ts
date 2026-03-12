@@ -76,7 +76,6 @@ export function getActiveApiKeys(db: BetterSQLite3Database, accountId: string): 
       id: apiKeys.id,
       accountId: apiKeys.accountId,
       systemId: apiKeys.systemId,
-      name: apiKeys.name,
       keyType: apiKeys.keyType,
       createdAt: apiKeys.createdAt,
       expiresAt: apiKeys.expiresAt,

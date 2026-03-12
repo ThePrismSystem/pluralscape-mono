@@ -53,6 +53,7 @@ export const frontingSessions = sqliteTable(
   },
   (t) => [
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
+    index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
     index("fronting_sessions_active_idx")
       .on(t.systemId)
@@ -64,8 +65,8 @@ export const frontingSessions = sqliteTable(
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.memberId],
-      foreignColumns: [members.id],
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     foreignKey({
       columns: [t.customFrontId],
@@ -120,8 +121,8 @@ export const frontingComments = sqliteTable(
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
     }).onDelete("cascade"),
     foreignKey({
-      columns: [t.memberId],
-      foreignColumns: [members.id],
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("fronting_comments_version_check", versionCheck(t.version)),
   ],

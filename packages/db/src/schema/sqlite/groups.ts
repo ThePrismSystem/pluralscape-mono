@@ -35,8 +35,8 @@ export const groups = sqliteTable(
     index("groups_system_id_idx").on(t.systemId),
     unique("groups_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.parentGroupId],
-      foreignColumns: [t.id],
+      columns: [t.parentGroupId, t.systemId],
+      foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("groups_sort_order_check", sql`${t.sortOrder} >= 0`),
     check("groups_version_check", versionCheck(t.version)),

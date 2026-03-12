@@ -227,7 +227,7 @@ export const PG_DDL = {
   `,
   friendConnectionsIndexes: `
     CREATE INDEX friend_connections_system_status_idx ON friend_connections (system_id, status);
-    CREATE INDEX friend_connections_friend_system_id_idx ON friend_connections (friend_system_id)
+    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_system_id, status)
   `,
   friendCodes: `
     CREATE TABLE friend_codes (
@@ -236,7 +236,8 @@ export const PG_DDL = {
       code VARCHAR(255) NOT NULL UNIQUE,
       created_at TIMESTAMPTZ NOT NULL,
       expires_at TIMESTAMPTZ,
-      CHECK (expires_at IS NULL OR expires_at > created_at)
+      CHECK (expires_at IS NULL OR expires_at > created_at),
+      CHECK (length(code) >= 8)
     )
   `,
   friendCodesIndexes: `
@@ -574,19 +575,17 @@ export const PG_DDL = {
       id VARCHAR(50) PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      name VARCHAR(255),
       key_type VARCHAR(50) NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
       token_hash VARCHAR(255) NOT NULL UNIQUE,
       scopes JSONB NOT NULL,
-      encrypted_data BYTEA,
+      encrypted_data BYTEA NOT NULL,
       encrypted_key_material BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       last_used_at TIMESTAMPTZ,
       revoked_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ,
       scoped_bucket_ids JSONB,
-      CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL)),
-      CHECK (name IS NOT NULL OR encrypted_data IS NOT NULL)
+      CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL))
     )
   `,
   apiKeysIndexes: `
@@ -950,7 +949,8 @@ export const PG_DDL = {
   deviceTokensIndexes: `
     CREATE INDEX device_tokens_account_id_idx ON device_tokens (account_id);
     CREATE INDEX device_tokens_system_id_idx ON device_tokens (system_id);
-    CREATE INDEX device_tokens_revoked_at_idx ON device_tokens (revoked_at)
+    CREATE INDEX device_tokens_revoked_at_idx ON device_tokens (revoked_at);
+    CREATE UNIQUE INDEX device_tokens_token_platform_unique ON device_tokens (token, platform)
   `,
   notificationConfigs: `
     CREATE TABLE notification_configs (

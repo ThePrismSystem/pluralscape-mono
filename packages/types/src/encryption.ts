@@ -576,8 +576,11 @@ export type ClientTimerConfig = TimerConfig;
 
 /**
  * Server-side audit log entry representation.
- * T1 encrypted: detail
- * T3 plaintext: eventType, actor, ipAddress, userAgent, timestamp
+ * T3 plaintext (all fields): detail, eventType, actor, ipAddress, userAgent, timestamp
+ *
+ * Unlike other Server* types, this has no `encryptedData` field — all fields are T3
+ * (server-readable) because the server needs detail for security monitoring
+ * (failed login detection, IP pattern analysis).
  *
  * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
  * The audit_log table intentionally uses `timestamp` to reflect when the
@@ -590,7 +593,7 @@ export interface ServerAuditLogEntry {
   readonly eventType: AuditEventType;
   readonly timestamp: UnixMillis;
   readonly actor: AuditActor;
-  readonly encryptedData: EncryptedBlob | null;
+  readonly detail: string | null;
   readonly ipAddress: string | null;
   readonly userAgent: string | null;
 }
@@ -633,13 +636,13 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // SideSystem: T1 (name, description, color, imageSource, emoji) | T3 (none)
 // Layer: T1 (name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds) | T3 (none)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
-// AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, timestamp)
+// AuditLogEntry: T3 (all fields — detail, eventType, actor, ipAddress, userAgent, timestamp; server-readable for security monitoring)
 //
 // Switch: T3 (memberIds, timestamp — immutable event metadata; member IDs are non-identifying opaque tokens)
 // FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side
 //
 // Session: T1 (deviceInfo — pending migration to encryptedData) | T3 (accountId, revoked, timestamps)
-// ApiKey: T1 (name — pending migration to encryptedData) | T3 (scopes — server enforces authorization; scopedBucketIds — server enforces bucket-scoped auth; keyType, tokenHash, timestamps, encryptedKeyMaterial)
+// ApiKey: T1 (name, inside encryptedData) | T3 (scopes — server enforces authorization; scopedBucketIds — server enforces bucket-scoped auth; keyType, tokenHash, timestamps, encryptedKeyMaterial)
 // BlobMetadata: T3 (mimeType — server must set Content-Type headers and validate uploads;
 //   purpose — server enforces per-purpose quota limits; sizeBytes — server enforces quota
 //   and validates uploads; all remaining fields are operational metadata. Encrypting any of

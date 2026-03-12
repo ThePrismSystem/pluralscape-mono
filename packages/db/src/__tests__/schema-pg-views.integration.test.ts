@@ -210,7 +210,7 @@ describe("PG views / query helpers", () => {
         id: crypto.randomUUID(),
         accountId,
         systemId,
-        name: "Active",
+        encryptedData: testBlob(),
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["read:members"],
@@ -220,7 +220,7 @@ describe("PG views / query helpers", () => {
         id: crypto.randomUUID(),
         accountId,
         systemId,
-        name: "Revoked",
+        encryptedData: testBlob(),
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["read:members"],
@@ -230,7 +230,6 @@ describe("PG views / query helpers", () => {
 
       const active = await getActiveApiKeys(db, accountId);
       expect(active).toHaveLength(1);
-      expect(active[0]?.name).toBe("Active");
     });
 
     it("returns empty array when no keys exist", async () => {
@@ -238,14 +237,13 @@ describe("PG views / query helpers", () => {
       expect(active).toHaveLength(0);
     });
 
-    it("includes key with null name and encryptedData", async () => {
+    it("includes key with encryptedData", async () => {
       const now = Date.now();
 
       await db.insert(apiKeys).values({
         id: crypto.randomUUID(),
         accountId,
         systemId,
-        name: null,
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["read:members"],
@@ -255,7 +253,6 @@ describe("PG views / query helpers", () => {
 
       const active = await getActiveApiKeys(db, accountId);
       expect(active).toHaveLength(1);
-      expect(active[0]?.name).toBeNull();
     });
   });
 

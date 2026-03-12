@@ -206,6 +206,7 @@ describe("RLS_TABLE_POLICIES", () => {
       ["buckets", "system"],
       ["fronting_sessions", "system"],
       ["switches", "system"],
+      ["fronting_reports", "system"],
       ["groups", "system"],
       ["journal_entries", "system"],
       ["api_keys", "dual"],

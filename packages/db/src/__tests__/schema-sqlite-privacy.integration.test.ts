@@ -656,6 +656,39 @@ describe("SQLite privacy schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("rejects code shorter than 8 characters via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(friendCodes)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            code: "SHORT",
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("accepts code exactly 8 characters", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          code: `E8CH${crypto.randomUUID().slice(0, 4)}`,
+          createdAt: now,
+        })
+        .run();
+    });
+
     it("rejects expiresAt === createdAt via CHECK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);

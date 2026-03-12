@@ -22,11 +22,10 @@ export const apiKeys = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 255 }),
     keyType: varchar("key_type", { length: ENUM_MAX_LENGTH }).notNull().$type<ApiKey["keyType"]>(),
     tokenHash: varchar("token_hash", { length: 255 }).notNull(),
     scopes: jsonb("scopes").notNull().$type<readonly ApiKeyScope[]>(),
-    encryptedData: pgEncryptedBlob("encrypted_data"),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     encryptedKeyMaterial: pgBinary("encrypted_key_material"),
     createdAt: pgTimestamp("created_at").notNull(),
     lastUsedAt: pgTimestamp("last_used_at"),
@@ -44,10 +43,6 @@ export const apiKeys = pgTable(
     check(
       "api_keys_key_material_check",
       sql`(${t.keyType} = 'crypto' AND ${t.encryptedKeyMaterial} IS NOT NULL) OR (${t.keyType} = 'metadata' AND ${t.encryptedKeyMaterial} IS NULL)`,
-    ),
-    check(
-      "api_keys_name_or_encrypted_data_check",
-      sql`${t.name} IS NOT NULL OR ${t.encryptedData} IS NOT NULL`,
     ),
   ],
 );

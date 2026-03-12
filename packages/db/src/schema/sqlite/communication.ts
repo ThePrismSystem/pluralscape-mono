@@ -38,8 +38,8 @@ export const channels = sqliteTable(
     index("channels_system_id_idx").on(t.systemId),
     unique("channels_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.parentId],
-      foreignColumns: [t.id],
+      columns: [t.parentId, t.systemId],
+      foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("channels_type_check", enumCheck(t.type, CHANNEL_TYPES)),
     check("channels_sort_order_check", sql`${t.sortOrder} >= 0`),
@@ -125,8 +125,8 @@ export const notes = sqliteTable(
     index("notes_system_id_idx").on(t.systemId),
     index("notes_member_id_idx").on(t.memberId),
     foreignKey({
-      columns: [t.memberId],
-      foreignColumns: [members.id],
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("notes_version_check", versionCheck(t.version)),
     check("notes_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
@@ -157,8 +157,8 @@ export const polls = sqliteTable(
     index("polls_system_id_idx").on(t.systemId),
     unique("polls_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
-      columns: [t.createdByMemberId],
-      foreignColumns: [members.id],
+      columns: [t.createdByMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
@@ -207,8 +207,8 @@ export const acknowledgements = sqliteTable(
   (t) => [
     index("acknowledgements_system_id_confirmed_idx").on(t.systemId, t.confirmed),
     foreignKey({
-      columns: [t.createdByMemberId],
-      foreignColumns: [members.id],
+      columns: [t.createdByMemberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
   ],
 );
