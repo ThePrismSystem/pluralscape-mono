@@ -832,4 +832,15 @@ describe("PG fronting schema", () => {
       ).rejects.toThrow();
     });
   });
+
+  describe("fronting_sessions indexes", () => {
+    it("creates partial index for active fronters", async () => {
+      const result = await client.query(
+        `SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'fronting_sessions' AND indexname = 'fronting_sessions_active_idx'`,
+      );
+      const rows = result.rows as Array<{ indexname: string; indexdef: string }>;
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.indexdef).toMatch(/WHERE.*end_time.*IS NULL/i);
+    });
+  });
 });

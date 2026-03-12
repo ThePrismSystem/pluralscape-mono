@@ -144,6 +144,10 @@ export const SQLITE_DDL = {
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
+  membersIndexes: `
+    CREATE INDEX members_system_id_archived_idx ON members (system_id, archived);
+    CREATE INDEX members_created_at_idx ON members (created_at)
+  `,
   memberPhotos: `
     CREATE TABLE member_photos (
       id TEXT PRIMARY KEY,
@@ -183,7 +187,6 @@ export const SQLITE_DDL = {
     )
   `,
   bucketContentTagsIndexes: `
-    CREATE INDEX bucket_content_tags_entity_idx ON bucket_content_tags (entity_type, entity_id);
     CREATE INDEX bucket_content_tags_bucket_id_idx ON bucket_content_tags (bucket_id)
   `,
   keyGrants: `
@@ -242,6 +245,9 @@ export const SQLITE_DDL = {
       PRIMARY KEY (friend_connection_id, bucket_id)
     )
   `,
+  friendBucketAssignmentsIndexes: `
+    CREATE INDEX friend_bucket_assignments_bucket_id_idx ON friend_bucket_assignments (bucket_id)
+  `,
   // Fronting
   frontingSessions: `
     CREATE TABLE fronting_sessions (
@@ -266,7 +272,8 @@ export const SQLITE_DDL = {
   `,
   frontingSessionsIndexes: `
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
-    CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time)
+    CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
+    CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL
   `,
   switches: `
     CREATE TABLE switches (
@@ -599,7 +606,8 @@ export const SQLITE_DDL = {
   auditLogIndexes: `
     CREATE INDEX audit_log_account_timestamp_idx ON audit_log (account_id, timestamp);
     CREATE INDEX audit_log_system_timestamp_idx ON audit_log (system_id, timestamp);
-    CREATE INDEX audit_log_event_type_idx ON audit_log (event_type)
+    CREATE INDEX audit_log_event_type_idx ON audit_log (event_type);
+    CREATE INDEX audit_log_timestamp_idx ON audit_log (timestamp)
   `,
   // Lifecycle Events
   lifecycleEvents: `
@@ -772,8 +780,7 @@ export const SQLITE_DDL = {
     )
   `,
   acknowledgementsIndexes: `
-    CREATE INDEX acknowledgements_system_id_idx ON acknowledgements (system_id);
-    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed)
+    CREATE INDEX acknowledgements_system_id_confirmed_idx ON acknowledgements (system_id, confirmed)
   `,
   // Journal
   journalEntries: `
@@ -1033,7 +1040,7 @@ export const SQLITE_DDL = {
     )
   `,
   blobMetadataIndexes: `
-    CREATE INDEX blob_metadata_system_id_idx ON blob_metadata (system_id);
+    CREATE INDEX blob_metadata_system_id_purpose_idx ON blob_metadata (system_id, purpose);
     CREATE UNIQUE INDEX blob_metadata_storage_key_idx ON blob_metadata (storage_key)
   `,
   // Timers
@@ -1332,6 +1339,7 @@ export function createSqliteSystemTables(client: InstanceType<typeof Database>):
 export function createSqliteMemberTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.memberPhotos);
 }
 
@@ -1348,11 +1356,13 @@ export function createSqlitePrivacyTables(client: InstanceType<typeof Database>)
   client.exec(SQLITE_DDL.friendCodes);
   client.exec(SQLITE_DDL.friendCodesIndexes);
   client.exec(SQLITE_DDL.friendBucketAssignments);
+  client.exec(SQLITE_DDL.friendBucketAssignmentsIndexes);
 }
 
 export function createSqliteFrontingTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.customFronts);
   client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
@@ -1366,6 +1376,7 @@ export function createSqliteFrontingTables(client: InstanceType<typeof Database>
 export function createSqliteStructureTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.relationships);
   client.exec(SQLITE_DDL.relationshipsIndexes);
   client.exec(SQLITE_DDL.subsystems);
@@ -1391,6 +1402,7 @@ export function createSqliteStructureTables(client: InstanceType<typeof Database
 export function createSqliteCustomFieldsTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.buckets);
   client.exec(SQLITE_DDL.bucketsIndexes);
   client.exec(SQLITE_DDL.fieldDefinitions);
@@ -1508,6 +1520,7 @@ export function sqliteInsertPoll(
 export function createSqliteCommunicationTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.channels);
   client.exec(SQLITE_DDL.channelsIndexes);
   client.exec(SQLITE_DDL.messages);
@@ -1527,6 +1540,7 @@ export function createSqliteCommunicationTables(client: InstanceType<typeof Data
 export function createSqliteJournalTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.customFronts);
   client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
@@ -1541,6 +1555,7 @@ export function createSqliteJournalTables(client: InstanceType<typeof Database>)
 export function createSqliteGroupsTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.groups);
   client.exec(SQLITE_DDL.groupsIndexes);
   client.exec(SQLITE_DDL.groupMemberships);
@@ -1595,6 +1610,7 @@ export function createSqliteBlobMetadataTables(client: InstanceType<typeof Datab
 export function createSqliteTimerTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.membersIndexes);
   client.exec(SQLITE_DDL.timerConfigs);
   client.exec(SQLITE_DDL.timerConfigsIndexes);
   client.exec(SQLITE_DDL.checkInRecords);

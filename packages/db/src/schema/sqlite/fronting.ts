@@ -54,6 +54,9 @@ export const frontingSessions = sqliteTable(
   (t) => [
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
+    index("fronting_sessions_active_idx")
+      .on(t.systemId)
+      .where(sql`${t.endTime} IS NULL`),
     check(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,

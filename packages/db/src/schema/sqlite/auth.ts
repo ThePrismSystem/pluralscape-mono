@@ -58,7 +58,6 @@ export const sessions = sqliteTable(
   },
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
-    index("sessions_revoked_idx").on(t.revoked),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
     index("sessions_expires_at_idx").on(t.expiresAt),
     check(

@@ -144,6 +144,10 @@ export const PG_DDL = {
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
+  membersIndexes: `
+    CREATE INDEX members_system_id_archived_idx ON members (system_id, archived);
+    CREATE INDEX members_created_at_idx ON members (created_at)
+  `,
   memberPhotos: `
     CREATE TABLE member_photos (
       id VARCHAR(255) PRIMARY KEY,
@@ -183,7 +187,6 @@ export const PG_DDL = {
     )
   `,
   bucketContentTagsIndexes: `
-    CREATE INDEX bucket_content_tags_entity_idx ON bucket_content_tags (entity_type, entity_id);
     CREATE INDEX bucket_content_tags_bucket_id_idx ON bucket_content_tags (bucket_id)
   `,
   keyGrants: `
@@ -242,6 +245,9 @@ export const PG_DDL = {
       PRIMARY KEY (friend_connection_id, bucket_id)
     )
   `,
+  friendBucketAssignmentsIndexes: `
+    CREATE INDEX friend_bucket_assignments_bucket_id_idx ON friend_bucket_assignments (bucket_id)
+  `,
   // Fronting
   frontingSessions: `
     CREATE TABLE fronting_sessions (
@@ -266,7 +272,8 @@ export const PG_DDL = {
   `,
   frontingSessionsIndexes: `
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
-    CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time)
+    CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
+    CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL
   `,
   switches: `
     CREATE TABLE switches (
@@ -599,7 +606,8 @@ export const PG_DDL = {
   auditLogIndexes: `
     CREATE INDEX audit_log_account_timestamp_idx ON audit_log (account_id, timestamp);
     CREATE INDEX audit_log_system_timestamp_idx ON audit_log (system_id, timestamp);
-    CREATE INDEX audit_log_event_type_idx ON audit_log (event_type)
+    CREATE INDEX audit_log_event_type_idx ON audit_log (event_type);
+    CREATE INDEX audit_log_timestamp_idx ON audit_log (timestamp)
   `,
   // Lifecycle Events
   lifecycleEvents: `
@@ -772,8 +780,7 @@ export const PG_DDL = {
     )
   `,
   acknowledgementsIndexes: `
-    CREATE INDEX acknowledgements_system_id_idx ON acknowledgements (system_id);
-    CREATE INDEX acknowledgements_confirmed_idx ON acknowledgements (confirmed)
+    CREATE INDEX acknowledgements_system_id_confirmed_idx ON acknowledgements (system_id, confirmed)
   `,
   // Journal
   journalEntries: `
@@ -1028,7 +1035,7 @@ export const PG_DDL = {
     )
   `,
   blobMetadataIndexes: `
-    CREATE INDEX blob_metadata_system_id_idx ON blob_metadata (system_id);
+    CREATE INDEX blob_metadata_system_id_purpose_idx ON blob_metadata (system_id, purpose);
     CREATE UNIQUE INDEX blob_metadata_storage_key_idx ON blob_metadata (storage_key)
   `,
   // Timers
@@ -1304,6 +1311,7 @@ export async function createPgSystemTables(client: PGlite): Promise<void> {
 export async function createPgMemberTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.memberPhotos);
 }
 
@@ -1320,11 +1328,13 @@ export async function createPgPrivacyTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.friendCodes);
   await pgExec(client, PG_DDL.friendCodesIndexes);
   await pgExec(client, PG_DDL.friendBucketAssignments);
+  await pgExec(client, PG_DDL.friendBucketAssignmentsIndexes);
 }
 
 export async function createPgFrontingTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.customFronts);
   await pgExec(client, PG_DDL.customFrontsIndexes);
   await pgExec(client, PG_DDL.frontingSessions);
@@ -1338,6 +1348,7 @@ export async function createPgFrontingTables(client: PGlite): Promise<void> {
 export async function createPgStructureTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.relationships);
   await pgExec(client, PG_DDL.relationshipsIndexes);
   await pgExec(client, PG_DDL.subsystems);
@@ -1363,6 +1374,7 @@ export async function createPgStructureTables(client: PGlite): Promise<void> {
 export async function createPgCustomFieldsTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.buckets);
   await pgExec(client, PG_DDL.bucketsIndexes);
   await pgExec(client, PG_DDL.fieldDefinitions);
@@ -1472,6 +1484,7 @@ export async function pgInsertPoll(
 export async function createPgCommunicationTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.channels);
   await pgExec(client, PG_DDL.channelsIndexes);
   await pgExec(client, PG_DDL.messages);
@@ -1491,6 +1504,7 @@ export async function createPgCommunicationTables(client: PGlite): Promise<void>
 export async function createPgJournalTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.customFronts);
   await pgExec(client, PG_DDL.customFrontsIndexes);
   await pgExec(client, PG_DDL.frontingSessions);
@@ -1505,6 +1519,7 @@ export async function createPgJournalTables(client: PGlite): Promise<void> {
 export async function createPgGroupsTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.groups);
   await pgExec(client, PG_DDL.groupsIndexes);
   await pgExec(client, PG_DDL.groupMemberships);
@@ -1559,6 +1574,7 @@ export async function createPgBlobMetadataTables(client: PGlite): Promise<void> 
 export async function createPgTimerTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.timerConfigs);
   await pgExec(client, PG_DDL.timerConfigsIndexes);
   await pgExec(client, PG_DDL.checkInRecords);

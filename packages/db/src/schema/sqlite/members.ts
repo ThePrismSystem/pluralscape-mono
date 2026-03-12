@@ -27,8 +27,7 @@ export const members = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("members_system_id_idx").on(t.systemId),
-    index("members_archived_idx").on(t.archived),
+    index("members_system_id_archived_idx").on(t.systemId, t.archived),
     index("members_created_at_idx").on(t.createdAt),
     unique("members_id_system_id_unique").on(t.id, t.systemId),
     check("members_version_check", versionCheck(t.version)),
