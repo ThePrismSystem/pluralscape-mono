@@ -7,6 +7,7 @@ import {
   integer,
   jsonb,
   pgTable,
+  primaryKey,
   unique,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -56,7 +57,7 @@ export const channels = pgTable(
 export const messages = pgTable(
   "messages",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
+    id: varchar("id", { length: 255 }).notNull(),
     channelId: varchar("channel_id", { length: 255 }).notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
@@ -70,18 +71,15 @@ export const messages = pgTable(
     ...archivable(),
   },
   (t) => [
+    primaryKey({ columns: [t.id, t.timestamp] }),
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_id_idx").on(t.systemId),
     index("messages_reply_to_id_idx").on(t.replyToId),
-    unique("messages_id_system_id_unique").on(t.id, t.systemId),
+    unique("messages_id_system_id_timestamp_unique").on(t.id, t.systemId, t.timestamp),
     foreignKey({
       columns: [t.channelId, t.systemId],
       foreignColumns: [channels.id, channels.systemId],
     }).onDelete("cascade"),
-    foreignKey({
-      columns: [t.replyToId],
-      foreignColumns: [t.id],
-    }).onDelete("set null"),
     check("messages_version_check", versionCheck(t.version)),
     check(
       "messages_archived_consistency_check",

@@ -33,11 +33,11 @@ export const syncDocuments = sqliteTable(
   ],
 );
 
-// UUID PKs don't guarantee insertion order; consider UUIDv7 or autoincrement sequence for replay ordering.
 export const syncQueue = sqliteTable(
   "sync_queue",
   {
     id: text("id").primaryKey(),
+    seq: integer("seq").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -59,6 +59,7 @@ export const syncQueue = sqliteTable(
       .on(t.systemId)
       .where(sql`${t.syncedAt} IS NULL`),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
+    uniqueIndex("sync_queue_seq_idx").on(t.seq),
   ],
 );
 

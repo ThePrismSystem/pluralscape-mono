@@ -22,6 +22,13 @@
       "when": 1773291360891,
       "tag": "0002_easy_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1773296937677,
+      "tag": "0003_nosy_mother_askani",
+      "breakpoints": true
     }
   ]
 }

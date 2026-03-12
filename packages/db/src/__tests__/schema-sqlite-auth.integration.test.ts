@@ -30,6 +30,7 @@ describe("SQLite auth schema", () => {
       emailHash: string;
       emailSalt: string;
       passwordHash: string;
+      kdfSalt: string;
       createdAt: number;
       updatedAt: number;
     }> = {},
@@ -38,6 +39,7 @@ describe("SQLite auth schema", () => {
     emailHash: string;
     emailSalt: string;
     passwordHash: string;
+    kdfSalt: string;
     createdAt: number;
     updatedAt: number;
   } {
@@ -47,6 +49,7 @@ describe("SQLite auth schema", () => {
       emailHash: overrides.emailHash ?? `hash_${crypto.randomUUID()}`,
       emailSalt: overrides.emailSalt ?? `salt_${crypto.randomUUID()}`,
       passwordHash: overrides.passwordHash ?? `$argon2id$${crypto.randomUUID()}`,
+      kdfSalt: overrides.kdfSalt ?? `kdf_${crypto.randomUUID()}`,
       createdAt: overrides.createdAt ?? now,
       updatedAt: overrides.updatedAt ?? now,
     };
@@ -88,6 +91,7 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.emailHash).toBe(account.emailHash);
       expect(rows[0]?.emailSalt).toBe(account.emailSalt);
       expect(rows[0]?.passwordHash).toBe(account.passwordHash);
+      expect(rows[0]?.kdfSalt).toBe(account.kdfSalt);
       expect(rows[0]?.createdAt).toBe(account.createdAt);
       expect(rows[0]?.updatedAt).toBe(account.updatedAt);
     });
@@ -116,18 +120,29 @@ describe("SQLite auth schema", () => {
       expect(() => insertAccount({ id })).toThrow(/UNIQUE|constraint/i);
     });
 
-    it("round-trips kdfSalt when provided", () => {
-      const kdfSalt = `salt_${crypto.randomUUID()}`;
-      const account = insertAccount();
-      db.update(accounts).set({ kdfSalt }).where(eq(accounts.id, account.id)).run();
+    it("round-trips kdfSalt", () => {
+      const kdfSalt = `kdf_${crypto.randomUUID()}`;
+      const account = insertAccount({ kdfSalt });
       const rows = db.select().from(accounts).where(eq(accounts.id, account.id)).all();
       expect(rows[0]?.kdfSalt).toBe(kdfSalt);
     });
 
-    it("defaults kdfSalt to null", () => {
-      const account = insertAccount();
-      const rows = db.select().from(accounts).where(eq(accounts.id, account.id)).all();
-      expect(rows[0]?.kdfSalt).toBeNull();
+    it("rejects null kdfSalt", () => {
+      const now = Date.now();
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at, version) VALUES (?, ?, ?, ?, NULL, ?, ?, 1)",
+          )
+          .run(
+            crypto.randomUUID(),
+            `hash_${crypto.randomUUID()}`,
+            `salt_${crypto.randomUUID()}`,
+            `pw_${crypto.randomUUID()}`,
+            now,
+            now,
+          ),
+      ).toThrow(/NOT NULL/i);
     });
   });
 

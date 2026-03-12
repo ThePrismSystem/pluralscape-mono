@@ -52,7 +52,7 @@ export const PG_DDL = {
       email_hash VARCHAR(255) NOT NULL UNIQUE,
       email_salt VARCHAR(255) NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
-      kdf_salt VARCHAR(255),
+      kdf_salt VARCHAR(255) NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
@@ -657,7 +657,7 @@ export const PG_DDL = {
   `,
   messages: `
     CREATE TABLE messages (
-      id VARCHAR(255) PRIMARY KEY,
+      id VARCHAR(255) NOT NULL,
       channel_id VARCHAR(255) NOT NULL,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       reply_to_id VARCHAR(255),
@@ -669,9 +669,9 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
-      UNIQUE (id, system_id),
+      PRIMARY KEY (id, timestamp),
+      UNIQUE (id, system_id, timestamp),
       FOREIGN KEY (channel_id, system_id) REFERENCES channels(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL,
       CHECK (version >= 1),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
@@ -1149,6 +1149,7 @@ export const PG_DDL = {
   syncQueue: `
     CREATE TABLE sync_queue (
       id VARCHAR(255) PRIMARY KEY,
+      seq SERIAL NOT NULL UNIQUE,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       entity_type VARCHAR(255) NOT NULL,
       entity_id VARCHAR(255) NOT NULL,
@@ -1160,6 +1161,7 @@ export const PG_DDL = {
   `,
   syncQueueIndexes: `
     CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
+    CREATE UNIQUE INDEX sync_queue_seq_idx ON sync_queue (seq);
     CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id) WHERE synced_at IS NULL
   `,
   syncConflicts: `
@@ -1260,6 +1262,7 @@ export async function pgInsertAccount(
     emailHash: `hash_${crypto.randomUUID()}`,
     emailSalt: `salt_${crypto.randomUUID()}`,
     passwordHash: `$argon2id$${crypto.randomUUID()}`,
+    kdfSalt: `kdf_${crypto.randomUUID()}`,
     createdAt: now,
     updatedAt: now,
   });

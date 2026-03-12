@@ -20,6 +20,7 @@ const schema = { accounts, systems, syncDocuments, syncQueue, syncConflicts };
 describe("SQLite sync schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
+  let seqCounter = 0;
 
   const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string): string =>
@@ -196,6 +197,7 @@ describe("SQLite sync schema", () => {
       db.insert(syncQueue)
         .values({
           id,
+          seq: ++seqCounter,
           systemId,
           entityType: "member",
           entityId: crypto.randomUUID(),
@@ -224,6 +226,7 @@ describe("SQLite sync schema", () => {
       db.insert(syncQueue)
         .values({
           id,
+          seq: ++seqCounter,
           systemId,
           entityType: "group",
           entityId: crypto.randomUUID(),
@@ -247,6 +250,7 @@ describe("SQLite sync schema", () => {
           .insert(syncQueue)
           .values({
             id: crypto.randomUUID(),
+            seq: ++seqCounter,
             systemId,
             entityType: "member",
             entityId: crypto.randomUUID(),
@@ -267,6 +271,7 @@ describe("SQLite sync schema", () => {
       db.insert(syncQueue)
         .values({
           id,
+          seq: ++seqCounter,
           systemId,
           entityType: "member",
           entityId: crypto.randomUUID(),
@@ -296,6 +301,7 @@ describe("SQLite sync schema", () => {
       db.insert(syncQueue)
         .values({
           id,
+          seq: ++seqCounter,
           systemId,
           entityType: "note",
           entityId: crypto.randomUUID(),
@@ -308,6 +314,114 @@ describe("SQLite sync schema", () => {
       const rows = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
       expect(rows[0]?.changeData).toEqual(data);
     });
+
+    it("assigns explicit seq values for ordering", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const ids = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+      const seqs = [++seqCounter, ++seqCounter, ++seqCounter];
+
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i] as string;
+        const seq = seqs[i] as number;
+        db.insert(syncQueue)
+          .values({
+            id,
+            seq,
+            systemId,
+            entityType: "member",
+            entityId: crypto.randomUUID(),
+            operation: "create",
+            changeData: new Uint8Array([1]),
+            createdAt: now,
+          })
+          .run();
+      }
+
+      const rows = ids.map(
+        (id) => db.select().from(syncQueue).where(eq(syncQueue.id, id)).all()[0],
+      );
+      expect(rows[0]?.seq).toBe(seqs[0]);
+      expect(rows[1]?.seq).toBe(seqs[1]);
+      expect(rows[2]?.seq).toBe(seqs[2]);
+      const r0 = rows[0] as { seq: number };
+      const r1 = rows[1] as { seq: number };
+      const r2 = rows[2] as { seq: number };
+      expect(r0.seq).toBeLessThan(r1.seq);
+      expect(r1.seq).toBeLessThan(r2.seq);
+    });
+
+    it("orders replay correctly via seq column", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      const id1 = crypto.randomUUID();
+      const id2 = crypto.randomUUID();
+      const id3 = crypto.randomUUID();
+      const orderedIds = [id1, id2, id3];
+
+      for (const id of orderedIds) {
+        db.insert(syncQueue)
+          .values({
+            id,
+            seq: ++seqCounter,
+            systemId,
+            entityType: "member",
+            entityId: crypto.randomUUID(),
+            operation: "create",
+            changeData: new Uint8Array([1]),
+            createdAt: now,
+          })
+          .run();
+      }
+
+      const rows = db
+        .select()
+        .from(syncQueue)
+        .where(eq(syncQueue.systemId, systemId))
+        .orderBy(syncQueue.seq)
+        .all();
+
+      expect(rows.map((r) => r.id)).toEqual(orderedIds);
+    });
+
+    it("rejects duplicate seq values", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const seq = ++seqCounter;
+
+      db.insert(syncQueue)
+        .values({
+          id: crypto.randomUUID(),
+          seq,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(syncQueue)
+          .values({
+            id: crypto.randomUUID(),
+            seq,
+            systemId,
+            entityType: "member",
+            entityId: crypto.randomUUID(),
+            operation: "create",
+            changeData: new Uint8Array([1]),
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
   });
 
   describe("sync_queue indexes", () => {
@@ -319,6 +433,7 @@ describe("SQLite sync schema", () => {
       db.insert(syncQueue)
         .values({
           id: crypto.randomUUID(),
+          seq: ++seqCounter,
           systemId,
           entityType: "member",
           entityId: crypto.randomUUID(),

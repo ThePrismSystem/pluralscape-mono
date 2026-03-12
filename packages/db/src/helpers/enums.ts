@@ -286,6 +286,7 @@ export const JOB_TYPES = [
   "account-purge",
   "bucket-key-rotation",
   "report-generate",
+  "sync-queue-cleanup",
 ] as const satisfies readonly JobType[];
 export const JOB_STATUSES = [
   "pending",

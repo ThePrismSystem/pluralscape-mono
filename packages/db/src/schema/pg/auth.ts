@@ -15,7 +15,7 @@ export const accounts = pgTable(
     emailHash: varchar("email_hash", { length: 255 }).notNull(),
     emailSalt: varchar("email_salt", { length: 255 }).notNull(),
     passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-    kdfSalt: varchar("kdf_salt", { length: 255 }),
+    kdfSalt: varchar("kdf_salt", { length: 255 }).notNull(),
     ...timestamps(),
     ...versioned(),
   },

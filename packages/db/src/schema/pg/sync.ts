@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgTable, text, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import {
+  check,
+  index,
+  integer,
+  pgTable,
+  serial,
+  text,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck, nullPairCheck, versionCheck } from "../../helpers/check.js";
@@ -33,11 +42,11 @@ export const syncDocuments = pgTable(
   ],
 );
 
-// UUID PKs don't guarantee insertion order; consider UUIDv7 or autoincrement sequence for replay ordering.
 export const syncQueue = pgTable(
   "sync_queue",
   {
     id: varchar("id", { length: 255 }).primaryKey(),
+    seq: serial("seq").notNull(),
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -56,6 +65,7 @@ export const syncQueue = pgTable(
       t.entityId,
     ),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
+    uniqueIndex("sync_queue_seq_idx").on(t.seq),
     index("sync_queue_unsynced_idx")
       .on(t.systemId)
       .where(sql`synced_at IS NULL`),

@@ -295,6 +295,73 @@ describe("PG sync schema", () => {
       const after = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
       expect(after[0]?.syncedAt).toBe(syncedAt);
     });
+
+    it("auto-assigns monotonically increasing seq values", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+      const ids = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+
+      for (const id of ids) {
+        await db.insert(syncQueue).values({
+          id,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+        });
+      }
+
+      const rows = await Promise.all(
+        ids.map((id) =>
+          db
+            .select()
+            .from(syncQueue)
+            .where(eq(syncQueue.id, id))
+            .then((r) => r[0]),
+        ),
+      );
+
+      const seqs = rows.map((r) => r?.seq);
+      expect(seqs[0]).toBeDefined();
+      expect(seqs[1]).toBeDefined();
+      expect(seqs[2]).toBeDefined();
+      const [s0, s1, s2] = seqs as [number, number, number];
+      expect(s0).toBeLessThan(s1);
+      expect(s1).toBeLessThan(s2);
+    });
+
+    it("orders replay correctly via seq column", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      const id1 = crypto.randomUUID();
+      const id2 = crypto.randomUUID();
+      const id3 = crypto.randomUUID();
+
+      for (const id of [id1, id2, id3]) {
+        await db.insert(syncQueue).values({
+          id,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+        });
+      }
+
+      const rows = await db
+        .select()
+        .from(syncQueue)
+        .where(eq(syncQueue.systemId, systemId))
+        .orderBy(syncQueue.seq);
+
+      expect(rows.map((r) => r.id)).toEqual([id1, id2, id3]);
+    });
   });
 
   describe("sync_conflicts", () => {
