@@ -77,11 +77,13 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       last_active INTEGER,
       revoked INTEGER NOT NULL DEFAULT 0,
-      expires_at INTEGER
+      expires_at INTEGER,
+      CHECK (expires_at IS NULL OR expires_at > created_at)
     )
   `,
   sessionsIndexes: `
-    CREATE INDEX sessions_revoked_last_active_idx ON sessions (revoked, last_active)
+    CREATE INDEX sessions_revoked_last_active_idx ON sessions (revoked, last_active);
+    CREATE INDEX sessions_expires_at_idx ON sessions (expires_at)
   `,
   recoveryKeys: `
     CREATE TABLE recovery_keys (
@@ -91,6 +93,10 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       revoked_at INTEGER
     )
+  `,
+  recoveryKeysIndexes: `
+    CREATE INDEX recovery_keys_account_id_idx ON recovery_keys (account_id);
+    CREATE INDEX recovery_keys_revoked_at_idx ON recovery_keys (revoked_at)
   `,
   deviceTransferRequests: `
     CREATE TABLE device_transfer_requests (
@@ -102,7 +108,8 @@ export const SQLITE_DDL = {
       encrypted_key_material BLOB,
       created_at INTEGER NOT NULL,
       expires_at INTEGER NOT NULL,
-      CHECK (expires_at > created_at)
+      CHECK (expires_at > created_at),
+      CHECK (status != 'approved' OR encrypted_key_material IS NOT NULL)
     )
   `,
   deviceTransferRequestsIndexes: `
@@ -1292,6 +1299,7 @@ export function createSqliteAuthTables(client: InstanceType<typeof Database>): v
   client.exec(SQLITE_DDL.sessions);
   client.exec(SQLITE_DDL.sessionsIndexes);
   client.exec(SQLITE_DDL.recoveryKeys);
+  client.exec(SQLITE_DDL.recoveryKeysIndexes);
   client.exec(SQLITE_DDL.deviceTransferRequests);
   client.exec(SQLITE_DDL.deviceTransferRequestsIndexes);
 }

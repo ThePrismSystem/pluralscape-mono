@@ -41,6 +41,7 @@ export interface Session {
   readonly createdAt: UnixMillis;
   readonly lastActive: UnixMillis | null;
   readonly revoked: boolean;
+  readonly expiresAt: UnixMillis | null;
 }
 
 /** Device metadata embedded in a session. */
@@ -56,6 +57,7 @@ export interface RecoveryKey {
   readonly accountId: AccountId;
   readonly encryptedMasterKey: Uint8Array;
   readonly createdAt: UnixMillis;
+  readonly revokedAt: UnixMillis | null;
 }
 
 /** Input type for login. */

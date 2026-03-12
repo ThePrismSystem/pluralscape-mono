@@ -61,6 +61,10 @@ export const sessions = sqliteTable(
     index("sessions_revoked_idx").on(t.revoked),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
     index("sessions_expires_at_idx").on(t.expiresAt),
+    check(
+      "sessions_expires_at_check",
+      sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
+    ),
   ],
 );
 
@@ -104,5 +108,9 @@ export const deviceTransferRequests = sqliteTable(
     index("device_transfer_requests_status_expires_idx").on(t.status, t.expiresAt),
     check("device_transfer_requests_status_check", enumCheck(t.status, DEVICE_TRANSFER_STATUSES)),
     check("device_transfer_requests_expires_at_check", sql`${t.expiresAt} > ${t.createdAt}`),
+    check(
+      "device_transfer_requests_key_material_check",
+      sql`${t.status} != 'approved' OR ${t.encryptedKeyMaterial} IS NOT NULL`,
+    ),
   ],
 );

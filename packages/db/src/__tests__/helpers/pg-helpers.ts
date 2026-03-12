@@ -77,11 +77,13 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       last_active TIMESTAMPTZ,
       revoked BOOLEAN NOT NULL DEFAULT false,
-      expires_at TIMESTAMPTZ
+      expires_at TIMESTAMPTZ,
+      CHECK (expires_at IS NULL OR expires_at > created_at)
     )
   `,
   sessionsIndexes: `
-    CREATE INDEX sessions_revoked_last_active_idx ON sessions (revoked, last_active)
+    CREATE INDEX sessions_revoked_last_active_idx ON sessions (revoked, last_active);
+    CREATE INDEX sessions_expires_at_idx ON sessions (expires_at) WHERE expires_at IS NOT NULL
   `,
   recoveryKeys: `
     CREATE TABLE recovery_keys (
@@ -91,6 +93,10 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       revoked_at TIMESTAMPTZ
     )
+  `,
+  recoveryKeysIndexes: `
+    CREATE INDEX recovery_keys_account_id_idx ON recovery_keys (account_id);
+    CREATE INDEX recovery_keys_revoked_at_idx ON recovery_keys (revoked_at) WHERE revoked_at IS NULL
   `,
   deviceTransferRequests: `
     CREATE TABLE device_transfer_requests (
@@ -102,7 +108,8 @@ export const PG_DDL = {
       encrypted_key_material BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       expires_at TIMESTAMPTZ NOT NULL,
-      CHECK (expires_at > created_at)
+      CHECK (expires_at > created_at),
+      CHECK (status != 'approved' OR encrypted_key_material IS NOT NULL)
     )
   `,
   deviceTransferRequestsIndexes: `
@@ -1281,6 +1288,7 @@ export async function createPgAuthTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.sessions);
   await pgExec(client, PG_DDL.sessionsIndexes);
   await pgExec(client, PG_DDL.recoveryKeys);
+  await pgExec(client, PG_DDL.recoveryKeysIndexes);
   await pgExec(client, PG_DDL.deviceTransferRequests);
   await pgExec(client, PG_DDL.deviceTransferRequestsIndexes);
 }

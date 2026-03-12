@@ -99,6 +99,7 @@ jobs:
 
   migrations:
     name: Migration Freshness
+    needs: [lint, typecheck]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

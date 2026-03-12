@@ -8,6 +8,13 @@
       "when": 1773284677128,
       "tag": "0000_condemned_amazoness",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773286063887,
+      "tag": "0001_romantic_metal_master",
+      "breakpoints": true
     }
   ]
 }
