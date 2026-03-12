@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, text, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
-import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { enumCheck, nullPairCheck, versionCheck } from "../../helpers/check.js";
 import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -85,9 +85,6 @@ export const syncConflicts = pgTable(
       t.entityId,
     ),
     check("sync_conflicts_resolution_check", enumCheck(t.resolution, SYNC_RESOLUTIONS)),
-    check(
-      "sync_conflicts_resolution_resolved_at_check",
-      sql`(${t.resolution} IS NULL) = (${t.resolvedAt} IS NULL)`,
-    ),
+    check("sync_conflicts_resolution_resolved_at_check", nullPairCheck(t.resolution, t.resolvedAt)),
   ],
 );

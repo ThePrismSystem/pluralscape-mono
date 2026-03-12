@@ -29,3 +29,8 @@ export function versionCheck(versionCol: AnyColumn): SQL {
 export function archivableConsistencyCheck(archivedCol: AnyColumn, archivedAtCol: AnyColumn): SQL {
   return sql`CASE WHEN ${archivedCol} THEN (${archivedAtCol} IS NOT NULL) ELSE (${archivedAtCol} IS NULL) END`;
 }
+
+/** CHECK: two nullable columns must be NULL together or non-NULL together. */
+export function nullPairCheck(colA: AnyColumn, colB: AnyColumn): SQL {
+  return sql`(${colA} IS NULL) = (${colB} IS NULL)`;
+}

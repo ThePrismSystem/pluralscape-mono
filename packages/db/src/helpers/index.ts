@@ -36,5 +36,5 @@ export {
   ENTITY_TYPES,
   FRONTING_REPORT_FORMATS,
 } from "./enums.js";
-export { enumCheck } from "./check.js";
+export { enumCheck, versionCheck, archivableConsistencyCheck, nullPairCheck } from "./check.js";
 export type { DbAuditActor } from "./types.js";
