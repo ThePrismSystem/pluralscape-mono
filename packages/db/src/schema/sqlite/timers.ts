@@ -1,7 +1,16 @@
-import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { versionCheck } from "../../helpers/check.js";
 
 import { systems } from "./systems.js";
 
@@ -24,6 +33,7 @@ export const timerConfigs = sqliteTable(
   (t) => [
     index("timer_configs_system_id_idx").on(t.systemId),
     unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
+    check("timer_configs_version_check", versionCheck(t.version)),
   ],
 );
 

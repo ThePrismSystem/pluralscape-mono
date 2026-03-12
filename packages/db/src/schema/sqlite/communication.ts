@@ -11,7 +11,7 @@ import {
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
+import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
 import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -43,6 +43,11 @@ export const channels = sqliteTable(
     }).onDelete("set null"),
     check("channels_type_check", enumCheck(t.type, CHANNEL_TYPES)),
     check("channels_sort_order_check", sql`${t.sortOrder} >= 0`),
+    check("channels_version_check", versionCheck(t.version)),
+    check(
+      "channels_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -75,6 +80,11 @@ export const messages = sqliteTable(
       columns: [t.replyToId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
+    check("messages_version_check", versionCheck(t.version)),
+    check(
+      "messages_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -94,6 +104,7 @@ export const boardMessages = sqliteTable(
   (t) => [
     index("board_messages_system_id_idx").on(t.systemId),
     check("board_messages_sort_order_check", sql`${t.sortOrder} >= 0`),
+    check("board_messages_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -117,6 +128,8 @@ export const notes = sqliteTable(
       columns: [t.memberId],
       foreignColumns: [members.id],
     }).onDelete("set null"),
+    check("notes_version_check", versionCheck(t.version)),
+    check("notes_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
   ],
 );
 
@@ -146,6 +159,7 @@ export const polls = sqliteTable(
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
+    check("polls_version_check", versionCheck(t.version)),
   ],
 );
 

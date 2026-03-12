@@ -1,10 +1,11 @@
 ---
 # db-gt84
 title: Referential integrity and constraint closure
-status: todo
+status: in-progress
 type: feature
+priority: normal
 created_at: 2026-03-11T19:39:32Z
-updated_at: 2026-03-11T19:39:32Z
+updated_at: 2026-03-11T23:50:03Z
 parent: db-2je4
 ---
 

@@ -12,7 +12,7 @@ import {
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
+import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
 import { FIELD_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -40,6 +40,11 @@ export const fieldDefinitions = pgTable(
     index("field_definitions_system_id_idx").on(t.systemId),
     unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
+    check("field_definitions_version_check", versionCheck(t.version)),
+    check(
+      "field_definitions_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -66,6 +71,7 @@ export const fieldValues = pgTable(
       columns: [t.memberId],
       foreignColumns: [members.id],
     }).onDelete("set null"),
+    check("field_values_version_check", versionCheck(t.version)),
   ],
 );
 

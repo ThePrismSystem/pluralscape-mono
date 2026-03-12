@@ -10,7 +10,7 @@ import {
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
+import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -35,6 +35,7 @@ export const relationships = sqliteTable(
   (t) => [
     index("relationships_system_id_idx").on(t.systemId),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
+    check("relationships_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -61,6 +62,7 @@ export const subsystems = sqliteTable(
       foreignColumns: [t.id],
     }).onDelete("set null"),
     check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
+    check("subsystems_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -78,6 +80,7 @@ export const sideSystems = sqliteTable(
   (t) => [
     index("side_systems_system_id_idx").on(t.systemId),
     unique("side_systems_id_system_id_unique").on(t.id, t.systemId),
+    check("side_systems_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -97,6 +100,7 @@ export const layers = sqliteTable(
   (t) => [
     index("layers_system_id_idx").on(t.systemId),
     unique("layers_id_system_id_unique").on(t.id, t.systemId),
+    check("layers_version_check", versionCheck(t.version)),
   ],
 );
 

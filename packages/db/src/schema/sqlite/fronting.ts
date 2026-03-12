@@ -3,7 +3,7 @@ import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
+import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -37,6 +37,7 @@ export const frontingSessions = sqliteTable(
     ),
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
+    check("fronting_sessions_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -69,7 +70,14 @@ export const customFronts = sqliteTable(
     ...versioned(),
     ...archivable(),
   },
-  (t) => [index("custom_fronts_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("custom_fronts_system_id_idx").on(t.systemId),
+    check("custom_fronts_version_check", versionCheck(t.version)),
+    check(
+      "custom_fronts_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
+  ],
 );
 
 export const frontingComments = sqliteTable(
@@ -91,5 +99,6 @@ export const frontingComments = sqliteTable(
       columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
     }).onDelete("cascade"),
+    check("fronting_comments_version_check", versionCheck(t.version)),
   ],
 );

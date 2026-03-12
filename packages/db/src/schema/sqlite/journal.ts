@@ -1,7 +1,8 @@
-import { foreignKey, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { check, foreignKey, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
+import { archivableConsistencyCheck, versionCheck } from "../../helpers/check.js";
 
 import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
@@ -26,6 +27,11 @@ export const journalEntries = sqliteTable(
       columns: [t.frontingSessionId],
       foreignColumns: [frontingSessions.id],
     }).onDelete("set null"),
+    check("journal_entries_version_check", versionCheck(t.version)),
+    check(
+      "journal_entries_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -45,5 +51,10 @@ export const wikiPages = sqliteTable(
   (t) => [
     index("wiki_pages_system_id_idx").on(t.systemId),
     uniqueIndex("wiki_pages_system_id_slug_idx").on(t.systemId, t.slug),
+    check("wiki_pages_version_check", versionCheck(t.version)),
+    check(
+      "wiki_pages_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );

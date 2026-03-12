@@ -3,7 +3,7 @@ import { check, foreignKey, index, jsonb, pgTable, unique, varchar } from "drizz
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
+import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -38,6 +38,7 @@ export const frontingSessions = pgTable(
     ),
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
+    check("fronting_sessions_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -70,7 +71,14 @@ export const customFronts = pgTable(
     ...versioned(),
     ...archivable(),
   },
-  (t) => [index("custom_fronts_system_id_idx").on(t.systemId)],
+  (t) => [
+    index("custom_fronts_system_id_idx").on(t.systemId),
+    check("custom_fronts_version_check", versionCheck(t.version)),
+    check(
+      "custom_fronts_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
+  ],
 );
 
 export const frontingComments = pgTable(
@@ -92,5 +100,6 @@ export const frontingComments = pgTable(
       columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
     }).onDelete("cascade"),
+    check("fronting_comments_version_check", versionCheck(t.version)),
   ],
 );

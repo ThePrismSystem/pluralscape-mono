@@ -2,7 +2,7 @@ import { boolean, check, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-co
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
+import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { PK_SYNC_DIRECTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -28,5 +28,6 @@ export const pkBridgeState = pgTable(
   (t) => [
     uniqueIndex("pk_bridge_state_system_id_idx").on(t.systemId),
     check("pk_bridge_state_sync_direction_check", enumCheck(t.syncDirection, PK_SYNC_DIRECTIONS)),
+    check("pk_bridge_state_version_check", versionCheck(t.version)),
   ],
 );

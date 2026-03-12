@@ -55,7 +55,8 @@ export const PG_DDL = {
       kdf_salt VARCHAR(255),
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   authKeys: `
@@ -111,7 +112,8 @@ export const PG_DDL = {
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   systemsIndexes: `
@@ -127,7 +129,9 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   memberPhotos: `
@@ -140,7 +144,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE,
+      CHECK (version >= 1)
     )
   `,
   // Privacy
@@ -152,7 +157,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   bucketsIndexes: `
@@ -198,7 +204,8 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (system_id, friend_system_id),
       UNIQUE (id, system_id),
-      CHECK (system_id != friend_system_id)
+      CHECK (system_id != friend_system_id),
+      CHECK (version >= 1)
     )
   `,
   friendConnectionsIndexes: `
@@ -241,7 +248,8 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       CHECK (end_time IS NULL OR end_time > start_time),
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   frontingSessionsIndexes: `
@@ -269,7 +277,9 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
-      archived_at TIMESTAMPTZ
+      archived_at TIMESTAMPTZ,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   customFrontsIndexes: `
@@ -285,7 +295,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE,
+      CHECK (version >= 1)
     )
   `,
   frontingCommentsIndexes: `
@@ -303,7 +314,8 @@ export const PG_DDL = {
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   relationshipsIndexes: `
@@ -322,7 +334,8 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (id, system_id),
-      FOREIGN KEY (parent_subsystem_id) REFERENCES subsystems(id) ON DELETE SET NULL
+      FOREIGN KEY (parent_subsystem_id) REFERENCES subsystems(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   subsystemsIndexes: `
@@ -336,7 +349,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   sideSystemsIndexes: `
@@ -351,7 +365,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   layersIndexes: `
@@ -464,7 +479,9 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   fieldDefinitionsIndexes: `
@@ -481,7 +498,8 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       FOREIGN KEY (field_definition_id, system_id) REFERENCES field_definitions(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   fieldValuesIndexes: `
@@ -501,7 +519,8 @@ export const PG_DDL = {
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   // System Settings
@@ -515,7 +534,8 @@ export const PG_DDL = {
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   // API Keys
@@ -586,7 +606,8 @@ export const PG_DDL = {
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   safeModeContentIndexes: `
@@ -607,7 +628,9 @@ export const PG_DDL = {
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
-      FOREIGN KEY (parent_id) REFERENCES channels(id) ON DELETE SET NULL
+      FOREIGN KEY (parent_id) REFERENCES channels(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   channelsIndexes: `
@@ -629,7 +652,9 @@ export const PG_DDL = {
       archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (channel_id, system_id) REFERENCES channels(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL
+      FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   messagesIndexes: `
@@ -646,7 +671,8 @@ export const PG_DDL = {
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   boardMessagesIndexes: `
@@ -663,7 +689,9 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
-      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   notesIndexes: `
@@ -687,7 +715,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   pollsIndexes: `
@@ -737,7 +766,9 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
-      FOREIGN KEY (fronting_session_id) REFERENCES fronting_sessions(id) ON DELETE SET NULL
+      FOREIGN KEY (fronting_session_id) REFERENCES fronting_sessions(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   journalEntriesIndexes: `
@@ -754,7 +785,9 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
-      archived_at TIMESTAMPTZ
+      archived_at TIMESTAMPTZ,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   wikiPagesIndexes: `
@@ -777,7 +810,9 @@ export const PG_DDL = {
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
-      FOREIGN KEY (parent_group_id) REFERENCES groups(id) ON DELETE SET NULL
+      FOREIGN KEY (parent_group_id) REFERENCES groups(id) ON DELETE SET NULL,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   groupsIndexes: `
@@ -809,7 +844,8 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (id, system_id),
-      FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL
+      FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   innerworldRegionsIndexes: `
@@ -824,7 +860,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL
+      FOREIGN KEY (region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
+      CHECK (version >= 1)
     )
   `,
   innerworldEntitiesIndexes: `
@@ -837,7 +874,8 @@ export const PG_DDL = {
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   // PK Bridge
@@ -853,7 +891,8 @@ export const PG_DDL = {
       last_sync_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   pkBridgeStateIndexes: `
@@ -985,7 +1024,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (id, system_id)
+      UNIQUE (id, system_id),
+      CHECK (version >= 1)
     )
   `,
   timerConfigsIndexes: `
@@ -1075,9 +1115,10 @@ export const PG_DDL = {
       entity_type VARCHAR(255) NOT NULL,
       entity_id VARCHAR(255) NOT NULL,
       automerge_heads BYTEA,
-      version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+      version INTEGER NOT NULL DEFAULT 1,
       created_at TIMESTAMPTZ NOT NULL,
-      last_synced_at TIMESTAMPTZ
+      last_synced_at TIMESTAMPTZ,
+      CHECK (version >= 1)
     )
   `,
   syncDocumentsIndexes: `

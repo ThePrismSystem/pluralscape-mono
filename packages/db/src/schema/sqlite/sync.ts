@@ -1,8 +1,7 @@
-import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
+import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -29,7 +28,7 @@ export const syncDocuments = sqliteTable(
       t.entityType,
       t.entityId,
     ),
-    check("sync_documents_version_check", sql`${t.version} >= 1`),
+    check("sync_documents_version_check", versionCheck(t.version)),
   ],
 );
 

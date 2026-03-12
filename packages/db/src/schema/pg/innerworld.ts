@@ -1,7 +1,8 @@
-import { foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { check, foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
+import { versionCheck } from "../../helpers/check.js";
 
 import { systems } from "./systems.js";
 
@@ -25,6 +26,7 @@ export const innerworldRegions = pgTable(
       columns: [t.parentRegionId],
       foreignColumns: [t.id],
     }).onDelete("set null"),
+    check("innerworld_regions_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -47,14 +49,19 @@ export const innerworldEntities = pgTable(
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
+    check("innerworld_entities_version_check", versionCheck(t.version)),
   ],
 );
 
-export const innerworldCanvas = pgTable("innerworld_canvas", {
-  systemId: varchar("system_id", { length: 255 })
-    .primaryKey()
-    .references(() => systems.id, { onDelete: "cascade" }),
-  encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
-  ...timestamps(),
-  ...versioned(),
-});
+export const innerworldCanvas = pgTable(
+  "innerworld_canvas",
+  {
+    systemId: varchar("system_id", { length: 255 })
+      .primaryKey()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...timestamps(),
+    ...versioned(),
+  },
+  (t) => [check("innerworld_canvas_version_check", versionCheck(t.version))],
+);

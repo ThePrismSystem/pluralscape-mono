@@ -15,3 +15,17 @@ export function enumCheck(column: AnyColumn, values: readonly string[]): SQL {
   const params = values.map((v) => sql`${v}`);
   return sql`${column} IS NULL OR ${column} IN (${sql.join(params, sql`, `)})`;
 }
+
+/** CHECK constraint: version >= 1. Pair with `versioned()` helper columns. */
+export function versionCheck(versionCol: AnyColumn): SQL {
+  return sql`${versionCol} >= 1`;
+}
+
+/**
+ * CHECK constraint: archived flag and archivedAt timestamp must be consistent.
+ * `archived = true` iff `archivedAt IS NOT NULL`.
+ * Pair with `archivable()` helper columns.
+ */
+export function archivableConsistencyCheck(archivedCol: AnyColumn, archivedAtCol: AnyColumn): SQL {
+  return sql`(${archivedCol} = true) = (${archivedAtCol} IS NOT NULL)`;
+}

@@ -3,7 +3,7 @@ import { check, index, integer, pgTable, primaryKey, unique, varchar } from "dri
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
+import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -24,6 +24,7 @@ export const buckets = pgTable(
   (t) => [
     index("buckets_system_id_idx").on(t.systemId),
     unique("buckets_id_system_id_unique").on(t.id, t.systemId),
+    check("buckets_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -93,6 +94,7 @@ export const friendConnections = pgTable(
     unique("friend_connections_id_system_id_unique").on(t.id, t.systemId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.systemId} != ${t.friendSystemId}`),
+    check("friend_connections_version_check", versionCheck(t.version)),
   ],
 );
 

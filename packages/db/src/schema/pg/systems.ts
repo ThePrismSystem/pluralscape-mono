@@ -1,7 +1,8 @@
-import { index, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
+import { versionCheck } from "../../helpers/check.js";
 
 import { accounts } from "./auth.js";
 
@@ -18,5 +19,8 @@ export const systems = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [index("systems_account_id_idx").on(t.accountId)],
+  (t) => [
+    index("systems_account_id_idx").on(t.accountId),
+    check("systems_version_check", versionCheck(t.version)),
+  ],
 );

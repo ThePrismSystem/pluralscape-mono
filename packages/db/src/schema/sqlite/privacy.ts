@@ -11,7 +11,7 @@ import {
 
 import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
+import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -32,6 +32,7 @@ export const buckets = sqliteTable(
   (t) => [
     index("buckets_system_id_idx").on(t.systemId),
     unique("buckets_id_system_id_unique").on(t.id, t.systemId),
+    check("buckets_version_check", versionCheck(t.version)),
   ],
 );
 
@@ -98,6 +99,7 @@ export const friendConnections = sqliteTable(
     unique("friend_connections_id_system_id_unique").on(t.id, t.systemId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.systemId} != ${t.friendSystemId}`),
+    check("friend_connections_version_check", versionCheck(t.version)),
   ],
 );
 
