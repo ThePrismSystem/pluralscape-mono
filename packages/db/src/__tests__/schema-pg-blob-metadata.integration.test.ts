@@ -223,6 +223,23 @@ describe("PG blob_metadata schema", () => {
     ).rejects.toThrow();
   });
 
+  it("accepts size_bytes at exactly 10 GB", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const now = Date.now();
+
+    await db.insert(blobMetadata).values({
+      id: crypto.randomUUID(),
+      systemId,
+      storageKey: `blobs/${crypto.randomUUID()}`,
+      sizeBytes: 10737418240,
+      encryptionTier: 1,
+      purpose: "avatar",
+      checksum: "sha256:test",
+      uploadedAt: now,
+    });
+  });
+
   it("rejects size_bytes exceeding 10 GB", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);

@@ -299,6 +299,7 @@ export const JOB_TYPES = [
   "bucket-key-rotation",
   "report-generate",
   "sync-queue-cleanup",
+  "audit-log-cleanup",
 ] as const satisfies readonly JobType[];
 export const JOB_STATUSES = [
   "pending",

@@ -21,7 +21,6 @@ CREATE TABLE `__new_messages` (
 INSERT INTO `__new_messages`("id", "channel_id", "system_id", "reply_to_id", "timestamp", "edited_at", "encrypted_data", "created_at", "updated_at", "version", "archived", "archived_at") SELECT "id", "channel_id", "system_id", "reply_to_id", "timestamp", "edited_at", "encrypted_data", "created_at", "updated_at", "version", "archived", "archived_at" FROM `messages`;--> statement-breakpoint
 DROP TABLE `messages`;--> statement-breakpoint
 ALTER TABLE `__new_messages` RENAME TO `messages`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE INDEX `messages_channel_id_timestamp_idx` ON `messages` (`channel_id`,`timestamp`);--> statement-breakpoint
 CREATE INDEX `messages_system_id_idx` ON `messages` (`system_id`);--> statement-breakpoint
 CREATE INDEX `messages_reply_to_id_idx` ON `messages` (`reply_to_id`);--> statement-breakpoint
@@ -233,4 +232,5 @@ DROP TABLE `blob_metadata`;--> statement-breakpoint
 ALTER TABLE `__new_blob_metadata` RENAME TO `blob_metadata`;--> statement-breakpoint
 CREATE INDEX `blob_metadata_system_id_purpose_idx` ON `blob_metadata` (`system_id`,`purpose`);--> statement-breakpoint
 CREATE UNIQUE INDEX `blob_metadata_storage_key_idx` ON `blob_metadata` (`storage_key`);--> statement-breakpoint
-CREATE UNIQUE INDEX `blob_metadata_id_system_id_unique` ON `blob_metadata` (`id`,`system_id`);
+CREATE UNIQUE INDEX `blob_metadata_id_system_id_unique` ON `blob_metadata` (`id`,`system_id`);--> statement-breakpoint
+PRAGMA foreign_keys=ON;

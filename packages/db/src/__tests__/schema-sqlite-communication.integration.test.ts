@@ -302,6 +302,31 @@ describe("SQLite communication schema", () => {
           .run(crypto.randomUUID(), channelId, systemId, now, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("allows replyToId referencing nonexistent message (no self-FK)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const channelId = insertChannel(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(messages)
+        .values({
+          id,
+          channelId,
+          systemId,
+          timestamp: now,
+          replyToId: "nonexistent-message-id",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(messages).where(eq(messages.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.replyToId).toBe("nonexistent-message-id");
+    });
   });
 
   describe("board_messages", () => {

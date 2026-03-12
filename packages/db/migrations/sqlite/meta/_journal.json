@@ -71,6 +71,13 @@
       "when": 1773346962942,
       "tag": "0009_thin_blindfold",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1773348475741,
+      "tag": "0010_audit-log-cleanup-job-type",
+      "breakpoints": true
     }
   ]
 }

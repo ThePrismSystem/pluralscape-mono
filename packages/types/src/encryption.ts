@@ -306,7 +306,8 @@ export type ClientNote = Note;
 export interface ServerFieldDefinition extends AuditMetadata {
   readonly id: FieldDefinitionId;
   readonly systemId: SystemId;
-  readonly fieldType: FieldType;
+  /** Nullable in DB — may be null before the client sets a type. */
+  readonly fieldType: FieldType | null;
   readonly required: boolean;
   readonly sortOrder: number;
   readonly encryptedData: EncryptedBlob;

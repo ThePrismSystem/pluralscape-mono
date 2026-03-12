@@ -13,7 +13,7 @@ import {
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH, MAX_BLOB_SIZE_BYTES } from "../../helpers/constants.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
@@ -52,7 +52,10 @@ export const blobMetadata = pgTable(
     }).onDelete("set null"),
     check("blob_metadata_purpose_check", enumCheck(t.purpose, BLOB_PURPOSES)),
     check("blob_metadata_size_bytes_check", sql`${t.sizeBytes} > 0`),
-    check("blob_metadata_size_bytes_max_check", sql`${t.sizeBytes} <= 10737418240`),
+    check(
+      "blob_metadata_size_bytes_max_check",
+      sql`${t.sizeBytes} <= ${sql.raw(String(MAX_BLOB_SIZE_BYTES))}`,
+    ),
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
   ],
 );
