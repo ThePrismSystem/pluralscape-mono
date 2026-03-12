@@ -1,10 +1,11 @@
 ---
 # db-2nr7
 title: Database schema hardening and optimization
-status: todo
+status: completed
 type: epic
+priority: normal
 created_at: 2026-03-11T19:40:12Z
-updated_at: 2026-03-11T19:40:12Z
+updated_at: 2026-03-12T11:58:54Z
 parent: ps-vtws
 ---
 
@@ -57,3 +58,5 @@ Deferred DB work — performance indexes, non-critical encryption, evaluations, 
 
 - db-4lpt: Add TTL cleanup for webhook_deliveries terminal states
 - db-459d: Add missing Argon2id KDF salt column to accounts
+
+## Summary of Changes\n\nAll 29 child beans completed across all categories: performance indexes (10), non-critical encryption (5), evaluations and documentation (7), sync queue fixes (3), PG search (1), and misc (2). Database schema is hardened and optimized for M1.
