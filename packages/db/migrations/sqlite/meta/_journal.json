@@ -15,6 +15,13 @@
       "when": 1773286069232,
       "tag": "0001_giant_wallflower",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773291360891,
+      "tag": "0002_easy_namorita",
+      "breakpoints": true
     }
   ]
 }
