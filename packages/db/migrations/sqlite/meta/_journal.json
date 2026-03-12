@@ -50,6 +50,13 @@
       "when": 1773314778611,
       "tag": "0006_ambitious_reptil",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1773341644485,
+      "tag": "0007_dusty_paladin",
+      "breakpoints": true
     }
   ]
 }
