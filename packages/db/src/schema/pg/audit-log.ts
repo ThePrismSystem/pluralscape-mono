@@ -1,4 +1,4 @@
-import { check, index, jsonb, pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { check, index, jsonb, pgTable, primaryKey, text, varchar } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -13,10 +13,13 @@ import type { AuditEventType } from "@pluralscape/types";
 
 export type { DbAuditActor } from "../../helpers/types.js";
 
+// NOTE: The production migration adds PARTITION BY RANGE ("timestamp") which Drizzle
+// cannot express. Running drizzle-kit generate for this table requires manual verification.
+// See ADR 017 and migration 0005 for details.
 export const auditLog = pgTable(
   "audit_log",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
     /** Denormalized for query performance — avoids joining through systems to get account. */
     accountId: varchar("account_id", { length: ID_MAX_LENGTH }).references(() => accounts.id, {
       onDelete: "set null",
@@ -33,6 +36,7 @@ export const auditLog = pgTable(
     detail: text("detail"),
   },
   (t) => [
+    primaryKey({ columns: [t.id, t.timestamp] }),
     index("audit_log_account_timestamp_idx").on(t.accountId, t.timestamp),
     index("audit_log_system_timestamp_idx").on(t.systemId, t.timestamp),
     index("audit_log_event_type_idx").on(t.eventType),

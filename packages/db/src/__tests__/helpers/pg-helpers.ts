@@ -598,7 +598,7 @@ export const PG_DDL = {
   // Audit Log
   auditLog: `
     CREATE TABLE audit_log (
-      id VARCHAR(50) PRIMARY KEY,
+      id VARCHAR(50) NOT NULL,
       account_id VARCHAR(50) REFERENCES accounts(id) ON DELETE SET NULL,
       system_id VARCHAR(50) REFERENCES systems(id) ON DELETE SET NULL,
       event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown')),
@@ -606,7 +606,8 @@ export const PG_DDL = {
       ip_address VARCHAR(255),
       user_agent VARCHAR(1024),
       actor JSONB NOT NULL,
-      detail TEXT
+      detail TEXT,
+      PRIMARY KEY (id, timestamp)
     )
   `,
   auditLogIndexes: `
@@ -1251,6 +1252,21 @@ export const PG_DDL = {
   frontingReportsIndexes: `
     CREATE INDEX fronting_reports_system_id_idx ON fronting_reports (system_id)
   `,
+  // Search Index (PGlite test DDL — search_vector is a plain nullable column, not GENERATED)
+  searchIndex: `
+    CREATE TABLE IF NOT EXISTS search_index (
+      system_id VARCHAR(255) NOT NULL,
+      entity_type VARCHAR(50) NOT NULL,
+      entity_id VARCHAR(255) NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      content TEXT NOT NULL DEFAULT '',
+      search_vector tsvector,
+      PRIMARY KEY (system_id, entity_type, entity_id)
+    )
+  `,
+  searchIndexIndexes: `
+    CREATE INDEX IF NOT EXISTS search_index_system_entity_type_idx ON search_index (system_id, entity_type)
+  `,
 } as const;
 
 export async function pgExec(client: PGlite, sql: string): Promise<void> {
@@ -1618,6 +1634,12 @@ export async function createPgAnalyticsTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.frontingReports);
   await pgExec(client, PG_DDL.frontingReportsIndexes);
+}
+
+export async function createPgSearchIndexTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.searchIndex);
+  await pgExec(client, PG_DDL.searchIndexIndexes);
 }
 
 export async function createPgKeyRotationTables(client: PGlite): Promise<void> {

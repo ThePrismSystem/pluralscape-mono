@@ -54,6 +54,18 @@ export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
 export { importJobs, exportRequests, accountPurgeRequests } from "./import-export.js";
 export { syncDocuments, syncQueue, syncConflicts } from "./sync.js";
 export { bucketKeyRotations, bucketRotationItems } from "./key-rotation.js";
+export {
+  SEARCH_INDEX_DDL,
+  SEARCH_INDEX_INDEXES_DDL,
+  createSearchIndex,
+  createSearchIndexIndexes,
+  dropSearchIndex,
+  insertSearchEntry,
+  deleteSearchEntry,
+  rebuildSearchIndex,
+  searchEntries,
+} from "./search.js";
+export type { PgSearchIndexEntry, PgSearchIndexResult, PgSearchOptions } from "./search.js";
 
 import type { frontingReports } from "./analytics.js";
 import type { apiKeys } from "./api-keys.js";

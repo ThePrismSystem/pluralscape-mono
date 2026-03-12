@@ -9,7 +9,7 @@ Pluralscape supports two database backends: **PostgreSQL** (cloud/hosted) and **
 | Row-Level Security (RLS) | Yes                                                                         | No                                    | PG uses `set_config` session variables; SQLite uses WHERE clauses |
 | Native JSONB             | Yes                                                                         | No                                    | SQLite stores JSON as TEXT with application-level parsing         |
 | Array columns            | Yes                                                                         | No                                    | SQLite uses JSON arrays or junction tables                        |
-| pgcrypto extension       | Yes                                                                         | No                                    | Defense-in-depth encryption at rest                               |
+| pgcrypto extension       | Yes (enabled in migration)                                                  | No                                    | Defense-in-depth encryption at rest (see ADR 018)                 |
 | Native enum types        | Yes                                                                         | No                                    | Both use varchar + CHECK constraints for portability              |
 | Full-text search         | tsvector/tsquery (server-side)                                              | FTS5 virtual tables (client-side)     | Different APIs, same conceptual role                              |
 | Background jobs          | BullMQ + Valkey (server-side)                                               | SQLite `jobs` table (client-side)     | See ADR 010                                                       |
@@ -147,13 +147,13 @@ Duration calculation differs by dialect:
 
 Both return milliseconds as an integer.
 
-## SQLite-Only Features
+## Full-Text Search
 
-Some features exist only on SQLite because they serve the offline/client-side use case:
+Both dialects support full-text search with different implementations:
 
-### FTS5 Search Index
+### SQLite: FTS5
 
-Client-side full-text search uses an FTS5 virtual table. Drizzle has no FTS5 support, so this uses raw SQL with typed wrappers.
+Client-side full-text search uses an FTS5 virtual table. Single-tenant (no `system_id`). Drizzle has no FTS5 support, so this uses raw SQL with typed wrappers.
 
 ```typescript
 import {
@@ -172,7 +172,37 @@ insertSearchEntry(db, {
 const results = searchEntries(db, "search query", { entityType: "member", limit: 20 });
 ```
 
-On PG, full-text search would use tsvector/tsquery at the API layer (not yet implemented).
+### PostgreSQL: tsvector/tsquery
+
+Server-side full-text search using PG native tsvector/tsquery. Multi-tenant (`system_id` scoped). Uses a GENERATED tsvector column with weighted fields (title=A, content=B) and GIN indexing.
+
+**Self-hosted only**: the `search_index` table stores plaintext for searchability. Hosted/cloud deployments must not populate it — search remains client-side via SQLite FTS5. See ADR 018 for the trust boundary.
+
+```typescript
+import {
+  createSearchIndex,
+  insertSearchEntry,
+  searchEntries,
+} from "@pluralscape/db/schema/pg/search";
+
+await createSearchIndex(db);
+await insertSearchEntry(db, {
+  systemId: "sys-1",
+  entityType: "member",
+  entityId: "...",
+  title: "Name",
+  content: "Bio text",
+});
+const results = await searchEntries(db, "sys-1", "search query", {
+  entityType: "member",
+  limit: 20,
+});
+// results include: entityType, entityId, title, content, rank, headline
+```
+
+## SQLite-Only Features
+
+Some features exist only on SQLite because they serve the offline/client-side use case:
 
 ### Job Queue Table
 
