@@ -1027,7 +1027,7 @@ export const PG_DDL = {
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       storage_key VARCHAR(1024) NOT NULL,
-      mime_type VARCHAR(50),
+      mime_type VARCHAR(255),
       size_bytes BIGINT NOT NULL,
       encryption_tier INTEGER NOT NULL,
       bucket_id VARCHAR(50),

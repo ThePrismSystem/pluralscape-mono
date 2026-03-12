@@ -214,6 +214,50 @@ describe("SQLite import-export schema", () => {
       ).toThrow();
     });
 
+    it("accepts progressPercent at 0", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(importJobs)
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralscape",
+          progressPercent: 0,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
+      expect(rows[0]?.progressPercent).toBe(0);
+    });
+
+    it("accepts progressPercent at 100", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(importJobs)
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralscape",
+          progressPercent: 100,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
+      expect(rows[0]?.progressPercent).toBe(100);
+    });
+
     it("rejects progressPercent above 100", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);

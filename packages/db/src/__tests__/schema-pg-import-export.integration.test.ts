@@ -122,6 +122,46 @@ describe("PG import-export schema", () => {
       ).rejects.toThrow();
     });
 
+    it("accepts progressPercent at 0", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "pluralscape",
+        progressPercent: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows[0]?.progressPercent).toBe(0);
+    });
+
+    it("accepts progressPercent at 100", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "pluralscape",
+        progressPercent: 100,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows[0]?.progressPercent).toBe(100);
+    });
+
     it("rejects progressPercent above 100", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);

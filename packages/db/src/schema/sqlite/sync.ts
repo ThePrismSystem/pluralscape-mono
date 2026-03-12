@@ -33,7 +33,7 @@ export const syncDocuments = sqliteTable(
     check("sync_documents_version_check", versionCheck(t.version)),
     check(
       "sync_documents_automerge_heads_size_check",
-      sql`${t.automergeHeads} IS NULL OR length(${t.automergeHeads}) <= ${sql.raw(String(MAX_AUTOMERGE_HEADS_BYTES))}`,
+      sql`${t.automergeHeads} IS NULL OR length(${t.automergeHeads}) <= ${MAX_AUTOMERGE_HEADS_BYTES}`,
     ),
   ],
 );

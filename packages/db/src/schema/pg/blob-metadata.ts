@@ -29,7 +29,7 @@ export const blobMetadata = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     storageKey: varchar("storage_key", { length: 1024 }).notNull(),
-    mimeType: varchar("mime_type", { length: ENUM_MAX_LENGTH }),
+    mimeType: varchar("mime_type", { length: 255 }),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     encryptionTier: integer("encryption_tier").notNull(),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH }),
