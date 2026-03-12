@@ -273,7 +273,7 @@ export const SQLITE_DDL = {
   frontingSessionsIndexes: `
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
     CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
-    CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE "fronting_sessions"."end_time" IS NULL
+    CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL
   `,
   switches: `
     CREATE TABLE switches (

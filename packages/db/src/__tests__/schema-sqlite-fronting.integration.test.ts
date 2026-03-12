@@ -921,4 +921,17 @@ describe("SQLite fronting schema", () => {
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
+
+  describe("fronting_sessions indexes", () => {
+    it("creates partial index for active fronters", () => {
+      const indexes = client
+        .prepare(
+          `SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'fronting_sessions'`,
+        )
+        .all() as Array<{ name: string; sql: string | null }>;
+      const activeIdx = indexes.find((i) => i.name === "fronting_sessions_active_idx");
+      expect(activeIdx).toBeDefined();
+      expect(activeIdx?.sql).toMatch(/WHERE.*end_time IS NULL/i);
+    });
+  });
 });
