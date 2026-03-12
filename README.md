@@ -6,30 +6,40 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestone 1 (Data Layer).**
+**Active development — Milestone 1 (Data Layer) nearing completion.**
 
-The foundation layer is well underway with domain types, database schemas, and encryption primitives implemented and tested. Milestone 0 (infrastructure and governance) is complete.
+Milestone 0 (infrastructure and governance) is complete. Within Milestone 1, the following epics are done:
+
+- Domain types (`@pluralscape/types`) — 30+ domain type modules with Zod validators and branded IDs
+- Database schema (`@pluralscape/db`) — 40+ tables across PostgreSQL and SQLite dual-dialect, with RLS, constraint closure, and encryption contract hardening
+- Database schema hardening — 29 optimization tasks covering indexes, encryption, sync queue fixes, and full-text search
+- Test framework setup — Vitest workspace with coverage enforcement
+- Encryption primitives (`@pluralscape/crypto`) — master key derivation, symmetric encryption, identity keypairs, libsodium cross-platform bindings
+- Sync proof-of-concept (`@pluralscape/sync`) — encrypted CRDT relay with Automerge
+
+Remaining M1 work: encryption layer completion (key recovery, per-bucket keys, rotation), sync protocol design, blob storage, background jobs, i18n, and nomenclature system.
 
 See the full [milestone roadmap](docs/planning/milestones.md) and [feature specification](docs/planning/features.md).
 
 ## Test Suite
 
-818 tests across 61 test files — all passing.
+2,338 tests across 132 test files — all passing.
 
 | Metric     | Coverage |
 | ---------- | -------- |
-| Statements | 96.58%   |
-| Branches   | 93.75%   |
-| Functions  | 95.91%   |
-| Lines      | 96.58%   |
+| Statements | 95.01%   |
+| Branches   | 83.77%   |
+| Functions  | 98.48%   |
+| Lines      | 94.97%   |
 
 Coverage by package:
 
-| Package               | Statements | Notes                                      |
-| --------------------- | ---------- | ------------------------------------------ |
-| `@pluralscape/crypto` | 100%       | Full coverage across all crypto operations |
-| `@pluralscape/db`     | 89-100%    | Schema and helpers at 100%, columns at 89% |
-| `@pluralscape/types`  | 100%       | Runtime validators fully covered           |
+| Package               | Statements | Notes                                       |
+| --------------------- | ---------- | ------------------------------------------- |
+| `@pluralscape/types`  | 100%       | Runtime validators fully covered            |
+| `@pluralscape/db`     | 100%       | Schema, helpers, RLS, and views             |
+| `@pluralscape/crypto` | 97.91%     | Full coverage across all crypto operations  |
+| `@pluralscape/sync`   | 96.73%     | Encrypted CRDT relay and session management |
 
 ```bash
 pnpm test              # Run all tests
@@ -69,20 +79,25 @@ tooling/
 
 ## Tech Stack
 
-| Layer        | Technology                                      | Decision Record                                |
-| ------------ | ----------------------------------------------- | ---------------------------------------------- |
-| Frontend     | Expo (React Native) + TypeScript                | [ADR 002](docs/adr/002-frontend-framework.md)  |
-| API          | Hono on Bun + tRPC (internal) + REST (public)   | [ADR 003](docs/adr/003-api-framework.md)       |
-| Database     | PostgreSQL + Drizzle ORM / SQLite (self-hosted) | [ADR 004](docs/adr/004-database.md)            |
-| Offline Sync | Custom CRDT (Automerge)                         | [ADR 005](docs/adr/005-offline-sync.md)        |
-| Encryption   | libsodium (E2E, zero-knowledge server)          | [ADR 006](docs/adr/006-encryption.md)          |
-| Real-Time    | WebSockets + SSE + Valkey                       | [ADR 007](docs/adr/007-realtime.md)            |
-| Runtime      | Bun (Node.js fallback)                          | [ADR 008](docs/adr/008-runtime.md)             |
-| Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md)  |
-| Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)     |
-| Key Recovery | Recovery key + multi-device transfer            | [ADR 011](docs/adr/011-key-recovery.md)        |
-| Self-Hosted  | Minimal (single binary) / Full (Docker Compose) | [ADR 012](docs/adr/012-self-hosted-tiers.md)   |
-| API Auth     | Hybrid metadata + crypto key model              | [ADR 013](docs/adr/013-api-auth-encryption.md) |
+| Layer            | Technology                                      | Decision Record                                     |
+| ---------------- | ----------------------------------------------- | --------------------------------------------------- |
+| Frontend         | Expo (React Native) + TypeScript                | [ADR 002](docs/adr/002-frontend-framework.md)       |
+| API              | Hono on Bun + tRPC (internal) + REST (public)   | [ADR 003](docs/adr/003-api-framework.md)            |
+| Database         | PostgreSQL + Drizzle ORM / SQLite (self-hosted) | [ADR 004](docs/adr/004-database.md)                 |
+| Offline Sync     | Custom CRDT (Automerge)                         | [ADR 005](docs/adr/005-offline-sync.md)             |
+| Encryption       | libsodium (E2E, zero-knowledge server)          | [ADR 006](docs/adr/006-encryption.md)               |
+| Real-Time        | WebSockets + SSE + Valkey                       | [ADR 007](docs/adr/007-realtime.md)                 |
+| Runtime          | Bun (Node.js fallback)                          | [ADR 008](docs/adr/008-runtime.md)                  |
+| Media            | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md)       |
+| Job Queue        | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)          |
+| Key Recovery     | Recovery key + multi-device transfer            | [ADR 011](docs/adr/011-key-recovery.md)             |
+| Self-Hosted      | Minimal (single binary) / Full (Docker Compose) | [ADR 012](docs/adr/012-self-hosted-tiers.md)        |
+| API Auth         | Hybrid metadata + crypto key model              | [ADR 013](docs/adr/013-api-auth-encryption.md)      |
+| Key Rotation     | Lazy per-bucket rotation with ledger            | [ADR 014](docs/adr/014-lazy-key-rotation.md)        |
+| Push Tokens      | Plaintext push tokens (server-side only)        | [ADR 015](docs/adr/015-push-token-plaintext.md)     |
+| Msg Partitioning | Hash-based message table partitioning           | [ADR 016](docs/adr/016-messages-partitioning.md)    |
+| Audit Log        | Time-based audit log partitioning               | [ADR 017](docs/adr/017-audit-log-partitioning.md)   |
+| Encryption@Rest  | DB-layer encryption-at-rest boundary            | [ADR 018](docs/adr/018-encryption-at-rest-boundary.md) |
 
 All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md).
 
@@ -178,7 +193,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 13 accepted ADRs cover the full stack from licensing through API authentication. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 18 accepted ADRs cover the full stack from licensing through encryption-at-rest boundaries. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 

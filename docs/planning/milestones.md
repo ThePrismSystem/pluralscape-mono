@@ -9,27 +9,29 @@ Milestones are ordered by dependency, not as a waterfall schedule. In practice, 
 Goal: Monorepo infrastructure, tooling, governance
 
 - Monorepo scaffolding (pnpm, turbo, shared tooling)
-- Architecture decisions (8 ADRs)
+- Architecture decisions (ADRs 001-008)
 - CI/CD pipeline (lint, typecheck)
 - Public repo setup (branch protection, issue templates, dependabot)
 - License audit
 
-## Milestone 1: Data Layer
+## Milestone 1: Data Layer [IN PROGRESS]
 
 Goal: Domain types, database schema, encryption primitives, sync protocol design, i18n foundation
 
 Epics:
 
-- Domain types (`packages/types`)
-- Database schema (`packages/db`) — co-designed with CRDT sync (ADR 004, 005)
-- Encryption layer (`packages/crypto`) — ADR 006
-- Sync protocol design (`packages/sync`) — ADR 005
+- ~~Domain types (`packages/types`)~~ [COMPLETED] — 30+ domain type modules with Zod validators and branded IDs
+- ~~Database schema (`packages/db`)~~ [COMPLETED] — 40+ tables, dual-dialect (PG + SQLite), RLS, constraint closure, encryption contracts
+- ~~Database schema hardening~~ [COMPLETED] — 29 tasks: indexes, encryption, sync queue fixes, full-text search, varchar right-sizing
+- ~~Test framework setup~~ [COMPLETED] — Vitest workspace, coverage enforcement, test factories (2,338 tests)
+- Encryption layer (`packages/crypto`) — ADR 006 (foundation complete: key derivation, symmetric crypto, identity keypairs; remaining: per-bucket keys, key rotation, recovery)
+- Sync protocol design (`packages/sync`) — ADR 005 (encrypted CRDT relay PoC complete; remaining: document topology, conflict resolution, partial replication)
 - Blob storage strategy — ADR 009
 - Background job infrastructure — ADR 010
 - Key recovery protocol — ADR 011
 - i18n infrastructure (features.md section 11)
 - Nomenclature system (features.md section 12)
-- Test framework setup
+- Database schema documentation (ER diagram pending)
 
 ## Milestone 2: API Core
 
@@ -168,15 +170,20 @@ These features are tracked but may be deferred past initial launch.
 
 ## Architecture Decision Records
 
-All ADRs for the current milestone plan have been accepted:
+18 accepted ADRs cover the full stack:
 
+- [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
+- [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
 - [ADR 009: Blob/Media Storage](../adr/009-blob-media-storage.md) — S3-compatible encrypted media, MinIO for self-hosted, local filesystem fallback
 - [ADR 010: Background Job Architecture](../adr/010-background-jobs.md) — BullMQ (Valkey) for hosted, SQLite-backed fallback for self-hosted
 - [ADR 011: Key Lifecycle and Recovery](../adr/011-key-recovery.md) — recovery key, multi-device transfer, password reset semantics
 - [ADR 012: Self-Hosted Deployment Tiers](../adr/012-self-hosted-tiers.md) — minimal (single binary) vs full (Docker Compose), capability matrix
 - [ADR 013: API Authentication with E2E Encryption](../adr/013-api-auth-encryption.md) — hybrid metadata + crypto key model, scoped access, key creation UX
-
-See also: [ADR 002-008](../adr/) for earlier foundation decisions.
+- [ADR 014: Lazy Key Rotation](../adr/014-lazy-key-rotation.md) — per-bucket lazy rotation with server-side ledger
+- [ADR 015: Push Token Plaintext](../adr/015-push-token-plaintext.md) — push tokens stored in plaintext (server-side only, not user content)
+- [ADR 016: Messages Partitioning](../adr/016-messages-partitioning.md) — hash-based partitioning for the messages table
+- [ADR 017: Audit Log Partitioning](../adr/017-audit-log-partitioning.md) — time-based partitioning with automated retention
+- [ADR 018: Encryption-at-Rest Boundary](../adr/018-encryption-at-rest-boundary.md) — DB-layer encryption boundary for tier-2/tier-3 data
 
 ## Development Sequence Rationale
 
