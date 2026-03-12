@@ -14,6 +14,7 @@ import {
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { apiKeys } from "./api-keys.js";
@@ -24,15 +25,15 @@ import type { WebhookDeliveryStatus, WebhookEventType } from "@pluralscape/types
 export const webhookConfigs = pgTable(
   "webhook_configs",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     url: varchar("url", { length: 2048 }).notNull(),
     secret: pgBinary("secret").notNull(),
     eventTypes: jsonb("event_types").notNull().$type<readonly WebhookEventType[]>(),
     enabled: boolean("enabled").notNull().default(true),
-    cryptoKeyId: varchar("crypto_key_id", { length: 255 }).references(() => apiKeys.id, {
+    cryptoKeyId: varchar("crypto_key_id", { length: ID_MAX_LENGTH }).references(() => apiKeys.id, {
       onDelete: "set null",
     }),
     ...timestamps(),
@@ -54,13 +55,15 @@ export const webhookConfigs = pgTable(
 export const webhookDeliveries = pgTable(
   "webhook_deliveries",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    webhookId: varchar("webhook_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    webhookId: varchar("webhook_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    eventType: varchar("event_type", { length: 255 }).notNull().$type<WebhookEventType>(),
-    status: varchar("status", { length: 255 })
+    eventType: varchar("event_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<WebhookEventType>(),
+    status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("pending")
       .$type<WebhookDeliveryStatus>(),

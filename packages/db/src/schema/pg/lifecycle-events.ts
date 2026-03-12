@@ -2,6 +2,7 @@ import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { LIFECYCLE_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -11,11 +12,13 @@ import type { ServerLifecycleEvent } from "@pluralscape/types";
 export const lifecycleEvents = pgTable(
   "lifecycle_events",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    eventType: varchar("event_type", { length: 255 }).$type<ServerLifecycleEvent["eventType"]>(),
+    eventType: varchar("event_type", { length: ENUM_MAX_LENGTH }).$type<
+      ServerLifecycleEvent["eventType"]
+    >(),
     occurredAt: pgTimestamp("occurred_at").notNull(),
     recordedAt: pgTimestamp("recorded_at").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

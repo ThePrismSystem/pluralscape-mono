@@ -122,6 +122,46 @@ describe("PG import-export schema", () => {
       ).rejects.toThrow();
     });
 
+    it("accepts progressPercent at 0", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "pluralscape",
+        progressPercent: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows[0]?.progressPercent).toBe(0);
+    });
+
+    it("accepts progressPercent at 100", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "pluralscape",
+        progressPercent: 100,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows[0]?.progressPercent).toBe(100);
+    });
+
     it("rejects progressPercent above 100", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -257,6 +297,52 @@ describe("PG import-export schema", () => {
       const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.errorLog).toEqual(errors);
+    });
+
+    it("accepts errorLog with 1000 entries", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const errors = Array.from({ length: 1000 }, (_, i) => ({
+        line: i,
+        message: `error ${String(i)}`,
+      }));
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "simply-plural",
+        errorLog: errors,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows).toHaveLength(1);
+    });
+
+    it("rejects errorLog with more than 1000 entries", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+      const errors = Array.from({ length: 1001 }, (_, i) => ({
+        line: i,
+        message: `error ${String(i)}`,
+      }));
+
+      await expect(
+        db.insert(importJobs).values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          source: "simply-plural",
+          errorLog: errors,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 

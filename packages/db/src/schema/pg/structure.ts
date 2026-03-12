@@ -13,6 +13,7 @@ import {
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -23,13 +24,13 @@ import type { ServerRelationship, ServerSubsystem } from "@pluralscape/types";
 export const relationships = pgTable(
   "relationships",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sourceMemberId: varchar("source_member_id", { length: 255 }),
-    targetMemberId: varchar("target_member_id", { length: 255 }),
-    type: varchar("type", { length: 255 }).$type<ServerRelationship["type"]>(),
+    sourceMemberId: varchar("source_member_id", { length: ID_MAX_LENGTH }),
+    targetMemberId: varchar("target_member_id", { length: ID_MAX_LENGTH }),
+    type: varchar("type", { length: ENUM_MAX_LENGTH }).$type<ServerRelationship["type"]>(),
     bidirectional: boolean("bidirectional"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -53,14 +54,14 @@ export const relationships = pgTable(
 export const subsystems = pgTable(
   "subsystems",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentSubsystemId: varchar("parent_subsystem_id", { length: 255 }),
+    parentSubsystemId: varchar("parent_subsystem_id", { length: ID_MAX_LENGTH }),
     architectureType: jsonb("architecture_type").$type<ServerSubsystem["architectureType"]>(),
     hasCore: boolean("has_core"),
-    discoveryStatus: varchar("discovery_status", { length: 255 }).$type<
+    discoveryStatus: varchar("discovery_status", { length: ENUM_MAX_LENGTH }).$type<
       ServerSubsystem["discoveryStatus"]
     >(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -82,8 +83,8 @@ export const subsystems = pgTable(
 export const sideSystems = pgTable(
   "side_systems",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -100,8 +101,8 @@ export const sideSystems = pgTable(
 export const layers = pgTable(
   "layers",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     // Ties are intentionally allowed; no uniqueness constraint on sortOrder
@@ -121,9 +122,9 @@ export const layers = pgTable(
 export const subsystemMemberships = pgTable(
   "subsystem_memberships",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    subsystemId: varchar("subsystem_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    subsystemId: varchar("subsystem_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -143,9 +144,9 @@ export const subsystemMemberships = pgTable(
 export const sideSystemMemberships = pgTable(
   "side_system_memberships",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    sideSystemId: varchar("side_system_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    sideSystemId: varchar("side_system_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -165,9 +166,9 @@ export const sideSystemMemberships = pgTable(
 export const layerMemberships = pgTable(
   "layer_memberships",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    layerId: varchar("layer_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    layerId: varchar("layer_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -186,10 +187,10 @@ export const layerMemberships = pgTable(
 export const subsystemLayerLinks = pgTable(
   "subsystem_layer_links",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    subsystemId: varchar("subsystem_id", { length: 255 }).notNull(),
-    layerId: varchar("layer_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    subsystemId: varchar("subsystem_id", { length: ID_MAX_LENGTH }).notNull(),
+    layerId: varchar("layer_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data"),
@@ -213,10 +214,10 @@ export const subsystemLayerLinks = pgTable(
 export const subsystemSideSystemLinks = pgTable(
   "subsystem_side_system_links",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    subsystemId: varchar("subsystem_id", { length: 255 }).notNull(),
-    sideSystemId: varchar("side_system_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    subsystemId: varchar("subsystem_id", { length: ID_MAX_LENGTH }).notNull(),
+    sideSystemId: varchar("side_system_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data"),
@@ -240,10 +241,10 @@ export const subsystemSideSystemLinks = pgTable(
 export const sideSystemLayerLinks = pgTable(
   "side_system_layer_links",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    sideSystemId: varchar("side_system_id", { length: 255 }).notNull(),
-    layerId: varchar("layer_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    sideSystemId: varchar("side_system_id", { length: ID_MAX_LENGTH }).notNull(),
+    layerId: varchar("layer_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data"),

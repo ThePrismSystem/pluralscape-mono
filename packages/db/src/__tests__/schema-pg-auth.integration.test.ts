@@ -873,4 +873,52 @@ describe("PG auth schema", () => {
       expect(rows[0]?.encryptedKeyMaterial).toEqual(keyMaterial);
     });
   });
+
+  describe("partial indexes", () => {
+    it("sessions_expires_at_idx has WHERE expires_at IS NOT NULL", async () => {
+      const result = await client.query<{ indexdef: string }>(
+        `SELECT indexdef FROM pg_indexes WHERE indexname = 'sessions_expires_at_idx'`,
+      );
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]?.indexdef).toMatch(/WHERE.*expires_at IS NOT NULL/i);
+    });
+
+    it("recovery_keys_revoked_at_idx has WHERE revoked_at IS NULL", async () => {
+      const result = await client.query<{ indexdef: string }>(
+        `SELECT indexdef FROM pg_indexes WHERE indexname = 'recovery_keys_revoked_at_idx'`,
+      );
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]?.indexdef).toMatch(/WHERE.*revoked_at IS NULL/i);
+    });
+  });
+
+  describe("varchar(50) enforcement", () => {
+    it("rejects account ID exceeding 50 characters", async () => {
+      const longId = "a".repeat(51);
+
+      await expect(
+        client.query(
+          `INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at, version) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), 1)`,
+          [longId, `hash_${crypto.randomUUID()}`, `salt_${crypto.randomUUID()}`, "pw_hash", "kdf"],
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("accepts account ID at exactly 50 characters", async () => {
+      const exactId = "a".repeat(50);
+
+      await client.query(
+        `INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at, version) VALUES ($1, $2, $3, $4, $5, NOW(), NOW(), 1)`,
+        [exactId, `hash_${crypto.randomUUID()}`, `salt_${crypto.randomUUID()}`, "pw_hash", "kdf"],
+      );
+
+      const result = await client.query<{ id: string }>(`SELECT id FROM accounts WHERE id = $1`, [
+        exactId,
+      ]);
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]?.id).toBe(exactId);
+
+      await client.query(`DELETE FROM accounts WHERE id = $1`, [exactId]);
+    });
+  });
 });

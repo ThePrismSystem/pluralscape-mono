@@ -15,6 +15,7 @@ import {
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { FIELD_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -26,11 +27,13 @@ import type { ServerFieldDefinition } from "@pluralscape/types";
 export const fieldDefinitions = pgTable(
   "field_definitions",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    fieldType: varchar("field_type", { length: 255 }).$type<ServerFieldDefinition["fieldType"]>(),
+    fieldType: varchar("field_type", { length: ENUM_MAX_LENGTH }).$type<
+      ServerFieldDefinition["fieldType"]
+    >(),
     required: boolean("required"),
     sortOrder: integer("sort_order"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -53,10 +56,10 @@ export const fieldDefinitions = pgTable(
 export const fieldValues = pgTable(
   "field_values",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    fieldDefinitionId: varchar("field_definition_id", { length: 255 }).notNull(),
-    memberId: varchar("member_id", { length: 255 }),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    fieldDefinitionId: varchar("field_definition_id", { length: ID_MAX_LENGTH }).notNull(),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -86,10 +89,10 @@ export const fieldValues = pgTable(
 export const fieldBucketVisibility = pgTable(
   "field_bucket_visibility",
   {
-    fieldDefinitionId: varchar("field_definition_id", { length: 255 })
+    fieldDefinitionId: varchar("field_definition_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => fieldDefinitions.id, { onDelete: "cascade" }),
-    bucketId: varchar("bucket_id", { length: 255 })
+    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
   },

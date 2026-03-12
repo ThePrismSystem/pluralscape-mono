@@ -974,4 +974,28 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.encryptedKeyMaterial).toEqual(keyMaterial);
     });
   });
+
+  describe("partial indexes", () => {
+    it("sessions_expires_at_idx has WHERE expires_at IS NOT NULL", () => {
+      const indexes = client
+        .prepare(
+          `SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'sessions'`,
+        )
+        .all() as Array<{ name: string; sql: string | null }>;
+      const idx = indexes.find((i) => i.name === "sessions_expires_at_idx");
+      expect(idx).toBeDefined();
+      expect(idx?.sql).toMatch(/WHERE.*expires_at IS NOT NULL/i);
+    });
+
+    it("recovery_keys_revoked_at_idx has WHERE revoked_at IS NULL", () => {
+      const indexes = client
+        .prepare(
+          `SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'recovery_keys'`,
+        )
+        .all() as Array<{ name: string; sql: string | null }>;
+      const idx = indexes.find((i) => i.name === "recovery_keys_revoked_at_idx");
+      expect(idx).toBeDefined();
+      expect(idx?.sql).toMatch(/WHERE.*revoked_at IS NULL/i);
+    });
+  });
 });

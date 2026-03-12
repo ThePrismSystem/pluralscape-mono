@@ -214,6 +214,50 @@ describe("SQLite import-export schema", () => {
       ).toThrow();
     });
 
+    it("accepts progressPercent at 0", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(importJobs)
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralscape",
+          progressPercent: 0,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
+      expect(rows[0]?.progressPercent).toBe(0);
+    });
+
+    it("accepts progressPercent at 100", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(importJobs)
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "pluralscape",
+          progressPercent: 100,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
+      expect(rows[0]?.progressPercent).toBe(100);
+    });
+
     it("rejects progressPercent above 100", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -299,6 +343,57 @@ describe("SQLite import-export schema", () => {
       db.delete(systems).where(eq(systems.id, systemId)).run();
       const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
       expect(rows).toHaveLength(0);
+    });
+
+    it("accepts errorLog with 1000 entries", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const errors = Array.from({ length: 1000 }, (_, i) => ({
+        line: i,
+        message: `error ${String(i)}`,
+      }));
+
+      db.insert(importJobs)
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "simply-plural",
+          errorLog: errors,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
+      expect(rows).toHaveLength(1);
+    });
+
+    it("rejects errorLog with more than 1000 entries", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const errors = Array.from({ length: 1001 }, (_, i) => ({
+        line: i,
+        message: `error ${String(i)}`,
+      }));
+
+      expect(() =>
+        db
+          .insert(importJobs)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            source: "simply-plural",
+            errorLog: errors,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
   });
 

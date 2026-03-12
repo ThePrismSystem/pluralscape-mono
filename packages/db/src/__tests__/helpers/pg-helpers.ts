@@ -51,7 +51,7 @@ export const TTL_RETENTION_DAYS = 30;
 export const PG_DDL = {
   accounts: `
     CREATE TABLE accounts (
-      id VARCHAR(255) PRIMARY KEY,
+      id VARCHAR(50) PRIMARY KEY,
       email_hash VARCHAR(255) NOT NULL UNIQUE,
       email_salt VARCHAR(255) NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
@@ -64,18 +64,18 @@ export const PG_DDL = {
   `,
   authKeys: `
     CREATE TABLE auth_keys (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       encrypted_private_key BYTEA NOT NULL,
       public_key BYTEA NOT NULL,
-      key_type VARCHAR(255) NOT NULL CHECK (key_type IN ('encryption', 'signing')),
+      key_type VARCHAR(50) NOT NULL CHECK (key_type IN ('encryption', 'signing')),
       created_at TIMESTAMPTZ NOT NULL
     )
   `,
   sessions: `
     CREATE TABLE sessions (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       device_info JSONB,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
@@ -91,8 +91,8 @@ export const PG_DDL = {
   `,
   recoveryKeys: `
     CREATE TABLE recovery_keys (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       encrypted_master_key BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       revoked_at TIMESTAMPTZ
@@ -104,11 +104,11 @@ export const PG_DDL = {
   `,
   deviceTransferRequests: `
     CREATE TABLE device_transfer_requests (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      source_session_id VARCHAR(255) NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-      target_session_id VARCHAR(255) NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'expired')),
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      source_session_id VARCHAR(50) NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      target_session_id VARCHAR(50) NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'expired')),
       encrypted_key_material BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       expires_at TIMESTAMPTZ NOT NULL,
@@ -121,8 +121,8 @@ export const PG_DDL = {
   `,
   systems: `
     CREATE TABLE systems (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -135,8 +135,8 @@ export const PG_DDL = {
   `,
   members: `
     CREATE TABLE members (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -154,9 +154,9 @@ export const PG_DDL = {
   `,
   memberPhotos: `
     CREATE TABLE member_photos (
-      id VARCHAR(255) PRIMARY KEY,
-      member_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      member_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -169,8 +169,8 @@ export const PG_DDL = {
   // Privacy
   buckets: `
     CREATE TABLE buckets (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -184,9 +184,9 @@ export const PG_DDL = {
   `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
-      entity_type VARCHAR(255) NOT NULL CHECK (entity_type IS NULL OR entity_type IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')),
-      entity_id VARCHAR(255) NOT NULL,
-      bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      entity_type VARCHAR(50) NOT NULL CHECK (entity_type IS NULL OR entity_type IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')),
+      entity_id VARCHAR(50) NOT NULL,
+      bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       PRIMARY KEY (entity_type, entity_id, bucket_id)
     )
   `,
@@ -195,9 +195,9 @@ export const PG_DDL = {
   `,
   keyGrants: `
     CREATE TABLE key_grants (
-      id VARCHAR(255) PRIMARY KEY,
-      bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
-      friend_system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      friend_system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_key BYTEA NOT NULL,
       key_version INTEGER NOT NULL CHECK (key_version >= 1),
       created_at TIMESTAMPTZ NOT NULL,
@@ -211,10 +211,10 @@ export const PG_DDL = {
   `,
   friendConnections: `
     CREATE TABLE friend_connections (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      friend_system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'blocked', 'removed')),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      friend_system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'blocked', 'removed')),
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -231,8 +231,8 @@ export const PG_DDL = {
   `,
   friendCodes: `
     CREATE TABLE friend_codes (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       code VARCHAR(255) NOT NULL UNIQUE,
       created_at TIMESTAMPTZ NOT NULL,
       expires_at TIMESTAMPTZ,
@@ -244,8 +244,8 @@ export const PG_DDL = {
   `,
   friendBucketAssignments: `
     CREATE TABLE friend_bucket_assignments (
-      friend_connection_id VARCHAR(255) NOT NULL REFERENCES friend_connections(id) ON DELETE CASCADE,
-      bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      friend_connection_id VARCHAR(50) NOT NULL REFERENCES friend_connections(id) ON DELETE CASCADE,
+      bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       PRIMARY KEY (friend_connection_id, bucket_id)
     )
   `,
@@ -255,13 +255,13 @@ export const PG_DDL = {
   // Fronting
   frontingSessions: `
     CREATE TABLE fronting_sessions (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       start_time TIMESTAMPTZ NOT NULL,
       end_time TIMESTAMPTZ,
-      member_id VARCHAR(255),
-      fronting_type VARCHAR(255) CHECK (fronting_type IS NULL OR fronting_type IN ('fronting', 'co-conscious')),
-      custom_front_id VARCHAR(255),
+      member_id VARCHAR(50),
+      fronting_type VARCHAR(50) CHECK (fronting_type IS NULL OR fronting_type IN ('fronting', 'co-conscious')),
+      custom_front_id VARCHAR(50),
       linked_structure JSONB,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -281,8 +281,8 @@ export const PG_DDL = {
   `,
   switches: `
     CREATE TABLE switches (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       timestamp TIMESTAMPTZ NOT NULL,
       member_ids JSONB NOT NULL CHECK (jsonb_array_length(member_ids) >= 1),
       created_at TIMESTAMPTZ NOT NULL,
@@ -295,8 +295,8 @@ export const PG_DDL = {
   `,
   customFronts: `
     CREATE TABLE custom_fronts (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -312,10 +312,10 @@ export const PG_DDL = {
   `,
   frontingComments: `
     CREATE TABLE fronting_comments (
-      id VARCHAR(255) PRIMARY KEY,
-      fronting_session_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      member_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      fronting_session_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      member_id VARCHAR(50),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -331,11 +331,11 @@ export const PG_DDL = {
   // Structure
   relationships: `
     CREATE TABLE relationships (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      source_member_id VARCHAR(255),
-      target_member_id VARCHAR(255),
-      type VARCHAR(255) CHECK (type IS NULL OR type IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      source_member_id VARCHAR(50),
+      target_member_id VARCHAR(50),
+      type VARCHAR(50) CHECK (type IS NULL OR type IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
       bidirectional BOOLEAN,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -351,12 +351,12 @@ export const PG_DDL = {
   `,
   subsystems: `
     CREATE TABLE subsystems (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      parent_subsystem_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      parent_subsystem_id VARCHAR(50),
       architecture_type JSONB,
       has_core BOOLEAN,
-      discovery_status VARCHAR(255) CHECK (discovery_status IS NULL OR discovery_status IN ('fully-mapped', 'partially-mapped', 'unknown')),
+      discovery_status VARCHAR(50) CHECK (discovery_status IS NULL OR discovery_status IN ('fully-mapped', 'partially-mapped', 'unknown')),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -371,8 +371,8 @@ export const PG_DDL = {
   `,
   sideSystems: `
     CREATE TABLE side_systems (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -386,8 +386,8 @@ export const PG_DDL = {
   `,
   layers: `
     CREATE TABLE layers (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       sort_order INTEGER NOT NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -402,9 +402,9 @@ export const PG_DDL = {
   `,
   subsystemMemberships: `
     CREATE TABLE subsystem_memberships (
-      id VARCHAR(255) PRIMARY KEY,
-      subsystem_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      subsystem_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE CASCADE
@@ -416,9 +416,9 @@ export const PG_DDL = {
   `,
   sideSystemMemberships: `
     CREATE TABLE side_system_memberships (
-      id VARCHAR(255) PRIMARY KEY,
-      side_system_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      side_system_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE CASCADE
@@ -430,9 +430,9 @@ export const PG_DDL = {
   `,
   layerMemberships: `
     CREATE TABLE layer_memberships (
-      id VARCHAR(255) PRIMARY KEY,
-      layer_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      layer_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE CASCADE
@@ -444,10 +444,10 @@ export const PG_DDL = {
   `,
   subsystemLayerLinks: `
     CREATE TABLE subsystem_layer_links (
-      id VARCHAR(255) PRIMARY KEY,
-      subsystem_id VARCHAR(255) NOT NULL,
-      layer_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      subsystem_id VARCHAR(50) NOT NULL,
+      layer_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       UNIQUE (subsystem_id, layer_id),
@@ -461,10 +461,10 @@ export const PG_DDL = {
   `,
   subsystemSideSystemLinks: `
     CREATE TABLE subsystem_side_system_links (
-      id VARCHAR(255) PRIMARY KEY,
-      subsystem_id VARCHAR(255) NOT NULL,
-      side_system_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      subsystem_id VARCHAR(50) NOT NULL,
+      side_system_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       UNIQUE (subsystem_id, side_system_id),
@@ -478,10 +478,10 @@ export const PG_DDL = {
   `,
   sideSystemLayerLinks: `
     CREATE TABLE side_system_layer_links (
-      id VARCHAR(255) PRIMARY KEY,
-      side_system_id VARCHAR(255) NOT NULL,
-      layer_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      side_system_id VARCHAR(50) NOT NULL,
+      layer_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       UNIQUE (side_system_id, layer_id),
@@ -496,9 +496,9 @@ export const PG_DDL = {
   // Custom Fields
   fieldDefinitions: `
     CREATE TABLE field_definitions (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      field_type VARCHAR(255) CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      field_type VARCHAR(50) CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
       required BOOLEAN,
       sort_order INTEGER,
       encrypted_data BYTEA NOT NULL,
@@ -517,10 +517,10 @@ export const PG_DDL = {
   `,
   fieldValues: `
     CREATE TABLE field_values (
-      id VARCHAR(255) PRIMARY KEY,
-      field_definition_id VARCHAR(255) NOT NULL,
-      member_id VARCHAR(255),
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      field_definition_id VARCHAR(50) NOT NULL,
+      member_id VARCHAR(50),
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -537,15 +537,15 @@ export const PG_DDL = {
   `,
   fieldBucketVisibility: `
     CREATE TABLE field_bucket_visibility (
-      field_definition_id VARCHAR(255) NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
-      bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      field_definition_id VARCHAR(50) NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
+      bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       PRIMARY KEY (field_definition_id, bucket_id)
     )
   `,
   // Nomenclature Settings
   nomenclatureSettings: `
     CREATE TABLE nomenclature_settings (
-      system_id VARCHAR(255) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -556,8 +556,8 @@ export const PG_DDL = {
   // System Settings
   systemSettings: `
     CREATE TABLE system_settings (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL UNIQUE REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL UNIQUE REFERENCES systems(id) ON DELETE CASCADE,
       locale VARCHAR(255),
       pin_hash VARCHAR(512),
       biometric_enabled BOOLEAN NOT NULL DEFAULT false,
@@ -571,11 +571,11 @@ export const PG_DDL = {
   // API Keys
   apiKeys: `
     CREATE TABLE api_keys (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       name VARCHAR(255),
-      key_type VARCHAR(255) NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
+      key_type VARCHAR(50) NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
       token_hash VARCHAR(255) NOT NULL UNIQUE,
       scopes JSONB NOT NULL,
       encrypted_data BYTEA,
@@ -598,10 +598,10 @@ export const PG_DDL = {
   // Audit Log
   auditLog: `
     CREATE TABLE audit_log (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) REFERENCES accounts(id) ON DELETE SET NULL,
-      system_id VARCHAR(255) REFERENCES systems(id) ON DELETE SET NULL,
-      event_type VARCHAR(255) NOT NULL CHECK (event_type IN ('auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown')),
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) REFERENCES accounts(id) ON DELETE SET NULL,
+      system_id VARCHAR(50) REFERENCES systems(id) ON DELETE SET NULL,
+      event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown')),
       timestamp TIMESTAMPTZ NOT NULL,
       ip_address VARCHAR(255),
       user_agent VARCHAR(1024),
@@ -618,9 +618,9 @@ export const PG_DDL = {
   // Lifecycle Events
   lifecycleEvents: `
     CREATE TABLE lifecycle_events (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      event_type VARCHAR(255) CHECK (event_type IS NULL OR event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type VARCHAR(50) CHECK (event_type IS NULL OR event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
       occurred_at TIMESTAMPTZ NOT NULL,
       recorded_at TIMESTAMPTZ NOT NULL,
       encrypted_data BYTEA NOT NULL
@@ -633,8 +633,8 @@ export const PG_DDL = {
   // Safe Mode Content
   safeModeContent: `
     CREATE TABLE safe_mode_content (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       sort_order INTEGER,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -649,10 +649,10 @@ export const PG_DDL = {
   // Communication
   channels: `
     CREATE TABLE channels (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      type VARCHAR(255) NOT NULL CHECK (type IN ('category', 'channel')),
-      parent_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      type VARCHAR(50) NOT NULL CHECK (type IN ('category', 'channel')),
+      parent_id VARCHAR(50),
       sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -671,10 +671,10 @@ export const PG_DDL = {
   `,
   messages: `
     CREATE TABLE messages (
-      id VARCHAR(255) NOT NULL,
-      channel_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      reply_to_id VARCHAR(255),
+      id VARCHAR(50) NOT NULL,
+      channel_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      reply_to_id VARCHAR(50),
       timestamp TIMESTAMPTZ NOT NULL,
       edited_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
@@ -697,8 +697,8 @@ export const PG_DDL = {
   `,
   boardMessages: `
     CREATE TABLE board_messages (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       pinned BOOLEAN NOT NULL DEFAULT false,
       sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BYTEA NOT NULL,
@@ -713,9 +713,9 @@ export const PG_DDL = {
   `,
   notes: `
     CREATE TABLE notes (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      member_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      member_id VARCHAR(50),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -733,11 +733,11 @@ export const PG_DDL = {
   `,
   polls: `
     CREATE TABLE polls (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      created_by_member_id VARCHAR(255),
-      kind VARCHAR(255) CHECK (kind IS NULL OR kind IN ('standard', 'custom')),
-      status VARCHAR(255) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_by_member_id VARCHAR(50),
+      kind VARCHAR(50) CHECK (kind IS NULL OR kind IN ('standard', 'custom')),
+      status VARCHAR(50) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at TIMESTAMPTZ,
       ends_at TIMESTAMPTZ,
       allow_multiple_votes BOOLEAN NOT NULL,
@@ -758,10 +758,10 @@ export const PG_DDL = {
   `,
   pollVotes: `
     CREATE TABLE poll_votes (
-      id VARCHAR(255) PRIMARY KEY,
-      poll_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      option_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      poll_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      option_id VARCHAR(50),
       voter JSONB,
       is_veto BOOLEAN,
       voted_at TIMESTAMPTZ,
@@ -776,9 +776,9 @@ export const PG_DDL = {
   `,
   acknowledgements: `
     CREATE TABLE acknowledgements (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      created_by_member_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      created_by_member_id VARCHAR(50),
       confirmed BOOLEAN NOT NULL DEFAULT false,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -791,9 +791,9 @@ export const PG_DDL = {
   // Journal
   journalEntries: `
     CREATE TABLE journal_entries (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      fronting_session_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      fronting_session_id VARCHAR(50),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -811,8 +811,8 @@ export const PG_DDL = {
   `,
   wikiPages: `
     CREATE TABLE wiki_pages (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       slug_hash VARCHAR(64) NOT NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -834,9 +834,9 @@ export const PG_DDL = {
   // Groups
   groups: `
     CREATE TABLE groups (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      parent_group_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      parent_group_id VARCHAR(50),
       sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -855,9 +855,9 @@ export const PG_DDL = {
   `,
   groupMemberships: `
     CREATE TABLE group_memberships (
-      group_id VARCHAR(255) NOT NULL,
-      member_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      group_id VARCHAR(50) NOT NULL,
+      member_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ NOT NULL,
       PRIMARY KEY (group_id, member_id),
       FOREIGN KEY (group_id, system_id) REFERENCES groups(id, system_id) ON DELETE CASCADE,
@@ -871,9 +871,9 @@ export const PG_DDL = {
   // Innerworld
   innerworldRegions: `
     CREATE TABLE innerworld_regions (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      parent_region_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      parent_region_id VARCHAR(50),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -888,9 +888,9 @@ export const PG_DDL = {
   `,
   innerworldEntities: `
     CREATE TABLE innerworld_entities (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      region_id VARCHAR(255),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      region_id VARCHAR(50),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -905,7 +905,7 @@ export const PG_DDL = {
   `,
   innerworldCanvas: `
     CREATE TABLE innerworld_canvas (
-      system_id VARCHAR(255) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) PRIMARY KEY REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -916,10 +916,10 @@ export const PG_DDL = {
   // PK Bridge
   pkBridgeState: `
     CREATE TABLE pk_bridge_state (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       enabled BOOLEAN NOT NULL DEFAULT true,
-      sync_direction VARCHAR(255) NOT NULL CHECK (sync_direction IN ('ps-to-pk', 'pk-to-ps', 'bidirectional')),
+      sync_direction VARCHAR(50) NOT NULL CHECK (sync_direction IN ('ps-to-pk', 'pk-to-ps', 'bidirectional')),
       pk_token_encrypted BYTEA NOT NULL,
       entity_mappings BYTEA NOT NULL,
       error_log BYTEA NOT NULL,
@@ -936,10 +936,10 @@ export const PG_DDL = {
   // Notifications
   deviceTokens: `
     CREATE TABLE device_tokens (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      platform VARCHAR(255) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      platform VARCHAR(50) NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
       token VARCHAR(512) NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       last_active_at TIMESTAMPTZ,
@@ -953,9 +953,9 @@ export const PG_DDL = {
   `,
   notificationConfigs: `
     CREATE TABLE notification_configs (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      event_type VARCHAR(255) NOT NULL CHECK (event_type IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert')),
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert')),
       enabled BOOLEAN NOT NULL DEFAULT true,
       push_enabled BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMPTZ NOT NULL,
@@ -967,9 +967,9 @@ export const PG_DDL = {
   `,
   friendNotificationPreferences: `
     CREATE TABLE friend_notification_preferences (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      friend_connection_id VARCHAR(255) NOT NULL,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      friend_connection_id VARCHAR(50) NOT NULL,
       enabled_event_types JSONB NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -982,13 +982,13 @@ export const PG_DDL = {
   // Webhooks
   webhookConfigs: `
     CREATE TABLE webhook_configs (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       url VARCHAR(2048) NOT NULL,
       secret BYTEA NOT NULL,
       event_types JSONB NOT NULL,
       enabled BOOLEAN NOT NULL DEFAULT true,
-      crypto_key_id VARCHAR(255) REFERENCES api_keys(id) ON DELETE SET NULL,
+      crypto_key_id VARCHAR(50) REFERENCES api_keys(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       UNIQUE (id, system_id)
@@ -999,11 +999,11 @@ export const PG_DDL = {
   `,
   webhookDeliveries: `
     CREATE TABLE webhook_deliveries (
-      id VARCHAR(255) PRIMARY KEY,
-      webhook_id VARCHAR(255) NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      event_type VARCHAR(255) NOT NULL CHECK (event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
-      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'success', 'failed')),
+      id VARCHAR(50) PRIMARY KEY,
+      webhook_id VARCHAR(50) NOT NULL,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+      status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'success', 'failed')),
       http_status INTEGER,
       attempt_count INTEGER NOT NULL DEFAULT 0,
       last_attempt_at TIMESTAMPTZ,
@@ -1024,15 +1024,15 @@ export const PG_DDL = {
   // Blob Metadata
   blobMetadata: `
     CREATE TABLE blob_metadata (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       storage_key VARCHAR(1024) NOT NULL,
       mime_type VARCHAR(255),
       size_bytes BIGINT NOT NULL,
       encryption_tier INTEGER NOT NULL,
-      bucket_id VARCHAR(255),
-      purpose VARCHAR(255) NOT NULL CHECK (purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
-      thumbnail_of_blob_id VARCHAR(255),
+      bucket_id VARCHAR(50),
+      purpose VARCHAR(50) NOT NULL CHECK (purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
+      thumbnail_of_blob_id VARCHAR(50),
       checksum VARCHAR(255) NOT NULL,
       uploaded_at TIMESTAMPTZ NOT NULL,
       UNIQUE (id, system_id),
@@ -1049,8 +1049,8 @@ export const PG_DDL = {
   // Timers
   timerConfigs: `
     CREATE TABLE timer_configs (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       enabled BOOLEAN NOT NULL DEFAULT true,
       interval_minutes INTEGER,
       waking_hours_only BOOLEAN,
@@ -1069,13 +1069,13 @@ export const PG_DDL = {
   `,
   checkInRecords: `
     CREATE TABLE check_in_records (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      timer_config_id VARCHAR(255) NOT NULL,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      timer_config_id VARCHAR(50) NOT NULL,
       scheduled_at TIMESTAMPTZ NOT NULL,
       responded_at TIMESTAMPTZ,
       dismissed BOOLEAN NOT NULL DEFAULT false,
-      responded_by_member_id VARCHAR(255),
+      responded_by_member_id VARCHAR(50),
       encrypted_data BYTEA,
       FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE,
       FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL
@@ -1089,11 +1089,11 @@ export const PG_DDL = {
   // Import/Export
   importJobs: `
     CREATE TABLE import_jobs (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      source VARCHAR(255) NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
-      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validating', 'importing', 'completed', 'failed')),
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      source VARCHAR(50) NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
+      status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validating', 'importing', 'completed', 'failed')),
       progress_percent INTEGER NOT NULL DEFAULT 0,
       error_log JSONB,
       warning_count INTEGER NOT NULL DEFAULT 0,
@@ -1103,7 +1103,8 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       completed_at TIMESTAMPTZ,
       CHECK (progress_percent >= 0 AND progress_percent <= 100),
-      CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total)
+      CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total),
+      CHECK (error_log IS NULL OR jsonb_array_length(error_log) <= 1000)
     )
   `,
   importJobsIndexes: `
@@ -1112,12 +1113,12 @@ export const PG_DDL = {
   `,
   exportRequests: `
     CREATE TABLE export_requests (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      format VARCHAR(255) NOT NULL CHECK (format IN ('json', 'csv')),
-      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-      blob_id VARCHAR(255) REFERENCES blob_metadata(id) ON DELETE SET NULL,
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      format VARCHAR(50) NOT NULL CHECK (format IN ('json', 'csv')),
+      status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+      blob_id VARCHAR(50) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       completed_at TIMESTAMPTZ
@@ -1129,9 +1130,9 @@ export const PG_DDL = {
   `,
   accountPurgeRequests: `
     CREATE TABLE account_purge_requests (
-      id VARCHAR(255) PRIMARY KEY,
-      account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
+      id VARCHAR(50) PRIMARY KEY,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')),
       confirmation_phrase VARCHAR(255) NOT NULL,
       scheduled_purge_at TIMESTAMPTZ NOT NULL,
       requested_at TIMESTAMPTZ NOT NULL,
@@ -1147,15 +1148,16 @@ export const PG_DDL = {
   // Sync
   syncDocuments: `
     CREATE TABLE sync_documents (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      entity_type VARCHAR(255) NOT NULL,
-      entity_id VARCHAR(255) NOT NULL,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type VARCHAR(50) NOT NULL,
+      entity_id VARCHAR(50) NOT NULL,
       automerge_heads BYTEA,
       version INTEGER NOT NULL DEFAULT 1,
       created_at TIMESTAMPTZ NOT NULL,
       last_synced_at TIMESTAMPTZ,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (automerge_heads IS NULL OR octet_length(automerge_heads) <= 16384)
     )
   `,
   syncDocumentsIndexes: `
@@ -1163,12 +1165,12 @@ export const PG_DDL = {
   `,
   syncQueue: `
     CREATE TABLE sync_queue (
-      id VARCHAR(255) PRIMARY KEY,
+      id VARCHAR(50) PRIMARY KEY,
       seq SERIAL NOT NULL,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      entity_type VARCHAR(255) NOT NULL,
-      entity_id VARCHAR(255) NOT NULL,
-      operation VARCHAR(255) NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type VARCHAR(50) NOT NULL,
+      entity_id VARCHAR(50) NOT NULL,
+      operation VARCHAR(50) NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
       change_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       synced_at TIMESTAMPTZ
@@ -1182,13 +1184,13 @@ export const PG_DDL = {
   `,
   syncConflicts: `
     CREATE TABLE sync_conflicts (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      entity_type VARCHAR(255) NOT NULL,
-      entity_id VARCHAR(255) NOT NULL,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      entity_type VARCHAR(50) NOT NULL,
+      entity_id VARCHAR(50) NOT NULL,
       local_version INTEGER NOT NULL,
       remote_version INTEGER NOT NULL,
-      resolution VARCHAR(255) CHECK (resolution IN ('local', 'remote', 'merged')),
+      resolution VARCHAR(50) CHECK (resolution IN ('local', 'remote', 'merged')),
       created_at TIMESTAMPTZ NOT NULL,
       resolved_at TIMESTAMPTZ,
       details TEXT,
@@ -1200,11 +1202,11 @@ export const PG_DDL = {
   `,
   bucketKeyRotations: `
     CREATE TABLE bucket_key_rotations (
-      id VARCHAR(255) PRIMARY KEY,
-      bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       from_key_version INTEGER NOT NULL,
       to_key_version INTEGER NOT NULL,
-      state VARCHAR(255) NOT NULL DEFAULT 'initiated' CHECK (state IN ('initiated', 'migrating', 'sealing', 'completed', 'failed')),
+      state VARCHAR(50) NOT NULL DEFAULT 'initiated' CHECK (state IN ('initiated', 'migrating', 'sealing', 'completed', 'failed')),
       initiated_at TIMESTAMPTZ NOT NULL,
       completed_at TIMESTAMPTZ,
       total_items INTEGER NOT NULL,
@@ -1219,11 +1221,11 @@ export const PG_DDL = {
   `,
   bucketRotationItems: `
     CREATE TABLE bucket_rotation_items (
-      id VARCHAR(255) PRIMARY KEY,
-      rotation_id VARCHAR(255) NOT NULL REFERENCES bucket_key_rotations(id) ON DELETE CASCADE,
-      entity_type VARCHAR(255) NOT NULL,
-      entity_id VARCHAR(255) NOT NULL,
-      status VARCHAR(255) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'claimed', 'completed', 'failed')),
+      id VARCHAR(50) PRIMARY KEY,
+      rotation_id VARCHAR(50) NOT NULL REFERENCES bucket_key_rotations(id) ON DELETE CASCADE,
+      entity_type VARCHAR(50) NOT NULL,
+      entity_id VARCHAR(50) NOT NULL,
+      status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'claimed', 'completed', 'failed')),
       claimed_by VARCHAR(255),
       claimed_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ,
@@ -1237,12 +1239,12 @@ export const PG_DDL = {
   // Analytics
   frontingReports: `
     CREATE TABLE fronting_reports (
-      id VARCHAR(255) PRIMARY KEY,
-      system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       date_range JSONB NOT NULL,
       member_breakdowns JSONB NOT NULL,
       chart_data JSONB NOT NULL,
-      format VARCHAR(255) NOT NULL CHECK (format IN ('html', 'pdf')),
+      format VARCHAR(50) NOT NULL CHECK (format IN ('html', 'pdf')),
       generated_at TIMESTAMPTZ NOT NULL
     )
   `,

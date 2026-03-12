@@ -4,6 +4,7 @@ import { check, foreignKey, index, jsonb, pgTable, unique, varchar } from "drizz
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -14,8 +15,8 @@ import type { ServerFrontingSession } from "@pluralscape/types";
 export const customFronts = pgTable(
   "custom_fronts",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -36,17 +37,17 @@ export const customFronts = pgTable(
 export const frontingSessions = pgTable(
   "fronting_sessions",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     startTime: pgTimestamp("start_time").notNull(),
     endTime: pgTimestamp("end_time"),
-    memberId: varchar("member_id", { length: 255 }),
-    frontingType: varchar("fronting_type", { length: 255 }).$type<
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
+    frontingType: varchar("fronting_type", { length: ENUM_MAX_LENGTH }).$type<
       ServerFrontingSession["frontingType"]
     >(),
-    customFrontId: varchar("custom_front_id", { length: 255 }),
+    customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
     linkedStructure: jsonb("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -80,8 +81,8 @@ export const frontingSessions = pgTable(
 export const switches = pgTable(
   "switches",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     timestamp: pgTimestamp("timestamp").notNull(),
@@ -104,12 +105,12 @@ export const switches = pgTable(
 export const frontingComments = pgTable(
   "fronting_comments",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    frontingSessionId: varchar("fronting_session_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    frontingSessionId: varchar("fronting_session_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    memberId: varchar("member_id", { length: 255 }),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

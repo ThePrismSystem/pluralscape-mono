@@ -161,6 +161,44 @@ describe("PG sync schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("accepts automergeHeads at 16384 bytes", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const heads = new Uint8Array(16_384).fill(0xab);
+
+      await db.insert(syncDocuments).values({
+        id,
+        systemId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        automergeHeads: heads,
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(syncDocuments).where(eq(syncDocuments.id, id));
+      expect(rows).toHaveLength(1);
+    });
+
+    it("rejects automergeHeads exceeding 16384 bytes", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+      const heads = new Uint8Array(16_385).fill(0xab);
+
+      await expect(
+        db.insert(syncDocuments).values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          automergeHeads: heads,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("sync_queue", () => {

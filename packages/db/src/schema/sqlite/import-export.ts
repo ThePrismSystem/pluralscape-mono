@@ -3,6 +3,7 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-o
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import { MAX_ERROR_LOG_ENTRIES } from "../../helpers/constants.js";
 import {
   ACCOUNT_PURGE_STATUSES,
   EXPORT_FORMATS,
@@ -56,6 +57,10 @@ export const importJobs = sqliteTable(
     check(
       "import_jobs_chunks_check",
       sql`${t.chunksTotal} IS NULL OR ${t.chunksCompleted} <= ${t.chunksTotal}`,
+    ),
+    check(
+      "import_jobs_error_log_length_check",
+      sql`${t.errorLog} IS NULL OR json_array_length(${t.errorLog}) <= ${MAX_ERROR_LOG_ENTRIES}`,
     ),
   ],
 );

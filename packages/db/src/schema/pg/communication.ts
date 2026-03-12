@@ -15,6 +15,7 @@ import {
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -25,12 +26,12 @@ import type { ServerChannel, ServerPoll, ServerPollVote } from "@pluralscape/typ
 export const channels = pgTable(
   "channels",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    type: varchar("type", { length: 255 }).notNull().$type<ServerChannel["type"]>(),
-    parentId: varchar("parent_id", { length: 255 }),
+    type: varchar("type", { length: ENUM_MAX_LENGTH }).notNull().$type<ServerChannel["type"]>(),
+    parentId: varchar("parent_id", { length: ID_MAX_LENGTH }),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -60,12 +61,12 @@ export const channels = pgTable(
 export const messages = pgTable(
   "messages",
   {
-    id: varchar("id", { length: 255 }).notNull(),
-    channelId: varchar("channel_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
+    channelId: varchar("channel_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    replyToId: varchar("reply_to_id", { length: 255 }),
+    replyToId: varchar("reply_to_id", { length: ID_MAX_LENGTH }),
     timestamp: pgTimestamp("timestamp").notNull(),
     editedAt: pgTimestamp("edited_at"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -94,8 +95,8 @@ export const messages = pgTable(
 export const boardMessages = pgTable(
   "board_messages",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     pinned: boolean("pinned").notNull().default(false),
@@ -114,11 +115,11 @@ export const boardMessages = pgTable(
 export const notes = pgTable(
   "notes",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    memberId: varchar("member_id", { length: 255 }),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -139,13 +140,13 @@ export const notes = pgTable(
 export const polls = pgTable(
   "polls",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: varchar("created_by_member_id", { length: 255 }),
-    kind: varchar("kind", { length: 255 }).$type<ServerPoll["kind"]>(),
-    status: varchar("status", { length: 255 })
+    createdByMemberId: varchar("created_by_member_id", { length: ID_MAX_LENGTH }),
+    kind: varchar("kind", { length: ENUM_MAX_LENGTH }).$type<ServerPoll["kind"]>(),
+    status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("open")
       .$type<ServerPoll["status"]>(),
@@ -176,12 +177,12 @@ export const polls = pgTable(
 export const pollVotes = pgTable(
   "poll_votes",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    pollId: varchar("poll_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    pollId: varchar("poll_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    optionId: varchar("option_id", { length: 255 }),
+    optionId: varchar("option_id", { length: ID_MAX_LENGTH }),
     voter: jsonb("voter").$type<ServerPollVote["voter"]>(),
     isVeto: boolean("is_veto"),
     votedAt: pgTimestamp("voted_at"),
@@ -201,11 +202,11 @@ export const pollVotes = pgTable(
 export const acknowledgements = pgTable(
   "acknowledgements",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    createdByMemberId: varchar("created_by_member_id", { length: 255 }),
+    createdByMemberId: varchar("created_by_member_id", { length: ID_MAX_LENGTH }),
     confirmed: boolean("confirmed").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),

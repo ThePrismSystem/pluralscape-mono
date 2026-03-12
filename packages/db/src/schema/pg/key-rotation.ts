@@ -3,6 +3,7 @@ import { check, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
@@ -12,13 +13,16 @@ import type { EntityType, RotationItemStatus, RotationState } from "@pluralscape
 export const bucketKeyRotations = pgTable(
   "bucket_key_rotations",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    bucketId: varchar("bucket_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
     fromKeyVersion: integer("from_key_version").notNull(),
     toKeyVersion: integer("to_key_version").notNull(),
-    state: varchar("state", { length: 255 }).notNull().default("initiated").$type<RotationState>(),
+    state: varchar("state", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .default("initiated")
+      .$type<RotationState>(),
     initiatedAt: pgTimestamp("initiated_at").notNull(),
     completedAt: pgTimestamp("completed_at"),
     totalItems: integer("total_items").notNull(),
@@ -39,13 +43,13 @@ export const bucketKeyRotations = pgTable(
 export const bucketRotationItems = pgTable(
   "bucket_rotation_items",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    rotationId: varchar("rotation_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    rotationId: varchar("rotation_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => bucketKeyRotations.id, { onDelete: "cascade" }),
-    entityType: varchar("entity_type", { length: 255 }).notNull().$type<EntityType>(),
-    entityId: varchar("entity_id", { length: 255 }).notNull(),
-    status: varchar("status", { length: 255 })
+    entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
+    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("pending")
       .$type<RotationItemStatus>(),

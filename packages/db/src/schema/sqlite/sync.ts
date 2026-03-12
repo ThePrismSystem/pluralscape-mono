@@ -3,6 +3,7 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-o
 
 import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck, nullPairCheck, versionCheck } from "../../helpers/check.js";
+import { MAX_AUTOMERGE_HEADS_BYTES } from "../../helpers/constants.js";
 import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -30,6 +31,10 @@ export const syncDocuments = sqliteTable(
       t.entityId,
     ),
     check("sync_documents_version_check", versionCheck(t.version)),
+    check(
+      "sync_documents_automerge_heads_size_check",
+      sql`${t.automergeHeads} IS NULL OR length(${t.automergeHeads}) <= ${MAX_AUTOMERGE_HEADS_BYTES}`,
+    ),
   ],
 );
 

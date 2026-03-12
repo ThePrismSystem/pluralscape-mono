@@ -13,6 +13,7 @@ import {
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { archivableConsistencyCheck, versionCheck } from "../../helpers/check.js";
+import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -20,11 +21,11 @@ import { systems } from "./systems.js";
 export const groups = pgTable(
   "groups",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    parentGroupId: varchar("parent_group_id", { length: 255 }),
+    parentGroupId: varchar("parent_group_id", { length: ID_MAX_LENGTH }),
     sortOrder: integer("sort_order").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -50,9 +51,9 @@ export const groups = pgTable(
 export const groupMemberships = pgTable(
   "group_memberships",
   {
-    groupId: varchar("group_id", { length: 255 }).notNull(),
-    memberId: varchar("member_id", { length: 255 }).notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    groupId: varchar("group_id", { length: ID_MAX_LENGTH }).notNull(),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     createdAt: pgTimestamp("created_at").notNull(),

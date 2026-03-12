@@ -3,6 +3,7 @@ import { check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { API_KEY_KEY_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -14,15 +15,15 @@ import type { ApiKey, ApiKeyScope } from "@pluralscape/types";
 export const apiKeys = pgTable(
   "api_keys",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    accountId: varchar("account_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: varchar("system_id", { length: 255 })
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }),
-    keyType: varchar("key_type", { length: 255 }).notNull().$type<ApiKey["keyType"]>(),
+    keyType: varchar("key_type", { length: ENUM_MAX_LENGTH }).notNull().$type<ApiKey["keyType"]>(),
     tokenHash: varchar("token_hash", { length: 255 }).notNull(),
     scopes: jsonb("scopes").notNull().$type<readonly ApiKeyScope[]>(),
     encryptedData: pgEncryptedBlob("encrypted_data"),

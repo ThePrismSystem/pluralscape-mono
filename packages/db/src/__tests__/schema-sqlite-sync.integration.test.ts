@@ -184,6 +184,49 @@ describe("SQLite sync schema", () => {
       const rows = db.select().from(syncDocuments).where(eq(syncDocuments.id, id)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("accepts automergeHeads at 16384 bytes", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const heads = new Uint8Array(16_384).fill(0xab);
+
+      db.insert(syncDocuments)
+        .values({
+          id,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          automergeHeads: heads,
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(syncDocuments).where(eq(syncDocuments.id, id)).all();
+      expect(rows).toHaveLength(1);
+    });
+
+    it("rejects automergeHeads exceeding 16384 bytes", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const heads = new Uint8Array(16_385).fill(0xab);
+
+      expect(() =>
+        db
+          .insert(syncDocuments)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            entityType: "member",
+            entityId: crypto.randomUUID(),
+            automergeHeads: heads,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
   });
 
   describe("sync_queue", () => {
