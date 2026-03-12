@@ -51,10 +51,12 @@ export const switches = sqliteTable(
     timestamp: sqliteTimestamp("timestamp").notNull(),
     memberIds: sqliteJson("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
+    ...versioned(),
   },
   (t) => [
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
     check("switches_member_ids_check", sql`json_array_length(${t.memberIds}) >= 1`),
+    check("switches_version_check", versionCheck(t.version)),
   ],
 );
 

@@ -262,7 +262,9 @@ export const PG_DDL = {
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       timestamp TIMESTAMPTZ NOT NULL,
       member_ids JSONB NOT NULL CHECK (jsonb_array_length(member_ids) >= 1),
-      created_at TIMESTAMPTZ NOT NULL
+      created_at TIMESTAMPTZ NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   switchesIndexes: `

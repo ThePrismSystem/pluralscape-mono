@@ -425,6 +425,40 @@ describe("SQLite fronting schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.memberIds).toEqual(["mem_single"]);
     });
+
+    it("defaults version to 1", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(switches)
+        .values({
+          id,
+          systemId,
+          timestamp: now,
+          memberIds: ["mem_test1"],
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("rejects version < 1 via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version) VALUES (?, ?, ?, '["m1"]', ?, 0)`,
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/constraint/i);
+    });
   });
 
   describe("custom_fronts", () => {

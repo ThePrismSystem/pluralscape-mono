@@ -385,6 +385,37 @@ describe("PG fronting schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.memberIds).toEqual(["mem_single"]);
     });
+
+    it("defaults version to 1", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(switches).values({
+        id,
+        systemId,
+        timestamp: now,
+        memberIds: ["mem_test1"],
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(switches).where(eq(switches.id, id));
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("rejects version < 1 via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version) VALUES ($1, $2, $3, '["m1"]'::jsonb, $4, 0)`,
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("custom_fronts", () => {

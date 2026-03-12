@@ -262,7 +262,9 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       timestamp INTEGER NOT NULL,
       member_ids TEXT NOT NULL CHECK (json_array_length(member_ids) >= 1),
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      CHECK (version >= 1)
     )
   `,
   switchesIndexes: `
