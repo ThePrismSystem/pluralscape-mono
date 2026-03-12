@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-import { eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -13,6 +13,7 @@ import {
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
 
+import type { JobResult, UnixMillis } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, jobs };
@@ -332,6 +333,152 @@ describe("SQLite jobs schema", () => {
       expect(failed?.status).toBe("failed");
       expect(failed?.error).toBe("Connection timeout after 5 attempts");
       expect(failed?.attempts).toBe(5);
+    });
+  });
+
+  describe("new columns (ADR 010)", () => {
+    it("round-trips heartbeat, timeout, result, scheduledFor, priority", () => {
+      const now = Date.now();
+      const result: JobResult = {
+        success: true,
+        message: "done",
+        completedAt: (now + 5000) as UnixMillis,
+      };
+
+      const inserted = db
+        .insert(jobs)
+        .values({
+          type: "sync-push",
+          payload: { test: true },
+          createdAt: now,
+          lastHeartbeatAt: now + 1000,
+          timeoutMs: 60000,
+          result,
+          scheduledFor: now + 10000,
+          priority: 5,
+        })
+        .returning()
+        .get();
+
+      expect(inserted.lastHeartbeatAt).toBe(now + 1000);
+      expect(inserted.timeoutMs).toBe(60000);
+      expect(inserted.result).toEqual(result);
+      expect(inserted.scheduledFor).toBe(now + 10000);
+      expect(inserted.priority).toBe(5);
+    });
+
+    it("defaults timeoutMs to 30000 and priority to 0", () => {
+      const now = Date.now();
+
+      const inserted = db
+        .insert(jobs)
+        .values({
+          type: "blob-cleanup",
+          payload: {},
+          createdAt: now,
+        })
+        .returning()
+        .get();
+
+      expect(inserted.timeoutMs).toBe(30000);
+      expect(inserted.priority).toBe(0);
+      expect(inserted.lastHeartbeatAt).toBeNull();
+      expect(inserted.result).toBeNull();
+      expect(inserted.scheduledFor).toBeNull();
+    });
+  });
+
+  describe("dead-letter status", () => {
+    it("transitions failed -> dead-letter", () => {
+      const now = Date.now();
+
+      const inserted = db
+        .insert(jobs)
+        .values({
+          type: "webhook-deliver",
+          payload: {},
+          status: "failed",
+          attempts: 5,
+          error: "Max retries exceeded",
+          createdAt: now,
+        })
+        .returning()
+        .get();
+
+      db.update(jobs).set({ status: "dead-letter" }).where(eq(jobs.id, inserted.id)).run();
+
+      const dlq = db.select().from(jobs).where(eq(jobs.id, inserted.id)).get();
+      expect(dlq?.status).toBe("dead-letter");
+      expect(dlq?.error).toBe("Max retries exceeded");
+    });
+
+    it("replays dead-letter -> pending with reset", () => {
+      const now = Date.now();
+
+      const inserted = db
+        .insert(jobs)
+        .values({
+          type: "notification-send",
+          payload: { recipient: "test" },
+          status: "dead-letter",
+          attempts: 5,
+          error: "Permanently failed",
+          createdAt: now,
+        })
+        .returning()
+        .get();
+
+      db.update(jobs)
+        .set({ status: "pending", attempts: 0, error: null })
+        .where(eq(jobs.id, inserted.id))
+        .run();
+
+      const replayed = db.select().from(jobs).where(eq(jobs.id, inserted.id)).get();
+      expect(replayed?.status).toBe("pending");
+      expect(replayed?.attempts).toBe(0);
+      expect(replayed?.error).toBeNull();
+    });
+  });
+
+  describe("timeoutMs CHECK constraint", () => {
+    it("rejects non-positive timeoutMs", () => {
+      const now = Date.now();
+
+      expect(() =>
+        db.run(
+          sql`INSERT INTO jobs (type, payload, status, timeout_ms, created_at) VALUES ('sync-push', '{}', 'pending', 0, ${now})`,
+        ),
+      ).toThrow();
+
+      expect(() =>
+        db.run(
+          sql`INSERT INTO jobs (type, payload, status, timeout_ms, created_at) VALUES ('sync-push', '{}', 'pending', -1, ${now})`,
+        ),
+      ).toThrow();
+    });
+  });
+
+  describe("priority ordering", () => {
+    it("orders jobs by priority ascending", () => {
+      const now = Date.now();
+
+      db.insert(jobs)
+        .values([
+          { type: "sync-push", payload: {}, createdAt: now, priority: 10 },
+          { type: "sync-pull", payload: {}, createdAt: now, priority: 0 },
+          { type: "blob-cleanup", payload: {}, createdAt: now, priority: 5 },
+        ])
+        .run();
+
+      const ordered = db
+        .select({ type: jobs.type, priority: jobs.priority })
+        .from(jobs)
+        .orderBy(asc(jobs.priority))
+        .all();
+
+      expect(ordered[0]?.priority).toBe(0);
+      expect(ordered[1]?.priority).toBe(5);
+      expect(ordered[2]?.priority).toBe(10);
     });
   });
 });

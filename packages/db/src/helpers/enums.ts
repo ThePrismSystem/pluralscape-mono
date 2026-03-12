@@ -293,6 +293,7 @@ export const JOB_STATUSES = [
   "completed",
   "failed",
   "cancelled",
+  "dead-letter",
 ] as const satisfies readonly JobStatus[];
 export const ENTITY_TYPES = [
   "system",

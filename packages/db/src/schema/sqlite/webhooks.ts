@@ -1,4 +1,13 @@
-import { foreignKey, index, integer, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  unique,
+} from "drizzle-orm/sqlite-core";
 
 import {
   sqliteBinary,
@@ -7,6 +16,8 @@ import {
   sqliteTimestamp,
 } from "../../columns/sqlite.js";
 import { timestamps } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
+import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { apiKeys } from "./api-keys.js";
 import { systems } from "./systems.js";
@@ -60,5 +71,12 @@ export const webhookDeliveries = sqliteTable(
       columns: [t.webhookId, t.systemId],
       foreignColumns: [webhookConfigs.id, webhookConfigs.systemId],
     }).onDelete("cascade"),
+    check("webhook_deliveries_event_type_check", enumCheck(t.eventType, WEBHOOK_EVENT_TYPES)),
+    check("webhook_deliveries_status_check", enumCheck(t.status, WEBHOOK_DELIVERY_STATUSES)),
+    check("webhook_deliveries_attempt_count_check", sql`${t.attemptCount} >= 0`),
+    check(
+      "webhook_deliveries_http_status_check",
+      sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,
+    ),
   ],
 );

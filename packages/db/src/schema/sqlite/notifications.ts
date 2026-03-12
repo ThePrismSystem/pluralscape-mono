@@ -1,4 +1,5 @@
 import {
+  check,
   foreignKey,
   index,
   integer,
@@ -9,6 +10,8 @@ import {
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
+import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
 import { friendConnections } from "./privacy.js";
@@ -40,6 +43,7 @@ export const deviceTokens = sqliteTable(
     index("device_tokens_account_id_idx").on(t.accountId),
     index("device_tokens_system_id_idx").on(t.systemId),
     index("device_tokens_revoked_at_idx").on(t.revokedAt),
+    check("device_tokens_platform_check", enumCheck(t.platform, DEVICE_TOKEN_PLATFORMS)),
   ],
 );
 
@@ -55,7 +59,13 @@ export const notificationConfigs = sqliteTable(
     pushEnabled: integer("push_enabled", { mode: "boolean" }).notNull().default(true),
     ...timestamps(),
   },
-  (t) => [uniqueIndex("notification_configs_system_id_event_type_idx").on(t.systemId, t.eventType)],
+  (t) => [
+    uniqueIndex("notification_configs_system_id_event_type_idx").on(t.systemId, t.eventType),
+    check(
+      "notification_configs_event_type_check",
+      enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
+    ),
+  ],
 );
 
 export const friendNotificationPreferences = sqliteTable(

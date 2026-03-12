@@ -165,6 +165,106 @@ describe("SQLite blob_metadata schema", () => {
     expect(rows[0]?.bucketId).toBeNull();
   });
 
+  it("rejects invalid purpose", () => {
+    const accountId = insertAccount();
+    const systemId = insertSystem(accountId);
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          crypto.randomUUID(),
+          systemId,
+          `blobs/${crypto.randomUUID()}`,
+          100,
+          1,
+          "invalid-purpose",
+          "sha256:test",
+          now,
+        ),
+    ).toThrow();
+  });
+
+  it("rejects sizeBytes <= 0", () => {
+    const accountId = insertAccount();
+    const systemId = insertSystem(accountId);
+    const now = Date.now();
+
+    expect(() =>
+      db
+        .insert(blobMetadata)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          storageKey: `blobs/${crypto.randomUUID()}`,
+          sizeBytes: 0,
+          encryptionTier: 1,
+          purpose: "avatar",
+          checksum: "sha256:test",
+          uploadedAt: now,
+        })
+        .run(),
+    ).toThrow();
+
+    expect(() =>
+      db
+        .insert(blobMetadata)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          storageKey: `blobs/${crypto.randomUUID()}`,
+          sizeBytes: -1,
+          encryptionTier: 1,
+          purpose: "avatar",
+          checksum: "sha256:test",
+          uploadedAt: now,
+        })
+        .run(),
+    ).toThrow();
+  });
+
+  it("rejects invalid encryptionTier", () => {
+    const accountId = insertAccount();
+    const systemId = insertSystem(accountId);
+    const now = Date.now();
+
+    expect(() =>
+      db
+        .insert(blobMetadata)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          storageKey: `blobs/${crypto.randomUUID()}`,
+          sizeBytes: 100,
+          encryptionTier: 0,
+          purpose: "avatar",
+          checksum: "sha256:test",
+          uploadedAt: now,
+        })
+        .run(),
+    ).toThrow();
+
+    expect(() =>
+      db
+        .insert(blobMetadata)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          storageKey: `blobs/${crypto.randomUUID()}`,
+          sizeBytes: 100,
+          encryptionTier: 3,
+          purpose: "avatar",
+          checksum: "sha256:test",
+          uploadedAt: now,
+        })
+        .run(),
+    ).toThrow();
+  });
+
   it("rejects null checksum", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);

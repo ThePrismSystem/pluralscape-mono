@@ -61,6 +61,7 @@ describe("JobStatus", () => {
     assertType<JobStatus>("completed");
     assertType<JobStatus>("failed");
     assertType<JobStatus>("cancelled");
+    assertType<JobStatus>("dead-letter");
   });
 
   it("rejects invalid statuses", () => {
@@ -76,6 +77,7 @@ describe("JobStatus", () => {
         case "completed":
         case "failed":
         case "cancelled":
+        case "dead-letter":
           return status;
         default: {
           const _exhaustive: never = status;

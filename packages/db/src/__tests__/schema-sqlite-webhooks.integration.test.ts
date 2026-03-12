@@ -213,6 +213,127 @@ describe("SQLite webhooks schema", () => {
       expect(rows[0]?.encryptedData).toBeNull();
     });
 
+    it("rejects invalid event_type", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(webhookConfigs)
+        .values({
+          id: whId,
+          systemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: ["member.created"],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), whId, systemId, "invalid-event", now),
+      ).toThrow();
+    });
+
+    it("rejects invalid status", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(webhookConfigs)
+        .values({
+          id: whId,
+          systemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: ["member.created"],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), whId, systemId, "member.created", "invalid-status", now),
+      ).toThrow();
+    });
+
+    it("rejects negative attempt_count", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(webhookConfigs)
+        .values({
+          id: whId,
+          systemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: ["member.created"],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, attempt_count, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), whId, systemId, "member.created", -1, now),
+      ).toThrow();
+    });
+
+    it("rejects http_status outside 100-599", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(webhookConfigs)
+        .values({
+          id: whId,
+          systemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: ["member.created"],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, http_status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), whId, systemId, "member.created", 99, now),
+      ).toThrow();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO webhook_deliveries (id, webhook_id, system_id, event_type, http_status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), whId, systemId, "member.created", 600, now),
+      ).toThrow();
+    });
+
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);

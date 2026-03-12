@@ -6,7 +6,12 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const DEFAULT_SEARCH_LIMIT = 50;
 
-/** FTS5 virtual table DDL for client-side full-text search. */
+/**
+ * FTS5 virtual table DDL for client-side full-text search.
+ *
+ * No system_id column: SQLite is single-tenant (one user, one system per database).
+ * See packages/db/docs/dialect-api-guide.md "SQLite Single-Tenant Isolation Model".
+ */
 export const SEARCH_INDEX_DDL = `
   CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
     entity_type UNINDEXED,

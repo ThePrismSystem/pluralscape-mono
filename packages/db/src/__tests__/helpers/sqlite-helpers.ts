@@ -929,7 +929,8 @@ export const SQLITE_DDL = {
       token TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       last_active_at INTEGER,
-      revoked_at INTEGER
+      revoked_at INTEGER,
+      CHECK (platform IS NULL OR platform IN ('ios', 'android', 'web'))
     )
   `,
   deviceTokensIndexes: `
@@ -945,7 +946,8 @@ export const SQLITE_DDL = {
       enabled INTEGER NOT NULL DEFAULT 1,
       push_enabled INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      CHECK (event_type IS NULL OR event_type IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert'))
     )
   `,
   notificationConfigsIndexes: `
@@ -996,7 +998,11 @@ export const SQLITE_DDL = {
       next_retry_at INTEGER,
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
-      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE,
+      CHECK (event_type IS NULL OR event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+      CHECK (status IS NULL OR status IN ('pending', 'success', 'failed')),
+      CHECK (attempt_count >= 0),
+      CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599))
     )
   `,
   webhookDeliveriesIndexes: `
@@ -1020,7 +1026,10 @@ export const SQLITE_DDL = {
       uploaded_at INTEGER NOT NULL,
       UNIQUE (id, system_id),
       FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
-      FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL
+      FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
+      CHECK (purpose IS NULL OR purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
+      CHECK (size_bytes > 0),
+      CHECK (encryption_tier IN (1, 2))
     )
   `,
   blobMetadataIndexes: `
@@ -1180,7 +1189,7 @@ export const SQLITE_DDL = {
       system_id TEXT REFERENCES systems(id) ON DELETE CASCADE,
       type TEXT NOT NULL CHECK (type IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate')),
       payload TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled', 'dead-letter')),
       attempts INTEGER NOT NULL DEFAULT 0,
       max_attempts INTEGER NOT NULL DEFAULT 5,
       next_retry_at INTEGER,
@@ -1189,13 +1198,21 @@ export const SQLITE_DDL = {
       started_at INTEGER,
       completed_at INTEGER,
       idempotency_key TEXT,
-      CHECK (attempts <= max_attempts)
+      last_heartbeat_at INTEGER,
+      timeout_ms INTEGER NOT NULL DEFAULT 30000,
+      result TEXT,
+      scheduled_for INTEGER,
+      priority INTEGER NOT NULL DEFAULT 0,
+      CHECK (attempts <= max_attempts),
+      CHECK (timeout_ms > 0)
     )
   `,
   jobsIndexes: `
     CREATE INDEX jobs_status_next_retry_at_idx ON jobs (status, next_retry_at);
     CREATE INDEX jobs_type_idx ON jobs (type);
-    CREATE UNIQUE INDEX jobs_idempotency_key_idx ON jobs (idempotency_key)
+    CREATE UNIQUE INDEX jobs_idempotency_key_idx ON jobs (idempotency_key);
+    CREATE INDEX jobs_priority_status_scheduled_idx ON jobs (priority, status, scheduled_for);
+    CREATE INDEX jobs_heartbeat_idx ON jobs (status, last_heartbeat_at)
   `,
   bucketKeyRotations: `
     CREATE TABLE bucket_key_rotations (

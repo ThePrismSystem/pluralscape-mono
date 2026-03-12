@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
@@ -49,6 +50,14 @@ export const syncQueue = sqliteTable(
   },
   (t) => [
     index("sync_queue_system_id_synced_at_idx").on(t.systemId, t.syncedAt),
+    index("sync_queue_system_id_entity_type_entity_id_idx").on(
+      t.systemId,
+      t.entityType,
+      t.entityId,
+    ),
+    index("sync_queue_unsynced_idx")
+      .on(t.systemId)
+      .where(sql`synced_at IS NULL`),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
   ],
 );
