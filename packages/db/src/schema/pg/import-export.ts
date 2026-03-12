@@ -121,8 +121,8 @@ export const accountPurgeRequests = pgTable(
   (t) => [
     index("account_purge_requests_account_id_idx").on(t.accountId),
     check("account_purge_requests_status_check", enumCheck(t.status, ACCOUNT_PURGE_STATUSES)),
-    uniqueIndex("account_purge_requests_pending_unique_idx")
+    uniqueIndex("account_purge_requests_active_unique_idx")
       .on(t.accountId)
-      .where(sql`status = 'pending'`),
+      .where(sql`status IN ('pending', 'confirmed', 'processing')`),
   ],
 );

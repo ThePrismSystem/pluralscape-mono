@@ -15,7 +15,7 @@ export const lifecycleEvents = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    eventType: text("event_type").$type<ServerLifecycleEvent["eventType"]>(),
+    eventType: text("event_type").notNull().$type<ServerLifecycleEvent["eventType"]>(),
     occurredAt: sqliteTimestamp("occurred_at").notNull(),
     recordedAt: sqliteTimestamp("recorded_at").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),

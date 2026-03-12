@@ -12,6 +12,7 @@ import {
 
 import { sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
+import { MAX_BLOB_SIZE_BYTES } from "../../helpers/constants.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
@@ -50,6 +51,10 @@ export const blobMetadata = sqliteTable(
     }).onDelete("set null"),
     check("blob_metadata_purpose_check", enumCheck(t.purpose, BLOB_PURPOSES)),
     check("blob_metadata_size_bytes_check", sql`${t.sizeBytes} > 0`),
+    check(
+      "blob_metadata_size_bytes_max_check",
+      sql`${t.sizeBytes} <= ${sql.raw(String(MAX_BLOB_SIZE_BYTES))}`,
+    ),
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
   ],
 );

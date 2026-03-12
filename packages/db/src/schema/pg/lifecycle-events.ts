@@ -16,9 +16,9 @@ export const lifecycleEvents = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    eventType: varchar("event_type", { length: ENUM_MAX_LENGTH }).$type<
-      ServerLifecycleEvent["eventType"]
-    >(),
+    eventType: varchar("event_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<ServerLifecycleEvent["eventType"]>(),
     occurredAt: pgTimestamp("occurred_at").notNull(),
     recordedAt: pgTimestamp("recorded_at").notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

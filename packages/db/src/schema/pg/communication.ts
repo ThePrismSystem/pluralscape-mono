@@ -146,7 +146,7 @@ export const polls = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     createdByMemberId: varchar("created_by_member_id", { length: ID_MAX_LENGTH }),
-    kind: varchar("kind", { length: ENUM_MAX_LENGTH }).$type<ServerPoll["kind"]>(),
+    kind: varchar("kind", { length: ENUM_MAX_LENGTH }).notNull().$type<ServerPoll["kind"]>(),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("open")
@@ -185,7 +185,7 @@ export const pollVotes = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     optionId: varchar("option_id", { length: ID_MAX_LENGTH }),
     voter: jsonb("voter").$type<ServerPollVote["voter"]>(),
-    isVeto: boolean("is_veto"),
+    isVeto: boolean("is_veto").notNull().default(false),
     votedAt: pgTimestamp("voted_at"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),

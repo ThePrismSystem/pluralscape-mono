@@ -290,4 +290,52 @@ describe("SQLite blob_metadata schema", () => {
         .run(id, systemId, `blobs/${crypto.randomUUID()}`, 100, 1, "avatar", now),
     ).toThrow();
   });
+
+  it("accepts size_bytes at exactly 10 GB", () => {
+    const accountId = insertAccount();
+    const systemId = insertSystem(accountId);
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          crypto.randomUUID(),
+          systemId,
+          `blobs/${crypto.randomUUID()}`,
+          10737418240,
+          1,
+          "avatar",
+          "sha256:test",
+          now,
+        ),
+    ).not.toThrow();
+  });
+
+  it("rejects size_bytes exceeding 10 GB", () => {
+    const accountId = insertAccount();
+    const systemId = insertSystem(accountId);
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          crypto.randomUUID(),
+          systemId,
+          `blobs/${crypto.randomUUID()}`,
+          10737418241,
+          1,
+          "avatar",
+          "sha256:test",
+          now,
+        ),
+    ).toThrow(/CHECK|constraint/i);
+  });
 });

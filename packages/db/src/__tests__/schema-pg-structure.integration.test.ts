@@ -122,6 +122,7 @@ describe("PG structure schema", () => {
       await db.insert(relationships).values({
         id,
         systemId,
+        type: "sibling",
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -142,6 +143,7 @@ describe("PG structure schema", () => {
       await db.insert(relationships).values({
         id,
         systemId,
+        type: "sibling",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -160,6 +162,7 @@ describe("PG structure schema", () => {
       await db.insert(relationships).values({
         id,
         systemId,
+        type: "sibling",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -176,6 +179,7 @@ describe("PG structure schema", () => {
         db.insert(relationships).values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
+          type: "sibling",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -219,6 +223,7 @@ describe("PG structure schema", () => {
       await db.insert(relationships).values({
         id,
         systemId,
+        type: "sibling",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -227,8 +232,8 @@ describe("PG structure schema", () => {
       const rows = await db.select().from(relationships).where(eq(relationships.id, id));
       expect(rows[0]?.sourceMemberId).toBeNull();
       expect(rows[0]?.targetMemberId).toBeNull();
-      expect(rows[0]?.type).toBeNull();
-      expect(rows[0]?.bidirectional).toBeNull();
+      expect(rows[0]?.type).toBe("sibling");
+      expect(rows[0]?.bidirectional).toBe(false);
     });
 
     it("rejects invalid type via CHECK constraint", async () => {
@@ -259,6 +264,7 @@ describe("PG structure schema", () => {
         id,
         systemId,
         sourceMemberId: memberId,
+        type: "sibling",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -279,6 +285,7 @@ describe("PG structure schema", () => {
           id: crypto.randomUUID(),
           systemId,
           sourceMemberId: "nonexistent",
+          type: "sibling",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -297,6 +304,7 @@ describe("PG structure schema", () => {
         id,
         systemId,
         targetMemberId: memberId,
+        type: "sibling",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -317,6 +325,7 @@ describe("PG structure schema", () => {
           id: crypto.randomUUID(),
           systemId,
           targetMemberId: "nonexistent",
+          type: "sibling",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -433,7 +442,7 @@ describe("PG structure schema", () => {
 
       const rows = await db.select().from(subsystems).where(eq(subsystems.id, id));
       expect(rows[0]?.architectureType).toBeNull();
-      expect(rows[0]?.hasCore).toBeNull();
+      expect(rows[0]?.hasCore).toBe(false);
       expect(rows[0]?.discoveryStatus).toBeNull();
     });
 

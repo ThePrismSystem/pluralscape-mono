@@ -44,6 +44,7 @@ describe("JobType", () => {
         case "bucket-key-rotation":
         case "report-generate":
         case "sync-queue-cleanup":
+        case "audit-log-cleanup":
           return type;
         default: {
           const _exhaustive: never = type;

@@ -470,6 +470,84 @@ describe("SQLite sync schema", () => {
           .run(),
       ).toThrow(/UNIQUE|constraint/i);
     });
+
+    it("rejects duplicate seq within same system", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const seq = ++seqCounter;
+
+      db.insert(syncQueue)
+        .values({
+          id: crypto.randomUUID(),
+          seq,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(syncQueue)
+          .values({
+            id: crypto.randomUUID(),
+            seq,
+            systemId,
+            entityType: "member",
+            entityId: crypto.randomUUID(),
+            operation: "update",
+            changeData: new Uint8Array([2]),
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("allows same seq across different systems", () => {
+      const accountId1 = insertAccount();
+      const systemId1 = insertSystem(accountId1);
+      const accountId2 = insertAccount();
+      const systemId2 = insertSystem(accountId2);
+      const now = Date.now();
+      const seq = ++seqCounter;
+
+      db.insert(syncQueue)
+        .values({
+          id: crypto.randomUUID(),
+          seq,
+          systemId: systemId1,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+        })
+        .run();
+
+      db.insert(syncQueue)
+        .values({
+          id: crypto.randomUUID(),
+          seq,
+          systemId: systemId2,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+        })
+        .run();
+
+      const rows1 = db.select().from(syncQueue).where(eq(syncQueue.systemId, systemId1)).all();
+      const rows2 = db.select().from(syncQueue).where(eq(syncQueue.systemId, systemId2)).all();
+      expect(rows1).toHaveLength(1);
+      expect(rows2).toHaveLength(1);
+      expect(rows1[0]?.seq).toBe(seq);
+      expect(rows2[0]?.seq).toBe(seq);
+    });
   });
 
   describe("sync_queue indexes", () => {

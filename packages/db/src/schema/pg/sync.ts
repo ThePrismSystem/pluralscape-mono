@@ -74,6 +74,8 @@ export const syncQueue = pgTable(
       t.entityId,
     ),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
+    // PG: seq is a SERIAL (globally unique auto-increment), so a global unique index suffices.
+    // SQLite: seq is application-supplied per system, so uniqueness is (system_id, seq).
     uniqueIndex("sync_queue_seq_idx").on(t.seq),
     index("sync_queue_unsynced_idx")
       .on(t.systemId)

@@ -34,8 +34,8 @@ export const fieldDefinitions = pgTable(
     fieldType: varchar("field_type", { length: ENUM_MAX_LENGTH }).$type<
       ServerFieldDefinition["fieldType"]
     >(),
-    required: boolean("required"),
-    sortOrder: integer("sort_order"),
+    required: boolean("required").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),

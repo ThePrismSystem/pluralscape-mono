@@ -126,6 +126,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
+          type: "sibling",
           encryptedData: data,
           createdAt: now,
           updatedAt: now,
@@ -148,6 +149,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
+          type: "sibling",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -168,6 +170,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
+          type: "sibling",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -187,6 +190,7 @@ describe("SQLite structure schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
+            type: "sibling",
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -234,6 +238,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
+          type: "sibling",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -243,8 +248,7 @@ describe("SQLite structure schema", () => {
       const rows = db.select().from(relationships).where(eq(relationships.id, id)).all();
       expect(rows[0]?.sourceMemberId).toBeNull();
       expect(rows[0]?.targetMemberId).toBeNull();
-      expect(rows[0]?.type).toBeNull();
-      expect(rows[0]?.bidirectional).toBeNull();
+      expect(rows[0]?.bidirectional).toBe(false);
     });
 
     it("rejects invalid type via CHECK constraint", () => {
@@ -278,6 +282,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
+          type: "sibling",
           sourceMemberId: memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -301,6 +306,7 @@ describe("SQLite structure schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId,
+            type: "sibling",
             sourceMemberId: "nonexistent",
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -321,6 +327,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           systemId,
+          type: "sibling",
           targetMemberId: memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -344,6 +351,7 @@ describe("SQLite structure schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId,
+            type: "sibling",
             targetMemberId: "nonexistent",
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -464,7 +472,7 @@ describe("SQLite structure schema", () => {
 
       const rows = db.select().from(subsystems).where(eq(subsystems.id, id)).all();
       expect(rows[0]?.architectureType).toBeNull();
-      expect(rows[0]?.hasCore).toBeNull();
+      expect(rows[0]?.hasCore).toBe(false);
       expect(rows[0]?.discoveryStatus).toBeNull();
     });
 

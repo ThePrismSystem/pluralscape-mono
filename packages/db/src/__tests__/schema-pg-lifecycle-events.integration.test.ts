@@ -45,6 +45,7 @@ describe("PG lifecycle_events schema", () => {
     await db.insert(lifecycleEvents).values({
       id,
       systemId,
+      eventType: "discovery",
       occurredAt,
       recordedAt,
       encryptedData: data,
@@ -70,6 +71,7 @@ describe("PG lifecycle_events schema", () => {
     await db.insert(lifecycleEvents).values({
       id,
       systemId,
+      eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
       encryptedData: blob,
@@ -88,6 +90,7 @@ describe("PG lifecycle_events schema", () => {
       await db.insert(lifecycleEvents).values({
         id: crypto.randomUUID(),
         systemId,
+        eventType: "discovery",
         occurredAt: now + i * 1000,
         recordedAt: now + i * 1000,
         encryptedData: testBlob(new Uint8Array([i])),
@@ -110,6 +113,7 @@ describe("PG lifecycle_events schema", () => {
     await db.insert(lifecycleEvents).values({
       id,
       systemId,
+      eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
@@ -126,6 +130,7 @@ describe("PG lifecycle_events schema", () => {
       db.insert(lifecycleEvents).values({
         id: crypto.randomUUID(),
         systemId: "nonexistent",
+        eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -154,6 +159,7 @@ describe("PG lifecycle_events schema", () => {
     await db.insert(lifecycleEvents).values({
       id,
       systemId,
+      eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
@@ -163,6 +169,7 @@ describe("PG lifecycle_events schema", () => {
       db.insert(lifecycleEvents).values({
         id,
         systemId,
+        eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
         encryptedData: testBlob(new Uint8Array([2])),
@@ -180,6 +187,7 @@ describe("PG lifecycle_events schema", () => {
     await db.insert(lifecycleEvents).values({
       id,
       systemId,
+      eventType: "discovery",
       occurredAt,
       recordedAt,
       encryptedData: testBlob(new Uint8Array([1])),
@@ -210,7 +218,7 @@ describe("PG lifecycle_events schema", () => {
     expect(rows[0]?.eventType).toBe("discovery");
   });
 
-  it("defaults eventType to null", async () => {
+  it("round-trips eventType when provided", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const id = crypto.randomUUID();
@@ -219,13 +227,14 @@ describe("PG lifecycle_events schema", () => {
     await db.insert(lifecycleEvents).values({
       id,
       systemId,
+      eventType: "discovery",
       occurredAt: now,
       recordedAt: now,
       encryptedData: testBlob(new Uint8Array([1])),
     });
 
     const rows = await db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id));
-    expect(rows[0]?.eventType).toBeNull();
+    expect(rows[0]?.eventType).toBe("discovery");
   });
 
   it("rejects invalid eventType via CHECK constraint", async () => {

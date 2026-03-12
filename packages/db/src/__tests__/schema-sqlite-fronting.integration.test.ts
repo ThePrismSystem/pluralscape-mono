@@ -57,13 +57,19 @@ describe("SQLite fronting schema", () => {
     return id;
   }
 
-  function insertFrontingSession(systemId: string, id = crypto.randomUUID()): string {
+  function insertFrontingSession(
+    systemId: string,
+    id = crypto.randomUUID(),
+    memberId?: string,
+  ): string {
     const now = Date.now();
+    const resolvedMemberId = memberId ?? insertMember(systemId);
     db.insert(frontingSessions)
       .values({
         id,
         systemId,
         startTime: now,
+        memberId: resolvedMemberId,
         encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
@@ -87,6 +93,7 @@ describe("SQLite fronting schema", () => {
     it("inserts with encrypted_data and round-trips binary", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
@@ -95,6 +102,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id,
           systemId,
+          memberId,
           startTime: now,
           endTime: now + 1000,
           encryptedData: data,
@@ -114,6 +122,7 @@ describe("SQLite fronting schema", () => {
     it("allows nullable endTime for open sessions", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -121,6 +130,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id,
           systemId,
+          memberId,
           startTime: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -135,6 +145,7 @@ describe("SQLite fronting schema", () => {
     it("defaults version to 1", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -142,6 +153,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id,
           systemId,
+          memberId,
           startTime: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -175,6 +187,7 @@ describe("SQLite fronting schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
+            memberId: "nonexistent-member",
             startTime: now,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -187,6 +200,7 @@ describe("SQLite fronting schema", () => {
     it("rejects endTime less than or equal to startTime via CHECK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const now = Date.now();
 
       expect(() =>
@@ -195,6 +209,7 @@ describe("SQLite fronting schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId,
+            memberId,
             startTime: now,
             endTime: now,
             encryptedData: testBlob(new Uint8Array([1])),
@@ -210,6 +225,7 @@ describe("SQLite fronting schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId,
+            memberId,
             startTime: now,
             endTime: now - 1,
             encryptedData: testBlob(new Uint8Array([1])),
@@ -223,6 +239,8 @@ describe("SQLite fronting schema", () => {
     it("allows overlapping sessions for the same system", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId1 = insertMember(systemId);
+      const memberId2 = insertMember(systemId);
       const now = Date.now();
 
       const id1 = crypto.randomUUID();
@@ -232,6 +250,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id: id1,
           systemId,
+          memberId: memberId1,
           startTime: now,
           endTime: now + 2000,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -244,6 +263,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id: id2,
           systemId,
+          memberId: memberId2,
           startTime: now + 1000,
           endTime: now + 3000,
           encryptedData: testBlob(new Uint8Array([2])),
@@ -293,6 +313,7 @@ describe("SQLite fronting schema", () => {
     it("defaults T3 metadata columns to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const customFrontId = insertCustomFront(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -300,6 +321,7 @@ describe("SQLite fronting schema", () => {
         .values({
           id,
           systemId,
+          customFrontId,
           startTime: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -309,8 +331,7 @@ describe("SQLite fronting schema", () => {
 
       const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
       expect(rows[0]?.memberId).toBeNull();
-      expect(rows[0]?.frontingType).toBeNull();
-      expect(rows[0]?.customFrontId).toBeNull();
+      expect(rows[0]?.frontingType).toBe("fronting");
       expect(rows[0]?.linkedStructure).toBeNull();
     });
 
@@ -318,6 +339,7 @@ describe("SQLite fronting schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const memberId = insertMember(systemId);
+      const customFrontId = insertCustomFront(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -327,6 +349,7 @@ describe("SQLite fronting schema", () => {
           systemId,
           startTime: now,
           memberId,
+          customFrontId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -362,6 +385,7 @@ describe("SQLite fronting schema", () => {
     it("sets customFrontId to null on custom front deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const customFrontId = insertCustomFront(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -371,6 +395,7 @@ describe("SQLite fronting schema", () => {
           id,
           systemId,
           startTime: now,
+          memberId,
           customFrontId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -407,6 +432,7 @@ describe("SQLite fronting schema", () => {
     it("rejects invalid frontingType via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const now = Date.now();
 
       expect(() =>
@@ -415,6 +441,7 @@ describe("SQLite fronting schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId,
+            memberId,
             startTime: now,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -428,15 +455,55 @@ describe("SQLite fronting schema", () => {
     it("rejects version < 1 via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const now = Date.now();
 
       expect(() =>
         client
           .prepare(
-            "INSERT INTO fronting_sessions (id, system_id, start_time, encrypted_data, created_at, updated_at, version) VALUES (?, ?, ?, X'0102', ?, ?, 0)",
+            "INSERT INTO fronting_sessions (id, system_id, member_id, start_time, encrypted_data, created_at, updated_at, version) VALUES (?, ?, ?, ?, X'0102', ?, ?, 0)",
+          )
+          .run(crypto.randomUUID(), systemId, memberId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects fronting session with no subject", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO fronting_sessions (id, system_id, start_time, encrypted_data, created_at, updated_at) VALUES (?, ?, ?, X'0102', ?, ?)",
           )
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("accepts fronting session with only customFrontId", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const customFrontId = insertCustomFront(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          customFrontId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.customFrontId).toBe(customFrontId);
     });
   });
 

@@ -11,6 +11,7 @@ import { systems } from "../schema/pg/systems.js";
 import {
   createPgJournalTables,
   pgInsertAccount,
+  pgInsertMember,
   pgInsertSystem,
   testBlob,
 } from "./helpers/pg-helpers.js";
@@ -45,10 +46,12 @@ describe("PG journal schema", () => {
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
 
+      const memberId = await pgInsertMember(db, systemId);
       await db.insert(frontingSessions).values({
         id: fsId,
         systemId,
         startTime: now,
+        memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,

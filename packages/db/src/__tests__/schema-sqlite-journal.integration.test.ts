@@ -6,18 +6,20 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/sqlite/auth.js";
 import { frontingSessions } from "../schema/sqlite/fronting.js";
 import { journalEntries, wikiPages } from "../schema/sqlite/journal.js";
+import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
 import {
   createSqliteJournalTables,
   sqliteInsertAccount,
+  sqliteInsertMember,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-const schema = { accounts, systems, frontingSessions, journalEntries, wikiPages };
+const schema = { accounts, systems, members, frontingSessions, journalEntries, wikiPages };
 
 describe("SQLite journal schema", () => {
   let client: InstanceType<typeof Database>;
@@ -26,6 +28,8 @@ describe("SQLite journal schema", () => {
   const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string): string =>
     sqliteInsertSystem(db, accountId, id);
+  const insertMember = (systemId: string, id?: string): string =>
+    sqliteInsertMember(db, systemId, id);
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -42,6 +46,7 @@ describe("SQLite journal schema", () => {
     it("round-trips with encrypted_data and frontingSessionId", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const fsId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -51,6 +56,7 @@ describe("SQLite journal schema", () => {
         .values({
           id: fsId,
           systemId,
+          memberId,
           startTime: now,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,

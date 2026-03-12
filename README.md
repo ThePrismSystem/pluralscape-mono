@@ -79,24 +79,24 @@ tooling/
 
 ## Tech Stack
 
-| Layer            | Technology                                      | Decision Record                                     |
-| ---------------- | ----------------------------------------------- | --------------------------------------------------- |
-| Frontend         | Expo (React Native) + TypeScript                | [ADR 002](docs/adr/002-frontend-framework.md)       |
-| API              | Hono on Bun + tRPC (internal) + REST (public)   | [ADR 003](docs/adr/003-api-framework.md)            |
-| Database         | PostgreSQL + Drizzle ORM / SQLite (self-hosted) | [ADR 004](docs/adr/004-database.md)                 |
-| Offline Sync     | Custom CRDT (Automerge)                         | [ADR 005](docs/adr/005-offline-sync.md)             |
-| Encryption       | libsodium (E2E, zero-knowledge server)          | [ADR 006](docs/adr/006-encryption.md)               |
-| Real-Time        | WebSockets + SSE + Valkey                       | [ADR 007](docs/adr/007-realtime.md)                 |
-| Runtime          | Bun (Node.js fallback)                          | [ADR 008](docs/adr/008-runtime.md)                  |
-| Media            | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md)       |
-| Job Queue        | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)          |
-| Key Recovery     | Recovery key + multi-device transfer            | [ADR 011](docs/adr/011-key-recovery.md)             |
-| Self-Hosted      | Minimal (single binary) / Full (Docker Compose) | [ADR 012](docs/adr/012-self-hosted-tiers.md)        |
-| API Auth         | Hybrid metadata + crypto key model              | [ADR 013](docs/adr/013-api-auth-encryption.md)      |
-| Key Rotation     | Lazy per-bucket rotation with ledger            | [ADR 014](docs/adr/014-lazy-key-rotation.md)        |
-| Push Tokens      | Plaintext push tokens (server-side only)        | [ADR 015](docs/adr/015-push-token-plaintext.md)     |
-| Msg Partitioning | Hash-based message table partitioning           | [ADR 016](docs/adr/016-messages-partitioning.md)    |
-| Audit Log        | Time-based audit log partitioning               | [ADR 017](docs/adr/017-audit-log-partitioning.md)   |
+| Layer            | Technology                                      | Decision Record                                        |
+| ---------------- | ----------------------------------------------- | ------------------------------------------------------ |
+| Frontend         | Expo (React Native) + TypeScript                | [ADR 002](docs/adr/002-frontend-framework.md)          |
+| API              | Hono on Bun + tRPC (internal) + REST (public)   | [ADR 003](docs/adr/003-api-framework.md)               |
+| Database         | PostgreSQL + Drizzle ORM / SQLite (self-hosted) | [ADR 004](docs/adr/004-database.md)                    |
+| Offline Sync     | Custom CRDT (Automerge)                         | [ADR 005](docs/adr/005-offline-sync.md)                |
+| Encryption       | libsodium (E2E, zero-knowledge server)          | [ADR 006](docs/adr/006-encryption.md)                  |
+| Real-Time        | WebSockets + SSE + Valkey                       | [ADR 007](docs/adr/007-realtime.md)                    |
+| Runtime          | Bun (Node.js fallback)                          | [ADR 008](docs/adr/008-runtime.md)                     |
+| Media            | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md)          |
+| Job Queue        | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)             |
+| Key Recovery     | Recovery key + multi-device transfer            | [ADR 011](docs/adr/011-key-recovery.md)                |
+| Self-Hosted      | Minimal (single binary) / Full (Docker Compose) | [ADR 012](docs/adr/012-self-hosted-tiers.md)           |
+| API Auth         | Hybrid metadata + crypto key model              | [ADR 013](docs/adr/013-api-auth-encryption.md)         |
+| Key Rotation     | Lazy per-bucket rotation with ledger            | [ADR 014](docs/adr/014-lazy-key-rotation.md)           |
+| Push Tokens      | Plaintext push tokens (server-side only)        | [ADR 015](docs/adr/015-push-token-plaintext.md)        |
+| Msg Partitioning | Hash-based message table partitioning           | [ADR 016](docs/adr/016-messages-partitioning.md)       |
+| Audit Log        | Time-based audit log partitioning               | [ADR 017](docs/adr/017-audit-log-partitioning.md)      |
 | Encryption@Rest  | DB-layer encryption-at-rest boundary            | [ADR 018](docs/adr/018-encryption-at-rest-boundary.md) |
 
 All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md).

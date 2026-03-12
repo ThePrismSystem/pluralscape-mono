@@ -34,7 +34,14 @@ import {
   getUnconfirmedAcknowledgements,
 } from "../views/pg.js";
 
-import { PG_DDL, pgExec, pgInsertAccount, pgInsertSystem, testBlob } from "./helpers/pg-helpers.js";
+import {
+  PG_DDL,
+  pgExec,
+  pgInsertAccount,
+  pgInsertMember,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -47,6 +54,7 @@ describe("PG views / query helpers", () => {
 
   let accountId: string;
   let systemId: string;
+  let memberId: string;
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -141,6 +149,7 @@ describe("PG views / query helpers", () => {
     }
     accountId = await insertAccount();
     systemId = await insertSystem(accountId);
+    memberId = await pgInsertMember(db, systemId);
   });
 
   describe("getCurrentFronters", () => {
@@ -150,6 +159,7 @@ describe("PG views / query helpers", () => {
       await db.insert(frontingSessions).values({
         id: crypto.randomUUID(),
         systemId,
+        memberId,
         startTime: now - 60000,
         endTime: null,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -159,6 +169,7 @@ describe("PG views / query helpers", () => {
       await db.insert(frontingSessions).values({
         id: crypto.randomUUID(),
         systemId,
+        memberId,
         startTime: now - 120000,
         endTime: now - 30000,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -184,6 +195,7 @@ describe("PG views / query helpers", () => {
       await db.insert(frontingSessions).values({
         id: crypto.randomUUID(),
         systemId,
+        memberId,
         startTime: now - 60000,
         endTime: null,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -540,6 +552,7 @@ describe("PG views / query helpers", () => {
         {
           id: activeSessionId,
           systemId,
+          memberId,
           startTime: now - 60000,
           endTime: null,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -549,6 +562,7 @@ describe("PG views / query helpers", () => {
         {
           id: endedSessionId,
           systemId,
+          memberId,
           startTime: now - 120000,
           endTime: now - 30000,
           encryptedData: testBlob(new Uint8Array([1])),

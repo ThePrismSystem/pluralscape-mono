@@ -77,7 +77,7 @@ describe("PG safe_mode_content schema", () => {
     expect(rows[0]?.version).toBe(1);
   });
 
-  it("allows nullable sort_order", async () => {
+  it("defaults sort_order to 0", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
     const now = Date.now();
@@ -92,7 +92,7 @@ describe("PG safe_mode_content schema", () => {
     });
 
     const rows = await db.select().from(safeModeContent).where(eq(safeModeContent.id, id));
-    expect(rows[0]?.sortOrder).toBeNull();
+    expect(rows[0]?.sortOrder).toBe(0);
   });
 
   it("supports multiple content items per system with ordering", async () => {

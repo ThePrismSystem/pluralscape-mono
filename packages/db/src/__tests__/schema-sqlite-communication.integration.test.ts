@@ -302,6 +302,31 @@ describe("SQLite communication schema", () => {
           .run(crypto.randomUUID(), channelId, systemId, now, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("allows replyToId referencing nonexistent message (no self-FK)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const channelId = insertChannel(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(messages)
+        .values({
+          id,
+          channelId,
+          systemId,
+          timestamp: now,
+          replyToId: "nonexistent-message-id",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(messages).where(eq(messages.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.replyToId).toBe("nonexistent-message-id");
+    });
   });
 
   describe("board_messages", () => {
@@ -545,6 +570,7 @@ describe("SQLite communication schema", () => {
           id,
           systemId,
           status: "open",
+          kind: "standard",
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
           allowAbstain: false,
@@ -582,6 +608,7 @@ describe("SQLite communication schema", () => {
             id: crypto.randomUUID(),
             systemId,
             status: "invalid" as "open",
+            kind: "standard",
             allowMultipleVotes: false,
             maxVotesPerMember: 1,
             allowAbstain: false,
@@ -639,7 +666,7 @@ describe("SQLite communication schema", () => {
 
       const rows = db.select().from(polls).where(eq(polls.id, pollId)).all();
       expect(rows[0]?.createdByMemberId).toBeNull();
-      expect(rows[0]?.kind).toBeNull();
+      expect(rows[0]?.kind).toBe("standard");
     });
 
     it("rejects invalid kind via CHECK constraint", () => {
@@ -678,6 +705,7 @@ describe("SQLite communication schema", () => {
           id,
           systemId,
           createdByMemberId: memberId,
+          kind: "standard",
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
           allowAbstain: false,
@@ -705,6 +733,7 @@ describe("SQLite communication schema", () => {
             id: crypto.randomUUID(),
             systemId,
             createdByMemberId: "nonexistent",
+            kind: "standard",
             allowMultipleVotes: false,
             maxVotesPerMember: 1,
             allowAbstain: false,
@@ -852,7 +881,7 @@ describe("SQLite communication schema", () => {
       const rows = db.select().from(pollVotes).where(eq(pollVotes.id, id)).all();
       expect(rows[0]?.optionId).toBeNull();
       expect(rows[0]?.voter).toBeNull();
-      expect(rows[0]?.isVeto).toBeNull();
+      expect(rows[0]?.isVeto).toBe(false);
       expect(rows[0]?.votedAt).toBeNull();
     });
   });

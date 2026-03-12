@@ -202,7 +202,7 @@ describe("SQLite custom fields schema", () => {
       expect(rows[0]?.sortOrder).toBe(5);
     });
 
-    it("defaults T3 metadata to null", () => {
+    it("defaults T3 metadata to null or default values", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -220,8 +220,8 @@ describe("SQLite custom fields schema", () => {
 
       const rows = db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id)).all();
       expect(rows[0]?.fieldType).toBeNull();
-      expect(rows[0]?.required).toBeNull();
-      expect(rows[0]?.sortOrder).toBeNull();
+      expect(rows[0]?.required).toBe(false);
+      expect(rows[0]?.sortOrder).toBe(0);
     });
 
     it("rejects invalid fieldType via CHECK constraint", () => {

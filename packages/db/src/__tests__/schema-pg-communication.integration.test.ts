@@ -655,6 +655,7 @@ describe("PG communication schema", () => {
       await db.insert(polls).values({
         id,
         systemId,
+        kind: "standard",
         status: "open",
         allowMultipleVotes: false,
         maxVotesPerMember: 1,
@@ -689,6 +690,7 @@ describe("PG communication schema", () => {
         db.insert(polls).values({
           id: crypto.randomUUID(),
           systemId,
+          kind: "standard",
           status: "invalid" as "open",
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
@@ -744,7 +746,7 @@ describe("PG communication schema", () => {
 
       const rows = await db.select().from(polls).where(eq(polls.id, pollId));
       expect(rows[0]?.createdByMemberId).toBeNull();
-      expect(rows[0]?.kind).toBeNull();
+      expect(rows[0]?.kind).toBe("standard");
     });
 
     it("rejects invalid kind via CHECK constraint", async () => {
@@ -779,6 +781,7 @@ describe("PG communication schema", () => {
         id,
         systemId,
         createdByMemberId: memberId,
+        kind: "standard",
         allowMultipleVotes: false,
         maxVotesPerMember: 1,
         allowAbstain: false,
@@ -803,6 +806,7 @@ describe("PG communication schema", () => {
           id: crypto.randomUUID(),
           systemId,
           createdByMemberId: "nonexistent",
+          kind: "standard",
           allowMultipleVotes: false,
           maxVotesPerMember: 1,
           allowAbstain: false,
@@ -938,7 +942,7 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
       expect(rows[0]?.optionId).toBeNull();
       expect(rows[0]?.voter).toBeNull();
-      expect(rows[0]?.isVeto).toBeNull();
+      expect(rows[0]?.isVeto).toBe(false);
       expect(rows[0]?.votedAt).toBeNull();
     });
   });

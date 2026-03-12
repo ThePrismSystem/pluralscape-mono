@@ -44,9 +44,10 @@ export const frontingSessions = pgTable(
     startTime: pgTimestamp("start_time").notNull(),
     endTime: pgTimestamp("end_time"),
     memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
-    frontingType: varchar("fronting_type", { length: ENUM_MAX_LENGTH }).$type<
-      ServerFrontingSession["frontingType"]
-    >(),
+    frontingType: varchar("fronting_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .default("fronting")
+      .$type<ServerFrontingSession["frontingType"]>(),
     customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
     linkedStructure: jsonb("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -75,6 +76,15 @@ export const frontingSessions = pgTable(
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
     check("fronting_sessions_version_check", versionCheck(t.version)),
+    // Invariant: every session must have at least one subject (member or custom front).
+    // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
+    // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
+    // behavior: members/custom_fronts should be archived (not deleted) per project
+    // principles. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
+    check(
+      "fronting_sessions_subject_check",
+      sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,
+    ),
   ],
 );
 

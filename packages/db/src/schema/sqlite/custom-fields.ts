@@ -30,8 +30,8 @@ export const fieldDefinitions = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     fieldType: text("field_type").$type<ServerFieldDefinition["fieldType"]>(),
-    required: integer("required", { mode: "boolean" }),
-    sortOrder: integer("sort_order"),
+    required: integer("required", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
