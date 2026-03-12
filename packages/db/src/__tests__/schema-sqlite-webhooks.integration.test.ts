@@ -312,6 +312,72 @@ describe("SQLite webhooks schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("supports TTL cleanup query on terminal states", () => {
+      const now = Date.now();
+      const thirtyOneDaysAgo = now - 31 * 24 * 60 * 60 * 1000;
+      const whId = crypto.randomUUID();
+
+      db.insert(webhookConfigs)
+        .values({
+          id: whId,
+          systemId: deliverySystemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: [],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const oldId = crypto.randomUUID();
+      const recentId = crypto.randomUUID();
+      const pendingOldId = crypto.randomUUID();
+
+      db.insert(webhookDeliveries)
+        .values([
+          {
+            id: oldId,
+            webhookId: whId,
+            systemId: deliverySystemId,
+            eventType: "member.created" as const,
+            status: "success" as const,
+            createdAt: thirtyOneDaysAgo,
+          },
+          {
+            id: recentId,
+            webhookId: whId,
+            systemId: deliverySystemId,
+            eventType: "member.created" as const,
+            status: "failed" as const,
+            createdAt: now,
+          },
+          {
+            id: pendingOldId,
+            webhookId: whId,
+            systemId: deliverySystemId,
+            eventType: "member.created" as const,
+            status: "pending" as const,
+            createdAt: thirtyOneDaysAgo,
+          },
+        ])
+        .run();
+
+      const cutoff = now - 30 * 24 * 60 * 60 * 1000;
+      client
+        .prepare(
+          "DELETE FROM webhook_deliveries WHERE status IN ('success', 'failed') AND created_at < ?",
+        )
+        .run(cutoff);
+
+      const remaining = db
+        .select()
+        .from(webhookDeliveries)
+        .where(eq(webhookDeliveries.webhookId, whId))
+        .all();
+      expect(remaining).toHaveLength(2);
+      expect(remaining.map((r) => r.id).sort()).toEqual([pendingOldId, recentId].sort());
+    });
+
     it("cascades on webhook config deletion", () => {
       const delId = crypto.randomUUID();
       const now = Date.now();

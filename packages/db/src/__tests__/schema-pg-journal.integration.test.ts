@@ -176,17 +176,18 @@ describe("PG journal schema", () => {
   });
 
   describe("wiki_pages", () => {
-    it("round-trips with encrypted_data and slug", async () => {
+    it("round-trips with encrypted_data and slugHash", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30]));
+      const hash = "a".repeat(64);
 
       await db.insert(wikiPages).values({
         id,
         systemId,
-        slug: "test-page",
+        slugHash: hash,
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -195,7 +196,7 @@ describe("PG journal schema", () => {
       const rows = await db.select().from(wikiPages).where(eq(wikiPages.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedData).toEqual(data);
-      expect(rows[0]?.slug).toBe("test-page");
+      expect(rows[0]?.slugHash).toBe(hash);
     });
 
     it("defaults archived to false and version to 1", async () => {
@@ -207,7 +208,7 @@ describe("PG journal schema", () => {
       await db.insert(wikiPages).values({
         id,
         systemId,
-        slug: `slug-${crypto.randomUUID()}`,
+        slugHash: crypto.randomUUID().replace(/-/g, "").padEnd(64, "0"),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -219,16 +220,16 @@ describe("PG journal schema", () => {
       expect(rows[0]?.version).toBe(1);
     });
 
-    it("enforces unique (system_id, slug)", async () => {
+    it("enforces unique (system_id, slug_hash)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const slug = `unique-${crypto.randomUUID()}`;
+      const slugHash = "b".repeat(64);
       const now = Date.now();
 
       await db.insert(wikiPages).values({
         id: crypto.randomUUID(),
         systemId,
-        slug,
+        slugHash,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -238,7 +239,7 @@ describe("PG journal schema", () => {
         db.insert(wikiPages).values({
           id: crypto.randomUUID(),
           systemId,
-          slug,
+          slugHash,
           encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
           updatedAt: now,
@@ -246,17 +247,17 @@ describe("PG journal schema", () => {
       ).rejects.toThrow();
     });
 
-    it("allows same slug in different systems", async () => {
+    it("allows same slugHash in different systems", async () => {
       const accountId = await insertAccount();
       const systemId1 = await insertSystem(accountId);
       const systemId2 = await insertSystem(accountId);
-      const slug = `shared-${crypto.randomUUID()}`;
+      const slugHash = "c".repeat(64);
       const now = Date.now();
 
       await db.insert(wikiPages).values({
         id: crypto.randomUUID(),
         systemId: systemId1,
-        slug,
+        slugHash,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -265,7 +266,7 @@ describe("PG journal schema", () => {
       await db.insert(wikiPages).values({
         id: crypto.randomUUID(),
         systemId: systemId2,
-        slug,
+        slugHash,
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
@@ -286,7 +287,7 @@ describe("PG journal schema", () => {
       await db.insert(wikiPages).values({
         id,
         systemId,
-        slug: `del-${crypto.randomUUID()}`,
+        slugHash: "d".repeat(64),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -304,8 +305,8 @@ describe("PG journal schema", () => {
 
       await expect(
         client.query(
-          "INSERT INTO wiki_pages (id, system_id, slug, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, 1, true, NULL)",
-          [crypto.randomUUID(), systemId, `slug-${crypto.randomUUID()}`, now, now],
+          "INSERT INTO wiki_pages (id, system_id, slug_hash, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, "e".repeat(64), now, now],
         ),
       ).rejects.toThrow(/check|constraint/i);
     });
@@ -317,8 +318,8 @@ describe("PG journal schema", () => {
 
       await expect(
         client.query(
-          "INSERT INTO wiki_pages (id, system_id, slug, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, 1, false, $6)",
-          [crypto.randomUUID(), systemId, `slug-${crypto.randomUUID()}`, now, now, now],
+          "INSERT INTO wiki_pages (id, system_id, slug_hash, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, 1, false, $6)",
+          [crypto.randomUUID(), systemId, "f".repeat(64), now, now, now],
         ),
       ).rejects.toThrow(/check|constraint/i);
     });

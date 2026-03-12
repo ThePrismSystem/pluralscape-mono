@@ -74,6 +74,7 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       device_info TEXT,
+      encrypted_data BLOB,
       created_at INTEGER NOT NULL,
       last_active INTEGER,
       revoked INTEGER NOT NULL DEFAULT 0,
@@ -570,10 +571,11 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      name TEXT NOT NULL,
+      name TEXT,
       key_type TEXT NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
       token_hash TEXT NOT NULL UNIQUE,
       scopes TEXT NOT NULL,
+      encrypted_data BLOB,
       encrypted_key_material BLOB,
       created_at INTEGER NOT NULL,
       last_used_at INTEGER,
@@ -807,7 +809,7 @@ export const SQLITE_DDL = {
     CREATE TABLE wiki_pages (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      slug TEXT NOT NULL,
+      slug_hash TEXT NOT NULL,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -822,7 +824,7 @@ export const SQLITE_DDL = {
     CREATE INDEX wiki_pages_system_id_idx ON wiki_pages (system_id)
   `,
   wikiPagesUniqueSlugIndex: `
-    CREATE UNIQUE INDEX wiki_pages_system_id_slug_idx ON wiki_pages (system_id, slug)
+    CREATE UNIQUE INDEX wiki_pages_system_id_slug_hash_idx ON wiki_pages (system_id, slug_hash)
   `,
   // Groups
   groups: `
@@ -1015,7 +1017,8 @@ export const SQLITE_DDL = {
   webhookDeliveriesIndexes: `
     CREATE INDEX webhook_deliveries_webhook_id_idx ON webhook_deliveries (webhook_id);
     CREATE INDEX webhook_deliveries_system_id_idx ON webhook_deliveries (system_id);
-    CREATE INDEX webhook_deliveries_status_next_retry_at_idx ON webhook_deliveries (status, next_retry_at)
+    CREATE INDEX webhook_deliveries_status_next_retry_at_idx ON webhook_deliveries (status, next_retry_at);
+    CREATE INDEX webhook_deliveries_status_created_at_idx ON webhook_deliveries (status, created_at)
   `,
   // Blob Metadata
   blobMetadata: `

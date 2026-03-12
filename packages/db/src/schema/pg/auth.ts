@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
@@ -51,6 +51,7 @@ export const sessions = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     deviceInfo: jsonb("device_info").$type<DeviceInfo | null>(),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
     createdAt: pgTimestamp("created_at").notNull(),
     lastActive: pgTimestamp("last_active"),
     revoked: boolean("revoked").notNull().default(false),

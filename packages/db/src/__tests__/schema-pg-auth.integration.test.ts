@@ -11,7 +11,7 @@ import {
   sessions,
 } from "../schema/pg/auth.js";
 
-import { createPgAuthTables } from "./helpers/pg-helpers.js";
+import { createPgAuthTables, testBlob } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -417,6 +417,36 @@ describe("PG auth schema", () => {
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
       expect(rows[0]?.expiresAt).toBe(expiresAt);
+    });
+
+    it("defaults encryptedData to null", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+
+      await db.insert(sessions).values({
+        id,
+        accountId: account.id,
+        createdAt: Date.now(),
+      });
+
+      const rows = await db.select().from(sessions).where(eq(sessions.id, id));
+      expect(rows[0]?.encryptedData).toBeNull();
+    });
+
+    it("round-trips encryptedData blob", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+      const blob = testBlob(new Uint8Array([10, 20, 30]));
+
+      await db.insert(sessions).values({
+        id,
+        accountId: account.id,
+        encryptedData: blob,
+        createdAt: Date.now(),
+      });
+
+      const rows = await db.select().from(sessions).where(eq(sessions.id, id));
+      expect(rows[0]?.encryptedData).toEqual(blob);
     });
   });
 

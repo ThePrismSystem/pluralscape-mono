@@ -25,7 +25,7 @@ export interface ActiveApiKey {
   readonly id: string;
   readonly accountId: string;
   readonly systemId: string;
-  readonly name: string;
+  readonly name: string | null;
   readonly keyType: "metadata" | "crypto";
   readonly createdAt: number;
   readonly expiresAt: number | null;

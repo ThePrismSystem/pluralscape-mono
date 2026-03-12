@@ -1,7 +1,12 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { sqliteBinary, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import {
+  sqliteBinary,
+  sqliteEncryptedBlob,
+  sqliteJson,
+  sqliteTimestamp,
+} from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
@@ -51,6 +56,7 @@ export const sessions = sqliteTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     deviceInfo: sqliteJson("device_info").$type<DeviceInfo | null>(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data"),
     createdAt: sqliteTimestamp("created_at").notNull(),
     lastActive: sqliteTimestamp("last_active"),
     revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),

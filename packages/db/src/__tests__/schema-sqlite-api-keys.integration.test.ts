@@ -11,6 +11,7 @@ import {
   createSqliteApiKeysTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -390,5 +391,75 @@ describe("SQLite api_keys schema", () => {
 
     const rows = db.select().from(apiKeys).where(eq(apiKeys.id, id)).all();
     expect(rows[0]?.encryptedKeyMaterial).toEqual(emptyMaterial);
+  });
+
+  it("allows nullable name for encrypted migration", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    db.insert(apiKeys)
+      .values({
+        id,
+        accountId,
+        systemId,
+        keyType: "metadata",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["read:members"],
+        createdAt: now,
+      })
+      .run();
+
+    const rows = db.select().from(apiKeys).where(eq(apiKeys.id, id)).all();
+    expect(rows[0]?.name).toBeNull();
+  });
+
+  it("round-trips encryptedData blob", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const now = Date.now();
+    const id = crypto.randomUUID();
+    const blob = testBlob(new Uint8Array([10, 20, 30]));
+
+    db.insert(apiKeys)
+      .values({
+        id,
+        accountId,
+        systemId,
+        name: "Encrypted Key",
+        keyType: "metadata",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["full"],
+        encryptedData: blob,
+        createdAt: now,
+      })
+      .run();
+
+    const rows = db.select().from(apiKeys).where(eq(apiKeys.id, id)).all();
+    expect(rows[0]?.encryptedData).toEqual(blob);
+  });
+
+  it("defaults encryptedData to null", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const now = Date.now();
+    const id = crypto.randomUUID();
+
+    db.insert(apiKeys)
+      .values({
+        id,
+        accountId,
+        systemId,
+        name: "No Blob Key",
+        keyType: "metadata",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["full"],
+        createdAt: now,
+      })
+      .run();
+
+    const rows = db.select().from(apiKeys).where(eq(apiKeys.id, id)).all();
+    expect(rows[0]?.encryptedData).toBeNull();
   });
 });

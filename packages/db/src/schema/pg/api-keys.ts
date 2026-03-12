@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { API_KEY_KEY_TYPES } from "../../helpers/enums.js";
 
@@ -21,10 +21,11 @@ export const apiKeys = pgTable(
     systemId: varchar("system_id", { length: 255 })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    name: varchar("name", { length: 255 }).notNull(),
+    name: varchar("name", { length: 255 }),
     keyType: varchar("key_type", { length: 255 }).notNull().$type<ApiKey["keyType"]>(),
     tokenHash: varchar("token_hash", { length: 255 }).notNull(),
     scopes: jsonb("scopes").notNull().$type<readonly ApiKeyScope[]>(),
+    encryptedData: pgEncryptedBlob("encrypted_data"),
     encryptedKeyMaterial: pgBinary("encrypted_key_material"),
     createdAt: pgTimestamp("created_at").notNull(),
     lastUsedAt: pgTimestamp("last_used_at"),

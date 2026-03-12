@@ -416,11 +416,16 @@ export type ClientJournalEntry = JournalEntry;
 /**
  * Server-side wiki page representation.
  * T1 encrypted: title, slug, blocks, tags, linkedEntities, linkedFromPages
- * T3 plaintext: archived
+ * T3 plaintext: archived, slugHash
+ *
+ * slugHash is a BLAKE2B-256 keyed hash (hex-encoded, 64 chars) of the plaintext slug.
+ * The plaintext slug lives inside encryptedData. Client hashes slug locally with
+ * master key and queries by (systemId, slugHash).
  */
 export interface ServerWikiPage extends AuditMetadata {
   readonly id: WikiPageId;
   readonly systemId: SystemId;
+  readonly slugHash: string;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
 }
@@ -571,13 +576,18 @@ export type ClientTimerConfig = TimerConfig;
 /**
  * Server-side audit log entry representation.
  * T1 encrypted: detail
- * T3 plaintext: eventType, actor, ipAddress, userAgent, createdAt
+ * T3 plaintext: eventType, actor, ipAddress, userAgent, timestamp
+ *
+ * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
+ * The audit_log table intentionally uses `timestamp` to reflect when the
+ * event occurred, not when the row was created. The client-side
+ * AuditLogEntry type uses `createdAt` — the mapping layer handles this rename.
  */
 export interface ServerAuditLogEntry {
   readonly id: AuditLogEntryId;
   readonly systemId: SystemId;
   readonly eventType: AuditEventType;
-  readonly createdAt: UnixMillis;
+  readonly timestamp: UnixMillis;
   readonly actor: AuditActor;
   readonly encryptedData: EncryptedBlob | null;
   readonly ipAddress: string | null;
@@ -614,7 +624,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // LifecycleEvent: T1 (notes) | T3 (eventType, occurredAt, recordedAt)
 // CustomFront: T1 (name, description, color, emoji) | T3 (archived)
 // JournalEntry: T1 (title, blocks, tags, linkedEntities, author) | T3 (frontingSessionId, archived)
-// WikiPage: T1 (title, slug, blocks, tags, linkedEntities, linkedFromPages) | T3 (archived)
+// WikiPage: T1 (title, slug, blocks, tags, linkedEntities, linkedFromPages) | T3 (archived, slugHash)
 // MemberPhoto: T1 (imageSource, caption) | T3 (memberId, sortOrder)
 // Poll: T1 (title, options, description) | T3 (createdByMemberId, kind, status, closedAt, endsAt, allowMultipleVotes, maxVotesPerMember, allowAbstain, allowVeto)
 // PollVote: T1 (comment) | T3 (pollId, optionId, voter, isVeto, votedAt)
@@ -622,18 +632,28 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // SideSystem: T1 (name, description, color, imageSource, emoji) | T3 (none)
 // Layer: T1 (name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds) | T3 (none)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
-// AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, createdAt)
+// AuditLogEntry: T1 (detail) | T3 (eventType, actor, ipAddress, userAgent, timestamp)
 //
 // Switch: T3 (memberIds, timestamp — immutable event metadata; member IDs are non-identifying opaque tokens)
 // FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side
 //
-// ApiKey: T3 (all fields — server metadata, no user content)
-// BlobMetadata: T3 (all fields — metadata only, blob content encrypted at storage layer)
+// Session: T1 (deviceInfo) | T3 (accountId, revoked, timestamps)
+// ApiKey: T1 (name) | T3 (scopes — server enforces authorization; scopedBucketIds — server enforces bucket-scoped auth; keyType, tokenHash, timestamps, encryptedKeyMaterial)
+// BlobMetadata: T3 (mimeType — server must set Content-Type headers and validate uploads;
+//   purpose — server enforces per-purpose quota limits; sizeBytes — server enforces quota
+//   and validates uploads; all remaining fields are operational metadata. Encrypting any of
+//   these would require trusting client-reported values, which is a security hole. This matches
+//   how all E2E encrypted storage systems handle blob metadata.)
 // JobDefinition: T3 (all fields — server-internal job metadata)
+// ImportJob: T3 (source — server must know source format to select the correct import parser;
+//   status, errorMessage, stats — operational metadata for transient job records. The revealed
+//   info (prior app choice) is extremely low sensitivity. Moving parsing client-side would be
+//   a major architecture change disproportionate to the risk.)
 // DeviceToken: T3 (token, platform, lastActiveAt — server must read push tokens to deliver notifications)
 // NotificationConfig: T3 (all fields — user preferences, no sensitive content)
 // NotificationPayload: T1 (title, body, data) | T3 (eventType, systemId)
-// WebhookConfig: T1 (secret via EncryptedString) | T3 (url, eventTypes, enabled, cryptoKeyId)
+// WebhookConfig: T1 (secret via EncryptedString) | T3 (url — server must read to deliver webhooks;
+//   eventTypes — server must read to route/filter events; enabled, cryptoKeyId)
 // WebhookDelivery: T1 (payload when encrypted) | T3 (eventType, statusCode, deliveredAt, success)
 // RealtimeSubscription: T3 (all fields — subscription metadata)
 // SearchQuery/SearchResult: client-only types, not persisted server-side

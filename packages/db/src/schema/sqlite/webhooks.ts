@@ -67,6 +67,7 @@ export const webhookDeliveries = sqliteTable(
     index("webhook_deliveries_webhook_id_idx").on(t.webhookId),
     index("webhook_deliveries_system_id_idx").on(t.systemId),
     index("webhook_deliveries_status_next_retry_at_idx").on(t.status, t.nextRetryAt),
+    index("webhook_deliveries_status_created_at_idx").on(t.status, t.createdAt),
     foreignKey({
       columns: [t.webhookId, t.systemId],
       foreignColumns: [webhookConfigs.id, webhookConfigs.systemId],

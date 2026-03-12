@@ -74,6 +74,7 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       device_info JSONB,
+      encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       last_active TIMESTAMPTZ,
       revoked BOOLEAN NOT NULL DEFAULT false,
@@ -570,10 +571,11 @@ export const PG_DDL = {
       id VARCHAR(255) PRIMARY KEY,
       account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      name VARCHAR(255) NOT NULL,
+      name VARCHAR(255),
       key_type VARCHAR(255) NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
       token_hash VARCHAR(255) NOT NULL UNIQUE,
       scopes JSONB NOT NULL,
+      encrypted_data BYTEA,
       encrypted_key_material BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       last_used_at TIMESTAMPTZ,
@@ -807,7 +809,7 @@ export const PG_DDL = {
     CREATE TABLE wiki_pages (
       id VARCHAR(255) PRIMARY KEY,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      slug VARCHAR(255) NOT NULL,
+      slug_hash VARCHAR(64) NOT NULL,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -822,7 +824,7 @@ export const PG_DDL = {
     CREATE INDEX wiki_pages_system_id_idx ON wiki_pages (system_id)
   `,
   wikiPagesUniqueSlugIndex: `
-    CREATE UNIQUE INDEX wiki_pages_system_id_slug_idx ON wiki_pages (system_id, slug)
+    CREATE UNIQUE INDEX wiki_pages_system_id_slug_hash_idx ON wiki_pages (system_id, slug_hash)
   `,
   // Groups
   groups: `
@@ -1011,7 +1013,8 @@ export const PG_DDL = {
   webhookDeliveriesIndexes: `
     CREATE INDEX webhook_deliveries_webhook_id_idx ON webhook_deliveries (webhook_id);
     CREATE INDEX webhook_deliveries_system_id_idx ON webhook_deliveries (system_id);
-    CREATE INDEX webhook_deliveries_status_next_retry_at_idx ON webhook_deliveries (status, next_retry_at)
+    CREATE INDEX webhook_deliveries_status_next_retry_at_idx ON webhook_deliveries (status, next_retry_at);
+    CREATE INDEX webhook_deliveries_terminal_created_at_idx ON webhook_deliveries (created_at) WHERE status IN ('success', 'failed')
   `,
   // Blob Metadata
   blobMetadata: `

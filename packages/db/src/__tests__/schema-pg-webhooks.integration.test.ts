@@ -332,6 +332,68 @@ describe("PG webhooks schema", () => {
       ).rejects.toThrow();
     });
 
+    it("supports TTL cleanup query on terminal states", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const now = Date.now();
+      const thirtyOneDaysAgo = now - 31 * 24 * 60 * 60 * 1000;
+
+      await db.insert(webhookConfigs).values({
+        id: whId,
+        systemId,
+        url: "https://example.com/hook",
+        secret: new Uint8Array([1]),
+        eventTypes: [],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const oldId = crypto.randomUUID();
+      const recentId = crypto.randomUUID();
+      const pendingOldId = crypto.randomUUID();
+
+      await db.insert(webhookDeliveries).values([
+        {
+          id: oldId,
+          webhookId: whId,
+          systemId,
+          eventType: "member.created" as const,
+          status: "success" as const,
+          createdAt: thirtyOneDaysAgo,
+        },
+        {
+          id: recentId,
+          webhookId: whId,
+          systemId,
+          eventType: "member.created" as const,
+          status: "failed" as const,
+          createdAt: now,
+        },
+        {
+          id: pendingOldId,
+          webhookId: whId,
+          systemId,
+          eventType: "member.created" as const,
+          status: "pending" as const,
+          createdAt: thirtyOneDaysAgo,
+        },
+      ]);
+
+      const cutoff = now - 30 * 24 * 60 * 60 * 1000;
+      await client.query(
+        "DELETE FROM webhook_deliveries WHERE status IN ('success', 'failed') AND created_at < $1",
+        [new Date(cutoff).toISOString()],
+      );
+
+      const remaining = await db
+        .select()
+        .from(webhookDeliveries)
+        .where(eq(webhookDeliveries.webhookId, whId));
+      expect(remaining).toHaveLength(2);
+      expect(remaining.map((r) => r.id).sort()).toEqual([pendingOldId, recentId].sort());
+    });
+
     it("cascades on webhook config deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);

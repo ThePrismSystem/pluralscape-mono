@@ -221,6 +221,7 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerWikiPage>().toBeObject();
     expectTypeOf<ServerWikiPage["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<ServerWikiPage["archived"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<ServerWikiPage["slugHash"]>().toEqualTypeOf<string>();
     expectTypeOf<ClientWikiPage>().toEqualTypeOf<WikiPage>();
   });
 
@@ -277,6 +278,7 @@ describe("Server/Client pairs exist for completed domains", () => {
   it("audit log entry pair", () => {
     expectTypeOf<ServerAuditLogEntry>().toBeObject();
     expectTypeOf<ServerAuditLogEntry["encryptedData"]>().toEqualTypeOf<EncryptedBlob | null>();
+    expectTypeOf<ServerAuditLogEntry["timestamp"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<ServerAuditLogEntry["actor"]>().toEqualTypeOf<AuditActor>();
     expectTypeOf<ServerAuditLogEntry["ipAddress"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ServerAuditLogEntry["userAgent"]>().toEqualTypeOf<string | null>();
