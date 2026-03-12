@@ -407,6 +407,7 @@ describe("SQLite api_keys schema", () => {
         keyType: "metadata",
         tokenHash: `hash_${crypto.randomUUID()}`,
         scopes: ["read:members"],
+        encryptedData: testBlob(),
         createdAt: now,
       })
       .run();
@@ -461,5 +462,26 @@ describe("SQLite api_keys schema", () => {
 
     const rows = db.select().from(apiKeys).where(eq(apiKeys.id, id)).all();
     expect(rows[0]?.encryptedData).toBeNull();
+  });
+
+  it("rejects both name and encryptedData null", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const now = Date.now();
+
+    expect(() =>
+      db
+        .insert(apiKeys)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          keyType: "metadata",
+          tokenHash: `hash_${crypto.randomUUID()}`,
+          scopes: ["full"],
+          createdAt: now,
+        })
+        .run(),
+    ).toThrow(/CHECK|constraint/i);
   });
 });

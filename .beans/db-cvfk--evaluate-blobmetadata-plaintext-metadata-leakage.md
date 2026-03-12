@@ -11,4 +11,6 @@ parent: db-2nr7
 
 mimeType, purpose, sizeBytes together fingerprint content types for each system. Consider whether these need encryption or are acceptable metadata. Ref: audit M13
 
-## Summary of Changes\n\nAccepted as T3 with rationale documented in the tier map. The server must read `mimeType` (Content-Type headers), `purpose` (quota limits), and `sizeBytes` (quota enforcement). Encrypting these would require trusting client-reported values.
+## Summary of Changes
+
+Accepted as T3 with rationale documented in the tier map. The server must read `mimeType` (Content-Type headers), `purpose` (quota limits), and `sizeBytes` (quota enforcement). Encrypting these would require trusting client-reported values.

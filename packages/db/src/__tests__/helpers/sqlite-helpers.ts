@@ -45,6 +45,9 @@ export function testBlobT2(
   };
 }
 
+export const MS_PER_DAY = 86_400_000;
+export const TTL_RETENTION_DAYS = 30;
+
 export const SQLITE_DDL = {
   accounts: `
     CREATE TABLE accounts (
@@ -582,7 +585,8 @@ export const SQLITE_DDL = {
       revoked_at INTEGER,
       expires_at INTEGER,
       scoped_bucket_ids TEXT,
-      CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL))
+      CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL)),
+      CHECK (name IS NOT NULL OR encrypted_data IS NOT NULL)
     )
   `,
   apiKeysIndexes: `
@@ -817,7 +821,8 @@ export const SQLITE_DDL = {
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       CHECK (version >= 1),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
+      CHECK ((archived = true) = (archived_at IS NOT NULL)),
+      CHECK (length(slug_hash) = 64)
     )
   `,
   wikiPagesIndexes: `

@@ -11,4 +11,6 @@ parent: db-2nr7
 
 Webhook URL may contain tokens or system identifiers. eventTypes reveals subscription patterns. Ref: audit M12
 
-## Summary of Changes\n\nDocumented `url` and `eventTypes` as T3 with rationale in the tier map. The server must read `url` to deliver webhooks and `eventTypes` to route events. No schema changes needed — the existing `secret` field (binary) is already T1.
+## Summary of Changes
+
+Documented `url` and `eventTypes` as T3 with rationale in the tier map. The server must read `url` to deliver webhooks and `eventTypes` to route events. No schema changes needed — the existing `secret` field (binary) is already T1.

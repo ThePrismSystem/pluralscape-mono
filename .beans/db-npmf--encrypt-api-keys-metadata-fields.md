@@ -11,4 +11,6 @@ parent: db-2nr7
 
 api_keys.name, scopes, scopedBucketIds are all plaintext. Reveals integration details to server operator. Ref: audit M11
 
-## Summary of Changes\n\nAdded nullable `encrypted_data BYTEA` column to api_keys table. Made `name` nullable (was NOT NULL) to support migration to encrypted blob. Updated DDL helpers and added integration tests. Updated tier map: `ApiKey: T1 (name) | T3 (scopes, scopedBucketIds, keyType, tokenHash, timestamps, encryptedKeyMaterial)`.
+## Summary of Changes
+
+Added nullable `encrypted_data BYTEA` column to api_keys table. Made `name` nullable (was NOT NULL) to support migration to encrypted blob. Updated DDL helpers and added integration tests. Updated tier map: `ApiKey: T1 (name) | T3 (scopes, scopedBucketIds, keyType, tokenHash, timestamps, encryptedKeyMaterial)`.

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
@@ -56,5 +57,6 @@ export const wikiPages = sqliteTable(
       "wiki_pages_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
     ),
+    check("wiki_pages_slug_hash_length_check", sql`length(${t.slugHash}) = 64`),
   ],
 );

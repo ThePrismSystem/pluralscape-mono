@@ -21,15 +21,6 @@ import { systems } from "./systems.js";
 
 import type { WebhookDeliveryStatus, WebhookEventType } from "@pluralscape/types";
 
-/**
- * Webhook delivery records. Terminal states ('success', 'failed') should be
- * cleaned up after 30 days. The `webhook_deliveries_terminal_created_at_idx`
- * partial index supports cleanup queries like:
- *   DELETE FROM webhook_deliveries
- *   WHERE status IN ('success', 'failed') AND created_at < $cutoff
- * Actual cleanup job is blocked by infra-m2t5 (background job infrastructure).
- */
-
 export const webhookConfigs = pgTable(
   "webhook_configs",
   {
@@ -52,6 +43,14 @@ export const webhookConfigs = pgTable(
   ],
 );
 
+/**
+ * Webhook delivery records. Terminal states ('success', 'failed') should be
+ * cleaned up after 30 days. The `webhook_deliveries_terminal_created_at_idx`
+ * partial index supports cleanup queries like:
+ *   DELETE FROM webhook_deliveries
+ *   WHERE status IN ('success', 'failed') AND created_at < $cutoff
+ * Actual cleanup job is blocked by infra-m2t5 (background job infrastructure).
+ */
 export const webhookDeliveries = pgTable(
   "webhook_deliveries",
   {

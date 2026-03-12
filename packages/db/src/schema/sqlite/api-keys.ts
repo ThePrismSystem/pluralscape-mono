@@ -49,5 +49,9 @@ export const apiKeys = sqliteTable(
       "api_keys_key_material_check",
       sql`(${t.keyType} = 'crypto' AND ${t.encryptedKeyMaterial} IS NOT NULL) OR (${t.keyType} = 'metadata' AND ${t.encryptedKeyMaterial} IS NULL)`,
     ),
+    check(
+      "api_keys_name_or_encrypted_data_check",
+      sql`${t.name} IS NOT NULL OR ${t.encryptedData} IS NOT NULL`,
+    ),
   ],
 );

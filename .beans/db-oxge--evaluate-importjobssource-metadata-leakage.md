@@ -11,4 +11,6 @@ parent: db-2nr7
 
 source field reveals migration patterns (simply-plural, pluralkit, pluralscape). Consider if this is acceptable operational metadata. Ref: audit M15
 
-## Summary of Changes\n\nAccepted as T3 with rationale documented in the tier map. The server must know the source format to select the correct import parser. Import jobs are transient operational records with extremely low sensitivity.
+## Summary of Changes
+
+Accepted as T3 with rationale documented in the tier map. The server must know the source format to select the correct import parser. Import jobs are transient operational records with extremely low sensitivity.

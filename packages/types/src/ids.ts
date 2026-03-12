@@ -69,6 +69,7 @@ export type FrontingCommentId = Brand<string, "FrontingCommentId">;
 export type BucketKeyRotationId = Brand<string, "BucketKeyRotationId">;
 export type BucketRotationItemId = Brand<string, "BucketRotationItemId">;
 export type HexColor = Brand<string, "HexColor">;
+export type SlugHash = Brand<string, "SlugHash">;
 
 // ── ID prefix convention ────────────────────────────────────────────
 

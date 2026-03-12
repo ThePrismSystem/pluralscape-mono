@@ -9,6 +9,8 @@ import { systems } from "../schema/sqlite/systems.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/sqlite/webhooks.js";
 
 import {
+  MS_PER_DAY,
+  TTL_RETENTION_DAYS,
   createSqliteWebhookTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
@@ -314,7 +316,7 @@ describe("SQLite webhooks schema", () => {
 
     it("supports TTL cleanup query on terminal states", () => {
       const now = Date.now();
-      const thirtyOneDaysAgo = now - 31 * 24 * 60 * 60 * 1000;
+      const thirtyOneDaysAgo = now - (TTL_RETENTION_DAYS + 1) * MS_PER_DAY;
       const whId = crypto.randomUUID();
 
       db.insert(webhookConfigs)
@@ -362,7 +364,7 @@ describe("SQLite webhooks schema", () => {
         ])
         .run();
 
-      const cutoff = now - 30 * 24 * 60 * 60 * 1000;
+      const cutoff = now - TTL_RETENTION_DAYS * MS_PER_DAY;
       client
         .prepare(
           "DELETE FROM webhook_deliveries WHERE status IN ('success', 'failed') AND created_at < ?",

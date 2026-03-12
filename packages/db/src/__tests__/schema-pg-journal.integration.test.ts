@@ -208,7 +208,7 @@ describe("PG journal schema", () => {
       await db.insert(wikiPages).values({
         id,
         systemId,
-        slugHash: crypto.randomUUID().replace(/-/g, "").padEnd(64, "0"),
+        slugHash: "a".repeat(64),
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -322,6 +322,23 @@ describe("PG journal schema", () => {
           [crypto.randomUUID(), systemId, "f".repeat(64), now, now, now],
         ),
       ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects slug_hash shorter than 64 chars", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(wikiPages).values({
+          id: crypto.randomUUID(),
+          systemId,
+          slugHash: "a".repeat(32),
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 });

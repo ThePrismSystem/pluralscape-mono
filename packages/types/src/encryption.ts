@@ -42,6 +42,7 @@ import type {
   SubsystemId,
   SystemId,
   TimerId,
+  SlugHash,
   WikiPageId,
 } from "./ids.js";
 import type { InnerWorldEntity, InnerWorldRegion } from "./innerworld.js";
@@ -418,14 +419,14 @@ export type ClientJournalEntry = JournalEntry;
  * T1 encrypted: title, slug, blocks, tags, linkedEntities, linkedFromPages
  * T3 plaintext: archived, slugHash
  *
- * slugHash is a BLAKE2B-256 keyed hash (hex-encoded, 64 chars) of the plaintext slug.
- * The plaintext slug lives inside encryptedData. Client hashes slug locally with
- * master key and queries by (systemId, slugHash).
+ * slugHash is a keyed hash (hex-encoded, 64 chars) of the plaintext slug.
+ * The plaintext slug lives inside encryptedData. Client hashes slug locally
+ * and queries by (systemId, slugHash). Hash algorithm TBD — see crypto package.
  */
 export interface ServerWikiPage extends AuditMetadata {
   readonly id: WikiPageId;
   readonly systemId: SystemId;
-  readonly slugHash: string;
+  readonly slugHash: SlugHash;
   readonly archived: boolean;
   readonly encryptedData: EncryptedBlob;
 }
@@ -581,7 +582,7 @@ export type ClientTimerConfig = TimerConfig;
  * Note: Uses `timestamp` (not `createdAt`) to match the DB column name.
  * The audit_log table intentionally uses `timestamp` to reflect when the
  * event occurred, not when the row was created. The client-side
- * AuditLogEntry type uses `createdAt` — the mapping layer handles this rename.
+ * AuditLogEntry type uses `createdAt` — the mapping layer will handle this rename.
  */
 export interface ServerAuditLogEntry {
   readonly id: AuditLogEntryId;
@@ -637,8 +638,8 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // Switch: T3 (memberIds, timestamp — immutable event metadata; member IDs are non-identifying opaque tokens)
 // FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side
 //
-// Session: T1 (deviceInfo) | T3 (accountId, revoked, timestamps)
-// ApiKey: T1 (name) | T3 (scopes — server enforces authorization; scopedBucketIds — server enforces bucket-scoped auth; keyType, tokenHash, timestamps, encryptedKeyMaterial)
+// Session: T1 (deviceInfo — pending migration to encryptedData) | T3 (accountId, revoked, timestamps)
+// ApiKey: T1 (name — pending migration to encryptedData) | T3 (scopes — server enforces authorization; scopedBucketIds — server enforces bucket-scoped auth; keyType, tokenHash, timestamps, encryptedKeyMaterial)
 // BlobMetadata: T3 (mimeType — server must set Content-Type headers and validate uploads;
 //   purpose — server enforces per-purpose quota limits; sizeBytes — server enforces quota
 //   and validates uploads; all remaining fields are operational metadata. Encrypting any of
@@ -654,6 +655,6 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // NotificationPayload: T1 (title, body, data) | T3 (eventType, systemId)
 // WebhookConfig: T1 (secret via EncryptedString) | T3 (url — server must read to deliver webhooks;
 //   eventTypes — server must read to route/filter events; enabled, cryptoKeyId)
-// WebhookDelivery: T1 (payload when encrypted) | T3 (eventType, statusCode, deliveredAt, success)
+// WebhookDelivery: T1 (encryptedData) | T3 (eventType, httpStatus, attemptCount, lastAttemptAt, nextRetryAt, createdAt)
 // RealtimeSubscription: T3 (all fields — subscription metadata)
 // SearchQuery/SearchResult: client-only types, not persisted server-side

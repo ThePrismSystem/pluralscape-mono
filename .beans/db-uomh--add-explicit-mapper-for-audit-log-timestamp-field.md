@@ -11,4 +11,6 @@ parent: db-2nr7
 
 audit_log uses timestamp rather than createdAt. Mapping contract is implicit — make it explicit or rename column. Ref: audit M23
 
-## Summary of Changes\n\nRenamed `createdAt` to `timestamp` in `ServerAuditLogEntry` to match the DB column name (`audit_log.timestamp`). Updated JSDoc, tier map comment, and type tests. The mapping layer between server/client types handles the rename to the domain `AuditLogEntry.createdAt`.
+## Summary of Changes
+
+Renamed `createdAt` to `timestamp` in `ServerAuditLogEntry` to match the DB column name (`audit_log.timestamp`). Updated JSDoc, tier map comment, and type tests. The mapping layer between server/client types handles the rename to the domain `AuditLogEntry.createdAt`.

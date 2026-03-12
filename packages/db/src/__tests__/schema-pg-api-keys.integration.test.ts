@@ -346,6 +346,7 @@ describe("PG api_keys schema", () => {
       keyType: "metadata",
       tokenHash: `hash_${crypto.randomUUID()}`,
       scopes: ["read:members"],
+      encryptedData: testBlob(),
       createdAt: now,
     });
 
@@ -395,5 +396,23 @@ describe("PG api_keys schema", () => {
 
     const rows = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
     expect(rows[0]?.encryptedData).toBeNull();
+  });
+
+  it("rejects both name and encryptedData null", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+    const now = Date.now();
+
+    await expect(
+      db.insert(apiKeys).values({
+        id: crypto.randomUUID(),
+        accountId,
+        systemId,
+        keyType: "metadata",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["full"],
+        createdAt: now,
+      }),
+    ).rejects.toThrow();
   });
 });

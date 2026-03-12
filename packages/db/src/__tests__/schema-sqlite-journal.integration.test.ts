@@ -227,7 +227,7 @@ describe("SQLite journal schema", () => {
         .values({
           id,
           systemId,
-          slugHash: crypto.randomUUID().replace(/-/g, "").padEnd(64, "0"),
+          slugHash: "a".repeat(64),
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -354,6 +354,26 @@ describe("SQLite journal schema", () => {
             "INSERT INTO wiki_pages (id, system_id, slug_hash, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
           )
           .run(crypto.randomUUID(), systemId, "f".repeat(64), now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects slug_hash shorter than 64 chars", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(wikiPages)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            slugHash: "a".repeat(32),
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
       ).toThrow(/CHECK|constraint/i);
     });
   });

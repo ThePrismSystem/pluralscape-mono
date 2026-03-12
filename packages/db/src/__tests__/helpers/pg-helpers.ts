@@ -45,6 +45,9 @@ export function testBlobT2(
   };
 }
 
+export const MS_PER_DAY = 86_400_000;
+export const TTL_RETENTION_DAYS = 30;
+
 export const PG_DDL = {
   accounts: `
     CREATE TABLE accounts (
@@ -582,7 +585,8 @@ export const PG_DDL = {
       revoked_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ,
       scoped_bucket_ids JSONB,
-      CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL))
+      CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL)),
+      CHECK (name IS NOT NULL OR encrypted_data IS NOT NULL)
     )
   `,
   apiKeysIndexes: `
@@ -817,7 +821,8 @@ export const PG_DDL = {
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
       CHECK (version >= 1),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
+      CHECK ((archived = true) = (archived_at IS NOT NULL)),
+      CHECK (length(slug_hash) = 64)
     )
   `,
   wikiPagesIndexes: `

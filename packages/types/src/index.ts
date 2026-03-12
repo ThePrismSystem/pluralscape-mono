@@ -63,6 +63,7 @@ export type {
   BucketKeyRotationId,
   BucketRotationItemId,
   HexColor,
+  SlugHash,
   EntityType,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";

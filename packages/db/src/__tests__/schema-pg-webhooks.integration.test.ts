@@ -8,7 +8,13 @@ import { accounts } from "../schema/pg/auth.js";
 import { systems } from "../schema/pg/systems.js";
 import { webhookConfigs, webhookDeliveries } from "../schema/pg/webhooks.js";
 
-import { createPgWebhookTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  MS_PER_DAY,
+  TTL_RETENTION_DAYS,
+  createPgWebhookTables,
+  pgInsertAccount,
+  pgInsertSystem,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -337,7 +343,7 @@ describe("PG webhooks schema", () => {
       const systemId = await insertSystem(accountId);
       const whId = crypto.randomUUID();
       const now = Date.now();
-      const thirtyOneDaysAgo = now - 31 * 24 * 60 * 60 * 1000;
+      const thirtyOneDaysAgo = now - (TTL_RETENTION_DAYS + 1) * MS_PER_DAY;
 
       await db.insert(webhookConfigs).values({
         id: whId,
@@ -380,7 +386,7 @@ describe("PG webhooks schema", () => {
         },
       ]);
 
-      const cutoff = now - 30 * 24 * 60 * 60 * 1000;
+      const cutoff = now - TTL_RETENTION_DAYS * MS_PER_DAY;
       await client.query(
         "DELETE FROM webhook_deliveries WHERE status IN ('success', 'failed') AND created_at < $1",
         [new Date(cutoff).toISOString()],

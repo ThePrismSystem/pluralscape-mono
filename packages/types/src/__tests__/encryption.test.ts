@@ -85,6 +85,7 @@ import type {
   PollId,
   PollOptionId,
   PollVoteId,
+  SlugHash,
   SystemId,
 } from "../ids.js";
 import type { JournalEntry, WikiPage } from "../journal.js";
@@ -221,7 +222,7 @@ describe("Server/Client pairs exist for completed domains", () => {
     expectTypeOf<ServerWikiPage>().toBeObject();
     expectTypeOf<ServerWikiPage["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
     expectTypeOf<ServerWikiPage["archived"]>().toEqualTypeOf<boolean>();
-    expectTypeOf<ServerWikiPage["slugHash"]>().toEqualTypeOf<string>();
+    expectTypeOf<ServerWikiPage["slugHash"]>().toEqualTypeOf<SlugHash>();
     expectTypeOf<ClientWikiPage>().toEqualTypeOf<WikiPage>();
   });
 
