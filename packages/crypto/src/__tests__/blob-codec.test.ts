@@ -358,6 +358,38 @@ describe("blob-codec", () => {
       expect(() => deserializeEncryptedBlob(buf)).toThrow();
     });
 
+    it("throws when T1 blob contains a bucketId", () => {
+      const bucketIdStr = "bucket-sneaky";
+      const bucketIdBytes = new TextEncoder().encode(bucketIdStr);
+      const nonce = makeNonce(0x00);
+      const ciphertext = new Uint8Array([0xab]);
+
+      // Build raw binary: version=1, tier=1, algo=0, keyVersion=null, hasBucketId=1 + bucketId + nonce + ciphertext
+      const totalLength =
+        HEADER_BYTES + 2 + bucketIdBytes.length + AEAD_NONCE_BYTES + ciphertext.length;
+      const buf = new Uint8Array(totalLength);
+      const view = new DataView(buf.buffer);
+
+      let offset = 0;
+      buf[offset++] = 0x01; // version
+      buf[offset++] = 1; // tier = T1
+      buf[offset++] = 0; // algorithm
+      view.setUint32(offset, 0xffffffff, true); // null keyVersion
+      offset += 4;
+      buf[offset++] = 1; // hasBucketId = 1
+
+      view.setUint16(offset, bucketIdBytes.length, true);
+      offset += 2;
+      buf.set(bucketIdBytes, offset);
+      offset += bucketIdBytes.length;
+
+      buf.set(nonce, offset);
+      offset += AEAD_NONCE_BYTES;
+      buf.set(ciphertext, offset);
+
+      expect(() => deserializeEncryptedBlob(buf)).toThrow("T1 EncryptedBlob must not contain");
+    });
+
     it("throws on truncated nonce", () => {
       // Header is fine but not enough bytes for the nonce
       const buf = new Uint8Array(8 + 5); // only 5 nonce bytes instead of 24

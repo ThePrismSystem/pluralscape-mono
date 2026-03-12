@@ -190,6 +190,9 @@ export function deserializeEncryptedBlob(data: Uint8Array): EncryptedBlob {
   const ciphertext = new Uint8Array(data.subarray(offset));
 
   if (tier === 1) {
+    if (bucketId !== null) {
+      throw new InvalidInputError("T1 EncryptedBlob must not contain a bucketId");
+    }
     return {
       ciphertext,
       nonce,
