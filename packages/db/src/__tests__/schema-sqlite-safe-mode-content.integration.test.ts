@@ -82,7 +82,7 @@ describe("SQLite safe_mode_content schema", () => {
     expect(rows[0]?.version).toBe(1);
   });
 
-  it("allows nullable sort_order", () => {
+  it("defaults sort_order to 0", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const now = Date.now();
@@ -99,7 +99,7 @@ describe("SQLite safe_mode_content schema", () => {
       .run();
 
     const rows = db.select().from(safeModeContent).where(eq(safeModeContent.id, id)).all();
-    expect(rows[0]?.sortOrder).toBeNull();
+    expect(rows[0]?.sortOrder).toBe(0);
   });
 
   it("supports multiple items with ordering", () => {

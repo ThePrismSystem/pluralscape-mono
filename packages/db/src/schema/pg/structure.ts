@@ -30,8 +30,10 @@ export const relationships = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     sourceMemberId: varchar("source_member_id", { length: ID_MAX_LENGTH }),
     targetMemberId: varchar("target_member_id", { length: ID_MAX_LENGTH }),
-    type: varchar("type", { length: ENUM_MAX_LENGTH }).$type<ServerRelationship["type"]>(),
-    bidirectional: boolean("bidirectional"),
+    type: varchar("type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<ServerRelationship["type"]>(),
+    bidirectional: boolean("bidirectional").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
@@ -60,7 +62,7 @@ export const subsystems = pgTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     parentSubsystemId: varchar("parent_subsystem_id", { length: ID_MAX_LENGTH }),
     architectureType: jsonb("architecture_type").$type<ServerSubsystem["architectureType"]>(),
-    hasCore: boolean("has_core"),
+    hasCore: boolean("has_core").notNull().default(false),
     discoveryStatus: varchar("discovery_status", { length: ENUM_MAX_LENGTH }).$type<
       ServerSubsystem["discoveryStatus"]
     >(),

@@ -187,7 +187,7 @@ describe("PG custom fields schema", () => {
       expect(rows[0]?.sortOrder).toBe(5);
     });
 
-    it("defaults T3 metadata to null", async () => {
+    it("defaults T3 metadata to null or default values", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -203,8 +203,8 @@ describe("PG custom fields schema", () => {
 
       const rows = await db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id));
       expect(rows[0]?.fieldType).toBeNull();
-      expect(rows[0]?.required).toBeNull();
-      expect(rows[0]?.sortOrder).toBeNull();
+      expect(rows[0]?.required).toBe(false);
+      expect(rows[0]?.sortOrder).toBe(0);
     });
 
     it("rejects invalid fieldType via CHECK constraint", async () => {

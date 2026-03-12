@@ -58,10 +58,12 @@ describe("PG fronting schema", () => {
     id = crypto.randomUUID(),
   ): Promise<string> {
     const now = Date.now();
+    const memberId = await insertMember(systemId);
     await db.insert(frontingSessions).values({
       id,
       systemId,
       startTime: now,
+      memberId,
       encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
@@ -83,6 +85,7 @@ describe("PG fronting schema", () => {
     it("inserts with encrypted_data and round-trips binary", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
@@ -92,6 +95,7 @@ describe("PG fronting schema", () => {
         systemId,
         startTime: now,
         endTime: now + 60000,
+        memberId,
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -108,6 +112,7 @@ describe("PG fronting schema", () => {
     it("allows nullable endTime for open sessions", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -115,6 +120,7 @@ describe("PG fronting schema", () => {
         id,
         systemId,
         startTime: now,
+        memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -127,6 +133,7 @@ describe("PG fronting schema", () => {
     it("defaults version to 1", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -134,6 +141,7 @@ describe("PG fronting schema", () => {
         id,
         systemId,
         startTime: now,
+        memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -163,6 +171,7 @@ describe("PG fronting schema", () => {
           id: crypto.randomUUID(),
           systemId: "nonexistent",
           startTime: now,
+          memberId: "nonexistent-member",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -173,6 +182,7 @@ describe("PG fronting schema", () => {
     it("rejects endTime <= startTime via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const now = Date.now();
 
       await expect(
@@ -181,6 +191,7 @@ describe("PG fronting schema", () => {
           systemId,
           startTime: now,
           endTime: now,
+          memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -193,6 +204,7 @@ describe("PG fronting schema", () => {
           systemId,
           startTime: now,
           endTime: now - 1000,
+          memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -203,6 +215,7 @@ describe("PG fronting schema", () => {
     it("allows overlapping sessions for the same system", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const now = Date.now();
 
       const id1 = crypto.randomUUID();
@@ -213,6 +226,7 @@ describe("PG fronting schema", () => {
         systemId,
         startTime: now,
         endTime: now + 60000,
+        memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -223,6 +237,7 @@ describe("PG fronting schema", () => {
         systemId,
         startTime: now + 30000,
         endTime: now + 90000,
+        memberId,
         encryptedData: testBlob(new Uint8Array([2])),
         createdAt: now,
         updatedAt: now,
@@ -266,6 +281,7 @@ describe("PG fronting schema", () => {
     it("defaults T3 metadata columns to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const customFrontId = await insertCustomFront(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -273,6 +289,7 @@ describe("PG fronting schema", () => {
         id,
         systemId,
         startTime: now,
+        customFrontId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -280,8 +297,8 @@ describe("PG fronting schema", () => {
 
       const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
       expect(rows[0]?.memberId).toBeNull();
-      expect(rows[0]?.frontingType).toBeNull();
-      expect(rows[0]?.customFrontId).toBeNull();
+      expect(rows[0]?.frontingType).toBe("fronting");
+      expect(rows[0]?.customFrontId).toBe(customFrontId);
       expect(rows[0]?.linkedStructure).toBeNull();
     });
 
@@ -289,6 +306,7 @@ describe("PG fronting schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const memberId = await insertMember(systemId);
+      const customFrontId = await insertCustomFront(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -297,6 +315,7 @@ describe("PG fronting schema", () => {
         systemId,
         startTime: now,
         memberId,
+        customFrontId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -329,6 +348,7 @@ describe("PG fronting schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const customFrontId = await insertCustomFront(systemId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -337,6 +357,7 @@ describe("PG fronting schema", () => {
         systemId,
         startTime: now,
         customFrontId,
+        memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -368,6 +389,7 @@ describe("PG fronting schema", () => {
     it("rejects invalid frontingType via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const now = Date.now();
 
       await expect(
@@ -375,6 +397,7 @@ describe("PG fronting schema", () => {
           id: crypto.randomUUID(),
           systemId,
           startTime: now,
+          memberId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -394,6 +417,42 @@ describe("PG fronting schema", () => {
           [crypto.randomUUID(), systemId, now, now, now],
         ),
       ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects fronting session with no subject", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO fronting_sessions (id, system_id, start_time, encrypted_data, created_at, updated_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("accepts fronting session with only customFrontId", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const customFrontId = await insertCustomFront(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingSessions).values({
+        id,
+        systemId,
+        startTime: now,
+        customFrontId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.customFrontId).toBe(customFrontId);
     });
   });
 

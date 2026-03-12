@@ -66,7 +66,7 @@ export const syncQueue = sqliteTable(
       .on(t.systemId)
       .where(sql`${t.syncedAt} IS NULL`),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
-    uniqueIndex("sync_queue_seq_idx").on(t.seq),
+    uniqueIndex("sync_queue_system_id_seq_idx").on(t.systemId, t.seq),
   ],
 );
 

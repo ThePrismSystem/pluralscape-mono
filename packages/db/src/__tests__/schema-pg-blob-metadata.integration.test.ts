@@ -222,4 +222,23 @@ describe("PG blob_metadata schema", () => {
       ),
     ).rejects.toThrow();
   });
+
+  it("rejects size_bytes exceeding 10 GB", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const now = Date.now();
+
+    await expect(
+      db.insert(blobMetadata).values({
+        id: crypto.randomUUID(),
+        systemId,
+        storageKey: `blobs/${crypto.randomUUID()}`,
+        sizeBytes: 10737418241,
+        encryptionTier: 1,
+        purpose: "avatar",
+        checksum: "sha256:test",
+        uploadedAt: now,
+      }),
+    ).rejects.toThrow(/check|constraint/i);
+  });
 });

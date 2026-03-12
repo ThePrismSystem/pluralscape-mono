@@ -76,10 +76,8 @@ export const messages = sqliteTable(
       columns: [t.channelId, t.systemId],
       foreignColumns: [channels.id, channels.systemId],
     }).onDelete("cascade"),
-    foreignKey({
-      columns: [t.replyToId],
-      foreignColumns: [t.id],
-    }).onDelete("set null"),
+    // reply_to_id is a soft reference — no FK constraint.
+    // PG can't self-FK on a single column when PK is composite (id, timestamp).
     check("messages_version_check", versionCheck(t.version)),
     check(
       "messages_archived_consistency_check",
@@ -141,7 +139,7 @@ export const polls = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     createdByMemberId: text("created_by_member_id"),
-    kind: text("kind").$type<ServerPoll["kind"]>(),
+    kind: text("kind").notNull().$type<ServerPoll["kind"]>(),
     status: text("status").notNull().default("open").$type<ServerPoll["status"]>(),
     closedAt: sqliteTimestamp("closed_at"),
     endsAt: sqliteTimestamp("ends_at"),
@@ -177,7 +175,7 @@ export const pollVotes = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     optionId: text("option_id"),
     voter: sqliteJson("voter").$type<ServerPollVote["voter"]>(),
-    isVeto: integer("is_veto", { mode: "boolean" }),
+    isVeto: integer("is_veto", { mode: "boolean" }).notNull().default(false),
     votedAt: sqliteTimestamp("voted_at"),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),

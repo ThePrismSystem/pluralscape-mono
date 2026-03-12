@@ -43,7 +43,10 @@ export const frontingSessions = sqliteTable(
     startTime: sqliteTimestamp("start_time").notNull(),
     endTime: sqliteTimestamp("end_time"),
     memberId: text("member_id"),
-    frontingType: text("fronting_type").$type<ServerFrontingSession["frontingType"]>(),
+    frontingType: text("fronting_type")
+      .notNull()
+      .default("fronting")
+      .$type<ServerFrontingSession["frontingType"]>(),
     customFrontId: text("custom_front_id"),
     linkedStructure:
       sqliteJson("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
@@ -73,6 +76,10 @@ export const frontingSessions = sqliteTable(
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
     check("fronting_sessions_version_check", versionCheck(t.version)),
+    check(
+      "fronting_sessions_subject_check",
+      sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,
+    ),
   ],
 );
 

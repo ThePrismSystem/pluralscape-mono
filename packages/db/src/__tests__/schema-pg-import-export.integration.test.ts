@@ -587,5 +587,71 @@ describe("PG import-export schema", () => {
       expect(rows[0]?.completedAt).toBeNull();
       expect(rows[0]?.cancelledAt).toBeNull();
     });
+
+    it("rejects second active purge request when first is confirmed", async () => {
+      const accountId = await insertAccount();
+      const now = Date.now();
+      const firstId = crypto.randomUUID();
+
+      await db.insert(accountPurgeRequests).values({
+        id: firstId,
+        accountId,
+        status: "pending",
+        confirmationPhrase: "DELETE MY ACCOUNT",
+        scheduledPurgeAt: now,
+        requestedAt: now,
+      });
+
+      await client.query(`UPDATE account_purge_requests SET status = 'confirmed' WHERE id = $1`, [
+        firstId,
+      ]);
+
+      await expect(
+        db.insert(accountPurgeRequests).values({
+          id: crypto.randomUUID(),
+          accountId,
+          status: "pending",
+          confirmationPhrase: "DELETE MY ACCOUNT",
+          scheduledPurgeAt: now,
+          requestedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("allows new purge request after previous is completed", async () => {
+      const accountId = await insertAccount();
+      const now = Date.now();
+      const firstId = crypto.randomUUID();
+
+      await db.insert(accountPurgeRequests).values({
+        id: firstId,
+        accountId,
+        status: "pending",
+        confirmationPhrase: "DELETE MY ACCOUNT",
+        scheduledPurgeAt: now,
+        requestedAt: now,
+      });
+
+      await client.query(`UPDATE account_purge_requests SET status = 'completed' WHERE id = $1`, [
+        firstId,
+      ]);
+
+      const secondId = crypto.randomUUID();
+      await db.insert(accountPurgeRequests).values({
+        id: secondId,
+        accountId,
+        status: "pending",
+        confirmationPhrase: "DELETE MY ACCOUNT",
+        scheduledPurgeAt: now,
+        requestedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(accountPurgeRequests)
+        .where(eq(accountPurgeRequests.id, secondId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.status).toBe("pending");
+    });
   });
 });

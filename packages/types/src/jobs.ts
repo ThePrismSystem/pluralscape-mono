@@ -15,7 +15,8 @@ export type JobType =
   | "account-purge"
   | "bucket-key-rotation"
   | "report-generate"
-  | "sync-queue-cleanup";
+  | "sync-queue-cleanup"
+  | "audit-log-cleanup";
 
 /** Current status of a background job. */
 export type JobStatus =

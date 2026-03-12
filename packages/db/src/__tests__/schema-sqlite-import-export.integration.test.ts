@@ -730,5 +730,81 @@ describe("SQLite import-export schema", () => {
         .all();
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects second active purge request when first is confirmed", () => {
+      const accountId = insertAccount();
+      const now = Date.now();
+      const firstId = crypto.randomUUID();
+
+      db.insert(accountPurgeRequests)
+        .values({
+          id: firstId,
+          accountId,
+          status: "pending",
+          confirmationPhrase: "DELETE MY ACCOUNT",
+          scheduledPurgeAt: now,
+          requestedAt: now,
+        })
+        .run();
+
+      client
+        .prepare(`UPDATE account_purge_requests SET status = 'confirmed' WHERE id = ?`)
+        .run(firstId);
+
+      expect(() =>
+        db
+          .insert(accountPurgeRequests)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            status: "pending",
+            confirmationPhrase: "DELETE MY ACCOUNT",
+            scheduledPurgeAt: now,
+            requestedAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
+    it("allows new purge request after previous is completed", () => {
+      const accountId = insertAccount();
+      const now = Date.now();
+      const firstId = crypto.randomUUID();
+
+      db.insert(accountPurgeRequests)
+        .values({
+          id: firstId,
+          accountId,
+          status: "pending",
+          confirmationPhrase: "DELETE MY ACCOUNT",
+          scheduledPurgeAt: now,
+          requestedAt: now,
+        })
+        .run();
+
+      client
+        .prepare(`UPDATE account_purge_requests SET status = 'completed' WHERE id = ?`)
+        .run(firstId);
+
+      const secondId = crypto.randomUUID();
+      db.insert(accountPurgeRequests)
+        .values({
+          id: secondId,
+          accountId,
+          status: "pending",
+          confirmationPhrase: "DELETE MY ACCOUNT",
+          scheduledPurgeAt: now,
+          requestedAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(accountPurgeRequests)
+        .where(eq(accountPurgeRequests.id, secondId))
+        .all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.status).toBe("pending");
+    });
   });
 });

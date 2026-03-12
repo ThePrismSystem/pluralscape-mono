@@ -64,6 +64,13 @@
       "when": 1773342975266,
       "tag": "0008_square_magma",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1773346962942,
+      "tag": "0009_thin_blindfold",
+      "breakpoints": true
     }
   ]
 }

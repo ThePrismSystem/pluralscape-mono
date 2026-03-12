@@ -47,6 +47,7 @@ describe("SQLite lifecycle_events schema", () => {
       .values({
         id,
         systemId,
+        eventType: "discovery",
         occurredAt: occurred,
         recordedAt: recorded,
         encryptedData: data,
@@ -74,6 +75,7 @@ describe("SQLite lifecycle_events schema", () => {
       .values({
         id,
         systemId,
+        eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
         encryptedData: blob,
@@ -93,6 +95,7 @@ describe("SQLite lifecycle_events schema", () => {
       .values({
         id: crypto.randomUUID(),
         systemId,
+        eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -103,6 +106,7 @@ describe("SQLite lifecycle_events schema", () => {
       .values({
         id: crypto.randomUUID(),
         systemId,
+        eventType: "discovery",
         occurredAt: now + 1000,
         recordedAt: now + 1000,
         encryptedData: testBlob(new Uint8Array([2])),
@@ -128,6 +132,7 @@ describe("SQLite lifecycle_events schema", () => {
       .values({
         id,
         systemId,
+        eventType: "discovery",
         occurredAt: occurred,
         recordedAt: recorded,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -150,6 +155,7 @@ describe("SQLite lifecycle_events schema", () => {
       .values({
         id,
         systemId,
+        eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -169,6 +175,7 @@ describe("SQLite lifecycle_events schema", () => {
         .values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
+          eventType: "discovery",
           occurredAt: now,
           recordedAt: now,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -187,6 +194,7 @@ describe("SQLite lifecycle_events schema", () => {
       .values({
         id,
         systemId,
+        eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -199,6 +207,7 @@ describe("SQLite lifecycle_events schema", () => {
         .values({
           id,
           systemId,
+          eventType: "discovery",
           occurredAt: now,
           recordedAt: now,
           encryptedData: testBlob(new Uint8Array([2])),
@@ -228,7 +237,7 @@ describe("SQLite lifecycle_events schema", () => {
     expect(rows[0]?.eventType).toBe("discovery");
   });
 
-  it("defaults eventType to null", () => {
+  it("stores eventType when provided", () => {
     const accountId = insertAccount();
     const systemId = sqliteInsertSystem(db, accountId);
     const id = crypto.randomUUID();
@@ -238,6 +247,7 @@ describe("SQLite lifecycle_events schema", () => {
       .values({
         id,
         systemId,
+        eventType: "discovery",
         occurredAt: now,
         recordedAt: now,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -245,7 +255,7 @@ describe("SQLite lifecycle_events schema", () => {
       .run();
 
     const rows = db.select().from(lifecycleEvents).where(eq(lifecycleEvents.id, id)).all();
-    expect(rows[0]?.eventType).toBeNull();
+    expect(rows[0]?.eventType).toBe("discovery");
   });
 
   it("rejects invalid eventType via CHECK constraint", () => {

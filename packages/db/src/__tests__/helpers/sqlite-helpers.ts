@@ -261,7 +261,7 @@ export const SQLITE_DDL = {
       start_time INTEGER NOT NULL,
       end_time INTEGER,
       member_id TEXT,
-      fronting_type TEXT CHECK (fronting_type IS NULL OR fronting_type IN ('fronting', 'co-conscious')),
+      fronting_type TEXT NOT NULL DEFAULT 'fronting' CHECK (fronting_type IN ('fronting', 'co-conscious')),
       custom_front_id TEXT,
       linked_structure TEXT,
       encrypted_data BLOB NOT NULL,
@@ -272,7 +272,8 @@ export const SQLITE_DDL = {
       UNIQUE (id, system_id),
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL)
     )
   `,
   frontingSessionsIndexes: `
@@ -336,8 +337,8 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       source_member_id TEXT,
       target_member_id TEXT,
-      type TEXT CHECK (type IS NULL OR type IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
-      bidirectional INTEGER,
+      type TEXT NOT NULL CHECK (type IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
+      bidirectional INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -356,7 +357,7 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       parent_subsystem_id TEXT,
       architecture_type TEXT,
-      has_core INTEGER,
+      has_core INTEGER NOT NULL DEFAULT 0,
       discovery_status TEXT CHECK (discovery_status IS NULL OR discovery_status IN ('fully-mapped', 'partially-mapped', 'unknown')),
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
@@ -500,8 +501,8 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       field_type TEXT CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
-      required INTEGER,
-      sort_order INTEGER,
+      required INTEGER NOT NULL DEFAULT 0,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -619,7 +620,7 @@ export const SQLITE_DDL = {
     CREATE TABLE lifecycle_events (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      event_type TEXT CHECK (event_type IS NULL OR event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
+      event_type TEXT NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
       occurred_at INTEGER NOT NULL,
       recorded_at INTEGER NOT NULL,
       encrypted_data BLOB NOT NULL
@@ -634,7 +635,7 @@ export const SQLITE_DDL = {
     CREATE TABLE safe_mode_content (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sort_order INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
@@ -684,7 +685,7 @@ export const SQLITE_DDL = {
       archived_at INTEGER,
       UNIQUE (id, system_id),
       FOREIGN KEY (channel_id, system_id) REFERENCES channels(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL,
+      -- reply_to_id is a soft reference (no FK) for PG parity
       CHECK (version >= 1),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
@@ -735,7 +736,7 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       created_by_member_id TEXT,
-      kind TEXT CHECK (kind IS NULL OR kind IN ('standard', 'custom')),
+      kind TEXT NOT NULL CHECK (kind IN ('standard', 'custom')),
       status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at INTEGER,
       ends_at INTEGER,
@@ -762,7 +763,7 @@ export const SQLITE_DDL = {
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       option_id TEXT,
       voter TEXT,
-      is_veto INTEGER,
+      is_veto INTEGER NOT NULL DEFAULT 0,
       voted_at INTEGER,
       encrypted_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
@@ -1044,6 +1045,7 @@ export const SQLITE_DDL = {
       FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       CHECK (purpose IS NULL OR purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
       CHECK (size_bytes > 0),
+      CHECK (size_bytes <= 10737418240),
       CHECK (encryption_tier IN (1, 2))
     )
   `,
@@ -1146,7 +1148,7 @@ export const SQLITE_DDL = {
   `,
   accountPurgeRequestsIndexes: `
     CREATE INDEX account_purge_requests_account_id_idx ON account_purge_requests (account_id);
-    CREATE UNIQUE INDEX account_purge_requests_pending_unique_idx ON account_purge_requests (account_id) WHERE status = 'pending'
+    CREATE UNIQUE INDEX account_purge_requests_active_unique_idx ON account_purge_requests (account_id) WHERE status IN ('pending', 'confirmed', 'processing')
   `,
   // Sync
   syncDocuments: `
@@ -1181,7 +1183,7 @@ export const SQLITE_DDL = {
   syncQueueIndexes: `
     CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
     CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id);
-    CREATE UNIQUE INDEX sync_queue_seq_idx ON sync_queue (seq);
+    CREATE UNIQUE INDEX sync_queue_system_id_seq_idx ON sync_queue (system_id, seq);
     CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id) WHERE synced_at IS NULL
   `,
   syncConflicts: `
@@ -1515,6 +1517,7 @@ export function sqliteInsertPoll(
     .values({
       id,
       systemId,
+      kind: "standard",
       encryptedData: testBlob(),
       allowMultipleVotes: false,
       maxVotesPerMember: 1,

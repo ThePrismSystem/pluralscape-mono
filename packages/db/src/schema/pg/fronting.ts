@@ -44,9 +44,10 @@ export const frontingSessions = pgTable(
     startTime: pgTimestamp("start_time").notNull(),
     endTime: pgTimestamp("end_time"),
     memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
-    frontingType: varchar("fronting_type", { length: ENUM_MAX_LENGTH }).$type<
-      ServerFrontingSession["frontingType"]
-    >(),
+    frontingType: varchar("fronting_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .default("fronting")
+      .$type<ServerFrontingSession["frontingType"]>(),
     customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
     linkedStructure: jsonb("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -75,6 +76,10 @@ export const frontingSessions = pgTable(
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
     check("fronting_sessions_version_check", versionCheck(t.version)),
+    check(
+      "fronting_sessions_subject_check",
+      sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,
+    ),
   ],
 );
 

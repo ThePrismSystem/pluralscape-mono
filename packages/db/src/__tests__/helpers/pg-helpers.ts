@@ -261,7 +261,7 @@ export const PG_DDL = {
       start_time TIMESTAMPTZ NOT NULL,
       end_time TIMESTAMPTZ,
       member_id VARCHAR(50),
-      fronting_type VARCHAR(50) CHECK (fronting_type IS NULL OR fronting_type IN ('fronting', 'co-conscious')),
+      fronting_type VARCHAR(50) NOT NULL DEFAULT 'fronting' CHECK (fronting_type IN ('fronting', 'co-conscious')),
       custom_front_id VARCHAR(50),
       linked_structure JSONB,
       encrypted_data BYTEA NOT NULL,
@@ -272,7 +272,8 @@ export const PG_DDL = {
       UNIQUE (id, system_id),
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL)
     )
   `,
   frontingSessionsIndexes: `
@@ -336,8 +337,8 @@ export const PG_DDL = {
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       source_member_id VARCHAR(50),
       target_member_id VARCHAR(50),
-      type VARCHAR(50) CHECK (type IS NULL OR type IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
-      bidirectional BOOLEAN,
+      type VARCHAR(50) NOT NULL CHECK (type IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
+      bidirectional BOOLEAN NOT NULL DEFAULT false,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -356,7 +357,7 @@ export const PG_DDL = {
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       parent_subsystem_id VARCHAR(50),
       architecture_type JSONB,
-      has_core BOOLEAN,
+      has_core BOOLEAN NOT NULL DEFAULT false,
       discovery_status VARCHAR(50) CHECK (discovery_status IS NULL OR discovery_status IN ('fully-mapped', 'partially-mapped', 'unknown')),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -500,8 +501,8 @@ export const PG_DDL = {
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       field_type VARCHAR(50) CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
-      required BOOLEAN,
-      sort_order INTEGER,
+      required BOOLEAN NOT NULL DEFAULT false,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -620,7 +621,7 @@ export const PG_DDL = {
     CREATE TABLE lifecycle_events (
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      event_type VARCHAR(50) CHECK (event_type IS NULL OR event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
+      event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
       occurred_at TIMESTAMPTZ NOT NULL,
       recorded_at TIMESTAMPTZ NOT NULL,
       encrypted_data BYTEA NOT NULL
@@ -635,7 +636,7 @@ export const PG_DDL = {
     CREATE TABLE safe_mode_content (
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      sort_order INTEGER,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
@@ -736,7 +737,7 @@ export const PG_DDL = {
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       created_by_member_id VARCHAR(50),
-      kind VARCHAR(50) CHECK (kind IS NULL OR kind IN ('standard', 'custom')),
+      kind VARCHAR(50) NOT NULL CHECK (kind IN ('standard', 'custom')),
       status VARCHAR(50) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
       closed_at TIMESTAMPTZ,
       ends_at TIMESTAMPTZ,
@@ -763,7 +764,7 @@ export const PG_DDL = {
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       option_id VARCHAR(50),
       voter JSONB,
-      is_veto BOOLEAN,
+      is_veto BOOLEAN NOT NULL DEFAULT false,
       voted_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
@@ -1040,6 +1041,7 @@ export const PG_DDL = {
       FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
       FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       CHECK (size_bytes > 0),
+      CHECK (size_bytes <= 10737418240),
       CHECK (encryption_tier IN (1, 2))
     )
   `,
@@ -1144,7 +1146,7 @@ export const PG_DDL = {
   `,
   accountPurgeRequestsIndexes: `
     CREATE INDEX account_purge_requests_account_id_idx ON account_purge_requests (account_id);
-    CREATE UNIQUE INDEX account_purge_requests_pending_unique_idx ON account_purge_requests (account_id) WHERE status = 'pending'
+    CREATE UNIQUE INDEX account_purge_requests_active_unique_idx ON account_purge_requests (account_id) WHERE status IN ('pending', 'confirmed', 'processing')
   `,
   // Sync
   syncDocuments: `
@@ -1512,6 +1514,7 @@ export async function pgInsertPoll(
   await db.insert(polls).values({
     id,
     systemId,
+    kind: "standard",
     encryptedData: testBlob(),
     allowMultipleVotes: false,
     maxVotesPerMember: 1,

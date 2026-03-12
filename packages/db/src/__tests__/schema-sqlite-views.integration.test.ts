@@ -37,6 +37,7 @@ import {
 import {
   SQLITE_DDL,
   sqliteInsertAccount,
+  sqliteInsertMember,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
@@ -109,6 +110,7 @@ describe("SQLite views / query helpers", () => {
 
   let accountId: string;
   let systemId: string;
+  let memberId: string;
 
   beforeEach(() => {
     // Clean up tables for each test (FK-safe order: children first)
@@ -140,6 +142,7 @@ describe("SQLite views / query helpers", () => {
     }
     accountId = insertAccount();
     systemId = insertSystem(accountId);
+    memberId = sqliteInsertMember(db, systemId);
   });
 
   describe("getCurrentFronters", () => {
@@ -154,6 +157,7 @@ describe("SQLite views / query helpers", () => {
         .values({
           id: crypto.randomUUID(),
           systemId,
+          memberId,
           startTime: now - 60000,
           endTime: null,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -165,6 +169,7 @@ describe("SQLite views / query helpers", () => {
         .values({
           id: crypto.randomUUID(),
           systemId,
+          memberId,
           startTime: now - 120000,
           endTime: now - 30000,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -191,6 +196,7 @@ describe("SQLite views / query helpers", () => {
         .values({
           id: crypto.randomUUID(),
           systemId,
+          memberId,
           startTime: now - 60000,
           endTime: null,
           encryptedData: testBlob(new Uint8Array([1])),
@@ -515,6 +521,7 @@ describe("SQLite views / query helpers", () => {
           {
             id: activeSessionId,
             systemId,
+            memberId,
             startTime: now - 60000,
             endTime: null,
             encryptedData: testBlob(new Uint8Array([1])),
@@ -524,6 +531,7 @@ describe("SQLite views / query helpers", () => {
           {
             id: endedSessionId,
             systemId,
+            memberId,
             startTime: now - 120000,
             endTime: now - 30000,
             encryptedData: testBlob(new Uint8Array([1])),

@@ -14,7 +14,7 @@ export const safeModeContent = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    sortOrder: integer("sort_order"),
+    sortOrder: integer("sort_order").notNull().default(0),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
