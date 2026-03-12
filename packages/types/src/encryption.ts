@@ -96,6 +96,7 @@ interface EncryptedBlobBase {
 /** T1 zero-knowledge blob — encrypted with the system master key. No bucket association. */
 export interface T1EncryptedBlob extends EncryptedBlobBase {
   readonly tier: 1;
+  readonly keyVersion: null;
   readonly bucketId: null;
 }
 

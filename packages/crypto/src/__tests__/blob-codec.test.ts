@@ -94,10 +94,10 @@ describe("blob-codec", () => {
       const blob: EncryptedBlob = {
         ciphertext: new Uint8Array([1]),
         nonce: makeNonce(),
-        tier: 1,
+        tier: 2,
         algorithm: "xchacha20-poly1305",
         keyVersion: 0xfffffffe,
-        bucketId: null,
+        bucketId: makeBucketId("maxkv"),
       };
 
       const serialized = serializeEncryptedBlob(blob);
@@ -131,7 +131,7 @@ describe("blob-codec", () => {
         nonce: makeNonce(),
         tier: 1,
         algorithm: "xchacha20-poly1305",
-        keyVersion: 1,
+        keyVersion: null,
         bucketId: null,
       };
 
@@ -286,7 +286,15 @@ describe("blob-codec", () => {
     });
 
     it("throws on keyVersion equal to null sentinel (0xFFFFFFFF)", () => {
-      const blob = makeT1Blob({ keyVersion: 0xffffffff });
+      // T2 blobs accept numeric keyVersion — use one to test the sentinel guard
+      const blob: EncryptedBlob = {
+        ciphertext: new Uint8Array([1]),
+        nonce: makeNonce(),
+        tier: 2,
+        algorithm: "xchacha20-poly1305",
+        keyVersion: 0xffffffff,
+        bucketId: makeBucketId("sentinel"),
+      };
       expect(() => serializeEncryptedBlob(blob)).toThrow("reserved");
     });
 
