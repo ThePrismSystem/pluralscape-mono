@@ -166,7 +166,7 @@ export const SQLITE_DDL = {
   `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
-      entity_type TEXT NOT NULL CHECK (entity_type IN ('system', 'member', 'group', 'bucket', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'blob', 'webhook', 'timer', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'api-key', 'audit-log-entry', 'check-in-record', 'friend-connection', 'key-grant', 'device-token', 'poll-vote', 'session', 'event', 'account', 'friend-code', 'notification-config', 'system-settings', 'poll-option', 'member-photo', 'switch', 'auth-key', 'recovery-key', 'device-transfer-request', 'sync-document', 'sync-queue-item', 'sync-conflict', 'import-job', 'pk-bridge-config', 'account-purge-request', 'export-request', 'job', 'subscription', 'webhook-delivery', 'fronting-report', 'friend-notification-preference', 'fronting-comment', 'bucket-key-rotation', 'bucket-rotation-item')),
+      entity_type TEXT NOT NULL CHECK (entity_type IS NULL OR entity_type IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')),
       entity_id TEXT NOT NULL,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       PRIMARY KEY (entity_type, entity_id, bucket_id)

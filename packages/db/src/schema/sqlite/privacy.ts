@@ -12,7 +12,7 @@ import {
 import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck, versionCheck } from "../../helpers/check.js";
-import { ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
+import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
@@ -49,7 +49,10 @@ export const bucketContentTags = sqliteTable(
     primaryKey({ columns: [t.entityType, t.entityId, t.bucketId] }),
     index("bucket_content_tags_entity_idx").on(t.entityType, t.entityId),
     index("bucket_content_tags_bucket_id_idx").on(t.bucketId),
-    check("bucket_content_tags_entity_type_check", enumCheck(t.entityType, ENTITY_TYPES)),
+    check(
+      "bucket_content_tags_entity_type_check",
+      enumCheck(t.entityType, BUCKET_CONTENT_ENTITY_TYPES),
+    ),
   ],
 );
 

@@ -11,6 +11,7 @@ import {
   DEVICE_TOKEN_PLATFORMS,
   DEVICE_TRANSFER_STATUSES,
   DISCOVERY_STATUSES,
+  BUCKET_CONTENT_ENTITY_TYPES,
   ENTITY_TYPES,
   EXPORT_FORMATS,
   EXPORT_REQUEST_STATUSES,
@@ -197,6 +198,22 @@ describe("enum arrays", () => {
 
   it("FRONTING_REPORT_FORMATS matches ReportFormat union", () => {
     expect(FRONTING_REPORT_FORMATS).toEqual(["html", "pdf"]);
+  });
+
+  it("BUCKET_CONTENT_ENTITY_TYPES is a subset of ENTITY_TYPES", () => {
+    for (const t of BUCKET_CONTENT_ENTITY_TYPES) {
+      expect(ENTITY_TYPES).toContain(t);
+    }
+  });
+
+  it("BUCKET_CONTENT_ENTITY_TYPES excludes infrastructure types", () => {
+    const set = new Set<string>(BUCKET_CONTENT_ENTITY_TYPES);
+    expect(set.has("session")).toBe(false);
+    expect(set.has("job")).toBe(false);
+    expect(set.has("auth-key")).toBe(false);
+    expect(set.has("recovery-key")).toBe(false);
+    expect(set.has("api-key")).toBe(false);
+    expect(set.has("account")).toBe(false);
   });
 
   it("DISCOVERY_STATUSES matches DiscoveryStatus union", () => {
