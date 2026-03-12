@@ -54,6 +54,9 @@ export const channels = pgTable(
   ],
 );
 
+// NOTE: The production migration adds PARTITION BY RANGE ("timestamp") which Drizzle
+// cannot express. Running drizzle-kit generate for this table requires manual verification.
+// See ADR 016 and migration 0002_deep_starbolt.sql for details.
 export const messages = pgTable(
   "messages",
   {

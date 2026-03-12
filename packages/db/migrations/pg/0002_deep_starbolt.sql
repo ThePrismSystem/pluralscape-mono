@@ -1,6 +1,9 @@
 -- Part 1: kdfSalt NOT NULL
 ALTER TABLE "accounts" ALTER COLUMN "kdf_salt" SET NOT NULL;--> statement-breakpoint
 
+-- Pre-release: sync_queue is expected to be empty. Adding NOT NULL serial on
+-- a populated table would require a DEFAULT + backfill strategy.
+
 -- Part 2: sync_queue seq column
 ALTER TABLE "sync_queue" ADD COLUMN "seq" serial NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "sync_queue_seq_idx" ON "sync_queue" USING btree ("seq");--> statement-breakpoint

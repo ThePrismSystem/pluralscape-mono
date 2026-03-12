@@ -20,7 +20,7 @@ const schema = { accounts, systems, syncDocuments, syncQueue, syncConflicts };
 describe("SQLite sync schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
-  let seqCounter = 0;
+  let seqCounter = Math.floor(Math.random() * 1_000_000);
 
   const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string): string =>
@@ -323,8 +323,9 @@ describe("SQLite sync schema", () => {
       const seqs = [++seqCounter, ++seqCounter, ++seqCounter];
 
       for (let i = 0; i < ids.length; i++) {
-        const id = ids[i] as string;
-        const seq = seqs[i] as number;
+        const id = ids[i];
+        const seq = seqs[i];
+        if (id === undefined || seq === undefined) continue;
         db.insert(syncQueue)
           .values({
             id,
@@ -342,14 +343,18 @@ describe("SQLite sync schema", () => {
       const rows = ids.map(
         (id) => db.select().from(syncQueue).where(eq(syncQueue.id, id)).all()[0],
       );
-      expect(rows[0]?.seq).toBe(seqs[0]);
-      expect(rows[1]?.seq).toBe(seqs[1]);
-      expect(rows[2]?.seq).toBe(seqs[2]);
-      const r0 = rows[0] as { seq: number };
-      const r1 = rows[1] as { seq: number };
-      const r2 = rows[2] as { seq: number };
-      expect(r0.seq).toBeLessThan(r1.seq);
-      expect(r1.seq).toBeLessThan(r2.seq);
+      const s0 = rows[0]?.seq;
+      const s1 = rows[1]?.seq;
+      const s2 = rows[2]?.seq;
+      expect(s0).toBe(seqs[0]);
+      expect(s1).toBe(seqs[1]);
+      expect(s2).toBe(seqs[2]);
+      expect(s0).toBeDefined();
+      expect(s1).toBeDefined();
+      expect(s2).toBeDefined();
+      if (s0 === undefined || s1 === undefined || s2 === undefined) return;
+      expect(s0).toBeLessThan(s1);
+      expect(s1).toBeLessThan(s2);
     });
 
     it("orders replay correctly via seq column", () => {

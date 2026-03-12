@@ -33,6 +33,7 @@ export interface SyncDocument {
 /** An offline write queued for sync. Replayed in order when connectivity returns. */
 export interface SyncQueueItem {
   readonly id: SyncQueueItemId;
+  readonly seq: number;
   readonly systemId: SystemId;
   readonly entityType: EntityType;
   /** Plain string rather than branded ID — the referenced entity type varies by entityType. */

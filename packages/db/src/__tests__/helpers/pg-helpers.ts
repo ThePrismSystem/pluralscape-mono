@@ -1149,7 +1149,7 @@ export const PG_DDL = {
   syncQueue: `
     CREATE TABLE sync_queue (
       id VARCHAR(255) PRIMARY KEY,
-      seq SERIAL NOT NULL UNIQUE,
+      seq SERIAL NOT NULL,
       system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       entity_type VARCHAR(255) NOT NULL,
       entity_id VARCHAR(255) NOT NULL,
@@ -1162,6 +1162,7 @@ export const PG_DDL = {
   syncQueueIndexes: `
     CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
     CREATE UNIQUE INDEX sync_queue_seq_idx ON sync_queue (seq);
+    CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id);
     CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id) WHERE synced_at IS NULL
   `,
   syncConflicts: `

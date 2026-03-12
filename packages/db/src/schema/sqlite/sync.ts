@@ -37,6 +37,8 @@ export const syncQueue = sqliteTable(
   "sync_queue",
   {
     id: text("id").primaryKey(),
+    // Unlike PG SERIAL, SQLite integer has no auto-increment here.
+    // Application layer must supply seq explicitly at insert time.
     seq: integer("seq").notNull(),
     systemId: text("system_id")
       .notNull()

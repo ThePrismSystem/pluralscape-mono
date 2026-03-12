@@ -33,7 +33,7 @@ import type { InferSelectModel } from "drizzle-orm";
 // DB-only columns — present in schema but not in canonical domain types.
 // These are internal persistence concerns (encryption, versioning, archival).
 // ---------------------------------------------------------------------------
-const DB_ONLY_COLUMNS = new Set(["encryptedData", "version", "archived", "archivedAt", "kdfSalt"]);
+const DB_ONLY_COLUMNS = new Set(["encryptedData", "version", "archived", "archivedAt"]);
 
 // ---------------------------------------------------------------------------
 // Table pairs shared between PG and SQLite.
@@ -679,9 +679,10 @@ describe("DB-only column allowlist", () => {
     expect(cols).toHaveProperty("archivedAt");
   });
 
-  it("accounts has kdfSalt as a DB-only column", () => {
+  it("accounts has kdfSalt as a non-nullable column", () => {
     const cols = getTableColumns(pg.accounts);
     expect(cols).toHaveProperty("kdfSalt");
+    expect(cols.kdfSalt.notNull).toBe(true);
   });
 });
 

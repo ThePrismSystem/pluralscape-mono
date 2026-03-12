@@ -324,11 +324,13 @@ describe("PG sync schema", () => {
         ),
       );
 
-      const seqs = rows.map((r) => r?.seq);
-      expect(seqs[0]).toBeDefined();
-      expect(seqs[1]).toBeDefined();
-      expect(seqs[2]).toBeDefined();
-      const [s0, s1, s2] = seqs as [number, number, number];
+      const s0 = rows[0]?.seq;
+      const s1 = rows[1]?.seq;
+      const s2 = rows[2]?.seq;
+      expect(s0).toBeDefined();
+      expect(s1).toBeDefined();
+      expect(s2).toBeDefined();
+      if (s0 === undefined || s1 === undefined || s2 === undefined) return;
       expect(s0).toBeLessThan(s1);
       expect(s1).toBeLessThan(s2);
     });
@@ -361,6 +363,34 @@ describe("PG sync schema", () => {
         .orderBy(syncQueue.seq);
 
       expect(rows.map((r) => r.id)).toEqual([id1, id2, id3]);
+    });
+
+    it("rejects duplicate seq values", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      const id = crypto.randomUUID();
+      await db.insert(syncQueue).values({
+        id,
+        systemId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        operation: "create",
+        changeData: new Uint8Array([1]),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
+      const seqVal = rows[0]?.seq;
+      expect(seqVal).toBeDefined();
+
+      await expect(
+        client.query(
+          `INSERT INTO sync_queue (id, seq, system_id, entity_type, entity_id, operation, change_data, created_at) VALUES ($1, $2, $3, 'member', $4, 'create', '\\x01'::bytea, $5)`,
+          [crypto.randomUUID(), seqVal, systemId, crypto.randomUUID(), new Date(now).toISOString()],
+        ),
+      ).rejects.toThrow(/unique|duplicate/i);
     });
   });
 
