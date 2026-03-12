@@ -161,6 +161,10 @@ export const polls = pgTable(
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
     unique("polls_id_system_id_unique").on(t.id, t.systemId),
+    foreignKey({
+      columns: [t.createdByMemberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
@@ -208,5 +212,9 @@ export const acknowledgements = pgTable(
   (t) => [
     index("acknowledgements_system_id_idx").on(t.systemId),
     index("acknowledgements_confirmed_idx").on(t.confirmed),
+    foreignKey({
+      columns: [t.createdByMemberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
   ],
 );

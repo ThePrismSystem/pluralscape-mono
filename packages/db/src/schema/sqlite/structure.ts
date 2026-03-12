@@ -13,6 +13,7 @@ import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
 import { enumCheck, versionCheck } from "../../helpers/check.js";
 import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
+import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type { ServerRelationship, ServerSubsystem } from "@pluralscape/types";
@@ -34,6 +35,14 @@ export const relationships = sqliteTable(
   },
   (t) => [
     index("relationships_system_id_idx").on(t.systemId),
+    foreignKey({
+      columns: [t.sourceMemberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [t.targetMemberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
     check("relationships_version_check", versionCheck(t.version)),
   ],

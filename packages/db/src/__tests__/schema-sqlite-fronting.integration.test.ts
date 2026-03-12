@@ -10,11 +10,13 @@ import {
   frontingSessions,
   switches,
 } from "../schema/sqlite/fronting.js";
+import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
 import {
   createSqliteFrontingTables,
   sqliteInsertAccount,
+  sqliteInsertMember,
   sqliteInsertSystem,
   testBlob,
 } from "./helpers/sqlite-helpers.js";
@@ -24,6 +26,7 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 const schema = {
   accounts,
   systems,
+  members,
   frontingSessions,
   switches,
   customFronts,
@@ -37,6 +40,22 @@ describe("SQLite fronting schema", () => {
   const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string): string =>
     sqliteInsertSystem(db, accountId, id);
+  const insertMember = (systemId: string, id?: string): string =>
+    sqliteInsertMember(db, systemId, id);
+
+  function insertCustomFront(systemId: string, id = crypto.randomUUID()): string {
+    const now = Date.now();
+    db.insert(customFronts)
+      .values({
+        id,
+        systemId,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+    return id;
+  }
 
   function insertFrontingSession(systemId: string, id = crypto.randomUUID()): string {
     const now = Date.now();
@@ -244,6 +263,8 @@ describe("SQLite fronting schema", () => {
     it("round-trips T3 metadata columns", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const cfId = insertCustomFront(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -255,17 +276,17 @@ describe("SQLite fronting schema", () => {
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
-          memberId: "member-1",
+          memberId,
           frontingType: "fronting",
-          customFrontId: "custom-1",
+          customFrontId: cfId,
           linkedStructure: { entityType: "subsystem", entityId: "r-1" },
         })
         .run();
 
       const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
-      expect(rows[0]?.memberId).toBe("member-1");
+      expect(rows[0]?.memberId).toBe(memberId);
       expect(rows[0]?.frontingType).toBe("fronting");
-      expect(rows[0]?.customFrontId).toBe("custom-1");
+      expect(rows[0]?.customFrontId).toBe(cfId);
       expect(rows[0]?.linkedStructure).toEqual({ entityType: "subsystem", entityId: "r-1" });
     });
 
@@ -291,6 +312,96 @@ describe("SQLite fronting schema", () => {
       expect(rows[0]?.frontingType).toBeNull();
       expect(rows[0]?.customFrontId).toBeNull();
       expect(rows[0]?.linkedStructure).toBeNull();
+    });
+
+    it("sets memberId to null on member deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          memberId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(members).where(eq(members.id, memberId)).run();
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows[0]?.memberId).toBeNull();
+    });
+
+    it("rejects nonexistent memberId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(frontingSessions)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            startTime: now,
+            memberId: "nonexistent",
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("sets customFrontId to null on custom front deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const customFrontId = insertCustomFront(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          customFrontId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(customFronts).where(eq(customFronts.id, customFrontId)).run();
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows[0]?.customFrontId).toBeNull();
+    });
+
+    it("rejects nonexistent customFrontId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(frontingSessions)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            startTime: now,
+            customFrontId: "nonexistent",
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
 
     it("rejects invalid frontingType via CHECK constraint", () => {
@@ -720,6 +831,7 @@ describe("SQLite fronting schema", () => {
     it("round-trips memberId T3 column", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const sessionId = insertFrontingSession(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -732,12 +844,12 @@ describe("SQLite fronting schema", () => {
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
-          memberId: "member-1",
+          memberId,
         })
         .run();
 
       const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
-      expect(rows[0]?.memberId).toBe("member-1");
+      expect(rows[0]?.memberId).toBe(memberId);
     });
 
     it("defaults memberId to null", () => {
@@ -760,6 +872,53 @@ describe("SQLite fronting schema", () => {
 
       const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
       expect(rows[0]?.memberId).toBeNull();
+    });
+
+    it("sets memberId to null on member deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const sessionId = insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingComments)
+        .values({
+          id,
+          frontingSessionId: sessionId,
+          systemId,
+          memberId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(members).where(eq(members.id, memberId)).run();
+      const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
+      expect(rows[0]?.memberId).toBeNull();
+    });
+
+    it("rejects nonexistent memberId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(frontingComments)
+          .values({
+            id: crypto.randomUUID(),
+            frontingSessionId: sessionId,
+            systemId,
+            memberId: "nonexistent",
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
 });

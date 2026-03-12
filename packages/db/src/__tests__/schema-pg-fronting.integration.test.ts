@@ -10,11 +10,13 @@ import {
   frontingSessions,
   switches,
 } from "../schema/pg/fronting.js";
+import { members } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
 
 import {
   createPgFrontingTables,
   pgInsertAccount,
+  pgInsertMember,
   pgInsertSystem,
   testBlob,
 } from "./helpers/pg-helpers.js";
@@ -24,6 +26,7 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 const schema = {
   accounts,
   systems,
+  members,
   frontingSessions,
   switches,
   customFronts,
@@ -36,6 +39,19 @@ describe("PG fronting schema", () => {
 
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
+  const insertMember = (systemId: string, id?: string) => pgInsertMember(db, systemId, id);
+
+  async function insertCustomFront(systemId: string, id = crypto.randomUUID()): Promise<string> {
+    const now = Date.now();
+    await db.insert(customFronts).values({
+      id,
+      systemId,
+      encryptedData: testBlob(),
+      createdAt: now,
+      updatedAt: now,
+    });
+    return id;
+  }
 
   async function insertFrontingSession(
     systemId: string,
@@ -222,6 +238,8 @@ describe("PG fronting schema", () => {
     it("round-trips T3 metadata columns", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const cfId = await insertCustomFront(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -232,16 +250,16 @@ describe("PG fronting schema", () => {
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
-        memberId: "member-1",
+        memberId,
         frontingType: "fronting",
-        customFrontId: "custom-1",
+        customFrontId: cfId,
         linkedStructure: { entityType: "subsystem", entityId: "r-1" },
       });
 
       const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
-      expect(rows[0]?.memberId).toBe("member-1");
+      expect(rows[0]?.memberId).toBe(memberId);
       expect(rows[0]?.frontingType).toBe("fronting");
-      expect(rows[0]?.customFrontId).toBe("custom-1");
+      expect(rows[0]?.customFrontId).toBe(cfId);
       expect(rows[0]?.linkedStructure).toEqual({ entityType: "subsystem", entityId: "r-1" });
     });
 
@@ -265,6 +283,86 @@ describe("PG fronting schema", () => {
       expect(rows[0]?.frontingType).toBeNull();
       expect(rows[0]?.customFrontId).toBeNull();
       expect(rows[0]?.linkedStructure).toBeNull();
+    });
+
+    it("sets memberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingSessions).values({
+        id,
+        systemId,
+        startTime: now,
+        memberId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
+      expect(rows[0]?.memberId).toBeNull();
+    });
+
+    it("rejects nonexistent memberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(frontingSessions).values({
+          id: crypto.randomUUID(),
+          systemId,
+          startTime: now,
+          memberId: "nonexistent",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("sets customFrontId to null on custom front deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const customFrontId = await insertCustomFront(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingSessions).values({
+        id,
+        systemId,
+        startTime: now,
+        customFrontId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(customFronts).where(eq(customFronts.id, customFrontId));
+      const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
+      expect(rows[0]?.customFrontId).toBeNull();
+    });
+
+    it("rejects nonexistent customFrontId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(frontingSessions).values({
+          id: crypto.randomUUID(),
+          systemId,
+          startTime: now,
+          customFrontId: "nonexistent",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
 
     it("rejects invalid frontingType via CHECK constraint", async () => {
@@ -653,6 +751,7 @@ describe("PG fronting schema", () => {
     it("round-trips memberId T3 column", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const sessionId = await insertFrontingSession(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -664,11 +763,11 @@ describe("PG fronting schema", () => {
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
-        memberId: "member-1",
+        memberId,
       });
 
       const rows = await db.select().from(frontingComments).where(eq(frontingComments.id, id));
-      expect(rows[0]?.memberId).toBe("member-1");
+      expect(rows[0]?.memberId).toBe(memberId);
     });
 
     it("defaults memberId to null", async () => {
@@ -689,6 +788,48 @@ describe("PG fronting schema", () => {
 
       const rows = await db.select().from(frontingComments).where(eq(frontingComments.id, id));
       expect(rows[0]?.memberId).toBeNull();
+    });
+
+    it("sets memberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const sessionId = await insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingComments).values({
+        id,
+        frontingSessionId: sessionId,
+        systemId,
+        memberId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(frontingComments).where(eq(frontingComments.id, id));
+      expect(rows[0]?.memberId).toBeNull();
+    });
+
+    it("rejects nonexistent memberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const sessionId = await insertFrontingSession(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(frontingComments).values({
+          id: crypto.randomUUID(),
+          frontingSessionId: sessionId,
+          systemId,
+          memberId: "nonexistent",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 });

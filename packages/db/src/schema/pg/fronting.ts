@@ -6,9 +6,32 @@ import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
+import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type { ServerFrontingSession } from "@pluralscape/types";
+
+export const customFronts = pgTable(
+  "custom_fronts",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    systemId: varchar("system_id", { length: 255 })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
+    ...timestamps(),
+    ...versioned(),
+    ...archivable(),
+  },
+  (t) => [
+    index("custom_fronts_system_id_idx").on(t.systemId),
+    check("custom_fronts_version_check", versionCheck(t.version)),
+    check(
+      "custom_fronts_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
+  ],
+);
 
 export const frontingSessions = pgTable(
   "fronting_sessions",
@@ -38,6 +61,14 @@ export const frontingSessions = pgTable(
     ),
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
+    foreignKey({
+      columns: [t.memberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [t.customFrontId],
+      foreignColumns: [customFronts.id],
+    }).onDelete("set null"),
     check("fronting_sessions_version_check", versionCheck(t.version)),
   ],
 );
@@ -61,28 +92,6 @@ export const switches = pgTable(
   ],
 );
 
-export const customFronts = pgTable(
-  "custom_fronts",
-  {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
-    ...timestamps(),
-    ...versioned(),
-    ...archivable(),
-  },
-  (t) => [
-    index("custom_fronts_system_id_idx").on(t.systemId),
-    check("custom_fronts_version_check", versionCheck(t.version)),
-    check(
-      "custom_fronts_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
-  ],
-);
-
 export const frontingComments = pgTable(
   "fronting_comments",
   {
@@ -102,6 +111,10 @@ export const frontingComments = pgTable(
       columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
     }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.memberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
     check("fronting_comments_version_check", versionCheck(t.version)),
   ],
 );

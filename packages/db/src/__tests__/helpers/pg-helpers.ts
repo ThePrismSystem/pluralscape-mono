@@ -249,6 +249,8 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       CHECK (end_time IS NULL OR end_time > start_time),
       UNIQUE (id, system_id),
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
@@ -298,6 +300,7 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
@@ -317,6 +320,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (source_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      FOREIGN KEY (target_member_id) REFERENCES members(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
@@ -718,6 +723,7 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (id, system_id),
+      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
@@ -749,7 +755,8 @@ export const PG_DDL = {
       created_by_member_id VARCHAR(255),
       confirmed BOOLEAN NOT NULL DEFAULT false,
       encrypted_data BYTEA NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL
+      created_at TIMESTAMPTZ NOT NULL,
+      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   acknowledgementsIndexes: `
@@ -1043,7 +1050,8 @@ export const PG_DDL = {
       dismissed BOOLEAN NOT NULL DEFAULT false,
       responded_by_member_id VARCHAR(255),
       encrypted_data BYTEA,
-      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   checkInRecordsIndexes: `
@@ -1299,18 +1307,20 @@ export async function createPgPrivacyTables(client: PGlite): Promise<void> {
 
 export async function createPgFrontingTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.customFronts);
+  await pgExec(client, PG_DDL.customFrontsIndexes);
   await pgExec(client, PG_DDL.frontingSessions);
   await pgExec(client, PG_DDL.frontingSessionsIndexes);
   await pgExec(client, PG_DDL.switches);
   await pgExec(client, PG_DDL.switchesIndexes);
-  await pgExec(client, PG_DDL.customFronts);
-  await pgExec(client, PG_DDL.customFrontsIndexes);
   await pgExec(client, PG_DDL.frontingComments);
   await pgExec(client, PG_DDL.frontingCommentsIndexes);
 }
 
 export async function createPgStructureTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.relationships);
   await pgExec(client, PG_DDL.relationshipsIndexes);
   await pgExec(client, PG_DDL.subsystems);
@@ -1463,6 +1473,9 @@ export async function createPgCommunicationTables(client: PGlite): Promise<void>
 
 export async function createPgJournalTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.members);
+  await pgExec(client, PG_DDL.customFronts);
+  await pgExec(client, PG_DDL.customFrontsIndexes);
   await pgExec(client, PG_DDL.frontingSessions);
   await pgExec(client, PG_DDL.frontingSessionsIndexes);
   await pgExec(client, PG_DDL.journalEntries);
@@ -1528,6 +1541,7 @@ export async function createPgBlobMetadataTables(client: PGlite): Promise<void> 
 
 export async function createPgTimerTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.timerConfigs);
   await pgExec(client, PG_DDL.timerConfigsIndexes);
   await pgExec(client, PG_DDL.checkInRecords);

@@ -249,6 +249,8 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       CHECK (end_time IS NULL OR end_time > start_time),
       UNIQUE (id, system_id),
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
+      FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
@@ -298,6 +300,7 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
@@ -317,6 +320,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      FOREIGN KEY (source_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      FOREIGN KEY (target_member_id) REFERENCES members(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
@@ -718,6 +723,7 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (id, system_id),
+      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
@@ -749,7 +755,8 @@ export const SQLITE_DDL = {
       created_by_member_id TEXT,
       confirmed INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   acknowledgementsIndexes: `
@@ -1039,7 +1046,8 @@ export const SQLITE_DDL = {
       dismissed INTEGER NOT NULL DEFAULT 0,
       responded_by_member_id TEXT,
       encrypted_data BLOB,
-      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL
     )
   `,
   checkInRecordsIndexes: `
@@ -1310,18 +1318,20 @@ export function createSqlitePrivacyTables(client: InstanceType<typeof Database>)
 
 export function createSqliteFrontingTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.customFronts);
+  client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
   client.exec(SQLITE_DDL.frontingSessionsIndexes);
   client.exec(SQLITE_DDL.switches);
   client.exec(SQLITE_DDL.switchesIndexes);
-  client.exec(SQLITE_DDL.customFronts);
-  client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingComments);
   client.exec(SQLITE_DDL.frontingCommentsIndexes);
 }
 
 export function createSqliteStructureTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.relationships);
   client.exec(SQLITE_DDL.relationshipsIndexes);
   client.exec(SQLITE_DDL.subsystems);
@@ -1482,6 +1492,9 @@ export function createSqliteCommunicationTables(client: InstanceType<typeof Data
 
 export function createSqliteJournalTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
+  client.exec(SQLITE_DDL.customFronts);
+  client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
   client.exec(SQLITE_DDL.frontingSessionsIndexes);
   client.exec(SQLITE_DDL.journalEntries);
@@ -1547,6 +1560,7 @@ export function createSqliteBlobMetadataTables(client: InstanceType<typeof Datab
 
 export function createSqliteTimerTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.members);
   client.exec(SQLITE_DDL.timerConfigs);
   client.exec(SQLITE_DDL.timerConfigsIndexes);
   client.exec(SQLITE_DDL.checkInRecords);

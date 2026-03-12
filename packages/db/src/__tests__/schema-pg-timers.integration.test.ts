@@ -4,19 +4,21 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
+import { members } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
 import { checkInRecords, timerConfigs } from "../schema/pg/timers.js";
 
 import {
   createPgTimerTables,
   pgInsertAccount,
+  pgInsertMember,
   pgInsertSystem,
   testBlob,
 } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, timerConfigs, checkInRecords };
+const schema = { accounts, systems, members, timerConfigs, checkInRecords };
 
 describe("PG timers schema", () => {
   let client: PGlite;
@@ -24,6 +26,7 @@ describe("PG timers schema", () => {
 
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
+  const insertMember = (systemId: string, id?: string) => pgInsertMember(db, systemId, id);
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -289,6 +292,7 @@ describe("PG timers schema", () => {
     it("round-trips respondedByMemberId T3 column", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const timerId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -306,11 +310,11 @@ describe("PG timers schema", () => {
         systemId,
         timerConfigId: timerId,
         scheduledAt: now,
-        respondedByMemberId: "member-1",
+        respondedByMemberId: memberId,
       });
 
       const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
-      expect(rows[0]?.respondedByMemberId).toBe("member-1");
+      expect(rows[0]?.respondedByMemberId).toBe(memberId);
     });
 
     it("defaults respondedByMemberId to null", async () => {
@@ -337,6 +341,60 @@ describe("PG timers schema", () => {
 
       const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
       expect(rows[0]?.respondedByMemberId).toBeNull();
+    });
+
+    it("sets respondedByMemberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(checkInRecords).values({
+        id,
+        systemId,
+        timerConfigId: timerId,
+        scheduledAt: now,
+        respondedByMemberId: memberId,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
+      expect(rows[0]?.respondedByMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent respondedByMemberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(checkInRecords).values({
+          id: crypto.randomUUID(),
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+          respondedByMemberId: "nonexistent",
+        }),
+      ).rejects.toThrow();
     });
   });
 });

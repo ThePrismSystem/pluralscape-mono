@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
+import { members } from "../schema/pg/members.js";
 import {
   layers,
   layerMemberships,
@@ -21,6 +22,7 @@ import { systems } from "../schema/pg/systems.js";
 import {
   createPgStructureTables,
   pgInsertAccount,
+  pgInsertMember,
   pgInsertSystem,
   testBlob,
 } from "./helpers/pg-helpers.js";
@@ -30,6 +32,7 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 const schema = {
   accounts,
   systems,
+  members,
   relationships,
   subsystems,
   sideSystems,
@@ -48,6 +51,7 @@ describe("PG structure schema", () => {
 
   const insertAccount = (id?: string) => pgInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string) => pgInsertSystem(db, accountId, id);
+  const insertMember = (systemId: string, id?: string) => pgInsertMember(db, systemId, id);
 
   async function insertSubsystem(
     systemId: string,
@@ -182,14 +186,16 @@ describe("PG structure schema", () => {
     it("round-trips T3 metadata columns", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const sourceMemberId = await insertMember(systemId);
+      const targetMemberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(relationships).values({
         id,
         systemId,
-        sourceMemberId: "member-1",
-        targetMemberId: "member-2",
+        sourceMemberId,
+        targetMemberId,
         type: "sibling",
         bidirectional: true,
         encryptedData: testBlob(new Uint8Array([1])),
@@ -198,8 +204,8 @@ describe("PG structure schema", () => {
       });
 
       const rows = await db.select().from(relationships).where(eq(relationships.id, id));
-      expect(rows[0]?.sourceMemberId).toBe("member-1");
-      expect(rows[0]?.targetMemberId).toBe("member-2");
+      expect(rows[0]?.sourceMemberId).toBe(sourceMemberId);
+      expect(rows[0]?.targetMemberId).toBe(targetMemberId);
       expect(rows[0]?.type).toBe("sibling");
       expect(rows[0]?.bidirectional).toBe(true);
     });
@@ -240,6 +246,82 @@ describe("PG structure schema", () => {
           updatedAt: now,
         }),
       ).rejects.toThrow(/check|constraint|failed query/i);
+    });
+
+    it("sets sourceMemberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(relationships).values({
+        id,
+        systemId,
+        sourceMemberId: memberId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(relationships).where(eq(relationships.id, id));
+      expect(rows[0]?.sourceMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent sourceMemberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(relationships).values({
+          id: crypto.randomUUID(),
+          systemId,
+          sourceMemberId: "nonexistent",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("sets targetMemberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(relationships).values({
+        id,
+        systemId,
+        targetMemberId: memberId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(relationships).where(eq(relationships.id, id));
+      expect(rows[0]?.targetMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent targetMemberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(relationships).values({
+          id: crypto.randomUUID(),
+          systemId,
+          targetMemberId: "nonexistent",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 

@@ -550,13 +550,14 @@ describe("PG communication schema", () => {
     it("round-trips T3 metadata columns", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(polls).values({
         id,
         systemId,
-        createdByMemberId: "member-1",
+        createdByMemberId: memberId,
         kind: "standard",
         allowMultipleVotes: false,
         maxVotesPerMember: 1,
@@ -568,7 +569,7 @@ describe("PG communication schema", () => {
       });
 
       const rows = await db.select().from(polls).where(eq(polls.id, id));
-      expect(rows[0]?.createdByMemberId).toBe("member-1");
+      expect(rows[0]?.createdByMemberId).toBe(memberId);
       expect(rows[0]?.kind).toBe("standard");
     });
 
@@ -601,6 +602,52 @@ describe("PG communication schema", () => {
           updatedAt: now,
         }),
       ).rejects.toThrow(/check|constraint|failed query/i);
+    });
+
+    it("sets createdByMemberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(polls).values({
+        id,
+        systemId,
+        createdByMemberId: memberId,
+        allowMultipleVotes: false,
+        maxVotesPerMember: 1,
+        allowAbstain: false,
+        allowVeto: false,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(polls).where(eq(polls.id, id));
+      expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent createdByMemberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(polls).values({
+          id: crypto.randomUUID(),
+          systemId,
+          createdByMemberId: "nonexistent",
+          allowMultipleVotes: false,
+          maxVotesPerMember: 1,
+          allowAbstain: false,
+          allowVeto: false,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 
@@ -790,19 +837,20 @@ describe("PG communication schema", () => {
     it("round-trips createdByMemberId T3 column", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(acknowledgements).values({
         id,
         systemId,
-        createdByMemberId: "member-1",
+        createdByMemberId: memberId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
       });
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
-      expect(rows[0]?.createdByMemberId).toBe("member-1");
+      expect(rows[0]?.createdByMemberId).toBe(memberId);
     });
 
     it("defaults createdByMemberId to null", async () => {
@@ -820,6 +868,42 @@ describe("PG communication schema", () => {
 
       const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
       expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("sets createdByMemberId to null on member deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(acknowledgements).values({
+        id,
+        systemId,
+        createdByMemberId: memberId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      await db.delete(members).where(eq(members.id, memberId));
+      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
+      expect(rows[0]?.createdByMemberId).toBeNull();
+    });
+
+    it("rejects nonexistent createdByMemberId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(acknowledgements).values({
+          id: crypto.randomUUID(),
+          systemId,
+          createdByMemberId: "nonexistent",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 });

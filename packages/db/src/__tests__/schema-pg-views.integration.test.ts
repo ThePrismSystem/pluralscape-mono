@@ -63,6 +63,8 @@ describe("PG views / query helpers", () => {
     // Members (needed for groups)
     await pgExec(client, PG_DDL.members);
     // Fronting
+    await pgExec(client, PG_DDL.customFronts);
+    await pgExec(client, PG_DDL.customFrontsIndexes);
     await pgExec(client, PG_DDL.frontingSessions);
     await pgExec(client, PG_DDL.frontingSessionsIndexes);
     await pgExec(client, PG_DDL.frontingComments);

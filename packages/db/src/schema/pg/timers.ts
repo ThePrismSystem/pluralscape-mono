@@ -13,6 +13,7 @@ import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { versionCheck } from "../../helpers/check.js";
 
+import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 export const timerConfigs = pgTable(
@@ -60,5 +61,9 @@ export const checkInRecords = pgTable(
       columns: [t.timerConfigId, t.systemId],
       foreignColumns: [timerConfigs.id, timerConfigs.systemId],
     }).onDelete("cascade"),
+    foreignKey({
+      columns: [t.respondedByMemberId],
+      foreignColumns: [members.id],
+    }).onDelete("set null"),
   ],
 );
