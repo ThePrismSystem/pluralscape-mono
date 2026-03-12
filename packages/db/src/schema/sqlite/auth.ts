@@ -15,7 +15,7 @@ export const accounts = sqliteTable(
     emailHash: text("email_hash").notNull(),
     emailSalt: text("email_salt").notNull(),
     passwordHash: text("password_hash").notNull(),
-    kdfSalt: text("kdf_salt"),
+    kdfSalt: text("kdf_salt").notNull(),
     ...timestamps(),
     ...versioned(),
   },

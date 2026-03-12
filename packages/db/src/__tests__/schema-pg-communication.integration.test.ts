@@ -351,6 +351,90 @@ describe("PG communication schema", () => {
         ),
       ).rejects.toThrow(/check|constraint/i);
     });
+
+    it("allows replyToId referencing nonexistent message (no self-FK)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const channelId = await insertChannel(systemId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(messages).values({
+        id,
+        channelId,
+        systemId,
+        replyToId: "nonexistent-message-id",
+        timestamp: now,
+        encryptedData: testBlob(new Uint8Array([1, 2])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(messages).where(eq(messages.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.replyToId).toBe("nonexistent-message-id");
+    });
+
+    it("rejects duplicate (id, timestamp) pair", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const channelId = await insertChannel(systemId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(messages).values({
+        id,
+        channelId,
+        systemId,
+        timestamp: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(messages).values({
+          id,
+          channelId,
+          systemId,
+          timestamp: now,
+          encryptedData: testBlob(new Uint8Array([2])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("allows same id with different timestamp", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const channelId = await insertChannel(systemId);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(messages).values({
+        id,
+        channelId,
+        systemId,
+        timestamp: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(messages).values({
+        id,
+        channelId,
+        systemId,
+        timestamp: now + 1000,
+        encryptedData: testBlob(new Uint8Array([2])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(messages).where(eq(messages.id, id));
+      expect(rows).toHaveLength(2);
+    });
   });
 
   describe("board_messages", () => {

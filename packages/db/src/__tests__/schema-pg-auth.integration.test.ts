@@ -30,6 +30,7 @@ describe("PG auth schema", () => {
       emailHash: string;
       emailSalt: string;
       passwordHash: string;
+      kdfSalt: string;
       createdAt: number;
       updatedAt: number;
     }> = {},
@@ -38,6 +39,7 @@ describe("PG auth schema", () => {
     emailHash: string;
     emailSalt: string;
     passwordHash: string;
+    kdfSalt: string;
     createdAt: number;
     updatedAt: number;
   }> {
@@ -47,6 +49,7 @@ describe("PG auth schema", () => {
       emailHash: overrides.emailHash ?? `hash_${crypto.randomUUID()}`,
       emailSalt: overrides.emailSalt ?? `salt_${crypto.randomUUID()}`,
       passwordHash: overrides.passwordHash ?? `$argon2id$${crypto.randomUUID()}`,
+      kdfSalt: overrides.kdfSalt ?? `kdf_${crypto.randomUUID()}`,
       createdAt: overrides.createdAt ?? now,
       updatedAt: overrides.updatedAt ?? now,
     };
@@ -87,6 +90,7 @@ describe("PG auth schema", () => {
       expect(rows[0]?.emailHash).toBe(account.emailHash);
       expect(rows[0]?.emailSalt).toBe(account.emailSalt);
       expect(rows[0]?.passwordHash).toBe(account.passwordHash);
+      expect(rows[0]?.kdfSalt).toBe(account.kdfSalt);
       expect(rows[0]?.createdAt).toBe(account.createdAt);
       expect(rows[0]?.updatedAt).toBe(account.updatedAt);
     });
@@ -115,18 +119,28 @@ describe("PG auth schema", () => {
       await expect(insertAccount({ id })).rejects.toThrow();
     });
 
-    it("round-trips kdfSalt when provided", async () => {
-      const kdfSalt = `salt_${crypto.randomUUID()}`;
-      const account = await insertAccount();
-      await db.update(accounts).set({ kdfSalt }).where(eq(accounts.id, account.id));
+    it("round-trips kdfSalt", async () => {
+      const kdfSalt = `kdf_${crypto.randomUUID()}`;
+      const account = await insertAccount({ kdfSalt });
       const rows = await db.select().from(accounts).where(eq(accounts.id, account.id));
       expect(rows[0]?.kdfSalt).toBe(kdfSalt);
     });
 
-    it("defaults kdfSalt to null", async () => {
-      const account = await insertAccount();
-      const rows = await db.select().from(accounts).where(eq(accounts.id, account.id));
-      expect(rows[0]?.kdfSalt).toBeNull();
+    it("rejects null kdfSalt", async () => {
+      const now = Date.now();
+      await expect(
+        client.query(
+          "INSERT INTO accounts (id, email_hash, email_salt, password_hash, kdf_salt, created_at, updated_at, version) VALUES ($1, $2, $3, $4, NULL, $5, $6, 1)",
+          [
+            crypto.randomUUID(),
+            `hash_${crypto.randomUUID()}`,
+            `salt_${crypto.randomUUID()}`,
+            `$argon2id$${crypto.randomUUID()}`,
+            now,
+            now,
+          ],
+        ),
+      ).rejects.toThrow();
     });
   });
 

@@ -52,7 +52,7 @@ export const SQLITE_DDL = {
       email_hash TEXT NOT NULL UNIQUE,
       email_salt TEXT NOT NULL,
       password_hash TEXT NOT NULL,
-      kdf_salt TEXT,
+      kdf_salt TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
@@ -1151,6 +1151,7 @@ export const SQLITE_DDL = {
   syncQueue: `
     CREATE TABLE sync_queue (
       id TEXT PRIMARY KEY,
+      seq INTEGER NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
@@ -1163,6 +1164,7 @@ export const SQLITE_DDL = {
   syncQueueIndexes: `
     CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
     CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id);
+    CREATE UNIQUE INDEX sync_queue_seq_idx ON sync_queue (seq);
     CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id) WHERE synced_at IS NULL
   `,
   syncConflicts: `
@@ -1286,6 +1288,7 @@ export function sqliteInsertAccount(
       emailHash: `hash_${crypto.randomUUID()}`,
       emailSalt: `salt_${crypto.randomUUID()}`,
       passwordHash: `$argon2id$${crypto.randomUUID()}`,
+      kdfSalt: `kdf_${crypto.randomUUID()}`,
       createdAt: now,
       updatedAt: now,
     })

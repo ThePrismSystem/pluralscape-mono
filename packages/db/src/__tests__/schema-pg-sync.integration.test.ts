@@ -295,6 +295,103 @@ describe("PG sync schema", () => {
       const after = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
       expect(after[0]?.syncedAt).toBe(syncedAt);
     });
+
+    it("auto-assigns monotonically increasing seq values", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+      const ids = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+
+      for (const id of ids) {
+        await db.insert(syncQueue).values({
+          id,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+        });
+      }
+
+      const rows = await Promise.all(
+        ids.map((id) =>
+          db
+            .select()
+            .from(syncQueue)
+            .where(eq(syncQueue.id, id))
+            .then((r) => r[0]),
+        ),
+      );
+
+      const s0 = rows[0]?.seq;
+      const s1 = rows[1]?.seq;
+      const s2 = rows[2]?.seq;
+      expect(s0).toBeDefined();
+      expect(s1).toBeDefined();
+      expect(s2).toBeDefined();
+      if (s0 === undefined || s1 === undefined || s2 === undefined) return;
+      expect(s0).toBeLessThan(s1);
+      expect(s1).toBeLessThan(s2);
+    });
+
+    it("orders replay correctly via seq column", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      const id1 = crypto.randomUUID();
+      const id2 = crypto.randomUUID();
+      const id3 = crypto.randomUUID();
+
+      for (const id of [id1, id2, id3]) {
+        await db.insert(syncQueue).values({
+          id,
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+        });
+      }
+
+      const rows = await db
+        .select()
+        .from(syncQueue)
+        .where(eq(syncQueue.systemId, systemId))
+        .orderBy(syncQueue.seq);
+
+      expect(rows.map((r) => r.id)).toEqual([id1, id2, id3]);
+    });
+
+    it("rejects duplicate seq values", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      const id = crypto.randomUUID();
+      await db.insert(syncQueue).values({
+        id,
+        systemId,
+        entityType: "member",
+        entityId: crypto.randomUUID(),
+        operation: "create",
+        changeData: new Uint8Array([1]),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
+      const seqVal = rows[0]?.seq;
+      expect(seqVal).toBeDefined();
+
+      await expect(
+        client.query(
+          `INSERT INTO sync_queue (id, seq, system_id, entity_type, entity_id, operation, change_data, created_at) VALUES ($1, $2, $3, 'member', $4, 'create', '\\x01'::bytea, $5)`,
+          [crypto.randomUUID(), seqVal, systemId, crypto.randomUUID(), new Date(now).toISOString()],
+        ),
+      ).rejects.toThrow(/unique|duplicate/i);
+    });
   });
 
   describe("sync_conflicts", () => {
