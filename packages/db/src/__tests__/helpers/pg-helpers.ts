@@ -1103,7 +1103,8 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       completed_at TIMESTAMPTZ,
       CHECK (progress_percent >= 0 AND progress_percent <= 100),
-      CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total)
+      CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total),
+      CHECK (error_log IS NULL OR jsonb_array_length(error_log) <= 1000)
     )
   `,
   importJobsIndexes: `
@@ -1155,7 +1156,8 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       created_at TIMESTAMPTZ NOT NULL,
       last_synced_at TIMESTAMPTZ,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (automerge_heads IS NULL OR octet_length(automerge_heads) <= 16384)
     )
   `,
   syncDocumentsIndexes: `

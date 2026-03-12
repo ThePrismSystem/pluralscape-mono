@@ -258,6 +258,52 @@ describe("PG import-export schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.errorLog).toEqual(errors);
     });
+
+    it("accepts errorLog with 1000 entries", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const errors = Array.from({ length: 1000 }, (_, i) => ({
+        line: i,
+        message: `error ${String(i)}`,
+      }));
+
+      await db.insert(importJobs).values({
+        id,
+        accountId,
+        systemId,
+        source: "simply-plural",
+        errorLog: errors,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(importJobs).where(eq(importJobs.id, id));
+      expect(rows).toHaveLength(1);
+    });
+
+    it("rejects errorLog with more than 1000 entries", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+      const errors = Array.from({ length: 1001 }, (_, i) => ({
+        line: i,
+        message: `error ${String(i)}`,
+      }));
+
+      await expect(
+        db.insert(importJobs).values({
+          id: crypto.randomUUID(),
+          accountId,
+          systemId,
+          source: "simply-plural",
+          errorLog: errors,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
   });
 
   describe("export_requests", () => {

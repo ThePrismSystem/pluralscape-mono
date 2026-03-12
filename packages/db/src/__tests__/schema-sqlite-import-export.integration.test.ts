@@ -300,6 +300,57 @@ describe("SQLite import-export schema", () => {
       const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("accepts errorLog with 1000 entries", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const errors = Array.from({ length: 1000 }, (_, i) => ({
+        line: i,
+        message: `error ${String(i)}`,
+      }));
+
+      db.insert(importJobs)
+        .values({
+          id,
+          accountId,
+          systemId,
+          source: "simply-plural",
+          errorLog: errors,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(importJobs).where(eq(importJobs.id, id)).all();
+      expect(rows).toHaveLength(1);
+    });
+
+    it("rejects errorLog with more than 1000 entries", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const errors = Array.from({ length: 1001 }, (_, i) => ({
+        line: i,
+        message: `error ${String(i)}`,
+      }));
+
+      expect(() =>
+        db
+          .insert(importJobs)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            systemId,
+            source: "simply-plural",
+            errorLog: errors,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
   });
 
   describe("export_requests", () => {

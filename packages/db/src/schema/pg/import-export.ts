@@ -3,6 +3,7 @@ import { check, index, integer, jsonb, pgTable, uniqueIndex, varchar } from "dri
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
+import { MAX_ERROR_LOG_ENTRIES } from "../../helpers/constants.js";
 import {
   ACCOUNT_PURGE_STATUSES,
   EXPORT_FORMATS,
@@ -59,6 +60,10 @@ export const importJobs = pgTable(
     check(
       "import_jobs_chunks_check",
       sql`${t.chunksTotal} IS NULL OR ${t.chunksCompleted} <= ${t.chunksTotal}`,
+    ),
+    check(
+      "import_jobs_error_log_length_check",
+      sql`${t.errorLog} IS NULL OR jsonb_array_length(${t.errorLog}) <= ${sql.raw(String(MAX_ERROR_LOG_ENTRIES))}`,
     ),
   ],
 );

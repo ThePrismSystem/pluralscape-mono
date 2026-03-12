@@ -1106,7 +1106,8 @@ export const SQLITE_DDL = {
       chunks_completed INTEGER NOT NULL DEFAULT 0 CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total),
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      completed_at INTEGER
+      completed_at INTEGER,
+      CHECK (error_log IS NULL OR json_array_length(error_log) <= 1000)
     )
   `,
   importJobsIndexes: `
@@ -1157,7 +1158,8 @@ export const SQLITE_DDL = {
       automerge_heads BLOB,
       version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
       created_at INTEGER NOT NULL,
-      last_synced_at INTEGER
+      last_synced_at INTEGER,
+      CHECK (automerge_heads IS NULL OR length(automerge_heads) <= 16384)
     )
   `,
   syncDocumentsIndexes: `
