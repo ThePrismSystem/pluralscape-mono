@@ -351,6 +351,129 @@ describe("PG custom fields schema", () => {
       expect(rows[0]?.memberId).toBe(memberId);
     });
 
+    it("allows same fieldDefinitionId for different members", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId1 = await pgInsertMember(db, systemId);
+      const memberId2 = await pgInsertMember(db, systemId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        systemId,
+        memberId: memberId1,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(fieldValues).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        systemId,
+        memberId: memberId2,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(fieldValues)
+        .where(eq(fieldValues.fieldDefinitionId, fieldDefId));
+      expect(rows).toHaveLength(2);
+    });
+
+    it("rejects duplicate (fieldDefinitionId, memberId)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await pgInsertMember(db, systemId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        systemId,
+        memberId,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(fieldValues).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          memberId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects duplicate system-level value where memberId IS NULL", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        systemId,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(fieldValues).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          systemId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("allows member-level and system-level values for same fieldDefinitionId", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await pgInsertMember(db, systemId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        systemId,
+        memberId,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(fieldValues).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        systemId,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(fieldValues)
+        .where(eq(fieldValues.fieldDefinitionId, fieldDefId));
+      expect(rows).toHaveLength(2);
+    });
+
     it("defaults memberId to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);

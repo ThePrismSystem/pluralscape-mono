@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
@@ -7,6 +8,7 @@ import {
   pgTable,
   primaryKey,
   unique,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -72,6 +74,12 @@ export const fieldValues = pgTable(
       foreignColumns: [members.id],
     }).onDelete("set null"),
     check("field_values_version_check", versionCheck(t.version)),
+    uniqueIndex("field_values_definition_member_uniq")
+      .on(t.fieldDefinitionId, t.memberId)
+      .where(sql`${t.memberId} IS NOT NULL`),
+    uniqueIndex("field_values_definition_system_uniq")
+      .on(t.fieldDefinitionId, t.systemId)
+      .where(sql`${t.memberId} IS NULL`),
   ],
 );
 

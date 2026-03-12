@@ -510,7 +510,9 @@ export const PG_DDL = {
     )
   `,
   fieldValuesIndexes: `
-    CREATE INDEX field_values_definition_system_idx ON field_values (field_definition_id, system_id)
+    CREATE INDEX field_values_definition_system_idx ON field_values (field_definition_id, system_id);
+    CREATE UNIQUE INDEX field_values_definition_member_uniq ON field_values (field_definition_id, member_id) WHERE member_id IS NOT NULL;
+    CREATE UNIQUE INDEX field_values_definition_system_uniq ON field_values (field_definition_id, system_id) WHERE member_id IS NULL
   `,
   fieldBucketVisibility: `
     CREATE TABLE field_bucket_visibility (
