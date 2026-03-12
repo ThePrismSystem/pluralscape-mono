@@ -82,6 +82,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "attachment",
+        checksum: "sha256:test",
         uploadedAt: now,
       })
       .run();
@@ -96,6 +97,7 @@ describe("SQLite blob_metadata schema", () => {
           sizeBytes: 200,
           encryptionTier: 1,
           purpose: "attachment",
+          checksum: "sha256:test",
           uploadedAt: now,
         })
         .run(),
@@ -116,6 +118,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 2,
         purpose: "member-photo",
+        checksum: "sha256:test",
         uploadedAt: now,
       })
       .run();
@@ -150,6 +153,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "attachment",
+        checksum: "sha256:test",
         bucketId,
         uploadedAt: now,
       })
@@ -159,5 +163,22 @@ describe("SQLite blob_metadata schema", () => {
     const rows = db.select().from(blobMetadata).where(eq(blobMetadata.id, id)).all();
     expect(rows).toHaveLength(1);
     expect(rows[0]?.bucketId).toBeNull();
+  });
+
+  it("rejects null checksum", () => {
+    const accountId = insertAccount();
+    const systemId = insertSystem(accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    // Use raw SQL to bypass Drizzle's type checking and test the DB constraint
+    expect(() =>
+      client
+        .prepare(
+          `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
+           VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
+        )
+        .run(id, systemId, `blobs/${crypto.randomUUID()}`, 100, 1, "avatar", now),
+    ).toThrow();
   });
 });

@@ -29,7 +29,7 @@ export const blobMetadata = sqliteTable(
     bucketId: text("bucket_id"),
     purpose: text("purpose").notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: text("thumbnail_of_blob_id"),
-    checksum: text("checksum"),
+    checksum: text("checksum").notNull(),
     uploadedAt: sqliteTimestamp("uploaded_at").notNull(),
   },
   (t) => [

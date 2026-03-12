@@ -997,7 +997,7 @@ export const SQLITE_DDL = {
       bucket_id TEXT,
       purpose TEXT NOT NULL,
       thumbnail_of_blob_id TEXT,
-      checksum TEXT,
+      checksum TEXT NOT NULL,
       uploaded_at INTEGER NOT NULL,
       UNIQUE (id, system_id),
       FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,

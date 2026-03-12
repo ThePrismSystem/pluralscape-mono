@@ -999,7 +999,7 @@ export const PG_DDL = {
       bucket_id VARCHAR(255),
       purpose VARCHAR(255) NOT NULL CHECK (purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
       thumbnail_of_blob_id VARCHAR(255),
-      checksum VARCHAR(255),
+      checksum VARCHAR(255) NOT NULL,
       uploaded_at TIMESTAMPTZ NOT NULL,
       UNIQUE (id, system_id),
       FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
