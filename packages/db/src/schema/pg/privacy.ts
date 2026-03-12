@@ -4,6 +4,7 @@ import { check, index, integer, pgTable, primaryKey, unique, varchar } from "dri
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -13,8 +14,8 @@ import type { EntityType, FriendConnectionStatus } from "@pluralscape/types";
 export const buckets = pgTable(
   "buckets",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -31,9 +32,9 @@ export const buckets = pgTable(
 export const bucketContentTags = pgTable(
   "bucket_content_tags",
   {
-    entityType: varchar("entity_type", { length: 255 }).notNull().$type<EntityType>(),
-    entityId: varchar("entity_id", { length: 255 }).notNull(),
-    bucketId: varchar("bucket_id", { length: 255 })
+    entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
+    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
   },
@@ -50,11 +51,11 @@ export const bucketContentTags = pgTable(
 export const keyGrants = pgTable(
   "key_grants",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    bucketId: varchar("bucket_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
-    friendSystemId: varchar("friend_system_id", { length: 255 })
+    friendSystemId: varchar("friend_system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedKey: pgBinary("encrypted_key").notNull(),
@@ -74,14 +75,14 @@ export const keyGrants = pgTable(
 export const friendConnections = pgTable(
   "friend_connections",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    friendSystemId: varchar("friend_system_id", { length: 255 })
+    friendSystemId: varchar("friend_system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    status: varchar("status", { length: 255 })
+    status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("pending")
       .$type<FriendConnectionStatus>(),
@@ -103,8 +104,8 @@ export const friendConnections = pgTable(
 export const friendCodes = pgTable(
   "friend_codes",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     code: varchar("code", { length: 255 }).notNull().unique(),
@@ -123,10 +124,10 @@ export const friendCodes = pgTable(
 export const friendBucketAssignments = pgTable(
   "friend_bucket_assignments",
   {
-    friendConnectionId: varchar("friend_connection_id", { length: 255 })
+    friendConnectionId: varchar("friend_connection_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => friendConnections.id, { onDelete: "cascade" }),
-    bucketId: varchar("bucket_id", { length: 255 })
+    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
   },

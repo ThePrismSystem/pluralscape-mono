@@ -2,6 +2,7 @@ import { check, index, jsonb, pgTable, text, varchar } from "drizzle-orm/pg-core
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { AUDIT_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -15,15 +16,15 @@ export type { DbAuditActor } from "../../helpers/types.js";
 export const auditLog = pgTable(
   "audit_log",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
     /** Denormalized for query performance — avoids joining through systems to get account. */
-    accountId: varchar("account_id", { length: 255 }).references(() => accounts.id, {
+    accountId: varchar("account_id", { length: ID_MAX_LENGTH }).references(() => accounts.id, {
       onDelete: "set null",
     }),
-    systemId: varchar("system_id", { length: 255 }).references(() => systems.id, {
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH }).references(() => systems.id, {
       onDelete: "set null",
     }),
-    eventType: varchar("event_type", { length: 255 }).notNull().$type<AuditEventType>(),
+    eventType: varchar("event_type", { length: ENUM_MAX_LENGTH }).notNull().$type<AuditEventType>(),
     /** Named "timestamp" (not "createdAt") to reflect when the event occurred, not row creation. */
     timestamp: pgTimestamp("timestamp").notNull(),
     ipAddress: varchar("ip_address", { length: 255 }),

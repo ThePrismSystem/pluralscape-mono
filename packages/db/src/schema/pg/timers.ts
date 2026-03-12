@@ -12,6 +12,7 @@ import {
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { versionCheck } from "../../helpers/check.js";
+import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -19,8 +20,8 @@ import { systems } from "./systems.js";
 export const timerConfigs = pgTable(
   "timer_configs",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     enabled: boolean("enabled").notNull().default(true),
@@ -42,15 +43,15 @@ export const timerConfigs = pgTable(
 export const checkInRecords = pgTable(
   "check_in_records",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    timerConfigId: varchar("timer_config_id", { length: 255 }).notNull(),
+    timerConfigId: varchar("timer_config_id", { length: ID_MAX_LENGTH }).notNull(),
     scheduledAt: pgTimestamp("scheduled_at").notNull(),
     respondedAt: pgTimestamp("responded_at"),
     dismissed: boolean("dismissed").notNull().default(false),
-    respondedByMemberId: varchar("responded_by_member_id", { length: 255 }),
+    respondedByMemberId: varchar("responded_by_member_id", { length: ID_MAX_LENGTH }),
     encryptedData: pgEncryptedBlob("encrypted_data"),
   },
   (t) => [

@@ -2,6 +2,7 @@ import { check, index, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { FRONTING_REPORT_FORMATS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -16,8 +17,8 @@ import type { ReportFormat } from "@pluralscape/types";
 export const frontingReports = pgTable(
   "fronting_reports",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     dateRange: jsonb("date_range").notNull().$type<DbDateRange>(),
@@ -25,7 +26,7 @@ export const frontingReports = pgTable(
       .notNull()
       .$type<readonly DbMemberFrontingBreakdown[]>(),
     chartData: jsonb("chart_data").notNull().$type<readonly DbChartData[]>(),
-    format: varchar("format", { length: 255 }).notNull().$type<ReportFormat>(),
+    format: varchar("format", { length: ENUM_MAX_LENGTH }).notNull().$type<ReportFormat>(),
     generatedAt: pgTimestamp("generated_at").notNull(),
   },
   (t) => [

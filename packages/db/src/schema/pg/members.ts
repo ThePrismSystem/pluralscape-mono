@@ -3,14 +3,15 @@ import { check, foreignKey, index, integer, pgTable, unique, varchar } from "dri
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
 import { archivableConsistencyCheck, versionCheck } from "../../helpers/check.js";
+import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
 
 export const members = pgTable(
   "members",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -33,10 +34,10 @@ export const members = pgTable(
 export const memberPhotos = pgTable(
   "member_photos",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    memberId: varchar("member_id", { length: 255 }).notNull(),
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
     /** Denormalized from members — avoids join through members for RLS queries. */
-    systemId: varchar("system_id", { length: 255 })
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull().default(0),

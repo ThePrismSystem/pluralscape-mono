@@ -12,7 +12,11 @@ import {
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck, nullPairCheck, versionCheck } from "../../helpers/check.js";
-import { MAX_AUTOMERGE_HEADS_BYTES } from "../../helpers/constants.js";
+import {
+  ENUM_MAX_LENGTH,
+  ID_MAX_LENGTH,
+  MAX_AUTOMERGE_HEADS_BYTES,
+} from "../../helpers/constants.js";
 import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
@@ -22,12 +26,12 @@ import type { EntityType, SyncOperation, SyncResolution } from "@pluralscape/typ
 export const syncDocuments = pgTable(
   "sync_documents",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityType: varchar("entity_type", { length: 255 }).notNull().$type<EntityType>(),
-    entityId: varchar("entity_id", { length: 255 }).notNull(),
+    entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
+    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
     automergeHeads: pgBinary("automerge_heads"),
     version: integer("version").notNull().default(1),
     createdAt: pgTimestamp("created_at").notNull(),
@@ -50,14 +54,14 @@ export const syncDocuments = pgTable(
 export const syncQueue = pgTable(
   "sync_queue",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
     seq: serial("seq").notNull(),
-    systemId: varchar("system_id", { length: 255 })
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityType: varchar("entity_type", { length: 255 }).notNull().$type<EntityType>(),
-    entityId: varchar("entity_id", { length: 255 }).notNull(),
-    operation: varchar("operation", { length: 255 }).notNull().$type<SyncOperation>(),
+    entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
+    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    operation: varchar("operation", { length: ENUM_MAX_LENGTH }).notNull().$type<SyncOperation>(),
     changeData: pgBinary("change_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
     syncedAt: pgTimestamp("synced_at"),
@@ -80,15 +84,15 @@ export const syncQueue = pgTable(
 export const syncConflicts = pgTable(
   "sync_conflicts",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    entityType: varchar("entity_type", { length: 255 }).notNull().$type<EntityType>(),
-    entityId: varchar("entity_id", { length: 255 }).notNull(),
+    entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
+    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
     localVersion: integer("local_version").notNull(),
     remoteVersion: integer("remote_version").notNull(),
-    resolution: varchar("resolution", { length: 255 }).$type<SyncResolution>(),
+    resolution: varchar("resolution", { length: ENUM_MAX_LENGTH }).$type<SyncResolution>(),
     createdAt: pgTimestamp("created_at").notNull(),
     resolvedAt: pgTimestamp("resolved_at"),
     details: text("details"),

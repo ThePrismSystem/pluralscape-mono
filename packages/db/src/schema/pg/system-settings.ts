@@ -3,14 +3,15 @@ import { boolean, check, pgTable, varchar } from "drizzle-orm/pg-core";
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned } from "../../helpers/audit.pg.js";
 import { versionCheck } from "../../helpers/check.js";
+import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
 
 export const systemSettings = pgTable(
   "system_settings",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .unique()
       .references(() => systems.id, { onDelete: "cascade" }),

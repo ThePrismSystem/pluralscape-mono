@@ -13,6 +13,7 @@ import {
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
@@ -23,17 +24,17 @@ import type { BlobPurpose } from "@pluralscape/types";
 export const blobMetadata = pgTable(
   "blob_metadata",
   {
-    id: varchar("id", { length: 255 }).primaryKey(),
-    systemId: varchar("system_id", { length: 255 })
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     storageKey: varchar("storage_key", { length: 1024 }).notNull(),
-    mimeType: varchar("mime_type", { length: 255 }),
+    mimeType: varchar("mime_type", { length: ENUM_MAX_LENGTH }),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
     encryptionTier: integer("encryption_tier").notNull(),
-    bucketId: varchar("bucket_id", { length: 255 }),
-    purpose: varchar("purpose", { length: 255 }).notNull().$type<BlobPurpose>(),
-    thumbnailOfBlobId: varchar("thumbnail_of_blob_id", { length: 255 }),
+    bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH }),
+    purpose: varchar("purpose", { length: ENUM_MAX_LENGTH }).notNull().$type<BlobPurpose>(),
+    thumbnailOfBlobId: varchar("thumbnail_of_blob_id", { length: ID_MAX_LENGTH }),
     checksum: varchar("checksum", { length: 255 }).notNull(),
     uploadedAt: pgTimestamp("uploaded_at").notNull(),
   },
