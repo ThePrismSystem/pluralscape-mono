@@ -1153,7 +1153,8 @@ export const PG_DDL = {
       resolution VARCHAR(255) CHECK (resolution IN ('local', 'remote', 'merged')),
       created_at TIMESTAMPTZ NOT NULL,
       resolved_at TIMESTAMPTZ,
-      details TEXT
+      details TEXT,
+      CHECK ((resolution IS NULL) = (resolved_at IS NULL))
     )
   `,
   syncConflictsIndexes: `

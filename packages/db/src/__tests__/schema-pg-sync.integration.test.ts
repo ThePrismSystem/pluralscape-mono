@@ -384,8 +384,35 @@ describe("PG sync schema", () => {
           remoteVersion: 2,
           resolution: "invalid" as "local",
           createdAt: now,
+          resolvedAt: now,
         }),
       ).rejects.toThrow();
+    });
+
+    it("rejects resolution set with resolvedAt null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          `INSERT INTO sync_conflicts (id, system_id, entity_type, entity_id, local_version, remote_version, resolution, created_at) VALUES ($1, $2, 'member', $3, 1, 2, 'local', $4)`,
+          [crypto.randomUUID(), systemId, crypto.randomUUID(), now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects resolvedAt set with resolution null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          `INSERT INTO sync_conflicts (id, system_id, entity_type, entity_id, local_version, remote_version, created_at, resolved_at) VALUES ($1, $2, 'member', $3, 1, 2, $4, $5)`,
+          [crypto.randomUUID(), systemId, crypto.randomUUID(), now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
 
     it("supports conflict lifecycle: insert unresolved then resolve", async () => {

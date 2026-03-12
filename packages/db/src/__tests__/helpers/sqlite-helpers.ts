@@ -1146,7 +1146,8 @@ export const SQLITE_DDL = {
       resolution TEXT CHECK (resolution IN ('local', 'remote', 'merged') OR resolution IS NULL),
       created_at INTEGER NOT NULL,
       resolved_at INTEGER,
-      details TEXT
+      details TEXT,
+      CHECK ((resolution IS NULL) = (resolved_at IS NULL))
     )
   `,
   syncConflictsIndexes: `

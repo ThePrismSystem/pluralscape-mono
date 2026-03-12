@@ -85,5 +85,9 @@ export const syncConflicts = pgTable(
       t.entityId,
     ),
     check("sync_conflicts_resolution_check", enumCheck(t.resolution, SYNC_RESOLUTIONS)),
+    check(
+      "sync_conflicts_resolution_resolved_at_check",
+      sql`(${t.resolution} IS NULL) = (${t.resolvedAt} IS NULL)`,
+    ),
   ],
 );

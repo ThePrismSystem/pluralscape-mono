@@ -384,9 +384,38 @@ describe("SQLite sync schema", () => {
             remoteVersion: 2,
             resolution: "invalid" as "local",
             createdAt: now,
+            resolvedAt: now,
           })
           .run(),
       ).toThrow();
+    });
+
+    it("rejects resolution set with resolvedAt null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO sync_conflicts (id, system_id, entity_type, entity_id, local_version, remote_version, resolution, created_at) VALUES (?, ?, 'member', ?, 1, 2, 'local', ?)`,
+          )
+          .run(crypto.randomUUID(), systemId, crypto.randomUUID(), now),
+      ).toThrow(/constraint/i);
+    });
+
+    it("rejects resolvedAt set with resolution null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO sync_conflicts (id, system_id, entity_type, entity_id, local_version, remote_version, created_at, resolved_at) VALUES (?, ?, 'member', ?, 1, 2, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), systemId, crypto.randomUUID(), now, now),
+      ).toThrow(/constraint/i);
     });
 
     it.each(["local", "remote"] as const)("exercises %s resolution", (resolution) => {
