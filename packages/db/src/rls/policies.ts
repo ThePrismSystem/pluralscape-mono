@@ -222,6 +222,9 @@ export const RLS_TABLE_POLICIES = {
   export_requests: "dual",
   account_purge_requests: "account",
 
+  // Search
+  search_index: "system",
+
   // Sync
   sync_documents: "system",
   sync_queue: "system",

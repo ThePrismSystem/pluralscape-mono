@@ -222,6 +222,7 @@ describe("RLS_TABLE_POLICIES", () => {
       ["blob_metadata", "system"],
       ["timer_configs", "system"],
       ["check_in_records", "system"],
+      ["search_index", "system"],
     ];
 
     for (const [table, scope] of expected) {

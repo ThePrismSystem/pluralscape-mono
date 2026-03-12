@@ -196,7 +196,7 @@ describe("PG audit_log schema", () => {
     expect(rows[0]?.systemId).toBeNull();
   });
 
-  it("rejects duplicate primary key", async () => {
+  it("rejects duplicate composite primary key (same id + timestamp)", async () => {
     const now = Date.now();
     const id = crypto.randomUUID();
 
@@ -215,5 +215,28 @@ describe("PG audit_log schema", () => {
         actor: testActor("account", "acc-123"),
       }),
     ).rejects.toThrow();
+  });
+
+  it("allows same id with different timestamps (composite PK)", async () => {
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(auditLog).values({
+      id,
+      eventType: "auth.login",
+      timestamp: now,
+      actor: testActor("account", "acc-1"),
+    });
+
+    await db.insert(auditLog).values({
+      id,
+      eventType: "auth.logout",
+      timestamp: now + 1000,
+      actor: testActor("account", "acc-1"),
+    });
+
+    const rows = await db.select().from(auditLog).where(eq(auditLog.id, id));
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.eventType).sort()).toEqual(["auth.login", "auth.logout"]);
   });
 });

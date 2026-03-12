@@ -39,8 +39,9 @@ The following are in scope:
 ## Security Principles
 
 - **Fail-closed**: if a privacy check errors, access is denied — never granted
-- **Encryption at rest**: all stored user data is encrypted
-- **End-to-end encryption**: data in transit is E2E encrypted
+- **End-to-end encryption**: user data is encrypted client-side before leaving the device — the server stores and returns opaque ciphertext blobs and never sees plaintext
+- **Encryption at rest**: infrastructure-level encryption (PG TDE / volume encryption, SQLCipher for mobile) provides defense-in-depth for metadata columns not covered by E2E encryption
+- **Transit encryption**: all client-server communication uses TLS (HTTPS/WSS), independent of E2E encryption
 - **No telemetry without opt-in**: we do not collect data about users without explicit consent
 - **Audit logging**: security-relevant events are logged for system administrators
 - **Offline-first safety**: locally cached data is treated as source of truth until sync is cryptographically verified
