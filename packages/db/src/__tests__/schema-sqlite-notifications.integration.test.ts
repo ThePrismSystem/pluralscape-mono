@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import {
@@ -46,6 +46,12 @@ describe("SQLite notifications schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(friendNotificationPreferences).run();
+    db.delete(notificationConfigs).run();
+    db.delete(deviceTokens).run();
   });
 
   describe("device_tokens", () => {

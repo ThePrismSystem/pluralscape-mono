@@ -310,6 +310,46 @@ describe("SQLite sync schema", () => {
     });
   });
 
+  describe("sync_queue indexes", () => {
+    it("uses compound index for system_id + synced_at queries", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      db.insert(syncQueue)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityType: "member",
+          entityId: crypto.randomUUID(),
+          operation: "create",
+          changeData: new Uint8Array([1]),
+          createdAt: now,
+          syncedAt: now + 1000,
+        })
+        .run();
+
+      const plan = client
+        .prepare(
+          `EXPLAIN QUERY PLAN SELECT * FROM sync_queue WHERE system_id = ? AND synced_at = ?`,
+        )
+        .all(systemId, now + 1000);
+      const detail = (plan as Array<{ detail: string }>).map((r) => r.detail).join(" ");
+      expect(detail).toMatch(/USING INDEX sync_queue_system_id_synced_at_idx/);
+    });
+
+    it("creates partial index for unsynced items", () => {
+      const indexes = client
+        .prepare(
+          `SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'sync_queue'`,
+        )
+        .all() as Array<{ name: string; sql: string | null }>;
+      const unsyncedIdx = indexes.find((i) => i.name === "sync_queue_unsynced_idx");
+      expect(unsyncedIdx).toBeDefined();
+      expect(unsyncedIdx?.sql).toMatch(/WHERE.*synced_at IS NULL/i);
+    });
+  });
+
   describe("sync_conflicts", () => {
     it("round-trips with all fields", () => {
       const accountId = insertAccount();

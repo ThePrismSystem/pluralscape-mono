@@ -29,6 +29,7 @@ import type {
   BlobMetadata,
   BlobPurpose,
   BlobUploadRequest,
+  EncryptionTier,
   BoardMessage,
   BucketEncrypted,
   BucketId,
@@ -566,6 +567,7 @@ describe("barrel exports", () => {
 
   it("exports blob types", () => {
     expectTypeOf<BlobPurpose>().toBeString();
+    expectTypeOf<EncryptionTier>().toBeNumber();
     expectTypeOf<BlobMetadata>().toBeObject();
     expectTypeOf<BlobUploadRequest>().toBeObject();
     expectTypeOf<BlobDownloadRef>().toBeObject();

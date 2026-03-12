@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { blobMetadata } from "../schema/sqlite/blob-metadata.js";
@@ -36,6 +36,10 @@ describe("SQLite blob_metadata schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(blobMetadata).run();
   });
 
   it("round-trips all fields", () => {
@@ -232,36 +236,41 @@ describe("SQLite blob_metadata schema", () => {
     const systemId = insertSystem(accountId);
     const now = Date.now();
 
+    // Use raw SQL to bypass TypeScript EncryptionTier type and test DB CHECK constraint
     expect(() =>
-      db
-        .insert(blobMetadata)
-        .values({
-          id: crypto.randomUUID(),
+      client
+        .prepare(
+          `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          crypto.randomUUID(),
           systemId,
-          storageKey: `blobs/${crypto.randomUUID()}`,
-          sizeBytes: 100,
-          encryptionTier: 0,
-          purpose: "avatar",
-          checksum: "sha256:test",
-          uploadedAt: now,
-        })
-        .run(),
+          `blobs/${crypto.randomUUID()}`,
+          100,
+          0,
+          "avatar",
+          "sha256:test",
+          now,
+        ),
     ).toThrow();
 
     expect(() =>
-      db
-        .insert(blobMetadata)
-        .values({
-          id: crypto.randomUUID(),
+      client
+        .prepare(
+          `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          crypto.randomUUID(),
           systemId,
-          storageKey: `blobs/${crypto.randomUUID()}`,
-          sizeBytes: 100,
-          encryptionTier: 3,
-          purpose: "avatar",
-          checksum: "sha256:test",
-          uploadedAt: now,
-        })
-        .run(),
+          `blobs/${crypto.randomUUID()}`,
+          100,
+          3,
+          "avatar",
+          "sha256:test",
+          now,
+        ),
     ).toThrow();
   });
 

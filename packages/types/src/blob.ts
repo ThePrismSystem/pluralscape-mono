@@ -1,6 +1,9 @@
 import type { BlobId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
+/** Encryption tier for stored blobs: 1 = at-rest only, 2 = at-rest + per-bucket key. */
+export type EncryptionTier = 1 | 2;
+
 /** The intended purpose of a blob. */
 export type BlobPurpose =
   | "avatar"
