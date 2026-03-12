@@ -246,7 +246,9 @@ describe("Server/Client pairs exist for completed domains", () => {
   it("acknowledgement request pair", () => {
     expectTypeOf<ServerAcknowledgementRequest>().toBeObject();
     expectTypeOf<ServerAcknowledgementRequest["encryptedData"]>().toEqualTypeOf<EncryptedBlob>();
-    expectTypeOf<ServerAcknowledgementRequest["createdByMemberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<
+      ServerAcknowledgementRequest["createdByMemberId"]
+    >().toEqualTypeOf<MemberId | null>();
     expectTypeOf<ServerAcknowledgementRequest["confirmed"]>().toEqualTypeOf<boolean>();
     expectTypeOf<ClientAcknowledgementRequest>().toEqualTypeOf<AcknowledgementRequest>();
   });

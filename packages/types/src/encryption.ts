@@ -501,7 +501,7 @@ export type ClientPollVote = PollVote;
 export interface ServerAcknowledgementRequest extends AuditMetadata {
   readonly id: AcknowledgementId;
   readonly systemId: SystemId;
-  readonly createdByMemberId: MemberId;
+  readonly createdByMemberId: MemberId | null;
   readonly confirmed: boolean;
   readonly encryptedData: EncryptedBlob;
 }
