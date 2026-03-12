@@ -1,8 +1,7 @@
-import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
 
@@ -26,7 +25,7 @@ export const innerworldRegions = sqliteTable(
       columns: [t.parentRegionId, t.systemId],
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
-    check("innerworld_regions_version_check", versionCheck(t.version)),
+    versionCheckFor("innerworld_regions", t.version),
   ],
 );
 
@@ -49,7 +48,7 @@ export const innerworldEntities = sqliteTable(
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
-    check("innerworld_entities_version_check", versionCheck(t.version)),
+    versionCheckFor("innerworld_entities", t.version),
   ],
 );
 
@@ -63,5 +62,5 @@ export const innerworldCanvas = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [check("innerworld_canvas_version_check", versionCheck(t.version))],
+  (t) => [versionCheckFor("innerworld_canvas", t.version)],
 );

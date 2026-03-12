@@ -2,8 +2,8 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -25,7 +25,7 @@ export const customFronts = sqliteTable(
   },
   (t) => [
     index("custom_fronts_system_id_idx").on(t.systemId),
-    check("custom_fronts_version_check", versionCheck(t.version)),
+    versionCheckFor("custom_fronts", t.version),
     check(
       "custom_fronts_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
@@ -75,7 +75,7 @@ export const frontingSessions = sqliteTable(
       columns: [t.customFrontId],
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
-    check("fronting_sessions_version_check", versionCheck(t.version)),
+    versionCheckFor("fronting_sessions", t.version),
     // Invariant: every session must have at least one subject (member or custom front).
     // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
     // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
@@ -109,7 +109,7 @@ export const switches = sqliteTable(
   (t) => [
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
     check("switches_member_ids_check", sql`json_array_length(${t.memberIds}) >= 1`),
-    check("switches_version_check", versionCheck(t.version)),
+    versionCheckFor("switches", t.version),
   ],
 );
 
@@ -136,6 +136,6 @@ export const frontingComments = sqliteTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
-    check("fronting_comments_version_check", versionCheck(t.version)),
+    versionCheckFor("fronting_comments", t.version),
   ],
 );

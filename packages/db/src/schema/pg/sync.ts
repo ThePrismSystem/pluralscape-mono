@@ -11,7 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
-import { enumCheck, nullPairCheck, versionCheck } from "../../helpers/check.js";
+import { versionCheckFor } from "../../helpers/audit.pg.js";
+import { enumCheck, nullPairCheck } from "../../helpers/check.js";
 import {
   ENUM_MAX_LENGTH,
   ID_MAX_LENGTH,
@@ -43,7 +44,7 @@ export const syncDocuments = pgTable(
       t.entityType,
       t.entityId,
     ),
-    check("sync_documents_version_check", versionCheck(t.version)),
+    versionCheckFor("sync_documents", t.version),
     check(
       "sync_documents_automerge_heads_size_check",
       sql`${t.automergeHeads} IS NULL OR octet_length(${t.automergeHeads}) <= ${MAX_AUTOMERGE_HEADS_BYTES}`,

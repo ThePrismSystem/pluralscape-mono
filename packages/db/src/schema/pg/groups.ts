@@ -11,8 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, versionCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { archivableConsistencyCheck } from "../../helpers/check.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { members } from "./members.js";
@@ -40,7 +40,7 @@ export const groups = pgTable(
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("groups_sort_order_check", sql`${t.sortOrder} >= 0`),
-    check("groups_version_check", versionCheck(t.version)),
+    versionCheckFor("groups", t.version),
     check(
       "groups_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),

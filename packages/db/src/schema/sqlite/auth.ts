@@ -7,8 +7,8 @@ import {
   sqliteJson,
   sqliteTimestamp,
 } from "../../columns/sqlite.js";
-import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
 import type { AuthKeyType, DeviceInfo, DeviceTransferStatus } from "@pluralscape/types";
@@ -26,7 +26,7 @@ export const accounts = sqliteTable(
   },
   (t) => [
     uniqueIndex("accounts_email_hash_idx").on(t.emailHash),
-    check("accounts_version_check", versionCheck(t.version)),
+    versionCheckFor("accounts", t.version),
   ],
 );
 

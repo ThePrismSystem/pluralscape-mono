@@ -2,8 +2,8 @@ import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, primaryKey, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
@@ -25,7 +25,7 @@ export const buckets = pgTable(
   (t) => [
     index("buckets_system_id_idx").on(t.systemId),
     unique("buckets_id_system_id_unique").on(t.id, t.systemId),
-    check("buckets_version_check", versionCheck(t.version)),
+    versionCheckFor("buckets", t.version),
   ],
 );
 
@@ -100,7 +100,7 @@ export const friendConnections = pgTable(
     unique("friend_connections_id_system_id_unique").on(t.id, t.systemId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.systemId} != ${t.friendSystemId}`),
-    check("friend_connections_version_check", versionCheck(t.version)),
+    versionCheckFor("friend_connections", t.version),
   ],
 );
 

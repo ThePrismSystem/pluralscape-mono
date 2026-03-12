@@ -12,8 +12,8 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
 import { FIELD_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -41,7 +41,7 @@ export const fieldDefinitions = sqliteTable(
     index("field_definitions_system_id_idx").on(t.systemId),
     unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
-    check("field_definitions_version_check", versionCheck(t.version)),
+    versionCheckFor("field_definitions", t.version),
     check(
       "field_definitions_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
@@ -72,7 +72,7 @@ export const fieldValues = sqliteTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
-    check("field_values_version_check", versionCheck(t.version)),
+    versionCheckFor("field_values", t.version),
     uniqueIndex("field_values_definition_member_uniq")
       .on(t.fieldDefinitionId, t.memberId)
       .where(sql`${t.memberId} IS NOT NULL`),

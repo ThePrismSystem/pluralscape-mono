@@ -1,8 +1,7 @@
-import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
 
@@ -21,5 +20,5 @@ export const systemSettings = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [check("system_settings_version_check", versionCheck(t.version))],
+  (t) => [versionCheckFor("system_settings", t.version)],
 );

@@ -2,8 +2,8 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, index, jsonb, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
@@ -26,7 +26,7 @@ export const customFronts = pgTable(
   },
   (t) => [
     index("custom_fronts_system_id_idx").on(t.systemId),
-    check("custom_fronts_version_check", versionCheck(t.version)),
+    versionCheckFor("custom_fronts", t.version),
     check(
       "custom_fronts_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
@@ -75,7 +75,7 @@ export const frontingSessions = pgTable(
       columns: [t.customFrontId],
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
-    check("fronting_sessions_version_check", versionCheck(t.version)),
+    versionCheckFor("fronting_sessions", t.version),
     // Invariant: every session must have at least one subject (member or custom front).
     // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
     // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
@@ -109,7 +109,7 @@ export const switches = pgTable(
   (t) => [
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
     check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
-    check("switches_version_check", versionCheck(t.version)),
+    versionCheckFor("switches", t.version),
   ],
 );
 
@@ -136,6 +136,6 @@ export const frontingComments = pgTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
-    check("fronting_comments_version_check", versionCheck(t.version)),
+    versionCheckFor("fronting_comments", t.version),
   ],
 );

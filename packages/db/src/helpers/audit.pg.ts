@@ -1,6 +1,11 @@
-import { boolean, integer } from "drizzle-orm/pg-core";
+import { boolean, check, integer } from "drizzle-orm/pg-core";
+
 
 import { pgTimestamp } from "../columns/pg.js";
+
+import { versionCheck } from "./check.js";
+
+import type { AnyColumn } from "drizzle-orm";
 
 function _timestamps() {
   return {
@@ -35,4 +40,16 @@ export function archivable(): ReturnType<typeof _archivable> {
 /** Versioned column for PG tables: integer version starting at 1. */
 export function versioned(): ReturnType<typeof _versioned> {
   return _versioned();
+}
+
+/**
+ * Returns a named version CHECK constraint for a PG table.
+ * Equivalent to `check(\`\${tableName}_version_check\`, versionCheck(t.version))`.
+ * Pair with `versioned()` in the column definition.
+ */
+export function versionCheckFor(
+  tableName: string,
+  versionCol: AnyColumn,
+): ReturnType<typeof check> {
+  return check(`${tableName}_version_check`, versionCheck(versionCol));
 }

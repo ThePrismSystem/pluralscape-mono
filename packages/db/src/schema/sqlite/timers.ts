@@ -9,8 +9,8 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { sqliteTimeFormatCheck, versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { sqliteTimeFormatCheck } from "../../helpers/check.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -34,7 +34,7 @@ export const timerConfigs = sqliteTable(
   (t) => [
     index("timer_configs_system_id_idx").on(t.systemId),
     unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
-    check("timer_configs_version_check", versionCheck(t.version)),
+    versionCheckFor("timer_configs", t.version),
     check("timer_configs_waking_start_format", sqliteTimeFormatCheck(t.wakingStart)),
     check("timer_configs_waking_end_format", sqliteTimeFormatCheck(t.wakingEnd)),
   ],

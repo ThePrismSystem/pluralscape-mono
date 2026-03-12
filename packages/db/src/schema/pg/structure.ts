@@ -11,8 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
@@ -49,7 +49,7 @@ export const relationships = pgTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
-    check("relationships_version_check", versionCheck(t.version)),
+    versionCheckFor("relationships", t.version),
   ],
 );
 
@@ -78,7 +78,7 @@ export const subsystems = pgTable(
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
-    check("subsystems_version_check", versionCheck(t.version)),
+    versionCheckFor("subsystems", t.version),
   ],
 );
 
@@ -96,7 +96,7 @@ export const sideSystems = pgTable(
   (t) => [
     index("side_systems_system_id_idx").on(t.systemId),
     unique("side_systems_id_system_id_unique").on(t.id, t.systemId),
-    check("side_systems_version_check", versionCheck(t.version)),
+    versionCheckFor("side_systems", t.version),
   ],
 );
 
@@ -116,7 +116,7 @@ export const layers = pgTable(
   (t) => [
     index("layers_system_id_idx").on(t.systemId),
     unique("layers_id_system_id_unique").on(t.id, t.systemId),
-    check("layers_version_check", versionCheck(t.version)),
+    versionCheckFor("layers", t.version),
   ],
 );
 
