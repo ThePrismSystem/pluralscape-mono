@@ -10,10 +10,10 @@
 import { getTableColumns } from "drizzle-orm";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
+import { BUCKET_CONTENT_ENTITY_TYPES } from "../helpers/enums.js";
 import * as pg from "../schema/pg/index.js";
 import * as sqlite from "../schema/sqlite/index.js";
 
-import type { BucketContentEntityType } from "../helpers/enums.js";
 import type {
   DbChartData,
   DbChartDataset,
@@ -21,10 +21,12 @@ import type {
   DbMemberFrontingBreakdown,
 } from "../schema/shared/analytics-types.js";
 import type {
+  BucketContentEntityType,
   ChartData,
   ChartDataset,
   DateRange,
   DeviceInfo,
+  EntityType,
   MemberFrontingBreakdown,
 } from "@pluralscape/types";
 import type { InferSelectModel } from "drizzle-orm";
@@ -703,6 +705,16 @@ describe("Type-level assertions", () => {
     expectTypeOf<Row["entityType"]>().toEqualTypeOf<BucketContentEntityType>();
   });
 
+  it("BucketContentEntityType is a subset of EntityType", () => {
+    expectTypeOf<BucketContentEntityType>().toExtend<EntityType>();
+  });
+
+  it("infrastructure types are not assignable to BucketContentEntityType", () => {
+    expectTypeOf<"session">().not.toExtend<BucketContentEntityType>();
+    expectTypeOf<"account">().not.toExtend<BucketContentEntityType>();
+    expectTypeOf<"job">().not.toExtend<BucketContentEntityType>();
+  });
+
   // Fix 2 — memberPhotos.sortOrder is number (non-nullable)
   it("PG memberPhotos.sortOrder infers as number (non-nullable)", () => {
     type Row = InferSelectModel<typeof pg.memberPhotos>;
@@ -835,5 +847,19 @@ describe("analytics type structural parity", () => {
 
   it("DbChartData has same keys as ChartData", () => {
     expectTypeOf<keyof DbChartData>().toEqualTypeOf<keyof ChartData>();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. BUCKET_CONTENT_ENTITY_TYPES array invariants
+// ---------------------------------------------------------------------------
+describe("BUCKET_CONTENT_ENTITY_TYPES invariants", () => {
+  it("has exactly 22 entries", () => {
+    expect(BUCKET_CONTENT_ENTITY_TYPES).toHaveLength(22);
+  });
+
+  it("has no duplicate values", () => {
+    const unique = new Set(BUCKET_CONTENT_ENTITY_TYPES);
+    expect(unique.size).toBe(BUCKET_CONTENT_ENTITY_TYPES.length);
   });
 });

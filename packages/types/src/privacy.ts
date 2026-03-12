@@ -1,11 +1,4 @@
-import type {
-  BucketId,
-  EntityType,
-  FriendCodeId,
-  FriendConnectionId,
-  KeyGrantId,
-  SystemId,
-} from "./ids.js";
+import type { BucketId, FriendCodeId, FriendConnectionId, KeyGrantId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -18,6 +11,37 @@ export interface PrivacyBucket extends AuditMetadata {
 }
 
 /**
+ * Entity types that can be tagged in privacy buckets.
+ *
+ * This is user-owned content subject to bucket-level privacy controls.
+ * Infrastructure types (accounts, sessions, jobs, sync documents, etc.)
+ * are excluded because they are not shareable content.
+ */
+export type BucketContentEntityType =
+  | "member"
+  | "group"
+  | "channel"
+  | "message"
+  | "note"
+  | "poll"
+  | "relationship"
+  | "subsystem"
+  | "side-system"
+  | "layer"
+  | "journal-entry"
+  | "wiki-page"
+  | "custom-front"
+  | "fronting-session"
+  | "board-message"
+  | "acknowledgement"
+  | "innerworld-entity"
+  | "innerworld-region"
+  | "field-definition"
+  | "field-value"
+  | "member-photo"
+  | "fronting-comment";
+
+/**
  * Tags an entity as belonging to a privacy bucket.
  *
  * Access is fail-closed: if an entity has no bucket tags, or if
@@ -25,7 +49,7 @@ export interface PrivacyBucket extends AuditMetadata {
  * bucket tags for the relevant scope, the entity is invisible.
  */
 export interface BucketContentTag {
-  readonly entityType: EntityType;
+  readonly entityType: BucketContentEntityType;
   readonly entityId: string;
   readonly bucketId: BucketId;
 }

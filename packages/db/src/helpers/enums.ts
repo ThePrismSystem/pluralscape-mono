@@ -11,6 +11,7 @@ import type {
   AuditEventType,
   AuthKeyType,
   BlobPurpose,
+  BucketContentEntityType,
   DeviceTokenPlatform,
   DeviceTransferStatus,
   DiscoveryStatus,
@@ -373,9 +374,10 @@ export const ENTITY_TYPES = [
 export const FRONTING_REPORT_FORMATS = ["html", "pdf"] as const satisfies readonly ReportFormat[];
 
 /**
- * Entity types that can be tagged in privacy buckets.
- * Subset of ENTITY_TYPES — infrastructure types excluded because they are
- * not user content subject to bucket-level privacy controls.
+ * Entity types that can be tagged in privacy buckets — user-owned content
+ * subject to bucket-level privacy controls (shareable via friend connections).
+ * Infrastructure types (accounts, sessions, jobs, sync documents, etc.) are
+ * excluded because they are internal to the system and never shared.
  */
 export const BUCKET_CONTENT_ENTITY_TYPES = [
   "member",
@@ -400,5 +402,16 @@ export const BUCKET_CONTENT_ENTITY_TYPES = [
   "field-value",
   "member-photo",
   "fronting-comment",
-] as const satisfies readonly EntityType[];
-export type BucketContentEntityType = (typeof BUCKET_CONTENT_ENTITY_TYPES)[number];
+] as const satisfies readonly BucketContentEntityType[];
+
+/** Runtime validation for BucketContentEntityType — rejects unknown strings at the trust boundary. */
+export function parseBucketContentEntityType(value: unknown): BucketContentEntityType {
+  if (typeof value !== "string") {
+    throw new Error(`Expected entity_type string, got ${typeof value}`);
+  }
+  const types: readonly string[] = BUCKET_CONTENT_ENTITY_TYPES;
+  if (!types.includes(value)) {
+    throw new Error(`Unknown BucketContentEntityType: ${value}`);
+  }
+  return value as BucketContentEntityType;
+}

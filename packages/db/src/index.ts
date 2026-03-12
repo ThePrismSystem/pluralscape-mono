@@ -71,7 +71,7 @@ export {
   FRONTING_REPORT_FORMATS,
   BUCKET_CONTENT_ENTITY_TYPES,
 } from "./helpers/index.js";
-export type { BucketContentEntityType } from "./helpers/index.js";
+export type { BucketContentEntityType } from "@pluralscape/types";
 export type { DbAuditActor } from "./helpers/index.js";
 
 // ── Views / Query Helpers ─────────────────────────────────────

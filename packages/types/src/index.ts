@@ -120,6 +120,7 @@ export type {
 // ── Privacy ────────────────────────────────────────────────────────
 export type {
   PrivacyBucket,
+  BucketContentEntityType,
   BucketContentTag,
   BucketVisibilityScope,
   KeyGrant,
