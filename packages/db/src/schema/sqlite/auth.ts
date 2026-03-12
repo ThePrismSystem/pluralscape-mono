@@ -54,11 +54,17 @@ export const sessions = sqliteTable(
     createdAt: sqliteTimestamp("created_at").notNull(),
     lastActive: sqliteTimestamp("last_active"),
     revoked: integer("revoked", { mode: "boolean" }).notNull().default(false),
+    expiresAt: sqliteTimestamp("expires_at"),
   },
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
     index("sessions_revoked_idx").on(t.revoked),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
+    index("sessions_expires_at_idx").on(t.expiresAt),
+    check(
+      "sessions_expires_at_check",
+      sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
+    ),
   ],
 );
 
@@ -71,8 +77,12 @@ export const recoveryKeys = sqliteTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: sqliteBinary("encrypted_master_key").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
+    revokedAt: sqliteTimestamp("revoked_at"),
   },
-  (t) => [index("recovery_keys_account_id_idx").on(t.accountId)],
+  (t) => [
+    index("recovery_keys_account_id_idx").on(t.accountId),
+    index("recovery_keys_revoked_at_idx").on(t.revokedAt),
+  ],
 );
 
 export const deviceTransferRequests = sqliteTable(
@@ -89,6 +99,7 @@ export const deviceTransferRequests = sqliteTable(
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("pending").$type<DeviceTransferStatus>(),
+    encryptedKeyMaterial: sqliteBinary("encrypted_key_material"),
     createdAt: sqliteTimestamp("created_at").notNull(),
     expiresAt: sqliteTimestamp("expires_at").notNull(),
   },
@@ -97,5 +108,9 @@ export const deviceTransferRequests = sqliteTable(
     index("device_transfer_requests_status_expires_idx").on(t.status, t.expiresAt),
     check("device_transfer_requests_status_check", enumCheck(t.status, DEVICE_TRANSFER_STATUSES)),
     check("device_transfer_requests_expires_at_check", sql`${t.expiresAt} > ${t.createdAt}`),
+    check(
+      "device_transfer_requests_key_material_check",
+      sql`${t.status} != 'approved' OR ${t.encryptedKeyMaterial} IS NOT NULL`,
+    ),
   ],
 );

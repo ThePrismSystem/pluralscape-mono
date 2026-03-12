@@ -54,11 +54,19 @@ export const sessions = pgTable(
     createdAt: pgTimestamp("created_at").notNull(),
     lastActive: pgTimestamp("last_active"),
     revoked: boolean("revoked").notNull().default(false),
+    expiresAt: pgTimestamp("expires_at"),
   },
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
     index("sessions_revoked_idx").on(t.revoked),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
+    index("sessions_expires_at_idx")
+      .on(t.expiresAt)
+      .where(sql`${t.expiresAt} IS NOT NULL`),
+    check(
+      "sessions_expires_at_check",
+      sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
+    ),
   ],
 );
 
@@ -71,8 +79,14 @@ export const recoveryKeys = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedMasterKey: pgBinary("encrypted_master_key").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
+    revokedAt: pgTimestamp("revoked_at"),
   },
-  (t) => [index("recovery_keys_account_id_idx").on(t.accountId)],
+  (t) => [
+    index("recovery_keys_account_id_idx").on(t.accountId),
+    index("recovery_keys_revoked_at_idx")
+      .on(t.revokedAt)
+      .where(sql`${t.revokedAt} IS NULL`),
+  ],
 );
 
 export const deviceTransferRequests = pgTable(
@@ -92,6 +106,7 @@ export const deviceTransferRequests = pgTable(
       .notNull()
       .default("pending")
       .$type<DeviceTransferStatus>(),
+    encryptedKeyMaterial: pgBinary("encrypted_key_material"),
     createdAt: pgTimestamp("created_at").notNull(),
     expiresAt: pgTimestamp("expires_at").notNull(),
   },
@@ -100,5 +115,9 @@ export const deviceTransferRequests = pgTable(
     index("device_transfer_requests_status_expires_idx").on(t.status, t.expiresAt),
     check("device_transfer_requests_status_check", enumCheck(t.status, DEVICE_TRANSFER_STATUSES)),
     check("device_transfer_requests_expires_at_check", sql`${t.expiresAt} > ${t.createdAt}`),
+    check(
+      "device_transfer_requests_key_material_check",
+      sql`${t.status} != 'approved' OR ${t.encryptedKeyMaterial} IS NOT NULL`,
+    ),
   ],
 );

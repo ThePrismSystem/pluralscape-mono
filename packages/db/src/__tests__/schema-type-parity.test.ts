@@ -793,6 +793,27 @@ describe("Type-level assertions", () => {
     type Row = InferSelectModel<typeof pg.frontingReports>;
     expectTypeOf<Row["generatedAt"]>().toEqualTypeOf<number>();
   });
+
+  // Auth session security — new nullable columns
+  it("PG sessions.expiresAt infers as number | null", () => {
+    type Row = InferSelectModel<typeof pg.sessions>;
+    expectTypeOf<Row["expiresAt"]>().toEqualTypeOf<number | null>();
+  });
+
+  it("SQLite sessions.expiresAt infers as number | null", () => {
+    type Row = InferSelectModel<typeof sqlite.sessions>;
+    expectTypeOf<Row["expiresAt"]>().toEqualTypeOf<number | null>();
+  });
+
+  it("PG recoveryKeys.revokedAt infers as number | null", () => {
+    type Row = InferSelectModel<typeof pg.recoveryKeys>;
+    expectTypeOf<Row["revokedAt"]>().toEqualTypeOf<number | null>();
+  });
+
+  it("SQLite recoveryKeys.revokedAt infers as number | null", () => {
+    type Row = InferSelectModel<typeof sqlite.recoveryKeys>;
+    expectTypeOf<Row["revokedAt"]>().toEqualTypeOf<number | null>();
+  });
 });
 
 // ---------------------------------------------------------------------------

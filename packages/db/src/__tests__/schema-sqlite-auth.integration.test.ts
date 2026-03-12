@@ -15,6 +15,9 @@ import { createSqliteAuthTables } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
+const ONE_DAY_MS = 86_400_000;
+const ONE_HOUR_MS = 3_600_000;
+
 const schema = { accounts, authKeys, sessions, recoveryKeys, deviceTransferRequests };
 
 describe("SQLite auth schema", () => {
@@ -262,6 +265,7 @@ describe("SQLite auth schema", () => {
       const now = Date.now();
       const id = crypto.randomUUID();
 
+      const expiresAt = now + ONE_DAY_MS;
       db.insert(sessions)
         .values({
           id,
@@ -270,6 +274,7 @@ describe("SQLite auth schema", () => {
           createdAt: now,
           lastActive: now,
           revoked: false,
+          expiresAt,
         })
         .run();
 
@@ -284,6 +289,7 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.createdAt).toBe(now);
       expect(rows[0]?.lastActive).toBe(now);
       expect(rows[0]?.revoked).toBe(false);
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
     it("defaults revoked to false", () => {
@@ -300,6 +306,40 @@ describe("SQLite auth schema", () => {
 
       const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
       expect(rows[0]?.revoked).toBe(false);
+    });
+
+    it("defaults expiresAt to null", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+
+      db.insert(sessions)
+        .values({
+          id,
+          accountId: account.id,
+          createdAt: Date.now(),
+        })
+        .run();
+
+      const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
+      expect(rows[0]?.expiresAt).toBeNull();
+    });
+
+    it("round-trips expiresAt when provided", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+      const expiresAt = Date.now() + ONE_DAY_MS;
+
+      db.insert(sessions)
+        .values({
+          id,
+          accountId: account.id,
+          createdAt: Date.now(),
+          expiresAt,
+        })
+        .run();
+
+      const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
     it("handles nullable deviceInfo and lastActive", () => {
@@ -348,6 +388,60 @@ describe("SQLite auth schema", () => {
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
+
+    it("rejects expiresAt <= createdAt via CHECK", () => {
+      const account = insertAccount();
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(sessions)
+          .values({
+            id: crypto.randomUUID(),
+            accountId: account.id,
+            createdAt: now,
+            expiresAt: now - 1000,
+          })
+          .run(),
+      ).toThrow(/constraint|CHECK/i);
+    });
+
+    it("rejects expiresAt === createdAt via CHECK (boundary)", () => {
+      const account = insertAccount();
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(sessions)
+          .values({
+            id: crypto.randomUUID(),
+            accountId: account.id,
+            createdAt: now,
+            expiresAt: now,
+          })
+          .run(),
+      ).toThrow(/constraint|CHECK/i);
+    });
+
+    it("updates expiresAt from null to a value", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(sessions)
+        .values({
+          id,
+          accountId: account.id,
+          createdAt: now,
+        })
+        .run();
+
+      const expiresAt = now + ONE_DAY_MS;
+      db.update(sessions).set({ expiresAt }).where(eq(sessions.id, id)).run();
+
+      const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
+    });
   });
 
   describe("recovery_keys", () => {
@@ -368,6 +462,42 @@ describe("SQLite auth schema", () => {
       const rows = db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedMasterKey).toEqual(masterKey);
+    });
+
+    it("defaults revokedAt to null", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+
+      db.insert(recoveryKeys)
+        .values({
+          id,
+          accountId: account.id,
+          encryptedMasterKey: new Uint8Array([1, 2, 3]),
+          createdAt: Date.now(),
+        })
+        .run();
+
+      const rows = db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id)).all();
+      expect(rows[0]?.revokedAt).toBeNull();
+    });
+
+    it("round-trips revokedAt when set", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+      const revokedAt = Date.now();
+
+      db.insert(recoveryKeys)
+        .values({
+          id,
+          accountId: account.id,
+          encryptedMasterKey: new Uint8Array([1, 2, 3]),
+          createdAt: Date.now(),
+          revokedAt,
+        })
+        .run();
+
+      const rows = db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id)).all();
+      expect(rows[0]?.revokedAt).toBe(revokedAt);
     });
 
     it("cascades on account deletion", () => {
@@ -401,6 +531,26 @@ describe("SQLite auth schema", () => {
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
+
+    it("updates revokedAt from null to timestamp", () => {
+      const account = insertAccount();
+      const id = crypto.randomUUID();
+
+      db.insert(recoveryKeys)
+        .values({
+          id,
+          accountId: account.id,
+          encryptedMasterKey: new Uint8Array([1, 2, 3]),
+          createdAt: Date.now(),
+        })
+        .run();
+
+      const revokedAt = Date.now();
+      db.update(recoveryKeys).set({ revokedAt }).where(eq(recoveryKeys.id, id)).run();
+
+      const rows = db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id)).all();
+      expect(rows[0]?.revokedAt).toBe(revokedAt);
+    });
   });
 
   describe("device_transfer_requests", () => {
@@ -418,7 +568,7 @@ describe("SQLite auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         })
         .run();
 
@@ -431,7 +581,61 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.accountId).toBe(account.id);
       expect(rows[0]?.sourceSessionId).toBe(source.id);
       expect(rows[0]?.targetSessionId).toBe(target.id);
-      expect(rows[0]?.expiresAt).toBe(now + 3600000);
+      expect(rows[0]?.expiresAt).toBe(now + ONE_HOUR_MS);
+    });
+
+    it("defaults encryptedKeyMaterial to null", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          createdAt: now,
+          expiresAt: now + ONE_HOUR_MS,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows[0]?.encryptedKeyMaterial).toBeNull();
+    });
+
+    it("round-trips encryptedKeyMaterial binary data", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+      const keyMaterial = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          encryptedKeyMaterial: keyMaterial,
+          createdAt: now,
+          expiresAt: now + ONE_HOUR_MS,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows[0]?.encryptedKeyMaterial).toEqual(keyMaterial);
     });
 
     it("defaults status to pending", () => {
@@ -448,7 +652,7 @@ describe("SQLite auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         })
         .run();
 
@@ -460,7 +664,7 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.status).toBe("pending");
     });
 
-    it("accepts approved status", () => {
+    it("accepts approved status with encryptedKeyMaterial", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
       const target = insertSession(account.id);
@@ -474,8 +678,9 @@ describe("SQLite auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           status: "approved",
+          encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         })
         .run();
 
@@ -502,7 +707,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           status: "expired",
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         })
         .run();
 
@@ -530,7 +735,7 @@ describe("SQLite auth schema", () => {
             targetSessionId: target.id,
             status: "invalid" as "pending",
             createdAt: now,
-            expiresAt: now + 3600000,
+            expiresAt: now + ONE_HOUR_MS,
           })
           .run(),
       ).toThrow(/constraint|CHECK/i);
@@ -592,7 +797,7 @@ describe("SQLite auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         })
         .run();
 
@@ -619,7 +824,7 @@ describe("SQLite auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         })
         .run();
 
@@ -646,7 +851,7 @@ describe("SQLite auth schema", () => {
             sourceSessionId: "nonexistent",
             targetSessionId: session.id,
             createdAt: now,
-            expiresAt: now + 3600000,
+            expiresAt: now + ONE_HOUR_MS,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -660,10 +865,64 @@ describe("SQLite auth schema", () => {
             sourceSessionId: session.id,
             targetSessionId: "nonexistent",
             createdAt: now,
-            expiresAt: now + 3600000,
+            expiresAt: now + ONE_HOUR_MS,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects approved status with null encryptedKeyMaterial via CHECK", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(deviceTransferRequests)
+          .values({
+            id: crypto.randomUUID(),
+            accountId: account.id,
+            sourceSessionId: source.id,
+            targetSessionId: target.id,
+            status: "approved",
+            createdAt: now,
+            expiresAt: now + ONE_HOUR_MS,
+          })
+          .run(),
+      ).toThrow(/constraint|CHECK/i);
+    });
+
+    it("updates encryptedKeyMaterial from null to binary", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          createdAt: now,
+          expiresAt: now + ONE_HOUR_MS,
+        })
+        .run();
+
+      const keyMaterial = new Uint8Array([10, 20, 30, 40]);
+      db.update(deviceTransferRequests)
+        .set({ encryptedKeyMaterial: keyMaterial })
+        .where(eq(deviceTransferRequests.id, id))
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows[0]?.encryptedKeyMaterial).toEqual(keyMaterial);
     });
   });
 });

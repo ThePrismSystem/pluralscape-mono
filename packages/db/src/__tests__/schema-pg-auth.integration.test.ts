@@ -15,6 +15,9 @@ import { createPgAuthTables } from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
+const ONE_DAY_MS = 86_400_000;
+const ONE_HOUR_MS = 3_600_000;
+
 const schema = { accounts, authKeys, sessions, recoveryKeys, deviceTransferRequests };
 
 describe("PG auth schema", () => {
@@ -247,6 +250,7 @@ describe("PG auth schema", () => {
       const now = Date.now();
       const id = crypto.randomUUID();
 
+      const expiresAt = now + ONE_DAY_MS;
       await db.insert(sessions).values({
         id,
         accountId: account.id,
@@ -254,6 +258,7 @@ describe("PG auth schema", () => {
         createdAt: now,
         lastActive: now,
         revoked: false,
+        expiresAt,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -267,6 +272,7 @@ describe("PG auth schema", () => {
       expect(rows[0]?.createdAt).toBe(now);
       expect(rows[0]?.lastActive).toBe(now);
       expect(rows[0]?.revoked).toBe(false);
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
     it("defaults revoked to false", async () => {
@@ -281,6 +287,36 @@ describe("PG auth schema", () => {
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
       expect(rows[0]?.revoked).toBe(false);
+    });
+
+    it("defaults expiresAt to null", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+
+      await db.insert(sessions).values({
+        id,
+        accountId: account.id,
+        createdAt: Date.now(),
+      });
+
+      const rows = await db.select().from(sessions).where(eq(sessions.id, id));
+      expect(rows[0]?.expiresAt).toBeNull();
+    });
+
+    it("round-trips expiresAt when provided", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+      const expiresAt = Date.now() + ONE_DAY_MS;
+
+      await db.insert(sessions).values({
+        id,
+        accountId: account.id,
+        createdAt: Date.now(),
+        expiresAt,
+      });
+
+      const rows = await db.select().from(sessions).where(eq(sessions.id, id));
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
     it("handles nullable deviceInfo and lastActive", async () => {
@@ -322,6 +358,52 @@ describe("PG auth schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("rejects expiresAt <= createdAt via CHECK", async () => {
+      const account = await insertAccount();
+      const now = Date.now();
+
+      await expect(
+        db.insert(sessions).values({
+          id: crypto.randomUUID(),
+          accountId: account.id,
+          createdAt: now,
+          expiresAt: now - 1000,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects expiresAt === createdAt via CHECK (boundary)", async () => {
+      const account = await insertAccount();
+      const now = Date.now();
+
+      await expect(
+        db.insert(sessions).values({
+          id: crypto.randomUUID(),
+          accountId: account.id,
+          createdAt: now,
+          expiresAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("updates expiresAt from null to a value", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(sessions).values({
+        id,
+        accountId: account.id,
+        createdAt: now,
+      });
+
+      const expiresAt = now + ONE_DAY_MS;
+      await db.update(sessions).set({ expiresAt }).where(eq(sessions.id, id));
+
+      const rows = await db.select().from(sessions).where(eq(sessions.id, id));
+      expect(rows[0]?.expiresAt).toBe(expiresAt);
+    });
   });
 
   describe("recovery_keys", () => {
@@ -340,6 +422,38 @@ describe("PG auth schema", () => {
       const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedMasterKey).toEqual(masterKey);
+    });
+
+    it("defaults revokedAt to null", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+
+      await db.insert(recoveryKeys).values({
+        id,
+        accountId: account.id,
+        encryptedMasterKey: new Uint8Array([1, 2, 3]),
+        createdAt: Date.now(),
+      });
+
+      const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
+      expect(rows[0]?.revokedAt).toBeNull();
+    });
+
+    it("round-trips revokedAt when set", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+      const revokedAt = Date.now();
+
+      await db.insert(recoveryKeys).values({
+        id,
+        accountId: account.id,
+        encryptedMasterKey: new Uint8Array([1, 2, 3]),
+        createdAt: Date.now(),
+        revokedAt,
+      });
+
+      const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
+      expect(rows[0]?.revokedAt).toBe(revokedAt);
     });
 
     it("cascades on account deletion", async () => {
@@ -368,6 +482,24 @@ describe("PG auth schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("updates revokedAt from null to timestamp", async () => {
+      const account = await insertAccount();
+      const id = crypto.randomUUID();
+
+      await db.insert(recoveryKeys).values({
+        id,
+        accountId: account.id,
+        encryptedMasterKey: new Uint8Array([1, 2, 3]),
+        createdAt: Date.now(),
+      });
+
+      const revokedAt = Date.now();
+      await db.update(recoveryKeys).set({ revokedAt }).where(eq(recoveryKeys.id, id));
+
+      const rows = await db.select().from(recoveryKeys).where(eq(recoveryKeys.id, id));
+      expect(rows[0]?.revokedAt).toBe(revokedAt);
+    });
   });
 
   describe("device_transfer_requests", () => {
@@ -384,7 +516,7 @@ describe("PG auth schema", () => {
         sourceSessionId: source.id,
         targetSessionId: target.id,
         createdAt: now,
-        expiresAt: now + 3600000,
+        expiresAt: now + ONE_HOUR_MS,
       });
 
       const rows = await db
@@ -395,7 +527,55 @@ describe("PG auth schema", () => {
       expect(rows[0]?.accountId).toBe(account.id);
       expect(rows[0]?.sourceSessionId).toBe(source.id);
       expect(rows[0]?.targetSessionId).toBe(target.id);
-      expect(rows[0]?.expiresAt).toBe(now + 3600000);
+      expect(rows[0]?.expiresAt).toBe(now + ONE_HOUR_MS);
+    });
+
+    it("defaults encryptedKeyMaterial to null", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: target.id,
+        createdAt: now,
+        expiresAt: now + ONE_HOUR_MS,
+      });
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows[0]?.encryptedKeyMaterial).toBeNull();
+    });
+
+    it("round-trips encryptedKeyMaterial binary data", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+      const keyMaterial = new Uint8Array([10, 20, 30, 40, 50, 60, 70, 80]);
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: target.id,
+        encryptedKeyMaterial: keyMaterial,
+        createdAt: now,
+        expiresAt: now + ONE_HOUR_MS,
+      });
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows[0]?.encryptedKeyMaterial).toEqual(keyMaterial);
     });
 
     it("defaults status to pending", async () => {
@@ -411,7 +591,7 @@ describe("PG auth schema", () => {
         sourceSessionId: source.id,
         targetSessionId: target.id,
         createdAt: now,
-        expiresAt: now + 3600000,
+        expiresAt: now + ONE_HOUR_MS,
       });
 
       const rows = await db
@@ -421,7 +601,7 @@ describe("PG auth schema", () => {
       expect(rows[0]?.status).toBe("pending");
     });
 
-    it("accepts approved status", async () => {
+    it("accepts approved status with encryptedKeyMaterial", async () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
       const target = await insertSession(account.id);
@@ -434,8 +614,9 @@ describe("PG auth schema", () => {
         sourceSessionId: source.id,
         targetSessionId: target.id,
         status: "approved",
+        encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
         createdAt: now,
-        expiresAt: now + 3600000,
+        expiresAt: now + ONE_HOUR_MS,
       });
 
       const rows = await db
@@ -459,7 +640,7 @@ describe("PG auth schema", () => {
         targetSessionId: target.id,
         status: "expired",
         createdAt: now,
-        expiresAt: now + 3600000,
+        expiresAt: now + ONE_HOUR_MS,
       });
 
       const rows = await db
@@ -483,7 +664,7 @@ describe("PG auth schema", () => {
           targetSessionId: target.id,
           status: "invalid" as "pending",
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         }),
       ).rejects.toThrow();
     });
@@ -537,7 +718,7 @@ describe("PG auth schema", () => {
         sourceSessionId: source.id,
         targetSessionId: target.id,
         createdAt: now,
-        expiresAt: now + 3600000,
+        expiresAt: now + ONE_HOUR_MS,
       });
 
       await db.delete(accounts).where(eq(accounts.id, account.id));
@@ -561,7 +742,7 @@ describe("PG auth schema", () => {
         sourceSessionId: source.id,
         targetSessionId: target.id,
         createdAt: now,
-        expiresAt: now + 3600000,
+        expiresAt: now + ONE_HOUR_MS,
       });
 
       await db.delete(sessions).where(eq(sessions.id, source.id));
@@ -584,7 +765,7 @@ describe("PG auth schema", () => {
           sourceSessionId: "nonexistent",
           targetSessionId: session.id,
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         }),
       ).rejects.toThrow();
 
@@ -595,9 +776,57 @@ describe("PG auth schema", () => {
           sourceSessionId: session.id,
           targetSessionId: "nonexistent",
           createdAt: now,
-          expiresAt: now + 3600000,
+          expiresAt: now + ONE_HOUR_MS,
         }),
       ).rejects.toThrow();
+    });
+
+    it("rejects approved status with null encryptedKeyMaterial via CHECK", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+
+      await expect(
+        db.insert(deviceTransferRequests).values({
+          id: crypto.randomUUID(),
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          status: "approved",
+          createdAt: now,
+          expiresAt: now + ONE_HOUR_MS,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("updates encryptedKeyMaterial from null to binary", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const target = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: target.id,
+        createdAt: now,
+        expiresAt: now + ONE_HOUR_MS,
+      });
+
+      const keyMaterial = new Uint8Array([10, 20, 30, 40]);
+      await db
+        .update(deviceTransferRequests)
+        .set({ encryptedKeyMaterial: keyMaterial })
+        .where(eq(deviceTransferRequests.id, id));
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows[0]?.encryptedKeyMaterial).toEqual(keyMaterial);
     });
   });
 });

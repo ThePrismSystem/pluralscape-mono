@@ -97,6 +97,36 @@ jobs:
       - name: Run integration tests
         run: pnpm test:integration
 
+  migrations:
+    name: Migration Freshness
+    needs: [lint, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate migrations
+        working-directory: packages/db
+        run: |
+          pnpm db:generate:pg
+          pnpm db:generate:sqlite
+
+      - name: Check for uncommitted migration changes
+        run: |
+          if [ -n "$(git diff --name-only packages/db/migrations/)" ]; then
+            echo "::error::Migrations are out of date. Run 'pnpm db:generate:pg && pnpm db:generate:sqlite' in packages/db/ and commit the results."
+            git diff packages/db/migrations/
+            exit 1
+          fi
+
   # Stub: enable once playwright is configured (see bean ps-m426)
   # test-e2e:
   #   name: E2E Tests
