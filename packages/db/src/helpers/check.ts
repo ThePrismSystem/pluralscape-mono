@@ -27,5 +27,5 @@ export function versionCheck(versionCol: AnyColumn): SQL {
  * Pair with `archivable()` helper columns.
  */
 export function archivableConsistencyCheck(archivedCol: AnyColumn, archivedAtCol: AnyColumn): SQL {
-  return sql`(${archivedCol} = true) = (${archivedAtCol} IS NOT NULL)`;
+  return sql`CASE WHEN ${archivedCol} THEN (${archivedAtCol} IS NOT NULL) ELSE (${archivedAtCol} IS NULL) END`;
 }
