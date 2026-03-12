@@ -416,10 +416,126 @@ describe("entity encryption round-trip", () => {
   });
 
   // ── Remaining entity stubs (simple T1 fields, pending helpers) ───
-  describe.todo("Subsystem round-trip");
-  describe.todo("SideSystem round-trip");
-  describe.todo("Layer round-trip");
-  describe.todo("Relationship round-trip");
+
+  describe("Subsystem round-trip", () => {
+    it("encrypts and decrypts T1 fields", () => {
+      const fields = { name: "The Littles", description: "Our younger headmates" };
+      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
+      const key = adapter.aeadKeygen();
+      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
+
+      const blob: T1EncryptedBlob = {
+        ciphertext,
+        nonce,
+        tier: 1,
+        algorithm: "xchacha20-poly1305",
+        keyVersion: null,
+        bucketId: null,
+      };
+
+      const serialized = serializeEncryptedBlob(blob);
+      const deserialized = deserializeEncryptedBlob(serialized);
+      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
+      const result = JSON.parse(new TextDecoder().decode(decrypted));
+
+      expect(result).toEqual(fields);
+      expect(deserialized.tier).toBe(1);
+      expect(deserialized.keyVersion).toBeNull();
+      expect(deserialized.bucketId).toBeNull();
+    });
+  });
+
+  describe("SideSystem round-trip", () => {
+    it("encrypts and decrypts T1 fields", () => {
+      const fields = { name: "External Side", description: "A connected side system" };
+      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
+      const key = adapter.aeadKeygen();
+      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
+
+      const blob: T1EncryptedBlob = {
+        ciphertext,
+        nonce,
+        tier: 1,
+        algorithm: "xchacha20-poly1305",
+        keyVersion: null,
+        bucketId: null,
+      };
+
+      const serialized = serializeEncryptedBlob(blob);
+      const deserialized = deserializeEncryptedBlob(serialized);
+      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
+      const result = JSON.parse(new TextDecoder().decode(decrypted));
+
+      expect(result).toEqual(fields);
+      expect(deserialized.tier).toBe(1);
+      expect(deserialized.keyVersion).toBeNull();
+      expect(deserialized.bucketId).toBeNull();
+    });
+  });
+
+  describe("Layer round-trip", () => {
+    it("encrypts and decrypts T1 fields", () => {
+      const fields = {
+        name: "Inner Layer",
+        description: "Deep protected space",
+        accessType: "gatekept",
+      };
+      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
+      const key = adapter.aeadKeygen();
+      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
+
+      const blob: T1EncryptedBlob = {
+        ciphertext,
+        nonce,
+        tier: 1,
+        algorithm: "xchacha20-poly1305",
+        keyVersion: null,
+        bucketId: null,
+      };
+
+      const serialized = serializeEncryptedBlob(blob);
+      const deserialized = deserializeEncryptedBlob(serialized);
+      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
+      const result = JSON.parse(new TextDecoder().decode(decrypted));
+
+      expect(result).toEqual(fields);
+      expect(deserialized.tier).toBe(1);
+      expect(deserialized.keyVersion).toBeNull();
+      expect(deserialized.bucketId).toBeNull();
+    });
+  });
+
+  describe("Relationship round-trip", () => {
+    it("encrypts and decrypts T1 fields", () => {
+      const fields = {
+        type: "protector-of",
+        description: "Protects the littles",
+        notes: "Long-standing dynamic",
+      };
+      const plaintext = new TextEncoder().encode(JSON.stringify(fields));
+      const key = adapter.aeadKeygen();
+      const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
+
+      const blob: T1EncryptedBlob = {
+        ciphertext,
+        nonce,
+        tier: 1,
+        algorithm: "xchacha20-poly1305",
+        keyVersion: null,
+        bucketId: null,
+      };
+
+      const serialized = serializeEncryptedBlob(blob);
+      const deserialized = deserializeEncryptedBlob(serialized);
+      const decrypted = adapter.aeadDecrypt(deserialized.ciphertext, nonce, null, key);
+      const result = JSON.parse(new TextDecoder().decode(decrypted));
+
+      expect(result).toEqual(fields);
+      expect(deserialized.tier).toBe(1);
+      expect(deserialized.keyVersion).toBeNull();
+      expect(deserialized.bucketId).toBeNull();
+    });
+  });
   describe.todo("FieldDefinition round-trip");
   describe.todo("FieldValue round-trip");
   describe.todo("LifecycleEvent round-trip");
@@ -454,5 +570,44 @@ describe("T2 bucket-encrypted round-trip", () => {
     expect(deserialized.tier).toBe(2);
     expect(deserialized.bucketId).toBe("bkt_test");
     expect(deserialized.keyVersion).toBe(1);
+  });
+});
+
+// ── Crypto failure modes ──────────────────────────────────────────
+
+describe("crypto failure modes", () => {
+  it("throws when decrypting with wrong key", () => {
+    const plaintext = new TextEncoder().encode(JSON.stringify({ name: "secret" }));
+    const keyA = adapter.aeadKeygen();
+    const keyB = adapter.aeadKeygen();
+
+    const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, keyA);
+
+    expect(() => adapter.aeadDecrypt(ciphertext, nonce, null, keyB)).toThrow();
+  });
+
+  it("throws when AD mismatches between encrypt and decrypt", () => {
+    const plaintext = new TextEncoder().encode(JSON.stringify({ name: "secret" }));
+    const key = adapter.aeadKeygen();
+    const adEncrypt = new Uint8Array([1, 2, 3]);
+    const adDecrypt = new Uint8Array([4, 5, 6]);
+
+    const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, adEncrypt, key);
+
+    expect(() => adapter.aeadDecrypt(ciphertext, nonce, adDecrypt, key)).toThrow();
+  });
+
+  it("throws on tampered ciphertext", () => {
+    const plaintext = new TextEncoder().encode(JSON.stringify({ name: "secret" }));
+    const key = adapter.aeadKeygen();
+
+    const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
+
+    // Flip a byte in the ciphertext
+    const tampered = new Uint8Array(ciphertext);
+    const original = tampered[0] ?? 0;
+    tampered[0] = original ^ 0xff;
+
+    expect(() => adapter.aeadDecrypt(tampered, nonce, null, key)).toThrow();
   });
 });

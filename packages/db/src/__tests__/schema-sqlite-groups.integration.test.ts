@@ -205,6 +205,34 @@ describe("SQLite groups schema", () => {
       const rows = db.select().from(groups).where(eq(groups.id, groupId)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO groups (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, 0, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO groups (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, 0, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 
   describe("group_memberships", () => {
