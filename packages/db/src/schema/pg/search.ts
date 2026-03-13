@@ -1,12 +1,25 @@
 import { sql } from "drizzle-orm";
 
+import { getDeploymentMode } from "../../deployment.js";
 import { parseSearchableEntityType } from "../../helpers/enums.js";
 
+import type { DeploymentMode } from "../../deployment.js";
 import type { SearchableEntityType, SystemId } from "@pluralscape/types";
 import type { SQL } from "drizzle-orm";
 
 const DEFAULT_SEARCH_LIMIT = 50;
 const MAX_SEARCH_LIMIT = 1000;
+
+/**
+ * Asserts that plaintext search operations are only performed in self-hosted mode.
+ * Throws in hosted mode to prevent storing plaintext in a cloud environment.
+ */
+function assertSelfHosted(mode?: DeploymentMode): void {
+  const resolved = mode ?? getDeploymentMode();
+  if (resolved === "hosted") {
+    throw new Error("Plaintext search_index is not available in hosted mode (see ADR 018)");
+  }
+}
 
 /**
  * DDL for PG full-text search index table.
@@ -77,7 +90,11 @@ interface PgExecutable {
  * via `generateRlsStatements("search_index")`. The search_index is created via raw
  * DDL (not Drizzle migrations), so RLS is not automatically applied.
  */
-export async function createSearchIndex(db: PgExecutable): Promise<void> {
+export async function createSearchIndex(
+  db: PgExecutable,
+  deploymentMode?: DeploymentMode,
+): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await db.execute(sql.raw(SEARCH_INDEX_DDL));
 }
 
@@ -95,7 +112,9 @@ export async function createSearchIndexIndexes(db: PgExecutable): Promise<void> 
 export async function insertSearchEntry(
   db: PgExecutable,
   entry: PgSearchIndexEntry,
+  deploymentMode?: DeploymentMode,
 ): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await db.execute(
     sql`INSERT INTO search_index (system_id, entity_type, entity_id, title, content)
         VALUES (${entry.systemId}, ${entry.entityType}, ${entry.entityId}, ${entry.title}, ${entry.content})
@@ -118,9 +137,13 @@ export async function deleteSearchEntry(
 }
 
 /** Drop and recreate the search index with indexes (full rebuild). */
-export async function rebuildSearchIndex(db: PgExecutable): Promise<void> {
+export async function rebuildSearchIndex(
+  db: PgExecutable,
+  deploymentMode?: DeploymentMode,
+): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await dropSearchIndex(db);
-  await createSearchIndex(db);
+  await createSearchIndex(db, deploymentMode);
   await createSearchIndexIndexes(db);
 }
 

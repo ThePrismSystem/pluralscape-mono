@@ -1,5 +1,9 @@
 // @pluralscape/db — Drizzle schema (PostgreSQL + SQLite)
 
+// ── Deployment ────────────────────────────────────────────────
+export { getDeploymentMode } from "./deployment.js";
+export type { DeploymentMode } from "./deployment.js";
+
 // ── Dialect ────────────────────────────────────────────────────
 export {
   ENABLE_PGCRYPTO,

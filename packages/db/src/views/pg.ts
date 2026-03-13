@@ -207,7 +207,14 @@ export async function getCurrentFrontingComments(
       commentCreatedAt: frontingComments.createdAt,
     })
     .from(frontingComments)
-    .innerJoin(frontingSessions, eq(frontingComments.frontingSessionId, frontingSessions.id))
+    .innerJoin(
+      frontingSessions,
+      and(
+        eq(frontingComments.frontingSessionId, frontingSessions.id),
+        eq(frontingComments.systemId, frontingSessions.systemId),
+        eq(frontingComments.sessionStartTime, frontingSessions.startTime),
+      ),
+    )
     .where(and(eq(frontingComments.systemId, systemId), isNull(frontingSessions.endTime)));
 }
 

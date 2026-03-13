@@ -36,6 +36,7 @@ export const customFronts = pgTable(
   },
   (t) => [
     index("custom_fronts_system_id_idx").on(t.systemId),
+    unique("custom_fronts_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("custom_fronts", t.version),
     check(
       "custom_fronts_archived_consistency_check",
