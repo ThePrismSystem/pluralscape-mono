@@ -43,8 +43,9 @@ const ENTITY_TABLE_MAP: Readonly<Record<BucketContentEntityType, string>> = {
  * Delete orphaned bucketContentTags for a specific entity type.
  * An orphaned tag is one whose source entity row no longer exists.
  *
- * PG variant — uses NOT EXISTS subquery for orphan detection.
- * Returns count via RETURNING + array length.
+ * PG variant — uses a CTE to count deleted rows without materialising
+ * them into JS memory. `.returning()` would load every deleted row as
+ * a JS object, causing OOM when large numbers of tags are purged.
  */
 export async function pgCleanupOrphanedTags<
   TSchema extends Record<string, unknown> = Record<string, never>,
@@ -53,17 +54,22 @@ export async function pgCleanupOrphanedTags<
   entityType: BucketContentEntityType,
 ): Promise<CleanupResult> {
   const sourceTable = ENTITY_TABLE_MAP[entityType];
-  const deleted = await db
-    .delete(pgBucketContentTags)
-    .where(
-      and(
-        eq(pgBucketContentTags.entityType, entityType),
-        sql`NOT EXISTS (SELECT 1 FROM ${sql.raw(sourceTable)} WHERE id = ${pgBucketContentTags.entityId})`,
-      ),
+  const result = await db.execute<{ deleted_count: string }>(
+    sql`WITH deleted AS (
+      DELETE FROM ${pgBucketContentTags}
+      WHERE ${pgBucketContentTags.entityType} = ${entityType}
+        AND NOT EXISTS (
+          SELECT 1 FROM ${sql.raw(sourceTable)}
+          WHERE id = ${pgBucketContentTags.entityId}
+        )
+      RETURNING 1
     )
-    .returning();
+    SELECT count(*) AS deleted_count FROM deleted`,
+  );
 
-  return { deletedCount: deleted.length };
+  // postgres-js returns RowList (an array); pglite returns Results ({ rows: [...] })
+  const row = Array.isArray(result) ? result[0] : result.rows[0];
+  return { deletedCount: Number(row?.deleted_count ?? 0) };
 }
 
 /**
