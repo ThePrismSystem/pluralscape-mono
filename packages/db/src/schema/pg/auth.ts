@@ -5,15 +5,19 @@ import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
-import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
+import { ACCOUNT_TYPES, AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
-import type { AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
+import type { AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const accounts = pgTable(
   "accounts",
   {
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    accountType: varchar("account_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .default("system")
+      .$type<AccountType>(),
     emailHash: varchar("email_hash", { length: 255 }).notNull(),
     emailSalt: varchar("email_salt", { length: 255 }).notNull(),
     passwordHash: varchar("password_hash", { length: 255 }).notNull(),
@@ -23,6 +27,7 @@ export const accounts = pgTable(
   },
   (t) => [
     uniqueIndex("accounts_email_hash_idx").on(t.emailHash),
+    check("accounts_account_type_check", enumCheck(t.accountType, ACCOUNT_TYPES)),
     versionCheckFor("accounts", t.version),
   ],
 );

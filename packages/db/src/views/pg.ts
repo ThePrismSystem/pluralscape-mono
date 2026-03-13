@@ -85,21 +85,24 @@ export async function getActiveApiKeys(db: PgDb, accountId: string): Promise<Act
     .where(and(eq(apiKeys.accountId, accountId), isNull(apiKeys.revokedAt)));
 }
 
-/** Get pending friend requests (received by this system). */
+/** Get pending friend requests (received by this account). */
 export async function getPendingFriendRequests(
   db: PgDb,
-  systemId: string,
+  accountId: string,
 ): Promise<PendingFriendRequest[]> {
   return db
     .select({
       id: friendConnections.id,
-      systemId: friendConnections.systemId,
-      friendSystemId: friendConnections.friendSystemId,
+      accountId: friendConnections.accountId,
+      friendAccountId: friendConnections.friendAccountId,
       createdAt: friendConnections.createdAt,
     })
     .from(friendConnections)
     .where(
-      and(eq(friendConnections.friendSystemId, systemId), eq(friendConnections.status, "pending")),
+      and(
+        eq(friendConnections.friendAccountId, accountId),
+        eq(friendConnections.status, "pending"),
+      ),
     );
 }
 
@@ -164,17 +167,19 @@ export async function getMemberGroupSummary(
 /** Get active (accepted) friend connections. */
 export async function getActiveFriendConnections(
   db: PgDb,
-  systemId: string,
+  accountId: string,
 ): Promise<ActiveFriendConnection[]> {
   return db
     .select({
       id: friendConnections.id,
-      systemId: friendConnections.systemId,
-      friendSystemId: friendConnections.friendSystemId,
+      accountId: friendConnections.accountId,
+      friendAccountId: friendConnections.friendAccountId,
       createdAt: friendConnections.createdAt,
     })
     .from(friendConnections)
-    .where(and(eq(friendConnections.systemId, systemId), eq(friendConnections.status, "accepted")));
+    .where(
+      and(eq(friendConnections.accountId, accountId), eq(friendConnections.status, "accepted")),
+    );
 }
 
 /** Get active (non-revoked) device tokens. */

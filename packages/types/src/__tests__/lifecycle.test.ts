@@ -1,6 +1,13 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { LifecycleEventId, MemberId, SubsystemId, SystemId } from "../ids.js";
+import type {
+  InnerWorldEntityId,
+  LifecycleEventId,
+  MemberId,
+  SubsystemId,
+  SystemId,
+} from "../ids.js";
+import type { InnerWorldEntityType } from "../innerworld.js";
 import type {
   ArchivalEvent,
   DiscoveryEvent,
@@ -8,11 +15,13 @@ import type {
   DormancyStartEvent,
   FormChangeEvent,
   FusionEvent,
+  InnerworldMoveEvent,
   LifecycleEvent,
   LifecycleEventType,
   MergeEvent,
   NameChangeEvent,
   SplitEvent,
+  StructureMoveEvent,
   SubsystemFormationEvent,
   UnmergeEvent,
 } from "../lifecycle.js";
@@ -118,6 +127,14 @@ describe("NameChangeEvent", () => {
   });
 });
 
+describe("InnerworldMoveEvent", () => {
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<InnerworldMoveEvent["eventType"]>().toEqualTypeOf<"innerworld-move">();
+    expectTypeOf<InnerworldMoveEvent["entityId"]>().toEqualTypeOf<InnerWorldEntityId>();
+    expectTypeOf<InnerworldMoveEvent["entityType"]>().toEqualTypeOf<InnerWorldEntityType>();
+  });
+});
+
 describe("LifecycleEvent discriminated union", () => {
   it("discriminates on eventType", () => {
     function handleEvent(event: LifecycleEvent): string {
@@ -155,6 +172,12 @@ describe("LifecycleEvent discriminated union", () => {
         case "name-change":
           expectTypeOf(event).toEqualTypeOf<NameChangeEvent>();
           return event.newName;
+        case "structure-move":
+          expectTypeOf(event).toEqualTypeOf<StructureMoveEvent>();
+          return event.memberId;
+        case "innerworld-move":
+          expectTypeOf(event).toEqualTypeOf<InnerworldMoveEvent>();
+          return event.entityId;
         default: {
           const _exhaustive: never = event;
           return _exhaustive;
@@ -178,6 +201,8 @@ describe("LifecycleEventType", () => {
     assertType<LifecycleEventType>("subsystem-formation");
     assertType<LifecycleEventType>("form-change");
     assertType<LifecycleEventType>("name-change");
+    assertType<LifecycleEventType>("structure-move");
+    assertType<LifecycleEventType>("innerworld-move");
   });
 
   it("rejects invalid types", () => {

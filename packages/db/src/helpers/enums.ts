@@ -6,6 +6,7 @@
 
 import type {
   AccountPurgeStatus,
+  AccountType,
   ApiKey,
   ApiKeyScope,
   AuditEventType,
@@ -38,12 +39,14 @@ import type {
   SearchableEntityType,
   ServerChannel,
   ServerPoll,
+  SnapshotTrigger,
   SyncOperation,
   SyncResolution,
   WebhookDeliveryStatus,
   WebhookEventType,
 } from "@pluralscape/types";
 
+export const ACCOUNT_TYPES = ["system", "viewer"] as const satisfies readonly AccountType[];
 export const KNOWN_SATURATION_LEVELS = [
   "fragment",
   "functional-fragment",
@@ -97,6 +100,8 @@ export const LIFECYCLE_EVENT_TYPES = [
   "subsystem-formation",
   "form-change",
   "name-change",
+  "structure-move",
+  "innerworld-move",
 ] as const satisfies readonly LifecycleEventType[];
 export const ROTATION_STATES = [
   "initiated",
@@ -371,8 +376,14 @@ export const ENTITY_TYPES = [
   "fronting-comment",
   "bucket-key-rotation",
   "bucket-rotation-item",
+  "system-snapshot",
 ] as const satisfies readonly EntityType[];
 export const FRONTING_REPORT_FORMATS = ["html", "pdf"] as const satisfies readonly ReportFormat[];
+export const SNAPSHOT_TRIGGERS = [
+  "manual",
+  "scheduled-daily",
+  "scheduled-weekly",
+] as const satisfies readonly SnapshotTrigger[];
 
 /**
  * Entity types that can be tagged in privacy buckets — user-owned content

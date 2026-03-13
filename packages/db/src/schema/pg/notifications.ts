@@ -81,9 +81,9 @@ export const friendNotificationPreferences = pgTable(
   "friend_notification_preferences",
   {
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     friendConnectionId: varchar("friend_connection_id", { length: ID_MAX_LENGTH }).notNull(),
     enabledEventTypes: jsonb("enabled_event_types")
       .notNull()
@@ -91,13 +91,13 @@ export const friendNotificationPreferences = pgTable(
     ...timestamps(),
   },
   (t) => [
-    uniqueIndex("friend_notification_prefs_system_id_friend_connection_id_idx").on(
-      t.systemId,
+    uniqueIndex("friend_notification_prefs_account_id_friend_connection_id_idx").on(
+      t.accountId,
       t.friendConnectionId,
     ),
     foreignKey({
-      columns: [t.friendConnectionId, t.systemId],
-      foreignColumns: [friendConnections.id, friendConnections.systemId],
+      columns: [t.friendConnectionId, t.accountId],
+      foreignColumns: [friendConnections.id, friendConnections.accountId],
     }).onDelete("cascade"),
   ],
 );

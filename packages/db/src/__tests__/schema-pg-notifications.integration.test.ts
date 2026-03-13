@@ -314,15 +314,15 @@ describe("PG notifications schema", () => {
   describe("friend_notification_preferences", () => {
     it("round-trips with enabledEventTypes JSON", async () => {
       const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
+      await insertSystem(accountId);
       const fcId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(friendConnections).values({
         id: fcId,
-        systemId,
-        friendSystemId: await insertSystem(accountId),
+        accountId,
+        friendAccountId: await insertAccount(),
         status: "accepted",
         createdAt: now,
         updatedAt: now,
@@ -330,7 +330,7 @@ describe("PG notifications schema", () => {
 
       await db.insert(friendNotificationPreferences).values({
         id,
-        systemId,
+        accountId,
         friendConnectionId: fcId,
         enabledEventTypes: ["friend-switch-alert"],
         createdAt: now,
@@ -347,15 +347,15 @@ describe("PG notifications schema", () => {
 
     it("cascades on friend_connection deletion", async () => {
       const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
+      await insertSystem(accountId);
       const fcId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(friendConnections).values({
         id: fcId,
-        systemId,
-        friendSystemId: await insertSystem(accountId),
+        accountId,
+        friendAccountId: await insertAccount(),
         status: "accepted",
         createdAt: now,
         updatedAt: now,
@@ -363,7 +363,7 @@ describe("PG notifications schema", () => {
 
       await db.insert(friendNotificationPreferences).values({
         id,
-        systemId,
+        accountId,
         friendConnectionId: fcId,
         enabledEventTypes: ["friend-switch-alert"],
         createdAt: now,
@@ -378,17 +378,17 @@ describe("PG notifications schema", () => {
       expect(rows).toHaveLength(0);
     });
 
-    it("enforces unique (system_id, friend_connection_id)", async () => {
+    it("enforces unique (account_id, friend_connection_id)", async () => {
       const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const friendSystemId = await insertSystem(accountId);
+      await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
       const fcId = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(friendConnections).values({
         id: fcId,
-        systemId,
-        friendSystemId,
+        accountId,
+        friendAccountId,
         status: "accepted",
         createdAt: now,
         updatedAt: now,
@@ -396,7 +396,7 @@ describe("PG notifications schema", () => {
 
       await db.insert(friendNotificationPreferences).values({
         id: crypto.randomUUID(),
-        systemId,
+        accountId,
         friendConnectionId: fcId,
         enabledEventTypes: [],
         createdAt: now,
@@ -406,7 +406,7 @@ describe("PG notifications schema", () => {
       await expect(
         db.insert(friendNotificationPreferences).values({
           id: crypto.randomUUID(),
-          systemId,
+          accountId,
           friendConnectionId: fcId,
           enabledEventTypes: [],
           createdAt: now,

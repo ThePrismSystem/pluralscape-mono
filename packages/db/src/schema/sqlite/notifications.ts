@@ -75,9 +75,9 @@ export const friendNotificationPreferences = sqliteTable(
   "friend_notification_preferences",
   {
     id: text("id").primaryKey(),
-    systemId: text("system_id")
+    accountId: text("account_id")
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     friendConnectionId: text("friend_connection_id").notNull(),
     enabledEventTypes: sqliteJson("enabled_event_types")
       .notNull()
@@ -85,13 +85,13 @@ export const friendNotificationPreferences = sqliteTable(
     ...timestamps(),
   },
   (t) => [
-    uniqueIndex("friend_notification_prefs_system_id_friend_connection_id_idx").on(
-      t.systemId,
+    uniqueIndex("friend_notification_prefs_account_id_friend_connection_id_idx").on(
+      t.accountId,
       t.friendConnectionId,
     ),
     foreignKey({
-      columns: [t.friendConnectionId, t.systemId],
-      foreignColumns: [friendConnections.id, friendConnections.systemId],
+      columns: [t.friendConnectionId, t.accountId],
+      foreignColumns: [friendConnections.id, friendConnections.accountId],
     }).onDelete("cascade"),
   ],
 );

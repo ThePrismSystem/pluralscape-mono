@@ -203,7 +203,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(59);
+    expect(prefixCount).toBe(60);
   });
 });
 
@@ -289,6 +289,7 @@ describe("EntityType", () => {
         case "fronting-comment":
         case "bucket-key-rotation":
         case "bucket-rotation-item":
+        case "system-snapshot":
           return type;
         default: {
           const _exhaustive: never = type;

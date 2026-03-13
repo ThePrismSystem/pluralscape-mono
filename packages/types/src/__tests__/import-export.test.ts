@@ -141,7 +141,7 @@ describe("SP import sub-types", () => {
 
   it("SPImportFriend has correct fields", () => {
     expectTypeOf<SPImportFriend["id"]>().toBeString();
-    expectTypeOf<SPImportFriend["friendSystemId"]>().toBeString();
+    expectTypeOf<SPImportFriend["externalFriendId"]>().toBeString();
     expectTypeOf<SPImportFriend["addedAt"]>().toBeNumber();
   });
 });

@@ -13,6 +13,9 @@ import type { AuditMetadata, EntityReference } from "./utility.js";
 /** Whether a member is fully fronting or co-conscious. */
 export type FrontingType = "fronting" | "co-conscious";
 
+/** Sentiment classification for an outtrigger reason. */
+export type OuttriggerSentiment = "negative" | "neutral" | "positive";
+
 /** Shared fields for all fronting session variants. */
 interface FrontingSessionBase extends AuditMetadata {
   readonly id: FrontingSessionId;
@@ -27,6 +30,11 @@ interface FrontingSessionBase extends AuditMetadata {
   readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
   /** Free-text description of fronting positionality (e.g. close vs far, height). */
   readonly positionality: string | null;
+  /** Outtrigger data — what caused the switch. Stored in T1 encrypted blob. */
+  readonly outtrigger: {
+    readonly reason: string;
+    readonly sentiment: OuttriggerSentiment;
+  } | null;
 }
 
 /** A fronting session that is still active (no end time). */

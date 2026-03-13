@@ -1,5 +1,14 @@
-import type { LifecycleEventId, MemberId, SubsystemId, SystemId } from "./ids.js";
+import type {
+  InnerWorldEntityId,
+  InnerWorldRegionId,
+  LifecycleEventId,
+  MemberId,
+  SubsystemId,
+  SystemId,
+} from "./ids.js";
+import type { InnerWorldEntityType } from "./innerworld.js";
 import type { UnixMillis } from "./timestamps.js";
+import type { EntityReference } from "./utility.js";
 
 /**
  * Shared fields for all lifecycle events.
@@ -90,6 +99,23 @@ export interface NameChangeEvent extends LifecycleEventBase {
   readonly newName: string;
 }
 
+/** A member moves within the system structure (subsystem, side system, or layer). */
+export interface StructureMoveEvent extends LifecycleEventBase {
+  readonly eventType: "structure-move";
+  readonly memberId: MemberId;
+  readonly fromStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+  readonly toStructure: EntityReference<"subsystem" | "side-system" | "layer">;
+}
+
+/** An entity moves within the innerworld (between regions). */
+export interface InnerworldMoveEvent extends LifecycleEventBase {
+  readonly eventType: "innerworld-move";
+  readonly entityId: InnerWorldEntityId;
+  readonly entityType: InnerWorldEntityType;
+  readonly fromRegionId: InnerWorldRegionId | null;
+  readonly toRegionId: InnerWorldRegionId | null;
+}
+
 /** All possible lifecycle events — discriminated on eventType. */
 export type LifecycleEvent =
   | SplitEvent
@@ -102,7 +128,9 @@ export type LifecycleEvent =
   | ArchivalEvent
   | SubsystemFormationEvent
   | FormChangeEvent
-  | NameChangeEvent;
+  | NameChangeEvent
+  | StructureMoveEvent
+  | InnerworldMoveEvent;
 
 /** The set of valid lifecycle event type strings. */
 export type LifecycleEventType = LifecycleEvent["eventType"];

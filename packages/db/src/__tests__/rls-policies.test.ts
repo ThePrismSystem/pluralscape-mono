@@ -199,7 +199,7 @@ describe("RLS_TABLE_POLICIES", () => {
       ["friend_bucket_assignments", "system"],
       ["field_bucket_visibility", "system"],
       ["notification_configs", "system"],
-      ["friend_notification_preferences", "system"],
+      ["friend_notification_preferences", "account"],
       ["webhook_configs", "system"],
       ["webhook_deliveries", "system"],
       ["blob_metadata", "system"],

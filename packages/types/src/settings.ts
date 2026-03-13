@@ -2,6 +2,7 @@ import type { Locale } from "./i18n.js";
 import type { BucketId, SystemSettingsId, SystemId } from "./ids.js";
 import type { LittlesSafeModeConfig } from "./littles-safe-mode.js";
 import type { NomenclatureSettings } from "./nomenclature.js";
+import type { SnapshotSchedule } from "./snapshot.js";
 import type { AuditMetadata } from "./utility.js";
 
 /** User preference for the application theme. */
@@ -55,5 +56,14 @@ export interface SystemSettings extends AuditMetadata {
   readonly littlesSafeMode: LittlesSafeModeConfig;
   readonly nomenclature: NomenclatureSettings;
   readonly saturationLevelsEnabled: boolean;
+  /** Automatically capture a fronting snapshot when creating a journal entry. */
+  readonly autoCaptureFrontingOnJournal: boolean;
+  /**
+   * Schedule for automatic system structure snapshots.
+   * Stored in the T1 encrypted blob. Scheduling is client-triggered:
+   * the client reads this value and fires snapshots locally, so the
+   * server never learns the schedule (zero-knowledge preservation).
+   */
+  readonly snapshotSchedule: SnapshotSchedule;
   readonly onboardingComplete: boolean;
 }

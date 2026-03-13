@@ -11,12 +11,16 @@ import type { AuditMetadata } from "./utility.js";
 /** Whether an auth key is used for encryption or signing. */
 export type AuthKeyType = "encryption" | "signing";
 
+/** Whether an account belongs to a system or a non-system viewer (therapist, friend). */
+export type AccountType = "system" | "viewer";
+
 /** Status of a device transfer request. */
 export type DeviceTransferStatus = "pending" | "approved" | "expired";
 
 /** A user account — the top-level authentication entity. */
 export interface Account extends AuditMetadata {
   readonly id: AccountId;
+  readonly accountType: AccountType;
   readonly emailHash: string;
   readonly emailSalt: string;
   readonly passwordHash: string;

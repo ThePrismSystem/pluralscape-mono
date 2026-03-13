@@ -33,8 +33,8 @@ export interface ActiveApiKey {
 /** Shared fields for friend connection query results. */
 interface FriendConnectionBase {
   readonly id: string;
-  readonly systemId: string;
-  readonly friendSystemId: string;
+  readonly accountId: string;
+  readonly friendAccountId: string;
   readonly createdAt: number;
 }
 

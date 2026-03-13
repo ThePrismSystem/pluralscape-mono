@@ -62,6 +62,7 @@ export type {
   FrontingCommentId,
   BucketKeyRotationId,
   BucketRotationItemId,
+  SystemSnapshotId,
   HexColor,
   SlugHash,
   EntityType,
@@ -102,11 +103,14 @@ export type {
   MemberPhoto,
   ArchivedMember,
   MemberListItem,
+  SystemListItem,
+  SystemDuplicationScope,
 } from "./identity.js";
 
 // ── Fronting ────────────────────────────────────────────────────────
 export type {
   FrontingType,
+  OuttriggerSentiment,
   ActiveFrontingSession,
   CompletedFrontingSession,
   FrontingSession,
@@ -159,6 +163,7 @@ export type {
 // ── Auth ──────────────────────────────────────────────────────
 export type {
   AuthKeyType,
+  AccountType,
   DeviceTransferStatus,
   Account,
   AuthKey,
@@ -409,6 +414,8 @@ export type {
   SubsystemFormationEvent,
   FormChangeEvent,
   NameChangeEvent,
+  StructureMoveEvent,
+  InnerworldMoveEvent,
   LifecycleEvent,
   LifecycleEventType,
 } from "./lifecycle.js";
@@ -437,6 +444,10 @@ export type {
   MemberLinkBlock,
   EntityLinkBlock,
   EntityLink,
+  MemberFrontingSnapshotEntry,
+  CustomFrontFrontingSnapshotEntry,
+  FrontingSnapshotEntry,
+  FrontingSnapshot,
   JournalEntry,
   ArchivedJournalEntry,
   WikiPage,
@@ -477,6 +488,7 @@ export type {
   SideSystemEntity,
   LayerEntity,
   InnerWorldEntity,
+  InnerWorldEntityType,
   InnerWorldRegion,
   InnerWorldCanvas,
 } from "./innerworld.js";
@@ -518,6 +530,22 @@ export type {
   PrivacyDefaults,
   SystemSettings,
 } from "./settings.js";
+
+// ── Snapshot ─────────────────────────────────────────────────────
+export type {
+  SnapshotTrigger,
+  SnapshotSchedule,
+  SystemSnapshot,
+  SnapshotMember,
+  SnapshotSubsystem,
+  SnapshotSideSystem,
+  SnapshotLayer,
+  SnapshotRelationship,
+  SnapshotGroup,
+  SnapshotInnerworldRegion,
+  SnapshotInnerworldEntity,
+  SnapshotContent,
+} from "./snapshot.js";
 
 // ── Runtime utilities ──────────────────────────────────────────────
 export { createId, now, toISO } from "./runtime.js";

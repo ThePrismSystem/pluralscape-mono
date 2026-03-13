@@ -1,4 +1,11 @@
-import type { BucketId, FriendCodeId, FriendConnectionId, KeyGrantId, SystemId } from "./ids.js";
+import type {
+  AccountId,
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  KeyGrantId,
+  SystemId,
+} from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -73,9 +80,10 @@ export type BucketVisibilityScope =
 export interface KeyGrant {
   readonly id: KeyGrantId;
   readonly bucketId: BucketId;
-  readonly friendUserId: SystemId;
+  readonly friendAccountId: AccountId;
   /** Encrypted symmetric key for the bucket. Serialized to base64 at API transport boundaries. */
   readonly encryptedBucketKey: Uint8Array;
+  readonly keyVersion: number;
   readonly createdAt: UnixMillis;
   readonly revokedAt: UnixMillis | null;
 }
@@ -91,11 +99,11 @@ export interface FriendVisibilitySettings {
   readonly allowFrontingNotifications: boolean;
 }
 
-/** A mutable friend connection between two systems. */
+/** A mutable friend connection between two accounts. */
 export interface FriendConnection extends AuditMetadata {
   readonly id: FriendConnectionId;
-  readonly systemId: SystemId;
-  readonly friendSystemId: SystemId;
+  readonly accountId: AccountId;
+  readonly friendAccountId: AccountId;
   readonly status: FriendConnectionStatus;
   readonly assignedBucketIds: readonly BucketId[];
   readonly visibility: FriendVisibilitySettings;
@@ -104,7 +112,7 @@ export interface FriendConnection extends AuditMetadata {
 /** An immutable, optionally expiring friend code used to initiate connections. */
 export interface FriendCode {
   readonly id: FriendCodeId;
-  readonly systemId: SystemId;
+  readonly accountId: AccountId;
   readonly code: string;
   readonly createdAt: UnixMillis;
   readonly expiresAt: UnixMillis | null;

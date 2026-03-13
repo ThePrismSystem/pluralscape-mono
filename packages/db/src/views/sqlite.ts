@@ -85,21 +85,24 @@ export function getActiveApiKeys(db: BetterSQLite3Database, accountId: string): 
     .all();
 }
 
-/** Get pending friend requests (received by this system). */
+/** Get pending friend requests (received by this account). */
 export function getPendingFriendRequests(
   db: BetterSQLite3Database,
-  systemId: string,
+  accountId: string,
 ): PendingFriendRequest[] {
   return db
     .select({
       id: friendConnections.id,
-      systemId: friendConnections.systemId,
-      friendSystemId: friendConnections.friendSystemId,
+      accountId: friendConnections.accountId,
+      friendAccountId: friendConnections.friendAccountId,
       createdAt: friendConnections.createdAt,
     })
     .from(friendConnections)
     .where(
-      and(eq(friendConnections.friendSystemId, systemId), eq(friendConnections.status, "pending")),
+      and(
+        eq(friendConnections.friendAccountId, accountId),
+        eq(friendConnections.status, "pending"),
+      ),
     )
     .all();
 }
@@ -169,17 +172,19 @@ export function getMemberGroupSummary(
 /** Get active (accepted) friend connections. */
 export function getActiveFriendConnections(
   db: BetterSQLite3Database,
-  systemId: string,
+  accountId: string,
 ): ActiveFriendConnection[] {
   return db
     .select({
       id: friendConnections.id,
-      systemId: friendConnections.systemId,
-      friendSystemId: friendConnections.friendSystemId,
+      accountId: friendConnections.accountId,
+      friendAccountId: friendConnections.friendAccountId,
       createdAt: friendConnections.createdAt,
     })
     .from(friendConnections)
-    .where(and(eq(friendConnections.systemId, systemId), eq(friendConnections.status, "accepted")))
+    .where(
+      and(eq(friendConnections.accountId, accountId), eq(friendConnections.status, "accepted")),
+    )
     .all();
 }
 

@@ -56,6 +56,7 @@ export const SQLITE_DDL = {
       email_salt TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       kdf_salt TEXT NOT NULL,
+      account_type TEXT NOT NULL DEFAULT 'system' CHECK (account_type IN ('system', 'viewer')),
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
@@ -199,43 +200,43 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      friend_system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      friend_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       encrypted_key BLOB NOT NULL,
       key_version INTEGER NOT NULL CHECK (key_version >= 1),
       created_at INTEGER NOT NULL,
       revoked_at INTEGER,
-      UNIQUE (bucket_id, friend_system_id, key_version)
+      UNIQUE (bucket_id, friend_account_id, key_version)
     )
   `,
   keyGrantsIndexes: `
     CREATE INDEX key_grants_system_id_idx ON key_grants (system_id);
-    CREATE INDEX key_grants_friend_bucket_idx ON key_grants (friend_system_id, bucket_id);
+    CREATE INDEX key_grants_friend_bucket_idx ON key_grants (friend_account_id, bucket_id);
     CREATE INDEX key_grants_revoked_at_idx ON key_grants (revoked_at)
   `,
   friendConnections: `
     CREATE TABLE friend_connections (
       id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      friend_system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      friend_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'blocked', 'removed')),
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (system_id, friend_system_id),
-      UNIQUE (id, system_id),
-      CHECK (system_id != friend_system_id),
+      UNIQUE (account_id, friend_account_id),
+      UNIQUE (id, account_id),
+      CHECK (account_id != friend_account_id),
       CHECK (version >= 1)
     )
   `,
   friendConnectionsIndexes: `
-    CREATE INDEX friend_connections_system_status_idx ON friend_connections (system_id, status);
-    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_system_id, status)
+    CREATE INDEX friend_connections_account_status_idx ON friend_connections (account_id, status);
+    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_account_id, status)
   `,
   friendCodes: `
     CREATE TABLE friend_codes (
       id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       code TEXT NOT NULL UNIQUE,
       created_at INTEGER NOT NULL,
       expires_at INTEGER,
@@ -244,7 +245,7 @@ export const SQLITE_DDL = {
     )
   `,
   friendCodesIndexes: `
-    CREATE INDEX friend_codes_system_id_idx ON friend_codes (system_id)
+    CREATE INDEX friend_codes_account_id_idx ON friend_codes (account_id)
   `,
   friendBucketAssignments: `
     CREATE TABLE friend_bucket_assignments (
@@ -633,7 +634,7 @@ export const SQLITE_DDL = {
     CREATE TABLE lifecycle_events (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      event_type TEXT NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
+      event_type TEXT NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')),
       occurred_at INTEGER NOT NULL,
       recorded_at INTEGER NOT NULL,
       encrypted_data BLOB NOT NULL
@@ -984,16 +985,29 @@ export const SQLITE_DDL = {
   friendNotificationPreferences: `
     CREATE TABLE friend_notification_preferences (
       id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       friend_connection_id TEXT NOT NULL,
       enabled_event_types TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      FOREIGN KEY (friend_connection_id, system_id) REFERENCES friend_connections(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
     )
   `,
   friendNotificationPreferencesIndexes: `
-    CREATE UNIQUE INDEX friend_notification_prefs_system_id_friend_connection_id_idx ON friend_notification_preferences (system_id, friend_connection_id)
+    CREATE UNIQUE INDEX friend_notification_prefs_account_id_friend_connection_id_idx ON friend_notification_preferences (account_id, friend_connection_id)
+  `,
+  // Snapshots
+  systemSnapshots: `
+    CREATE TABLE system_snapshots (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      snapshot_trigger TEXT NOT NULL CHECK (snapshot_trigger IN ('manual', 'scheduled-daily', 'scheduled-weekly')),
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `,
+  systemSnapshotsIndexes: `
+    CREATE INDEX system_snapshots_system_created_idx ON system_snapshots (system_id, created_at)
   `,
   // Webhooks
   webhookConfigs: `
@@ -1625,6 +1639,12 @@ export function createSqlitePkBridgeTables(client: InstanceType<typeof Database>
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.pkBridgeConfigs);
   client.exec(SQLITE_DDL.pkBridgeConfigsIndexes);
+}
+
+export function createSqliteSnapshotTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.systemSnapshots);
+  client.exec(SQLITE_DDL.systemSnapshotsIndexes);
 }
 
 export function createSqliteNotificationTables(client: InstanceType<typeof Database>): void {

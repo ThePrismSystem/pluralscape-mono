@@ -9,6 +9,7 @@ import type {
   FrontingComment,
   FrontingSession,
   FrontingType,
+  OuttriggerSentiment,
   Switch,
 } from "../fronting.js";
 import type {
@@ -76,6 +77,10 @@ describe("FrontingSession", () => {
       "subsystem" | "side-system" | "layer"
     > | null>();
     expectTypeOf<ActiveFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<ActiveFrontingSession["outtrigger"]>().toEqualTypeOf<{
+      readonly reason: string;
+      readonly sentiment: OuttriggerSentiment;
+    } | null>();
   });
 
   it("CompletedFrontingSession has individual field types", () => {
@@ -91,6 +96,10 @@ describe("FrontingSession", () => {
       "subsystem" | "side-system" | "layer"
     > | null>();
     expectTypeOf<CompletedFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<CompletedFrontingSession["outtrigger"]>().toEqualTypeOf<{
+      readonly reason: string;
+      readonly sentiment: OuttriggerSentiment;
+    } | null>();
   });
 
   it("ActiveFrontingSession extends AuditMetadata", () => {

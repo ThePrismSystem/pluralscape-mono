@@ -7,6 +7,7 @@ import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
+import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
 import type { BucketContentEntityType, FriendConnectionStatus } from "@pluralscape/types";
@@ -65,9 +66,9 @@ export const keyGrants = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    friendSystemId: varchar("friend_system_id", { length: ID_MAX_LENGTH })
+    friendAccountId: varchar("friend_account_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedKey: pgBinary("encrypted_key").notNull(),
     keyVersion: integer("key_version").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
@@ -75,25 +76,26 @@ export const keyGrants = pgTable(
   },
   (t) => [
     index("key_grants_system_id_idx").on(t.systemId),
-    index("key_grants_friend_bucket_idx").on(t.friendSystemId, t.bucketId),
-    index("key_grants_friend_revoked_idx").on(t.friendSystemId, t.revokedAt),
+    index("key_grants_friend_bucket_idx").on(t.friendAccountId, t.bucketId),
+    index("key_grants_friend_revoked_idx").on(t.friendAccountId, t.revokedAt),
     index("key_grants_revoked_at_idx").on(t.revokedAt),
-    unique("key_grants_bucket_friend_version_uniq").on(t.bucketId, t.friendSystemId, t.keyVersion),
+    unique("key_grants_bucket_friend_version_uniq").on(t.bucketId, t.friendAccountId, t.keyVersion),
     check("key_grants_key_version_check", sql`${t.keyVersion} >= 1`),
   ],
 );
 
 // Connections are intentionally directional: A→B and B→A are separate entries
+// Friend connections are account-level (not system-level) to support non-system viewer accounts.
 export const friendConnections = pgTable(
   "friend_connections",
   {
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    friendSystemId: varchar("friend_system_id", { length: ID_MAX_LENGTH })
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    friendAccountId: varchar("friend_account_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("pending")
@@ -103,12 +105,12 @@ export const friendConnections = pgTable(
     ...versioned(),
   },
   (t) => [
-    index("friend_connections_system_status_idx").on(t.systemId, t.status),
-    index("friend_connections_friend_status_idx").on(t.friendSystemId, t.status),
-    unique("friend_connections_system_friend_uniq").on(t.systemId, t.friendSystemId),
-    unique("friend_connections_id_system_id_unique").on(t.id, t.systemId),
+    index("friend_connections_account_status_idx").on(t.accountId, t.status),
+    index("friend_connections_friend_status_idx").on(t.friendAccountId, t.status),
+    unique("friend_connections_account_friend_uniq").on(t.accountId, t.friendAccountId),
+    unique("friend_connections_id_account_id_unique").on(t.id, t.accountId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
-    check("friend_connections_no_self_check", sql`${t.systemId} != ${t.friendSystemId}`),
+    check("friend_connections_no_self_check", sql`${t.accountId} != ${t.friendAccountId}`),
     versionCheckFor("friend_connections", t.version),
   ],
 );
@@ -117,15 +119,15 @@ export const friendCodes = pgTable(
   "friend_codes",
   {
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+    accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     code: varchar("code", { length: 255 }).notNull().unique(),
     createdAt: pgTimestamp("created_at").notNull(),
     expiresAt: pgTimestamp("expires_at"),
   },
   (t) => [
-    index("friend_codes_system_id_idx").on(t.systemId),
+    index("friend_codes_account_id_idx").on(t.accountId),
     check(
       "friend_codes_expires_at_check",
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
