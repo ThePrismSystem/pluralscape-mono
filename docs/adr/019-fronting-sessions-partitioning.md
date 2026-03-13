@@ -14,8 +14,8 @@ partitioning.
 
 Unlike `messages` (ADR 016) and `audit_log` (ADR 017), fronting sessions are
 **mutable**: `end_time` is NULL when a session starts and gets updated when the
-session ends. However, `start_time` is immutable and monotonically increasing,
-making it a valid partition key. Updates to `end_time` always target the same
+session ends. However, `start_time` is immutable after creation, making it a
+valid partition key. Updates to `end_time` always target the same
 partition as the original insert (since `start_time` determines partition
 placement and never changes).
 
@@ -24,7 +24,8 @@ placement and never changes).
 1. PostgreSQL requires the partition key to be part of the primary key.
 2. All UNIQUE constraints must include the partition key columns.
 3. Foreign keys referencing a partitioned table must include the partition key.
-4. `fronting_comments` has a composite FK on `(fronting_session_id, system_id)`.
+4. `fronting_comments` has a composite FK on `(fronting_session_id, system_id)`
+   which must be extended to include the partition key.
 5. SQLite does not support partitioning — no changes to the SQLite schema.
 
 ## Decision

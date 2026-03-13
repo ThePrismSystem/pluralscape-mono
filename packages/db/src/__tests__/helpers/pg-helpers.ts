@@ -329,7 +329,8 @@ export const PG_DDL = {
     )
   `,
   frontingCommentsIndexes: `
-    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (fronting_session_id, created_at)
+    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (fronting_session_id, created_at);
+    CREATE INDEX fronting_comments_session_start_idx ON fronting_comments (session_start_time)
   `,
   // Structure
   relationships: `

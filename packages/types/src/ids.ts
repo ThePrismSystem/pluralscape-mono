@@ -62,6 +62,7 @@ export type PKBridgeConfigId = Brand<string, "PKBridgeConfigId">;
 export type AccountPurgeRequestId = Brand<string, "AccountPurgeRequestId">;
 export type ExportRequestId = Brand<string, "ExportRequestId">;
 export type JobId = Brand<string, "JobId">;
+/** In-memory WebSocket subscription — not a persisted entity, has no ID_PREFIXES entry. */
 export type SubscriptionId = Brand<string, "SubscriptionId">;
 export type WebhookDeliveryId = Brand<string, "WebhookDeliveryId">;
 export type FrontingReportId = Brand<string, "FrontingReportId">;
@@ -128,7 +129,6 @@ export const ID_PREFIXES = {
   accountPurgeRequest: "apr_",
   exportRequest: "er_",
   job: "job_",
-
   webhookDelivery: "wd_",
   frontingReport: "fr_",
   friendNotificationPreference: "fnp_",

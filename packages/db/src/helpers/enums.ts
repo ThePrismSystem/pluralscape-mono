@@ -364,7 +364,6 @@ export const ENTITY_TYPES = [
   "account-purge-request",
   "export-request",
   "job",
-
   "webhook-delivery",
   "fronting-report",
   "friend-notification-preference",

@@ -141,6 +141,7 @@ export const frontingComments = pgTable(
   },
   (t) => [
     index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
+    index("fronting_comments_session_start_idx").on(t.sessionStartTime),
     foreignKey({
       columns: [t.frontingSessionId, t.systemId, t.sessionStartTime],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId, frontingSessions.startTime],

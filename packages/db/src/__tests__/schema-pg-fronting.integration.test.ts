@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -162,6 +162,56 @@ describe("PG fronting schema", () => {
         .from(frontingSessions)
         .where(eq(frontingSessions.id, sessionId));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects duplicate composite PK (id, startTime)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const { id: sessionId, startTime } = await insertFrontingSession(systemId);
+      const memberId = await insertMember(systemId);
+
+      await expect(
+        db.insert(frontingSessions).values({
+          id: sessionId,
+          systemId,
+          startTime,
+          memberId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("allows same id with different startTime (composite PK)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingSessions).values({
+        id,
+        systemId,
+        startTime: now,
+        memberId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(frontingSessions).values({
+        id,
+        systemId,
+        startTime: now + 60000,
+        memberId,
+        encryptedData: testBlob(new Uint8Array([2])),
+        createdAt: now + 60000,
+        updatedAt: now + 60000,
+      });
+
+      const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
+      expect(rows).toHaveLength(2);
     });
 
     it("rejects nonexistent systemId FK", async () => {
@@ -761,7 +811,11 @@ describe("PG fronting schema", () => {
         updatedAt: now,
       });
 
-      await db.delete(frontingSessions).where(eq(frontingSessions.id, sessionId));
+      await db
+        .delete(frontingSessions)
+        .where(
+          and(eq(frontingSessions.id, sessionId), eq(frontingSessions.startTime, sessionStartTime)),
+        );
       const rows = await db
         .select()
         .from(frontingComments)
@@ -805,6 +859,25 @@ describe("PG fronting schema", () => {
           frontingSessionId: "nonexistent",
           systemId,
           sessionStartTime: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects mismatched sessionStartTime FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(frontingComments).values({
+          id: crypto.randomUUID(),
+          frontingSessionId: sessionId,
+          systemId,
+          sessionStartTime: sessionStartTime + 99999,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
