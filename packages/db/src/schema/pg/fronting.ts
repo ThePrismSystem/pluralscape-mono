@@ -70,6 +70,7 @@ export const frontingSessions = pgTable(
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
+    index("fronting_sessions_system_type_start_idx").on(t.systemId, t.frontingType, t.startTime),
     index("fronting_sessions_active_idx")
       .on(t.systemId)
       .where(sql`${t.endTime} IS NULL`),

@@ -278,6 +278,7 @@ export const SQLITE_DDL = {
   frontingSessionsIndexes: `
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
     CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
+    CREATE INDEX fronting_sessions_system_type_start_idx ON fronting_sessions (system_id, fronting_type, start_time);
     CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL
   `,
   switches: `
@@ -616,7 +617,7 @@ export const SQLITE_DDL = {
   auditLogIndexes: `
     CREATE INDEX audit_log_account_timestamp_idx ON audit_log (account_id, timestamp);
     CREATE INDEX audit_log_system_timestamp_idx ON audit_log (system_id, timestamp);
-    CREATE INDEX audit_log_event_type_idx ON audit_log (event_type);
+    CREATE INDEX audit_log_system_event_type_timestamp_idx ON audit_log (system_id, event_type, timestamp);
     CREATE INDEX audit_log_timestamp_idx ON audit_log (timestamp)
   `,
   // Lifecycle Events
@@ -1209,7 +1210,7 @@ export const SQLITE_DDL = {
     CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
     CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id);
     CREATE UNIQUE INDEX sync_queue_system_id_seq_idx ON sync_queue (system_id, seq);
-    CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id) WHERE synced_at IS NULL
+    CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id, seq) WHERE synced_at IS NULL
   `,
   syncConflicts: `
     CREATE TABLE sync_conflicts (

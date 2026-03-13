@@ -92,6 +92,13 @@
       "when": 1773619201000,
       "tag": "0012_pin_hash_kdf_check",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1773619202000,
+      "tag": "0013_compound_indexes",
+      "breakpoints": true
     }
   ]
 }
