@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { parseSearchableEntityType } from "../../helpers/enums.js";
 
 import type { SearchableEntityType } from "@pluralscape/types";
-// Intentionally typed for better-sqlite3 (self-hosted tier); mobile app will need its own FTS5 wrapper.
+// Intentionally typed for better-sqlite3-multiple-ciphers (self-hosted tier); mobile app will need its own FTS5 wrapper.
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const DEFAULT_SEARCH_LIMIT = 50;

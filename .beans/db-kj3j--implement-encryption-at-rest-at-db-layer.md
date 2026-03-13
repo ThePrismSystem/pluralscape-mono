@@ -9,7 +9,7 @@ updated_at: 2026-03-12T11:24:25Z
 parent: db-2nr7
 ---
 
-SECURITY.md says all stored data is encrypted at rest. ADR 006 requires SQLCipher for local DB; ADR 004 calls out pgcrypto. DB uses better-sqlite3 (not SQLCipher). ENABLE_PGCRYPTO constant exists but migrations are empty. Document implementation boundary or wire SQLCipher/pgcrypto. Ref: audit H1
+SECURITY.md says all stored data is encrypted at rest. ADR 006 requires SQLCipher for local DB; ADR 004 calls out pgcrypto. DB now uses better-sqlite3-multiple-ciphers (SQLCipher 4.x). ENABLE_PGCRYPTO constant exists but migrations are empty. Document implementation boundary or wire SQLCipher/pgcrypto. Ref: audit H1
 
 ## Summary of Changes
 

@@ -87,4 +87,4 @@ PG treats NULL as unique in UNIQUE indexes by default. SQLite does the same sinc
 
 ## Summary of Changes
 
-Full Drizzle project setup with dual PG+SQLite dialect support. Custom column types for timestamps, binary, and JSON with testable mapping functions. Audit helpers (timestamps, archivable, versioned) for both dialects. Enum arrays for CHECK constraints. Example systems table with PGlite and better-sqlite3 integration tests. Connection factory with env-based dialect selection. Subpath exports for per-dialect schema access.
+Full Drizzle project setup with dual PG+SQLite dialect support. Custom column types for timestamps, binary, and JSON with testable mapping functions. Audit helpers (timestamps, archivable, versioned) for both dialects. Enum arrays for CHECK constraints. Example systems table with PGlite and better-sqlite3-multiple-ciphers integration tests. Connection factory with env-based dialect selection. Subpath exports for per-dialect schema access.

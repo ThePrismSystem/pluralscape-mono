@@ -56,7 +56,7 @@ export const sqliteBinary = customType<{ data: Uint8Array; driverData: Uint8Arra
     return "blob";
   },
   fromDriver(val: Uint8Array): Uint8Array {
-    // better-sqlite3 returns Buffer (a Node.js subclass of Uint8Array).
+    // better-sqlite3-multiple-ciphers returns Buffer (a Node.js subclass of Uint8Array).
     // Convert to plain Uint8Array for consistent cross-dialect behavior.
     return new Uint8Array(val);
   },
@@ -69,7 +69,7 @@ export function encryptedBlobToDriver(val: EncryptedBlob): Uint8Array {
 
 /** Converts SQLite blob back to EncryptedBlob. */
 export function encryptedBlobFromDriver(val: Uint8Array): EncryptedBlob {
-  // better-sqlite3 returns Buffer — create a view; deserializeEncryptedBlob
+  // better-sqlite3-multiple-ciphers returns Buffer — create a view; deserializeEncryptedBlob
   // makes defensive copies of nonce and ciphertext internally.
   return deserializeEncryptedBlob(new Uint8Array(val.buffer, val.byteOffset, val.byteLength));
 }

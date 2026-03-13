@@ -8,7 +8,7 @@ created_at: 2026-03-12T11:20:43Z
 updated_at: 2026-03-13T13:46:38Z
 ---
 
-Currently using better-sqlite3 during development. Per ADR 006, production mobile releases need SQLCipher for encrypting the local SQLite database at rest. This protects locally cached data if the device is compromised. Requires evaluating SQLCipher npm packages, updating the drizzle configuration, and testing with the existing schema.
+Migrated from better-sqlite3 to better-sqlite3-multiple-ciphers for SQLCipher encryption-at-rest support. Per ADR 006, production and mobile deployments encrypt the local SQLite database at rest via SQLITE_ENCRYPTION_KEY env var.
 
 ## Implementation
 
