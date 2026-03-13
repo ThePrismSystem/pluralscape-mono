@@ -8,3 +8,11 @@ export {
   sqliteCleanupOrphanedTags,
   sqliteCleanupAllOrphanedTags,
 } from "./orphan-cleanup.js";
+export {
+  PARTITIONED_TABLES,
+  formatPartitionName,
+  parsePartitionDate,
+  pgEnsureFuturePartitions,
+  pgDetachOldPartitions,
+} from "./partition-maintenance.js";
+export type { PartitionedTable, DetachableTable, DetachResult } from "./partition-maintenance.js";
