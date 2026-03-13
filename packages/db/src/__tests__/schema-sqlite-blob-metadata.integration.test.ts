@@ -57,7 +57,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 1024,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "sha256-abc",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       })
       .run();
@@ -86,7 +86,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "attachment",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       })
       .run();
@@ -101,7 +101,7 @@ describe("SQLite blob_metadata schema", () => {
           sizeBytes: 200,
           encryptionTier: 1,
           purpose: "attachment",
-          checksum: "sha256:test",
+          checksum: "a".repeat(64),
           uploadedAt: now,
         })
         .run(),
@@ -122,7 +122,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 2,
         purpose: "member-photo",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       })
       .run();
@@ -157,7 +157,7 @@ describe("SQLite blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "attachment",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         bucketId,
         uploadedAt: now,
       })
@@ -187,7 +187,7 @@ describe("SQLite blob_metadata schema", () => {
           100,
           1,
           "invalid-purpose",
-          "sha256:test",
+          "a".repeat(64),
           now,
         ),
     ).toThrow();
@@ -208,7 +208,7 @@ describe("SQLite blob_metadata schema", () => {
           sizeBytes: 0,
           encryptionTier: 1,
           purpose: "avatar",
-          checksum: "sha256:test",
+          checksum: "a".repeat(64),
           uploadedAt: now,
         })
         .run(),
@@ -224,7 +224,7 @@ describe("SQLite blob_metadata schema", () => {
           sizeBytes: -1,
           encryptionTier: 1,
           purpose: "avatar",
-          checksum: "sha256:test",
+          checksum: "a".repeat(64),
           uploadedAt: now,
         })
         .run(),
@@ -250,7 +250,7 @@ describe("SQLite blob_metadata schema", () => {
           100,
           0,
           "avatar",
-          "sha256:test",
+          "a".repeat(64),
           now,
         ),
     ).toThrow();
@@ -268,7 +268,7 @@ describe("SQLite blob_metadata schema", () => {
           100,
           3,
           "avatar",
-          "sha256:test",
+          "a".repeat(64),
           now,
         ),
     ).toThrow();
@@ -309,7 +309,7 @@ describe("SQLite blob_metadata schema", () => {
           10737418240,
           1,
           "avatar",
-          "sha256:test",
+          "a".repeat(64),
           now,
         ),
     ).not.toThrow();
@@ -333,7 +333,7 @@ describe("SQLite blob_metadata schema", () => {
           10737418241,
           1,
           "avatar",
-          "sha256:test",
+          "a".repeat(64),
           now,
         ),
     ).toThrow(/CHECK|constraint/i);

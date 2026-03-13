@@ -274,9 +274,9 @@ const TABLE_PAIRS: Array<{
   },
   // PK Bridge
   {
-    name: "pkBridgeState",
-    pgTable: getTableColumns(pg.pkBridgeState),
-    sqliteTable: getTableColumns(sqlite.pkBridgeState),
+    name: "pkBridgeConfigs",
+    pgTable: getTableColumns(pg.pkBridgeConfigs),
+    sqliteTable: getTableColumns(sqlite.pkBridgeConfigs),
   },
   // Safe Mode
   {

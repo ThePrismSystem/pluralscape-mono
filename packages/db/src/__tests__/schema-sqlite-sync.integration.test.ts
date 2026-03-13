@@ -230,7 +230,7 @@ describe("SQLite sync schema", () => {
   });
 
   describe("sync_queue", () => {
-    it("round-trips with all fields including binary changeData", () => {
+    it("round-trips with all fields including binary encryptedChangeData", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -245,7 +245,7 @@ describe("SQLite sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: data,
+          encryptedChangeData: data,
           createdAt: now,
           syncedAt: now + 5000,
         })
@@ -256,7 +256,7 @@ describe("SQLite sync schema", () => {
       expect(rows[0]?.systemId).toBe(systemId);
       expect(rows[0]?.entityType).toBe("member");
       expect(rows[0]?.operation).toBe("create");
-      expect(rows[0]?.changeData).toEqual(data);
+      expect(rows[0]?.encryptedChangeData).toEqual(data);
       expect(rows[0]?.syncedAt).toBe(now + 5000);
     });
 
@@ -274,7 +274,7 @@ describe("SQLite sync schema", () => {
           entityType: "group",
           entityId: crypto.randomUUID(),
           operation: "update",
-          changeData: new Uint8Array([10]),
+          encryptedChangeData: new Uint8Array([10]),
           createdAt: now,
         })
         .run();
@@ -298,7 +298,7 @@ describe("SQLite sync schema", () => {
             entityType: "member",
             entityId: crypto.randomUUID(),
             operation: "invalid" as "create",
-            changeData: new Uint8Array([1]),
+            encryptedChangeData: new Uint8Array([1]),
             createdAt: now,
           })
           .run(),
@@ -319,7 +319,7 @@ describe("SQLite sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: new Uint8Array([1, 2, 3]),
+          encryptedChangeData: new Uint8Array([1, 2, 3]),
           createdAt: now,
         })
         .run();
@@ -334,7 +334,7 @@ describe("SQLite sync schema", () => {
       expect(after[0]?.syncedAt).toBe(syncedAt);
     });
 
-    it("round-trips binary changeData accurately", () => {
+    it("round-trips binary encryptedChangeData accurately", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -349,13 +349,13 @@ describe("SQLite sync schema", () => {
           entityType: "note",
           entityId: crypto.randomUUID(),
           operation: "delete",
-          changeData: data,
+          encryptedChangeData: data,
           createdAt: now,
         })
         .run();
 
       const rows = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
-      expect(rows[0]?.changeData).toEqual(data);
+      expect(rows[0]?.encryptedChangeData).toEqual(data);
     });
 
     it("assigns explicit seq values for ordering", () => {
@@ -377,7 +377,7 @@ describe("SQLite sync schema", () => {
             entityType: "member",
             entityId: crypto.randomUUID(),
             operation: "create",
-            changeData: new Uint8Array([1]),
+            encryptedChangeData: new Uint8Array([1]),
             createdAt: now,
           })
           .run();
@@ -419,7 +419,7 @@ describe("SQLite sync schema", () => {
             entityType: "member",
             entityId: crypto.randomUUID(),
             operation: "create",
-            changeData: new Uint8Array([1]),
+            encryptedChangeData: new Uint8Array([1]),
             createdAt: now,
           })
           .run();
@@ -449,7 +449,7 @@ describe("SQLite sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: new Uint8Array([1]),
+          encryptedChangeData: new Uint8Array([1]),
           createdAt: now,
         })
         .run();
@@ -464,7 +464,7 @@ describe("SQLite sync schema", () => {
             entityType: "member",
             entityId: crypto.randomUUID(),
             operation: "create",
-            changeData: new Uint8Array([1]),
+            encryptedChangeData: new Uint8Array([1]),
             createdAt: now,
           })
           .run(),
@@ -485,7 +485,7 @@ describe("SQLite sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: new Uint8Array([1]),
+          encryptedChangeData: new Uint8Array([1]),
           createdAt: now,
         })
         .run();
@@ -500,7 +500,7 @@ describe("SQLite sync schema", () => {
             entityType: "member",
             entityId: crypto.randomUUID(),
             operation: "update",
-            changeData: new Uint8Array([2]),
+            encryptedChangeData: new Uint8Array([2]),
             createdAt: now,
           })
           .run(),
@@ -523,7 +523,7 @@ describe("SQLite sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: new Uint8Array([1]),
+          encryptedChangeData: new Uint8Array([1]),
           createdAt: now,
         })
         .run();
@@ -536,7 +536,7 @@ describe("SQLite sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: new Uint8Array([1]),
+          encryptedChangeData: new Uint8Array([1]),
           createdAt: now,
         })
         .run();
@@ -564,7 +564,7 @@ describe("SQLite sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: new Uint8Array([1]),
+          encryptedChangeData: new Uint8Array([1]),
           createdAt: now,
           syncedAt: now + 1000,
         })

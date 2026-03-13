@@ -64,7 +64,8 @@ export const syncQueue = pgTable(
     entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
     entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
     operation: varchar("operation", { length: ENUM_MAX_LENGTH }).notNull().$type<SyncOperation>(),
-    changeData: pgBinary("change_data").notNull(),
+    /** Must always contain encrypted CRDT changesets — never plaintext deltas. */
+    encryptedChangeData: pgBinary("encrypted_change_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
     syncedAt: pgTimestamp("synced_at"),
   },
@@ -81,7 +82,7 @@ export const syncQueue = pgTable(
     uniqueIndex("sync_queue_seq_idx").on(t.seq),
     index("sync_queue_unsynced_idx")
       .on(t.systemId)
-      .where(sql`synced_at IS NULL`),
+      .where(sql`${t.syncedAt} IS NULL`),
     index("sync_queue_cleanup_idx")
       .on(t.syncedAt)
       .where(sql`${t.syncedAt} IS NOT NULL`),

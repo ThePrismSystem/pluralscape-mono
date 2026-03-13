@@ -544,6 +544,9 @@ export const PG_DDL = {
       PRIMARY KEY (field_definition_id, bucket_id)
     )
   `,
+  fieldBucketVisibilityIndexes: `
+    CREATE INDEX field_bucket_visibility_bucket_id_idx ON field_bucket_visibility (bucket_id)
+  `,
   // Nomenclature Settings
   nomenclatureSettings: `
     CREATE TABLE nomenclature_settings (
@@ -607,7 +610,8 @@ export const PG_DDL = {
       user_agent VARCHAR(1024),
       actor JSONB NOT NULL,
       detail TEXT,
-      PRIMARY KEY (id, timestamp)
+      PRIMARY KEY (id, timestamp),
+      CHECK (detail IS NULL OR length(detail) <= 2048)
     )
   `,
   auditLogIndexes: `
@@ -915,8 +919,8 @@ export const PG_DDL = {
     )
   `,
   // PK Bridge
-  pkBridgeState: `
-    CREATE TABLE pk_bridge_state (
+  pkBridgeConfigs: `
+    CREATE TABLE pk_bridge_configs (
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       enabled BOOLEAN NOT NULL DEFAULT true,
@@ -931,8 +935,8 @@ export const PG_DDL = {
       CHECK (version >= 1)
     )
   `,
-  pkBridgeStateIndexes: `
-    CREATE UNIQUE INDEX pk_bridge_state_system_id_idx ON pk_bridge_state (system_id)
+  pkBridgeConfigsIndexes: `
+    CREATE UNIQUE INDEX pk_bridge_configs_system_id_idx ON pk_bridge_configs (system_id)
   `,
   // Notifications
   deviceTokens: `
@@ -1021,7 +1025,8 @@ export const PG_DDL = {
     CREATE INDEX webhook_deliveries_webhook_id_idx ON webhook_deliveries (webhook_id);
     CREATE INDEX webhook_deliveries_system_id_idx ON webhook_deliveries (system_id);
     CREATE INDEX webhook_deliveries_status_next_retry_at_idx ON webhook_deliveries (status, next_retry_at);
-    CREATE INDEX webhook_deliveries_terminal_created_at_idx ON webhook_deliveries (created_at) WHERE status IN ('success', 'failed')
+    CREATE INDEX webhook_deliveries_terminal_created_at_idx ON webhook_deliveries (created_at) WHERE status IN ('success', 'failed');
+    CREATE INDEX webhook_deliveries_system_retry_idx ON webhook_deliveries (system_id, status, next_retry_at) WHERE status NOT IN ('success', 'failed')
   `,
   // Blob Metadata
   blobMetadata: `
@@ -1042,7 +1047,8 @@ export const PG_DDL = {
       FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       CHECK (size_bytes > 0),
       CHECK (size_bytes <= 10737418240),
-      CHECK (encryption_tier IN (1, 2))
+      CHECK (encryption_tier IN (1, 2)),
+      CHECK (length(checksum) = 64)
     )
   `,
   blobMetadataIndexes: `
@@ -1089,7 +1095,8 @@ export const PG_DDL = {
   checkInRecordsIndexes: `
     CREATE INDEX check_in_records_system_id_idx ON check_in_records (system_id);
     CREATE INDEX check_in_records_timer_config_id_idx ON check_in_records (timer_config_id);
-    CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at)
+    CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at);
+    CREATE INDEX check_in_records_system_pending_idx ON check_in_records (system_id, scheduled_at) WHERE responded_at IS NULL AND dismissed = false
   `,
   // Import/Export
   importJobs: `
@@ -1176,7 +1183,7 @@ export const PG_DDL = {
       entity_type VARCHAR(50) NOT NULL,
       entity_id VARCHAR(50) NOT NULL,
       operation VARCHAR(50) NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
-      change_data BYTEA NOT NULL,
+      encrypted_change_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       synced_at TIMESTAMPTZ
     )
@@ -1426,6 +1433,7 @@ export async function createPgCustomFieldsTables(client: PGlite): Promise<void> 
   await pgExec(client, PG_DDL.fieldValues);
   await pgExec(client, PG_DDL.fieldValuesIndexes);
   await pgExec(client, PG_DDL.fieldBucketVisibility);
+  await pgExec(client, PG_DDL.fieldBucketVisibilityIndexes);
 }
 
 export async function createPgNomenclatureSettingsTables(client: PGlite): Promise<void> {
@@ -1582,8 +1590,8 @@ export async function createPgInnerworldTables(client: PGlite): Promise<void> {
 
 export async function createPgPkBridgeTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
-  await pgExec(client, PG_DDL.pkBridgeState);
-  await pgExec(client, PG_DDL.pkBridgeStateIndexes);
+  await pgExec(client, PG_DDL.pkBridgeConfigs);
+  await pgExec(client, PG_DDL.pkBridgeConfigsIndexes);
 }
 
 export async function createPgNotificationTables(client: PGlite): Promise<void> {

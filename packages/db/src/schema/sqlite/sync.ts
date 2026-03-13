@@ -53,7 +53,8 @@ export const syncQueue = sqliteTable(
     entityType: text("entity_type").notNull().$type<EntityType>(),
     entityId: text("entity_id").notNull(),
     operation: text("operation").notNull().$type<SyncOperation>(),
-    changeData: sqliteBinary("change_data").notNull(),
+    /** Must always contain encrypted CRDT changesets — never plaintext deltas. */
+    encryptedChangeData: sqliteBinary("encrypted_change_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     syncedAt: sqliteTimestamp("synced_at"),
   },

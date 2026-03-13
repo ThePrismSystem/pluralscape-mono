@@ -544,6 +544,9 @@ export const SQLITE_DDL = {
       PRIMARY KEY (field_definition_id, bucket_id)
     )
   `,
+  fieldBucketVisibilityIndexes: `
+    CREATE INDEX field_bucket_visibility_bucket_id_idx ON field_bucket_visibility (bucket_id)
+  `,
   // Nomenclature Settings
   nomenclatureSettings: `
     CREATE TABLE nomenclature_settings (
@@ -606,7 +609,8 @@ export const SQLITE_DDL = {
       ip_address TEXT,
       user_agent TEXT,
       actor TEXT NOT NULL,
-      detail TEXT
+      detail TEXT,
+      CHECK (detail IS NULL OR length(detail) <= 2048)
     )
   `,
   auditLogIndexes: `
@@ -914,8 +918,8 @@ export const SQLITE_DDL = {
     )
   `,
   // PK Bridge
-  pkBridgeState: `
-    CREATE TABLE pk_bridge_state (
+  pkBridgeConfigs: `
+    CREATE TABLE pk_bridge_configs (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       enabled INTEGER NOT NULL DEFAULT 1,
@@ -930,8 +934,8 @@ export const SQLITE_DDL = {
       CHECK (version >= 1)
     )
   `,
-  pkBridgeStateIndexes: `
-    CREATE UNIQUE INDEX pk_bridge_state_system_id_idx ON pk_bridge_state (system_id)
+  pkBridgeConfigsIndexes: `
+    CREATE UNIQUE INDEX pk_bridge_configs_system_id_idx ON pk_bridge_configs (system_id)
   `,
   // Notifications
   deviceTokens: `
@@ -1024,7 +1028,8 @@ export const SQLITE_DDL = {
     CREATE INDEX webhook_deliveries_webhook_id_idx ON webhook_deliveries (webhook_id);
     CREATE INDEX webhook_deliveries_system_id_idx ON webhook_deliveries (system_id);
     CREATE INDEX webhook_deliveries_status_next_retry_at_idx ON webhook_deliveries (status, next_retry_at);
-    CREATE INDEX webhook_deliveries_status_created_at_idx ON webhook_deliveries (status, created_at)
+    CREATE INDEX webhook_deliveries_terminal_created_at_idx ON webhook_deliveries (created_at) WHERE status IN ('success', 'failed');
+    CREATE INDEX webhook_deliveries_system_retry_idx ON webhook_deliveries (system_id, status, next_retry_at) WHERE status NOT IN ('success', 'failed')
   `,
   // Blob Metadata
   blobMetadata: `
@@ -1046,7 +1051,8 @@ export const SQLITE_DDL = {
       CHECK (purpose IS NULL OR purpose IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
       CHECK (size_bytes > 0),
       CHECK (size_bytes <= 10737418240),
-      CHECK (encryption_tier IN (1, 2))
+      CHECK (encryption_tier IN (1, 2)),
+      CHECK (length(checksum) = 64)
     )
   `,
   blobMetadataIndexes: `
@@ -1109,7 +1115,8 @@ export const SQLITE_DDL = {
   checkInRecordsIndexes: `
     CREATE INDEX check_in_records_system_id_idx ON check_in_records (system_id);
     CREATE INDEX check_in_records_timer_config_id_idx ON check_in_records (timer_config_id);
-    CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at)
+    CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at);
+    CREATE INDEX check_in_records_system_pending_idx ON check_in_records (system_id, scheduled_at) WHERE responded_at IS NULL AND dismissed = 0
   `,
   // Import/Export
   importJobs: `
@@ -1193,7 +1200,7 @@ export const SQLITE_DDL = {
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
       operation TEXT NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
-      change_data BLOB NOT NULL,
+      encrypted_change_data BLOB NOT NULL,
       created_at INTEGER NOT NULL,
       synced_at INTEGER
     )
@@ -1438,6 +1445,7 @@ export function createSqliteCustomFieldsTables(client: InstanceType<typeof Datab
   client.exec(SQLITE_DDL.fieldValues);
   client.exec(SQLITE_DDL.fieldValuesIndexes);
   client.exec(SQLITE_DDL.fieldBucketVisibility);
+  client.exec(SQLITE_DDL.fieldBucketVisibilityIndexes);
 }
 
 export function createSqliteNomenclatureSettingsTables(
@@ -1602,8 +1610,8 @@ export function createSqliteInnerworldTables(client: InstanceType<typeof Databas
 
 export function createSqlitePkBridgeTables(client: InstanceType<typeof Database>): void {
   createSqliteBaseTables(client);
-  client.exec(SQLITE_DDL.pkBridgeState);
-  client.exec(SQLITE_DDL.pkBridgeStateIndexes);
+  client.exec(SQLITE_DDL.pkBridgeConfigs);
+  client.exec(SQLITE_DDL.pkBridgeConfigsIndexes);
 }
 
 export function createSqliteNotificationTables(client: InstanceType<typeof Database>): void {

@@ -50,7 +50,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 1024,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "sha256-abc",
+      checksum: "a".repeat(64),
       uploadedAt: now,
     });
 
@@ -77,7 +77,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "attachment",
-      checksum: "sha256:test",
+      checksum: "a".repeat(64),
       uploadedAt: now,
     });
 
@@ -89,7 +89,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 200,
         encryptionTier: 1,
         purpose: "attachment",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -108,7 +108,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 0,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -120,6 +120,7 @@ describe("PG blob_metadata schema", () => {
     const now = Date.now();
 
     await expect(
+      // @ts-expect-error — intentionally testing CHECK constraint with invalid tier value
       db.insert(blobMetadata).values({
         id: crypto.randomUUID(),
         systemId,
@@ -127,7 +128,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 3,
         purpose: "avatar",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -146,7 +147,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "invalid" as "avatar",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -165,7 +166,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 2,
       purpose: "member-photo",
-      checksum: "sha256:test",
+      checksum: "a".repeat(64),
       uploadedAt: now,
     });
 
@@ -196,7 +197,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "attachment",
-      checksum: "sha256:test",
+      checksum: "a".repeat(64),
       bucketId,
       uploadedAt: now,
     });
@@ -235,7 +236,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 10737418240,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "sha256:test",
+      checksum: "a".repeat(64),
       uploadedAt: now,
     });
   });
@@ -253,7 +254,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 10737418241,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow(/check|constraint/i);
