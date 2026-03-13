@@ -98,13 +98,21 @@ export async function createSearchIndex(
   await db.execute(sql.raw(SEARCH_INDEX_DDL));
 }
 
-/** Drop the search_index table. */
+/**
+ * Drop the search_index table.
+ * Intentionally unguarded: dropping is safe in any mode, and a hosted deployment
+ * may need to purge a residual table.
+ */
 export async function dropSearchIndex(db: PgExecutable): Promise<void> {
   await db.execute(sql.raw("DROP TABLE IF EXISTS search_index"));
 }
 
-/** Create indexes on search_index (idempotent). */
-export async function createSearchIndexIndexes(db: PgExecutable): Promise<void> {
+/** Create indexes on search_index (idempotent). Guarded: indexes only make sense if the table exists. */
+export async function createSearchIndexIndexes(
+  db: PgExecutable,
+  deploymentMode?: DeploymentMode,
+): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await db.execute(sql.raw(SEARCH_INDEX_INDEXES_DDL));
 }
 
@@ -136,7 +144,11 @@ export async function deleteSearchEntry(
   );
 }
 
-/** Drop and recreate the search index with indexes (full rebuild). */
+/**
+ * Drop and recreate the search index with indexes (full rebuild).
+ * Guards before drop to avoid leaving the table in a dropped state if mode is wrong.
+ * createSearchIndex/createSearchIndexIndexes re-check internally (defense-in-depth).
+ */
 export async function rebuildSearchIndex(
   db: PgExecutable,
   deploymentMode?: DeploymentMode,
@@ -144,7 +156,7 @@ export async function rebuildSearchIndex(
   assertSelfHosted(deploymentMode);
   await dropSearchIndex(db);
   await createSearchIndex(db, deploymentMode);
-  await createSearchIndexIndexes(db);
+  await createSearchIndexIndexes(db, deploymentMode);
 }
 
 /**

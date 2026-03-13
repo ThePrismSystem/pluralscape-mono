@@ -1,9 +1,11 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { getDeploymentMode } from "../deployment.js";
 import {
   createSearchIndex,
+  createSearchIndexIndexes,
   deleteSearchEntry,
   insertSearchEntry,
   rebuildSearchIndex,
@@ -325,6 +327,12 @@ describe("PG search_index hosted-mode guard", () => {
     await client.close();
   });
 
+  afterEach(async () => {
+    await pgExec(client, "DELETE FROM search_index");
+    await pgExec(client, "DELETE FROM systems");
+    await pgExec(client, "DELETE FROM accounts");
+  });
+
   it("createSearchIndex throws in hosted mode", async () => {
     await expect(createSearchIndex(db, "hosted")).rejects.toThrow(
       "Plaintext search_index is not available in hosted mode",
@@ -353,6 +361,12 @@ describe("PG search_index hosted-mode guard", () => {
     );
   });
 
+  it("createSearchIndexIndexes throws in hosted mode", async () => {
+    await expect(createSearchIndexIndexes(db, "hosted")).rejects.toThrow(
+      "Plaintext search_index is not available in hosted mode",
+    );
+  });
+
   it("allows operations in self-hosted mode (explicit param)", async () => {
     const accountId = await pgInsertAccount(db);
     const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
@@ -369,5 +383,37 @@ describe("PG search_index hosted-mode guard", () => {
         "self-hosted",
       ),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe("getDeploymentMode", () => {
+  const originalEnv = process.env["DEPLOYMENT_MODE"];
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env["DEPLOYMENT_MODE"];
+    } else {
+      process.env["DEPLOYMENT_MODE"] = originalEnv;
+    }
+  });
+
+  it("returns 'self-hosted' when DEPLOYMENT_MODE is unset", () => {
+    delete process.env["DEPLOYMENT_MODE"];
+    expect(getDeploymentMode()).toBe("self-hosted");
+  });
+
+  it("returns 'hosted' when DEPLOYMENT_MODE is 'hosted'", () => {
+    process.env["DEPLOYMENT_MODE"] = "hosted";
+    expect(getDeploymentMode()).toBe("hosted");
+  });
+
+  it("returns 'self-hosted' when DEPLOYMENT_MODE is 'self-hosted'", () => {
+    process.env["DEPLOYMENT_MODE"] = "self-hosted";
+    expect(getDeploymentMode()).toBe("self-hosted");
+  });
+
+  it("returns 'self-hosted' for unrecognized values (fail-safe)", () => {
+    process.env["DEPLOYMENT_MODE"] = "cloud";
+    expect(getDeploymentMode()).toBe("self-hosted");
   });
 });

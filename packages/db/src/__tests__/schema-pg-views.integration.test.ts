@@ -600,6 +600,74 @@ describe("PG views / query helpers", () => {
       const comments = await getCurrentFrontingComments(db, systemId);
       expect(comments).toHaveLength(0);
     });
+
+    it("excludes comments with matching sessionId but mismatched systemId", async () => {
+      const now = Date.now();
+      const sessionIdA = crypto.randomUUID();
+      const sessionIdB = crypto.randomUUID();
+      const startTimeA = now - 60000;
+      const startTimeB = now - 90000;
+
+      // Create session in system A
+      await db.insert(frontingSessions).values({
+        id: sessionIdA,
+        systemId,
+        memberId,
+        startTime: startTimeA,
+        endTime: null,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Create system B with its own member and session
+      const otherAccountId = await insertAccount();
+      const otherSystemId = await insertSystem(otherAccountId);
+      const otherMemberId = await pgInsertMember(db, otherSystemId);
+
+      await db.insert(frontingSessions).values({
+        id: sessionIdB,
+        systemId: otherSystemId,
+        memberId: otherMemberId,
+        startTime: startTimeB,
+        endTime: null,
+        encryptedData: testBlob(new Uint8Array([2])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Comment on system A's session
+      await db.insert(frontingComments).values({
+        id: crypto.randomUUID(),
+        frontingSessionId: sessionIdA,
+        systemId,
+        sessionStartTime: startTimeA,
+        encryptedData: testBlob(new Uint8Array([3])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Comment on system B's session
+      await db.insert(frontingComments).values({
+        id: crypto.randomUUID(),
+        frontingSessionId: sessionIdB,
+        systemId: otherSystemId,
+        sessionStartTime: startTimeB,
+        encryptedData: testBlob(new Uint8Array([4])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Query for system A — should only see system A's comment
+      const commentsA = await getCurrentFrontingComments(db, systemId);
+      expect(commentsA).toHaveLength(1);
+      expect(commentsA[0]?.systemId).toBe(systemId);
+
+      // Query for system B — should only see system B's comment
+      const commentsB = await getCurrentFrontingComments(db, otherSystemId);
+      expect(commentsB).toHaveLength(1);
+      expect(commentsB[0]?.systemId).toBe(otherSystemId);
+    });
   });
 
   describe("getStructureCrossLinks", () => {

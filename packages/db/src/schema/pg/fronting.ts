@@ -83,6 +83,9 @@ export const frontingSessions = pgTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
+    // Single-column FK intentionally: composite (customFrontId, systemId) with ON DELETE SET NULL
+    // would attempt to null system_id, violating its NOT NULL constraint. Cross-tenant isolation
+    // for custom fronts is enforced by RLS and the system_id FK on this table.
     foreignKey({
       columns: [t.customFrontId],
       foreignColumns: [customFronts.id],

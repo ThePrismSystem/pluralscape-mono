@@ -274,6 +274,24 @@ describe("PG import-export schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("rejects cross-tenant system reference via composite FK", async () => {
+      const accountA = await insertAccount();
+      const accountB = await insertAccount();
+      const systemOfB = await insertSystem(accountB);
+      const now = Date.now();
+
+      await expect(
+        db.insert(importJobs).values({
+          id: crypto.randomUUID(),
+          accountId: accountA,
+          systemId: systemOfB,
+          source: "pluralscape",
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
     it("round-trips JSON error_log array", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -450,6 +468,24 @@ describe("PG import-export schema", () => {
       await db.delete(accounts).where(eq(accounts.id, accountId));
       const rows = await db.select().from(exportRequests).where(eq(exportRequests.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects cross-tenant system reference via composite FK", async () => {
+      const accountA = await insertAccount();
+      const accountB = await insertAccount();
+      const systemOfB = await insertSystem(accountB);
+      const now = Date.now();
+
+      await expect(
+        db.insert(exportRequests).values({
+          id: crypto.randomUUID(),
+          accountId: accountA,
+          systemId: systemOfB,
+          format: "json",
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
 
     it("allows nullable blobId", async () => {

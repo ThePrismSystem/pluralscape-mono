@@ -2,7 +2,7 @@
 
 // ── Deployment ────────────────────────────────────────────────
 export { getDeploymentMode } from "./deployment.js";
-export type { DeploymentMode } from "./deployment.js";
+export type { DeploymentMode, SelfHostedMode } from "./deployment.js";
 
 // ── Dialect ────────────────────────────────────────────────────
 export {
