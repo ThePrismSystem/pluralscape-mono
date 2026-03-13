@@ -13,6 +13,8 @@ export type { DbDialect, DialectCapabilities } from "./dialect.js";
 // ── RLS ────────────────────────────────────────────────────────
 export {
   accountScope,
+  applyAllRls,
+  dropPolicySql,
   enableRls,
   generateRlsStatements,
   RLS_TABLE_POLICIES,
@@ -24,7 +26,7 @@ export {
   systemScope,
 } from "./rls/index.js";
 export type { PgExecutor } from "./rls/index.js";
-export type { RlsScopeType, RlsTableName } from "./rls/index.js";
+export type { RlsExecutor, RlsScopeType, RlsTableName } from "./rls/index.js";
 
 // ── Client ─────────────────────────────────────────────────────
 export { createDatabase, createDatabaseFromEnv } from "./client/factory.js";

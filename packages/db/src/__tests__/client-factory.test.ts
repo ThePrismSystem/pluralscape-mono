@@ -1,5 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// Mock better-sqlite3 and its drizzle adapter so tests work without the native module
+vi.mock("better-sqlite3", () => {
+  class FakeDatabase {
+    pragma = vi.fn();
+  }
+  return { default: FakeDatabase };
+});
+
+vi.mock("drizzle-orm/better-sqlite3", () => ({
+  drizzle: vi.fn(() => ({ fake: true })),
+}));
+
 import { createDatabase, createDatabaseFromEnv } from "../client/factory.js";
 
 describe("createDatabase", () => {

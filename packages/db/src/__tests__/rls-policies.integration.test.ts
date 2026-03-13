@@ -5,8 +5,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
   accountRlsPolicy,
+  chainedJoinSystemRlsPolicy,
+  dualTenantRlsPolicy,
   enableRls,
   generateRlsStatements,
+  joinSystemRlsPolicy,
   RLS_TABLE_POLICIES,
   systemRlsPolicy,
 } from "../rls/policies.js";
@@ -551,6 +554,511 @@ describe("RLS cross-tenant isolation — system-pk scope (PGlite)", () => {
     await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
 
     const result = await db.execute(sql`SELECT * FROM nomenclature_settings`);
+    expect(result.rows).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. RLS cross-tenant isolation — dual scope (PGlite integration tests)
+// ---------------------------------------------------------------------------
+
+describe("RLS cross-tenant isolation — dual scope (PGlite)", () => {
+  let client: PGliteType;
+  let db: PgliteDatabase<Record<string, unknown>>;
+
+  const accountIdA = crypto.randomUUID();
+  const accountIdB = crypto.randomUUID();
+  const systemIdA = crypto.randomUUID();
+  const systemIdB = crypto.randomUUID();
+  const apiKeyIdA = crypto.randomUUID();
+  const apiKeyIdB = crypto.randomUUID();
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await client.query(`
+      CREATE TABLE accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        email_hash VARCHAR(255) NOT NULL UNIQUE,
+        email_salt VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE systems (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        encrypted_data BYTEA,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE api_keys (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+        key_type VARCHAR(50) NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
+        token_hash VARCHAR(255) NOT NULL UNIQUE,
+        scopes JSONB NOT NULL,
+        encrypted_data BYTEA NOT NULL,
+        encrypted_key_material BYTEA,
+        created_at TIMESTAMPTZ NOT NULL,
+        last_used_at TIMESTAMPTZ,
+        revoked_at TIMESTAMPTZ,
+        expires_at TIMESTAMPTZ,
+        scoped_bucket_ids JSONB
+      )
+    `);
+
+    await pgInsertAccount(db, accountIdA);
+    await pgInsertAccount(db, accountIdB);
+    await pgInsertSystem(db, accountIdA, systemIdA);
+    await pgInsertSystem(db, accountIdB, systemIdB);
+
+    const now = new Date().toISOString();
+    await client.query(
+      `INSERT INTO api_keys (id, account_id, system_id, key_type, token_hash, scopes, encrypted_data, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        apiKeyIdA,
+        accountIdA,
+        systemIdA,
+        "metadata",
+        `hash_${apiKeyIdA}`,
+        "[]",
+        new Uint8Array([1]),
+        now,
+      ],
+    );
+    await client.query(
+      `INSERT INTO api_keys (id, account_id, system_id, key_type, token_hash, scopes, encrypted_data, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [
+        apiKeyIdB,
+        accountIdB,
+        systemIdB,
+        "metadata",
+        `hash_${apiKeyIdB}`,
+        "[]",
+        new Uint8Array([2]),
+        now,
+      ],
+    );
+
+    await client.query(`CREATE ROLE ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON api_keys TO ${APP_ROLE}`);
+
+    for (const stmt of enableRls("api_keys")) {
+      await client.query(stmt);
+    }
+    await client.query(dualTenantRlsPolicy("api_keys"));
+
+    await client.query(`SET ROLE ${APP_ROLE}`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("only sees api_keys for correct tenant (both GUCs set)", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM api_keys`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(apiKeyIdA);
+  });
+
+  it("returns empty when GUCs cleared (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_account_id', '', false)`);
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+
+    const result = await db.execute(sql`SELECT * FROM api_keys`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant INSERT blocked", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const now = new Date().toISOString();
+    await expect(
+      client.query(
+        `INSERT INTO api_keys (id, account_id, system_id, key_type, token_hash, scopes, encrypted_data, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          crypto.randomUUID(),
+          accountIdB,
+          systemIdB,
+          "metadata",
+          `hash_${crypto.randomUUID()}`,
+          "[]",
+          new Uint8Array([9]),
+          now,
+        ],
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("cross-tenant UPDATE affects 0 rows", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(
+      sql`UPDATE api_keys SET encrypted_data = ${new Uint8Array([99])} WHERE id = ${apiKeyIdB}`,
+    );
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant DELETE affects 0 rows", async () => {
+    await setSessionAccountId(db, accountIdA);
+    await setSessionSystemId(db, systemIdA);
+
+    await db.execute(sql`DELETE FROM api_keys WHERE id = ${apiKeyIdB}`);
+
+    // Verify row still exists
+    await setSessionAccountId(db, accountIdB);
+    await setSessionSystemId(db, systemIdB);
+    const result = await db.execute(sql`SELECT * FROM api_keys WHERE id = ${apiKeyIdB}`);
+    expect(result.rows).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. RLS cross-tenant isolation — join-system scope (PGlite integration tests)
+// ---------------------------------------------------------------------------
+
+describe("RLS cross-tenant isolation — join-system scope (PGlite)", () => {
+  let client: PGliteType;
+  let db: PgliteDatabase<Record<string, unknown>>;
+
+  const accountIdA = crypto.randomUUID();
+  const accountIdB = crypto.randomUUID();
+  const systemIdA = crypto.randomUUID();
+  const systemIdB = crypto.randomUUID();
+  const bucketIdA = crypto.randomUUID();
+  const bucketIdB = crypto.randomUUID();
+  const grantIdA = crypto.randomUUID();
+  const grantIdB = crypto.randomUUID();
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await client.query(`
+      CREATE TABLE accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        email_hash VARCHAR(255) NOT NULL UNIQUE,
+        email_salt VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE systems (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        encrypted_data BYTEA,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE buckets (
+        id VARCHAR(255) PRIMARY KEY,
+        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+        encrypted_data BYTEA NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE key_grants (
+        id VARCHAR(255) PRIMARY KEY,
+        bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+        friend_system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+        encrypted_key BYTEA NOT NULL,
+        key_version INTEGER NOT NULL CHECK (key_version >= 1),
+        created_at TIMESTAMPTZ NOT NULL,
+        revoked_at TIMESTAMPTZ
+      )
+    `);
+
+    await pgInsertAccount(db, accountIdA);
+    await pgInsertAccount(db, accountIdB);
+    await pgInsertSystem(db, accountIdA, systemIdA);
+    await pgInsertSystem(db, accountIdB, systemIdB);
+
+    const now = new Date().toISOString();
+    await client.query(
+      `INSERT INTO buckets (id, system_id, encrypted_data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`,
+      [bucketIdA, systemIdA, new Uint8Array([1]), now, now],
+    );
+    await client.query(
+      `INSERT INTO buckets (id, system_id, encrypted_data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`,
+      [bucketIdB, systemIdB, new Uint8Array([2]), now, now],
+    );
+
+    await client.query(
+      `INSERT INTO key_grants (id, bucket_id, friend_system_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [grantIdA, bucketIdA, systemIdA, new Uint8Array([10]), 1, now],
+    );
+    await client.query(
+      `INSERT INTO key_grants (id, bucket_id, friend_system_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [grantIdB, bucketIdB, systemIdB, new Uint8Array([20]), 1, now],
+    );
+
+    await client.query(`CREATE ROLE ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON buckets TO ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON key_grants TO ${APP_ROLE}`);
+
+    // RLS on buckets (system scope — parent table)
+    for (const stmt of enableRls("buckets")) {
+      await client.query(stmt);
+    }
+    await client.query(systemRlsPolicy("buckets"));
+
+    // RLS on key_grants (join-system scope)
+    for (const stmt of enableRls("key_grants")) {
+      await client.query(stmt);
+    }
+    await client.query(joinSystemRlsPolicy("key_grants", "buckets", "bucket_id"));
+
+    await client.query(`SET ROLE ${APP_ROLE}`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("only sees key_grants for correct tenant", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM key_grants`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(grantIdA);
+  });
+
+  it("returns empty when no system context (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+
+    const result = await db.execute(sql`SELECT * FROM key_grants`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant key_grants not visible", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM key_grants WHERE id = ${grantIdB}`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant INSERT blocked", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    await expect(
+      client.query(
+        `INSERT INTO key_grants (id, bucket_id, friend_system_id, encrypted_key, key_version, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          crypto.randomUUID(),
+          bucketIdB,
+          systemIdA,
+          new Uint8Array([99]),
+          1,
+          new Date().toISOString(),
+        ],
+      ),
+    ).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. RLS cross-tenant isolation — join-system-chained scope (PGlite integration tests)
+// ---------------------------------------------------------------------------
+
+describe("RLS cross-tenant isolation — join-system-chained scope (PGlite)", () => {
+  let client: PGliteType;
+  let db: PgliteDatabase<Record<string, unknown>>;
+
+  const accountIdA = crypto.randomUUID();
+  const accountIdB = crypto.randomUUID();
+  const systemIdA = crypto.randomUUID();
+  const systemIdB = crypto.randomUUID();
+  const bucketIdA = crypto.randomUUID();
+  const bucketIdB = crypto.randomUUID();
+  const rotationIdA = crypto.randomUUID();
+  const rotationIdB = crypto.randomUUID();
+  const itemIdA = crypto.randomUUID();
+  const itemIdB = crypto.randomUUID();
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await client.query(`
+      CREATE TABLE accounts (
+        id VARCHAR(255) PRIMARY KEY,
+        email_hash VARCHAR(255) NOT NULL UNIQUE,
+        email_salt VARCHAR(255) NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        kdf_salt VARCHAR(255),
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE systems (
+        id VARCHAR(255) PRIMARY KEY,
+        account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        encrypted_data BYTEA,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE buckets (
+        id VARCHAR(255) PRIMARY KEY,
+        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+        encrypted_data BYTEA NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1
+      )
+    `);
+    await client.query(`
+      CREATE TABLE bucket_key_rotations (
+        id VARCHAR(255) PRIMARY KEY,
+        bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+        from_key_version INTEGER NOT NULL,
+        to_key_version INTEGER NOT NULL,
+        state VARCHAR(50) NOT NULL DEFAULT 'initiated',
+        initiated_at TIMESTAMPTZ NOT NULL,
+        completed_at TIMESTAMPTZ,
+        total_items INTEGER NOT NULL,
+        completed_items INTEGER NOT NULL DEFAULT 0,
+        failed_items INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+    await client.query(`
+      CREATE TABLE bucket_rotation_items (
+        id VARCHAR(255) PRIMARY KEY,
+        rotation_id VARCHAR(255) NOT NULL REFERENCES bucket_key_rotations(id) ON DELETE CASCADE,
+        entity_type VARCHAR(50) NOT NULL,
+        entity_id VARCHAR(50) NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'pending',
+        claimed_by VARCHAR(255),
+        claimed_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        attempts INTEGER NOT NULL DEFAULT 0
+      )
+    `);
+
+    await pgInsertAccount(db, accountIdA);
+    await pgInsertAccount(db, accountIdB);
+    await pgInsertSystem(db, accountIdA, systemIdA);
+    await pgInsertSystem(db, accountIdB, systemIdB);
+
+    const now = new Date().toISOString();
+    // Buckets
+    await client.query(
+      `INSERT INTO buckets (id, system_id, encrypted_data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`,
+      [bucketIdA, systemIdA, new Uint8Array([1]), now, now],
+    );
+    await client.query(
+      `INSERT INTO buckets (id, system_id, encrypted_data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)`,
+      [bucketIdB, systemIdB, new Uint8Array([2]), now, now],
+    );
+    // Rotations
+    await client.query(
+      `INSERT INTO bucket_key_rotations (id, bucket_id, from_key_version, to_key_version, state, initiated_at, total_items) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [rotationIdA, bucketIdA, 1, 2, "initiated", now, 1],
+    );
+    await client.query(
+      `INSERT INTO bucket_key_rotations (id, bucket_id, from_key_version, to_key_version, state, initiated_at, total_items) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [rotationIdB, bucketIdB, 1, 2, "initiated", now, 1],
+    );
+    // Rotation items
+    await client.query(
+      `INSERT INTO bucket_rotation_items (id, rotation_id, entity_type, entity_id) VALUES ($1, $2, $3, $4)`,
+      [itemIdA, rotationIdA, "member", crypto.randomUUID()],
+    );
+    await client.query(
+      `INSERT INTO bucket_rotation_items (id, rotation_id, entity_type, entity_id) VALUES ($1, $2, $3, $4)`,
+      [itemIdB, rotationIdB, "member", crypto.randomUUID()],
+    );
+
+    await client.query(`CREATE ROLE ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON buckets TO ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON bucket_key_rotations TO ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON bucket_rotation_items TO ${APP_ROLE}`);
+
+    // RLS on buckets (system scope)
+    for (const stmt of enableRls("buckets")) {
+      await client.query(stmt);
+    }
+    await client.query(systemRlsPolicy("buckets"));
+
+    // RLS on bucket_key_rotations (join-system scope)
+    for (const stmt of enableRls("bucket_key_rotations")) {
+      await client.query(stmt);
+    }
+    await client.query(joinSystemRlsPolicy("bucket_key_rotations", "buckets", "bucket_id"));
+
+    // RLS on bucket_rotation_items (chained join-system scope)
+    for (const stmt of enableRls("bucket_rotation_items")) {
+      await client.query(stmt);
+    }
+    await client.query(
+      chainedJoinSystemRlsPolicy(
+        "bucket_rotation_items",
+        "bucket_key_rotations",
+        "rotation_id",
+        "buckets",
+        "bucket_id",
+      ),
+    );
+
+    await client.query(`SET ROLE ${APP_ROLE}`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("only sees rotation items for correct tenant", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM bucket_rotation_items`);
+    expect(result.rows).toHaveLength(1);
+    expect((result.rows[0] as Record<string, unknown>)["id"]).toBe(itemIdA);
+  });
+
+  it("returns empty when no system context (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+
+    const result = await db.execute(sql`SELECT * FROM bucket_rotation_items`);
+    expect(result.rows).toHaveLength(0);
+  });
+
+  it("cross-tenant rotation items not visible", async () => {
+    await setSessionSystemId(db, systemIdA);
+
+    const result = await db.execute(sql`SELECT * FROM bucket_rotation_items WHERE id = ${itemIdB}`);
     expect(result.rows).toHaveLength(0);
   });
 });

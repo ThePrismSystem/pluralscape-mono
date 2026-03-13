@@ -64,6 +64,13 @@
       "when": 1773346956824,
       "tag": "0008_giant_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1773609600000,
+      "tag": "0009_rls_all_tables",
+      "breakpoints": true
     }
   ]
 }
