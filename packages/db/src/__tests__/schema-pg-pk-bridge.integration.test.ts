@@ -7,7 +7,12 @@ import { accounts } from "../schema/pg/auth.js";
 import { pkBridgeConfigs } from "../schema/pg/pk-bridge.js";
 import { systems } from "../schema/pg/systems.js";
 
-import { createPgPkBridgeTables, pgInsertAccount, pgInsertSystem } from "./helpers/pg-helpers.js";
+import {
+  createPgPkBridgeTables,
+  pgInsertAccount,
+  pgInsertSystem,
+  testBlob,
+} from "./helpers/pg-helpers.js";
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -40,8 +45,8 @@ describe("PG pk_bridge_configs schema", () => {
     const now = Date.now();
     const syncAt = now - 60_000;
     const token = new Uint8Array([10, 20, 30, 40]);
-    const mappings = new Uint8Array([50, 60, 70]);
-    const errors = new Uint8Array([80, 90]);
+    const mappings = testBlob(new Uint8Array([50, 60, 70]));
+    const errors = testBlob(new Uint8Array([80, 90]));
 
     await db.insert(pkBridgeConfigs).values({
       id,
@@ -65,8 +70,8 @@ describe("PG pk_bridge_configs schema", () => {
     expect(row?.enabled).toBe(true);
     expect(row?.syncDirection).toBe("ps-to-pk");
     expect(row?.pkTokenEncrypted).toEqual(token);
-    expect(row?.entityMappings).toEqual(mappings);
-    expect(row?.errorLog).toEqual(errors);
+    expect(row?.entityMappings.ciphertext).toEqual(mappings.ciphertext);
+    expect(row?.errorLog.ciphertext).toEqual(errors.ciphertext);
     expect(row?.lastSyncAt).toBe(syncAt);
     expect(row?.createdAt).toBe(now);
     expect(row?.updatedAt).toBe(now);
@@ -84,8 +89,8 @@ describe("PG pk_bridge_configs schema", () => {
       systemId,
       syncDirection: "bidirectional",
       pkTokenEncrypted: new Uint8Array([1]),
-      entityMappings: new Uint8Array([2]),
-      errorLog: new Uint8Array([3]),
+      entityMappings: testBlob(),
+      errorLog: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -107,8 +112,8 @@ describe("PG pk_bridge_configs schema", () => {
         systemId,
         syncDirection: dir,
         pkTokenEncrypted: new Uint8Array([1]),
-        entityMappings: new Uint8Array([2]),
-        errorLog: new Uint8Array([3]),
+        entityMappings: testBlob(),
+        errorLog: testBlob(),
         createdAt: now,
         updatedAt: now,
       });
@@ -142,8 +147,8 @@ describe("PG pk_bridge_configs schema", () => {
       systemId,
       syncDirection: "ps-to-pk",
       pkTokenEncrypted: new Uint8Array([1]),
-      entityMappings: new Uint8Array([2]),
-      errorLog: new Uint8Array([3]),
+      entityMappings: testBlob(),
+      errorLog: testBlob(),
       lastSyncAt: null,
       createdAt: now,
       updatedAt: now,
@@ -165,8 +170,8 @@ describe("PG pk_bridge_configs schema", () => {
       systemId,
       syncDirection: "pk-to-ps",
       pkTokenEncrypted: new Uint8Array([1]),
-      entityMappings: new Uint8Array([2]),
-      errorLog: new Uint8Array([3]),
+      entityMappings: testBlob(),
+      errorLog: testBlob(),
       lastSyncAt: syncAt,
       createdAt: now,
       updatedAt: now,
@@ -183,11 +188,13 @@ describe("PG pk_bridge_configs schema", () => {
     const now = Date.now();
 
     const token = new Uint8Array(256);
-    const mappings = new Uint8Array(512);
-    const errors = new Uint8Array(1024);
     for (let i = 0; i < 256; i++) token[i] = i;
-    for (let i = 0; i < 512; i++) mappings[i] = i % 256;
-    for (let i = 0; i < 1024; i++) errors[i] = (i * 7) % 256;
+    const mappingsCiphertext = new Uint8Array(512);
+    for (let i = 0; i < 512; i++) mappingsCiphertext[i] = i % 256;
+    const errorsCiphertext = new Uint8Array(1024);
+    for (let i = 0; i < 1024; i++) errorsCiphertext[i] = (i * 7) % 256;
+    const mappings = testBlob(mappingsCiphertext);
+    const errors = testBlob(errorsCiphertext);
 
     await db.insert(pkBridgeConfigs).values({
       id,
@@ -202,8 +209,8 @@ describe("PG pk_bridge_configs schema", () => {
 
     const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(rows[0]?.pkTokenEncrypted).toEqual(token);
-    expect(rows[0]?.entityMappings).toEqual(mappings);
-    expect(rows[0]?.errorLog).toEqual(errors);
+    expect(rows[0]?.entityMappings.ciphertext).toEqual(mappingsCiphertext);
+    expect(rows[0]?.errorLog.ciphertext).toEqual(errorsCiphertext);
   });
 
   it("cascades delete when parent system is deleted", async () => {
@@ -217,8 +224,8 @@ describe("PG pk_bridge_configs schema", () => {
       systemId,
       syncDirection: "ps-to-pk",
       pkTokenEncrypted: new Uint8Array([1]),
-      entityMappings: new Uint8Array([2]),
-      errorLog: new Uint8Array([3]),
+      entityMappings: testBlob(),
+      errorLog: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -245,8 +252,8 @@ describe("PG pk_bridge_configs schema", () => {
       systemId,
       syncDirection: "pk-to-ps",
       pkTokenEncrypted: new Uint8Array([1]),
-      entityMappings: new Uint8Array([2]),
-      errorLog: new Uint8Array([3]),
+      entityMappings: testBlob(),
+      errorLog: testBlob(),
       createdAt: now,
       updatedAt: now,
     });
@@ -263,8 +270,8 @@ describe("PG pk_bridge_configs schema", () => {
         systemId: "nonexistent-system-id",
         syncDirection: "ps-to-pk",
         pkTokenEncrypted: new Uint8Array([1]),
-        entityMappings: new Uint8Array([2]),
-        errorLog: new Uint8Array([3]),
+        entityMappings: testBlob(),
+        errorLog: testBlob(),
         createdAt: now,
         updatedAt: now,
       }),
@@ -283,8 +290,8 @@ describe("PG pk_bridge_configs schema", () => {
       enabled: false,
       syncDirection: "bidirectional",
       pkTokenEncrypted: new Uint8Array([1]),
-      entityMappings: new Uint8Array([2]),
-      errorLog: new Uint8Array([3]),
+      entityMappings: testBlob(),
+      errorLog: testBlob(),
       createdAt: now,
       updatedAt: now,
     });

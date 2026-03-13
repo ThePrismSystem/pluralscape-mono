@@ -16,6 +16,7 @@ export const systemSettings = sqliteTable(
       .unique()
       .references(() => systems.id, { onDelete: "cascade" }),
     locale: text("locale"),
+    /** Must use Argon2id — PINs are low-entropy (4-6 digits) and trivially reversible with weak hashes. */
     pinHash: text("pin_hash"),
     biometricEnabled: integer("biometric_enabled", { mode: "boolean" }).notNull().default(false),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),

@@ -30,6 +30,7 @@ export const blobMetadata = sqliteTable(
       .references(() => systems.id, { onDelete: "cascade" }),
     storageKey: text("storage_key").notNull(),
     mimeType: text("mime_type"),
+    /** SQLite integer is 64-bit in practice; PG uses bigint explicitly. Semantically equivalent but distinguish when comparing raw schemas. */
     sizeBytes: integer("size_bytes").notNull(),
     encryptionTier: integer("encryption_tier").notNull().$type<EncryptionTier>(),
     bucketId: text("bucket_id"),
