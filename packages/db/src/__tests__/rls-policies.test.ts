@@ -7,7 +7,6 @@ import {
   dualTenantRlsPolicy,
   enableRls,
   generateRlsStatements,
-  joinSystemRlsPolicy,
   RLS_TABLE_POLICIES,
   systemRlsPolicy,
 } from "../rls/policies.js";
@@ -89,29 +88,6 @@ describe("dualTenantRlsPolicy", () => {
   });
 });
 
-describe("joinSystemRlsPolicy", () => {
-  it("generates EXISTS subquery for bucket parent", () => {
-    const result = joinSystemRlsPolicy("key_grants", "buckets", "bucket_id");
-
-    expect(result).toContain("CREATE POLICY key_grants_system_isolation ON key_grants");
-    expect(result).toContain("EXISTS");
-    expect(result).toContain("buckets.id = key_grants.bucket_id");
-    expect(result).toContain("buckets.system_id =");
-    expect(result).toContain("current_setting('app.current_system_id', true)");
-  });
-
-  it("generates EXISTS subquery for field_definitions parent", () => {
-    const result = joinSystemRlsPolicy(
-      "field_bucket_visibility",
-      "field_definitions",
-      "field_definition_id",
-    );
-
-    expect(result).toContain("field_definitions.id = field_bucket_visibility.field_definition_id");
-    expect(result).toContain("field_definitions.system_id =");
-  });
-});
-
 // ---------------------------------------------------------------------------
 // generateRlsStatements
 // ---------------------------------------------------------------------------
@@ -171,26 +147,29 @@ describe("generateRlsStatements", () => {
     expect(stmts[2]).toContain("tenant_isolation");
   });
 
-  it("returns join-based policy for key_grants", () => {
+  it("returns direct system_id policy for key_grants", () => {
     const stmts = generateRlsStatements("key_grants");
 
     expect(stmts).toHaveLength(3);
-    expect(stmts[2]).toContain("EXISTS");
-    expect(stmts[2]).toContain("buckets");
-    expect(stmts[2]).not.toContain("key_grants.system_id");
+    expect(stmts[2]).toContain("system_id =");
+    expect(stmts[2]).not.toContain("EXISTS");
   });
 
-  it("returns join-based policy for field_bucket_visibility", () => {
+  it("returns direct system_id policy for field_bucket_visibility", () => {
     const stmts = generateRlsStatements("field_bucket_visibility");
 
     expect(stmts).toHaveLength(3);
-    expect(stmts[2]).toContain("field_definitions");
+    expect(stmts[2]).toContain("system_id =");
+    expect(stmts[2]).not.toContain("EXISTS");
   });
 
-  it("throws for unknown table", () => {
-    expect(() => generateRlsStatements("nonexistent")).toThrow(
-      /No RLS policy defined for table 'nonexistent'/,
-    );
+  it("accepts all RLS table names", () => {
+    for (const tableName of Object.keys(RLS_TABLE_POLICIES) as Array<
+      keyof typeof RLS_TABLE_POLICIES
+    >) {
+      const stmts = generateRlsStatements(tableName);
+      expect(stmts.length).toBeGreaterThanOrEqual(3);
+    }
   });
 });
 
@@ -215,10 +194,10 @@ describe("RLS_TABLE_POLICIES", () => {
       ["api_keys", "dual"],
       ["audit_log", "dual"],
       ["device_tokens", "dual"],
-      ["key_grants", "join-system"],
-      ["bucket_content_tags", "join-system"],
-      ["friend_bucket_assignments", "join-system"],
-      ["field_bucket_visibility", "join-system"],
+      ["key_grants", "system"],
+      ["bucket_content_tags", "system"],
+      ["friend_bucket_assignments", "system"],
+      ["field_bucket_visibility", "system"],
       ["notification_configs", "system"],
       ["friend_notification_preferences", "system"],
       ["webhook_configs", "system"],
@@ -245,8 +224,6 @@ describe("RLS_TABLE_POLICIES", () => {
       "system-pk",
       "account-pk",
       "dual",
-      "join-system",
-      "join-system-chained",
     ]);
 
     for (const [table, scope] of Object.entries(RLS_TABLE_POLICIES)) {

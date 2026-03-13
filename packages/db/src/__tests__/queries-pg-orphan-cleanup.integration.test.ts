@@ -68,8 +68,9 @@ describe("pgCleanupOrphanedTags", () => {
     entityType: BucketContentEntityType,
     entityId: string,
     bucketId: string,
+    systemId: string,
   ): Promise<void> {
-    await db.insert(bucketContentTags).values({ entityType, entityId, bucketId });
+    await db.insert(bucketContentTags).values({ entityType, entityId, bucketId, systemId });
   }
 
   it("deletes tags whose source entity no longer exists", async () => {
@@ -79,9 +80,9 @@ describe("pgCleanupOrphanedTags", () => {
     const bucketId = await insertBucket(systemId);
 
     // Tag referencing an existing member
-    await insertTag("member", memberId, bucketId);
+    await insertTag("member", memberId, bucketId, systemId);
     // Tag referencing a non-existent member (orphan)
-    await insertTag("member", crypto.randomUUID(), bucketId);
+    await insertTag("member", crypto.randomUUID(), bucketId, systemId);
 
     const result = await pgCleanupOrphanedTags(db, "member");
     expect(result.deletedCount).toBe(1);
@@ -97,7 +98,7 @@ describe("pgCleanupOrphanedTags", () => {
     const memberId = await pgInsertMember(db, systemId);
     const bucketId = await insertBucket(systemId);
 
-    await insertTag("member", memberId, bucketId);
+    await insertTag("member", memberId, bucketId, systemId);
 
     const result = await pgCleanupOrphanedTags(db, "member");
     expect(result.deletedCount).toBe(0);
@@ -115,9 +116,9 @@ describe("pgCleanupOrphanedTags", () => {
     const bucketId = await insertBucket(systemId);
 
     // Valid member tag
-    await insertTag("member", memberId, bucketId);
+    await insertTag("member", memberId, bucketId, systemId);
     // Orphan tag for group type (no matching group row exists)
-    await insertTag("group", crypto.randomUUID(), bucketId);
+    await insertTag("group", crypto.randomUUID(), bucketId, systemId);
 
     // Clean only member type — group orphan should remain untouched
     const result = await pgCleanupOrphanedTags(db, "member");

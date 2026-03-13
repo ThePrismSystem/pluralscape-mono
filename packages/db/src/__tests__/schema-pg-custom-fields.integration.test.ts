@@ -58,6 +58,7 @@ describe("PG custom fields schema", () => {
     await db.insert(fieldDefinitions).values({
       id,
       systemId,
+      fieldType: "text",
       encryptedData: testBlob(),
       createdAt: now,
       updatedAt: now,
@@ -86,6 +87,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldDefinitions).values({
         id,
         systemId,
+        fieldType: "text",
         encryptedData: data,
         createdAt: now,
         updatedAt: now,
@@ -106,6 +108,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldDefinitions).values({
         id,
         systemId,
+        fieldType: "text",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -136,6 +139,7 @@ describe("PG custom fields schema", () => {
         db.insert(fieldDefinitions).values({
           id: crypto.randomUUID(),
           systemId: "nonexistent",
+          fieldType: "text",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -152,6 +156,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldDefinitions).values({
         id,
         systemId,
+        fieldType: "text",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
@@ -187,7 +192,7 @@ describe("PG custom fields schema", () => {
       expect(rows[0]?.sortOrder).toBe(5);
     });
 
-    it("defaults T3 metadata to null or default values", async () => {
+    it("defaults T3 metadata to default values", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -196,13 +201,14 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldDefinitions).values({
         id,
         systemId,
+        fieldType: "text",
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
         updatedAt: now,
       });
 
       const rows = await db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id));
-      expect(rows[0]?.fieldType).toBeNull();
+      expect(rows[0]?.fieldType).toBe("text");
       expect(rows[0]?.required).toBe(false);
       expect(rows[0]?.sortOrder).toBe(0);
     });
@@ -531,6 +537,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldBucketVisibility).values({
         fieldDefinitionId: fieldDefId,
         bucketId,
+        systemId,
       });
 
       const rows = await db
@@ -556,6 +563,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldBucketVisibility).values({
         fieldDefinitionId: fieldDefId,
         bucketId,
+        systemId,
       });
 
       await db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId));
@@ -575,6 +583,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldBucketVisibility).values({
         fieldDefinitionId: fieldDefId,
         bucketId,
+        systemId,
       });
 
       await db.delete(buckets).where(eq(buckets.id, bucketId));
@@ -594,12 +603,14 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldBucketVisibility).values({
         fieldDefinitionId: fieldDefId,
         bucketId,
+        systemId,
       });
 
       await expect(
         db.insert(fieldBucketVisibility).values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -613,6 +624,7 @@ describe("PG custom fields schema", () => {
         db.insert(fieldBucketVisibility).values({
           fieldDefinitionId: "nonexistent",
           bucketId,
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -626,6 +638,7 @@ describe("PG custom fields schema", () => {
         db.insert(fieldBucketVisibility).values({
           fieldDefinitionId: fieldDefId,
           bucketId: "nonexistent",
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -638,8 +651,8 @@ describe("PG custom fields schema", () => {
       const fieldDefId2 = await insertFieldDefinition(systemId);
 
       await db.insert(fieldBucketVisibility).values([
-        { fieldDefinitionId: fieldDefId1, bucketId },
-        { fieldDefinitionId: fieldDefId2, bucketId },
+        { fieldDefinitionId: fieldDefId1, bucketId, systemId },
+        { fieldDefinitionId: fieldDefId2, bucketId, systemId },
       ]);
 
       const rows = await db

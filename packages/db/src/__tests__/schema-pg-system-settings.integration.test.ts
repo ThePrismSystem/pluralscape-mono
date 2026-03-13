@@ -182,6 +182,18 @@ describe("PG system_settings schema", () => {
     ).rejects.toThrow();
   });
 
+  it("rejects pinHash that does not start with $argon2id$", async () => {
+    const accountId = await insertAccount();
+    const systemId = await pgInsertSystem(db, accountId);
+
+    await expect(
+      client.query(
+        "INSERT INTO system_settings (id, system_id, pin_hash, encrypted_data, created_at, updated_at, version) VALUES ($1, $2, 'bcrypt$hash', '\\x0102'::bytea, NOW(), NOW(), 1)",
+        [`sset_${crypto.randomUUID()}`, systemId],
+      ),
+    ).rejects.toThrow(/check|constraint/i);
+  });
+
   it("rejects null encrypted_data via raw SQL", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);

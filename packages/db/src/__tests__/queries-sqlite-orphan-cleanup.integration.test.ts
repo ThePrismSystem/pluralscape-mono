@@ -72,8 +72,9 @@ describe("sqliteCleanupOrphanedTags", () => {
     entityType: BucketContentEntityType,
     entityId: string,
     bucketId: string,
+    systemId: string,
   ): void {
-    db.insert(bucketContentTags).values({ entityType, entityId, bucketId }).run();
+    db.insert(bucketContentTags).values({ entityType, entityId, bucketId, systemId }).run();
   }
 
   it("deletes tags whose source entity no longer exists", () => {
@@ -83,9 +84,9 @@ describe("sqliteCleanupOrphanedTags", () => {
     const bucketId = insertBucket(systemId);
 
     // Tag referencing an existing member
-    insertTag("member", memberId, bucketId);
+    insertTag("member", memberId, bucketId, systemId);
     // Tag referencing a non-existent member (orphan)
-    insertTag("member", crypto.randomUUID(), bucketId);
+    insertTag("member", crypto.randomUUID(), bucketId, systemId);
 
     const result = sqliteCleanupOrphanedTags(db, "member");
     expect(result.deletedCount).toBe(1);
@@ -101,7 +102,7 @@ describe("sqliteCleanupOrphanedTags", () => {
     const memberId = sqliteInsertMember(db, systemId);
     const bucketId = insertBucket(systemId);
 
-    insertTag("member", memberId, bucketId);
+    insertTag("member", memberId, bucketId, systemId);
 
     const result = sqliteCleanupOrphanedTags(db, "member");
     expect(result.deletedCount).toBe(0);
@@ -118,9 +119,9 @@ describe("sqliteCleanupOrphanedTags", () => {
     const memberId = sqliteInsertMember(db, systemId);
     const bucketId = insertBucket(systemId);
 
-    insertTag("member", memberId, bucketId);
-    insertTag("member", crypto.randomUUID(), bucketId);
-    insertTag("member", crypto.randomUUID(), bucketId);
+    insertTag("member", memberId, bucketId, systemId);
+    insertTag("member", crypto.randomUUID(), bucketId, systemId);
+    insertTag("member", crypto.randomUUID(), bucketId, systemId);
 
     const result = sqliteCleanupOrphanedTags(db, "member");
     expect(result.deletedCount).toBe(2);
@@ -137,9 +138,9 @@ describe("sqliteCleanupOrphanedTags", () => {
     const bucketId = insertBucket(systemId);
 
     // Valid member tag
-    insertTag("member", memberId, bucketId);
+    insertTag("member", memberId, bucketId, systemId);
     // Orphan tag for group type (no matching group row exists)
-    insertTag("group", crypto.randomUUID(), bucketId);
+    insertTag("group", crypto.randomUUID(), bucketId, systemId);
 
     // Clean only member type — group orphan should remain untouched
     const result = sqliteCleanupOrphanedTags(db, "member");

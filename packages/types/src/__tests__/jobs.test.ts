@@ -45,6 +45,7 @@ describe("JobType", () => {
         case "report-generate":
         case "sync-queue-cleanup":
         case "audit-log-cleanup":
+        case "partition-maintenance":
           return type;
         default: {
           const _exhaustive: never = type;

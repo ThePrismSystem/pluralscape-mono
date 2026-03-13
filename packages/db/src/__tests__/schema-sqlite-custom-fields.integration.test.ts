@@ -59,6 +59,7 @@ describe("SQLite custom fields schema", () => {
       .values({
         id,
         systemId,
+        fieldType: "text",
         encryptedData: testBlob(),
         createdAt: now,
         updatedAt: now,
@@ -90,6 +91,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           id,
           systemId,
+          fieldType: "text",
           encryptedData: data,
           createdAt: now,
           updatedAt: now,
@@ -112,6 +114,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           id,
           systemId,
+          fieldType: "text",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -146,6 +149,7 @@ describe("SQLite custom fields schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
+            fieldType: "text",
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
             updatedAt: now,
@@ -164,6 +168,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           id,
           systemId,
+          fieldType: "text",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -202,7 +207,7 @@ describe("SQLite custom fields schema", () => {
       expect(rows[0]?.sortOrder).toBe(5);
     });
 
-    it("defaults T3 metadata to null or default values", () => {
+    it("defaults T3 metadata to default values", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -212,6 +217,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           id,
           systemId,
+          fieldType: "text",
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
           updatedAt: now,
@@ -219,7 +225,7 @@ describe("SQLite custom fields schema", () => {
         .run();
 
       const rows = db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id)).all();
-      expect(rows[0]?.fieldType).toBeNull();
+      expect(rows[0]?.fieldType).toBe("text");
       expect(rows[0]?.required).toBe(false);
       expect(rows[0]?.sortOrder).toBe(0);
     });
@@ -589,6 +595,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -611,6 +618,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -633,6 +641,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -655,6 +664,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -664,6 +674,7 @@ describe("SQLite custom fields schema", () => {
           .values({
             fieldDefinitionId: fieldDefId,
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow(/UNIQUE|PRIMARY KEY|constraint/i);
@@ -680,6 +691,7 @@ describe("SQLite custom fields schema", () => {
           .values({
             fieldDefinitionId: "nonexistent",
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -696,6 +708,7 @@ describe("SQLite custom fields schema", () => {
           .values({
             fieldDefinitionId: fieldDefId,
             bucketId: "nonexistent",
+            systemId,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -710,8 +723,8 @@ describe("SQLite custom fields schema", () => {
 
       db.insert(fieldBucketVisibility)
         .values([
-          { fieldDefinitionId: fieldDefId1, bucketId },
-          { fieldDefinitionId: fieldDefId2, bucketId },
+          { fieldDefinitionId: fieldDefId1, bucketId, systemId },
+          { fieldDefinitionId: fieldDefId2, bucketId, systemId },
         ])
         .run();
 

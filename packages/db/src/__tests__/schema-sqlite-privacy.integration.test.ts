@@ -191,6 +191,7 @@ describe("SQLite privacy schema", () => {
           entityType: "member",
           entityId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -215,6 +216,7 @@ describe("SQLite privacy schema", () => {
           entityType: "fronting-session",
           entityId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -239,6 +241,7 @@ describe("SQLite privacy schema", () => {
             entityType: "invalid-type" as "member",
             entityId: crypto.randomUUID(),
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow();
@@ -255,6 +258,7 @@ describe("SQLite privacy schema", () => {
           entityType: "note",
           entityId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -265,6 +269,7 @@ describe("SQLite privacy schema", () => {
             entityType: "note",
             entityId,
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow();
@@ -278,6 +283,7 @@ describe("SQLite privacy schema", () => {
             entityType: "member",
             entityId: crypto.randomUUID(),
             bucketId: "nonexistent",
+            systemId: "nonexistent",
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -295,6 +301,7 @@ describe("SQLite privacy schema", () => {
             entityType: "session" as "member",
             entityId: crypto.randomUUID(),
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow();
@@ -316,6 +323,7 @@ describe("SQLite privacy schema", () => {
         .values({
           id,
           bucketId,
+          systemId,
           friendSystemId,
           encryptedKey: keyData,
           keyVersion: 1,
@@ -344,6 +352,7 @@ describe("SQLite privacy schema", () => {
         .values({
           id,
           bucketId,
+          systemId,
           friendSystemId,
           encryptedKey: new Uint8Array([1]),
           keyVersion: 1,
@@ -368,6 +377,7 @@ describe("SQLite privacy schema", () => {
         .values({
           id: grantId,
           bucketId,
+          systemId,
           friendSystemId,
           encryptedKey: new Uint8Array([1]),
           keyVersion: 1,
@@ -394,6 +404,7 @@ describe("SQLite privacy schema", () => {
           .values({
             id: crypto.randomUUID(),
             bucketId,
+            systemId,
             friendSystemId,
             encryptedKey: new Uint8Array([1]),
             keyVersion: 0,
@@ -415,6 +426,7 @@ describe("SQLite privacy schema", () => {
         .values({
           id: crypto.randomUUID(),
           bucketId,
+          systemId,
           friendSystemId,
           encryptedKey: new Uint8Array([1]),
           keyVersion: 1,
@@ -428,6 +440,7 @@ describe("SQLite privacy schema", () => {
           .values({
             id: crypto.randomUUID(),
             bucketId,
+            systemId,
             friendSystemId,
             encryptedKey: new Uint8Array([2]),
             keyVersion: 1,
@@ -449,6 +462,7 @@ describe("SQLite privacy schema", () => {
           .values({
             id: crypto.randomUUID(),
             bucketId,
+            systemId,
             friendSystemId: "nonexistent",
             encryptedKey: new Uint8Array([1]),
             keyVersion: 1,
@@ -741,6 +755,7 @@ describe("SQLite privacy schema", () => {
         .values({
           friendConnectionId: connId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -765,6 +780,7 @@ describe("SQLite privacy schema", () => {
         .values({
           friendConnectionId: connId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -789,6 +805,7 @@ describe("SQLite privacy schema", () => {
         .values({
           friendConnectionId: connId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -813,6 +830,7 @@ describe("SQLite privacy schema", () => {
         .values({
           friendConnectionId: connId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -822,6 +840,7 @@ describe("SQLite privacy schema", () => {
           .values({
             friendConnectionId: connId,
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow();
@@ -838,6 +857,7 @@ describe("SQLite privacy schema", () => {
           .values({
             friendConnectionId: "nonexistent",
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -856,6 +876,7 @@ describe("SQLite privacy schema", () => {
           .values({
             friendConnectionId: connId,
             bucketId: "nonexistent",
+            systemId,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);

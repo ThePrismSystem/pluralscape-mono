@@ -4,6 +4,8 @@ import { BUCKET_CONTENT_ENTITY_TYPES } from "../helpers/enums.js";
 import { bucketContentTags as pgBucketContentTags } from "../schema/pg/privacy.js";
 import { bucketContentTags as sqliteBucketContentTags } from "../schema/sqlite/privacy.js";
 
+import { extractDeletedCount } from "./types.js";
+
 import type { CleanupResult } from "./types.js";
 import type { BucketContentEntityType } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -43,8 +45,9 @@ const ENTITY_TABLE_MAP: Readonly<Record<BucketContentEntityType, string>> = {
  * Delete orphaned bucketContentTags for a specific entity type.
  * An orphaned tag is one whose source entity row no longer exists.
  *
- * PG variant — uses NOT EXISTS subquery for orphan detection.
- * Returns count via RETURNING + array length.
+ * PG variant — uses a CTE to count deleted rows without materialising
+ * them into JS memory. `.returning()` would load every deleted row as
+ * a JS object, causing OOM when large numbers of tags are purged.
  */
 export async function pgCleanupOrphanedTags<
   TSchema extends Record<string, unknown> = Record<string, never>,
@@ -53,17 +56,20 @@ export async function pgCleanupOrphanedTags<
   entityType: BucketContentEntityType,
 ): Promise<CleanupResult> {
   const sourceTable = ENTITY_TABLE_MAP[entityType];
-  const deleted = await db
-    .delete(pgBucketContentTags)
-    .where(
-      and(
-        eq(pgBucketContentTags.entityType, entityType),
-        sql`NOT EXISTS (SELECT 1 FROM ${sql.raw(sourceTable)} WHERE id = ${pgBucketContentTags.entityId})`,
-      ),
+  const result = await db.execute<{ deleted_count: string }>(
+    sql`WITH deleted AS (
+      DELETE FROM ${pgBucketContentTags}
+      WHERE ${pgBucketContentTags.entityType} = ${entityType}
+        AND NOT EXISTS (
+          SELECT 1 FROM ${sql.raw(sourceTable)}
+          WHERE id = ${pgBucketContentTags.entityId}
+        )
+      RETURNING 1
     )
-    .returning();
+    SELECT count(*) AS deleted_count FROM deleted`,
+  );
 
-  return { deletedCount: deleted.length };
+  return extractDeletedCount(result);
 }
 
 /**

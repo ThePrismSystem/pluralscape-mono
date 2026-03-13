@@ -81,7 +81,7 @@ export const syncQueue = pgTable(
     // SQLite: seq is application-supplied per system, so uniqueness is (system_id, seq).
     uniqueIndex("sync_queue_seq_idx").on(t.seq),
     index("sync_queue_unsynced_idx")
-      .on(t.systemId)
+      .on(t.systemId, t.seq)
       .where(sql`${t.syncedAt} IS NULL`),
     index("sync_queue_cleanup_idx")
       .on(t.syncedAt)

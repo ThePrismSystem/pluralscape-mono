@@ -454,9 +454,9 @@ describe("Column existence", () => {
       expect(cols).toHaveProperty("bucketId");
     });
 
-    it("no unexpected columns exist beyond the canonical three", () => {
+    it("no unexpected columns exist beyond the canonical four", () => {
       const pgCols = new Set(Object.keys(getTableColumns(pg.bucketContentTags)));
-      const canonical = new Set(["entityType", "entityId", "bucketId"]);
+      const canonical = new Set(["entityType", "entityId", "bucketId", "systemId"]);
       const extra = [...pgCols].filter((c) => !canonical.has(c) && !DB_ONLY_COLUMNS.has(c));
       expect(extra).toEqual([]);
     });

@@ -22,7 +22,7 @@ export interface RlsExecutor {
  * @param executor - An object that can execute raw SQL strings
  */
 export async function applyAllRls(executor: RlsExecutor): Promise<void> {
-  const tableNames = Object.keys(RLS_TABLE_POLICIES);
+  const tableNames = Object.keys(RLS_TABLE_POLICIES) as Array<keyof typeof RLS_TABLE_POLICIES>;
   await executor.execute("BEGIN");
   try {
     for (const tableName of tableNames) {

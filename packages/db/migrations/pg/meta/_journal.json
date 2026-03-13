@@ -71,6 +71,48 @@
       "when": 1773609600000,
       "tag": "0009_rls_all_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1773619200000,
+      "tag": "0010_field_type_not_null",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1773619201000,
+      "tag": "0011_pin_hash_kdf_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1773619202000,
+      "tag": "0012_compound_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1773619203000,
+      "tag": "0013_fronting_sessions_partitioning",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1773619204000,
+      "tag": "0014_switches_partitioning",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1773619205000,
+      "tag": "0015_rls_denormalization",
+      "breakpoints": true
     }
   ]
 }

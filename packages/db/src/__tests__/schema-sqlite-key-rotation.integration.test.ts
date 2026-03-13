@@ -41,6 +41,7 @@ describe("SQLite key-rotation schema", () => {
 
   function insertRotation(
     bucketId: string,
+    systemId: string,
     overrides: Partial<{
       id: string;
       fromKeyVersion: number;
@@ -54,6 +55,7 @@ describe("SQLite key-rotation schema", () => {
       .values({
         id,
         bucketId,
+        systemId,
         fromKeyVersion: overrides.fromKeyVersion ?? 1,
         toKeyVersion: overrides.toKeyVersion ?? 2,
         totalItems: overrides.totalItems ?? 10,
@@ -86,6 +88,7 @@ describe("SQLite key-rotation schema", () => {
         .values({
           id,
           bucketId,
+          systemId,
           fromKeyVersion: 1,
           toKeyVersion: 2,
           totalItems: 5,
@@ -116,6 +119,7 @@ describe("SQLite key-rotation schema", () => {
           .values({
             id: crypto.randomUUID(),
             bucketId,
+            systemId,
             fromKeyVersion: 1,
             toKeyVersion: 2,
             state: "invalid" as "initiated",
@@ -137,6 +141,7 @@ describe("SQLite key-rotation schema", () => {
           .values({
             id: crypto.randomUUID(),
             bucketId,
+            systemId,
             fromKeyVersion: 3,
             toKeyVersion: 2,
             totalItems: 1,
@@ -157,6 +162,7 @@ describe("SQLite key-rotation schema", () => {
           .values({
             id: crypto.randomUUID(),
             bucketId,
+            systemId,
             fromKeyVersion: 2,
             toKeyVersion: 2,
             totalItems: 1,
@@ -176,6 +182,7 @@ describe("SQLite key-rotation schema", () => {
         .values({
           id,
           bucketId,
+          systemId,
           fromKeyVersion: 1,
           toKeyVersion: 2,
           totalItems: 1,
@@ -207,6 +214,7 @@ describe("SQLite key-rotation schema", () => {
         .values({
           id,
           bucketId,
+          systemId,
           fromKeyVersion: 1,
           toKeyVersion: 2,
           totalItems: 5,
@@ -227,7 +235,7 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const rotationId = insertRotation(bucketId);
+      const rotationId = insertRotation(bucketId, systemId);
 
       db.delete(buckets).where(eq(buckets.id, bucketId)).run();
 
@@ -245,13 +253,14 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const rotationId = insertRotation(bucketId);
+      const rotationId = insertRotation(bucketId, systemId);
       const id = crypto.randomUUID();
 
       db.insert(bucketRotationItems)
         .values({
           id,
           rotationId,
+          systemId,
           entityType: "member",
           entityId: crypto.randomUUID(),
           status: "claimed",
@@ -279,13 +288,14 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const rotationId = insertRotation(bucketId);
+      const rotationId = insertRotation(bucketId, systemId);
       const id = crypto.randomUUID();
 
       db.insert(bucketRotationItems)
         .values({
           id,
           rotationId,
+          systemId,
           entityType: "journal-entry",
           entityId: crypto.randomUUID(),
         })
@@ -306,7 +316,7 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const rotationId = insertRotation(bucketId);
+      const rotationId = insertRotation(bucketId, systemId);
 
       expect(() =>
         db
@@ -314,6 +324,7 @@ describe("SQLite key-rotation schema", () => {
           .values({
             id: crypto.randomUUID(),
             rotationId,
+            systemId,
             entityType: "member",
             entityId: crypto.randomUUID(),
             status: "invalid" as "pending",
@@ -326,13 +337,14 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const rotationId = insertRotation(bucketId);
+      const rotationId = insertRotation(bucketId, systemId);
       const itemId = crypto.randomUUID();
 
       db.insert(bucketRotationItems)
         .values({
           id: itemId,
           rotationId,
+          systemId,
           entityType: "member",
           entityId: crypto.randomUUID(),
         })
@@ -352,13 +364,14 @@ describe("SQLite key-rotation schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
-      const rotationId = insertRotation(bucketId);
+      const rotationId = insertRotation(bucketId, systemId);
       const itemId = crypto.randomUUID();
 
       db.insert(bucketRotationItems)
         .values({
           id: itemId,
           rotationId,
+          systemId,
           entityType: "member",
           entityId: crypto.randomUUID(),
         })

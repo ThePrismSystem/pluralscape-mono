@@ -1,4 +1,5 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
@@ -23,7 +24,13 @@ export const systemSettings = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [versionCheckFor("system_settings", t.version)],
+  (t) => [
+    versionCheckFor("system_settings", t.version),
+    check(
+      "system_settings_pin_hash_kdf_check",
+      sql`${t.pinHash} IS NULL OR ${t.pinHash} LIKE '$argon2id$%'`,
+    ),
+  ],
 );
 
 export type SystemSettingsRow = InferSelectModel<typeof systemSettings>;

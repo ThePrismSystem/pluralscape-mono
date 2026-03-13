@@ -186,16 +186,19 @@ export const SQLITE_DDL = {
       entity_type TEXT NOT NULL CHECK (entity_type IS NULL OR entity_type IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')),
       entity_id TEXT NOT NULL,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       PRIMARY KEY (entity_type, entity_id, bucket_id)
     )
   `,
   bucketContentTagsIndexes: `
-    CREATE INDEX bucket_content_tags_bucket_id_idx ON bucket_content_tags (bucket_id)
+    CREATE INDEX bucket_content_tags_bucket_id_idx ON bucket_content_tags (bucket_id);
+    CREATE INDEX bucket_content_tags_system_id_idx ON bucket_content_tags (system_id)
   `,
   keyGrants: `
     CREATE TABLE key_grants (
       id TEXT PRIMARY KEY,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       friend_system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_key BLOB NOT NULL,
       key_version INTEGER NOT NULL CHECK (key_version >= 1),
@@ -205,6 +208,7 @@ export const SQLITE_DDL = {
     )
   `,
   keyGrantsIndexes: `
+    CREATE INDEX key_grants_system_id_idx ON key_grants (system_id);
     CREATE INDEX key_grants_friend_bucket_idx ON key_grants (friend_system_id, bucket_id);
     CREATE INDEX key_grants_revoked_at_idx ON key_grants (revoked_at)
   `,
@@ -246,11 +250,13 @@ export const SQLITE_DDL = {
     CREATE TABLE friend_bucket_assignments (
       friend_connection_id TEXT NOT NULL REFERENCES friend_connections(id) ON DELETE CASCADE,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       PRIMARY KEY (friend_connection_id, bucket_id)
     )
   `,
   friendBucketAssignmentsIndexes: `
-    CREATE INDEX friend_bucket_assignments_bucket_id_idx ON friend_bucket_assignments (bucket_id)
+    CREATE INDEX friend_bucket_assignments_bucket_id_idx ON friend_bucket_assignments (bucket_id);
+    CREATE INDEX friend_bucket_assignments_system_id_idx ON friend_bucket_assignments (system_id)
   `,
   // Fronting
   frontingSessions: `
@@ -278,6 +284,7 @@ export const SQLITE_DDL = {
   frontingSessionsIndexes: `
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
     CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
+    CREATE INDEX fronting_sessions_system_type_start_idx ON fronting_sessions (system_id, fronting_type, start_time);
     CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL
   `,
   switches: `
@@ -499,7 +506,7 @@ export const SQLITE_DDL = {
     CREATE TABLE field_definitions (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      field_type TEXT CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
+      field_type TEXT NOT NULL CHECK (field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
       required INTEGER NOT NULL DEFAULT 0,
       sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,
@@ -540,11 +547,13 @@ export const SQLITE_DDL = {
     CREATE TABLE field_bucket_visibility (
       field_definition_id TEXT NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       PRIMARY KEY (field_definition_id, bucket_id)
     )
   `,
   fieldBucketVisibilityIndexes: `
-    CREATE INDEX field_bucket_visibility_bucket_id_idx ON field_bucket_visibility (bucket_id)
+    CREATE INDEX field_bucket_visibility_bucket_id_idx ON field_bucket_visibility (bucket_id);
+    CREATE INDEX field_bucket_visibility_system_id_idx ON field_bucket_visibility (system_id)
   `,
   // Nomenclature Settings
   nomenclatureSettings: `
@@ -569,7 +578,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (pin_hash IS NULL OR pin_hash LIKE '$argon2id$%')
     )
   `,
   // API Keys
@@ -615,7 +625,7 @@ export const SQLITE_DDL = {
   auditLogIndexes: `
     CREATE INDEX audit_log_account_timestamp_idx ON audit_log (account_id, timestamp);
     CREATE INDEX audit_log_system_timestamp_idx ON audit_log (system_id, timestamp);
-    CREATE INDEX audit_log_event_type_idx ON audit_log (event_type);
+    CREATE INDEX audit_log_system_event_type_timestamp_idx ON audit_log (system_id, event_type, timestamp);
     CREATE INDEX audit_log_timestamp_idx ON audit_log (timestamp)
   `,
   // Lifecycle Events
@@ -1208,7 +1218,7 @@ export const SQLITE_DDL = {
     CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
     CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id);
     CREATE UNIQUE INDEX sync_queue_system_id_seq_idx ON sync_queue (system_id, seq);
-    CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id) WHERE synced_at IS NULL
+    CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id, seq) WHERE synced_at IS NULL
   `,
   syncConflicts: `
     CREATE TABLE sync_conflicts (
@@ -1264,6 +1274,7 @@ export const SQLITE_DDL = {
     CREATE TABLE bucket_key_rotations (
       id TEXT PRIMARY KEY,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       from_key_version INTEGER NOT NULL,
       to_key_version INTEGER NOT NULL,
       state TEXT NOT NULL DEFAULT 'initiated' CHECK (state IN ('initiated', 'migrating', 'sealing', 'completed', 'failed')),
@@ -1277,12 +1288,14 @@ export const SQLITE_DDL = {
     )
   `,
   bucketKeyRotationsIndexes: `
-    CREATE INDEX bucket_key_rotations_bucket_state_idx ON bucket_key_rotations (bucket_id, state)
+    CREATE INDEX bucket_key_rotations_bucket_state_idx ON bucket_key_rotations (bucket_id, state);
+    CREATE INDEX bucket_key_rotations_system_id_idx ON bucket_key_rotations (system_id)
   `,
   bucketRotationItems: `
     CREATE TABLE bucket_rotation_items (
       id TEXT PRIMARY KEY,
       rotation_id TEXT NOT NULL REFERENCES bucket_key_rotations(id) ON DELETE CASCADE,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       entity_type TEXT NOT NULL,
       entity_id TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'claimed', 'completed', 'failed')),
@@ -1294,7 +1307,8 @@ export const SQLITE_DDL = {
   `,
   bucketRotationItemsIndexes: `
     CREATE INDEX bucket_rotation_items_rotation_status_idx ON bucket_rotation_items (rotation_id, status);
-    CREATE INDEX bucket_rotation_items_status_claimed_by_idx ON bucket_rotation_items (status, claimed_by)
+    CREATE INDEX bucket_rotation_items_status_claimed_by_idx ON bucket_rotation_items (status, claimed_by);
+    CREATE INDEX bucket_rotation_items_system_id_idx ON bucket_rotation_items (system_id)
   `,
   // Analytics
   frontingReports: `

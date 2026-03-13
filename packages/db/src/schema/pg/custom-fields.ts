@@ -32,9 +32,9 @@ export const fieldDefinitions = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    fieldType: varchar("field_type", { length: ENUM_MAX_LENGTH }).$type<
-      ServerFieldDefinition["fieldType"]
-    >(),
+    fieldType: varchar("field_type", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<ServerFieldDefinition["fieldType"]>(),
     required: boolean("required").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -96,10 +96,14 @@ export const fieldBucketVisibility = pgTable(
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
   },
   (t) => [
     primaryKey({ columns: [t.fieldDefinitionId, t.bucketId] }),
     index("field_bucket_visibility_bucket_id_idx").on(t.bucketId),
+    index("field_bucket_visibility_system_id_idx").on(t.systemId),
   ],
 );
 

@@ -16,7 +16,8 @@ export type JobType =
   | "bucket-key-rotation"
   | "report-generate"
   | "sync-queue-cleanup"
-  | "audit-log-cleanup";
+  | "audit-log-cleanup"
+  | "partition-maintenance";
 
 /** Current status of a background job. */
 export type JobStatus =

@@ -45,6 +45,9 @@ export const customFronts = pgTable(
   ],
 );
 
+// NOTE: The production migration adds PARTITION BY RANGE ("start_time") which Drizzle
+// cannot express. Running drizzle-kit generate for this table requires manual verification.
+// See migration 0013 for details.
 export const frontingSessions = pgTable(
   "fronting_sessions",
   {
@@ -66,10 +69,13 @@ export const frontingSessions = pgTable(
     ...versioned(),
   },
   (t) => [
+    // Composite PK (id, start_time) required by PARTITION BY RANGE (start_time). This diverges
+    // from the SQLite schema (simple PK on id) — see schema/sqlite/fronting.ts for cross-ref.
     primaryKey({ columns: [t.id, t.startTime] }),
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
+    index("fronting_sessions_system_type_start_idx").on(t.systemId, t.frontingType, t.startTime),
     index("fronting_sessions_active_idx")
       .on(t.systemId)
       .where(sql`${t.endTime} IS NULL`),
@@ -104,10 +110,13 @@ export const frontingSessions = pgTable(
 );
 
 // Switches are immutable timeline events and are not archivable.
+// NOTE: The production migration adds PARTITION BY RANGE ("timestamp") which Drizzle
+// cannot express. Running drizzle-kit generate for this table requires manual verification.
+// See migration 0014 for details.
 export const switches = pgTable(
   "switches",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -122,6 +131,7 @@ export const switches = pgTable(
     ...versioned(),
   },
   (t) => [
+    primaryKey({ columns: [t.id, t.timestamp] }),
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
     check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
     versionCheckFor("switches", t.version),

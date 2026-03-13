@@ -30,7 +30,7 @@ export const fieldDefinitions = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    fieldType: text("field_type").$type<ServerFieldDefinition["fieldType"]>(),
+    fieldType: text("field_type").notNull().$type<ServerFieldDefinition["fieldType"]>(),
     required: integer("required", { mode: "boolean" }).notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
@@ -92,10 +92,14 @@ export const fieldBucketVisibility = sqliteTable(
     bucketId: text("bucket_id")
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
+    systemId: text("system_id")
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
   },
   (t) => [
     primaryKey({ columns: [t.fieldDefinitionId, t.bucketId] }),
     index("field_bucket_visibility_bucket_id_idx").on(t.bucketId),
+    index("field_bucket_visibility_system_id_idx").on(t.systemId),
   ],
 );
 

@@ -78,6 +78,41 @@
       "when": 1773348475741,
       "tag": "0010_audit-log-cleanup-job-type",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1773619200000,
+      "tag": "0011_field_type_not_null",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1773619201000,
+      "tag": "0012_pin_hash_kdf_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1773619202000,
+      "tag": "0013_compound_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1773619203000,
+      "tag": "0014_partition_maintenance_job_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1773619204000,
+      "tag": "0015_rls_denormalization",
+      "breakpoints": true
     }
   ]
 }
