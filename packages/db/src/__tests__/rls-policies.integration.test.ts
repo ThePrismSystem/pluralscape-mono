@@ -95,10 +95,13 @@ describe("RLS policy SQL generation", () => {
     expect(stmts[2]).toContain("CREATE POLICY");
   });
 
-  it("generateRlsStatements throws for unknown table", () => {
-    expect(() => generateRlsStatements("nonexistent")).toThrow(
-      /No RLS policy defined for table 'nonexistent'/,
-    );
+  it("generateRlsStatements accepts all RLS table names", () => {
+    for (const tableName of Object.keys(RLS_TABLE_POLICIES) as Array<
+      keyof typeof RLS_TABLE_POLICIES
+    >) {
+      const stmts = generateRlsStatements(tableName);
+      expect(stmts.length).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it("RLS_TABLE_POLICIES covers all expected tables", () => {

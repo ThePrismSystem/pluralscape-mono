@@ -77,7 +77,9 @@ describe("RLS migration bootstrap", () => {
     lines.push("-- Generated from RLS_TABLE_POLICIES in src/rls/policies.ts");
     lines.push("");
 
-    for (const tableName of Object.keys(RLS_TABLE_POLICIES)) {
+    for (const tableName of Object.keys(RLS_TABLE_POLICIES) as Array<
+      keyof typeof RLS_TABLE_POLICIES
+    >) {
       lines.push(`-- ${tableName}`);
       const statements = generateRlsStatements(tableName);
       for (const stmt of statements) {

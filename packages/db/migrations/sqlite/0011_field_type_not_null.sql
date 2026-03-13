@@ -12,7 +12,7 @@ CREATE TABLE "__new_field_definitions" (
 	"archived" integer DEFAULT false NOT NULL,
 	"archived_at" integer,
 	UNIQUE("id", "system_id"),
-	CHECK("field_type" IS NULL OR "field_type" IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
+	CHECK("field_type" IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
 	CHECK("version" >= 1),
 	CHECK(("archived" = true) = ("archived_at" IS NOT NULL))
 );--> statement-breakpoint

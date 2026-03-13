@@ -108,7 +108,7 @@ export const RLS_TABLE_POLICIES = {
   audit_log: "dual",
   device_tokens: "dual",
 
-  // Formerly join-based; now carry direct system_id for O(1) RLS
+  // System-scoped (denormalized system_id)
   key_grants: "system",
   bucket_content_tags: "system",
   friend_bucket_assignments: "system",
@@ -184,11 +184,8 @@ export type RlsTableName = keyof typeof RLS_TABLE_POLICIES;
  * Generates all RLS SQL statements (ENABLE + policy) for a given table.
  * Returns an array of SQL strings to execute sequentially.
  */
-export function generateRlsStatements(tableName: string): string[] {
-  const scopeType = (RLS_TABLE_POLICIES as Record<string, RlsScopeType>)[tableName];
-  if (scopeType === undefined) {
-    throw new Error(`No RLS policy defined for table '${tableName}'`);
-  }
+export function generateRlsStatements(tableName: RlsTableName): string[] {
+  const scopeType = RLS_TABLE_POLICIES[tableName];
 
   const statements = [...enableRls(tableName)];
 

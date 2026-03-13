@@ -4,6 +4,8 @@ import { BUCKET_CONTENT_ENTITY_TYPES } from "../helpers/enums.js";
 import { bucketContentTags as pgBucketContentTags } from "../schema/pg/privacy.js";
 import { bucketContentTags as sqliteBucketContentTags } from "../schema/sqlite/privacy.js";
 
+import { extractDeletedCount } from "./types.js";
+
 import type { CleanupResult } from "./types.js";
 import type { BucketContentEntityType } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -67,9 +69,7 @@ export async function pgCleanupOrphanedTags<
     SELECT count(*) AS deleted_count FROM deleted`,
   );
 
-  // postgres-js returns RowList (an array); pglite returns Results ({ rows: [...] })
-  const row = Array.isArray(result) ? result[0] : result.rows[0];
-  return { deletedCount: Number(row?.deleted_count ?? 0) };
+  return extractDeletedCount(result);
 }
 
 /**

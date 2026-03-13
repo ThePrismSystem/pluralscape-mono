@@ -5,6 +5,7 @@ import {
   formatPartitionName,
   parsePartitionDate,
 } from "../queries/partition-maintenance.js";
+import { validateMonthsAhead, validateOlderThanMonths } from "../queries/types.js";
 
 describe("PARTITIONED_TABLES", () => {
   it("contains all expected tables", () => {
@@ -54,11 +55,93 @@ describe("parsePartitionDate", () => {
       [2026, 6],
       [2027, 12],
     ];
-    for (const table of ["messages", "audit_log", "fronting_sessions", "switches"]) {
+    for (const table of ["messages", "audit_log", "fronting_sessions", "switches"] as const) {
       for (const [year, month] of cases) {
         const name = formatPartitionName(table, year, month);
         expect(parsePartitionDate(name)).toEqual({ year, month });
       }
     }
+  });
+});
+
+describe("validateMonthsAhead", () => {
+  it("accepts 0", () => {
+    expect(() => {
+      validateMonthsAhead(0);
+    }).not.toThrow();
+  });
+
+  it("accepts positive values", () => {
+    expect(() => {
+      validateMonthsAhead(6);
+    }).not.toThrow();
+  });
+
+  it("rejects negative values", () => {
+    expect(() => {
+      validateMonthsAhead(-1);
+    }).toThrow(/non-negative finite/);
+  });
+
+  it("rejects NaN", () => {
+    expect(() => {
+      validateMonthsAhead(NaN);
+    }).toThrow(/non-negative finite/);
+  });
+
+  it("rejects Infinity", () => {
+    expect(() => {
+      validateMonthsAhead(Infinity);
+    }).toThrow(/non-negative finite/);
+  });
+
+  it("rejects -Infinity", () => {
+    expect(() => {
+      validateMonthsAhead(-Infinity);
+    }).toThrow(/non-negative finite/);
+  });
+});
+
+describe("validateOlderThanMonths", () => {
+  it("accepts 1", () => {
+    expect(() => {
+      validateOlderThanMonths(1);
+    }).not.toThrow();
+  });
+
+  it("accepts large values", () => {
+    expect(() => {
+      validateOlderThanMonths(24);
+    }).not.toThrow();
+  });
+
+  it("rejects 0", () => {
+    expect(() => {
+      validateOlderThanMonths(0);
+    }).toThrow(/>= 1/);
+  });
+
+  it("rejects negative values", () => {
+    expect(() => {
+      validateOlderThanMonths(-1);
+    }).toThrow(/>= 1/);
+  });
+
+  it("rejects NaN", () => {
+    expect(() => {
+      validateOlderThanMonths(NaN);
+    }).toThrow(/>= 1/);
+  });
+
+  it("rejects Infinity", () => {
+    expect(() => {
+      validateOlderThanMonths(Infinity);
+    }).toThrow(/>= 1/);
+  });
+
+  it("rejects -Infinity", () => {
+    expect(() => {
+      validateOlderThanMonths(-Infinity);
+    }).toThrow(/>= 1/);
   });
 });

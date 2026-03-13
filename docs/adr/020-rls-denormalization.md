@@ -12,7 +12,7 @@ Six tables were initially designed as join tables without a direct `system_id` c
 
 - `bucket_content_tags` — tagged via `bucket_id → buckets.system_id`
 - `key_grants` — owned via `bucket_id → buckets.system_id`
-- `friend_bucket_assignments` — owned via `bucket_id → buckets.system_id`
+- `friend_bucket_assignments` — owned via `friend_connection_id → friend_connections.system_id`
 - `field_bucket_visibility` — owned via `bucket_id → buckets.system_id`
 - `bucket_key_rotations` — owned via `bucket_id → buckets.system_id`
 - `bucket_rotation_items` — owned via `rotation_id → bucket_key_rotations → buckets.system_id`
@@ -26,7 +26,7 @@ Add a direct `system_id` column to all six tables, populated from the parent tab
 - `system_id` is `NOT NULL` with a `REFERENCES systems(id) ON DELETE CASCADE` constraint.
 - An index on `system_id` is added to each table to support RLS policy evaluation and system-scoped queries.
 - RLS policies for these tables are updated to use `"system"` scope (direct column comparison) instead of `"join-system"` or `"join-system-chained"` scope.
-- The `JOIN_SYSTEM_CONFIG` and `CHAINED_JOIN_CONFIG` entries for all six tables are removed from `packages/db/src/rls/policies.ts`.
+- The `joinSystemRlsPolicy` and `chainedJoinSystemRlsPolicy` functions and the `"join-system"` / `"join-system-chained"` scope types are removed from `packages/db/src/rls/policies.ts`.
 
 This is a pre-release change. Backfill of existing rows via the migration is safe because there is no production data.
 

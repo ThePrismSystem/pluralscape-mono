@@ -78,4 +78,20 @@ CREATE TABLE "fronting_comments" (
 
 -- Indexes on fronting_comments
 CREATE INDEX "fronting_comments_session_created_idx" ON "fronting_comments" ("fronting_session_id", "created_at");--> statement-breakpoint
-CREATE INDEX "fronting_comments_session_start_idx" ON "fronting_comments" ("session_start_time");
+CREATE INDEX "fronting_comments_session_start_idx" ON "fronting_comments" ("session_start_time");--> statement-breakpoint
+
+-- Re-apply RLS on fronting_sessions (dropped with the table; partitioned tables inherit policy on all partitions)
+ALTER TABLE "fronting_sessions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "fronting_sessions" FORCE ROW LEVEL SECURITY;--> statement-breakpoint
+DROP POLICY IF EXISTS "fronting_sessions_system_isolation" ON "fronting_sessions";--> statement-breakpoint
+CREATE POLICY "fronting_sessions_system_isolation" ON "fronting_sessions"
+    USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)
+    WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);--> statement-breakpoint
+
+-- Re-apply RLS on fronting_comments (dropped with the table)
+ALTER TABLE "fronting_comments" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "fronting_comments" FORCE ROW LEVEL SECURITY;--> statement-breakpoint
+DROP POLICY IF EXISTS "fronting_comments_system_isolation" ON "fronting_comments";--> statement-breakpoint
+CREATE POLICY "fronting_comments_system_isolation" ON "fronting_comments"
+    USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)
+    WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);

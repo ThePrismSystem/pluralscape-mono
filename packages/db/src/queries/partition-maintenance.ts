@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
 
+import { validateMonthsAhead, validateOlderThanMonths } from "./types.js";
+
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -25,7 +27,7 @@ export type DetachableTable = "audit_log";
  *
  * Example: formatPartitionName("audit_log", 2026, 3) → "audit_log_2026_03"
  */
-export function formatPartitionName(table: string, year: number, month: number): string {
+export function formatPartitionName(table: PartitionedTable, year: number, month: number): string {
   return `${table}_${String(year)}_${String(month).padStart(2, "0")}`;
 }
 
@@ -58,6 +60,7 @@ export async function pgEnsureFuturePartitions<
   db: PostgresJsDatabase<TSchema> | PgliteDatabase<TSchema>,
   options: { monthsAhead: number },
 ): Promise<void> {
+  validateMonthsAhead(options.monthsAhead);
   const now = new Date();
   for (let i = 0; i <= options.monthsAhead; i++) {
     const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
@@ -77,6 +80,7 @@ export async function pgEnsureFuturePartitions<
 
 export interface DetachResult {
   readonly detachedCount: number;
+  readonly errors: ReadonlyArray<{ partitionName: string; error: string }>;
 }
 
 /**
@@ -94,6 +98,7 @@ export async function pgDetachOldPartitions<
   db: PostgresJsDatabase<TSchema> | PgliteDatabase<TSchema>,
   options: { table: DetachableTable; olderThanMonths: number },
 ): Promise<DetachResult> {
+  validateOlderThanMonths(options.olderThanMonths);
   const result = await db.execute<{ partition_name: string }>(
     sql`SELECT c.relname AS partition_name
         FROM pg_inherits i
@@ -108,17 +113,25 @@ export async function pgDetachOldPartitions<
   cutoff.setMonth(cutoff.getMonth() - options.olderThanMonths);
 
   let detachedCount = 0;
+  const errors: Array<{ partitionName: string; error: string }> = [];
   for (const { partition_name } of rows) {
     const parsed = parsePartitionDate(partition_name);
     if (!parsed) continue;
     const partitionDate = new Date(parsed.year, parsed.month - 1, 1);
     if (partitionDate < cutoff) {
-      await db.execute(
-        sql`ALTER TABLE ${sql.raw(`"${options.table}"`)} DETACH PARTITION ${sql.raw(`"${partition_name}"`)}`,
-      );
-      await db.execute(sql`DROP TABLE ${sql.raw(`"${partition_name}"`)}`);
-      detachedCount++;
+      try {
+        await db.execute(
+          sql`ALTER TABLE ${sql.raw(`"${options.table}"`)} DETACH PARTITION ${sql.raw(`"${partition_name}"`)}`,
+        );
+        await db.execute(sql`DROP TABLE ${sql.raw(`"${partition_name}"`)}`);
+        detachedCount++;
+      } catch (err) {
+        errors.push({
+          partitionName: partition_name,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }
-  return { detachedCount };
+  return { detachedCount, errors };
 }

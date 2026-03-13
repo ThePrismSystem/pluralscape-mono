@@ -3,7 +3,7 @@ import { and, isNotNull, lt, sql } from "drizzle-orm";
 import { syncQueue as pgSyncQueue } from "../schema/pg/sync.js";
 import { syncQueue as sqliteSyncQueue } from "../schema/sqlite/sync.js";
 
-import { MS_PER_DAY, validateOlderThanDays } from "./types.js";
+import { MS_PER_DAY, extractDeletedCount, validateOlderThanDays } from "./types.js";
 
 import type { CleanupResult } from "./types.js";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -53,9 +53,7 @@ export async function pgCleanupSyncedEntries<
 
   const result = await db.execute<{ deleted_count: string }>(query);
 
-  // postgres-js returns RowList (an array); pglite returns Results ({ rows: [...] })
-  const row = Array.isArray(result) ? result[0] : result.rows[0];
-  return { deletedCount: Number(row?.deleted_count ?? 0) };
+  return extractDeletedCount(result);
 }
 
 /**

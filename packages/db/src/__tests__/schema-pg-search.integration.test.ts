@@ -441,11 +441,13 @@ describe("PG search_index RLS policy enforcement", () => {
 
     await client.query(
       `INSERT INTO search_index (system_id, entity_type, entity_id, title, content)
-       VALUES ('${systemIdA}', 'member', 'm-rls-a', 'Member A', 'Content for system A')`,
+       VALUES ($1, 'member', 'm-rls-a', 'Member A', 'Content for system A')`,
+      [systemIdA],
     );
     await client.query(
       `INSERT INTO search_index (system_id, entity_type, entity_id, title, content)
-       VALUES ('${systemIdB}', 'member', 'm-rls-b', 'Member B', 'Content for system B')`,
+       VALUES ($1, 'member', 'm-rls-b', 'Member B', 'Content for system B')`,
+      [systemIdB],
     );
 
     // Grant table access to the app role
