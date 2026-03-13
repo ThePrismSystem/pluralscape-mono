@@ -1,8 +1,16 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { deleteSearchEntry, insertSearchEntry, searchEntries } from "../schema/pg/search.js";
+import { getDeploymentMode } from "../deployment.js";
+import {
+  createSearchIndex,
+  createSearchIndexIndexes,
+  deleteSearchEntry,
+  insertSearchEntry,
+  rebuildSearchIndex,
+  searchEntries,
+} from "../schema/pg/search.js";
 
 import {
   createPgSearchIndexTables,
@@ -302,5 +310,110 @@ describe("PG search_index full-text search", () => {
     const negResults = await searchEntries(db, systemId, "morning -happy");
     expect(negResults).toHaveLength(1);
     expect(negResults[0]?.entityId).toBe("n-2");
+  });
+});
+
+describe("PG search_index hosted-mode guard", () => {
+  let client: PGlite;
+  let db: ReturnType<typeof drizzle>;
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+    await createPgSearchIndexTables(client);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  afterEach(async () => {
+    await pgExec(client, "DELETE FROM search_index");
+    await pgExec(client, "DELETE FROM systems");
+    await pgExec(client, "DELETE FROM accounts");
+  });
+
+  it("createSearchIndex throws in hosted mode", async () => {
+    await expect(createSearchIndex(db, "hosted")).rejects.toThrow(
+      "Plaintext search_index is not available in hosted mode",
+    );
+  });
+
+  it("insertSearchEntry throws in hosted mode", async () => {
+    await expect(
+      insertSearchEntry(
+        db,
+        {
+          systemId: "sys-1" as SystemId,
+          entityType: "member",
+          entityId: "m-1",
+          title: "test",
+          content: "test",
+        },
+        "hosted",
+      ),
+    ).rejects.toThrow("Plaintext search_index is not available in hosted mode");
+  });
+
+  it("rebuildSearchIndex throws in hosted mode", async () => {
+    await expect(rebuildSearchIndex(db, "hosted")).rejects.toThrow(
+      "Plaintext search_index is not available in hosted mode",
+    );
+  });
+
+  it("createSearchIndexIndexes throws in hosted mode", async () => {
+    await expect(createSearchIndexIndexes(db, "hosted")).rejects.toThrow(
+      "Plaintext search_index is not available in hosted mode",
+    );
+  });
+
+  it("allows operations in self-hosted mode (explicit param)", async () => {
+    const accountId = await pgInsertAccount(db);
+    const sysId = (await pgInsertSystem(db, accountId)) as SystemId;
+    await expect(
+      insertSearchEntry(
+        db,
+        {
+          systemId: sysId,
+          entityType: "member",
+          entityId: "m-guard-test",
+          title: "guard test",
+          content: "should succeed",
+        },
+        "self-hosted",
+      ),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("getDeploymentMode", () => {
+  const originalEnv = process.env["DEPLOYMENT_MODE"];
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env["DEPLOYMENT_MODE"];
+    } else {
+      process.env["DEPLOYMENT_MODE"] = originalEnv;
+    }
+  });
+
+  it("returns 'self-hosted' when DEPLOYMENT_MODE is unset", () => {
+    delete process.env["DEPLOYMENT_MODE"];
+    expect(getDeploymentMode()).toBe("self-hosted");
+  });
+
+  it("returns 'hosted' when DEPLOYMENT_MODE is 'hosted'", () => {
+    process.env["DEPLOYMENT_MODE"] = "hosted";
+    expect(getDeploymentMode()).toBe("hosted");
+  });
+
+  it("returns 'self-hosted' when DEPLOYMENT_MODE is 'self-hosted'", () => {
+    process.env["DEPLOYMENT_MODE"] = "self-hosted";
+    expect(getDeploymentMode()).toBe("self-hosted");
+  });
+
+  it("returns 'self-hosted' for unrecognized values (fail-safe)", () => {
+    process.env["DEPLOYMENT_MODE"] = "cloud";
+    expect(getDeploymentMode()).toBe("self-hosted");
   });
 });

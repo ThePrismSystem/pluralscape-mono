@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import {
+  check,
+  foreignKey,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -32,9 +41,7 @@ export const importJobs = pgTable(
     accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH }).notNull(),
     source: varchar("source", { length: ENUM_MAX_LENGTH }).notNull().$type<ImportSource>(),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
@@ -67,6 +74,10 @@ export const importJobs = pgTable(
       "import_jobs_error_log_length_check",
       sql`${t.errorLog} IS NULL OR jsonb_array_length(${t.errorLog}) <= ${MAX_ERROR_LOG_ENTRIES}`,
     ),
+    foreignKey({
+      columns: [t.systemId, t.accountId],
+      foreignColumns: [systems.id, systems.accountId],
+    }).onDelete("cascade"),
   ],
 );
 
@@ -77,9 +88,7 @@ export const exportRequests = pgTable(
     accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH }).notNull(),
     format: varchar("format", { length: ENUM_MAX_LENGTH }).notNull().$type<ExportFormat>(),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
@@ -98,6 +107,10 @@ export const exportRequests = pgTable(
     index("export_requests_system_id_idx").on(t.systemId),
     check("export_requests_format_check", enumCheck(t.format, EXPORT_FORMATS)),
     check("export_requests_status_check", enumCheck(t.status, EXPORT_REQUEST_STATUSES)),
+    foreignKey({
+      columns: [t.systemId, t.accountId],
+      foreignColumns: [systems.id, systems.accountId],
+    }).onDelete("cascade"),
   ],
 );
 

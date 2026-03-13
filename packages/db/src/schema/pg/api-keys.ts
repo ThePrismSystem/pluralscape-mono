@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import {
+  check,
+  foreignKey,
+  index,
+  jsonb,
+  pgTable,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
@@ -12,7 +20,7 @@ import { systems } from "./systems.js";
 import type { ApiKey, ApiKeyScope } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-/** Account-system ownership (ensuring the account owns the system) is enforced at the app layer. */
+/** Composite FK (systemId, accountId) → systems(id, accountId) enforces tenant ownership at DB layer. */
 export const apiKeys = pgTable(
   "api_keys",
   {
@@ -20,9 +28,7 @@ export const apiKeys = pgTable(
     accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH }).notNull(),
     keyType: varchar("key_type", { length: ENUM_MAX_LENGTH }).notNull().$type<ApiKey["keyType"]>(),
     tokenHash: varchar("token_hash", { length: 255 }).notNull(),
     scopes: jsonb("scopes").notNull().$type<readonly ApiKeyScope[]>(),
@@ -45,6 +51,10 @@ export const apiKeys = pgTable(
       "api_keys_key_material_check",
       sql`(${t.keyType} = 'crypto' AND ${t.encryptedKeyMaterial} IS NOT NULL) OR (${t.keyType} = 'metadata' AND ${t.encryptedKeyMaterial} IS NULL)`,
     ),
+    foreignKey({
+      columns: [t.systemId, t.accountId],
+      foreignColumns: [systems.id, systems.accountId],
+    }).onDelete("cascade"),
   ],
 );
 

@@ -66,7 +66,12 @@ search. To preserve the zero-knowledge guarantee for hosted/cloud deployments:
   mobile app). The server never decrypts user data, so it cannot populate the
   search index.
 
-This is enforced at the API layer, not the database layer.
+This is enforced at two layers for defense-in-depth:
+
+- **DB layer**: `createSearchIndex()`, `insertSearchEntry()`, and `rebuildSearchIndex()`
+  accept a `deploymentMode` parameter and throw in `"hosted"` mode.
+- **API layer**: the `requireSelfHosted` Hono middleware returns 403 for search
+  write endpoints in hosted mode, preventing requests from reaching the DB layer.
 
 ## What This ADR Does NOT Cover
 

@@ -1,12 +1,25 @@
 import { sql } from "drizzle-orm";
 
+import { getDeploymentMode } from "../../deployment.js";
 import { parseSearchableEntityType } from "../../helpers/enums.js";
 
+import type { DeploymentMode } from "../../deployment.js";
 import type { SearchableEntityType, SystemId } from "@pluralscape/types";
 import type { SQL } from "drizzle-orm";
 
 const DEFAULT_SEARCH_LIMIT = 50;
 const MAX_SEARCH_LIMIT = 1000;
+
+/**
+ * Asserts that plaintext search operations are only performed in self-hosted mode.
+ * Throws in hosted mode to prevent storing plaintext in a cloud environment.
+ */
+function assertSelfHosted(mode?: DeploymentMode): void {
+  const resolved = mode ?? getDeploymentMode();
+  if (resolved === "hosted") {
+    throw new Error("Plaintext search_index is not available in hosted mode (see ADR 018)");
+  }
+}
 
 /**
  * DDL for PG full-text search index table.
@@ -77,17 +90,29 @@ interface PgExecutable {
  * via `generateRlsStatements("search_index")`. The search_index is created via raw
  * DDL (not Drizzle migrations), so RLS is not automatically applied.
  */
-export async function createSearchIndex(db: PgExecutable): Promise<void> {
+export async function createSearchIndex(
+  db: PgExecutable,
+  deploymentMode?: DeploymentMode,
+): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await db.execute(sql.raw(SEARCH_INDEX_DDL));
 }
 
-/** Drop the search_index table. */
+/**
+ * Drop the search_index table.
+ * Intentionally unguarded: dropping is safe in any mode, and a hosted deployment
+ * may need to purge a residual table.
+ */
 export async function dropSearchIndex(db: PgExecutable): Promise<void> {
   await db.execute(sql.raw("DROP TABLE IF EXISTS search_index"));
 }
 
-/** Create indexes on search_index (idempotent). */
-export async function createSearchIndexIndexes(db: PgExecutable): Promise<void> {
+/** Create indexes on search_index (idempotent). Guarded: indexes only make sense if the table exists. */
+export async function createSearchIndexIndexes(
+  db: PgExecutable,
+  deploymentMode?: DeploymentMode,
+): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await db.execute(sql.raw(SEARCH_INDEX_INDEXES_DDL));
 }
 
@@ -95,7 +120,9 @@ export async function createSearchIndexIndexes(db: PgExecutable): Promise<void> 
 export async function insertSearchEntry(
   db: PgExecutable,
   entry: PgSearchIndexEntry,
+  deploymentMode?: DeploymentMode,
 ): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await db.execute(
     sql`INSERT INTO search_index (system_id, entity_type, entity_id, title, content)
         VALUES (${entry.systemId}, ${entry.entityType}, ${entry.entityId}, ${entry.title}, ${entry.content})
@@ -117,11 +144,19 @@ export async function deleteSearchEntry(
   );
 }
 
-/** Drop and recreate the search index with indexes (full rebuild). */
-export async function rebuildSearchIndex(db: PgExecutable): Promise<void> {
+/**
+ * Drop and recreate the search index with indexes (full rebuild).
+ * Guards before drop to avoid leaving the table in a dropped state if mode is wrong.
+ * createSearchIndex/createSearchIndexIndexes re-check internally (defense-in-depth).
+ */
+export async function rebuildSearchIndex(
+  db: PgExecutable,
+  deploymentMode?: DeploymentMode,
+): Promise<void> {
+  assertSelfHosted(deploymentMode);
   await dropSearchIndex(db);
-  await createSearchIndex(db);
-  await createSearchIndexIndexes(db);
+  await createSearchIndex(db, deploymentMode);
+  await createSearchIndexIndexes(db, deploymentMode);
 }
 
 /**

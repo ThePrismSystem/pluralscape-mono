@@ -127,6 +127,7 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      UNIQUE (id, account_id),
       CHECK (version >= 1)
     )
   `,
@@ -306,6 +307,7 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
+      UNIQUE (id, system_id),
       CHECK (version >= 1),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
@@ -581,7 +583,7 @@ export const PG_DDL = {
     CREATE TABLE api_keys (
       id VARCHAR(50) PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL,
       key_type VARCHAR(50) NOT NULL CHECK (key_type IN ('metadata', 'crypto')),
       token_hash VARCHAR(255) NOT NULL UNIQUE,
       scopes JSONB NOT NULL,
@@ -592,6 +594,7 @@ export const PG_DDL = {
       revoked_at TIMESTAMPTZ,
       expires_at TIMESTAMPTZ,
       scoped_bucket_ids JSONB,
+      FOREIGN KEY (system_id, account_id) REFERENCES systems(id, account_id) ON DELETE CASCADE,
       CHECK ((key_type = 'crypto' AND encrypted_key_material IS NOT NULL) OR (key_type = 'metadata' AND encrypted_key_material IS NULL))
     )
   `,
@@ -1105,7 +1108,7 @@ export const PG_DDL = {
     CREATE TABLE import_jobs (
       id VARCHAR(50) PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL,
       source VARCHAR(50) NOT NULL CHECK (source IN ('simply-plural', 'pluralkit', 'pluralscape')),
       status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validating', 'importing', 'completed', 'failed')),
       progress_percent INTEGER NOT NULL DEFAULT 0,
@@ -1116,6 +1119,7 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       completed_at TIMESTAMPTZ,
+      FOREIGN KEY (system_id, account_id) REFERENCES systems(id, account_id) ON DELETE CASCADE,
       CHECK (progress_percent >= 0 AND progress_percent <= 100),
       CHECK (chunks_total IS NULL OR chunks_completed <= chunks_total),
       CHECK (error_log IS NULL OR jsonb_array_length(error_log) <= 1000)
@@ -1129,13 +1133,14 @@ export const PG_DDL = {
     CREATE TABLE export_requests (
       id VARCHAR(50) PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL,
       format VARCHAR(50) NOT NULL CHECK (format IN ('json', 'csv')),
       status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
       blob_id VARCHAR(50) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      completed_at TIMESTAMPTZ
+      completed_at TIMESTAMPTZ,
+      FOREIGN KEY (system_id, account_id) REFERENCES systems(id, account_id) ON DELETE CASCADE
     )
   `,
   exportRequestsIndexes: `

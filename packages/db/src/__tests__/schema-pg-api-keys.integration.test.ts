@@ -332,6 +332,27 @@ describe("PG api_keys schema", () => {
     ).rejects.toThrow();
   });
 
+  it("rejects cross-tenant system reference via composite FK", async () => {
+    const accountA = await insertAccount();
+    const accountB = await insertAccount();
+    const systemOfB = await pgInsertSystem(db, accountB);
+    const now = Date.now();
+
+    // accountA tries to create an API key referencing accountB's system
+    await expect(
+      db.insert(apiKeys).values({
+        id: crypto.randomUUID(),
+        accountId: accountA,
+        systemId: systemOfB,
+        encryptedData: testBlob(),
+        keyType: "metadata",
+        tokenHash: `hash_${crypto.randomUUID()}`,
+        scopes: ["read:members"],
+        createdAt: now,
+      }),
+    ).rejects.toThrow();
+  });
+
   it("rejects insert without encryptedData", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
