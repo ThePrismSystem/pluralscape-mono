@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { enumCheck } from "../helpers/check.js";
 import {
+  parseBucketContentEntityType,
   ACCOUNT_PURGE_STATUSES,
   API_KEY_KEY_TYPES,
   API_KEY_SCOPES,
@@ -285,5 +286,27 @@ describe("enum arrays", () => {
     expect(DISCOVERY_STATUSES).toHaveLength(3);
     expect(ROTATION_STATES).toHaveLength(5);
     expect(ROTATION_ITEM_STATUSES).toHaveLength(4);
+  });
+});
+
+describe("parseBucketContentEntityType", () => {
+  it("returns valid BucketContentEntityType for known value", () => {
+    expect(parseBucketContentEntityType("member")).toBe("member");
+    expect(parseBucketContentEntityType("group")).toBe("group");
+    expect(parseBucketContentEntityType("fronting-session")).toBe("fronting-session");
+  });
+
+  it("throws for non-string input", () => {
+    expect(() => parseBucketContentEntityType(null)).toThrow("Expected entity_type string");
+    expect(() => parseBucketContentEntityType(42)).toThrow("Expected entity_type string");
+  });
+
+  it("throws for unknown string", () => {
+    expect(() => parseBucketContentEntityType("session")).toThrow(
+      "Unknown BucketContentEntityType",
+    );
+    expect(() => parseBucketContentEntityType("nonexistent")).toThrow(
+      "Unknown BucketContentEntityType",
+    );
   });
 });

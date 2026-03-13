@@ -1,6 +1,10 @@
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
-import type { CleanupResult } from "./sync-queue-cleanup.js";
+import { BUCKET_CONTENT_ENTITY_TYPES } from "../helpers/enums.js";
+import { bucketContentTags as pgBucketContentTags } from "../schema/pg/privacy.js";
+import { bucketContentTags as sqliteBucketContentTags } from "../schema/sqlite/privacy.js";
+
+import type { CleanupResult } from "./types.js";
 import type { BucketContentEntityType } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
@@ -39,7 +43,7 @@ const ENTITY_TABLE_MAP: Readonly<Record<BucketContentEntityType, string>> = {
  * Delete orphaned bucketContentTags for a specific entity type.
  * An orphaned tag is one whose source entity row no longer exists.
  *
- * PG variant — uses NOT IN subquery for orphan detection.
+ * PG variant — uses NOT EXISTS subquery for orphan detection.
  * Returns count via RETURNING + array length.
  */
 export async function pgCleanupOrphanedTags<
@@ -49,35 +53,36 @@ export async function pgCleanupOrphanedTags<
   entityType: BucketContentEntityType,
 ): Promise<CleanupResult> {
   const sourceTable = ENTITY_TABLE_MAP[entityType];
-  const result = await db.execute(
-    sql`DELETE FROM bucket_content_tags
-        WHERE entity_type = ${entityType}
-        AND entity_id NOT IN (
-          SELECT id FROM ${sql.raw(sourceTable)}
-        )
-        RETURNING entity_id`,
-  );
+  const deleted = await db
+    .delete(pgBucketContentTags)
+    .where(
+      and(
+        eq(pgBucketContentTags.entityType, entityType),
+        sql`NOT EXISTS (SELECT 1 FROM ${sql.raw(sourceTable)} WHERE id = ${pgBucketContentTags.entityId})`,
+      ),
+    )
+    .returning();
 
-  // PGlite returns { rows: [...] }, postgres.js returns RowList (array-like)
-  const count = Array.isArray(result) ? result.length : result.rows.length;
-  return { deletedCount: count };
+  return { deletedCount: deleted.length };
 }
 
 /**
  * Delete orphaned bucketContentTags for a specific entity type.
- * SQLite variant.
+ * SQLite variant — uses NOT EXISTS subquery for orphan detection.
  */
 export function sqliteCleanupOrphanedTags<
   TSchema extends Record<string, unknown> = Record<string, never>,
 >(db: BetterSQLite3Database<TSchema>, entityType: BucketContentEntityType): CleanupResult {
   const sourceTable = ENTITY_TABLE_MAP[entityType];
-  const result = db.run(
-    sql`DELETE FROM bucket_content_tags
-        WHERE entity_type = ${entityType}
-        AND entity_id NOT IN (
-          SELECT id FROM ${sql.raw(sourceTable)}
-        )`,
-  );
+  const result = db
+    .delete(sqliteBucketContentTags)
+    .where(
+      and(
+        eq(sqliteBucketContentTags.entityType, entityType),
+        sql`NOT EXISTS (SELECT 1 FROM ${sql.raw(sourceTable)} WHERE id = ${sqliteBucketContentTags.entityId})`,
+      ),
+    )
+    .run();
 
   return { deletedCount: result.changes };
 }
@@ -90,7 +95,7 @@ export async function pgCleanupAllOrphanedTags<
   TSchema extends Record<string, unknown> = Record<string, never>,
 >(db: PostgresJsDatabase<TSchema> | PgliteDatabase<TSchema>): Promise<CleanupResult> {
   let total = 0;
-  for (const entityType of Object.keys(ENTITY_TABLE_MAP) as BucketContentEntityType[]) {
+  for (const entityType of BUCKET_CONTENT_ENTITY_TYPES) {
     const result = await pgCleanupOrphanedTags(db, entityType);
     total += result.deletedCount;
   }
@@ -105,7 +110,7 @@ export function sqliteCleanupAllOrphanedTags<
   TSchema extends Record<string, unknown> = Record<string, never>,
 >(db: BetterSQLite3Database<TSchema>): CleanupResult {
   let total = 0;
-  for (const entityType of Object.keys(ENTITY_TABLE_MAP) as BucketContentEntityType[]) {
+  for (const entityType of BUCKET_CONTENT_ENTITY_TYPES) {
     const result = sqliteCleanupOrphanedTags(db, entityType);
     total += result.deletedCount;
   }

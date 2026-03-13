@@ -3,13 +3,12 @@ import { lt, sql } from "drizzle-orm";
 import { auditLog as pgAuditLog } from "../schema/pg/audit-log.js";
 import { auditLog as sqliteAuditLog } from "../schema/sqlite/audit-log.js";
 
-import type { CleanupResult } from "./sync-queue-cleanup.js";
+import { MS_PER_DAY, validateOlderThanDays } from "./types.js";
+
+import type { CleanupResult } from "./types.js";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-/** Milliseconds in one day. */
-const MS_PER_DAY = 86_400_000;
 
 /**
  * Delete audit log entries older than the given threshold.
@@ -22,6 +21,7 @@ export async function pgCleanupAuditLog<
   db: PostgresJsDatabase<TSchema> | PgliteDatabase<TSchema>,
   options: { olderThanDays: number },
 ): Promise<CleanupResult> {
+  validateOlderThanDays(options.olderThanDays);
   const cutoff = sql`now() - interval '${sql.raw(String(options.olderThanDays))} days'`;
   const deleted = await db.delete(pgAuditLog).where(lt(pgAuditLog.timestamp, cutoff)).returning();
 
@@ -38,9 +38,10 @@ export function sqliteCleanupAuditLog<
   db: BetterSQLite3Database<TSchema>,
   options: { olderThanDays: number; batchSize?: number },
 ): CleanupResult {
+  validateOlderThanDays(options.olderThanDays);
   const cutoffMs = Date.now() - options.olderThanDays * MS_PER_DAY;
 
-  if (options.batchSize) {
+  if (options.batchSize !== undefined && options.batchSize > 0) {
     // Batch delete: delete up to batchSize rows per invocation
     const result = db.run(
       sql`DELETE FROM ${sqliteAuditLog} WHERE rowid IN (

@@ -3,16 +3,12 @@ import { and, isNotNull, lt, sql } from "drizzle-orm";
 import { syncQueue as pgSyncQueue } from "../schema/pg/sync.js";
 import { syncQueue as sqliteSyncQueue } from "../schema/sqlite/sync.js";
 
+import { MS_PER_DAY, validateOlderThanDays } from "./types.js";
+
+import type { CleanupResult } from "./types.js";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-export interface CleanupResult {
-  readonly deletedCount: number;
-}
-
-/** Milliseconds in one day. */
-const MS_PER_DAY = 86_400_000;
 
 /**
  * Delete synced entries from the sync queue that are older than the given threshold.
@@ -24,6 +20,7 @@ export async function pgCleanupSyncedEntries<
   db: PostgresJsDatabase<TSchema> | PgliteDatabase<TSchema>,
   options: { olderThanDays: number },
 ): Promise<CleanupResult> {
+  validateOlderThanDays(options.olderThanDays);
   const cutoff = sql`now() - interval '${sql.raw(String(options.olderThanDays))} days'`;
   const deleted = await db
     .delete(pgSyncQueue)
@@ -40,6 +37,7 @@ export async function pgCleanupSyncedEntries<
 export function sqliteCleanupSyncedEntries<
   TSchema extends Record<string, unknown> = Record<string, never>,
 >(db: BetterSQLite3Database<TSchema>, options: { olderThanDays: number }): CleanupResult {
+  validateOlderThanDays(options.olderThanDays);
   const cutoffMs = Date.now() - options.olderThanDays * MS_PER_DAY;
   const result = db
     .delete(sqliteSyncQueue)

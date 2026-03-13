@@ -2,14 +2,15 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { pgCleanupOrphanedTags } from "../queries/orphan-cleanup.js";
+import { pgCleanupAllOrphanedTags, pgCleanupOrphanedTags } from "../queries/orphan-cleanup.js";
 import { accounts } from "../schema/pg/auth.js";
+import { groups } from "../schema/pg/groups.js";
 import { members } from "../schema/pg/members.js";
 import { bucketContentTags, buckets } from "../schema/pg/privacy.js";
 import { systems } from "../schema/pg/systems.js";
 
 import {
-  createPgMemberTables,
+  createPgGroupsTables,
   pgExec,
   pgInsertAccount,
   pgInsertMember,
@@ -21,7 +22,7 @@ import {
 import type { BucketContentEntityType } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, members, buckets, bucketContentTags };
+const schema = { accounts, systems, members, groups, buckets, bucketContentTags };
 
 describe("pgCleanupOrphanedTags", () => {
   let client: PGlite;
@@ -30,8 +31,8 @@ describe("pgCleanupOrphanedTags", () => {
   beforeAll(async () => {
     client = await PGlite.create();
     db = drizzle(client, { schema });
-    // Member tables include base tables (accounts, systems) + members
-    await createPgMemberTables(client);
+    // Groups tables include base tables (accounts, systems) + members + groups
+    await createPgGroupsTables(client);
     // Add privacy tables manually to avoid re-creating base tables
     await pgExec(client, PG_DDL.buckets);
     await pgExec(client, PG_DDL.bucketsIndexes);
@@ -46,6 +47,7 @@ describe("pgCleanupOrphanedTags", () => {
   afterEach(async () => {
     await db.delete(bucketContentTags);
     await db.delete(buckets);
+    await db.delete(groups);
     await db.delete(members);
   });
 
@@ -114,20 +116,76 @@ describe("pgCleanupOrphanedTags", () => {
 
     // Valid member tag
     await insertTag("member", memberId, bucketId);
-    // Orphan tag for a different entity type (group — no groups table populated)
-    // This would be orphaned under "group" cleanup but untouched by "member" cleanup
-    // We can't insert "group" type without a groups table, so test isolation differently:
-    // Insert two orphan member tags, clean only member, verify both removed
-    const orphan1 = crypto.randomUUID();
-    const orphan2 = crypto.randomUUID();
-    await insertTag("member", orphan1, bucketId);
-    await insertTag("member", orphan2, bucketId);
+    // Orphan tag for group type (no matching group row exists)
+    await insertTag("group", crypto.randomUUID(), bucketId);
 
+    // Clean only member type — group orphan should remain untouched
     const result = await pgCleanupOrphanedTags(db, "member");
-    expect(result.deletedCount).toBe(2);
+    expect(result.deletedCount).toBe(0);
 
     const remaining = await db.select().from(bucketContentTags);
-    expect(remaining).toHaveLength(1);
-    expect(remaining[0]?.entityId).toBe(memberId);
+    expect(remaining).toHaveLength(2);
+  });
+});
+
+describe("pgCleanupAllOrphanedTags", () => {
+  /**
+   * Stub tables required by ENTITY_TABLE_MAP that aren't created by
+   * createPgGroupsTables (which provides: members, groups).
+   */
+  const STUB_TABLES = [
+    "channels",
+    "messages",
+    "notes",
+    "polls",
+    "relationships",
+    "subsystems",
+    "side_systems",
+    "layers",
+    "journal_entries",
+    "wiki_pages",
+    "custom_fronts",
+    "fronting_sessions",
+    "board_messages",
+    "acknowledgements",
+    "innerworld_entities",
+    "innerworld_regions",
+    "field_definitions",
+    "field_values",
+    "member_photos",
+    "fronting_comments",
+  ];
+
+  let client: PGlite;
+  let db: PgliteDatabase<typeof schema>;
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client, { schema });
+    await createPgGroupsTables(client);
+    await pgExec(client, PG_DDL.buckets);
+    await pgExec(client, PG_DDL.bucketsIndexes);
+    await pgExec(client, PG_DDL.bucketContentTags);
+    await pgExec(client, PG_DDL.bucketContentTagsIndexes);
+    // Create minimal stub tables so NOT EXISTS subqueries don't fail
+    for (const table of STUB_TABLES) {
+      await pgExec(client, `CREATE TABLE IF NOT EXISTS ${table} (id VARCHAR PRIMARY KEY)`);
+    }
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(bucketContentTags);
+    await db.delete(buckets);
+    await db.delete(groups);
+    await db.delete(members);
+  });
+
+  it("returns 0 on empty table", async () => {
+    const result = await pgCleanupAllOrphanedTags(db);
+    expect(result.deletedCount).toBe(0);
   });
 });
