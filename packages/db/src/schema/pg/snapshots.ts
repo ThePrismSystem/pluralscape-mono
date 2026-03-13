@@ -17,13 +17,18 @@ export const systemSnapshots = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    trigger: varchar("trigger", { length: ENUM_MAX_LENGTH }).notNull().$type<SnapshotTrigger>(),
+    snapshotTrigger: varchar("snapshot_trigger", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<SnapshotTrigger>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
     index("system_snapshots_system_created_idx").on(t.systemId, t.createdAt),
-    check("system_snapshots_trigger_check", enumCheck(t.trigger, SNAPSHOT_TRIGGERS)),
+    check(
+      "system_snapshots_snapshot_trigger_check",
+      enumCheck(t.snapshotTrigger, SNAPSHOT_TRIGGERS),
+    ),
   ],
 );
 

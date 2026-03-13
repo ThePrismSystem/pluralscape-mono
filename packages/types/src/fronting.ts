@@ -30,10 +30,11 @@ interface FrontingSessionBase extends AuditMetadata {
   readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
   /** Free-text description of fronting positionality (e.g. close vs far, height). */
   readonly positionality: string | null;
-  /** Free-text reason for the outtrigger (what caused the switch). Stored in T1 encrypted blob. */
-  readonly outtriggerReason: string | null;
-  /** Sentiment classification for the outtrigger reason. */
-  readonly outtriggerSentiment: OuttriggerSentiment | null;
+  /** Outtrigger data — what caused the switch. Stored in T1 encrypted blob. */
+  readonly outtrigger: {
+    readonly reason: string;
+    readonly sentiment: OuttriggerSentiment;
+  } | null;
 }
 
 /** A fronting session that is still active (no end time). */

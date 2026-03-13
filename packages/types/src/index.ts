@@ -444,6 +444,8 @@ export type {
   MemberLinkBlock,
   EntityLinkBlock,
   EntityLink,
+  MemberFrontingSnapshotEntry,
+  CustomFrontFrontingSnapshotEntry,
   FrontingSnapshotEntry,
   FrontingSnapshot,
   JournalEntry,
@@ -486,6 +488,7 @@ export type {
   SideSystemEntity,
   LayerEntity,
   InnerWorldEntity,
+  InnerWorldEntityType,
   InnerWorldRegion,
   InnerWorldCanvas,
 } from "./innerworld.js";

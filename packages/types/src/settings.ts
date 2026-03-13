@@ -58,7 +58,12 @@ export interface SystemSettings extends AuditMetadata {
   readonly saturationLevelsEnabled: boolean;
   /** Automatically capture a fronting snapshot when creating a journal entry. */
   readonly autoCaptureFrontingOnJournal: boolean;
-  /** Schedule for automatic system structure snapshots. */
+  /**
+   * Schedule for automatic system structure snapshots.
+   * Stored in the T1 encrypted blob. Scheduling is client-triggered:
+   * the client reads this value and fires snapshots locally, so the
+   * server never learns the schedule (zero-knowledge preservation).
+   */
   readonly snapshotSchedule: SnapshotSchedule;
   readonly onboardingComplete: boolean;
 }

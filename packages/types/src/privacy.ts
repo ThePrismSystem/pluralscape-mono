@@ -83,6 +83,7 @@ export interface KeyGrant {
   readonly friendAccountId: AccountId;
   /** Encrypted symmetric key for the bucket. Serialized to base64 at API transport boundaries. */
   readonly encryptedBucketKey: Uint8Array;
+  readonly keyVersion: number;
   readonly createdAt: UnixMillis;
   readonly revokedAt: UnixMillis | null;
 }

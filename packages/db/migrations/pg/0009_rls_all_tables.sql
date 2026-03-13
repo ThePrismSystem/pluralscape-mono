@@ -214,14 +214,14 @@ CREATE POLICY buckets_system_isolation ON buckets USING (system_id = NULLIF(curr
 -- friend_connections
 ALTER TABLE friend_connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE friend_connections FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS friend_connections_system_isolation ON friend_connections;
-CREATE POLICY friend_connections_system_isolation ON friend_connections USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+DROP POLICY IF EXISTS friend_connections_account_isolation ON friend_connections;
+CREATE POLICY friend_connections_account_isolation ON friend_connections USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
 
 -- friend_codes
 ALTER TABLE friend_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE friend_codes FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS friend_codes_system_isolation ON friend_codes;
-CREATE POLICY friend_codes_system_isolation ON friend_codes USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+DROP POLICY IF EXISTS friend_codes_account_isolation ON friend_codes;
+CREATE POLICY friend_codes_account_isolation ON friend_codes USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
 
 -- groups
 ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
@@ -346,8 +346,14 @@ CREATE POLICY notification_configs_system_isolation ON notification_configs USIN
 -- friend_notification_preferences
 ALTER TABLE friend_notification_preferences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE friend_notification_preferences FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS friend_notification_preferences_system_isolation ON friend_notification_preferences;
-CREATE POLICY friend_notification_preferences_system_isolation ON friend_notification_preferences USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
+DROP POLICY IF EXISTS friend_notification_preferences_account_isolation ON friend_notification_preferences;
+CREATE POLICY friend_notification_preferences_account_isolation ON friend_notification_preferences USING (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar) WITH CHECK (account_id = NULLIF(current_setting('app.current_account_id', true), '')::varchar);
+
+-- system_snapshots
+ALTER TABLE system_snapshots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_snapshots FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS system_snapshots_system_isolation ON system_snapshots;
+CREATE POLICY system_snapshots_system_isolation ON system_snapshots USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- webhook_configs
 ALTER TABLE webhook_configs ENABLE ROW LEVEL SECURITY;

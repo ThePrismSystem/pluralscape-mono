@@ -57,6 +57,7 @@ export const PG_DDL = {
       email_salt VARCHAR(255) NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
       kdf_salt VARCHAR(255) NOT NULL,
+      account_type VARCHAR(50) NOT NULL DEFAULT 'system' CHECK (account_type IN ('system', 'viewer')),
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
@@ -642,7 +643,7 @@ export const PG_DDL = {
     CREATE TABLE lifecycle_events (
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
+      event_type VARCHAR(50) NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')),
       occurred_at TIMESTAMPTZ NOT NULL,
       recorded_at TIMESTAMPTZ NOT NULL,
       encrypted_data BYTEA NOT NULL
@@ -990,16 +991,29 @@ export const PG_DDL = {
   friendNotificationPreferences: `
     CREATE TABLE friend_notification_preferences (
       id VARCHAR(50) PRIMARY KEY,
-      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       friend_connection_id VARCHAR(50) NOT NULL,
       enabled_event_types JSONB NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (friend_connection_id, system_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
+      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
     )
   `,
   friendNotificationPreferencesIndexes: `
-    CREATE UNIQUE INDEX friend_notification_prefs_system_id_friend_connection_id_idx ON friend_notification_preferences (system_id, friend_connection_id)
+    CREATE UNIQUE INDEX friend_notification_prefs_account_id_friend_connection_id_idx ON friend_notification_preferences (account_id, friend_connection_id)
+  `,
+  // Snapshots
+  systemSnapshots: `
+    CREATE TABLE system_snapshots (
+      id VARCHAR(50) PRIMARY KEY,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      snapshot_trigger VARCHAR(50) NOT NULL CHECK (snapshot_trigger IN ('manual', 'scheduled-daily', 'scheduled-weekly')),
+      encrypted_data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    )
+  `,
+  systemSnapshotsIndexes: `
+    CREATE INDEX system_snapshots_system_created_idx ON system_snapshots (system_id, created_at)
   `,
   // Webhooks
   webhookConfigs: `
@@ -1616,6 +1630,12 @@ export async function createPgPkBridgeTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.pkBridgeConfigsIndexes);
 }
 
+export async function createPgSnapshotTables(client: PGlite): Promise<void> {
+  await createPgBaseTables(client);
+  await pgExec(client, PG_DDL.systemSnapshots);
+  await pgExec(client, PG_DDL.systemSnapshotsIndexes);
+}
+
 export async function createPgNotificationTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.buckets);
@@ -1857,6 +1877,9 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.syncQueueIndexes);
   await pgExec(client, PG_DDL.syncConflicts);
   await pgExec(client, PG_DDL.syncConflictsIndexes);
+  // Snapshots
+  await pgExec(client, PG_DDL.systemSnapshots);
+  await pgExec(client, PG_DDL.systemSnapshotsIndexes);
   // Key rotation
   await pgExec(client, PG_DDL.bucketKeyRotations);
   await pgExec(client, PG_DDL.bucketKeyRotationsIndexes);

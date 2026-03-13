@@ -100,6 +100,7 @@ describe("KeyGrant", () => {
     expectTypeOf<KeyGrant["bucketId"]>().toEqualTypeOf<BucketId>();
     expectTypeOf<KeyGrant["friendAccountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<KeyGrant["encryptedBucketKey"]>().toEqualTypeOf<Uint8Array>();
+    expectTypeOf<KeyGrant["keyVersion"]>().toEqualTypeOf<number>();
     expectTypeOf<KeyGrant["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<KeyGrant["revokedAt"]>().toEqualTypeOf<UnixMillis | null>();
   });

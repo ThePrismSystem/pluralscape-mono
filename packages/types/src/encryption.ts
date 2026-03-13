@@ -615,7 +615,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // ── Tier map ───────────────────────────────────────────────────
 //
 // Member: T1 (name, pronouns, description, tags, colors, avatarSource, saturationLevel, suppressFriendFrontNotification, boardMessageNotificationOnFront) | T3 (archived)
-// FrontingSession: T1 (comment, positionality, outtriggerReason, outtriggerSentiment) | T3 (timestamps, memberId, frontingType, customFrontId, linkedStructure)
+// FrontingSession: T1 (comment, positionality, outtrigger) | T3 (timestamps, memberId, frontingType, customFrontId, linkedStructure)
 // FrontingComment: T1 (content) | T3 (frontingSessionId, memberId) — extends AuditMetadata
 // Group: T1 (name, description, imageSource, color, emoji) | T3 (sortOrder, archived, parentGroupId)
 // Subsystem: T1 (name, description, color, imageSource, emoji) | T3 (parentSubsystemId, architectureType, hasCore, discoveryStatus)

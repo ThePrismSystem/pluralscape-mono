@@ -95,14 +95,14 @@ export interface MemberListItem {
   readonly archived: boolean;
 }
 
-/** Lightweight projection of a system for the multi-system switcher UI. */
+/** @future Multi-system switcher list item — not yet implemented. */
 export interface SystemListItem {
   readonly id: SystemId;
   readonly name: string;
   readonly avatarSource: ImageSource | null;
 }
 
-/** Scope controls for system duplication — which elements to copy. */
+/** @future System duplication scope controls — not yet implemented. */
 export interface SystemDuplicationScope {
   readonly members: boolean;
   readonly photos: boolean;

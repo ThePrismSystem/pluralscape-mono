@@ -1,4 +1,5 @@
 import type {
+  AccountId,
   DeviceTokenId,
   FriendConnectionId,
   FriendNotificationPreferenceId,
@@ -58,6 +59,6 @@ export type FriendNotificationEventType = "friend-switch-alert";
 export interface FriendNotificationPreference extends AuditMetadata {
   readonly id: FriendNotificationPreferenceId;
   readonly friendConnectionId: FriendConnectionId;
-  readonly systemId: SystemId;
+  readonly accountId: AccountId;
   readonly enabledEventTypes: readonly FriendNotificationEventType[];
 }

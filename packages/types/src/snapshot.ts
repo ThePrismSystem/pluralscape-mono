@@ -1,4 +1,4 @@
-import type { Tag, KnownSaturationLevel } from "./identity.js";
+import type { Tag, SaturationLevel } from "./identity.js";
 import type {
   GroupId,
   InnerWorldEntityId,
@@ -10,6 +10,7 @@ import type {
   SystemId,
   SystemSnapshotId,
 } from "./ids.js";
+import type { InnerWorldEntityType } from "./innerworld.js";
 import type {
   ArchitectureType,
   DiscoveryStatus,
@@ -27,7 +28,7 @@ import type { UnixMillis } from "./timestamps.js";
 // ── Snapshot metadata ─────────────────────────────────────────────
 
 /** How a snapshot was triggered. */
-export type SnapshotTrigger = "manual" | "scheduled";
+export type SnapshotTrigger = "manual" | "scheduled-daily" | "scheduled-weekly";
 
 /** Configurable schedule for automatic snapshots. */
 export type SnapshotSchedule = "daily" | "weekly" | "disabled";
@@ -36,9 +37,6 @@ export type SnapshotSchedule = "daily" | "weekly" | "disabled";
 export interface SystemSnapshot {
   readonly id: SystemSnapshotId;
   readonly systemId: SystemId;
-  /** User-provided name for manual snapshots. */
-  readonly name: string | null;
-  readonly description: string | null;
   readonly trigger: SnapshotTrigger;
   readonly createdAt: UnixMillis;
 }
@@ -52,7 +50,7 @@ export interface SnapshotMember {
   readonly pronouns: readonly string[];
   readonly description: string | null;
   readonly tags: readonly Tag[];
-  readonly saturationLevel: KnownSaturationLevel | null;
+  readonly saturationLevel: SaturationLevel | null;
   readonly archived: boolean;
 }
 
@@ -113,12 +111,14 @@ export interface SnapshotInnerworldRegion {
 export interface SnapshotInnerworldEntity {
   readonly id: InnerWorldEntityId;
   readonly regionId: InnerWorldRegionId | null;
-  readonly entityType: "member" | "landmark" | "subsystem" | "side-system" | "layer";
+  readonly entityType: InnerWorldEntityType;
   readonly name: string | null;
 }
 
 /** The decrypted content of a system snapshot blob. */
 export interface SnapshotContent {
+  readonly name: string | null;
+  readonly description: string | null;
   readonly members: readonly SnapshotMember[];
   readonly subsystems: readonly SnapshotSubsystem[];
   readonly sideSystems: readonly SnapshotSideSystem[];

@@ -381,7 +381,8 @@ export const ENTITY_TYPES = [
 export const FRONTING_REPORT_FORMATS = ["html", "pdf"] as const satisfies readonly ReportFormat[];
 export const SNAPSHOT_TRIGGERS = [
   "manual",
-  "scheduled",
+  "scheduled-daily",
+  "scheduled-weekly",
 ] as const satisfies readonly SnapshotTrigger[];
 
 /**

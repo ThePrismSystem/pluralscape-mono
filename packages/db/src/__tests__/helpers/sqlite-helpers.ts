@@ -56,6 +56,7 @@ export const SQLITE_DDL = {
       email_salt TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       kdf_salt TEXT NOT NULL,
+      account_type TEXT NOT NULL DEFAULT 'system' CHECK (account_type IN ('system', 'viewer')),
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
@@ -633,7 +634,7 @@ export const SQLITE_DDL = {
     CREATE TABLE lifecycle_events (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      event_type TEXT NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change')),
+      event_type TEXT NOT NULL CHECK (event_type IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')),
       occurred_at INTEGER NOT NULL,
       recorded_at INTEGER NOT NULL,
       encrypted_data BLOB NOT NULL
@@ -984,16 +985,29 @@ export const SQLITE_DDL = {
   friendNotificationPreferences: `
     CREATE TABLE friend_notification_preferences (
       id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       friend_connection_id TEXT NOT NULL,
       enabled_event_types TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      FOREIGN KEY (friend_connection_id, system_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
+      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
     )
   `,
   friendNotificationPreferencesIndexes: `
-    CREATE UNIQUE INDEX friend_notification_prefs_system_id_friend_connection_id_idx ON friend_notification_preferences (system_id, friend_connection_id)
+    CREATE UNIQUE INDEX friend_notification_prefs_account_id_friend_connection_id_idx ON friend_notification_preferences (account_id, friend_connection_id)
+  `,
+  // Snapshots
+  systemSnapshots: `
+    CREATE TABLE system_snapshots (
+      id TEXT PRIMARY KEY,
+      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      snapshot_trigger TEXT NOT NULL CHECK (snapshot_trigger IN ('manual', 'scheduled-daily', 'scheduled-weekly')),
+      encrypted_data BLOB NOT NULL,
+      created_at INTEGER NOT NULL
+    )
+  `,
+  systemSnapshotsIndexes: `
+    CREATE INDEX system_snapshots_system_created_idx ON system_snapshots (system_id, created_at)
   `,
   // Webhooks
   webhookConfigs: `
@@ -1625,6 +1639,12 @@ export function createSqlitePkBridgeTables(client: InstanceType<typeof Database>
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.pkBridgeConfigs);
   client.exec(SQLITE_DDL.pkBridgeConfigsIndexes);
+}
+
+export function createSqliteSnapshotTables(client: InstanceType<typeof Database>): void {
+  createSqliteBaseTables(client);
+  client.exec(SQLITE_DDL.systemSnapshots);
+  client.exec(SQLITE_DDL.systemSnapshotsIndexes);
 }
 
 export function createSqliteNotificationTables(client: InstanceType<typeof Database>): void {

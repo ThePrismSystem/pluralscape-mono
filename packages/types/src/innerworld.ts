@@ -72,6 +72,9 @@ export type InnerWorldEntity =
   | SideSystemEntity
   | LayerEntity;
 
+/** The set of valid innerworld entity type strings. */
+export type InnerWorldEntityType = InnerWorldEntity["entityType"];
+
 /** A region or area within the innerworld. */
 export interface InnerWorldRegion extends AuditMetadata {
   readonly id: InnerWorldRegionId;

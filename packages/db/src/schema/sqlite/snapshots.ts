@@ -16,13 +16,16 @@ export const systemSnapshots = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    trigger: text("trigger").notNull().$type<SnapshotTrigger>(),
+    snapshotTrigger: text("snapshot_trigger").notNull().$type<SnapshotTrigger>(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
     index("system_snapshots_system_created_idx").on(t.systemId, t.createdAt),
-    check("system_snapshots_trigger_check", enumCheck(t.trigger, SNAPSHOT_TRIGGERS)),
+    check(
+      "system_snapshots_snapshot_trigger_check",
+      enumCheck(t.snapshotTrigger, SNAPSHOT_TRIGGERS),
+    ),
   ],
 );
 

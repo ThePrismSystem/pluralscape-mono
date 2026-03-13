@@ -1,10 +1,12 @@
 import type {
+  InnerWorldEntityId,
   InnerWorldRegionId,
   LifecycleEventId,
   MemberId,
   SubsystemId,
   SystemId,
 } from "./ids.js";
+import type { InnerWorldEntityType } from "./innerworld.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { EntityReference } from "./utility.js";
 
@@ -108,8 +110,8 @@ export interface StructureMoveEvent extends LifecycleEventBase {
 /** An entity moves within the innerworld (between regions). */
 export interface InnerworldMoveEvent extends LifecycleEventBase {
   readonly eventType: "innerworld-move";
-  readonly entityId: string;
-  readonly entityType: "member" | "landmark" | "subsystem" | "side-system" | "layer";
+  readonly entityId: InnerWorldEntityId;
+  readonly entityType: InnerWorldEntityType;
   readonly fromRegionId: InnerWorldRegionId | null;
   readonly toRegionId: InnerWorldRegionId | null;
 }

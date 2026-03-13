@@ -27,6 +27,7 @@ import {
   JOB_TYPES,
   KNOWN_SATURATION_LEVELS,
   LAYER_ACCESS_TYPES,
+  LIFECYCLE_EVENT_TYPES,
   NOTIFICATION_EVENT_TYPES,
   PK_SYNC_DIRECTIONS,
   POLL_KINDS,
@@ -254,6 +255,21 @@ describe("enum arrays", () => {
     expect(ROTATION_ITEM_STATUSES).toContain("failed");
   });
 
+  it("LIFECYCLE_EVENT_TYPES matches LifecycleEventType union", () => {
+    expect(LIFECYCLE_EVENT_TYPES).toHaveLength(13);
+    expect(LIFECYCLE_EVENT_TYPES).toContain("split");
+    expect(LIFECYCLE_EVENT_TYPES).toContain("fusion");
+    expect(LIFECYCLE_EVENT_TYPES).toContain("structure-move");
+    expect(LIFECYCLE_EVENT_TYPES).toContain("innerworld-move");
+  });
+
+  it("SNAPSHOT_TRIGGERS matches SnapshotTrigger union", () => {
+    expect(SNAPSHOT_TRIGGERS).toHaveLength(3);
+    expect(SNAPSHOT_TRIGGERS).toContain("manual");
+    expect(SNAPSHOT_TRIGGERS).toContain("scheduled-daily");
+    expect(SNAPSHOT_TRIGGERS).toContain("scheduled-weekly");
+  });
+
   it("all arrays have correct element counts", () => {
     expect(KNOWN_SATURATION_LEVELS).toHaveLength(4);
     expect(FRONTING_TYPES).toHaveLength(2);
@@ -290,7 +306,8 @@ describe("enum arrays", () => {
     expect(ROTATION_STATES).toHaveLength(5);
     expect(ROTATION_ITEM_STATUSES).toHaveLength(4);
     expect(ACCOUNT_TYPES).toHaveLength(2);
-    expect(SNAPSHOT_TRIGGERS).toHaveLength(2);
+    expect(SNAPSHOT_TRIGGERS).toHaveLength(3);
+    expect(LIFECYCLE_EVENT_TYPES).toHaveLength(13);
   });
 });
 

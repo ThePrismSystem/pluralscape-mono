@@ -1,6 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
+  AccountId,
   DeviceTokenId,
   FriendConnectionId,
   FriendNotificationPreferenceId,
@@ -118,7 +119,7 @@ describe("FriendNotificationPreference", () => {
     expectTypeOf<
       FriendNotificationPreference["friendConnectionId"]
     >().toEqualTypeOf<FriendConnectionId>();
-    expectTypeOf<FriendNotificationPreference["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FriendNotificationPreference["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<FriendNotificationPreference["enabledEventTypes"]>().toEqualTypeOf<
       readonly FriendNotificationEventType[]
     >();

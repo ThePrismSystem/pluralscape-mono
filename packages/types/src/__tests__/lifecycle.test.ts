@@ -1,6 +1,13 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { LifecycleEventId, MemberId, SubsystemId, SystemId } from "../ids.js";
+import type {
+  InnerWorldEntityId,
+  LifecycleEventId,
+  MemberId,
+  SubsystemId,
+  SystemId,
+} from "../ids.js";
+import type { InnerWorldEntityType } from "../innerworld.js";
 import type {
   ArchivalEvent,
   DiscoveryEvent,
@@ -117,6 +124,14 @@ describe("NameChangeEvent", () => {
     expectTypeOf<NameChangeEvent["memberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<NameChangeEvent["previousName"]>().toEqualTypeOf<string | null>();
     expectTypeOf<NameChangeEvent["newName"]>().toEqualTypeOf<string>();
+  });
+});
+
+describe("InnerworldMoveEvent", () => {
+  it("has correct discriminator and fields", () => {
+    expectTypeOf<InnerworldMoveEvent["eventType"]>().toEqualTypeOf<"innerworld-move">();
+    expectTypeOf<InnerworldMoveEvent["entityId"]>().toEqualTypeOf<InnerWorldEntityId>();
+    expectTypeOf<InnerworldMoveEvent["entityType"]>().toEqualTypeOf<InnerWorldEntityType>();
   });
 });
 
