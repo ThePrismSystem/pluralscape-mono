@@ -39,5 +39,4 @@ export {
   parseBucketContentEntityType,
 } from "./enums.js";
 export { enumCheck, versionCheck, archivableConsistencyCheck, nullPairCheck } from "./check.js";
-export { parseBucketContentEntityType } from "./enums.js";
 export type { DbAuditActor } from "./types.js";
