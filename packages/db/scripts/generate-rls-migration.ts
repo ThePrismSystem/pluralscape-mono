@@ -4,9 +4,7 @@
  * Output goes to stdout — redirect to migration file.
  */
 
-import { generateRlsStatements, RLS_TABLE_POLICIES } from "../src/rls/policies.js";
-
-const CREATE_POLICY_RE = /^CREATE POLICY (\S+) ON (\S+) /;
+import { dropPolicySql, generateRlsStatements, RLS_TABLE_POLICIES } from "../src/rls/policies.js";
 
 const lines: string[] = [];
 lines.push("-- RLS policies for all tenant tables");
@@ -17,10 +15,9 @@ for (const tableName of Object.keys(RLS_TABLE_POLICIES)) {
   lines.push(`-- ${tableName}`);
   const statements = generateRlsStatements(tableName);
   for (const stmt of statements) {
-    const match = CREATE_POLICY_RE.exec(stmt);
-    if (match) {
-      const [, policyName, policyTable] = match;
-      lines.push(`DROP POLICY IF EXISTS ${policyName} ON ${policyTable};`);
+    const drop = dropPolicySql(stmt);
+    if (drop) {
+      lines.push(`${drop};`);
     }
     lines.push(`${stmt};`);
   }

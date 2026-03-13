@@ -5,7 +5,7 @@
 
 import { AEAD_NONCE_BYTES } from "@pluralscape/crypto";
 
-import { applyAllRls } from "../../rls/apply.js";
+import { applyAllRls, type RlsExecutor } from "../../rls/apply.js";
 import { accounts } from "../../schema/pg/auth.js";
 import { channels, polls } from "../../schema/pg/communication.js";
 import { members } from "../../schema/pg/members.js";
@@ -1852,7 +1852,7 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
  * Call after creating the tables you need for your test.
  */
 export async function applyAllRlsToClient(client: PGlite): Promise<void> {
-  const executor = {
+  const executor: RlsExecutor = {
     async execute(statement: string): Promise<void> {
       await client.query(statement);
     },

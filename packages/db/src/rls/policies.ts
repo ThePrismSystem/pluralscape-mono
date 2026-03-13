@@ -105,6 +105,27 @@ export function chainedJoinSystemRlsPolicy(
   return `CREATE POLICY ${tableName}_system_isolation ON ${tableName} USING (${exists}) WITH CHECK (${exists})`;
 }
 
+/** Tables where system-pk scope uses `id` instead of `system_id`. */
+const SYSTEM_PK_ID_COLUMN: Readonly<Record<string, string>> = { systems: "id" };
+
+/** Tables where account-pk scope uses `id` instead of `account_id`. */
+const ACCOUNT_PK_ID_COLUMN: Readonly<Record<string, string>> = { accounts: "id" };
+
+/** Regex to extract policy name and table from CREATE POLICY statements. */
+const CREATE_POLICY_RE = /^CREATE POLICY (\S+) ON (\S+) /;
+
+/**
+ * Returns a `DROP POLICY IF EXISTS ...` statement for a CREATE POLICY statement,
+ * or `null` if the input is not a CREATE POLICY statement.
+ */
+export function dropPolicySql(stmt: string): string | null {
+  const match = CREATE_POLICY_RE.exec(stmt);
+  const policyName = match?.[1];
+  const tableName = match?.[2];
+  if (!policyName || !tableName) return null;
+  return `DROP POLICY IF EXISTS ${policyName} ON ${tableName}`;
+}
+
 /** Configuration for join-based RLS tables: maps table name to parent table and join column. */
 const JOIN_SYSTEM_CONFIG: Readonly<Record<string, { parentTable: string; joinColumn: string }>> = {
   key_grants: { parentTable: "buckets", joinColumn: "bucket_id" },
@@ -255,14 +276,10 @@ export function generateRlsStatements(tableName: string): string[] {
       statements.push(accountRlsPolicy(tableName));
       break;
     case "system-pk":
-      if (tableName === "systems") {
-        statements.push(systemRlsPolicy("systems", "id"));
-      } else {
-        statements.push(systemRlsPolicy(tableName));
-      }
+      statements.push(systemRlsPolicy(tableName, SYSTEM_PK_ID_COLUMN[tableName] ?? "system_id"));
       break;
     case "account-pk":
-      statements.push(accountRlsPolicy("accounts", "id"));
+      statements.push(accountRlsPolicy(tableName, ACCOUNT_PK_ID_COLUMN[tableName] ?? "account_id"));
       break;
     case "dual":
       statements.push(dualTenantRlsPolicy(tableName));

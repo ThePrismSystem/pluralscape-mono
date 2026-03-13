@@ -14,6 +14,7 @@ export type { DbDialect, DialectCapabilities } from "./dialect.js";
 export {
   accountScope,
   applyAllRls,
+  dropPolicySql,
   enableRls,
   generateRlsStatements,
   RLS_TABLE_POLICIES,
