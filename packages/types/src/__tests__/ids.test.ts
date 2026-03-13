@@ -290,7 +290,6 @@ describe("EntityType", () => {
         case "fronting-comment":
         case "bucket-key-rotation":
         case "bucket-rotation-item":
-        case "innerworld-canvas":
           return type;
         default: {
           const _exhaustive: never = type;
