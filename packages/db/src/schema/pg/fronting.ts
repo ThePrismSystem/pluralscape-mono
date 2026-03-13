@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, jsonb, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import {
+  check,
+  foreignKey,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  unique,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
@@ -38,7 +47,7 @@ export const customFronts = pgTable(
 export const frontingSessions = pgTable(
   "fronting_sessions",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -56,6 +65,7 @@ export const frontingSessions = pgTable(
     ...versioned(),
   },
   (t) => [
+    primaryKey({ columns: [t.id, t.startTime] }),
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
@@ -67,7 +77,7 @@ export const frontingSessions = pgTable(
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
     check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
-    unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
+    unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId, t.startTime),
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
@@ -122,6 +132,8 @@ export const frontingComments = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
+    /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
+    sessionStartTime: pgTimestamp("session_start_time").notNull(),
     memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
@@ -129,9 +141,10 @@ export const frontingComments = pgTable(
   },
   (t) => [
     index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
+    index("fronting_comments_session_start_idx").on(t.sessionStartTime),
     foreignKey({
-      columns: [t.frontingSessionId, t.systemId],
-      foreignColumns: [frontingSessions.id, frontingSessions.systemId],
+      columns: [t.frontingSessionId, t.systemId, t.sessionStartTime],
+      foreignColumns: [frontingSessions.id, frontingSessions.systemId, frontingSessions.startTime],
     }).onDelete("cascade"),
     foreignKey({
       columns: [t.memberId, t.systemId],

@@ -76,7 +76,6 @@ export const PG_DDL = {
     CREATE TABLE sessions (
       id VARCHAR(50) PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      device_info JSONB,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       last_active TIMESTAMPTZ,
@@ -256,7 +255,7 @@ export const PG_DDL = {
   // Fronting
   frontingSessions: `
     CREATE TABLE fronting_sessions (
-      id VARCHAR(50) PRIMARY KEY,
+      id VARCHAR(50) NOT NULL,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       start_time TIMESTAMPTZ NOT NULL,
       end_time TIMESTAMPTZ,
@@ -268,8 +267,9 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (id, start_time),
       CHECK (end_time IS NULL OR end_time > start_time),
-      UNIQUE (id, system_id),
+      UNIQUE (id, system_id, start_time),
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
       CHECK (version >= 1),
@@ -317,18 +317,20 @@ export const PG_DDL = {
       id VARCHAR(50) PRIMARY KEY,
       fronting_session_id VARCHAR(50) NOT NULL,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      session_start_time TIMESTAMPTZ NOT NULL,
       member_id VARCHAR(50),
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE,
+      FOREIGN KEY (fronting_session_id, system_id, session_start_time) REFERENCES fronting_sessions(id, system_id, start_time) ON DELETE CASCADE,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       CHECK (version >= 1)
     )
   `,
   frontingCommentsIndexes: `
-    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (fronting_session_id, created_at)
+    CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (fronting_session_id, created_at);
+    CREATE INDEX fronting_comments_session_start_idx ON fronting_comments (session_start_time)
   `,
   // Structure
   relationships: `
@@ -801,7 +803,6 @@ export const PG_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived BOOLEAN NOT NULL DEFAULT false,
       archived_at TIMESTAMPTZ,
-      FOREIGN KEY (fronting_session_id) REFERENCES fronting_sessions(id) ON DELETE SET NULL,
       CHECK (version >= 1),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )

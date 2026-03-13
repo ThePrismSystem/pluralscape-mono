@@ -1,4 +1,4 @@
-import type { EventId, MemberId, SubsystemId, SystemId } from "./ids.js";
+import type { LifecycleEventId, MemberId, SubsystemId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /**
@@ -8,7 +8,7 @@ import type { UnixMillis } from "./timestamps.js";
  * append-only immutable records with their own timestamp semantics.
  */
 interface LifecycleEventBase {
-  readonly id: EventId;
+  readonly id: LifecycleEventId;
   readonly systemId: SystemId;
   readonly occurredAt: UnixMillis;
   readonly recordedAt: UnixMillis;
@@ -45,14 +45,14 @@ export interface UnmergeEvent extends LifecycleEventBase {
 export interface DormancyStartEvent extends LifecycleEventBase {
   readonly eventType: "dormancy-start";
   readonly memberId: MemberId;
-  readonly relatedEventId: EventId | null;
+  readonly relatedLifecycleEventId: LifecycleEventId | null;
 }
 
 /** A member exits dormancy. */
 export interface DormancyEndEvent extends LifecycleEventBase {
   readonly eventType: "dormancy-end";
   readonly memberId: MemberId;
-  readonly relatedEventId: EventId | null;
+  readonly relatedLifecycleEventId: LifecycleEventId | null;
 }
 
 /** A new member is discovered. */

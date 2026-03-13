@@ -16,7 +16,7 @@ export type {
   FieldDefinitionId,
   FieldValueId,
   SessionId,
-  EventId,
+  LifecycleEventId,
   AccountId,
   BlobId,
   ApiKeyId,

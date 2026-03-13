@@ -77,7 +77,6 @@ describe("Session", () => {
   it("has expected fields", () => {
     expectTypeOf<Session["id"]>().toEqualTypeOf<SessionId>();
     expectTypeOf<Session["accountId"]>().toEqualTypeOf<AccountId>();
-    expectTypeOf<Session["deviceInfo"]>().toEqualTypeOf<DeviceInfo | null>();
     expectTypeOf<Session["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<Session["lastActive"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<Session["revoked"]>().toEqualTypeOf<boolean>();
