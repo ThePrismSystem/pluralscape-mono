@@ -190,6 +190,20 @@ describe("SQLite system_settings schema", () => {
     expect(rows).toHaveLength(0);
   });
 
+  it("rejects pinHash that does not start with $argon2id$", () => {
+    const accountId = insertAccount();
+    const systemId = sqliteInsertSystem(db, accountId);
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          "INSERT INTO system_settings (id, system_id, pin_hash, encrypted_data, created_at, updated_at, version) VALUES (?, ?, 'bcrypt$hash', X'0102', ?, ?, 1)",
+        )
+        .run(`sset_${crypto.randomUUID()}`, systemId, now, now),
+    ).toThrow(/CHECK|constraint/i);
+  });
+
   it("rejects nonexistent systemId FK", () => {
     const now = Date.now();
     expect(() =>

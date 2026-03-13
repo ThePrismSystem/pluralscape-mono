@@ -85,6 +85,13 @@
       "when": 1773619200000,
       "tag": "0011_field_type_not_null",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1773619201000,
+      "tag": "0012_pin_hash_kdf_check",
+      "breakpoints": true
     }
   ]
 }

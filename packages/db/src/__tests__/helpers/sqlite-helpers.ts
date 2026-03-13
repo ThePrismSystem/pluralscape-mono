@@ -569,7 +569,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (pin_hash IS NULL OR pin_hash LIKE '$argon2id$%')
     )
   `,
   // API Keys

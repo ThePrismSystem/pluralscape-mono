@@ -575,7 +575,8 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (pin_hash IS NULL OR pin_hash LIKE '$argon2id$%')
     )
   `,
   // API Keys

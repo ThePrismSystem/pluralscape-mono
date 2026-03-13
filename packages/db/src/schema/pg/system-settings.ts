@@ -1,4 +1,5 @@
-import { boolean, pgTable, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, check, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
@@ -24,7 +25,13 @@ export const systemSettings = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [versionCheckFor("system_settings", t.version)],
+  (t) => [
+    versionCheckFor("system_settings", t.version),
+    check(
+      "system_settings_pin_hash_kdf_check",
+      sql`${t.pinHash} IS NULL OR ${t.pinHash} LIKE '$argon2id$%'`,
+    ),
+  ],
 );
 
 export type SystemSettingsRow = InferSelectModel<typeof systemSettings>;
