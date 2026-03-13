@@ -25,7 +25,6 @@ import type {
   ChartData,
   ChartDataset,
   DateRange,
-  DeviceInfo,
   EntityType,
   MemberFrontingBreakdown,
 } from "@pluralscape/types";
@@ -36,6 +35,14 @@ import type { InferSelectModel } from "drizzle-orm";
 // These are internal persistence concerns (encryption, versioning, archival).
 // ---------------------------------------------------------------------------
 const DB_ONLY_COLUMNS = new Set(["encryptedData", "version", "archived", "archivedAt"]);
+
+// ---------------------------------------------------------------------------
+// PG-only columns — present in PG but intentionally absent from SQLite.
+// These support server-side concerns like partitioning (ADR 019).
+// ---------------------------------------------------------------------------
+const PG_ONLY_COLUMNS: Record<string, Set<string>> = {
+  frontingComments: new Set(["sessionStartTime"]),
+};
 
 // ---------------------------------------------------------------------------
 // Table pairs shared between PG and SQLite.
@@ -274,9 +281,9 @@ const TABLE_PAIRS: Array<{
   },
   // PK Bridge
   {
-    name: "pkBridgeState",
-    pgTable: getTableColumns(pg.pkBridgeState),
-    sqliteTable: getTableColumns(sqlite.pkBridgeState),
+    name: "pkBridgeConfigs",
+    pgTable: getTableColumns(pg.pkBridgeConfigs),
+    sqliteTable: getTableColumns(sqlite.pkBridgeConfigs),
   },
   // Safe Mode
   {
@@ -416,8 +423,9 @@ describe("PG and SQLite column parity", () => {
     it(`${name} has identical column sets in PG and SQLite`, () => {
       const pgCols = new Set(Object.keys(pgTable));
       const sqliteCols = new Set(Object.keys(sqliteTable));
+      const pgOnly = PG_ONLY_COLUMNS[name] ?? new Set<string>();
 
-      const onlyInPg = [...pgCols].filter((c) => !sqliteCols.has(c));
+      const onlyInPg = [...pgCols].filter((c) => !sqliteCols.has(c) && !pgOnly.has(c));
       const onlyInSqlite = [...sqliteCols].filter((c) => !pgCols.has(c));
 
       expect(onlyInPg, `columns only in PG ${name}`).toEqual([]);
@@ -489,30 +497,19 @@ describe("Column existence", () => {
       expect(cols.frontingSessionId.name).toBe("fronting_session_id");
     });
 
-    it("has expected canonical columns: id, frontingSessionId, systemId, memberId, encryptedData", () => {
+    it("has expected canonical columns: id, frontingSessionId, systemId, sessionStartTime, memberId, encryptedData", () => {
       const cols = getTableColumns(pg.frontingComments);
-      const expected = ["id", "frontingSessionId", "systemId", "memberId", "encryptedData"];
+      const expected = [
+        "id",
+        "frontingSessionId",
+        "systemId",
+        "sessionStartTime",
+        "memberId",
+        "encryptedData",
+      ];
       for (const col of expected) {
         expect(cols, `expected column ${col}`).toHaveProperty(col);
       }
-    });
-  });
-
-  // Fix 4 — sessions.deviceInfo is DeviceInfo | null
-  describe("sessions (Fix 4)", () => {
-    it("PG has deviceInfo column", () => {
-      const cols = getTableColumns(pg.sessions);
-      expect(cols).toHaveProperty("deviceInfo");
-    });
-
-    it("SQLite has deviceInfo column", () => {
-      const cols = getTableColumns(sqlite.sessions);
-      expect(cols).toHaveProperty("deviceInfo");
-    });
-
-    it("PG deviceInfo DB column is named device_info", () => {
-      const cols = getTableColumns(pg.sessions);
-      expect(cols.deviceInfo.name).toBe("device_info");
     });
   });
 
@@ -733,17 +730,6 @@ describe("Type-level assertions", () => {
   it("SQLite frontingComments.frontingSessionId infers as string", () => {
     type Row = InferSelectModel<typeof sqlite.frontingComments>;
     expectTypeOf<Row["frontingSessionId"]>().toEqualTypeOf<string>();
-  });
-
-  // Fix 4 — sessions.deviceInfo is DeviceInfo | null
-  it("PG sessions.deviceInfo infers as DeviceInfo | null", () => {
-    type Row = InferSelectModel<typeof pg.sessions>;
-    expectTypeOf<Row["deviceInfo"]>().toEqualTypeOf<DeviceInfo | null>();
-  });
-
-  it("SQLite sessions.deviceInfo infers as DeviceInfo | null", () => {
-    type Row = InferSelectModel<typeof sqlite.sessions>;
-    expectTypeOf<Row["deviceInfo"]>().toEqualTypeOf<DeviceInfo | null>();
   });
 
   // Fix 5 — switches.memberIds is a non-empty readonly tuple

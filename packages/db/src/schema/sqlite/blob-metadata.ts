@@ -58,6 +58,7 @@ export const blobMetadata = sqliteTable(
       sql`${t.sizeBytes} <= ${sql.raw(String(MAX_BLOB_SIZE_BYTES))}`,
     ),
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
+    check("blob_metadata_checksum_length_check", sql`length(${t.checksum}) = 64`),
   ],
 );
 

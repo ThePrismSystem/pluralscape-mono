@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { check, index, primaryKey, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
@@ -38,6 +39,7 @@ export const auditLog = sqliteTable(
     index("audit_log_event_type_idx").on(t.eventType),
     index("audit_log_timestamp_idx").on(t.timestamp),
     check("audit_log_event_type_check", enumCheck(t.eventType, AUDIT_EVENT_TYPES)),
+    check("audit_log_detail_length_check", sql`${t.detail} IS NULL OR length(${t.detail}) <= 2048`),
   ],
 );
 

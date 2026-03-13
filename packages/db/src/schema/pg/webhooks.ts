@@ -83,6 +83,9 @@ export const webhookDeliveries = pgTable(
     index("webhook_deliveries_terminal_created_at_idx")
       .on(t.createdAt)
       .where(sql`${t.status} IN ('success', 'failed')`),
+    index("webhook_deliveries_system_retry_idx")
+      .on(t.systemId, t.status, t.nextRetryAt)
+      .where(sql`${t.status} NOT IN ('success', 'failed')`),
     foreignKey({
       columns: [t.webhookId, t.systemId],
       foreignColumns: [webhookConfigs.id, webhookConfigs.systemId],

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { pkBridgeState } from "../schema/sqlite/pk-bridge.js";
+import { pkBridgeConfigs } from "../schema/sqlite/pk-bridge.js";
 import { systems } from "../schema/sqlite/systems.js";
 
 import {
@@ -16,7 +16,7 @@ import {
 import type DatabaseConstructor from "better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-const schema = { pkBridgeState, systems };
+const schema = { pkBridgeConfigs, systems };
 
 describe("SQLite PK Bridge Schema", () => {
   let client: InstanceType<typeof DatabaseConstructor>;
@@ -44,7 +44,7 @@ describe("SQLite PK Bridge Schema", () => {
     const entityMappings = testBlob(new Uint8Array([40, 50, 60]));
     const errorLog = testBlob(new Uint8Array([70, 80, 90]));
 
-    db.insert(pkBridgeState)
+    db.insert(pkBridgeConfigs)
       .values({
         id,
         systemId,
@@ -59,7 +59,7 @@ describe("SQLite PK Bridge Schema", () => {
       })
       .run();
 
-    const rows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(rows).toHaveLength(1);
     const row = rows[0];
     expect(row?.id).toBe(id);
@@ -80,7 +80,7 @@ describe("SQLite PK Bridge Schema", () => {
     const now = Date.now();
     const id = crypto.randomUUID();
 
-    db.insert(pkBridgeState)
+    db.insert(pkBridgeConfigs)
       .values({
         id,
         systemId,
@@ -93,7 +93,7 @@ describe("SQLite PK Bridge Schema", () => {
       })
       .run();
 
-    const rows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(rows).toHaveLength(1);
     expect(rows[0]?.enabled).toBe(true);
   });
@@ -107,7 +107,7 @@ describe("SQLite PK Bridge Schema", () => {
       const now = Date.now();
       const id = crypto.randomUUID();
 
-      db.insert(pkBridgeState)
+      db.insert(pkBridgeConfigs)
         .values({
           id,
           systemId,
@@ -120,7 +120,7 @@ describe("SQLite PK Bridge Schema", () => {
         })
         .run();
 
-      const rows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+      const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
       expect(rows[0]?.syncDirection).toBe(direction);
     }
   });
@@ -132,7 +132,7 @@ describe("SQLite PK Bridge Schema", () => {
 
     expect(() =>
       db
-        .insert(pkBridgeState)
+        .insert(pkBridgeConfigs)
         .values({
           id: crypto.randomUUID(),
           systemId,
@@ -153,7 +153,7 @@ describe("SQLite PK Bridge Schema", () => {
     const now = Date.now();
     const id = crypto.randomUUID();
 
-    db.insert(pkBridgeState)
+    db.insert(pkBridgeConfigs)
       .values({
         id,
         systemId,
@@ -167,7 +167,7 @@ describe("SQLite PK Bridge Schema", () => {
       })
       .run();
 
-    const rows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(rows[0]?.lastSyncAt).toBeNull();
   });
 
@@ -178,7 +178,7 @@ describe("SQLite PK Bridge Schema", () => {
     const syncTime = now - 60000;
     const id = crypto.randomUUID();
 
-    db.insert(pkBridgeState)
+    db.insert(pkBridgeConfigs)
       .values({
         id,
         systemId,
@@ -192,7 +192,7 @@ describe("SQLite PK Bridge Schema", () => {
       })
       .run();
 
-    const rows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(rows[0]?.lastSyncAt).toBe(syncTime);
   });
 
@@ -211,7 +211,7 @@ describe("SQLite PK Bridge Schema", () => {
     const largeEntityMappings = testBlob(largeEntityCiphertext);
     const largeErrorLog = testBlob(largeErrorCiphertext);
 
-    db.insert(pkBridgeState)
+    db.insert(pkBridgeConfigs)
       .values({
         id,
         systemId,
@@ -224,7 +224,7 @@ describe("SQLite PK Bridge Schema", () => {
       })
       .run();
 
-    const rows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(rows[0]?.pkTokenEncrypted).toEqual(largePkToken);
     expect(rows[0]?.entityMappings.ciphertext).toEqual(largeEntityCiphertext);
     expect(rows[0]?.errorLog.ciphertext).toEqual(largeErrorCiphertext);
@@ -236,7 +236,7 @@ describe("SQLite PK Bridge Schema", () => {
     const now = Date.now();
     const id = crypto.randomUUID();
 
-    db.insert(pkBridgeState)
+    db.insert(pkBridgeConfigs)
       .values({
         id,
         systemId,
@@ -250,13 +250,13 @@ describe("SQLite PK Bridge Schema", () => {
       .run();
 
     // Verify the row exists
-    const beforeRows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const beforeRows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(beforeRows).toHaveLength(1);
 
     // Delete the system via raw SQL to trigger cascade
     client.exec(`DELETE FROM systems WHERE id = '${systemId}'`);
 
-    const afterRows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const afterRows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(afterRows).toHaveLength(0);
   });
 
@@ -266,7 +266,7 @@ describe("SQLite PK Bridge Schema", () => {
     const now = Date.now();
     const id = crypto.randomUUID();
 
-    db.insert(pkBridgeState)
+    db.insert(pkBridgeConfigs)
       .values({
         id,
         systemId,
@@ -279,7 +279,7 @@ describe("SQLite PK Bridge Schema", () => {
       })
       .run();
 
-    const rows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(rows[0]?.version).toBe(1);
   });
 
@@ -288,7 +288,7 @@ describe("SQLite PK Bridge Schema", () => {
 
     expect(() =>
       db
-        .insert(pkBridgeState)
+        .insert(pkBridgeConfigs)
         .values({
           id: crypto.randomUUID(),
           systemId: "nonexistent-system-id",
@@ -309,7 +309,7 @@ describe("SQLite PK Bridge Schema", () => {
     const now = Date.now();
     const id = crypto.randomUUID();
 
-    db.insert(pkBridgeState)
+    db.insert(pkBridgeConfigs)
       .values({
         id,
         systemId,
@@ -323,7 +323,7 @@ describe("SQLite PK Bridge Schema", () => {
       })
       .run();
 
-    const rows = db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id)).all();
+    const rows = db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id)).all();
     expect(rows[0]?.enabled).toBe(false);
   });
 });

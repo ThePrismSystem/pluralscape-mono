@@ -48,7 +48,7 @@ describe("sqliteCleanupSyncedEntries", () => {
         entityType: "member",
         entityId: crypto.randomUUID(),
         operation: "create",
-        changeData: new Uint8Array([1, 2, 3]),
+        encryptedChangeData: new Uint8Array([1, 2, 3]),
         createdAt: now,
         syncedAt: opts.syncedAt ?? null,
       })

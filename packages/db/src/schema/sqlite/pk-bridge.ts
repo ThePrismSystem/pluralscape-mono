@@ -10,8 +10,8 @@ import { systems } from "./systems.js";
 import type { PKSyncDirection } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
-export const pkBridgeState = sqliteTable(
-  "pk_bridge_state",
+export const pkBridgeConfigs = sqliteTable(
+  "pk_bridge_configs",
   {
     id: text("id").primaryKey(),
     systemId: text("system_id")
@@ -29,11 +29,11 @@ export const pkBridgeState = sqliteTable(
     ...versioned(),
   },
   (t) => [
-    uniqueIndex("pk_bridge_state_system_id_idx").on(t.systemId),
-    check("pk_bridge_state_sync_direction_check", enumCheck(t.syncDirection, PK_SYNC_DIRECTIONS)),
-    versionCheckFor("pk_bridge_state", t.version),
+    uniqueIndex("pk_bridge_configs_system_id_idx").on(t.systemId),
+    check("pk_bridge_configs_sync_direction_check", enumCheck(t.syncDirection, PK_SYNC_DIRECTIONS)),
+    versionCheckFor("pk_bridge_configs", t.version),
   ],
 );
 
-export type PkBridgeStateRow = InferSelectModel<typeof pkBridgeState>;
-export type NewPkBridgeState = InferInsertModel<typeof pkBridgeState>;
+export type PkBridgeConfigRow = InferSelectModel<typeof pkBridgeConfigs>;
+export type NewPkBridgeConfig = InferInsertModel<typeof pkBridgeConfigs>;

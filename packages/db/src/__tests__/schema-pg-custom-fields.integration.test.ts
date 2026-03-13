@@ -629,5 +629,27 @@ describe("PG custom fields schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("queries multiple visibility records by bucket_id", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const bucketId = await insertBucket(systemId);
+      const fieldDefId1 = await insertFieldDefinition(systemId);
+      const fieldDefId2 = await insertFieldDefinition(systemId);
+
+      await db.insert(fieldBucketVisibility).values([
+        { fieldDefinitionId: fieldDefId1, bucketId },
+        { fieldDefinitionId: fieldDefId2, bucketId },
+      ]);
+
+      const rows = await db
+        .select()
+        .from(fieldBucketVisibility)
+        .where(eq(fieldBucketVisibility.bucketId, bucketId));
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r) => r.fieldDefinitionId).sort()).toEqual(
+        [fieldDefId1, fieldDefId2].sort(),
+      );
+    });
   });
 });

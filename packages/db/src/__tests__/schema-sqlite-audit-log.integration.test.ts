@@ -241,4 +241,35 @@ describe("SQLite audit_log schema", () => {
         .run(),
     ).toThrow(/UNIQUE|constraint/i);
   });
+
+  it("accepts detail at exactly 2048 characters", () => {
+    const now = Date.now();
+
+    db.insert(auditLog)
+      .values({
+        id: crypto.randomUUID(),
+        eventType: "auth.login",
+        timestamp: now,
+        actor: testActor("account", "acc-123"),
+        detail: "x".repeat(2048),
+      })
+      .run();
+  });
+
+  it("rejects detail exceeding 2048 characters", () => {
+    const now = Date.now();
+
+    expect(() =>
+      db
+        .insert(auditLog)
+        .values({
+          id: crypto.randomUUID(),
+          eventType: "auth.login",
+          timestamp: now,
+          actor: testActor("account", "acc-123"),
+          detail: "x".repeat(2049),
+        })
+        .run(),
+    ).toThrow(/CHECK|constraint/i);
+  });
 });

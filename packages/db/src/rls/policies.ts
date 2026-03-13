@@ -209,7 +209,7 @@ export const RLS_TABLE_POLICIES = {
   field_values: "system",
   lifecycle_events: "system",
   safe_mode_content: "system",
-  pk_bridge_state: "system",
+  pk_bridge_configs: "system",
   notification_configs: "system",
   friend_notification_preferences: "system",
   webhook_configs: "system",

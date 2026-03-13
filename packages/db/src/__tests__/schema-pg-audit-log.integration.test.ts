@@ -239,4 +239,30 @@ describe("PG audit_log schema", () => {
     expect(rows).toHaveLength(2);
     expect(rows.map((r) => r.eventType).sort()).toEqual(["auth.login", "auth.logout"]);
   });
+
+  it("accepts detail at exactly 2048 characters", async () => {
+    const now = Date.now();
+
+    await db.insert(auditLog).values({
+      id: crypto.randomUUID(),
+      eventType: "auth.login",
+      timestamp: now,
+      actor: testActor("account", "acc-123"),
+      detail: "x".repeat(2048),
+    });
+  });
+
+  it("rejects detail exceeding 2048 characters", async () => {
+    const now = Date.now();
+
+    await expect(
+      db.insert(auditLog).values({
+        id: crypto.randomUUID(),
+        eventType: "auth.login",
+        timestamp: now,
+        actor: testActor("account", "acc-123"),
+        detail: "x".repeat(2049),
+      }),
+    ).rejects.toThrow();
+  });
 });

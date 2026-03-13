@@ -268,7 +268,6 @@ describe("PG auth schema", () => {
       await db.insert(sessions).values({
         id,
         accountId: account.id,
-        deviceInfo: { platform: "ios", appVersion: "1.0", deviceName: "iPhone" },
         createdAt: now,
         lastActive: now,
         revoked: false,
@@ -278,11 +277,6 @@ describe("PG auth schema", () => {
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
       expect(rows).toHaveLength(1);
       expect(rows[0]?.accountId).toBe(account.id);
-      expect(rows[0]?.deviceInfo).toEqual({
-        platform: "ios",
-        appVersion: "1.0",
-        deviceName: "iPhone",
-      });
       expect(rows[0]?.createdAt).toBe(now);
       expect(rows[0]?.lastActive).toBe(now);
       expect(rows[0]?.revoked).toBe(false);
@@ -333,7 +327,7 @@ describe("PG auth schema", () => {
       expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
-    it("handles nullable deviceInfo and lastActive", async () => {
+    it("handles nullable lastActive", async () => {
       const account = await insertAccount();
       const id = crypto.randomUUID();
 
@@ -344,7 +338,6 @@ describe("PG auth schema", () => {
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
-      expect(rows[0]?.deviceInfo).toBeNull();
       expect(rows[0]?.lastActive).toBeNull();
     });
 

@@ -70,7 +70,13 @@ interface PgExecutable {
   execute(query: SQL): Promise<{ rows: Record<string, unknown>[] }>;
 }
 
-/** Create the search_index table (idempotent). */
+/**
+ * Create the search_index table (idempotent).
+ *
+ * IMPORTANT: After calling this function, the caller must also apply RLS policies
+ * via `generateRlsStatements("search_index")`. The search_index is created via raw
+ * DDL (not Drizzle migrations), so RLS is not automatically applied.
+ */
 export async function createSearchIndex(db: PgExecutable): Promise<void> {
   await db.execute(sql.raw(SEARCH_INDEX_DDL));
 }

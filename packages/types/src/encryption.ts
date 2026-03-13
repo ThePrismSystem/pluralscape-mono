@@ -20,7 +20,7 @@ import type {
   BucketId,
   ChannelId,
   CustomFrontId,
-  EventId,
+  LifecycleEventId,
   FieldDefinitionId,
   FieldValueId,
   FrontingCommentId,
@@ -160,12 +160,14 @@ export type ClientFrontingSession = FrontingSession;
 /**
  * Server-side fronting comment representation.
  * T1 encrypted: content
- * T3 plaintext: frontingSessionId, memberId
+ * T3 plaintext: frontingSessionId, sessionStartTime, memberId
  */
 export interface ServerFrontingComment extends AuditMetadata {
   readonly id: FrontingCommentId;
   readonly frontingSessionId: FrontingSessionId;
   readonly systemId: SystemId;
+  /** Denormalized from parent fronting session for FK on partitioned table (ADR 019). */
+  readonly sessionStartTime: UnixMillis;
   readonly memberId: MemberId;
   readonly encryptedData: EncryptedBlob;
 }
@@ -369,7 +371,7 @@ export type ClientInnerWorldRegion = InnerWorldRegion;
  * T1 encrypted: notes
  */
 export interface ServerLifecycleEvent {
-  readonly id: EventId;
+  readonly id: LifecycleEventId;
   readonly systemId: SystemId;
   readonly eventType: LifecycleEventType;
   readonly occurredAt: UnixMillis;
@@ -642,7 +644,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // Switch: T3 (memberIds, timestamp — immutable event metadata; member IDs are non-identifying opaque tokens)
 // FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side
 //
-// Session: T1 (deviceInfo — pending migration to encryptedData) | T3 (accountId, revoked, timestamps)
+// Session: T1 (deviceInfo inside encryptedData) | T3 (accountId, revoked, timestamps, expiresAt)
 // ApiKey: T1 (name, inside encryptedData) | T3 (scopes — server enforces authorization; scopedBucketIds — server enforces bucket-scoped auth; keyType, tokenHash, timestamps, encryptedKeyMaterial)
 // BlobMetadata: T3 (mimeType — server must set Content-Type headers and validate uploads;
 //   purpose — server enforces per-purpose quota limits; sizeBytes — server enforces quota

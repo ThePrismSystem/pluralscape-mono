@@ -38,6 +38,7 @@ export const importJobs = sqliteTable(
     source: text("source").notNull().$type<ImportSource>(),
     status: text("status").notNull().default("pending").$type<ImportJobStatus>(),
     progressPercent: integer("progress_percent").notNull().default(0),
+    /** Error messages must be sanitized to exclude user-generated content (member names, etc.). */
     errorLog: sqliteJson("error_log"),
     warningCount: integer("warning_count").notNull().default(0),
     chunksTotal: integer("chunks_total"),
@@ -113,7 +114,7 @@ export const accountPurgeRequests = sqliteTable(
     check("account_purge_requests_status_check", enumCheck(t.status, ACCOUNT_PURGE_STATUSES)),
     uniqueIndex("account_purge_requests_active_unique_idx")
       .on(t.accountId)
-      .where(sql`status IN ('pending', 'confirmed', 'processing')`),
+      .where(sql`${t.status} IN ('pending', 'confirmed', 'processing')`),
   ],
 );
 

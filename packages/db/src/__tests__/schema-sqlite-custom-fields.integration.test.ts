@@ -700,5 +700,30 @@ describe("SQLite custom fields schema", () => {
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
+
+    it("queries multiple visibility records by bucket_id", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const bucketId = insertBucket(systemId);
+      const fieldDefId1 = insertFieldDefinition(systemId);
+      const fieldDefId2 = insertFieldDefinition(systemId);
+
+      db.insert(fieldBucketVisibility)
+        .values([
+          { fieldDefinitionId: fieldDefId1, bucketId },
+          { fieldDefinitionId: fieldDefId2, bucketId },
+        ])
+        .run();
+
+      const rows = db
+        .select()
+        .from(fieldBucketVisibility)
+        .where(eq(fieldBucketVisibility.bucketId, bucketId))
+        .all();
+      expect(rows).toHaveLength(2);
+      expect(rows.map((r) => r.fieldDefinitionId).sort()).toEqual(
+        [fieldDefId1, fieldDefId2].sort(),
+      );
+    });
   });
 });

@@ -1,10 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
-import { pkBridgeState } from "../schema/pg/pk-bridge.js";
+import { pkBridgeConfigs } from "../schema/pg/pk-bridge.js";
 import { systems } from "../schema/pg/systems.js";
 
 import {
@@ -16,9 +16,9 @@ import {
 
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
-const schema = { accounts, systems, pkBridgeState };
+const schema = { accounts, systems, pkBridgeConfigs };
 
-describe("PG pk_bridge_state schema", () => {
+describe("PG pk_bridge_configs schema", () => {
   let client: PGlite;
   let db: PgliteDatabase<typeof schema>;
 
@@ -34,6 +34,10 @@ describe("PG pk_bridge_state schema", () => {
     await client.close();
   });
 
+  afterEach(async () => {
+    await db.delete(pkBridgeConfigs);
+  });
+
   it("round-trips insert and select with all fields", async () => {
     const accountId = await insertAccount();
     const systemId = await pgInsertSystem(db, accountId);
@@ -44,7 +48,7 @@ describe("PG pk_bridge_state schema", () => {
     const mappings = testBlob(new Uint8Array([50, 60, 70]));
     const errors = testBlob(new Uint8Array([80, 90]));
 
-    await db.insert(pkBridgeState).values({
+    await db.insert(pkBridgeConfigs).values({
       id,
       systemId,
       enabled: true,
@@ -58,7 +62,7 @@ describe("PG pk_bridge_state schema", () => {
       version: 3,
     });
 
-    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(rows).toHaveLength(1);
     const row = rows[0];
     expect(row?.id).toBe(id);
@@ -80,7 +84,7 @@ describe("PG pk_bridge_state schema", () => {
     const id = crypto.randomUUID();
     const now = Date.now();
 
-    await db.insert(pkBridgeState).values({
+    await db.insert(pkBridgeConfigs).values({
       id,
       systemId,
       syncDirection: "bidirectional",
@@ -91,7 +95,7 @@ describe("PG pk_bridge_state schema", () => {
       updatedAt: now,
     });
 
-    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(rows[0]?.enabled).toBe(true);
   });
 
@@ -103,7 +107,7 @@ describe("PG pk_bridge_state schema", () => {
       const systemId = await pgInsertSystem(db, accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-      await db.insert(pkBridgeState).values({
+      await db.insert(pkBridgeConfigs).values({
         id,
         systemId,
         syncDirection: dir,
@@ -114,7 +118,7 @@ describe("PG pk_bridge_state schema", () => {
         updatedAt: now,
       });
 
-      const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+      const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
       expect(rows[0]?.syncDirection).toBe(dir);
     }
   });
@@ -125,7 +129,7 @@ describe("PG pk_bridge_state schema", () => {
 
     await expect(
       client.query(
-        `INSERT INTO pk_bridge_state (id, system_id, enabled, sync_direction, pk_token_encrypted, entity_mappings, error_log, created_at, updated_at, version)
+        `INSERT INTO pk_bridge_configs (id, system_id, enabled, sync_direction, pk_token_encrypted, entity_mappings, error_log, created_at, updated_at, version)
          VALUES ($1, $2, true, 'invalid-dir', '\\x01', '\\x02', '\\x03', NOW(), NOW(), 1)`,
         [crypto.randomUUID(), systemId],
       ),
@@ -138,7 +142,7 @@ describe("PG pk_bridge_state schema", () => {
     const id = crypto.randomUUID();
     const now = Date.now();
 
-    await db.insert(pkBridgeState).values({
+    await db.insert(pkBridgeConfigs).values({
       id,
       systemId,
       syncDirection: "ps-to-pk",
@@ -150,7 +154,7 @@ describe("PG pk_bridge_state schema", () => {
       updatedAt: now,
     });
 
-    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(rows[0]?.lastSyncAt).toBeNull();
   });
 
@@ -161,7 +165,7 @@ describe("PG pk_bridge_state schema", () => {
     const now = Date.now();
     const syncAt = now - 120_000;
 
-    await db.insert(pkBridgeState).values({
+    await db.insert(pkBridgeConfigs).values({
       id,
       systemId,
       syncDirection: "pk-to-ps",
@@ -173,7 +177,7 @@ describe("PG pk_bridge_state schema", () => {
       updatedAt: now,
     });
 
-    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(rows[0]?.lastSyncAt).toBe(syncAt);
   });
 
@@ -192,7 +196,7 @@ describe("PG pk_bridge_state schema", () => {
     const mappings = testBlob(mappingsCiphertext);
     const errors = testBlob(errorsCiphertext);
 
-    await db.insert(pkBridgeState).values({
+    await db.insert(pkBridgeConfigs).values({
       id,
       systemId,
       syncDirection: "bidirectional",
@@ -203,7 +207,7 @@ describe("PG pk_bridge_state schema", () => {
       updatedAt: now,
     });
 
-    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(rows[0]?.pkTokenEncrypted).toEqual(token);
     expect(rows[0]?.entityMappings.ciphertext).toEqual(mappingsCiphertext);
     expect(rows[0]?.errorLog.ciphertext).toEqual(errorsCiphertext);
@@ -215,7 +219,7 @@ describe("PG pk_bridge_state schema", () => {
     const id = crypto.randomUUID();
     const now = Date.now();
 
-    await db.insert(pkBridgeState).values({
+    await db.insert(pkBridgeConfigs).values({
       id,
       systemId,
       syncDirection: "ps-to-pk",
@@ -227,13 +231,13 @@ describe("PG pk_bridge_state schema", () => {
     });
 
     // Verify it exists first
-    const before = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const before = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(before).toHaveLength(1);
 
     // Delete the parent system via raw SQL to bypass any ORM protections
     await client.query("DELETE FROM systems WHERE id = $1", [systemId]);
 
-    const after = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const after = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(after).toHaveLength(0);
   });
 
@@ -243,7 +247,7 @@ describe("PG pk_bridge_state schema", () => {
     const id = crypto.randomUUID();
     const now = Date.now();
 
-    await db.insert(pkBridgeState).values({
+    await db.insert(pkBridgeConfigs).values({
       id,
       systemId,
       syncDirection: "pk-to-ps",
@@ -254,14 +258,14 @@ describe("PG pk_bridge_state schema", () => {
       updatedAt: now,
     });
 
-    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(rows[0]?.version).toBe(1);
   });
 
   it("rejects nonexistent systemId FK", async () => {
     const now = Date.now();
     await expect(
-      db.insert(pkBridgeState).values({
+      db.insert(pkBridgeConfigs).values({
         id: crypto.randomUUID(),
         systemId: "nonexistent-system-id",
         syncDirection: "ps-to-pk",
@@ -280,7 +284,7 @@ describe("PG pk_bridge_state schema", () => {
     const id = crypto.randomUUID();
     const now = Date.now();
 
-    await db.insert(pkBridgeState).values({
+    await db.insert(pkBridgeConfigs).values({
       id,
       systemId,
       enabled: false,
@@ -292,7 +296,7 @@ describe("PG pk_bridge_state schema", () => {
       updatedAt: now,
     });
 
-    const rows = await db.select().from(pkBridgeState).where(eq(pkBridgeState.id, id));
+    const rows = await db.select().from(pkBridgeConfigs).where(eq(pkBridgeConfigs.id, id));
     expect(rows[0]?.enabled).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { blobMetadata } from "../schema/pg/blob-metadata.js";
@@ -36,6 +36,10 @@ describe("PG blob_metadata schema", () => {
     await client.close();
   });
 
+  afterEach(async () => {
+    await db.delete(blobMetadata);
+  });
+
   it("round-trips all fields", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
@@ -50,7 +54,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 1024,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "sha256-abc",
+      checksum: "a".repeat(64),
       uploadedAt: now,
     });
 
@@ -77,7 +81,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "attachment",
-      checksum: "sha256:test",
+      checksum: "a".repeat(64),
       uploadedAt: now,
     });
 
@@ -89,7 +93,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 200,
         encryptionTier: 1,
         purpose: "attachment",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -108,7 +112,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 0,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -120,6 +124,7 @@ describe("PG blob_metadata schema", () => {
     const now = Date.now();
 
     await expect(
+      // @ts-expect-error — intentionally testing CHECK constraint with invalid tier value
       db.insert(blobMetadata).values({
         id: crypto.randomUUID(),
         systemId,
@@ -127,7 +132,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 3,
         purpose: "avatar",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -146,7 +151,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 100,
         encryptionTier: 1,
         purpose: "invalid" as "avatar",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -165,7 +170,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 2,
       purpose: "member-photo",
-      checksum: "sha256:test",
+      checksum: "a".repeat(64),
       uploadedAt: now,
     });
 
@@ -196,7 +201,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 100,
       encryptionTier: 1,
       purpose: "attachment",
-      checksum: "sha256:test",
+      checksum: "a".repeat(64),
       bucketId,
       uploadedAt: now,
     });
@@ -223,6 +228,38 @@ describe("PG blob_metadata schema", () => {
     ).rejects.toThrow();
   });
 
+  it("rejects checksum not exactly 64 characters", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const now = Date.now();
+
+    await expect(
+      db.insert(blobMetadata).values({
+        id: crypto.randomUUID(),
+        systemId,
+        storageKey: `blobs/${crypto.randomUUID()}`,
+        sizeBytes: 100,
+        encryptionTier: 1,
+        purpose: "avatar",
+        checksum: "a".repeat(63),
+        uploadedAt: now,
+      }),
+    ).rejects.toThrow(/check|constraint/i);
+
+    await expect(
+      db.insert(blobMetadata).values({
+        id: crypto.randomUUID(),
+        systemId,
+        storageKey: `blobs/${crypto.randomUUID()}`,
+        sizeBytes: 100,
+        encryptionTier: 1,
+        purpose: "avatar",
+        checksum: "a".repeat(65),
+        uploadedAt: now,
+      }),
+    ).rejects.toThrow(/check|constraint/i);
+  });
+
   it("accepts size_bytes at exactly 10 GB", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
@@ -235,7 +272,7 @@ describe("PG blob_metadata schema", () => {
       sizeBytes: 10737418240,
       encryptionTier: 1,
       purpose: "avatar",
-      checksum: "sha256:test",
+      checksum: "a".repeat(64),
       uploadedAt: now,
     });
   });
@@ -253,7 +290,7 @@ describe("PG blob_metadata schema", () => {
         sizeBytes: 10737418241,
         encryptionTier: 1,
         purpose: "avatar",
-        checksum: "sha256:test",
+        checksum: "a".repeat(64),
         uploadedAt: now,
       }),
     ).rejects.toThrow(/check|constraint/i);
