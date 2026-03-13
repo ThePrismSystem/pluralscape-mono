@@ -12,6 +12,8 @@ export interface PgConfig {
 export interface SqliteConfig {
   readonly dialect: "sqlite";
   readonly filename: string;
+  /** Encryption key for SQLCipher. When provided, the database is encrypted at rest. */
+  readonly encryptionKey?: string;
 }
 
 /** Combined config union. */
@@ -33,9 +35,21 @@ export async function createDatabase(config: DatabaseConfig): Promise<DatabaseCl
       return { dialect: "pg", db: drizzle(client) };
     }
     case "sqlite": {
-      const Database = (await import("better-sqlite3")).default;
+      const Database = (await import("better-sqlite3-multiple-ciphers")).default;
       const { drizzle } = await import("drizzle-orm/better-sqlite3");
       const client = new Database(config.filename);
+      if (config.encryptionKey) {
+        client.pragma(`cipher='sqlcipher'`);
+        // Use x'...' hex literal to avoid SQL injection via single quotes in the key.
+        // Validate hex format: even-length string of [0-9a-fA-F].
+        const HEX_KEY_RE = /^[0-9a-fA-F]+$/;
+        if (config.encryptionKey.length % 2 !== 0 || !HEX_KEY_RE.test(config.encryptionKey)) {
+          throw new Error(
+            "SQLITE_ENCRYPTION_KEY must be a hex-encoded key (even-length hex string)",
+          );
+        }
+        client.pragma(`key="x'${config.encryptionKey}'"`);
+      }
       client.pragma("journal_mode = WAL");
       return { dialect: "sqlite", db: drizzle(client) };
     }
@@ -61,7 +75,12 @@ export async function createDatabaseFromEnv(): Promise<DatabaseClient> {
       if (!filename) {
         console.warn("DATABASE_PATH not set, defaulting to 'pluralscape.db'");
       }
-      return createDatabase({ dialect: "sqlite", filename: filename ?? "pluralscape.db" });
+      const encryptionKey = process.env["SQLITE_ENCRYPTION_KEY"] ?? undefined;
+      return createDatabase({
+        dialect: "sqlite",
+        filename: filename ?? "pluralscape.db",
+        encryptionKey,
+      });
     }
   }
 }

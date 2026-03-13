@@ -14,7 +14,7 @@
   "dependencies": {
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "better-sqlite3": "^12.6.2",
+    "better-sqlite3-multiple-ciphers": "^12.6.2",
     "drizzle-orm": "^0.45.1",
     "postgres": "^3.4.5"
   },
