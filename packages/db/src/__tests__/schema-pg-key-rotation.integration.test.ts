@@ -39,6 +39,7 @@ describe("PG key-rotation schema", () => {
 
   async function insertRotation(
     bucketId: string,
+    systemId: string,
     overrides: Partial<{
       id: string;
       fromKeyVersion: number;
@@ -51,6 +52,7 @@ describe("PG key-rotation schema", () => {
     await db.insert(bucketKeyRotations).values({
       id,
       bucketId,
+      systemId,
       fromKeyVersion: overrides.fromKeyVersion ?? 1,
       toKeyVersion: overrides.toKeyVersion ?? 2,
       totalItems: overrides.totalItems ?? 10,
@@ -80,6 +82,7 @@ describe("PG key-rotation schema", () => {
       await db.insert(bucketKeyRotations).values({
         id,
         bucketId,
+        systemId,
         fromKeyVersion: 1,
         toKeyVersion: 2,
         totalItems: 5,
@@ -107,6 +110,7 @@ describe("PG key-rotation schema", () => {
         db.insert(bucketKeyRotations).values({
           id: crypto.randomUUID(),
           bucketId,
+          systemId,
           fromKeyVersion: 1,
           toKeyVersion: 2,
           state: "invalid" as "initiated",
@@ -125,6 +129,7 @@ describe("PG key-rotation schema", () => {
         db.insert(bucketKeyRotations).values({
           id: crypto.randomUUID(),
           bucketId,
+          systemId,
           fromKeyVersion: 3,
           toKeyVersion: 2,
           totalItems: 1,
@@ -142,6 +147,7 @@ describe("PG key-rotation schema", () => {
         db.insert(bucketKeyRotations).values({
           id: crypto.randomUUID(),
           bucketId,
+          systemId,
           fromKeyVersion: 2,
           toKeyVersion: 2,
           totalItems: 1,
@@ -159,6 +165,7 @@ describe("PG key-rotation schema", () => {
       await db.insert(bucketKeyRotations).values({
         id,
         bucketId,
+        systemId,
         fromKeyVersion: 1,
         toKeyVersion: 2,
         totalItems: 1,
@@ -187,6 +194,7 @@ describe("PG key-rotation schema", () => {
       await db.insert(bucketKeyRotations).values({
         id,
         bucketId,
+        systemId,
         fromKeyVersion: 1,
         toKeyVersion: 2,
         totalItems: 5,
@@ -205,7 +213,7 @@ describe("PG key-rotation schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
-      const rotationId = await insertRotation(bucketId);
+      const rotationId = await insertRotation(bucketId, systemId);
 
       await db.delete(buckets).where(eq(buckets.id, bucketId));
 
@@ -222,12 +230,13 @@ describe("PG key-rotation schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
-      const rotationId = await insertRotation(bucketId);
+      const rotationId = await insertRotation(bucketId, systemId);
       const id = crypto.randomUUID();
 
       await db.insert(bucketRotationItems).values({
         id,
         rotationId,
+        systemId,
         entityType: "member",
         entityId: crypto.randomUUID(),
         status: "claimed",
@@ -253,12 +262,13 @@ describe("PG key-rotation schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
-      const rotationId = await insertRotation(bucketId);
+      const rotationId = await insertRotation(bucketId, systemId);
       const id = crypto.randomUUID();
 
       await db.insert(bucketRotationItems).values({
         id,
         rotationId,
+        systemId,
         entityType: "journal-entry",
         entityId: crypto.randomUUID(),
       });
@@ -277,12 +287,13 @@ describe("PG key-rotation schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
-      const rotationId = await insertRotation(bucketId);
+      const rotationId = await insertRotation(bucketId, systemId);
 
       await expect(
         db.insert(bucketRotationItems).values({
           id: crypto.randomUUID(),
           rotationId,
+          systemId,
           entityType: "member",
           entityId: crypto.randomUUID(),
           status: "invalid" as "pending",
@@ -294,12 +305,13 @@ describe("PG key-rotation schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
-      const rotationId = await insertRotation(bucketId);
+      const rotationId = await insertRotation(bucketId, systemId);
       const itemId = crypto.randomUUID();
 
       await db.insert(bucketRotationItems).values({
         id: itemId,
         rotationId,
+        systemId,
         entityType: "member",
         entityId: crypto.randomUUID(),
       });
@@ -317,12 +329,13 @@ describe("PG key-rotation schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const bucketId = await insertBucket(systemId);
-      const rotationId = await insertRotation(bucketId);
+      const rotationId = await insertRotation(bucketId, systemId);
       const itemId = crypto.randomUUID();
 
       await db.insert(bucketRotationItems).values({
         id: itemId,
         rotationId,
+        systemId,
         entityType: "member",
         entityId: crypto.randomUUID(),
       });

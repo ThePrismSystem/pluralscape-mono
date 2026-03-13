@@ -7,6 +7,7 @@ import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { ROTATION_ITEM_STATUSES, ROTATION_STATES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
+import { systems } from "./systems.js";
 
 import type { EntityType, RotationItemStatus, RotationState } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
@@ -18,6 +19,9 @@ export const bucketKeyRotations = pgTable(
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
     fromKeyVersion: integer("from_key_version").notNull(),
     toKeyVersion: integer("to_key_version").notNull(),
     state: varchar("state", { length: ENUM_MAX_LENGTH })
@@ -32,6 +36,7 @@ export const bucketKeyRotations = pgTable(
   },
   (t) => [
     index("bucket_key_rotations_bucket_state_idx").on(t.bucketId, t.state),
+    index("bucket_key_rotations_system_id_idx").on(t.systemId),
     check("bucket_key_rotations_state_check", enumCheck(t.state, ROTATION_STATES)),
     check("bucket_key_rotations_version_check", sql`${t.toKeyVersion} > ${t.fromKeyVersion}`),
     check(
@@ -48,6 +53,9 @@ export const bucketRotationItems = pgTable(
     rotationId: varchar("rotation_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => bucketKeyRotations.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
     entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull().$type<EntityType>(),
     entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
@@ -62,6 +70,7 @@ export const bucketRotationItems = pgTable(
   (t) => [
     index("bucket_rotation_items_rotation_status_idx").on(t.rotationId, t.status),
     index("bucket_rotation_items_status_claimed_by_idx").on(t.status, t.claimedBy),
+    index("bucket_rotation_items_system_id_idx").on(t.systemId),
     check("bucket_rotation_items_status_check", enumCheck(t.status, ROTATION_ITEM_STATUSES)),
   ],
 );

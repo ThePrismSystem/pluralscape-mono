@@ -40,10 +40,14 @@ export const bucketContentTags = pgTable(
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
   },
   (t) => [
     primaryKey({ columns: [t.entityType, t.entityId, t.bucketId] }),
     index("bucket_content_tags_bucket_id_idx").on(t.bucketId),
+    index("bucket_content_tags_system_id_idx").on(t.systemId),
     check(
       "bucket_content_tags_entity_type_check",
       enumCheck(t.entityType, BUCKET_CONTENT_ENTITY_TYPES),
@@ -58,6 +62,9 @@ export const keyGrants = pgTable(
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
     friendSystemId: varchar("friend_system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -67,6 +74,7 @@ export const keyGrants = pgTable(
     revokedAt: pgTimestamp("revoked_at"),
   },
   (t) => [
+    index("key_grants_system_id_idx").on(t.systemId),
     index("key_grants_friend_bucket_idx").on(t.friendSystemId, t.bucketId),
     index("key_grants_friend_revoked_idx").on(t.friendSystemId, t.revokedAt),
     index("key_grants_revoked_at_idx").on(t.revokedAt),
@@ -135,10 +143,14 @@ export const friendBucketAssignments = pgTable(
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => buckets.id, { onDelete: "cascade" }),
+    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
+      .notNull()
+      .references(() => systems.id, { onDelete: "cascade" }),
   },
   (t) => [
     primaryKey({ columns: [t.friendConnectionId, t.bucketId] }),
     index("friend_bucket_assignments_bucket_id_idx").on(t.bucketId),
+    index("friend_bucket_assignments_system_id_idx").on(t.systemId),
   ],
 );
 

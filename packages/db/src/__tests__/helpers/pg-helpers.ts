@@ -188,16 +188,19 @@ export const PG_DDL = {
       entity_type VARCHAR(50) NOT NULL CHECK (entity_type IS NULL OR entity_type IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')),
       entity_id VARCHAR(50) NOT NULL,
       bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       PRIMARY KEY (entity_type, entity_id, bucket_id)
     )
   `,
   bucketContentTagsIndexes: `
-    CREATE INDEX bucket_content_tags_bucket_id_idx ON bucket_content_tags (bucket_id)
+    CREATE INDEX bucket_content_tags_bucket_id_idx ON bucket_content_tags (bucket_id);
+    CREATE INDEX bucket_content_tags_system_id_idx ON bucket_content_tags (system_id)
   `,
   keyGrants: `
     CREATE TABLE key_grants (
       id VARCHAR(50) PRIMARY KEY,
       bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       friend_system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_key BYTEA NOT NULL,
       key_version INTEGER NOT NULL CHECK (key_version >= 1),
@@ -207,6 +210,7 @@ export const PG_DDL = {
     )
   `,
   keyGrantsIndexes: `
+    CREATE INDEX key_grants_system_id_idx ON key_grants (system_id);
     CREATE INDEX key_grants_friend_bucket_idx ON key_grants (friend_system_id, bucket_id);
     CREATE INDEX key_grants_revoked_at_idx ON key_grants (revoked_at)
   `,
@@ -248,11 +252,13 @@ export const PG_DDL = {
     CREATE TABLE friend_bucket_assignments (
       friend_connection_id VARCHAR(50) NOT NULL REFERENCES friend_connections(id) ON DELETE CASCADE,
       bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       PRIMARY KEY (friend_connection_id, bucket_id)
     )
   `,
   friendBucketAssignmentsIndexes: `
-    CREATE INDEX friend_bucket_assignments_bucket_id_idx ON friend_bucket_assignments (bucket_id)
+    CREATE INDEX friend_bucket_assignments_bucket_id_idx ON friend_bucket_assignments (bucket_id);
+    CREATE INDEX friend_bucket_assignments_system_id_idx ON friend_bucket_assignments (system_id)
   `,
   // Fronting
   frontingSessions: `
@@ -548,11 +554,13 @@ export const PG_DDL = {
     CREATE TABLE field_bucket_visibility (
       field_definition_id VARCHAR(50) NOT NULL REFERENCES field_definitions(id) ON DELETE CASCADE,
       bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       PRIMARY KEY (field_definition_id, bucket_id)
     )
   `,
   fieldBucketVisibilityIndexes: `
-    CREATE INDEX field_bucket_visibility_bucket_id_idx ON field_bucket_visibility (bucket_id)
+    CREATE INDEX field_bucket_visibility_bucket_id_idx ON field_bucket_visibility (bucket_id);
+    CREATE INDEX field_bucket_visibility_system_id_idx ON field_bucket_visibility (system_id)
   `,
   // Nomenclature Settings
   nomenclatureSettings: `
@@ -1226,6 +1234,7 @@ export const PG_DDL = {
     CREATE TABLE bucket_key_rotations (
       id VARCHAR(50) PRIMARY KEY,
       bucket_id VARCHAR(50) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       from_key_version INTEGER NOT NULL,
       to_key_version INTEGER NOT NULL,
       state VARCHAR(50) NOT NULL DEFAULT 'initiated' CHECK (state IN ('initiated', 'migrating', 'sealing', 'completed', 'failed')),
@@ -1239,12 +1248,14 @@ export const PG_DDL = {
     )
   `,
   bucketKeyRotationsIndexes: `
-    CREATE INDEX bucket_key_rotations_bucket_state_idx ON bucket_key_rotations (bucket_id, state)
+    CREATE INDEX bucket_key_rotations_bucket_state_idx ON bucket_key_rotations (bucket_id, state);
+    CREATE INDEX bucket_key_rotations_system_id_idx ON bucket_key_rotations (system_id)
   `,
   bucketRotationItems: `
     CREATE TABLE bucket_rotation_items (
       id VARCHAR(50) PRIMARY KEY,
       rotation_id VARCHAR(50) NOT NULL REFERENCES bucket_key_rotations(id) ON DELETE CASCADE,
+      system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       entity_type VARCHAR(50) NOT NULL,
       entity_id VARCHAR(50) NOT NULL,
       status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'claimed', 'completed', 'failed')),
@@ -1256,7 +1267,8 @@ export const PG_DDL = {
   `,
   bucketRotationItemsIndexes: `
     CREATE INDEX bucket_rotation_items_rotation_status_idx ON bucket_rotation_items (rotation_id, status);
-    CREATE INDEX bucket_rotation_items_status_claimed_by_idx ON bucket_rotation_items (status, claimed_by)
+    CREATE INDEX bucket_rotation_items_status_claimed_by_idx ON bucket_rotation_items (status, claimed_by);
+    CREATE INDEX bucket_rotation_items_system_id_idx ON bucket_rotation_items (system_id)
   `,
   // Analytics
   frontingReports: `

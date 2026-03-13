@@ -5,11 +5,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import {
   accountRlsPolicy,
-  chainedJoinSystemRlsPolicy,
   dualTenantRlsPolicy,
   enableRls,
   generateRlsStatements,
-  joinSystemRlsPolicy,
   RLS_TABLE_POLICIES,
   systemRlsPolicy,
 } from "../rls/policies.js";
@@ -732,10 +730,10 @@ describe("RLS cross-tenant isolation — dual scope (PGlite)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 7. RLS cross-tenant isolation — join-system scope (PGlite integration tests)
+// 7. RLS cross-tenant isolation — key_grants (direct system_id) (PGlite integration tests)
 // ---------------------------------------------------------------------------
 
-describe("RLS cross-tenant isolation — join-system scope (PGlite)", () => {
+describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
@@ -788,6 +786,7 @@ describe("RLS cross-tenant isolation — join-system scope (PGlite)", () => {
       CREATE TABLE key_grants (
         id VARCHAR(255) PRIMARY KEY,
         bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
         friend_system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
         encrypted_key BYTEA NOT NULL,
         key_version INTEGER NOT NULL CHECK (key_version >= 1),
@@ -812,12 +811,12 @@ describe("RLS cross-tenant isolation — join-system scope (PGlite)", () => {
     );
 
     await client.query(
-      `INSERT INTO key_grants (id, bucket_id, friend_system_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [grantIdA, bucketIdA, systemIdA, new Uint8Array([10]), 1, now],
+      `INSERT INTO key_grants (id, bucket_id, system_id, friend_system_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [grantIdA, bucketIdA, systemIdA, systemIdA, new Uint8Array([10]), 1, now],
     );
     await client.query(
-      `INSERT INTO key_grants (id, bucket_id, friend_system_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [grantIdB, bucketIdB, systemIdB, new Uint8Array([20]), 1, now],
+      `INSERT INTO key_grants (id, bucket_id, system_id, friend_system_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [grantIdB, bucketIdB, systemIdB, systemIdB, new Uint8Array([20]), 1, now],
     );
 
     await client.query(`CREATE ROLE ${APP_ROLE}`);
@@ -830,11 +829,11 @@ describe("RLS cross-tenant isolation — join-system scope (PGlite)", () => {
     }
     await client.query(systemRlsPolicy("buckets"));
 
-    // RLS on key_grants (join-system scope)
+    // RLS on key_grants (direct system_id)
     for (const stmt of enableRls("key_grants")) {
       await client.query(stmt);
     }
-    await client.query(joinSystemRlsPolicy("key_grants", "buckets", "bucket_id"));
+    await client.query(systemRlsPolicy("key_grants"));
 
     await client.query(`SET ROLE ${APP_ROLE}`);
   });
@@ -870,11 +869,12 @@ describe("RLS cross-tenant isolation — join-system scope (PGlite)", () => {
 
     await expect(
       client.query(
-        `INSERT INTO key_grants (id, bucket_id, friend_system_id, encrypted_key, key_version, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT INTO key_grants (id, bucket_id, system_id, friend_system_id, encrypted_key, key_version, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           crypto.randomUUID(),
           bucketIdB,
+          systemIdB,
           systemIdA,
           new Uint8Array([99]),
           1,
@@ -886,10 +886,10 @@ describe("RLS cross-tenant isolation — join-system scope (PGlite)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 8. RLS cross-tenant isolation — join-system-chained scope (PGlite integration tests)
+// 8. RLS cross-tenant isolation — bucket_rotation_items (direct system_id) (PGlite integration tests)
 // ---------------------------------------------------------------------------
 
-describe("RLS cross-tenant isolation — join-system-chained scope (PGlite)", () => {
+describe("RLS cross-tenant isolation — bucket_rotation_items (system scope, PGlite)", () => {
   let client: PGliteType;
   let db: PgliteDatabase<Record<string, unknown>>;
 
@@ -944,6 +944,7 @@ describe("RLS cross-tenant isolation — join-system-chained scope (PGlite)", ()
       CREATE TABLE bucket_key_rotations (
         id VARCHAR(255) PRIMARY KEY,
         bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
+        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
         from_key_version INTEGER NOT NULL,
         to_key_version INTEGER NOT NULL,
         state VARCHAR(50) NOT NULL DEFAULT 'initiated',
@@ -958,6 +959,7 @@ describe("RLS cross-tenant isolation — join-system-chained scope (PGlite)", ()
       CREATE TABLE bucket_rotation_items (
         id VARCHAR(255) PRIMARY KEY,
         rotation_id VARCHAR(255) NOT NULL REFERENCES bucket_key_rotations(id) ON DELETE CASCADE,
+        system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
         entity_type VARCHAR(50) NOT NULL,
         entity_id VARCHAR(50) NOT NULL,
         status VARCHAR(50) NOT NULL DEFAULT 'pending',
@@ -985,21 +987,21 @@ describe("RLS cross-tenant isolation — join-system-chained scope (PGlite)", ()
     );
     // Rotations
     await client.query(
-      `INSERT INTO bucket_key_rotations (id, bucket_id, from_key_version, to_key_version, state, initiated_at, total_items) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [rotationIdA, bucketIdA, 1, 2, "initiated", now, 1],
+      `INSERT INTO bucket_key_rotations (id, bucket_id, system_id, from_key_version, to_key_version, state, initiated_at, total_items) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [rotationIdA, bucketIdA, systemIdA, 1, 2, "initiated", now, 1],
     );
     await client.query(
-      `INSERT INTO bucket_key_rotations (id, bucket_id, from_key_version, to_key_version, state, initiated_at, total_items) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [rotationIdB, bucketIdB, 1, 2, "initiated", now, 1],
+      `INSERT INTO bucket_key_rotations (id, bucket_id, system_id, from_key_version, to_key_version, state, initiated_at, total_items) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [rotationIdB, bucketIdB, systemIdB, 1, 2, "initiated", now, 1],
     );
     // Rotation items
     await client.query(
-      `INSERT INTO bucket_rotation_items (id, rotation_id, entity_type, entity_id) VALUES ($1, $2, $3, $4)`,
-      [itemIdA, rotationIdA, "member", crypto.randomUUID()],
+      `INSERT INTO bucket_rotation_items (id, rotation_id, system_id, entity_type, entity_id) VALUES ($1, $2, $3, $4, $5)`,
+      [itemIdA, rotationIdA, systemIdA, "member", crypto.randomUUID()],
     );
     await client.query(
-      `INSERT INTO bucket_rotation_items (id, rotation_id, entity_type, entity_id) VALUES ($1, $2, $3, $4)`,
-      [itemIdB, rotationIdB, "member", crypto.randomUUID()],
+      `INSERT INTO bucket_rotation_items (id, rotation_id, system_id, entity_type, entity_id) VALUES ($1, $2, $3, $4, $5)`,
+      [itemIdB, rotationIdB, systemIdB, "member", crypto.randomUUID()],
     );
 
     await client.query(`CREATE ROLE ${APP_ROLE}`);
@@ -1013,25 +1015,17 @@ describe("RLS cross-tenant isolation — join-system-chained scope (PGlite)", ()
     }
     await client.query(systemRlsPolicy("buckets"));
 
-    // RLS on bucket_key_rotations (join-system scope)
+    // RLS on bucket_key_rotations (direct system_id)
     for (const stmt of enableRls("bucket_key_rotations")) {
       await client.query(stmt);
     }
-    await client.query(joinSystemRlsPolicy("bucket_key_rotations", "buckets", "bucket_id"));
+    await client.query(systemRlsPolicy("bucket_key_rotations"));
 
-    // RLS on bucket_rotation_items (chained join-system scope)
+    // RLS on bucket_rotation_items (direct system_id)
     for (const stmt of enableRls("bucket_rotation_items")) {
       await client.query(stmt);
     }
-    await client.query(
-      chainedJoinSystemRlsPolicy(
-        "bucket_rotation_items",
-        "bucket_key_rotations",
-        "rotation_id",
-        "buckets",
-        "bucket_id",
-      ),
-    );
+    await client.query(systemRlsPolicy("bucket_rotation_items"));
 
     await client.query(`SET ROLE ${APP_ROLE}`);
   });

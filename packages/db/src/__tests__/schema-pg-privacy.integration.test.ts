@@ -175,6 +175,7 @@ describe("PG privacy schema", () => {
         entityType: "member",
         entityId,
         bucketId,
+        systemId,
       });
 
       const rows = await db
@@ -195,6 +196,7 @@ describe("PG privacy schema", () => {
         entityType: "note",
         entityId: crypto.randomUUID(),
         bucketId,
+        systemId,
       });
 
       await db.delete(buckets).where(eq(buckets.id, bucketId));
@@ -227,6 +229,7 @@ describe("PG privacy schema", () => {
         entityType: "channel",
         entityId,
         bucketId,
+        systemId,
       });
 
       await expect(
@@ -234,6 +237,7 @@ describe("PG privacy schema", () => {
           entityType: "channel",
           entityId,
           bucketId,
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -244,6 +248,7 @@ describe("PG privacy schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           bucketId: "nonexistent",
+          systemId: "nonexistent",
         }),
       ).rejects.toThrow();
     });
@@ -275,6 +280,7 @@ describe("PG privacy schema", () => {
       await db.insert(keyGrants).values({
         id,
         bucketId,
+        systemId,
         friendSystemId,
         encryptedKey: keyData,
         keyVersion: 1,
@@ -301,6 +307,7 @@ describe("PG privacy schema", () => {
       await db.insert(keyGrants).values({
         id,
         bucketId,
+        systemId,
         friendSystemId,
         encryptedKey: new Uint8Array([1]),
         keyVersion: 1,
@@ -323,6 +330,7 @@ describe("PG privacy schema", () => {
       await db.insert(keyGrants).values({
         id: grantId,
         bucketId,
+        systemId,
         friendSystemId,
         encryptedKey: new Uint8Array([1]),
         keyVersion: 1,
@@ -346,6 +354,7 @@ describe("PG privacy schema", () => {
         db.insert(keyGrants).values({
           id: crypto.randomUUID(),
           bucketId,
+          systemId,
           friendSystemId,
           encryptedKey: new Uint8Array([1]),
           keyVersion: 0,
@@ -365,6 +374,7 @@ describe("PG privacy schema", () => {
       await db.insert(keyGrants).values({
         id: crypto.randomUUID(),
         bucketId,
+        systemId,
         friendSystemId,
         encryptedKey: new Uint8Array([1]),
         keyVersion: 1,
@@ -375,6 +385,7 @@ describe("PG privacy schema", () => {
         db.insert(keyGrants).values({
           id: crypto.randomUUID(),
           bucketId,
+          systemId,
           friendSystemId,
           encryptedKey: new Uint8Array([2]),
           keyVersion: 1,
@@ -393,6 +404,7 @@ describe("PG privacy schema", () => {
         db.insert(keyGrants).values({
           id: crypto.randomUUID(),
           bucketId,
+          systemId,
           friendSystemId: "nonexistent",
           encryptedKey: new Uint8Array([1]),
           keyVersion: 1,
@@ -650,6 +662,7 @@ describe("PG privacy schema", () => {
       await db.insert(friendBucketAssignments).values({
         friendConnectionId: connectionId,
         bucketId,
+        systemId,
       });
 
       const rows = await db
@@ -671,6 +684,7 @@ describe("PG privacy schema", () => {
       await db.insert(friendBucketAssignments).values({
         friendConnectionId: connectionId,
         bucketId,
+        systemId,
       });
 
       await db.delete(friendConnections).where(eq(friendConnections.id, connectionId));
@@ -692,6 +706,7 @@ describe("PG privacy schema", () => {
       await db.insert(friendBucketAssignments).values({
         friendConnectionId: connectionId,
         bucketId,
+        systemId,
       });
 
       await db.delete(buckets).where(eq(buckets.id, bucketId));
@@ -713,12 +728,14 @@ describe("PG privacy schema", () => {
       await db.insert(friendBucketAssignments).values({
         friendConnectionId: connectionId,
         bucketId,
+        systemId,
       });
 
       await expect(
         db.insert(friendBucketAssignments).values({
           friendConnectionId: connectionId,
           bucketId,
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -732,6 +749,7 @@ describe("PG privacy schema", () => {
         db.insert(friendBucketAssignments).values({
           friendConnectionId: "nonexistent",
           bucketId,
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -747,6 +765,7 @@ describe("PG privacy schema", () => {
         db.insert(friendBucketAssignments).values({
           friendConnectionId: connectionId,
           bucketId: "nonexistent",
+          systemId,
         }),
       ).rejects.toThrow();
     });

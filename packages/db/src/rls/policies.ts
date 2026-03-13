@@ -6,14 +6,7 @@
  */
 
 /** Policy scoping type for each table. */
-export type RlsScopeType =
-  | "system"
-  | "account"
-  | "system-pk"
-  | "account-pk"
-  | "dual"
-  | "join-system"
-  | "join-system-chained";
+export type RlsScopeType = "system" | "account" | "system-pk" | "account-pk" | "dual";
 
 /**
  * Returns a SQL expression for reading a GUC variable fail-closed.
@@ -71,40 +64,6 @@ export function dualTenantRlsPolicy(tableName: string): string {
   );
 }
 
-/**
- * Creates an RLS policy for join tables that lack a direct tenant column.
- * Verifies ownership via EXISTS subquery against a parent table's system_id.
- */
-export function joinSystemRlsPolicy(
-  tableName: string,
-  parentTable: string,
-  joinColumn: string,
-): string {
-  const setting = currentSettingSql("app.current_system_id");
-  const exists = `EXISTS (SELECT 1 FROM ${parentTable} WHERE ${parentTable}.id = ${tableName}.${joinColumn} AND ${parentTable}.system_id = ${setting})`;
-  return `CREATE POLICY ${tableName}_system_isolation ON ${tableName} USING (${exists}) WITH CHECK (${exists})`;
-}
-
-/**
- * Creates an RLS policy for tables two hops from a tenant column.
- * Verifies ownership via a JOIN through an intermediate table to reach system_id.
- */
-export function chainedJoinSystemRlsPolicy(
-  tableName: string,
-  intermediateTable: string,
-  joinColumn: string,
-  parentTable: string,
-  intermediateJoinColumn: string,
-): string {
-  const setting = currentSettingSql("app.current_system_id");
-  const exists =
-    `EXISTS (SELECT 1 FROM ${intermediateTable} ` +
-    `JOIN ${parentTable} ON ${parentTable}.id = ${intermediateTable}.${intermediateJoinColumn} ` +
-    `WHERE ${intermediateTable}.id = ${tableName}.${joinColumn} ` +
-    `AND ${parentTable}.system_id = ${setting})`;
-  return `CREATE POLICY ${tableName}_system_isolation ON ${tableName} USING (${exists}) WITH CHECK (${exists})`;
-}
-
 /** Tables where system-pk scope uses `id` instead of `system_id`. */
 const SYSTEM_PK_ID_COLUMN: Readonly<Record<string, string>> = { systems: "id" };
 
@@ -125,41 +84,6 @@ export function dropPolicySql(stmt: string): string | null {
   if (!policyName || !tableName) return null;
   return `DROP POLICY IF EXISTS ${policyName} ON ${tableName}`;
 }
-
-/** Configuration for join-based RLS tables: maps table name to parent table and join column. */
-const JOIN_SYSTEM_CONFIG: Readonly<Record<string, { parentTable: string; joinColumn: string }>> = {
-  key_grants: { parentTable: "buckets", joinColumn: "bucket_id" },
-  bucket_content_tags: { parentTable: "buckets", joinColumn: "bucket_id" },
-  friend_bucket_assignments: {
-    parentTable: "friend_connections",
-    joinColumn: "friend_connection_id",
-  },
-  field_bucket_visibility: { parentTable: "field_definitions", joinColumn: "field_definition_id" },
-  bucket_key_rotations: { parentTable: "buckets", joinColumn: "bucket_id" },
-};
-
-/**
- * Configuration for chained join-based RLS tables: tables that require a two-hop
- * join to reach a tenant column (e.g. rotation_items → rotations → buckets).
- */
-const CHAINED_JOIN_CONFIG: Readonly<
-  Record<
-    string,
-    {
-      intermediateTable: string;
-      joinColumn: string;
-      parentTable: string;
-      intermediateJoinColumn: string;
-    }
-  >
-> = {
-  bucket_rotation_items: {
-    intermediateTable: "bucket_key_rotations",
-    joinColumn: "rotation_id",
-    parentTable: "buckets",
-    intermediateJoinColumn: "bucket_id",
-  },
-};
 
 /**
  * Map of every RLS-enabled table to its policy scope type.
@@ -184,13 +108,13 @@ export const RLS_TABLE_POLICIES = {
   audit_log: "dual",
   device_tokens: "dual",
 
-  // Join tables (no direct tenant column — verified via parent)
-  key_grants: "join-system",
-  bucket_content_tags: "join-system",
-  friend_bucket_assignments: "join-system",
-  field_bucket_visibility: "join-system",
-  bucket_key_rotations: "join-system",
-  bucket_rotation_items: "join-system-chained",
+  // Formerly join-based; now carry direct system_id for O(1) RLS
+  key_grants: "system",
+  bucket_content_tags: "system",
+  friend_bucket_assignments: "system",
+  field_bucket_visibility: "system",
+  bucket_key_rotations: "system",
+  bucket_rotation_items: "system",
 
   // System-scoped (system_id column)
   members: "system",
@@ -284,30 +208,6 @@ export function generateRlsStatements(tableName: string): string[] {
     case "dual":
       statements.push(dualTenantRlsPolicy(tableName));
       break;
-    case "join-system": {
-      const config = JOIN_SYSTEM_CONFIG[tableName];
-      if (config === undefined) {
-        throw new Error(`No join config for table '${tableName}'`);
-      }
-      statements.push(joinSystemRlsPolicy(tableName, config.parentTable, config.joinColumn));
-      break;
-    }
-    case "join-system-chained": {
-      const chainConfig = CHAINED_JOIN_CONFIG[tableName];
-      if (chainConfig === undefined) {
-        throw new Error(`No chained join config for table '${tableName}'`);
-      }
-      statements.push(
-        chainedJoinSystemRlsPolicy(
-          tableName,
-          chainConfig.intermediateTable,
-          chainConfig.joinColumn,
-          chainConfig.parentTable,
-          chainConfig.intermediateJoinColumn,
-        ),
-      );
-      break;
-    }
     default: {
       const _exhaustive: never = scopeType;
       throw new Error(`Unknown RLS scope type: ${_exhaustive as string}`);

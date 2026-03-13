@@ -595,6 +595,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -617,6 +618,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -639,6 +641,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -661,6 +664,7 @@ describe("SQLite custom fields schema", () => {
         .values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         })
         .run();
 
@@ -670,6 +674,7 @@ describe("SQLite custom fields schema", () => {
           .values({
             fieldDefinitionId: fieldDefId,
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow(/UNIQUE|PRIMARY KEY|constraint/i);
@@ -686,6 +691,7 @@ describe("SQLite custom fields schema", () => {
           .values({
             fieldDefinitionId: "nonexistent",
             bucketId,
+            systemId,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -702,6 +708,7 @@ describe("SQLite custom fields schema", () => {
           .values({
             fieldDefinitionId: fieldDefId,
             bucketId: "nonexistent",
+            systemId,
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
@@ -716,8 +723,8 @@ describe("SQLite custom fields schema", () => {
 
       db.insert(fieldBucketVisibility)
         .values([
-          { fieldDefinitionId: fieldDefId1, bucketId },
-          { fieldDefinitionId: fieldDefId2, bucketId },
+          { fieldDefinitionId: fieldDefId1, bucketId, systemId },
+          { fieldDefinitionId: fieldDefId2, bucketId, systemId },
         ])
         .run();
 

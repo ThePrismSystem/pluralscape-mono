@@ -537,6 +537,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldBucketVisibility).values({
         fieldDefinitionId: fieldDefId,
         bucketId,
+        systemId,
       });
 
       const rows = await db
@@ -562,6 +563,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldBucketVisibility).values({
         fieldDefinitionId: fieldDefId,
         bucketId,
+        systemId,
       });
 
       await db.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldDefId));
@@ -581,6 +583,7 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldBucketVisibility).values({
         fieldDefinitionId: fieldDefId,
         bucketId,
+        systemId,
       });
 
       await db.delete(buckets).where(eq(buckets.id, bucketId));
@@ -600,12 +603,14 @@ describe("PG custom fields schema", () => {
       await db.insert(fieldBucketVisibility).values({
         fieldDefinitionId: fieldDefId,
         bucketId,
+        systemId,
       });
 
       await expect(
         db.insert(fieldBucketVisibility).values({
           fieldDefinitionId: fieldDefId,
           bucketId,
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -619,6 +624,7 @@ describe("PG custom fields schema", () => {
         db.insert(fieldBucketVisibility).values({
           fieldDefinitionId: "nonexistent",
           bucketId,
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -632,6 +638,7 @@ describe("PG custom fields schema", () => {
         db.insert(fieldBucketVisibility).values({
           fieldDefinitionId: fieldDefId,
           bucketId: "nonexistent",
+          systemId,
         }),
       ).rejects.toThrow();
     });
@@ -644,8 +651,8 @@ describe("PG custom fields schema", () => {
       const fieldDefId2 = await insertFieldDefinition(systemId);
 
       await db.insert(fieldBucketVisibility).values([
-        { fieldDefinitionId: fieldDefId1, bucketId },
-        { fieldDefinitionId: fieldDefId2, bucketId },
+        { fieldDefinitionId: fieldDefId1, bucketId, systemId },
+        { fieldDefinitionId: fieldDefId2, bucketId, systemId },
       ]);
 
       const rows = await db

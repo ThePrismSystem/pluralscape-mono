@@ -77,37 +77,37 @@ CREATE POLICY device_tokens_tenant_isolation ON device_tokens USING (account_id 
 ALTER TABLE key_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE key_grants FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS key_grants_system_isolation ON key_grants;
-CREATE POLICY key_grants_system_isolation ON key_grants USING (EXISTS (SELECT 1 FROM buckets WHERE buckets.id = key_grants.bucket_id AND buckets.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (EXISTS (SELECT 1 FROM buckets WHERE buckets.id = key_grants.bucket_id AND buckets.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
+CREATE POLICY key_grants_system_isolation ON key_grants USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- bucket_content_tags
 ALTER TABLE bucket_content_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bucket_content_tags FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS bucket_content_tags_system_isolation ON bucket_content_tags;
-CREATE POLICY bucket_content_tags_system_isolation ON bucket_content_tags USING (EXISTS (SELECT 1 FROM buckets WHERE buckets.id = bucket_content_tags.bucket_id AND buckets.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (EXISTS (SELECT 1 FROM buckets WHERE buckets.id = bucket_content_tags.bucket_id AND buckets.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
+CREATE POLICY bucket_content_tags_system_isolation ON bucket_content_tags USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- friend_bucket_assignments
 ALTER TABLE friend_bucket_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE friend_bucket_assignments FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS friend_bucket_assignments_system_isolation ON friend_bucket_assignments;
-CREATE POLICY friend_bucket_assignments_system_isolation ON friend_bucket_assignments USING (EXISTS (SELECT 1 FROM friend_connections WHERE friend_connections.id = friend_bucket_assignments.friend_connection_id AND friend_connections.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (EXISTS (SELECT 1 FROM friend_connections WHERE friend_connections.id = friend_bucket_assignments.friend_connection_id AND friend_connections.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
+CREATE POLICY friend_bucket_assignments_system_isolation ON friend_bucket_assignments USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- field_bucket_visibility
 ALTER TABLE field_bucket_visibility ENABLE ROW LEVEL SECURITY;
 ALTER TABLE field_bucket_visibility FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS field_bucket_visibility_system_isolation ON field_bucket_visibility;
-CREATE POLICY field_bucket_visibility_system_isolation ON field_bucket_visibility USING (EXISTS (SELECT 1 FROM field_definitions WHERE field_definitions.id = field_bucket_visibility.field_definition_id AND field_definitions.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (EXISTS (SELECT 1 FROM field_definitions WHERE field_definitions.id = field_bucket_visibility.field_definition_id AND field_definitions.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
+CREATE POLICY field_bucket_visibility_system_isolation ON field_bucket_visibility USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- bucket_key_rotations
 ALTER TABLE bucket_key_rotations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bucket_key_rotations FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS bucket_key_rotations_system_isolation ON bucket_key_rotations;
-CREATE POLICY bucket_key_rotations_system_isolation ON bucket_key_rotations USING (EXISTS (SELECT 1 FROM buckets WHERE buckets.id = bucket_key_rotations.bucket_id AND buckets.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (EXISTS (SELECT 1 FROM buckets WHERE buckets.id = bucket_key_rotations.bucket_id AND buckets.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
+CREATE POLICY bucket_key_rotations_system_isolation ON bucket_key_rotations USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- bucket_rotation_items
 ALTER TABLE bucket_rotation_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bucket_rotation_items FORCE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS bucket_rotation_items_system_isolation ON bucket_rotation_items;
-CREATE POLICY bucket_rotation_items_system_isolation ON bucket_rotation_items USING (EXISTS (SELECT 1 FROM bucket_key_rotations JOIN buckets ON buckets.id = bucket_key_rotations.bucket_id WHERE bucket_key_rotations.id = bucket_rotation_items.rotation_id AND buckets.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar)) WITH CHECK (EXISTS (SELECT 1 FROM bucket_key_rotations JOIN buckets ON buckets.id = bucket_key_rotations.bucket_id WHERE bucket_key_rotations.id = bucket_rotation_items.rotation_id AND buckets.system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar));
+CREATE POLICY bucket_rotation_items_system_isolation ON bucket_rotation_items USING (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar) WITH CHECK (system_id = NULLIF(current_setting('app.current_system_id', true), '')::varchar);
 
 -- members
 ALTER TABLE members ENABLE ROW LEVEL SECURITY;
