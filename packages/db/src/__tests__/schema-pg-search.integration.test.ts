@@ -1,8 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { getDeploymentMode } from "../deployment.js";
+import { generateRlsStatements } from "../rls/policies.js";
 import {
   createSearchIndex,
   createSearchIndexIndexes,
@@ -415,5 +417,84 @@ describe("getDeploymentMode", () => {
   it("returns 'self-hosted' for unrecognized values (fail-safe)", () => {
     process.env["DEPLOYMENT_MODE"] = "cloud";
     expect(getDeploymentMode()).toBe("self-hosted");
+  });
+});
+
+describe("PG search_index RLS policy enforcement", () => {
+  const APP_ROLE = "search_rls_app_user";
+  let client: PGlite;
+  let db: ReturnType<typeof drizzle>;
+  let systemIdA: string;
+  let systemIdB: string;
+
+  beforeAll(async () => {
+    client = await PGlite.create();
+    db = drizzle(client);
+
+    await createPgSearchIndexTables(client);
+
+    // Insert test data as superuser (bypasses RLS)
+    const accountIdA = await pgInsertAccount(db);
+    const accountIdB = await pgInsertAccount(db);
+    systemIdA = await pgInsertSystem(db, accountIdA);
+    systemIdB = await pgInsertSystem(db, accountIdB);
+
+    await client.query(
+      `INSERT INTO search_index (system_id, entity_type, entity_id, title, content)
+       VALUES ('${systemIdA}', 'member', 'm-rls-a', 'Member A', 'Content for system A')`,
+    );
+    await client.query(
+      `INSERT INTO search_index (system_id, entity_type, entity_id, title, content)
+       VALUES ('${systemIdB}', 'member', 'm-rls-b', 'Member B', 'Content for system B')`,
+    );
+
+    // Grant table access to the app role
+    await client.query(`CREATE ROLE ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON accounts TO ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON systems TO ${APP_ROLE}`);
+    await client.query(`GRANT ALL ON search_index TO ${APP_ROLE}`);
+
+    // Apply RLS using generateRlsStatements (same path as production)
+    for (const stmt of generateRlsStatements("search_index")) {
+      await client.query(stmt);
+    }
+
+    await client.query(`SET ROLE ${APP_ROLE}`);
+  });
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  it("only returns rows for the active session system", async () => {
+    await db.execute(sql`SELECT set_config('app.current_system_id', ${systemIdA}, false)`);
+
+    const result = await client.query<{ system_id: string; entity_id: string }>(
+      "SELECT system_id, entity_id FROM search_index",
+    );
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.system_id).toBe(systemIdA);
+    expect(result.rows[0]?.entity_id).toBe("m-rls-a");
+  });
+
+  it("switches visible rows when session context changes", async () => {
+    await db.execute(sql`SELECT set_config('app.current_system_id', ${systemIdB}, false)`);
+
+    const result = await client.query<{ system_id: string; entity_id: string }>(
+      "SELECT system_id, entity_id FROM search_index",
+    );
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]?.system_id).toBe(systemIdB);
+    expect(result.rows[0]?.entity_id).toBe("m-rls-b");
+  });
+
+  it("returns empty when session GUC is unset (fail-closed)", async () => {
+    await db.execute(sql`SELECT set_config('app.current_system_id', '', false)`);
+
+    const result = await client.query<{ system_id: string }>("SELECT system_id FROM search_index");
+
+    expect(result.rows).toHaveLength(0);
   });
 });
