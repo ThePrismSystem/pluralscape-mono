@@ -99,6 +99,13 @@
       "when": 1773619203000,
       "tag": "0013_fronting_sessions_partitioning",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1773619204000,
+      "tag": "0014_switches_partitioning",
+      "breakpoints": true
     }
   ]
 }

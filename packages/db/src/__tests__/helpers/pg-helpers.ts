@@ -286,12 +286,13 @@ export const PG_DDL = {
   `,
   switches: `
     CREATE TABLE switches (
-      id VARCHAR(50) PRIMARY KEY,
+      id VARCHAR(50) NOT NULL,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       timestamp TIMESTAMPTZ NOT NULL,
       member_ids JSONB NOT NULL CHECK (jsonb_array_length(member_ids) >= 1),
       created_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (id, timestamp),
       CHECK (version >= 1)
     )
   `,

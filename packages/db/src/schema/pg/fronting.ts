@@ -108,10 +108,13 @@ export const frontingSessions = pgTable(
 );
 
 // Switches are immutable timeline events and are not archivable.
+// NOTE: The production migration adds PARTITION BY RANGE ("timestamp") which Drizzle
+// cannot express. Running drizzle-kit generate for this table requires manual verification.
+// See migration 0014 for details.
 export const switches = pgTable(
   "switches",
   {
-    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -126,6 +129,7 @@ export const switches = pgTable(
     ...versioned(),
   },
   (t) => [
+    primaryKey({ columns: [t.id, t.timestamp] }),
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
     check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
     versionCheckFor("switches", t.version),
