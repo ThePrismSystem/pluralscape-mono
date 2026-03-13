@@ -71,6 +71,13 @@
       "when": 1773609600000,
       "tag": "0009_rls_all_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1773619200000,
+      "tag": "0010_field_type_not_null",
+      "breakpoints": true
     }
   ]
 }

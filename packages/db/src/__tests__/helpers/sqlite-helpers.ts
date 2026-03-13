@@ -499,7 +499,7 @@ export const SQLITE_DDL = {
     CREATE TABLE field_definitions (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      field_type TEXT CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
+      field_type TEXT NOT NULL CHECK (field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
       required INTEGER NOT NULL DEFAULT 0,
       sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BLOB NOT NULL,

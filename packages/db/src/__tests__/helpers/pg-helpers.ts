@@ -505,7 +505,7 @@ export const PG_DDL = {
     CREATE TABLE field_definitions (
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      field_type VARCHAR(50) CHECK (field_type IS NULL OR field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
+      field_type VARCHAR(50) NOT NULL CHECK (field_type IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
       required BOOLEAN NOT NULL DEFAULT false,
       sort_order INTEGER NOT NULL DEFAULT 0,
       encrypted_data BYTEA NOT NULL,
