@@ -35,6 +35,7 @@
     "lint": "eslint --max-warnings 0 .",
     "lint:fix": "eslint --fix --max-warnings 0 .",
     "db:generate:pg": "tsx node_modules/drizzle-kit/bin.cjs generate --config=drizzle.config.pg.ts",
-    "db:generate:sqlite": "tsx node_modules/drizzle-kit/bin.cjs generate --config=drizzle.config.sqlite.ts"
+    "db:generate:sqlite": "tsx node_modules/drizzle-kit/bin.cjs generate --config=drizzle.config.sqlite.ts",
+    "db:apply-rls": "tsx scripts/apply-rls.ts"
   }
 }

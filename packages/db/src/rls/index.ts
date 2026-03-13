@@ -1,3 +1,5 @@
+export { applyAllRls } from "./apply.js";
+export type { RlsExecutor } from "./apply.js";
 export { enableRls, generateRlsStatements, RLS_TABLE_POLICIES } from "./policies.js";
 export type { RlsScopeType, RlsTableName } from "./policies.js";
 
