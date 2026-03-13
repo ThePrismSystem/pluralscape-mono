@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { applyAllRls } from "../rls/apply.js";
 import {
   accountRlsPolicy,
+  dropPolicySql,
   dualTenantRlsPolicy,
   enableRls,
   generateRlsStatements,
@@ -10,6 +12,7 @@ import {
   systemRlsPolicy,
 } from "../rls/policies.js";
 
+import type { RlsExecutor } from "../rls/apply.js";
 import type { RlsScopeType } from "../rls/policies.js";
 
 // ---------------------------------------------------------------------------
@@ -249,5 +252,65 @@ describe("RLS_TABLE_POLICIES", () => {
     for (const [table, scope] of Object.entries(RLS_TABLE_POLICIES)) {
       expect(validScopes.has(scope), `Invalid scope for ${table}: ${scope}`).toBe(true);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// dropPolicySql
+// ---------------------------------------------------------------------------
+
+describe("dropPolicySql", () => {
+  it("extracts DROP POLICY from a CREATE POLICY statement", () => {
+    const create =
+      "CREATE POLICY members_system_isolation ON members USING (system_id = 'x') WITH CHECK (system_id = 'x')";
+    expect(dropPolicySql(create)).toBe("DROP POLICY IF EXISTS members_system_isolation ON members");
+  });
+
+  it("returns null for non-CREATE POLICY statements", () => {
+    expect(dropPolicySql("ALTER TABLE members ENABLE ROW LEVEL SECURITY")).toBeNull();
+    expect(dropPolicySql("ALTER TABLE members FORCE ROW LEVEL SECURITY")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// applyAllRls (unit test with mock executor)
+// ---------------------------------------------------------------------------
+
+describe("applyAllRls", () => {
+  it("executes BEGIN, statements, and COMMIT on success", async () => {
+    const executed: string[] = [];
+    const executor: RlsExecutor = {
+      execute: vi.fn((sql: string) => {
+        executed.push(sql);
+        return Promise.resolve();
+      }),
+    };
+
+    await applyAllRls(executor);
+
+    expect(executed[0]).toBe("BEGIN");
+    expect(executed[executed.length - 1]).toBe("COMMIT");
+    // Every table should have at least ENABLE + FORCE + policy
+    const tableCount = Object.keys(RLS_TABLE_POLICIES).length;
+    // At minimum: BEGIN + (3 statements + 1 drop) * N tables + COMMIT
+    expect(executed.length).toBeGreaterThan(tableCount * 3);
+  });
+
+  it("executes ROLLBACK on failure and rethrows", async () => {
+    const executed: string[] = [];
+    const executor: RlsExecutor = {
+      execute: vi.fn((sql: string) => {
+        executed.push(sql);
+        if (sql.includes("ENABLE ROW LEVEL SECURITY")) {
+          return Promise.reject(new Error("simulated failure"));
+        }
+        return Promise.resolve();
+      }),
+    };
+
+    await expect(applyAllRls(executor)).rejects.toThrow("simulated failure");
+    expect(executed[0]).toBe("BEGIN");
+    expect(executed[executed.length - 1]).toBe("ROLLBACK");
+    expect(executed).not.toContain("COMMIT");
   });
 });
