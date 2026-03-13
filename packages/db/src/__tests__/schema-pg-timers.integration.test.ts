@@ -458,5 +458,49 @@ describe("PG timers schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("queries pending check-ins by system_id", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const pendingId = crypto.randomUUID();
+      const respondedId = crypto.randomUUID();
+      const dismissedId = crypto.randomUUID();
+
+      await db.insert(checkInRecords).values([
+        { id: pendingId, systemId, timerConfigId: timerId, scheduledAt: now },
+        {
+          id: respondedId,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now + 1000,
+          respondedAt: now + 2000,
+        },
+        {
+          id: dismissedId,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now + 3000,
+          dismissed: true,
+        },
+      ]);
+
+      const pending = await client.query<{ id: string }>(
+        "SELECT id FROM check_in_records WHERE system_id = $1 AND responded_at IS NULL AND dismissed = false ORDER BY scheduled_at",
+        [systemId],
+      );
+      expect(pending.rows).toHaveLength(1);
+      expect(pending.rows[0]?.id).toBe(pendingId);
+    });
   });
 });

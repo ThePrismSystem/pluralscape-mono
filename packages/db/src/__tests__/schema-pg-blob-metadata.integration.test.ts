@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { blobMetadata } from "../schema/pg/blob-metadata.js";
@@ -34,6 +34,10 @@ describe("PG blob_metadata schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(blobMetadata);
   });
 
   it("round-trips all fields", async () => {
@@ -222,6 +226,38 @@ describe("PG blob_metadata schema", () => {
         [id, systemId, `blobs/${crypto.randomUUID()}`, 100, 1, "avatar", now],
       ),
     ).rejects.toThrow();
+  });
+
+  it("rejects checksum not exactly 64 characters", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const now = Date.now();
+
+    await expect(
+      db.insert(blobMetadata).values({
+        id: crypto.randomUUID(),
+        systemId,
+        storageKey: `blobs/${crypto.randomUUID()}`,
+        sizeBytes: 100,
+        encryptionTier: 1,
+        purpose: "avatar",
+        checksum: "a".repeat(63),
+        uploadedAt: now,
+      }),
+    ).rejects.toThrow(/check|constraint/i);
+
+    await expect(
+      db.insert(blobMetadata).values({
+        id: crypto.randomUUID(),
+        systemId,
+        storageKey: `blobs/${crypto.randomUUID()}`,
+        sizeBytes: 100,
+        encryptionTier: 1,
+        purpose: "avatar",
+        checksum: "a".repeat(65),
+        uploadedAt: now,
+      }),
+    ).rejects.toThrow(/check|constraint/i);
   });
 
   it("accepts size_bytes at exactly 10 GB", async () => {

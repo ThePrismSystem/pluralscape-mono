@@ -430,5 +430,62 @@ describe("PG webhooks schema", () => {
       const rows = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, delId));
       expect(rows).toHaveLength(0);
     });
+
+    it("queries retryable deliveries by system_id", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const now = Date.now();
+      const retryAt = now + 60_000;
+
+      await db.insert(webhookConfigs).values({
+        id: whId,
+        systemId,
+        url: "https://example.com/hook",
+        secret: new Uint8Array([1]),
+        eventTypes: [],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const pendingId = crypto.randomUUID();
+      const successId = crypto.randomUUID();
+      const failedId = crypto.randomUUID();
+
+      await db.insert(webhookDeliveries).values([
+        {
+          id: pendingId,
+          webhookId: whId,
+          systemId,
+          eventType: "member.created" as const,
+          status: "pending" as const,
+          nextRetryAt: retryAt,
+          createdAt: now,
+        },
+        {
+          id: successId,
+          webhookId: whId,
+          systemId,
+          eventType: "member.created" as const,
+          status: "success" as const,
+          createdAt: now,
+        },
+        {
+          id: failedId,
+          webhookId: whId,
+          systemId,
+          eventType: "member.created" as const,
+          status: "failed" as const,
+          createdAt: now,
+        },
+      ]);
+
+      const retryable = await client.query<{ id: string }>(
+        "SELECT id FROM webhook_deliveries WHERE system_id = $1 AND status NOT IN ('success', 'failed') ORDER BY next_retry_at",
+        [systemId],
+      );
+      expect(retryable.rows).toHaveLength(1);
+      expect(retryable.rows[0]?.id).toBe(pendingId);
+    });
   });
 });

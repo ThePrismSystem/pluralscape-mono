@@ -291,6 +291,44 @@ describe("SQLite blob_metadata schema", () => {
     ).toThrow();
   });
 
+  it("rejects checksum not exactly 64 characters", () => {
+    const accountId = insertAccount();
+    const systemId = insertSystem(accountId);
+    const now = Date.now();
+
+    expect(() =>
+      db
+        .insert(blobMetadata)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          storageKey: `blobs/${crypto.randomUUID()}`,
+          sizeBytes: 100,
+          encryptionTier: 1,
+          purpose: "avatar",
+          checksum: "a".repeat(63),
+          uploadedAt: now,
+        })
+        .run(),
+    ).toThrow(/CHECK|constraint/i);
+
+    expect(() =>
+      db
+        .insert(blobMetadata)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          storageKey: `blobs/${crypto.randomUUID()}`,
+          sizeBytes: 100,
+          encryptionTier: 1,
+          purpose: "avatar",
+          checksum: "a".repeat(65),
+          uploadedAt: now,
+        })
+        .run(),
+    ).toThrow(/CHECK|constraint/i);
+  });
+
   it("accepts size_bytes at exactly 10 GB", () => {
     const accountId = insertAccount();
     const systemId = insertSystem(accountId);

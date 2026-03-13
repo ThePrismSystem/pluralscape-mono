@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { pkBridgeConfigs } from "../schema/pg/pk-bridge.js";
@@ -27,6 +27,10 @@ describe("PG pk_bridge_configs schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(pkBridgeConfigs);
   });
 
   it("round-trips insert and select with all fields", async () => {
