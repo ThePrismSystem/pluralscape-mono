@@ -67,7 +67,7 @@ export {
 } from "./search.js";
 export type { PgSearchIndexEntry, PgSearchIndexResult, PgSearchOptions } from "./search.js";
 
-// Inferred row types — co-located with their table definitions
+// Auth
 export type {
   AccountRow,
   NewAccount,

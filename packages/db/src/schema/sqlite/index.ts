@@ -67,7 +67,7 @@ export {
 export type { SearchIndexEntry, SearchIndexResult, SearchOptions } from "./search.js";
 export { jobs } from "./jobs.js";
 
-// Inferred row types — co-located with their table definitions
+// Auth
 export type {
   AccountRow,
   NewAccount,

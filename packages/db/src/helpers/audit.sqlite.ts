@@ -1,6 +1,5 @@
 import { check, integer } from "drizzle-orm/sqlite-core";
 
-
 import { sqliteTimestamp } from "../columns/sqlite.js";
 
 import { versionCheck } from "./check.js";
