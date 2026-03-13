@@ -83,6 +83,25 @@ describe("pgCleanupSyncedEntries", () => {
     expect(result.deletedCount).toBe(0);
   });
 
+  it("respects batchSize and deletes at most that many entries", async () => {
+    const accountId = await pgInsertAccount(db);
+    const systemId = await pgInsertSystem(db, accountId);
+
+    // Insert 5 old synced entries
+    for (let i = 0; i < 5; i++) {
+      const id = await insertSyncEntry(systemId, { syncedAt: Date.now() });
+      await db.execute(
+        sql`UPDATE sync_queue SET synced_at = now() - interval '10 days' WHERE id = ${id}`,
+      );
+    }
+
+    const result = await pgCleanupSyncedEntries(db, { olderThanDays: 7, batchSize: 2 });
+    expect(result.deletedCount).toBe(2);
+
+    const remaining = await db.select().from(syncQueue);
+    expect(remaining).toHaveLength(3);
+  });
+
   it("does not delete unsynced entries", async () => {
     const accountId = await pgInsertAccount(db);
     const systemId = await pgInsertSystem(db, accountId);
