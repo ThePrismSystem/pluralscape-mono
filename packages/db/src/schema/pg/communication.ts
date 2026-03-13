@@ -79,8 +79,6 @@ export const messages = pgTable(
     primaryKey({ columns: [t.id, t.timestamp] }),
     unique("messages_id_unique").on(t.id, t.timestamp),
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
-    // TODO(db-0wzf): Drop after partitioning is stable — spans all partitions and queries
-    // should use messages_channel_id_timestamp_idx (partition-pruned) instead. See audit 005 M12.
     index("messages_system_id_idx").on(t.systemId),
     index("messages_reply_to_id_idx").on(t.replyToId),
     unique("messages_id_system_id_timestamp_unique").on(t.id, t.systemId, t.timestamp),
