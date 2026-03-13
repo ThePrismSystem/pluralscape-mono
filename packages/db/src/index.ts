@@ -74,6 +74,19 @@ export {
 export type { BucketContentEntityType } from "@pluralscape/types";
 export type { DbAuditActor } from "./helpers/index.js";
 
+// ── Queries (Job Helpers) ─────────────────────────────────────
+export type { CleanupResult } from "./queries/index.js";
+export {
+  pgCleanupSyncedEntries,
+  sqliteCleanupSyncedEntries,
+  pgCleanupAuditLog,
+  sqliteCleanupAuditLog,
+  pgCleanupOrphanedTags,
+  pgCleanupAllOrphanedTags,
+  sqliteCleanupOrphanedTags,
+  sqliteCleanupAllOrphanedTags,
+} from "./queries/index.js";
+
 // ── Views / Query Helpers ─────────────────────────────────────
 export { pgViews, sqliteViews, LINK_TYPES, mapStructureCrossLinkRow } from "./views/index.js";
 export type {

@@ -1,11 +1,11 @@
 ---
 # db-y7ct
 title: Add type parity tests between DB schema and canonical types
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-11T04:47:32Z
-updated_at: 2026-03-11T19:39:44Z
+updated_at: 2026-03-13T00:03:54Z
 parent: db-gwpb
 ---
 

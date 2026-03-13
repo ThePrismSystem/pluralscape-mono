@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 
 import { parseSearchableEntityType } from "../../helpers/enums.js";
 
-import type { SearchableEntityType } from "@pluralscape/types";
+import type { SearchableEntityType, SystemId } from "@pluralscape/types";
 import type { SQL } from "drizzle-orm";
 
 const DEFAULT_SEARCH_LIMIT = 50;
@@ -41,7 +41,7 @@ export const SEARCH_INDEX_INDEXES_DDL = `
 
 /** Shape of a search index entry (input). */
 export interface PgSearchIndexEntry {
-  readonly systemId: string;
+  readonly systemId: SystemId;
   readonly entityType: SearchableEntityType;
   readonly entityId: string;
   readonly title: string;
@@ -101,7 +101,7 @@ export async function insertSearchEntry(
 /** Delete a search entry by system, entity type, and entity ID. */
 export async function deleteSearchEntry(
   db: PgExecutable,
-  systemId: string,
+  systemId: SystemId,
   entityType: SearchableEntityType,
   entityId: string,
 ): Promise<void> {
@@ -129,7 +129,7 @@ export async function rebuildSearchIndex(db: PgExecutable): Promise<void> {
  */
 export async function searchEntries(
   db: PgExecutable,
-  systemId: string,
+  systemId: SystemId,
   query: string,
   opts?: PgSearchOptions,
 ): Promise<PgSearchIndexResult[]> {

@@ -1,11 +1,11 @@
 ---
 # db-fojn
 title: Mermaid ER diagram of database schema
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T20:08:18Z
-updated_at: 2026-03-08T20:08:22Z
+updated_at: 2026-03-13T00:07:26Z
 parent: db-9nf0
 blocked_by:
   - db-0yyh
@@ -39,3 +39,23 @@ Generate a comprehensive Mermaid ER diagram documenting all database tables, rel
 - All db-\* beans under db-2je4
 - ADR 004 (Database)
 - ADR 006 (Encryption — tier annotations)
+
+## Summary of Changes
+
+Created docs/database-schema.md with comprehensive Mermaid ER diagrams organized by domain:
+
+- Auth (accounts, authKeys, sessions, recoveryKeys, deviceTransferRequests)
+- Systems and Settings
+- Members and Structure (members, groups, relationships, subsystems, layers)
+- Communication (channels, messages, notes, polls, board messages)
+- Fronting (sessions, switches, custom fronts, reports)
+- Privacy (buckets, content tags, key grants, friend connections)
+- Journal and Wiki
+- Innerworld (entities, regions)
+- Custom Fields
+- Sync (documents, queue, conflicts)
+- Jobs, Lifecycle, and Import/Export
+- API Keys and Webhooks
+- Key Rotation
+
+Each diagram shows FK relationships with cardinality markers and key columns.

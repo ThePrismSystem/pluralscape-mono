@@ -11,10 +11,12 @@ import {
   pgInsertSystem,
 } from "./helpers/pg-helpers.js";
 
+import type { SystemId } from "@pluralscape/types";
+
 describe("PG search_index full-text search", () => {
   let client: PGlite;
   let db: ReturnType<typeof drizzle>;
-  let systemId: string;
+  let systemId: SystemId;
 
   beforeAll(async () => {
     client = await PGlite.create();
@@ -29,7 +31,7 @@ describe("PG search_index full-text search", () => {
   beforeEach(async () => {
     await pgExec(client, "DELETE FROM search_index");
     const accountId = await pgInsertAccount(db);
-    systemId = await pgInsertSystem(db, accountId);
+    systemId = (await pgInsertSystem(db, accountId)) as SystemId;
   });
 
   it("inserts and searches by keyword", async () => {
@@ -64,7 +66,7 @@ describe("PG search_index full-text search", () => {
 
   it("enforces multi-tenant isolation via system_id", async () => {
     const otherAccountId = await pgInsertAccount(db);
-    const otherSystemId = await pgInsertSystem(db, otherAccountId);
+    const otherSystemId = (await pgInsertSystem(db, otherAccountId)) as SystemId;
 
     await insertSearchEntry(db, {
       systemId,

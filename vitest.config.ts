@@ -64,6 +64,8 @@ export default defineConfig({
         "packages/db/src/client/types.ts",
         // Drizzle schema files are declarative — callbacks only run during migration generation
         "packages/db/src/schema/**/*.ts",
+        // DB query helpers are tested via integration tests, not unit tests
+        "packages/db/src/queries/**/*.ts",
       ],
       reporter: ["text", "lcov", "html"],
       reportsDirectory: "./coverage",
