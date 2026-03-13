@@ -129,6 +129,7 @@ export type {
   FriendConnection,
   FriendCode,
   BucketAccessCheck,
+  FriendBucketAssignment,
 } from "./privacy.js";
 
 // ── Structure ──────────────────────────────────────────────────────

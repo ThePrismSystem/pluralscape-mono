@@ -25,6 +25,7 @@ import type {
   FrontingSessionId,
   GroupId,
   HexColor,
+  InnerWorldCanvasId,
   InnerWorldEntityId,
   InnerWorldRegionId,
   JournalEntryId,
@@ -104,7 +105,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 58 branded types as string-based", () => {
+  it("defines all 59 branded types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -128,6 +129,7 @@ describe("branded ID types", () => {
     expectTypeOf<WikiPageId>().toExtend<string>();
     expectTypeOf<SideSystemId>().toExtend<string>();
     expectTypeOf<LayerId>().toExtend<string>();
+    expectTypeOf<InnerWorldCanvasId>().toExtend<string>();
     expectTypeOf<InnerWorldEntityId>().toExtend<string>();
     expectTypeOf<InnerWorldRegionId>().toExtend<string>();
     expectTypeOf<AuditLogEntryId>().toExtend<string>();
@@ -201,7 +203,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(59);
+    expect(prefixCount).toBe(60);
   });
 });
 
@@ -251,6 +253,7 @@ describe("EntityType", () => {
         case "acknowledgement":
         case "innerworld-entity":
         case "innerworld-region":
+        case "innerworld-canvas":
         case "field-definition":
         case "field-value":
         case "api-key":
@@ -287,6 +290,7 @@ describe("EntityType", () => {
         case "fronting-comment":
         case "bucket-key-rotation":
         case "bucket-rotation-item":
+        case "innerworld-canvas":
           return type;
         default: {
           const _exhaustive: never = type;

@@ -334,6 +334,7 @@ export const ENTITY_TYPES = [
   "acknowledgement",
   "innerworld-entity",
   "innerworld-region",
+  "innerworld-canvas",
   "field-definition",
   "field-value",
   "api-key",

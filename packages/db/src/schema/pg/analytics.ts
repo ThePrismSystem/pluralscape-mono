@@ -1,17 +1,12 @@
-import { check, index, jsonb, pgTable, varchar } from "drizzle-orm/pg-core";
+import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
-import { pgTimestamp } from "../../columns/pg.js";
+import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { FRONTING_REPORT_FORMATS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type {
-  DbChartData,
-  DbDateRange,
-  DbMemberFrontingBreakdown,
-} from "../shared/analytics-types.js";
 import type { ReportFormat } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -22,11 +17,7 @@ export const frontingReports = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    dateRange: jsonb("date_range").notNull().$type<DbDateRange>(),
-    memberBreakdowns: jsonb("member_breakdowns")
-      .notNull()
-      .$type<readonly DbMemberFrontingBreakdown[]>(),
-    chartData: jsonb("chart_data").notNull().$type<readonly DbChartData[]>(),
+    encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     format: varchar("format", { length: ENUM_MAX_LENGTH }).notNull().$type<ReportFormat>(),
     generatedAt: pgTimestamp("generated_at").notNull(),
   },

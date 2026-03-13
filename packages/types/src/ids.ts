@@ -34,6 +34,7 @@ export type SideSystemId = Brand<string, "SideSystemId">;
 export type LayerId = Brand<string, "LayerId">;
 export type InnerWorldEntityId = Brand<string, "InnerWorldEntityId">;
 export type InnerWorldRegionId = Brand<string, "InnerWorldRegionId">;
+export type InnerWorldCanvasId = Brand<string, "InnerWorldCanvasId">;
 export type AuditLogEntryId = Brand<string, "AuditLogEntryId">;
 export type BoardMessageId = Brand<string, "BoardMessageId">;
 export type AcknowledgementId = Brand<string, "AcknowledgementId">;
@@ -99,6 +100,7 @@ export const ID_PREFIXES = {
   layer: "lyr_",
   innerWorldEntity: "iwe_",
   innerWorldRegion: "iwr_",
+  innerWorldCanvas: "iwc_",
   auditLogEntry: "al_",
   boardMessage: "bm_",
   acknowledgement: "ack_",
@@ -161,6 +163,7 @@ export type EntityType =
   | "acknowledgement"
   | "innerworld-entity"
   | "innerworld-region"
+  | "innerworld-canvas"
   | "field-definition"
   | "field-value"
   | "api-key"

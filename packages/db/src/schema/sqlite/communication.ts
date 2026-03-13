@@ -4,6 +4,7 @@ import {
   foreignKey,
   index,
   integer,
+  primaryKey,
   sqliteTable,
   text,
   unique,
@@ -55,7 +56,7 @@ export const channels = sqliteTable(
 export const messages = sqliteTable(
   "messages",
   {
-    id: text("id").primaryKey(),
+    id: text("id").notNull(),
     channelId: text("channel_id").notNull(),
     systemId: text("system_id")
       .notNull()
@@ -69,10 +70,12 @@ export const messages = sqliteTable(
     ...archivable(),
   },
   (t) => [
+    primaryKey({ columns: [t.id, t.timestamp] }),
+    unique("messages_id_unique").on(t.id, t.timestamp),
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
     index("messages_system_id_idx").on(t.systemId),
     index("messages_reply_to_id_idx").on(t.replyToId),
-    unique("messages_id_system_id_unique").on(t.id, t.systemId),
+    unique("messages_id_system_id_timestamp_unique").on(t.id, t.systemId, t.timestamp),
     foreignKey({
       columns: [t.channelId, t.systemId],
       foreignColumns: [channels.id, channels.systemId],

@@ -82,6 +82,9 @@ export const syncQueue = pgTable(
     index("sync_queue_unsynced_idx")
       .on(t.systemId)
       .where(sql`synced_at IS NULL`),
+    index("sync_queue_cleanup_idx")
+      .on(t.syncedAt)
+      .where(sql`${t.syncedAt} IS NOT NULL`),
   ],
 );
 

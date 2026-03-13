@@ -1225,9 +1225,9 @@ export const SQLITE_DDL = {
   // Jobs (SQLite-only)
   jobs: `
     CREATE TABLE jobs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id TEXT PRIMARY KEY,
       system_id TEXT REFERENCES systems(id) ON DELETE CASCADE,
-      type TEXT NOT NULL CHECK (type IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate')),
+      type TEXT NOT NULL CHECK (type IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate', 'sync-queue-cleanup', 'audit-log-cleanup')),
       payload TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled', 'dead-letter')),
       attempts INTEGER NOT NULL DEFAULT 0,
@@ -1295,9 +1295,7 @@ export const SQLITE_DDL = {
     CREATE TABLE fronting_reports (
       id TEXT PRIMARY KEY,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      date_range TEXT NOT NULL,
-      member_breakdowns TEXT NOT NULL,
-      chart_data TEXT NOT NULL,
+      encrypted_data BLOB NOT NULL,
       format TEXT NOT NULL CHECK (format IN ('html', 'pdf')),
       generated_at INTEGER NOT NULL
     )

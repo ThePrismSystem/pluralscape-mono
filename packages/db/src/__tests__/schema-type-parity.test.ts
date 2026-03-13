@@ -627,27 +627,23 @@ describe("Column existence", () => {
       expect(sqlite.frontingReports).toBeDefined();
     });
 
-    it("has expected columns: id, systemId, dateRange, memberBreakdowns, chartData, format, generatedAt", () => {
+    it("has expected columns: id, systemId, encryptedData, format, generatedAt", () => {
       const cols = getTableColumns(pg.frontingReports);
-      const expected = [
-        "id",
-        "systemId",
-        "dateRange",
-        "memberBreakdowns",
-        "chartData",
-        "format",
-        "generatedAt",
-      ];
+      const expected = ["id", "systemId", "encryptedData", "format", "generatedAt"];
       for (const col of expected) {
         expect(cols, `expected column ${col}`).toHaveProperty(col);
       }
     });
 
-    it("does not have encryptedData — it is a plaintext analytics table", () => {
+    it("does not have plaintext JSONB columns — report data is T1 encrypted", () => {
       const pgCols = getTableColumns(pg.frontingReports);
       const sqliteCols = getTableColumns(sqlite.frontingReports);
-      expect(pgCols).not.toHaveProperty("encryptedData");
-      expect(sqliteCols).not.toHaveProperty("encryptedData");
+      expect(pgCols).not.toHaveProperty("dateRange");
+      expect(pgCols).not.toHaveProperty("memberBreakdowns");
+      expect(pgCols).not.toHaveProperty("chartData");
+      expect(sqliteCols).not.toHaveProperty("dateRange");
+      expect(sqliteCols).not.toHaveProperty("memberBreakdowns");
+      expect(sqliteCols).not.toHaveProperty("chartData");
     });
   });
 });
@@ -666,9 +662,11 @@ describe("DB-only column allowlist", () => {
     }
   });
 
-  it("frontingReports does not have any DB-only columns (it is a plaintext analytics record)", () => {
+  it("frontingReports has encryptedData but no other DB-only columns", () => {
     const cols = getTableColumns(pg.frontingReports);
+    expect(cols).toHaveProperty("encryptedData");
     for (const dbOnly of DB_ONLY_COLUMNS) {
+      if (dbOnly === "encryptedData") continue;
       expect(cols, `frontingReports should not have ${dbOnly}`).not.toHaveProperty(dbOnly);
     }
   });

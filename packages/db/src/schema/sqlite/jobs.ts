@@ -7,7 +7,7 @@ import { JOB_STATUSES, JOB_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { JobResult, JobStatus, JobType } from "@pluralscape/types";
+import type { JobId, JobResult, JobStatus, JobType } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
@@ -17,7 +17,7 @@ const DEFAULT_TIMEOUT_MS = 30000;
 export const jobs = sqliteTable(
   "jobs",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: text("id").primaryKey().$type<JobId>(),
     systemId: text("system_id").references(() => systems.id, { onDelete: "cascade" }),
     type: text("type").notNull().$type<JobType>(),
     payload: sqliteJson("payload").notNull(),

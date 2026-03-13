@@ -6,6 +6,7 @@ import type {
   BucketContentEntityType,
   BucketContentTag,
   BucketVisibilityScope,
+  FriendBucketAssignment,
   FriendCode,
   FriendConnection,
   FriendConnectionStatus,
@@ -165,5 +166,18 @@ describe("BucketAccessCheck", () => {
     expectTypeOf<BucketAccessCheck["friendBucketIds"]>().toEqualTypeOf<readonly BucketId[]>();
     expectTypeOf<BucketAccessCheck["contentBucketIds"]>().toEqualTypeOf<readonly BucketId[]>();
     expectTypeOf<BucketAccessCheck["scope"]>().toEqualTypeOf<BucketVisibilityScope>();
+  });
+});
+
+describe("FriendBucketAssignment", () => {
+  it("has correct field types", () => {
+    expectTypeOf<
+      FriendBucketAssignment["friendConnectionId"]
+    >().toEqualTypeOf<FriendConnectionId>();
+    expectTypeOf<FriendBucketAssignment["bucketId"]>().toEqualTypeOf<BucketId>();
+  });
+
+  it("has exact shape", () => {
+    expectTypeOf<keyof FriendBucketAssignment>().toEqualTypeOf<"friendConnectionId" | "bucketId">();
   });
 });

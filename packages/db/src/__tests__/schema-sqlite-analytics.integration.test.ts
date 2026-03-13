@@ -11,6 +11,7 @@ import {
   createSqliteAnalyticsTables,
   sqliteInsertAccount,
   sqliteInsertSystem,
+  testBlob,
 } from "./helpers/sqlite-helpers.js";
 
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
@@ -45,32 +46,13 @@ describe("SQLite analytics schema", () => {
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-
-      const dateRange = { start: now - 86400000, end: now };
-      const memberBreakdowns = [
-        {
-          memberId: "mem_abc",
-          totalDuration: 3600000,
-          sessionCount: 5,
-          averageSessionLength: 720000,
-          percentageOfTotal: 45.5,
-        },
-      ];
-      const chartData = [
-        {
-          chartType: "pie" as const,
-          labels: ["Alice", "Bob"],
-          datasets: [{ label: "Duration", data: [60, 40], color: "#ff0000" }],
-        },
-      ];
+      const blob = testBlob();
 
       db.insert(frontingReports)
         .values({
           id,
           systemId,
-          dateRange,
-          memberBreakdowns,
-          chartData,
+          encryptedData: blob,
           format: "html",
           generatedAt: now,
         })
@@ -79,9 +61,7 @@ describe("SQLite analytics schema", () => {
       const rows = db.select().from(frontingReports).where(eq(frontingReports.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.systemId).toBe(systemId);
-      expect(rows[0]?.dateRange).toEqual(dateRange);
-      expect(rows[0]?.memberBreakdowns).toEqual(memberBreakdowns);
-      expect(rows[0]?.chartData).toEqual(chartData);
+      expect(rows[0]?.encryptedData).toEqual(blob);
       expect(rows[0]?.format).toBe("html");
       expect(rows[0]?.generatedAt).toBe(now);
     });
@@ -96,9 +76,7 @@ describe("SQLite analytics schema", () => {
         .values({
           id,
           systemId,
-          dateRange: { start: now - 86400000, end: now },
-          memberBreakdowns: [],
-          chartData: [],
+          encryptedData: testBlob(),
           format: "pdf",
           generatedAt: now,
         })
@@ -119,9 +97,7 @@ describe("SQLite analytics schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId,
-            dateRange: { start: now - 86400000, end: now },
-            memberBreakdowns: [],
-            chartData: [],
+            encryptedData: testBlob(),
             format: "docx" as "html",
             generatedAt: now,
           })
@@ -139,9 +115,7 @@ describe("SQLite analytics schema", () => {
         .values({
           id,
           systemId,
-          dateRange: { start: now - 86400000, end: now },
-          memberBreakdowns: [],
-          chartData: [],
+          encryptedData: testBlob(),
           format: "html",
           generatedAt: now,
         })
@@ -160,9 +134,7 @@ describe("SQLite analytics schema", () => {
           .values({
             id: crypto.randomUUID(),
             systemId: "nonexistent",
-            dateRange: { start: now - 86400000, end: now },
-            memberBreakdowns: [],
-            chartData: [],
+            encryptedData: testBlob(),
             format: "html",
             generatedAt: now,
           })
@@ -178,9 +150,7 @@ describe("SQLite analytics schema", () => {
       const values = {
         id,
         systemId,
-        dateRange: { start: now - 86400000, end: now },
-        memberBreakdowns: [],
-        chartData: [],
+        encryptedData: testBlob(),
         format: "html" as const,
         generatedAt: now,
       };
@@ -199,18 +169,14 @@ describe("SQLite analytics schema", () => {
           {
             id: crypto.randomUUID(),
             systemId,
-            dateRange: { start: now - 86400000, end: now },
-            memberBreakdowns: [],
-            chartData: [],
+            encryptedData: testBlob(new Uint8Array([1])),
             format: "html",
             generatedAt: now,
           },
           {
             id: crypto.randomUUID(),
             systemId,
-            dateRange: { start: now - 172800000, end: now - 86400000 },
-            memberBreakdowns: [],
-            chartData: [],
+            encryptedData: testBlob(new Uint8Array([2])),
             format: "pdf",
             generatedAt: now,
           },
@@ -225,42 +191,25 @@ describe("SQLite analytics schema", () => {
       expect(rows).toHaveLength(2);
     });
 
-    it("round-trips complex chart data with multiple datasets", () => {
+    it("round-trips distinct ciphertext payloads", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
-
-      const chartData = [
-        {
-          chartType: "bar" as const,
-          labels: ["Mon", "Tue", "Wed"],
-          datasets: [
-            { label: "Alice", data: [3, 5, 2], color: "#ff0000" },
-            { label: "Bob", data: [1, 4, 6], color: "#00ff00" },
-          ],
-        },
-        {
-          chartType: "timeline" as const,
-          labels: ["2024-01-01", "2024-01-02"],
-          datasets: [{ label: "Fronting", data: [8, 12], color: "#0000ff" }],
-        },
-      ];
+      const blob = testBlob(new Uint8Array([10, 20, 30, 40, 50]));
 
       db.insert(frontingReports)
         .values({
           id,
           systemId,
-          dateRange: { start: now - 604800000, end: now },
-          memberBreakdowns: [],
-          chartData,
+          encryptedData: blob,
           format: "html",
           generatedAt: now,
         })
         .run();
 
       const rows = db.select().from(frontingReports).where(eq(frontingReports.id, id)).all();
-      expect(rows[0]?.chartData).toEqual(chartData);
+      expect(rows[0]?.encryptedData).toEqual(blob);
     });
   });
 });

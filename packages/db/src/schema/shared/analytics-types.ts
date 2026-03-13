@@ -1,8 +1,10 @@
 /**
  * DB-layer analytics types — unbranded equivalents of the domain types in @pluralscape/types.
  *
- * Fronting reports are generated client-side. Member names appearing in chart labels
- * are T1 encrypted before storage. Member IDs are non-identifying opaque tokens (T3).
+ * These types describe the plaintext structure that is encrypted into the
+ * frontingReports.encryptedData blob. The server stores only the ciphertext.
+ * Fronting reports are generated client-side and stored as a single T1 encrypted blob;
+ * only `format` and `generatedAt` are stored as plaintext T3 metadata columns.
  */
 
 /** Unbranded DB-layer equivalent of DateRange (avoids branded UnixMillis in Drizzle types). */

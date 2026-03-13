@@ -13,10 +13,12 @@ import {
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
 
-import type { JobResult, UnixMillis } from "@pluralscape/types";
+import type { JobId, JobResult, JobType, UnixMillis } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, jobs };
+
+const newJobId = (): JobId => `job_${crypto.randomUUID()}` as JobId;
 
 describe("SQLite jobs schema", () => {
   let client: InstanceType<typeof Database>;
@@ -41,41 +43,35 @@ describe("SQLite jobs schema", () => {
     db.delete(jobs).run();
   });
 
-  describe("autoincrement primary key", () => {
-    it("assigns sequential integer IDs", () => {
+  describe("text primary key", () => {
+    it("stores and retrieves a prefixed UUID as the primary key", () => {
       const now = Date.now();
+      const id = newJobId();
 
       db.insert(jobs)
         .values({
+          id,
           type: "sync-push",
           payload: { test: true },
           createdAt: now,
         })
         .run();
 
-      db.insert(jobs)
-        .values({
-          type: "sync-pull",
-          payload: { test: true },
-          createdAt: now,
-        })
-        .run();
+      const row = db.select().from(jobs).where(eq(jobs.id, id)).get();
+      expect(row).toBeDefined();
+      expect(row?.id).toBe(id);
+      expect(typeof row?.id).toBe("string");
+    });
 
-      const rows = db.select().from(jobs).all();
-      expect(rows.length).toBeGreaterThanOrEqual(2);
-      const ids = rows.map((r) => r.id);
-      // IDs should be sequential integers
-      for (const id of ids) {
-        expect(typeof id).toBe("number");
-        expect(id).toBeGreaterThan(0);
-      }
-      // Second should be greater than first
-      const firstId = ids[0];
-      const lastId = ids[ids.length - 1];
-      if (firstId === undefined || lastId === undefined) {
-        throw new Error("Expected firstId and lastId to be defined");
-      }
-      expect(lastId).toBeGreaterThan(firstId);
+    it("rejects duplicate primary keys", () => {
+      const now = Date.now();
+      const id = newJobId();
+
+      db.insert(jobs).values({ id, type: "sync-push", payload: {}, createdAt: now }).run();
+
+      expect(() =>
+        db.insert(jobs).values({ id, type: "sync-pull", payload: {}, createdAt: now }).run(),
+      ).toThrow(/UNIQUE|PRIMARY KEY/);
     });
   });
 
@@ -88,6 +84,7 @@ describe("SQLite jobs schema", () => {
 
       db.insert(jobs)
         .values({
+          id: newJobId(),
           systemId,
           type: "export-generate",
           payload,
@@ -126,6 +123,7 @@ describe("SQLite jobs schema", () => {
       const result = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           type: "notification-send",
           payload: {},
           createdAt: now,
@@ -146,6 +144,7 @@ describe("SQLite jobs schema", () => {
       const result = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           systemId: null,
           type: "analytics-compute",
           payload: { scope: "global" },
@@ -202,6 +201,7 @@ describe("SQLite jobs schema", () => {
 
       db.insert(jobs)
         .values({
+          id: newJobId(),
           type: "webhook-deliver",
           payload: {},
           createdAt: now,
@@ -213,6 +213,7 @@ describe("SQLite jobs schema", () => {
         db
           .insert(jobs)
           .values({
+            id: newJobId(),
             type: "webhook-deliver",
             payload: {},
             createdAt: now,
@@ -228,6 +229,7 @@ describe("SQLite jobs schema", () => {
       expect(() => {
         db.insert(jobs)
           .values({
+            id: newJobId(),
             type: "blob-cleanup",
             payload: {},
             createdAt: now,
@@ -236,6 +238,7 @@ describe("SQLite jobs schema", () => {
           .run();
         db.insert(jobs)
           .values({
+            id: newJobId(),
             type: "blob-cleanup",
             payload: {},
             createdAt: now,
@@ -254,6 +257,7 @@ describe("SQLite jobs schema", () => {
 
       db.insert(jobs)
         .values({
+          id: newJobId(),
           systemId,
           type: "sync-push",
           payload: {},
@@ -278,6 +282,7 @@ describe("SQLite jobs schema", () => {
       const inserted = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           type: "import-process",
           payload: { file: "import.json" },
           createdAt: now,
@@ -312,6 +317,7 @@ describe("SQLite jobs schema", () => {
       const inserted = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           type: "webhook-deliver",
           payload: { url: "https://example.com" },
           createdAt: now,
@@ -348,6 +354,7 @@ describe("SQLite jobs schema", () => {
       const inserted = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           type: "sync-push",
           payload: { test: true },
           createdAt: now,
@@ -373,6 +380,7 @@ describe("SQLite jobs schema", () => {
       const inserted = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           type: "blob-cleanup",
           payload: {},
           createdAt: now,
@@ -395,6 +403,7 @@ describe("SQLite jobs schema", () => {
       const inserted = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           type: "webhook-deliver",
           payload: {},
           status: "failed",
@@ -418,6 +427,7 @@ describe("SQLite jobs schema", () => {
       const inserted = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           type: "sync-push",
           payload: {},
           status: "dead-letter",
@@ -440,6 +450,7 @@ describe("SQLite jobs schema", () => {
       const inserted = db
         .insert(jobs)
         .values({
+          id: newJobId(),
           type: "notification-send",
           payload: { recipient: "test" },
           status: "dead-letter",
@@ -486,9 +497,27 @@ describe("SQLite jobs schema", () => {
 
       db.insert(jobs)
         .values([
-          { type: "sync-push", payload: {}, createdAt: now, priority: 10 },
-          { type: "sync-pull", payload: {}, createdAt: now, priority: 0 },
-          { type: "blob-cleanup", payload: {}, createdAt: now, priority: 5 },
+          {
+            id: newJobId(),
+            type: "sync-push" as JobType,
+            payload: {},
+            createdAt: now,
+            priority: 10,
+          },
+          {
+            id: newJobId(),
+            type: "sync-pull" as JobType,
+            payload: {},
+            createdAt: now,
+            priority: 0,
+          },
+          {
+            id: newJobId(),
+            type: "blob-cleanup" as JobType,
+            payload: {},
+            createdAt: now,
+            priority: 5,
+          },
         ])
         .run();
 

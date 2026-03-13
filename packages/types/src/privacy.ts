@@ -110,6 +110,12 @@ export interface FriendCode {
   readonly expiresAt: UnixMillis | null;
 }
 
+/** A junction mapping a friend connection to a privacy bucket. */
+export interface FriendBucketAssignment {
+  readonly friendConnectionId: FriendConnectionId;
+  readonly bucketId: BucketId;
+}
+
 /**
  * Parameters for checking whether a friend can access specific content.
  *

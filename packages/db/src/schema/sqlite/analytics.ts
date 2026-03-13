@@ -1,16 +1,11 @@
 import { check, index, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
+import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { FRONTING_REPORT_FORMATS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type {
-  DbChartData,
-  DbDateRange,
-  DbMemberFrontingBreakdown,
-} from "../shared/analytics-types.js";
 import type { ReportFormat } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
@@ -21,11 +16,7 @@ export const frontingReports = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    dateRange: sqliteJson("date_range").notNull().$type<DbDateRange>(),
-    memberBreakdowns: sqliteJson("member_breakdowns")
-      .notNull()
-      .$type<readonly DbMemberFrontingBreakdown[]>(),
-    chartData: sqliteJson("chart_data").notNull().$type<readonly DbChartData[]>(),
+    encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     format: text("format").notNull().$type<ReportFormat>(),
     generatedAt: sqliteTimestamp("generated_at").notNull(),
   },

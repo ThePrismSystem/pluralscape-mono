@@ -23,9 +23,22 @@ export async function pgCleanupAuditLog<
 ): Promise<CleanupResult> {
   validateOlderThanDays(options.olderThanDays);
   const cutoff = sql`now() - interval '${sql.raw(String(options.olderThanDays))} days'`;
-  const deleted = await db.delete(pgAuditLog).where(lt(pgAuditLog.timestamp, cutoff)).returning();
 
-  return { deletedCount: deleted.length };
+  // Use a CTE to count deleted rows without materializing them into JS memory.
+  // `.returning()` would load every deleted row as a JS object, causing OOM
+  // when millions of rows are purged.
+  const result = await db.execute<{ deleted_count: string }>(
+    sql`WITH deleted AS (
+      DELETE FROM ${pgAuditLog}
+      WHERE ${pgAuditLog.timestamp} < ${cutoff}
+      RETURNING 1
+    )
+    SELECT count(*) AS deleted_count FROM deleted`,
+  );
+
+  // postgres-js returns RowList (an array); pglite returns Results ({ rows: [...] })
+  const row = Array.isArray(result) ? result[0] : result.rows[0];
+  return { deletedCount: Number(row?.deleted_count ?? 0) };
 }
 
 /**

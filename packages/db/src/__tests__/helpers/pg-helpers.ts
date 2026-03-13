@@ -1246,9 +1246,7 @@ export const PG_DDL = {
     CREATE TABLE fronting_reports (
       id VARCHAR(50) PRIMARY KEY,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      date_range JSONB NOT NULL,
-      member_breakdowns JSONB NOT NULL,
-      chart_data JSONB NOT NULL,
+      encrypted_data BYTEA NOT NULL,
       format VARCHAR(50) NOT NULL CHECK (format IN ('html', 'pdf')),
       generated_at TIMESTAMPTZ NOT NULL
     )

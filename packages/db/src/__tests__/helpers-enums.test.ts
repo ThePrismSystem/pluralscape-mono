@@ -208,7 +208,7 @@ describe("enum arrays", () => {
   });
 
   it("ENTITY_TYPES matches EntityType union", () => {
-    expect(ENTITY_TYPES).toHaveLength(59);
+    expect(ENTITY_TYPES).toHaveLength(60);
     expect(ENTITY_TYPES).toContain("member");
     expect(ENTITY_TYPES).toContain("system");
     expect(ENTITY_TYPES).toContain("fronting-report");
@@ -281,7 +281,7 @@ describe("enum arrays", () => {
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
     expect(JOB_TYPES).toHaveLength(14);
     expect(JOB_STATUSES).toHaveLength(6);
-    expect(ENTITY_TYPES).toHaveLength(59);
+    expect(ENTITY_TYPES).toHaveLength(60);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);
     expect(DISCOVERY_STATUSES).toHaveLength(3);
     expect(ROTATION_STATES).toHaveLength(5);

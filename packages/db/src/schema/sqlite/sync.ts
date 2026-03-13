@@ -67,6 +67,9 @@ export const syncQueue = sqliteTable(
     index("sync_queue_unsynced_idx")
       .on(t.systemId)
       .where(sql`${t.syncedAt} IS NULL`),
+    index("sync_queue_cleanup_idx")
+      .on(t.syncedAt)
+      .where(sql`${t.syncedAt} IS NOT NULL`),
     check("sync_queue_operation_check", enumCheck(t.operation, SYNC_OPERATIONS)),
     // SQLite: seq is application-supplied per system, so uniqueness is (system_id, seq).
     // PG: seq is a SERIAL (globally unique auto-increment), so a global unique index suffices.
