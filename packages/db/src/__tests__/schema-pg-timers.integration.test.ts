@@ -124,6 +124,68 @@ describe("PG timers schema", () => {
       expect(rows[0]?.wakingEnd).toBe("22:00");
     });
 
+    it("accepts valid HH:MM time strings", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      for (const [start, end] of [
+        ["00:00", "23:59"],
+        ["08:30", "22:00"],
+        ["12:00", "18:45"],
+      ]) {
+        const id = crypto.randomUUID();
+        const now = Date.now();
+        await db.insert(timerConfigs).values({
+          id,
+          systemId,
+          wakingStart: start,
+          wakingEnd: end,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        });
+        const rows = await db.select().from(timerConfigs).where(eq(timerConfigs.id, id));
+        expect(rows[0]?.wakingStart).toBe(start);
+        expect(rows[0]?.wakingEnd).toBe(end);
+      }
+    });
+
+    it("rejects invalid wakingStart time format", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      for (const bad of ["24:00", "8:00", "25:00", "12:60", "ab:cd", "1200", ""]) {
+        await expect(
+          db.insert(timerConfigs).values({
+            id: crypto.randomUUID(),
+            systemId,
+            wakingStart: bad,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          }),
+        ).rejects.toThrow();
+      }
+    });
+
+    it("rejects invalid wakingEnd time format", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      for (const bad of ["24:00", "9:30", "99:99"]) {
+        await expect(
+          db.insert(timerConfigs).values({
+            id: crypto.randomUUID(),
+            systemId,
+            wakingEnd: bad,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          }),
+        ).rejects.toThrow();
+      }
+    });
+
     it("defaults T3 metadata to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);

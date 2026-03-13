@@ -1064,7 +1064,9 @@ export const PG_DDL = {
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (id, system_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (waking_start IS NULL OR waking_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+      CHECK (waking_end IS NULL OR waking_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')
     )
   `,
   timerConfigsIndexes: `

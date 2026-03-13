@@ -1068,7 +1068,25 @@ export const SQLITE_DDL = {
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
       UNIQUE (id, system_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK (waking_start IS NULL OR (
+        length(waking_start) = 5
+        AND substr(waking_start, 3, 1) = ':'
+        AND substr(waking_start, 1, 1) BETWEEN '0' AND '2'
+        AND substr(waking_start, 2, 1) BETWEEN '0' AND '9'
+        AND (substr(waking_start, 1, 1) < '2' OR substr(waking_start, 2, 1) <= '3')
+        AND substr(waking_start, 4, 1) BETWEEN '0' AND '5'
+        AND substr(waking_start, 5, 1) BETWEEN '0' AND '9'
+      )),
+      CHECK (waking_end IS NULL OR (
+        length(waking_end) = 5
+        AND substr(waking_end, 3, 1) = ':'
+        AND substr(waking_end, 1, 1) BETWEEN '0' AND '2'
+        AND substr(waking_end, 2, 1) BETWEEN '0' AND '9'
+        AND (substr(waking_end, 1, 1) < '2' OR substr(waking_end, 2, 1) <= '3')
+        AND substr(waking_end, 4, 1) BETWEEN '0' AND '5'
+        AND substr(waking_end, 5, 1) BETWEEN '0' AND '9'
+      ))
     )
   `,
   timerConfigsIndexes: `
