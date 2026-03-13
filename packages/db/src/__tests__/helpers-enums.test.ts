@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { enumCheck } from "../helpers/check.js";
 import {
   parseBucketContentEntityType,
+  ACCOUNT_TYPES,
   ACCOUNT_PURGE_STATUSES,
   API_KEY_KEY_TYPES,
   API_KEY_SCOPES,
@@ -34,6 +35,7 @@ import {
   ROTATION_ITEM_STATUSES,
   ROTATION_STATES,
   SEARCHABLE_ENTITY_TYPES,
+  SNAPSHOT_TRIGGERS,
   SYNC_OPERATIONS,
   SYNC_RESOLUTIONS,
   WEBHOOK_DELIVERY_STATUSES,
@@ -209,7 +211,7 @@ describe("enum arrays", () => {
   });
 
   it("ENTITY_TYPES matches EntityType union", () => {
-    expect(ENTITY_TYPES).toHaveLength(59);
+    expect(ENTITY_TYPES).toHaveLength(60);
     expect(ENTITY_TYPES).toContain("member");
     expect(ENTITY_TYPES).toContain("system");
     expect(ENTITY_TYPES).toContain("fronting-report");
@@ -282,11 +284,13 @@ describe("enum arrays", () => {
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
     expect(JOB_TYPES).toHaveLength(15);
     expect(JOB_STATUSES).toHaveLength(6);
-    expect(ENTITY_TYPES).toHaveLength(59);
+    expect(ENTITY_TYPES).toHaveLength(60);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);
     expect(DISCOVERY_STATUSES).toHaveLength(3);
     expect(ROTATION_STATES).toHaveLength(5);
     expect(ROTATION_ITEM_STATUSES).toHaveLength(4);
+    expect(ACCOUNT_TYPES).toHaveLength(2);
+    expect(SNAPSHOT_TRIGGERS).toHaveLength(2);
   });
 });
 

@@ -4,15 +4,16 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-o
 import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
-import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
+import { ACCOUNT_TYPES, AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
-import type { AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
+import type { AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const accounts = sqliteTable(
   "accounts",
   {
     id: text("id").primaryKey(),
+    accountType: text("account_type").notNull().default("system").$type<AccountType>(),
     emailHash: text("email_hash").notNull(),
     emailSalt: text("email_salt").notNull(),
     passwordHash: text("password_hash").notNull(),
@@ -22,6 +23,7 @@ export const accounts = sqliteTable(
   },
   (t) => [
     uniqueIndex("accounts_email_hash_idx").on(t.emailHash),
+    check("accounts_account_type_check", enumCheck(t.accountType, ACCOUNT_TYPES)),
     versionCheckFor("accounts", t.version),
   ],
 );

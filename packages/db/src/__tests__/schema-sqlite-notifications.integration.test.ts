@@ -351,7 +351,7 @@ describe("SQLite notifications schema", () => {
     it("round-trips with enabledEventTypes JSON", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const friendSystemId = insertSystem(accountId);
+      const friendAccountId = insertAccount();
       const fcId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -359,8 +359,8 @@ describe("SQLite notifications schema", () => {
       db.insert(friendConnections)
         .values({
           id: fcId,
-          systemId,
-          friendSystemId,
+          accountId,
+          friendAccountId,
           status: "accepted",
           createdAt: now,
           updatedAt: now,
@@ -390,7 +390,7 @@ describe("SQLite notifications schema", () => {
     it("cascades on friend_connection deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const friendSystemId = insertSystem(accountId);
+      const friendAccountId = insertAccount();
       const fcId = crypto.randomUUID();
       const id = crypto.randomUUID();
       const now = Date.now();
@@ -398,8 +398,8 @@ describe("SQLite notifications schema", () => {
       db.insert(friendConnections)
         .values({
           id: fcId,
-          systemId,
-          friendSystemId,
+          accountId,
+          friendAccountId,
           status: "accepted",
           createdAt: now,
           updatedAt: now,
@@ -429,15 +429,15 @@ describe("SQLite notifications schema", () => {
     it("enforces unique (system_id, friend_connection_id)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const friendSystemId = insertSystem(accountId);
+      const friendAccountId = insertAccount();
       const fcId = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(friendConnections)
         .values({
           id: fcId,
-          systemId,
-          friendSystemId,
+          accountId,
+          friendAccountId,
           status: "accepted",
           createdAt: now,
           updatedAt: now,

@@ -14,6 +14,7 @@ import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqli
 import { enumCheck } from "../../helpers/check.js";
 import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
+import { accounts } from "./auth.js";
 import { systems } from "./systems.js";
 
 import type { BucketContentEntityType, FriendConnectionStatus } from "@pluralscape/types";
@@ -70,9 +71,9 @@ export const keyGrants = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    friendSystemId: text("friend_system_id")
+    friendAccountId: text("friend_account_id")
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedKey: sqliteBinary("encrypted_key").notNull(),
     keyVersion: integer("key_version").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
@@ -80,37 +81,38 @@ export const keyGrants = sqliteTable(
   },
   (t) => [
     index("key_grants_system_id_idx").on(t.systemId),
-    index("key_grants_friend_bucket_idx").on(t.friendSystemId, t.bucketId),
-    index("key_grants_friend_revoked_idx").on(t.friendSystemId, t.revokedAt),
+    index("key_grants_friend_bucket_idx").on(t.friendAccountId, t.bucketId),
+    index("key_grants_friend_revoked_idx").on(t.friendAccountId, t.revokedAt),
     index("key_grants_revoked_at_idx").on(t.revokedAt),
-    unique("key_grants_bucket_friend_version_uniq").on(t.bucketId, t.friendSystemId, t.keyVersion),
+    unique("key_grants_bucket_friend_version_uniq").on(t.bucketId, t.friendAccountId, t.keyVersion),
     check("key_grants_key_version_check", sql`${t.keyVersion} >= 1`),
   ],
 );
 
 // Connections are intentionally directional: A→B and B→A are separate entries
+// Friend connections are account-level (not system-level) to support non-system viewer accounts.
 export const friendConnections = sqliteTable(
   "friend_connections",
   {
     id: text("id").primaryKey(),
-    systemId: text("system_id")
+    accountId: text("account_id")
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    friendSystemId: text("friend_system_id")
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    friendAccountId: text("friend_account_id")
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("pending").$type<FriendConnectionStatus>(),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
     ...timestamps(),
     ...versioned(),
   },
   (t) => [
-    index("friend_connections_system_status_idx").on(t.systemId, t.status),
-    index("friend_connections_friend_status_idx").on(t.friendSystemId, t.status),
-    unique("friend_connections_system_friend_uniq").on(t.systemId, t.friendSystemId),
-    unique("friend_connections_id_system_id_unique").on(t.id, t.systemId),
+    index("friend_connections_account_status_idx").on(t.accountId, t.status),
+    index("friend_connections_friend_status_idx").on(t.friendAccountId, t.status),
+    unique("friend_connections_account_friend_uniq").on(t.accountId, t.friendAccountId),
+    unique("friend_connections_id_account_id_unique").on(t.id, t.accountId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
-    check("friend_connections_no_self_check", sql`${t.systemId} != ${t.friendSystemId}`),
+    check("friend_connections_no_self_check", sql`${t.accountId} != ${t.friendAccountId}`),
     versionCheckFor("friend_connections", t.version),
   ],
 );
@@ -119,15 +121,15 @@ export const friendCodes = sqliteTable(
   "friend_codes",
   {
     id: text("id").primaryKey(),
-    systemId: text("system_id")
+    accountId: text("account_id")
       .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     code: text("code").notNull().unique(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     expiresAt: sqliteTimestamp("expires_at"),
   },
   (t) => [
-    index("friend_codes_system_id_idx").on(t.systemId),
+    index("friend_codes_account_id_idx").on(t.accountId),
     check(
       "friend_codes_expires_at_check",
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,

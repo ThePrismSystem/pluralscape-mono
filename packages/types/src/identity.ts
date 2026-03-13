@@ -94,3 +94,28 @@ export interface MemberListItem {
   readonly colors: readonly HexColor[];
   readonly archived: boolean;
 }
+
+/** Lightweight projection of a system for the multi-system switcher UI. */
+export interface SystemListItem {
+  readonly id: SystemId;
+  readonly name: string;
+  readonly avatarSource: ImageSource | null;
+}
+
+/** Scope controls for system duplication — which elements to copy. */
+export interface SystemDuplicationScope {
+  readonly members: boolean;
+  readonly photos: boolean;
+  readonly customFields: boolean;
+  readonly groups: boolean;
+  /** Subsystems, side systems, layers, memberships, and cross-structure links. */
+  readonly structure: boolean;
+  readonly relationships: boolean;
+  readonly frontingHistory: boolean;
+  /** Channels, messages, boards, notes, polls. */
+  readonly communication: boolean;
+  readonly journal: boolean;
+  readonly wiki: boolean;
+  readonly innerworld: boolean;
+  readonly settings: boolean;
+}

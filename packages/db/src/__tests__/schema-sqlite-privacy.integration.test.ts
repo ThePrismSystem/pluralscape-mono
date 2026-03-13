@@ -58,16 +58,16 @@ describe("SQLite privacy schema", () => {
   }
 
   function insertFriendConnection(
-    systemId: string,
-    friendSystemId: string,
+    accountId: string,
+    friendAccountId: string,
     id = crypto.randomUUID(),
   ): string {
     const now = Date.now();
     db.insert(friendConnections)
       .values({
         id,
-        systemId,
-        friendSystemId,
+        accountId,
+        friendAccountId,
         createdAt: now,
         updatedAt: now,
       })
@@ -314,7 +314,7 @@ describe("SQLite privacy schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const keyData = new Uint8Array([99, 88, 77, 66]);
@@ -324,7 +324,7 @@ describe("SQLite privacy schema", () => {
           id,
           bucketId,
           systemId,
-          friendSystemId,
+          friendAccountId,
           encryptedKey: keyData,
           keyVersion: 1,
           createdAt: now,
@@ -335,7 +335,7 @@ describe("SQLite privacy schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.encryptedKey).toEqual(keyData);
       expect(rows[0]?.bucketId).toBe(bucketId);
-      expect(rows[0]?.friendSystemId).toBe(friendSystemId);
+      expect(rows[0]?.friendAccountId).toBe(friendAccountId);
       expect(rows[0]?.keyVersion).toBe(1);
     });
 
@@ -344,7 +344,7 @@ describe("SQLite privacy schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -353,7 +353,7 @@ describe("SQLite privacy schema", () => {
           id,
           bucketId,
           systemId,
-          friendSystemId,
+          friendAccountId,
           encryptedKey: new Uint8Array([1]),
           keyVersion: 1,
           createdAt: now,
@@ -369,7 +369,7 @@ describe("SQLite privacy schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const grantId = crypto.randomUUID();
       const now = Date.now();
 
@@ -378,7 +378,7 @@ describe("SQLite privacy schema", () => {
           id: grantId,
           bucketId,
           systemId,
-          friendSystemId,
+          friendAccountId,
           encryptedKey: new Uint8Array([1]),
           keyVersion: 1,
           createdAt: now,
@@ -395,7 +395,7 @@ describe("SQLite privacy schema", () => {
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const now = Date.now();
 
       expect(() =>
@@ -405,7 +405,7 @@ describe("SQLite privacy schema", () => {
             id: crypto.randomUUID(),
             bucketId,
             systemId,
-            friendSystemId,
+            friendAccountId,
             encryptedKey: new Uint8Array([1]),
             keyVersion: 0,
             createdAt: now,
@@ -414,12 +414,12 @@ describe("SQLite privacy schema", () => {
       ).toThrow();
     });
 
-    it("rejects duplicate (bucketId, friendSystemId, keyVersion)", () => {
+    it("rejects duplicate (bucketId, friendAccountId, keyVersion)", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const now = Date.now();
 
       db.insert(keyGrants)
@@ -427,7 +427,7 @@ describe("SQLite privacy schema", () => {
           id: crypto.randomUUID(),
           bucketId,
           systemId,
-          friendSystemId,
+          friendAccountId,
           encryptedKey: new Uint8Array([1]),
           keyVersion: 1,
           createdAt: now,
@@ -441,7 +441,7 @@ describe("SQLite privacy schema", () => {
             id: crypto.randomUUID(),
             bucketId,
             systemId,
-            friendSystemId,
+            friendAccountId,
             encryptedKey: new Uint8Array([2]),
             keyVersion: 1,
             createdAt: now,
@@ -450,7 +450,7 @@ describe("SQLite privacy schema", () => {
       ).toThrow();
     });
 
-    it("rejects nonexistent friendSystemId FK", () => {
+    it("rejects nonexistent friendAccountId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const bucketId = insertBucket(systemId);
@@ -463,7 +463,7 @@ describe("SQLite privacy schema", () => {
             id: crypto.randomUUID(),
             bucketId,
             systemId,
-            friendSystemId: "nonexistent",
+            friendAccountId: "nonexistent",
             encryptedKey: new Uint8Array([1]),
             keyVersion: 1,
             createdAt: now,
@@ -476,17 +476,17 @@ describe("SQLite privacy schema", () => {
   describe("friend_connections", () => {
     it("inserts with defaults and round-trips", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(friendConnections)
         .values({
           id,
-          systemId,
-          friendSystemId,
+          accountId,
+          friendAccountId,
           createdAt: now,
           updatedAt: now,
         })
@@ -501,9 +501,9 @@ describe("SQLite privacy schema", () => {
 
     it("rejects invalid status CHECK", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const now = Date.now();
 
       expect(() =>
@@ -511,8 +511,8 @@ describe("SQLite privacy schema", () => {
           .insert(friendConnections)
           .values({
             id: crypto.randomUUID(),
-            systemId,
-            friendSystemId,
+            accountId,
+            friendAccountId,
             status: "invalid-status" as "pending",
             createdAt: now,
             updatedAt: now,
@@ -521,14 +521,14 @@ describe("SQLite privacy schema", () => {
       ).toThrow();
     });
 
-    it("cascades on system deletion", () => {
+    it("cascades on account deletion", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
-      const connId = insertFriendConnection(systemId, friendSystemId);
+      insertSystem(friendAccountId);
+      const connId = insertFriendConnection(accountId, friendAccountId);
 
-      db.delete(systems).where(eq(systems.id, systemId)).run();
+      db.delete(accounts).where(eq(accounts.id, accountId)).run();
       const rows = db
         .select()
         .from(friendConnections)
@@ -539,7 +539,7 @@ describe("SQLite privacy schema", () => {
 
     it("rejects self-friendship via CHECK", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const now = Date.now();
 
       expect(() =>
@@ -547,8 +547,8 @@ describe("SQLite privacy schema", () => {
           .insert(friendConnections)
           .values({
             id: crypto.randomUUID(),
-            systemId,
-            friendSystemId: systemId,
+            accountId,
+            friendAccountId: accountId,
             createdAt: now,
             updatedAt: now,
           })
@@ -556,22 +556,22 @@ describe("SQLite privacy schema", () => {
       ).toThrow();
     });
 
-    it("rejects duplicate (systemId, friendSystemId)", () => {
+    it("rejects duplicate (accountId, friendAccountId)", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const now = Date.now();
 
-      insertFriendConnection(systemId, friendSystemId);
+      insertFriendConnection(accountId, friendAccountId);
 
       expect(() =>
         db
           .insert(friendConnections)
           .values({
             id: crypto.randomUUID(),
-            systemId,
-            friendSystemId,
+            accountId,
+            friendAccountId,
             createdAt: now,
             updatedAt: now,
           })
@@ -583,7 +583,7 @@ describe("SQLite privacy schema", () => {
   describe("friend_codes", () => {
     it("inserts and queries by code", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const id = crypto.randomUUID();
       const code = `FC-${crypto.randomUUID()}`;
       const now = Date.now();
@@ -591,7 +591,7 @@ describe("SQLite privacy schema", () => {
       db.insert(friendCodes)
         .values({
           id,
-          systemId,
+          accountId,
           code,
           createdAt: now,
         })
@@ -600,19 +600,19 @@ describe("SQLite privacy schema", () => {
       const rows = db.select().from(friendCodes).where(eq(friendCodes.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.code).toBe(code);
-      expect(rows[0]?.systemId).toBe(systemId);
+      expect(rows[0]?.accountId).toBe(accountId);
     });
 
     it("allows nullable expiresAt", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(friendCodes)
         .values({
           id,
-          systemId,
+          accountId,
           code: `FC-${crypto.randomUUID()}`,
           createdAt: now,
         })
@@ -624,14 +624,14 @@ describe("SQLite privacy schema", () => {
 
     it("rejects duplicate code", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const code = `FC-${crypto.randomUUID()}`;
       const now = Date.now();
 
       db.insert(friendCodes)
         .values({
           id: crypto.randomUUID(),
-          systemId,
+          accountId,
           code,
           createdAt: now,
         })
@@ -642,7 +642,7 @@ describe("SQLite privacy schema", () => {
           .insert(friendCodes)
           .values({
             id: crypto.randomUUID(),
-            systemId,
+            accountId,
             code,
             createdAt: now,
           })
@@ -650,29 +650,29 @@ describe("SQLite privacy schema", () => {
       ).toThrow();
     });
 
-    it("cascades on system deletion", () => {
+    it("cascades on account deletion", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(friendCodes)
         .values({
           id,
-          systemId,
+          accountId,
           code: `FC-${crypto.randomUUID()}`,
           createdAt: now,
         })
         .run();
 
-      db.delete(systems).where(eq(systems.id, systemId)).run();
+      db.delete(accounts).where(eq(accounts.id, accountId)).run();
       const rows = db.select().from(friendCodes).where(eq(friendCodes.id, id)).all();
       expect(rows).toHaveLength(0);
     });
 
     it("rejects code shorter than 8 characters via CHECK", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const now = Date.now();
 
       expect(() =>
@@ -680,7 +680,7 @@ describe("SQLite privacy schema", () => {
           .insert(friendCodes)
           .values({
             id: crypto.randomUUID(),
-            systemId,
+            accountId,
             code: "SHORT",
             createdAt: now,
           })
@@ -690,13 +690,13 @@ describe("SQLite privacy schema", () => {
 
     it("accepts code exactly 8 characters", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const now = Date.now();
 
       db.insert(friendCodes)
         .values({
           id: crypto.randomUUID(),
-          systemId,
+          accountId,
           code: `E8CH${crypto.randomUUID().slice(0, 4)}`,
           createdAt: now,
         })
@@ -705,7 +705,7 @@ describe("SQLite privacy schema", () => {
 
     it("rejects expiresAt === createdAt via CHECK", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const now = Date.now();
 
       expect(() =>
@@ -713,7 +713,7 @@ describe("SQLite privacy schema", () => {
           .insert(friendCodes)
           .values({
             id: crypto.randomUUID(),
-            systemId,
+            accountId,
             code: `FC-${crypto.randomUUID()}`,
             createdAt: now,
             expiresAt: now,
@@ -724,7 +724,7 @@ describe("SQLite privacy schema", () => {
 
     it("rejects expiresAt <= createdAt via CHECK", () => {
       const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
+      insertSystem(accountId);
       const now = Date.now();
 
       expect(() =>
@@ -732,7 +732,7 @@ describe("SQLite privacy schema", () => {
           .insert(friendCodes)
           .values({
             id: crypto.randomUUID(),
-            systemId,
+            accountId,
             code: `FC-${crypto.randomUUID()}`,
             createdAt: now,
             expiresAt: now - 1000,
@@ -747,9 +747,9 @@ describe("SQLite privacy schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const bucketId = insertBucket(systemId);
-      const connId = insertFriendConnection(systemId, friendSystemId);
+      const connId = insertFriendConnection(accountId, friendAccountId);
 
       db.insert(friendBucketAssignments)
         .values({
@@ -772,9 +772,9 @@ describe("SQLite privacy schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const bucketId = insertBucket(systemId);
-      const connId = insertFriendConnection(systemId, friendSystemId);
+      const connId = insertFriendConnection(accountId, friendAccountId);
 
       db.insert(friendBucketAssignments)
         .values({
@@ -797,9 +797,9 @@ describe("SQLite privacy schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const bucketId = insertBucket(systemId);
-      const connId = insertFriendConnection(systemId, friendSystemId);
+      const connId = insertFriendConnection(accountId, friendAccountId);
 
       db.insert(friendBucketAssignments)
         .values({
@@ -822,9 +822,9 @@ describe("SQLite privacy schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
+      insertSystem(friendAccountId);
       const bucketId = insertBucket(systemId);
-      const connId = insertFriendConnection(systemId, friendSystemId);
+      const connId = insertFriendConnection(accountId, friendAccountId);
 
       db.insert(friendBucketAssignments)
         .values({
@@ -867,8 +867,8 @@ describe("SQLite privacy schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const friendAccountId = insertAccount();
-      const friendSystemId = insertSystem(friendAccountId);
-      const connId = insertFriendConnection(systemId, friendSystemId);
+      insertSystem(friendAccountId);
+      const connId = insertFriendConnection(accountId, friendAccountId);
 
       expect(() =>
         db

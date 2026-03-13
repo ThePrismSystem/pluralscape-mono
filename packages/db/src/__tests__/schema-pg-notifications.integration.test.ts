@@ -321,8 +321,8 @@ describe("PG notifications schema", () => {
 
       await db.insert(friendConnections).values({
         id: fcId,
-        systemId,
-        friendSystemId: await insertSystem(accountId),
+        accountId,
+        friendAccountId: await insertAccount(),
         status: "accepted",
         createdAt: now,
         updatedAt: now,
@@ -354,8 +354,8 @@ describe("PG notifications schema", () => {
 
       await db.insert(friendConnections).values({
         id: fcId,
-        systemId,
-        friendSystemId: await insertSystem(accountId),
+        accountId,
+        friendAccountId: await insertAccount(),
         status: "accepted",
         createdAt: now,
         updatedAt: now,
@@ -381,14 +381,14 @@ describe("PG notifications schema", () => {
     it("enforces unique (system_id, friend_connection_id)", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
-      const friendSystemId = await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
       const fcId = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(friendConnections).values({
         id: fcId,
-        systemId,
-        friendSystemId,
+        accountId,
+        friendAccountId,
         status: "accepted",
         createdAt: now,
         updatedAt: now,

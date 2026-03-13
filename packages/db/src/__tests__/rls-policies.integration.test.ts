@@ -790,7 +790,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
         id VARCHAR(255) PRIMARY KEY,
         bucket_id VARCHAR(255) NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
         system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-        friend_system_id VARCHAR(255) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+        friend_account_id VARCHAR(255) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
         encrypted_key BYTEA NOT NULL,
         key_version INTEGER NOT NULL CHECK (key_version >= 1),
         created_at TIMESTAMPTZ NOT NULL,
@@ -814,11 +814,11 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
     );
 
     await client.query(
-      `INSERT INTO key_grants (id, bucket_id, system_id, friend_system_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO key_grants (id, bucket_id, system_id, friend_account_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [grantIdA, bucketIdA, systemIdA, systemIdA, new Uint8Array([10]), 1, now],
     );
     await client.query(
-      `INSERT INTO key_grants (id, bucket_id, system_id, friend_system_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO key_grants (id, bucket_id, system_id, friend_account_id, encrypted_key, key_version, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [grantIdB, bucketIdB, systemIdB, systemIdB, new Uint8Array([20]), 1, now],
     );
 
@@ -872,7 +872,7 @@ describe("RLS cross-tenant isolation — key_grants (system scope, PGlite)", () 
 
     await expect(
       client.query(
-        `INSERT INTO key_grants (id, bucket_id, system_id, friend_system_id, encrypted_key, key_version, created_at)
+        `INSERT INTO key_grants (id, bucket_id, system_id, friend_account_id, encrypted_key, key_version, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         [
           crypto.randomUUID(),

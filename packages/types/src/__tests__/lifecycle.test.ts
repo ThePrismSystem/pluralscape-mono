@@ -8,11 +8,13 @@ import type {
   DormancyStartEvent,
   FormChangeEvent,
   FusionEvent,
+  InnerworldMoveEvent,
   LifecycleEvent,
   LifecycleEventType,
   MergeEvent,
   NameChangeEvent,
   SplitEvent,
+  StructureMoveEvent,
   SubsystemFormationEvent,
   UnmergeEvent,
 } from "../lifecycle.js";
@@ -155,6 +157,12 @@ describe("LifecycleEvent discriminated union", () => {
         case "name-change":
           expectTypeOf(event).toEqualTypeOf<NameChangeEvent>();
           return event.newName;
+        case "structure-move":
+          expectTypeOf(event).toEqualTypeOf<StructureMoveEvent>();
+          return event.memberId;
+        case "innerworld-move":
+          expectTypeOf(event).toEqualTypeOf<InnerworldMoveEvent>();
+          return event.entityId;
         default: {
           const _exhaustive: never = event;
           return _exhaustive;
@@ -178,6 +186,8 @@ describe("LifecycleEventType", () => {
     assertType<LifecycleEventType>("subsystem-formation");
     assertType<LifecycleEventType>("form-change");
     assertType<LifecycleEventType>("name-change");
+    assertType<LifecycleEventType>("structure-move");
+    assertType<LifecycleEventType>("innerworld-move");
   });
 
   it("rejects invalid types", () => {

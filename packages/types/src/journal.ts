@@ -1,5 +1,7 @@
+import type { FrontingType } from "./fronting.js";
 import type {
   BlobId,
+  CustomFrontId,
   EntityType,
   FrontingSessionId,
   JournalEntryId,
@@ -105,6 +107,24 @@ export interface EntityLink {
   readonly displayText: string;
 }
 
+// ── Fronting snapshot ──────────────────────────────────────────────
+
+/** A single fronter in a fronting snapshot. */
+export interface FrontingSnapshotEntry {
+  readonly sessionId: FrontingSessionId;
+  readonly memberId: MemberId | null;
+  readonly customFrontId: CustomFrontId | null;
+  readonly frontingType: FrontingType;
+  readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
+  readonly startTime: UnixMillis;
+}
+
+/** A point-in-time capture of who is fronting, attached to a journal entry. */
+export interface FrontingSnapshot {
+  readonly capturedAt: UnixMillis;
+  readonly entries: readonly FrontingSnapshotEntry[];
+}
+
 // ── Journal entries ────────────────────────────────────────────────
 
 /** A journal entry authored by a member or structure entity. */
@@ -117,6 +137,8 @@ export interface JournalEntry extends AuditMetadata {
   readonly blocks: readonly JournalBlock[];
   readonly tags: readonly string[];
   readonly linkedEntities: readonly EntityLink[];
+  /** Point-in-time snapshots of who was fronting. Stored in T1 encrypted blob. */
+  readonly frontingSnapshots: readonly FrontingSnapshot[] | null;
   readonly archived: false;
 }
 

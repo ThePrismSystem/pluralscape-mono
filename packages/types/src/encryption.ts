@@ -615,7 +615,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // ── Tier map ───────────────────────────────────────────────────
 //
 // Member: T1 (name, pronouns, description, tags, colors, avatarSource, saturationLevel, suppressFriendFrontNotification, boardMessageNotificationOnFront) | T3 (archived)
-// FrontingSession: T1 (comment, positionality) | T3 (timestamps, memberId, frontingType, customFrontId, linkedStructure)
+// FrontingSession: T1 (comment, positionality, outtriggerReason, outtriggerSentiment) | T3 (timestamps, memberId, frontingType, customFrontId, linkedStructure)
 // FrontingComment: T1 (content) | T3 (frontingSessionId, memberId) — extends AuditMetadata
 // Group: T1 (name, description, imageSource, color, emoji) | T3 (sortOrder, archived, parentGroupId)
 // Subsystem: T1 (name, description, color, imageSource, emoji) | T3 (parentSubsystemId, architectureType, hasCore, discoveryStatus)
@@ -640,6 +640,8 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // Layer: T1 (name, description, color, imageSource, emoji, accessType, gatekeeperMemberIds) | T3 (none)
 // TimerConfig: T1 (promptText) | T3 (intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, enabled)
 // AuditLogEntry: T3 (all fields — detail, eventType, actor, ipAddress, userAgent, timestamp; server-readable for security monitoring)
+//
+// SystemSnapshot: T1 (name, description, SnapshotContent — all inside encryptedData) | T3 (trigger, createdAt)
 //
 // Switch: T3 (memberIds, timestamp — immutable event metadata; member IDs are non-identifying opaque tokens)
 // FrontingReport: client-generated, stored locally; member names in chart labels are T1 encrypted client-side

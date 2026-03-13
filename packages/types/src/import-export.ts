@@ -110,7 +110,7 @@ export interface SPImportPrivacyBucket {
 /** A friend connection from a Simply Plural export. */
 export interface SPImportFriend {
   readonly id: string;
-  readonly friendSystemId: string;
+  readonly friendAccountId: string;
   readonly addedAt: number;
 }
 

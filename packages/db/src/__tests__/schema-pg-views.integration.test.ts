@@ -271,34 +271,34 @@ describe("PG views / query helpers", () => {
   describe("getPendingFriendRequests", () => {
     it("returns only pending connections", async () => {
       const otherAccountId1 = await insertAccount();
-      const otherSystemId1 = await insertSystem(otherAccountId1);
+      await insertSystem(otherAccountId1);
       const otherAccountId2 = await insertAccount();
-      const otherSystemId2 = await insertSystem(otherAccountId2);
+      await insertSystem(otherAccountId2);
       const now = Date.now();
 
       await db.insert(friendConnections).values({
         id: crypto.randomUUID(),
-        systemId: otherSystemId1,
-        friendSystemId: systemId,
+        accountId: otherAccountId1,
+        friendAccountId: accountId,
         status: "pending",
         createdAt: now,
         updatedAt: now,
       });
       await db.insert(friendConnections).values({
         id: crypto.randomUUID(),
-        systemId: otherSystemId2,
-        friendSystemId: systemId,
+        accountId: otherAccountId2,
+        friendAccountId: accountId,
         status: "accepted",
         createdAt: now,
         updatedAt: now,
       });
 
-      const pending = await getPendingFriendRequests(db, systemId);
+      const pending = await getPendingFriendRequests(db, accountId);
       expect(pending).toHaveLength(1);
     });
 
     it("returns empty array when no pending requests", async () => {
-      const pending = await getPendingFriendRequests(db, systemId);
+      const pending = await getPendingFriendRequests(db, accountId);
       expect(pending).toHaveLength(0);
     });
   });
@@ -443,28 +443,28 @@ describe("PG views / query helpers", () => {
     it("returns only accepted connections", async () => {
       const now = Date.now();
       const otherAccountId1 = await insertAccount();
-      const otherSystemId1 = await insertSystem(otherAccountId1);
+      await insertSystem(otherAccountId1);
       const otherAccountId2 = await insertAccount();
-      const otherSystemId2 = await insertSystem(otherAccountId2);
+      await insertSystem(otherAccountId2);
 
       await db.insert(friendConnections).values({
         id: crypto.randomUUID(),
-        systemId,
-        friendSystemId: otherSystemId1,
+        accountId,
+        friendAccountId: otherAccountId1,
         status: "accepted",
         createdAt: now,
         updatedAt: now,
       });
       await db.insert(friendConnections).values({
         id: crypto.randomUUID(),
-        systemId,
-        friendSystemId: otherSystemId2,
+        accountId,
+        friendAccountId: otherAccountId2,
         status: "pending",
         createdAt: now,
         updatedAt: now,
       });
 
-      const active = await getActiveFriendConnections(db, systemId);
+      const active = await getActiveFriendConnections(db, accountId);
       expect(active).toHaveLength(1);
     });
   });

@@ -70,6 +70,7 @@ export type FriendNotificationPreferenceId = Brand<string, "FriendNotificationPr
 export type FrontingCommentId = Brand<string, "FrontingCommentId">;
 export type BucketKeyRotationId = Brand<string, "BucketKeyRotationId">;
 export type BucketRotationItemId = Brand<string, "BucketRotationItemId">;
+export type SystemSnapshotId = Brand<string, "SystemSnapshotId">;
 export type HexColor = Brand<string, "HexColor">;
 export type SlugHash = Brand<string, "SlugHash">;
 
@@ -135,6 +136,7 @@ export const ID_PREFIXES = {
   frontingComment: "fcom_",
   bucketKeyRotation: "bkr_",
   bucketRotationItem: "bri_",
+  systemSnapshot: "snap_",
 } as const;
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -198,4 +200,5 @@ export type EntityType =
   | "friend-notification-preference"
   | "fronting-comment"
   | "bucket-key-rotation"
-  | "bucket-rotation-item";
+  | "bucket-rotation-item"
+  | "system-snapshot";

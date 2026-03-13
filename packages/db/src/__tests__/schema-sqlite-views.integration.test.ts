@@ -252,22 +252,22 @@ describe("SQLite views / query helpers", () => {
 
   describe("getPendingFriendRequests", () => {
     it("returns empty array when no requests", () => {
-      const pending = getPendingFriendRequests(db, systemId);
+      const pending = getPendingFriendRequests(db, accountId);
       expect(pending).toHaveLength(0);
     });
 
     it("returns only pending connections", () => {
       const now = Date.now();
       const otherAccountId1 = insertAccount();
-      const otherSystemId1 = insertSystem(otherAccountId1);
+      insertSystem(otherAccountId1);
       const otherAccountId2 = insertAccount();
-      const otherSystemId2 = insertSystem(otherAccountId2);
+      insertSystem(otherAccountId2);
 
       db.insert(friendConnections)
         .values({
           id: crypto.randomUUID(),
-          systemId: otherSystemId1,
-          friendSystemId: systemId,
+          accountId: otherAccountId1,
+          friendAccountId: accountId,
           status: "pending",
           createdAt: now,
           updatedAt: now,
@@ -276,15 +276,15 @@ describe("SQLite views / query helpers", () => {
       db.insert(friendConnections)
         .values({
           id: crypto.randomUUID(),
-          systemId: otherSystemId2,
-          friendSystemId: systemId,
+          accountId: otherAccountId2,
+          friendAccountId: accountId,
           status: "accepted",
           createdAt: now,
           updatedAt: now,
         })
         .run();
 
-      const pending = getPendingFriendRequests(db, systemId);
+      const pending = getPendingFriendRequests(db, accountId);
       expect(pending).toHaveLength(1);
     });
   });
@@ -443,27 +443,27 @@ describe("SQLite views / query helpers", () => {
 
   describe("getActiveFriendConnections", () => {
     it("returns empty array when no accepted connections", () => {
-      const active = getActiveFriendConnections(db, systemId);
+      const active = getActiveFriendConnections(db, accountId);
       expect(active).toHaveLength(0);
     });
 
     it("returns only accepted connections", () => {
       const now = Date.now();
       const otherAccountId = insertAccount();
-      const otherSystemId = insertSystem(otherAccountId);
+      insertSystem(otherAccountId);
 
       db.insert(friendConnections)
         .values({
           id: crypto.randomUUID(),
-          systemId,
-          friendSystemId: otherSystemId,
+          accountId,
+          friendAccountId: otherAccountId,
           status: "accepted",
           createdAt: now,
           updatedAt: now,
         })
         .run();
 
-      const active = getActiveFriendConnections(db, systemId);
+      const active = getActiveFriendConnections(db, accountId);
       expect(active).toHaveLength(1);
     });
   });

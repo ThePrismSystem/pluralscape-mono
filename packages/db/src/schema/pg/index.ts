@@ -54,6 +54,7 @@ export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
 export { importJobs, exportRequests, accountPurgeRequests } from "./import-export.js";
 export { syncDocuments, syncQueue, syncConflicts } from "./sync.js";
 export { bucketKeyRotations, bucketRotationItems } from "./key-rotation.js";
+export { systemSnapshots } from "./snapshots.js";
 export {
   SEARCH_INDEX_DDL,
   SEARCH_INDEX_INDEXES_DDL,
@@ -255,3 +256,6 @@ export type {
   BucketRotationItemRow,
   NewBucketRotationItem,
 } from "./key-rotation.js";
+
+// Snapshots
+export type { SystemSnapshotRow, NewSystemSnapshot } from "./snapshots.js";

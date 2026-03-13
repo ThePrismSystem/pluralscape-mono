@@ -24,6 +24,7 @@ Epics:
 - ~~Database schema (`packages/db`)~~ [COMPLETED] — 40+ tables, dual-dialect (PG + SQLite), RLS, constraint closure, encryption contracts
 - ~~Database schema hardening~~ [COMPLETED] — 29 tasks: indexes, encryption, sync queue fixes, full-text search, varchar right-sizing
 - ~~Test framework setup~~ [COMPLETED] — Vitest workspace, coverage enforcement, test factories (2,338 tests)
+- Launch feature types: fronting snapshot types (L3), outtrigger types (L5), lifecycle event types for structure-move and innerworld-move (L8/L9), system snapshot types and table (L10)
 - Encryption layer (`packages/crypto`) — ADR 006 (foundation complete: key derivation, symmetric crypto, identity keypairs; remaining: per-bucket keys, key rotation, recovery)
 - Sync protocol design (`packages/sync`) — ADR 005 (encrypted CRDT relay PoC complete; remaining: document topology, conflict resolution, partial replication)
 - Blob storage strategy — ADR 009
@@ -39,8 +40,8 @@ Goal: Authentication, identity management, core CRUD
 
 Epics:
 
-- Auth system (features.md section 14)
-- Member CRUD (features.md section 1)
+- Auth system (features.md section 14), including non-system account type (L2, ADR 021)
+- Member CRUD (features.md section 1), including member duplication (L4)
 - Groups and folders (features.md section 1)
 - Custom fronts (features.md section 1)
 - System settings (features.md section 12)
@@ -67,7 +68,7 @@ Goal: Front logging, co-fronting, analytics, timers
 
 Epics:
 
-- Front logging API (features.md section 2)
+- Front logging API (features.md section 2), including outtrigger reason/sentiment (L5) and fronting structure location display (L1)
 - Analytics engine (features.md section 2)
 - Fronting history report generation (features.md section 2)
 - Automated timers and check-in reminders (features.md section 2)
@@ -92,7 +93,7 @@ Goal: Privacy engine, friend network, external access
 
 Epics:
 
-- Privacy buckets (features.md section 4)
+- Privacy buckets (features.md section 4), including non-system account impact on friend model (L2)
 - Friend network (features.md section 4)
 - External dashboard (features.md section 4)
 - Friend-side search (features.md section 8)
@@ -162,15 +163,26 @@ Epics:
 
 ## Future (unscheduled)
 
-These features are tracked but may be deferred past initial launch.
+These features are tracked but may be deferred past initial launch. Each has a detailed design document in `docs/future-features/`.
 
-- Inter-system messaging (features.md section 5)
-- Widget / wearable support (features.md section 19)
-- Official client SDKs (features.md section 9)
+- Inter-system messaging (features.md section 5) — [future feature doc](../future-features/001-inter-system-messaging.md)
+- Widget / wearable support (features.md section 19) — [future feature doc](../future-features/002-widget-wearable-support.md)
+- Official client SDKs (features.md section 9) — [future feature doc](../future-features/004-client-sdks.md)
+- Multi-system support verification (L6) and system duplication (L7)
+- System snapshots (L10, ADR 022)
+- New/rediscovered alter onboarding — [future feature doc](../future-features/005-alter-onboarding.md)
+- Linked fronting — [future feature doc](../future-features/006-linked-fronting.md)
+- Outtrigger analytics — [future feature doc](../future-features/007-outtrigger-analytics.md)
+- Traumaversary tracking — [future feature doc](../future-features/008-traumaversary-tracking.md)
+- Therapist journal report — [future feature doc](../future-features/009-therapist-journal-report.md)
+- Journal custom fields — [future feature doc](../future-features/010-journal-custom-fields.md)
+- Journal fronting context — [future feature doc](../future-features/011-journal-fronting-context.md)
+- Member creation templates — [future feature doc](../future-features/012-member-templates.md)
+- Custom lifecycle event types — [future feature doc](../future-features/013-custom-lifecycle-events.md)
 
 ## Architecture Decision Records
 
-18 accepted ADRs cover the full stack:
+20 accepted ADRs cover the full stack:
 
 - [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
 - [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
@@ -184,6 +196,8 @@ These features are tracked but may be deferred past initial launch.
 - [ADR 016: Messages Partitioning](../adr/016-messages-partitioning.md) — hash-based partitioning for the messages table
 - [ADR 017: Audit Log Partitioning](../adr/017-audit-log-partitioning.md) — time-based partitioning with automated retention
 - [ADR 018: Encryption-at-Rest Boundary](../adr/018-encryption-at-rest-boundary.md) — DB-layer encryption boundary for tier-2/tier-3 data
+- [ADR 021: Non-System Account Model](../adr/021-non-system-accounts.md) — viewer accounts, account-level friend connections
+- [ADR 022: System Structure Snapshots](../adr/022-system-snapshots.md) — point-in-time structure captures, manual and scheduled triggers
 
 ## Development Sequence Rationale
 

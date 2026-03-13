@@ -20,6 +20,7 @@ Actionable feature spec for Pluralscape, organized by domain.
 - **Groups/folders** — hierarchical organization with multi-group membership, drag-and-drop reorder
   - Groups have: image, description, color, emoji
   - Move/copy entire folders between other folders
+- **Member duplication** — duplicate an existing member as a starting point for a new entry (copies name as "Copy of {name}", optionally copies photos, custom fields, group memberships, and structure memberships; records a `discovery` lifecycle event for the new member)
 - **Archival** — non-destructive, read-only preservation with instant restore
 - **Custom fronts** — abstract cognitive states logged like members (e.g., "Dissociated", "Blurry")
 
@@ -33,6 +34,9 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Fronting comments: multiple timestamped comments per fronting session (unlimited length), stored as separate `FrontingComment` entities linked to the session
   - Sessions can link to a structure entity (subsystem, side system, or layer) via `linkedStructure` — replaces the old subsystem-only field with a polymorphic `EntityReference`
   - Positionality: free-text field describing fronting position (e.g. close vs far, height, depth)
+  - Outtrigger reason: optional free-text field describing what caused the switch/fronting change, stored in T1 encrypted blob
+  - Outtrigger sentiment: classification of the outtrigger as negative, neutral, or positive
+  - Fronting structure location display: when viewing who's fronting, show which layer(s), subsystem(s), and side system(s) the fronting members belong to (queries existing structure membership tables)
   - Subsystem-level fronting (subsystems can front independently of the parent system)
 - **Historical editing** — retroactive entries, timestamp adjustment, comments on entries
 - **Timeline visualization** — multi-lane display, color-coded per member, co-fronting overlap visible
@@ -61,6 +65,7 @@ Note: polls and acknowledgements are cooperative guardrails within a system, not
   - Unmapped or errored privacy data defaults to maximum restriction (invisible to all)
   - Controls visibility at multiple levels: members, custom fields, fronting status, etc.
   - Custom field visibility is per-bucket, applied globally across all members (not per-member granularity)
+- **Non-system accounts** — accounts for non-systems (therapists, supportive friends) that can view system data via privacy buckets without owning a system entity. Account type is "system" (default) or "viewer". Friend connections, friend codes, and key grants operate at the account level rather than system level (ADR 021).
 - **Friend network** — friend codes, read-only external dashboard
 - **Friend visibility** — friends can view based on their assigned privacy buckets:
   - Active fronters (including custom fronts and custom front status)
@@ -72,7 +77,7 @@ Note: polls and acknowledgements are cooperative guardrails within a system, not
 
 ## 5. Inter-System Messaging (future)
 
-Tracked as a potential future feature; may be deferred past initial launch.
+Tracked as a potential future feature; may be deferred past initial launch. See [future feature doc](../future-features/001-inter-system-messaging.md) for detailed design.
 
 - **External DMs** — between specific members of different systems
 - **Per-member external inboxes** — each member has their own inbox for cross-system messages
@@ -104,7 +109,15 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
   - Subsystem formation (member joins or creates a subsystem)
   - Form change (tracking appearance/form shifts)
   - Name change (tracking previous and new names)
+  - Structure move (member moves between subsystems, side systems, or layers)
+  - Innerworld move (entity moves between innerworld regions)
   - Each event links the involved members and resulting members
+- **System snapshots** — point-in-time captures of system structure state (ADR 022)
+  - Manual trigger and configurable schedule (daily/weekly/disabled)
+  - Captures: members (text-only), subsystems, side systems, layers, relationships, memberships, cross-links, groups, innerworld state
+  - View-only (no revert); T1 encrypted; stored in `system_snapshots` table
+- **Multi-system support** — multiple systems per account (already supported by schema: `systems.accountId` is a non-unique FK). System selection is a client concern; encryption keys are per-account (shared across systems). `SystemListItem` type for the system-switcher UI.
+- **System duplication** — duplicate the current system to a new system under the same account, choosing which elements to copy (members, photos, custom fields, groups, structure, relationships, fronting history, communication, journal, wiki, innerworld, settings). Application-layer deep copy with ID remapping.
 - **Innerworld mapping** — spatial positioning on 2D canvas
   - Layers/regions with access rules (open vs gatekept)
   - Gatekeeper member assignment per region
@@ -119,6 +132,11 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
 - **Block-based rich-text editor** — nested, structured content blocks
 - **Hyperlinked pages** — member names auto-link to profiles
 - **Polymorphic authorship** — journal entries can be authored by members or structure entities (subsystems, side systems, layers)
+- **Fronting snapshot** — optional point-in-time capture of who is fronting when a journal entry is created
+  - Automatic capture via `autoCaptureFrontingOnJournal` system setting, or manual via button in editor
+  - Supports multiple snapshots per entry (for long writing sessions)
+  - Snapshot data stored inside the journal entry's T1 encrypted blob (no separate table)
+  - Each snapshot entry captures: session ID, member/custom front, fronting type, linked structure, start time
 - **Internal wiki** — system lore, term definitions, trauma timelines
 - Replaces basic Notes for power users (Notes remain for simple use)
 
@@ -145,7 +163,7 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
 - **Rate limiting** — intelligent backoff
 - **API documentation** — auto-generated from endpoint definitions
 - **Integration guides** — step-by-step guides for common languages (Python, JavaScript/TypeScript, Go, Rust, C#) covering authentication, metadata endpoints, and encrypted data decryption
-- **Client SDKs** (future) — official libraries for common languages that handle authentication and libsodium decryption, so third-party developers don't need to implement the crypto stack themselves
+- **Client SDKs** (future) — official libraries for common languages that handle authentication and libsodium decryption, so third-party developers don't need to implement the crypto stack themselves. See [future feature doc](../future-features/004-client-sdks.md) for detailed design.
 
 ## 10. Data Portability
 
@@ -277,14 +295,14 @@ Two deployment tiers. ADR 012.
 
 ## 19. Widget and Wearable Support (future)
 
-Tracked as a potential future feature; may be deferred past initial launch.
+Tracked as a potential future feature; may be deferred past initial launch. See [future feature doc](../future-features/002-widget-wearable-support.md) for detailed design.
 
 - Home screen widgets (quick front switching, current fronter display)
 - Apple Watch companion (front switching, current fronter glance)
 
 ## 20. Monetization (post-launch)
 
-Cosmetic only — revenue covers server costs exclusively. No functional features paywalled, ever.
+Cosmetic only — revenue covers server costs exclusively. No functional features paywalled, ever. See [future feature doc](../future-features/003-monetization-cosmetics.md) for detailed design.
 
 - Premium themes (gradient customization)
 - Avatar frame assembler (geometric shapes, borders, backgrounds)

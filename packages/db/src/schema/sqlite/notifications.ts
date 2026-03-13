@@ -91,7 +91,7 @@ export const friendNotificationPreferences = sqliteTable(
     ),
     foreignKey({
       columns: [t.friendConnectionId, t.systemId],
-      foreignColumns: [friendConnections.id, friendConnections.systemId],
+      foreignColumns: [friendConnections.id, friendConnections.accountId],
     }).onDelete("cascade"),
   ],
 );

@@ -1,6 +1,13 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { BucketId, FriendCodeId, FriendConnectionId, KeyGrantId, SystemId } from "../ids.js";
+import type {
+  AccountId,
+  BucketId,
+  FriendCodeId,
+  FriendConnectionId,
+  KeyGrantId,
+  SystemId,
+} from "../ids.js";
 import type {
   BucketAccessCheck,
   BucketContentEntityType,
@@ -91,7 +98,7 @@ describe("KeyGrant", () => {
   it("has correct field types", () => {
     expectTypeOf<KeyGrant["id"]>().toEqualTypeOf<KeyGrantId>();
     expectTypeOf<KeyGrant["bucketId"]>().toEqualTypeOf<BucketId>();
-    expectTypeOf<KeyGrant["friendUserId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<KeyGrant["friendAccountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<KeyGrant["encryptedBucketKey"]>().toEqualTypeOf<Uint8Array>();
     expectTypeOf<KeyGrant["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<KeyGrant["revokedAt"]>().toEqualTypeOf<UnixMillis | null>();
@@ -124,8 +131,8 @@ describe("FriendConnection", () => {
 
   it("has correct field types", () => {
     expectTypeOf<FriendConnection["id"]>().toEqualTypeOf<FriendConnectionId>();
-    expectTypeOf<FriendConnection["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<FriendConnection["friendSystemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FriendConnection["accountId"]>().toEqualTypeOf<AccountId>();
+    expectTypeOf<FriendConnection["friendAccountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<FriendConnection["status"]>().toEqualTypeOf<FriendConnectionStatus>();
     expectTypeOf<FriendConnection["assignedBucketIds"]>().toEqualTypeOf<readonly BucketId[]>();
     expectTypeOf<FriendConnection["visibility"]>().toEqualTypeOf<FriendVisibilitySettings>();
@@ -154,7 +161,7 @@ describe("FriendCode", () => {
 
   it("has correct field types", () => {
     expectTypeOf<FriendCode["id"]>().toEqualTypeOf<FriendCodeId>();
-    expectTypeOf<FriendCode["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<FriendCode["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<FriendCode["code"]>().toBeString();
     expectTypeOf<FriendCode["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<FriendCode["expiresAt"]>().toEqualTypeOf<UnixMillis | null>();

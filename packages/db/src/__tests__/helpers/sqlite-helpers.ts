@@ -199,43 +199,43 @@ export const SQLITE_DDL = {
       id TEXT PRIMARY KEY,
       bucket_id TEXT NOT NULL REFERENCES buckets(id) ON DELETE CASCADE,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      friend_system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      friend_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       encrypted_key BLOB NOT NULL,
       key_version INTEGER NOT NULL CHECK (key_version >= 1),
       created_at INTEGER NOT NULL,
       revoked_at INTEGER,
-      UNIQUE (bucket_id, friend_system_id, key_version)
+      UNIQUE (bucket_id, friend_account_id, key_version)
     )
   `,
   keyGrantsIndexes: `
     CREATE INDEX key_grants_system_id_idx ON key_grants (system_id);
-    CREATE INDEX key_grants_friend_bucket_idx ON key_grants (friend_system_id, bucket_id);
+    CREATE INDEX key_grants_friend_bucket_idx ON key_grants (friend_account_id, bucket_id);
     CREATE INDEX key_grants_revoked_at_idx ON key_grants (revoked_at)
   `,
   friendConnections: `
     CREATE TABLE friend_connections (
       id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      friend_system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      friend_account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'blocked', 'removed')),
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (system_id, friend_system_id),
-      UNIQUE (id, system_id),
-      CHECK (system_id != friend_system_id),
+      UNIQUE (account_id, friend_account_id),
+      UNIQUE (id, account_id),
+      CHECK (account_id != friend_account_id),
       CHECK (version >= 1)
     )
   `,
   friendConnectionsIndexes: `
-    CREATE INDEX friend_connections_system_status_idx ON friend_connections (system_id, status);
-    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_system_id, status)
+    CREATE INDEX friend_connections_account_status_idx ON friend_connections (account_id, status);
+    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_account_id, status)
   `,
   friendCodes: `
     CREATE TABLE friend_codes (
       id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
+      account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       code TEXT NOT NULL UNIQUE,
       created_at INTEGER NOT NULL,
       expires_at INTEGER,
@@ -244,7 +244,7 @@ export const SQLITE_DDL = {
     )
   `,
   friendCodesIndexes: `
-    CREATE INDEX friend_codes_system_id_idx ON friend_codes (system_id)
+    CREATE INDEX friend_codes_account_id_idx ON friend_codes (account_id)
   `,
   friendBucketAssignments: `
     CREATE TABLE friend_bucket_assignments (
@@ -989,7 +989,7 @@ export const SQLITE_DDL = {
       enabled_event_types TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      FOREIGN KEY (friend_connection_id, system_id) REFERENCES friend_connections(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (friend_connection_id, system_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
     )
   `,
   friendNotificationPreferencesIndexes: `
