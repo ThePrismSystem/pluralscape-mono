@@ -45,6 +45,9 @@ export const customFronts = pgTable(
   ],
 );
 
+// NOTE: The production migration adds PARTITION BY RANGE ("start_time") which Drizzle
+// cannot express. Running drizzle-kit generate for this table requires manual verification.
+// See migration 0013 for details.
 export const frontingSessions = pgTable(
   "fronting_sessions",
   {
