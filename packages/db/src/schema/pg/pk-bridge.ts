@@ -1,6 +1,6 @@
 import { boolean, check, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
-import { pgBinary, pgTimestamp } from "../../columns/pg.js";
+import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
@@ -23,10 +23,10 @@ export const pkBridgeState = pgTable(
       .notNull()
       .$type<PKSyncDirection>(),
     pkTokenEncrypted: pgBinary("pk_token_encrypted").notNull(),
-    /** T1 encrypted: contains member name→PK ID mappings. Must be encrypted before storage. */
-    entityMappings: pgBinary("entity_mappings").notNull(),
-    /** T1 encrypted: may contain member names in error context. Must be encrypted before storage. */
-    errorLog: pgBinary("error_log").notNull(),
+    /** T1 encrypted: contains member name→PK ID mappings. */
+    entityMappings: pgEncryptedBlob("entity_mappings").notNull(),
+    /** T1 encrypted: may contain member names in error context. */
+    errorLog: pgEncryptedBlob("error_log").notNull(),
     lastSyncAt: pgTimestamp("last_sync_at"),
     ...timestamps(),
     ...versioned(),
