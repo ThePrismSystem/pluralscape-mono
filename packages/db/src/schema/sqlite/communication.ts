@@ -10,14 +10,15 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
 import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type { ServerChannel, ServerPoll, ServerPollVote } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const channels = sqliteTable(
   "channels",
@@ -43,7 +44,7 @@ export const channels = sqliteTable(
     }).onDelete("set null"),
     check("channels_type_check", enumCheck(t.type, CHANNEL_TYPES)),
     check("channels_sort_order_check", sql`${t.sortOrder} >= 0`),
-    check("channels_version_check", versionCheck(t.version)),
+    versionCheckFor("channels", t.version),
     check(
       "channels_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
@@ -78,7 +79,7 @@ export const messages = sqliteTable(
     }).onDelete("cascade"),
     // reply_to_id is a soft reference — no FK constraint.
     // PG can't self-FK on a single column when PK is composite (id, timestamp).
-    check("messages_version_check", versionCheck(t.version)),
+    versionCheckFor("messages", t.version),
     check(
       "messages_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
@@ -102,7 +103,7 @@ export const boardMessages = sqliteTable(
   (t) => [
     index("board_messages_system_id_idx").on(t.systemId),
     check("board_messages_sort_order_check", sql`${t.sortOrder} >= 0`),
-    check("board_messages_version_check", versionCheck(t.version)),
+    versionCheckFor("board_messages", t.version),
   ],
 );
 
@@ -126,7 +127,7 @@ export const notes = sqliteTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
-    check("notes_version_check", versionCheck(t.version)),
+    versionCheckFor("notes", t.version),
     check("notes_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
   ],
 );
@@ -161,7 +162,7 @@ export const polls = sqliteTable(
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
-    check("polls_version_check", versionCheck(t.version)),
+    versionCheckFor("polls", t.version),
   ],
 );
 
@@ -210,3 +211,18 @@ export const acknowledgements = sqliteTable(
     }).onDelete("set null"),
   ],
 );
+
+export type ChannelRow = InferSelectModel<typeof channels>;
+export type NewChannel = InferInsertModel<typeof channels>;
+export type MessageRow = InferSelectModel<typeof messages>;
+export type NewMessage = InferInsertModel<typeof messages>;
+export type BoardMessageRow = InferSelectModel<typeof boardMessages>;
+export type NewBoardMessage = InferInsertModel<typeof boardMessages>;
+export type NoteRow = InferSelectModel<typeof notes>;
+export type NewNote = InferInsertModel<typeof notes>;
+export type PollRow = InferSelectModel<typeof polls>;
+export type NewPoll = InferInsertModel<typeof polls>;
+export type PollVoteRow = InferSelectModel<typeof pollVotes>;
+export type NewPollVote = InferInsertModel<typeof pollVotes>;
+export type AcknowledgementRow = InferSelectModel<typeof acknowledgements>;
+export type NewAcknowledgement = InferInsertModel<typeof acknowledgements>;

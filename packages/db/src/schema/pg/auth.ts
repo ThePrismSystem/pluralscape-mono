@@ -2,12 +2,13 @@ import { sql } from "drizzle-orm";
 import { boolean, check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
 import type { AuthKeyType, DeviceInfo, DeviceTransferStatus } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const accounts = pgTable(
   "accounts",
@@ -22,7 +23,7 @@ export const accounts = pgTable(
   },
   (t) => [
     uniqueIndex("accounts_email_hash_idx").on(t.emailHash),
-    check("accounts_version_check", versionCheck(t.version)),
+    versionCheckFor("accounts", t.version),
   ],
 );
 
@@ -122,3 +123,14 @@ export const deviceTransferRequests = pgTable(
     ),
   ],
 );
+
+export type AccountRow = InferSelectModel<typeof accounts>;
+export type NewAccount = InferInsertModel<typeof accounts>;
+export type AuthKeyRow = InferSelectModel<typeof authKeys>;
+export type NewAuthKey = InferInsertModel<typeof authKeys>;
+export type SessionRow = InferSelectModel<typeof sessions>;
+export type NewSession = InferInsertModel<typeof sessions>;
+export type RecoveryKeyRow = InferSelectModel<typeof recoveryKeys>;
+export type NewRecoveryKey = InferInsertModel<typeof recoveryKeys>;
+export type DeviceTransferRequestRow = InferSelectModel<typeof deviceTransferRequests>;
+export type NewDeviceTransferRequest = InferInsertModel<typeof deviceTransferRequests>;

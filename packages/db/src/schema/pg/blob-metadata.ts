@@ -20,6 +20,7 @@ import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
 import type { BlobPurpose } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const blobMetadata = pgTable(
   "blob_metadata",
@@ -59,3 +60,6 @@ export const blobMetadata = pgTable(
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
   ],
 );
+
+export type BlobMetadataRow = InferSelectModel<typeof blobMetadata>;
+export type NewBlobMetadata = InferInsertModel<typeof blobMetadata>;

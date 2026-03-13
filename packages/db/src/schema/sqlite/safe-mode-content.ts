@@ -1,10 +1,11 @@
-import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const safeModeContent = sqliteTable(
   "safe_mode_content",
@@ -20,6 +21,9 @@ export const safeModeContent = sqliteTable(
   },
   (t) => [
     index("safe_mode_content_system_sort_idx").on(t.systemId, t.sortOrder),
-    check("safe_mode_content_version_check", versionCheck(t.version)),
+    versionCheckFor("safe_mode_content", t.version),
   ],
 );
+
+export type SafeModeContentRow = InferSelectModel<typeof safeModeContent>;
+export type NewSafeModeContent = InferInsertModel<typeof safeModeContent>;

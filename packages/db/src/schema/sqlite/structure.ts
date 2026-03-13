@@ -9,14 +9,15 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
 
 import type { ServerRelationship, ServerSubsystem } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const relationships = sqliteTable(
   "relationships",
@@ -44,7 +45,7 @@ export const relationships = sqliteTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
-    check("relationships_version_check", versionCheck(t.version)),
+    versionCheckFor("relationships", t.version),
   ],
 );
 
@@ -71,7 +72,7 @@ export const subsystems = sqliteTable(
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
-    check("subsystems_version_check", versionCheck(t.version)),
+    versionCheckFor("subsystems", t.version),
   ],
 );
 
@@ -89,7 +90,7 @@ export const sideSystems = sqliteTable(
   (t) => [
     index("side_systems_system_id_idx").on(t.systemId),
     unique("side_systems_id_system_id_unique").on(t.id, t.systemId),
-    check("side_systems_version_check", versionCheck(t.version)),
+    versionCheckFor("side_systems", t.version),
   ],
 );
 
@@ -109,7 +110,7 @@ export const layers = sqliteTable(
   (t) => [
     index("layers_system_id_idx").on(t.systemId),
     unique("layers_id_system_id_unique").on(t.id, t.systemId),
-    check("layers_version_check", versionCheck(t.version)),
+    versionCheckFor("layers", t.version),
   ],
 );
 
@@ -259,3 +260,24 @@ export const sideSystemLayerLinks = sqliteTable(
     }).onDelete("cascade"),
   ],
 );
+
+export type RelationshipRow = InferSelectModel<typeof relationships>;
+export type NewRelationship = InferInsertModel<typeof relationships>;
+export type SubsystemRow = InferSelectModel<typeof subsystems>;
+export type NewSubsystem = InferInsertModel<typeof subsystems>;
+export type SideSystemRow = InferSelectModel<typeof sideSystems>;
+export type NewSideSystem = InferInsertModel<typeof sideSystems>;
+export type LayerRow = InferSelectModel<typeof layers>;
+export type NewLayer = InferInsertModel<typeof layers>;
+export type SubsystemMembershipRow = InferSelectModel<typeof subsystemMemberships>;
+export type NewSubsystemMembership = InferInsertModel<typeof subsystemMemberships>;
+export type SideSystemMembershipRow = InferSelectModel<typeof sideSystemMemberships>;
+export type NewSideSystemMembership = InferInsertModel<typeof sideSystemMemberships>;
+export type LayerMembershipRow = InferSelectModel<typeof layerMemberships>;
+export type NewLayerMembership = InferInsertModel<typeof layerMemberships>;
+export type SubsystemLayerLinkRow = InferSelectModel<typeof subsystemLayerLinks>;
+export type NewSubsystemLayerLink = InferInsertModel<typeof subsystemLayerLinks>;
+export type SubsystemSideSystemLinkRow = InferSelectModel<typeof subsystemSideSystemLinks>;
+export type NewSubsystemSideSystemLink = InferInsertModel<typeof subsystemSideSystemLinks>;
+export type SideSystemLayerLinkRow = InferSelectModel<typeof sideSystemLayerLinks>;
+export type NewSideSystemLayerLink = InferInsertModel<typeof sideSystemLayerLinks>;

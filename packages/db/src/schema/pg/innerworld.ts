@@ -1,11 +1,12 @@
-import { check, foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 // Regions must be declared before entities (entities FK to regions)
 export const innerworldRegions = pgTable(
@@ -27,7 +28,7 @@ export const innerworldRegions = pgTable(
       columns: [t.parentRegionId, t.systemId],
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
-    check("innerworld_regions_version_check", versionCheck(t.version)),
+    versionCheckFor("innerworld_regions", t.version),
   ],
 );
 
@@ -50,7 +51,7 @@ export const innerworldEntities = pgTable(
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
-    check("innerworld_entities_version_check", versionCheck(t.version)),
+    versionCheckFor("innerworld_entities", t.version),
   ],
 );
 
@@ -64,5 +65,12 @@ export const innerworldCanvas = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [check("innerworld_canvas_version_check", versionCheck(t.version))],
+  (t) => [versionCheckFor("innerworld_canvas", t.version)],
 );
+
+export type InnerworldRegionRow = InferSelectModel<typeof innerworldRegions>;
+export type NewInnerworldRegion = InferInsertModel<typeof innerworldRegions>;
+export type InnerworldEntityRow = InferSelectModel<typeof innerworldEntities>;
+export type NewInnerworldEntity = InferInsertModel<typeof innerworldEntities>;
+export type InnerworldCanvasRow = InferSelectModel<typeof innerworldCanvas>;
+export type NewInnerworldCanvas = InferInsertModel<typeof innerworldCanvas>;

@@ -11,11 +11,13 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, versionCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { archivableConsistencyCheck } from "../../helpers/check.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const groups = sqliteTable(
   "groups",
@@ -39,7 +41,7 @@ export const groups = sqliteTable(
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     check("groups_sort_order_check", sql`${t.sortOrder} >= 0`),
-    check("groups_version_check", versionCheck(t.version)),
+    versionCheckFor("groups", t.version),
     check(
       "groups_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
@@ -71,3 +73,8 @@ export const groupMemberships = sqliteTable(
     }).onDelete("cascade"),
   ],
 );
+
+export type GroupRow = InferSelectModel<typeof groups>;
+export type NewGroup = InferInsertModel<typeof groups>;
+export type GroupMembershipRow = InferSelectModel<typeof groupMemberships>;
+export type NewGroupMembership = InferInsertModel<typeof groupMemberships>;

@@ -25,6 +25,7 @@ import type {
   FriendNotificationEventType,
   NotificationEventType,
 } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const deviceTokens = pgTable(
   "device_tokens",
@@ -100,3 +101,14 @@ export const friendNotificationPreferences = pgTable(
     }).onDelete("cascade"),
   ],
 );
+
+export type DeviceTokenRow = InferSelectModel<typeof deviceTokens>;
+export type NewDeviceToken = InferInsertModel<typeof deviceTokens>;
+export type NotificationConfigRow = InferSelectModel<typeof notificationConfigs>;
+export type NewNotificationConfig = InferInsertModel<typeof notificationConfigs>;
+export type FriendNotificationPreferenceRow = InferSelectModel<
+  typeof friendNotificationPreferences
+>;
+export type NewFriendNotificationPreference = InferInsertModel<
+  typeof friendNotificationPreferences
+>;

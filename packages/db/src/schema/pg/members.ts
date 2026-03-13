@@ -1,11 +1,13 @@
 import { check, foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, versionCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { archivableConsistencyCheck } from "../../helpers/check.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const members = pgTable(
   "members",
@@ -23,7 +25,7 @@ export const members = pgTable(
     index("members_system_id_archived_idx").on(t.systemId, t.archived),
     index("members_created_at_idx").on(t.createdAt),
     unique("members_id_system_id_unique").on(t.id, t.systemId),
-    check("members_version_check", versionCheck(t.version)),
+    versionCheckFor("members", t.version),
     check(
       "members_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
@@ -52,6 +54,11 @@ export const memberPhotos = pgTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("cascade"),
-    check("member_photos_version_check", versionCheck(t.version)),
+    versionCheckFor("member_photos", t.version),
   ],
 );
+
+export type MemberRow = InferSelectModel<typeof members>;
+export type NewMember = InferInsertModel<typeof members>;
+export type MemberPhotoRow = InferSelectModel<typeof memberPhotos>;
+export type NewMemberPhoto = InferInsertModel<typeof memberPhotos>;

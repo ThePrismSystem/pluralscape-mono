@@ -1,11 +1,12 @@
-import { check, pgTable, varchar } from "drizzle-orm/pg-core";
+import { pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const nomenclatureSettings = pgTable(
   "nomenclature_settings",
@@ -17,5 +18,8 @@ export const nomenclatureSettings = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [check("nomenclature_settings_version_check", versionCheck(t.version))],
+  (t) => [versionCheckFor("nomenclature_settings", t.version)],
 );
+
+export type NomenclatureSettingsRow = InferSelectModel<typeof nomenclatureSettings>;
+export type NewNomenclatureSettings = InferInsertModel<typeof nomenclatureSettings>;

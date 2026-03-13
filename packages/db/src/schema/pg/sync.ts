@@ -11,7 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
-import { enumCheck, nullPairCheck, versionCheck } from "../../helpers/check.js";
+import { versionCheckFor } from "../../helpers/audit.pg.js";
+import { enumCheck, nullPairCheck } from "../../helpers/check.js";
 import {
   ENUM_MAX_LENGTH,
   ID_MAX_LENGTH,
@@ -22,6 +23,7 @@ import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 import { systems } from "./systems.js";
 
 import type { EntityType, SyncOperation, SyncResolution } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const syncDocuments = pgTable(
   "sync_documents",
@@ -43,7 +45,7 @@ export const syncDocuments = pgTable(
       t.entityType,
       t.entityId,
     ),
-    check("sync_documents_version_check", versionCheck(t.version)),
+    versionCheckFor("sync_documents", t.version),
     check(
       "sync_documents_automerge_heads_size_check",
       sql`${t.automergeHeads} IS NULL OR octet_length(${t.automergeHeads}) <= ${MAX_AUTOMERGE_HEADS_BYTES}`,
@@ -109,3 +111,10 @@ export const syncConflicts = pgTable(
     check("sync_conflicts_resolution_resolved_at_check", nullPairCheck(t.resolution, t.resolvedAt)),
   ],
 );
+
+export type SyncDocumentRow = InferSelectModel<typeof syncDocuments>;
+export type NewSyncDocument = InferInsertModel<typeof syncDocuments>;
+export type SyncQueueRow = InferSelectModel<typeof syncQueue>;
+export type NewSyncQueue = InferInsertModel<typeof syncQueue>;
+export type SyncConflictRow = InferSelectModel<typeof syncConflicts>;
+export type NewSyncConflict = InferInsertModel<typeof syncConflicts>;

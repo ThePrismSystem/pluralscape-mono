@@ -1,11 +1,12 @@
-import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
+import { index, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { accounts } from "./auth.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 /** PG systems table — top-level entity for a plural system. */
 export const systems = pgTable(
@@ -20,8 +21,8 @@ export const systems = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [
-    index("systems_account_id_idx").on(t.accountId),
-    check("systems_version_check", versionCheck(t.version)),
-  ],
+  (t) => [index("systems_account_id_idx").on(t.accountId), versionCheckFor("systems", t.version)],
 );
+
+export type SystemRow = InferSelectModel<typeof systems>;
+export type NewSystem = InferInsertModel<typeof systems>;

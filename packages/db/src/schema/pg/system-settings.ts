@@ -1,11 +1,12 @@
-import { boolean, check, pgTable, varchar } from "drizzle-orm/pg-core";
+import { boolean, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const systemSettings = pgTable(
   "system_settings",
@@ -22,5 +23,8 @@ export const systemSettings = pgTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [check("system_settings_version_check", versionCheck(t.version))],
+  (t) => [versionCheckFor("system_settings", t.version)],
 );
+
+export type SystemSettingsRow = InferSelectModel<typeof systemSettings>;
+export type NewSystemSettings = InferInsertModel<typeof systemSettings>;

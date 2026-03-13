@@ -1,10 +1,11 @@
-import { check, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { timestamps, versioned } from "../../helpers/audit.sqlite.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const nomenclatureSettings = sqliteTable(
   "nomenclature_settings",
@@ -16,5 +17,8 @@ export const nomenclatureSettings = sqliteTable(
     ...timestamps(),
     ...versioned(),
   },
-  (t) => [check("nomenclature_settings_version_check", versionCheck(t.version))],
+  (t) => [versionCheckFor("nomenclature_settings", t.version)],
 );
+
+export type NomenclatureSettingsRow = InferSelectModel<typeof nomenclatureSettings>;
+export type NewNomenclatureSettings = InferInsertModel<typeof nomenclatureSettings>;

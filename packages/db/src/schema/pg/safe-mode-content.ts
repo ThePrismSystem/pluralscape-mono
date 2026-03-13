@@ -1,11 +1,12 @@
-import { check, index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
+import { index, integer, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const safeModeContent = pgTable(
   "safe_mode_content",
@@ -21,6 +22,9 @@ export const safeModeContent = pgTable(
   },
   (t) => [
     index("safe_mode_content_system_sort_idx").on(t.systemId, t.sortOrder),
-    check("safe_mode_content_version_check", versionCheck(t.version)),
+    versionCheckFor("safe_mode_content", t.version),
   ],
 );
+
+export type SafeModeContentRow = InferSelectModel<typeof safeModeContent>;
+export type NewSafeModeContent = InferInsertModel<typeof safeModeContent>;

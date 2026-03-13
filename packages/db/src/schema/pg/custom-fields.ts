@@ -13,8 +13,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { archivable, timestamps, versioned } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, enumCheck, versionCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { FIELD_TYPES } from "../../helpers/enums.js";
 
@@ -23,6 +23,7 @@ import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
 import type { ServerFieldDefinition } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const fieldDefinitions = pgTable(
   "field_definitions",
@@ -45,7 +46,7 @@ export const fieldDefinitions = pgTable(
     index("field_definitions_system_id_idx").on(t.systemId),
     unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
-    check("field_definitions_version_check", versionCheck(t.version)),
+    versionCheckFor("field_definitions", t.version),
     check(
       "field_definitions_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),
@@ -76,7 +77,7 @@ export const fieldValues = pgTable(
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
-    check("field_values_version_check", versionCheck(t.version)),
+    versionCheckFor("field_values", t.version),
     uniqueIndex("field_values_definition_member_uniq")
       .on(t.fieldDefinitionId, t.memberId)
       .where(sql`${t.memberId} IS NOT NULL`),
@@ -98,3 +99,10 @@ export const fieldBucketVisibility = pgTable(
   },
   (t) => [primaryKey({ columns: [t.fieldDefinitionId, t.bucketId] })],
 );
+
+export type FieldDefinitionRow = InferSelectModel<typeof fieldDefinitions>;
+export type NewFieldDefinition = InferInsertModel<typeof fieldDefinitions>;
+export type FieldValueRow = InferSelectModel<typeof fieldValues>;
+export type NewFieldValue = InferInsertModel<typeof fieldValues>;
+export type FieldBucketVisibilityRow = InferSelectModel<typeof fieldBucketVisibility>;
+export type NewFieldBucketVisibility = InferInsertModel<typeof fieldBucketVisibility>;

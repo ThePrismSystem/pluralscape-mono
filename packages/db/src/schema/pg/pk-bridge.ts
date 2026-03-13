@@ -1,14 +1,15 @@
 import { boolean, check, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { enumCheck, versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { PK_SYNC_DIRECTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
 import type { PKSyncDirection } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const pkBridgeState = pgTable(
   "pk_bridge_state",
@@ -31,6 +32,9 @@ export const pkBridgeState = pgTable(
   (t) => [
     uniqueIndex("pk_bridge_state_system_id_idx").on(t.systemId),
     check("pk_bridge_state_sync_direction_check", enumCheck(t.syncDirection, PK_SYNC_DIRECTIONS)),
-    check("pk_bridge_state_version_check", versionCheck(t.version)),
+    versionCheckFor("pk_bridge_state", t.version),
   ],
 );
+
+export type PkBridgeStateRow = InferSelectModel<typeof pkBridgeState>;
+export type NewPkBridgeState = InferInsertModel<typeof pkBridgeState>;

@@ -10,12 +10,14 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned } from "../../helpers/audit.pg.js";
-import { pgTimeFormatCheck, versionCheck } from "../../helpers/check.js";
+import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { pgTimeFormatCheck } from "../../helpers/check.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
+
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const timerConfigs = pgTable(
   "timer_configs",
@@ -36,7 +38,7 @@ export const timerConfigs = pgTable(
   (t) => [
     index("timer_configs_system_id_idx").on(t.systemId),
     unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
-    check("timer_configs_version_check", versionCheck(t.version)),
+    versionCheckFor("timer_configs", t.version),
     check("timer_configs_waking_start_format", pgTimeFormatCheck(t.wakingStart)),
     check("timer_configs_waking_end_format", pgTimeFormatCheck(t.wakingEnd)),
   ],
@@ -70,3 +72,8 @@ export const checkInRecords = pgTable(
     }).onDelete("set null"),
   ],
 );
+
+export type TimerConfigRow = InferSelectModel<typeof timerConfigs>;
+export type NewTimerConfig = InferInsertModel<typeof timerConfigs>;
+export type CheckInRecordRow = InferSelectModel<typeof checkInRecords>;
+export type NewCheckInRecord = InferInsertModel<typeof checkInRecords>;

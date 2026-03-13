@@ -2,13 +2,15 @@ import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
-import { enumCheck, nullPairCheck, versionCheck } from "../../helpers/check.js";
+import { versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { enumCheck, nullPairCheck } from "../../helpers/check.js";
 import { MAX_AUTOMERGE_HEADS_BYTES } from "../../helpers/constants.js";
 import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
 import type { EntityType, SyncOperation, SyncResolution } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const syncDocuments = sqliteTable(
   "sync_documents",
@@ -30,7 +32,7 @@ export const syncDocuments = sqliteTable(
       t.entityType,
       t.entityId,
     ),
-    check("sync_documents_version_check", versionCheck(t.version)),
+    versionCheckFor("sync_documents", t.version),
     check(
       "sync_documents_automerge_heads_size_check",
       sql`${t.automergeHeads} IS NULL OR length(${t.automergeHeads}) <= ${MAX_AUTOMERGE_HEADS_BYTES}`,
@@ -98,3 +100,10 @@ export const syncConflicts = sqliteTable(
     check("sync_conflicts_resolution_resolved_at_check", nullPairCheck(t.resolution, t.resolvedAt)),
   ],
 );
+
+export type SyncDocumentRow = InferSelectModel<typeof syncDocuments>;
+export type NewSyncDocument = InferInsertModel<typeof syncDocuments>;
+export type SyncQueueRow = InferSelectModel<typeof syncQueue>;
+export type NewSyncQueue = InferInsertModel<typeof syncQueue>;
+export type SyncConflictRow = InferSelectModel<typeof syncConflicts>;
+export type NewSyncConflict = InferInsertModel<typeof syncConflicts>;

@@ -9,6 +9,7 @@ import { systems } from "./systems.js";
 
 import type { DbAuditActor } from "../../helpers/types.js";
 import type { AuditEventType } from "@pluralscape/types";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const auditLog = sqliteTable(
   "audit_log",
@@ -33,3 +34,6 @@ export const auditLog = sqliteTable(
     check("audit_log_event_type_check", enumCheck(t.eventType, AUDIT_EVENT_TYPES)),
   ],
 );
+
+export type AuditLogRow = InferSelectModel<typeof auditLog>;
+export type NewAuditLog = InferInsertModel<typeof auditLog>;
