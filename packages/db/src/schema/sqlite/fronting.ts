@@ -34,6 +34,8 @@ export const customFronts = sqliteTable(
   ],
 );
 
+// SQLite uses a simple PK (id). The PG schema uses composite PK (id, start_time) for
+// PARTITION BY RANGE — see schema/pg/fronting.ts. No partitioning in SQLite.
 export const frontingSessions = sqliteTable(
   "fronting_sessions",
   {

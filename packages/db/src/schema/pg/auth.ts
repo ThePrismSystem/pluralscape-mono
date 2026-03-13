@@ -54,6 +54,8 @@ export const sessions = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     encryptedData: pgEncryptedBlob("encrypted_data"),
     createdAt: pgTimestamp("created_at").notNull(),
+    // Updated on every authenticated request. At scale, throttle updates (e.g.
+    // write only when lastActive is >60s stale) to reduce write amplification.
     lastActive: pgTimestamp("last_active"),
     revoked: boolean("revoked").notNull().default(false),
     expiresAt: pgTimestamp("expires_at"),

@@ -69,6 +69,8 @@ export const frontingSessions = pgTable(
     ...versioned(),
   },
   (t) => [
+    // Composite PK (id, start_time) required by PARTITION BY RANGE (start_time). This diverges
+    // from the SQLite schema (simple PK on id) — see schema/sqlite/fronting.ts for cross-ref.
     primaryKey({ columns: [t.id, t.startTime] }),
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),

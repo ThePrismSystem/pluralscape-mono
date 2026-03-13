@@ -9,6 +9,8 @@ import { systems } from "./systems.js";
 import type { ServerLifecycleEvent } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+// Intentionally no version column: append-only immutable. CRDT sync treats
+// lifecycle_events as insert-only (version is always implicitly 1).
 export const lifecycleEvents = sqliteTable(
   "lifecycle_events",
   {
