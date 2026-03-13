@@ -2,6 +2,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDatabase, createDatabaseFromEnv } from "../client/factory.js";
 
+// better-sqlite3 requires native bindings that may not be available in all
+// environments (e.g., CI without build tools). Mock the dynamic imports so
+// factory logic is tested without requiring the native module.
+function MockDatabase(): void {
+  // @ts-expect-error -- mock constructor assigning pragma
+  this.pragma = vi.fn();
+}
+const mockDrizzle = vi.fn(() => ({ mock: true }));
+
+vi.mock("better-sqlite3", () => ({
+  default: MockDatabase,
+}));
+
+vi.mock("drizzle-orm/better-sqlite3", () => ({
+  drizzle: mockDrizzle,
+}));
+
 describe("createDatabase", () => {
   it("returns a SQLite client when given sqlite config", async () => {
     const client = await createDatabase({ dialect: "sqlite", filename: ":memory:" });
