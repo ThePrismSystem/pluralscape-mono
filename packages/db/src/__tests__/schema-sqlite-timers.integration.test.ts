@@ -516,5 +516,54 @@ describe("SQLite timers schema", () => {
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
+
+    it("queries pending check-ins by system_id", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id: timerId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const pendingId = crypto.randomUUID();
+      const respondedId = crypto.randomUUID();
+      const dismissedId = crypto.randomUUID();
+
+      db.insert(checkInRecords)
+        .values([
+          { id: pendingId, systemId, timerConfigId: timerId, scheduledAt: now },
+          {
+            id: respondedId,
+            systemId,
+            timerConfigId: timerId,
+            scheduledAt: now + 1000,
+            respondedAt: now + 2000,
+          },
+          {
+            id: dismissedId,
+            systemId,
+            timerConfigId: timerId,
+            scheduledAt: now + 3000,
+            dismissed: true,
+          },
+        ])
+        .run();
+
+      const pending = client
+        .prepare(
+          "SELECT id FROM check_in_records WHERE system_id = ? AND responded_at IS NULL AND dismissed = 0 ORDER BY scheduled_at",
+        )
+        .all(systemId) as Array<{ id: string }>;
+      expect(pending).toHaveLength(1);
+      expect(pending[0]?.id).toBe(pendingId);
+    });
   });
 });

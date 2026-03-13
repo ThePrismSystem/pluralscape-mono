@@ -19,7 +19,7 @@ import { BLOB_PURPOSES } from "../../helpers/enums.js";
 import { buckets } from "./privacy.js";
 import { systems } from "./systems.js";
 
-import type { BlobPurpose } from "@pluralscape/types";
+import type { BlobPurpose, EncryptionTier } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const blobMetadata = pgTable(
@@ -32,7 +32,7 @@ export const blobMetadata = pgTable(
     storageKey: varchar("storage_key", { length: 1024 }).notNull(),
     mimeType: varchar("mime_type", { length: 255 }),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
-    encryptionTier: integer("encryption_tier").notNull(),
+    encryptionTier: integer("encryption_tier").notNull().$type<EncryptionTier>(),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH }),
     purpose: varchar("purpose", { length: ENUM_MAX_LENGTH }).notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: varchar("thumbnail_of_blob_id", { length: ID_MAX_LENGTH }),
@@ -58,6 +58,7 @@ export const blobMetadata = pgTable(
       sql`${t.sizeBytes} <= ${sql.raw(String(MAX_BLOB_SIZE_BYTES))}`,
     ),
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
+    check("blob_metadata_checksum_length_check", sql`length(${t.checksum}) = 64`),
   ],
 );
 

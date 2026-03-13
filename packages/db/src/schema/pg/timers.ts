@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
@@ -70,6 +71,9 @@ export const checkInRecords = pgTable(
       columns: [t.respondedByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
+    index("check_in_records_system_pending_idx")
+      .on(t.systemId, t.scheduledAt)
+      .where(sql`${t.respondedAt} IS NULL AND ${t.dismissed} = false`),
   ],
 );
 

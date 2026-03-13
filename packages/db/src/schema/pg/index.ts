@@ -24,7 +24,7 @@ export {
   friendNotificationPreferences,
   notificationConfigs,
 } from "./notifications.js";
-export { pkBridgeState } from "./pk-bridge.js";
+export { pkBridgeConfigs } from "./pk-bridge.js";
 export {
   bucketContentTags,
   buckets,
@@ -194,7 +194,7 @@ export type {
 } from "./innerworld.js";
 
 // PK Bridge
-export type { PkBridgeStateRow, NewPkBridgeState } from "./pk-bridge.js";
+export type { PkBridgeConfigRow, NewPkBridgeConfig } from "./pk-bridge.js";
 
 // Notifications
 export type {

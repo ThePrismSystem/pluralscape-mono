@@ -399,5 +399,52 @@ describe("SQLite webhooks schema", () => {
       const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, delId)).all();
       expect(rows).toHaveLength(0);
     });
+
+    it("queries retryable deliveries by system_id", () => {
+      const now = Date.now();
+      const retryAt = now + 60_000;
+
+      const pendingId = crypto.randomUUID();
+      const successId = crypto.randomUUID();
+      const failedId = crypto.randomUUID();
+
+      db.insert(webhookDeliveries)
+        .values([
+          {
+            id: pendingId,
+            webhookId: deliveryWhId,
+            systemId: deliverySystemId,
+            eventType: "member.created" as const,
+            status: "pending" as const,
+            nextRetryAt: retryAt,
+            createdAt: now,
+          },
+          {
+            id: successId,
+            webhookId: deliveryWhId,
+            systemId: deliverySystemId,
+            eventType: "member.created" as const,
+            status: "success" as const,
+            createdAt: now,
+          },
+          {
+            id: failedId,
+            webhookId: deliveryWhId,
+            systemId: deliverySystemId,
+            eventType: "member.created" as const,
+            status: "failed" as const,
+            createdAt: now,
+          },
+        ])
+        .run();
+
+      const retryable = client
+        .prepare(
+          "SELECT id FROM webhook_deliveries WHERE system_id = ? AND status NOT IN ('success', 'failed') ORDER BY next_retry_at",
+        )
+        .all(deliverySystemId) as Array<{ id: string }>;
+      expect(retryable).toHaveLength(1);
+      expect(retryable[0]?.id).toBe(pendingId);
+    });
   });
 });

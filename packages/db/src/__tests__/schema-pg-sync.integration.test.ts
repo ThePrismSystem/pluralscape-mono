@@ -202,7 +202,7 @@ describe("PG sync schema", () => {
   });
 
   describe("sync_queue", () => {
-    it("round-trips all fields including binary changeData", async () => {
+    it("round-trips all fields including binary encryptedChangeData", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -215,7 +215,7 @@ describe("PG sync schema", () => {
         entityType: "member",
         entityId: crypto.randomUUID(),
         operation: "create",
-        changeData: data,
+        encryptedChangeData: data,
         createdAt: now,
         syncedAt: now,
       });
@@ -224,7 +224,7 @@ describe("PG sync schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.systemId).toBe(systemId);
       expect(rows[0]?.operation).toBe("create");
-      expect(rows[0]?.changeData).toEqual(data);
+      expect(rows[0]?.encryptedChangeData).toEqual(data);
       expect(rows[0]?.syncedAt).toBe(now);
     });
 
@@ -240,7 +240,7 @@ describe("PG sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "invalid" as "create",
-          changeData: new Uint8Array([1]),
+          encryptedChangeData: new Uint8Array([1]),
           createdAt: now,
         }),
       ).rejects.toThrow();
@@ -258,7 +258,7 @@ describe("PG sync schema", () => {
         entityType: "member",
         entityId: crypto.randomUUID(),
         operation,
-        changeData: new Uint8Array([10]),
+        encryptedChangeData: new Uint8Array([10]),
         createdAt: now,
       });
 
@@ -278,7 +278,7 @@ describe("PG sync schema", () => {
         entityType: "member",
         entityId: crypto.randomUUID(),
         operation: "update",
-        changeData: new Uint8Array([10]),
+        encryptedChangeData: new Uint8Array([10]),
         createdAt: now,
       });
 
@@ -286,7 +286,7 @@ describe("PG sync schema", () => {
       expect(rows[0]?.syncedAt).toBeNull();
     });
 
-    it("round-trips binary changeData content", async () => {
+    it("round-trips binary encryptedChangeData content", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -299,13 +299,13 @@ describe("PG sync schema", () => {
         entityType: "member",
         entityId: crypto.randomUUID(),
         operation: "delete",
-        changeData: data,
+        encryptedChangeData: data,
         createdAt: now,
       });
 
       const rows = await db.select().from(syncQueue).where(eq(syncQueue.id, id));
-      expect(rows[0]?.changeData).toBeInstanceOf(Uint8Array);
-      expect(rows[0]?.changeData).toEqual(data);
+      expect(rows[0]?.encryptedChangeData).toBeInstanceOf(Uint8Array);
+      expect(rows[0]?.encryptedChangeData).toEqual(data);
     });
 
     it("supports lifecycle: insert unsynced then mark synced", async () => {
@@ -320,7 +320,7 @@ describe("PG sync schema", () => {
         entityType: "member",
         entityId: crypto.randomUUID(),
         operation: "create",
-        changeData: new Uint8Array([1, 2, 3]),
+        encryptedChangeData: new Uint8Array([1, 2, 3]),
         createdAt: now,
       });
 
@@ -347,7 +347,7 @@ describe("PG sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: new Uint8Array([1]),
+          encryptedChangeData: new Uint8Array([1]),
           createdAt: now,
         });
       }
@@ -389,7 +389,7 @@ describe("PG sync schema", () => {
           entityType: "member",
           entityId: crypto.randomUUID(),
           operation: "create",
-          changeData: new Uint8Array([1]),
+          encryptedChangeData: new Uint8Array([1]),
           createdAt: now,
         });
       }
@@ -415,7 +415,7 @@ describe("PG sync schema", () => {
         entityType: "member",
         entityId: crypto.randomUUID(),
         operation: "create",
-        changeData: new Uint8Array([1]),
+        encryptedChangeData: new Uint8Array([1]),
         createdAt: now,
       });
 
@@ -425,7 +425,7 @@ describe("PG sync schema", () => {
 
       await expect(
         client.query(
-          `INSERT INTO sync_queue (id, seq, system_id, entity_type, entity_id, operation, change_data, created_at) VALUES ($1, $2, $3, 'member', $4, 'create', '\\x01'::bytea, $5)`,
+          `INSERT INTO sync_queue (id, seq, system_id, entity_type, entity_id, operation, encrypted_change_data, created_at) VALUES ($1, $2, $3, 'member', $4, 'create', '\\x01'::bytea, $5)`,
           [crypto.randomUUID(), seqVal, systemId, crypto.randomUUID(), new Date(now).toISOString()],
         ),
       ).rejects.toThrow(/unique|duplicate/i);
