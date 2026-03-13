@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, jsonb, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
@@ -7,7 +7,7 @@ import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
-import type { AuthKeyType, DeviceInfo, DeviceTransferStatus } from "@pluralscape/types";
+import type { AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const accounts = pgTable(
@@ -52,7 +52,6 @@ export const sessions = pgTable(
     accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    deviceInfo: jsonb("device_info").$type<DeviceInfo | null>(),
     encryptedData: pgEncryptedBlob("encrypted_data"),
     createdAt: pgTimestamp("created_at").notNull(),
     lastActive: pgTimestamp("last_active"),

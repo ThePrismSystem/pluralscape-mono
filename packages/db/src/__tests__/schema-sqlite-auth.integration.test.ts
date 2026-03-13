@@ -285,7 +285,6 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
-          deviceInfo: { platform: "ios", appVersion: "1.0", deviceName: "iPhone" },
           createdAt: now,
           lastActive: now,
           revoked: false,
@@ -296,11 +295,6 @@ describe("SQLite auth schema", () => {
       const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
       expect(rows).toHaveLength(1);
       expect(rows[0]?.accountId).toBe(account.id);
-      expect(rows[0]?.deviceInfo).toEqual({
-        platform: "ios",
-        appVersion: "1.0",
-        deviceName: "iPhone",
-      });
       expect(rows[0]?.createdAt).toBe(now);
       expect(rows[0]?.lastActive).toBe(now);
       expect(rows[0]?.revoked).toBe(false);
@@ -357,7 +351,7 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.expiresAt).toBe(expiresAt);
     });
 
-    it("handles nullable deviceInfo and lastActive", () => {
+    it("handles nullable lastActive", () => {
       const account = insertAccount();
       const id = crypto.randomUUID();
 
@@ -370,7 +364,6 @@ describe("SQLite auth schema", () => {
         .run();
 
       const rows = db.select().from(sessions).where(eq(sessions.id, id)).all();
-      expect(rows[0]?.deviceInfo).toBeNull();
       expect(rows[0]?.lastActive).toBeNull();
     });
 

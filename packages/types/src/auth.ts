@@ -37,14 +37,16 @@ export interface AuthKey {
 export interface Session {
   readonly id: SessionId;
   readonly accountId: AccountId;
-  readonly deviceInfo: DeviceInfo | null;
   readonly createdAt: UnixMillis;
   readonly lastActive: UnixMillis | null;
   readonly revoked: boolean;
   readonly expiresAt: UnixMillis | null;
 }
 
-/** Device metadata embedded in a session. */
+/**
+ * Device metadata stored inside the session's encryptedData blob.
+ * The server never sees this in plaintext — it is T1 encrypted.
+ */
 export interface DeviceInfo {
   readonly platform: string;
   readonly appVersion: string;

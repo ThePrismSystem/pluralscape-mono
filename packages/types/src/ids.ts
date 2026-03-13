@@ -22,7 +22,7 @@ export type SubsystemId = Brand<string, "SubsystemId">;
 export type FieldDefinitionId = Brand<string, "FieldDefinitionId">;
 export type FieldValueId = Brand<string, "FieldValueId">;
 export type SessionId = Brand<string, "SessionId">;
-export type EventId = Brand<string, "EventId">;
+export type LifecycleEventId = Brand<string, "LifecycleEventId">;
 export type AccountId = Brand<string, "AccountId">;
 export type BlobId = Brand<string, "BlobId">;
 export type ApiKeyId = Brand<string, "ApiKeyId">;
@@ -88,7 +88,7 @@ export const ID_PREFIXES = {
   fieldDefinition: "fld_",
   fieldValue: "fv_",
   session: "sess_",
-  event: "evt_",
+  lifecycleEvent: "evt_",
   account: "acct_",
   blob: "blob_",
   apiKey: "ak_",
@@ -128,7 +128,7 @@ export const ID_PREFIXES = {
   accountPurgeRequest: "apr_",
   exportRequest: "er_",
   job: "job_",
-  subscription: "rsub_",
+
   webhookDelivery: "wd_",
   frontingReport: "fr_",
   friendNotificationPreference: "fnp_",
@@ -174,7 +174,7 @@ export type EntityType =
   | "device-token"
   | "poll-vote"
   | "session"
-  | "event"
+  | "lifecycle-event"
   | "account"
   | "friend-code"
   | "notification-config"
@@ -193,7 +193,6 @@ export type EntityType =
   | "account-purge-request"
   | "export-request"
   | "job"
-  | "subscription"
   | "webhook-delivery"
   | "fronting-report"
   | "friend-notification-preference"

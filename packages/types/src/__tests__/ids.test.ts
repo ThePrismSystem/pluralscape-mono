@@ -16,7 +16,7 @@ import type {
   CustomFrontId,
   DeviceTokenId,
   EntityType,
-  EventId,
+  LifecycleEventId,
   FieldDefinitionId,
   FieldValueId,
   FriendCodeId,
@@ -119,7 +119,7 @@ describe("branded ID types", () => {
     expectTypeOf<FieldDefinitionId>().toExtend<string>();
     expectTypeOf<FieldValueId>().toExtend<string>();
     expectTypeOf<SessionId>().toExtend<string>();
-    expectTypeOf<EventId>().toExtend<string>();
+    expectTypeOf<LifecycleEventId>().toExtend<string>();
     expectTypeOf<AccountId>().toExtend<string>();
     expectTypeOf<BlobId>().toExtend<string>();
     expectTypeOf<ApiKeyId>().toExtend<string>();
@@ -203,7 +203,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(60);
+    expect(prefixCount).toBe(59);
   });
 });
 
@@ -264,7 +264,7 @@ describe("EntityType", () => {
         case "device-token":
         case "poll-vote":
         case "session":
-        case "event":
+        case "lifecycle-event":
         case "account":
         case "friend-code":
         case "notification-config":
@@ -283,7 +283,6 @@ describe("EntityType", () => {
         case "account-purge-request":
         case "export-request":
         case "job":
-        case "subscription":
         case "webhook-delivery":
         case "fronting-report":
         case "friend-notification-preference":

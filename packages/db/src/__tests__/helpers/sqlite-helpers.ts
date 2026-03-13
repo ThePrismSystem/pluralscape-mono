@@ -76,7 +76,6 @@ export const SQLITE_DDL = {
     CREATE TABLE sessions (
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      device_info TEXT,
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
       last_active INTEGER,

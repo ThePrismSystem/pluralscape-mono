@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { EventId, MemberId, SubsystemId, SystemId } from "../ids.js";
+import type { LifecycleEventId, MemberId, SubsystemId, SystemId } from "../ids.js";
 import type {
   ArchivalEvent,
   DiscoveryEvent,
@@ -20,7 +20,7 @@ import type { UnixMillis } from "../timestamps.js";
 
 describe("LifecycleEvent base fields", () => {
   it("all variants share common fields", () => {
-    expectTypeOf<SplitEvent["id"]>().toEqualTypeOf<EventId>();
+    expectTypeOf<SplitEvent["id"]>().toEqualTypeOf<LifecycleEventId>();
     expectTypeOf<SplitEvent["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<SplitEvent["occurredAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<SplitEvent["recordedAt"]>().toEqualTypeOf<UnixMillis>();
@@ -62,7 +62,9 @@ describe("DormancyStartEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<DormancyStartEvent["eventType"]>().toEqualTypeOf<"dormancy-start">();
     expectTypeOf<DormancyStartEvent["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<DormancyStartEvent["relatedEventId"]>().toEqualTypeOf<EventId | null>();
+    expectTypeOf<
+      DormancyStartEvent["relatedLifecycleEventId"]
+    >().toEqualTypeOf<LifecycleEventId | null>();
   });
 });
 
@@ -70,7 +72,9 @@ describe("DormancyEndEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<DormancyEndEvent["eventType"]>().toEqualTypeOf<"dormancy-end">();
     expectTypeOf<DormancyEndEvent["memberId"]>().toEqualTypeOf<MemberId>();
-    expectTypeOf<DormancyEndEvent["relatedEventId"]>().toEqualTypeOf<EventId | null>();
+    expectTypeOf<
+      DormancyEndEvent["relatedLifecycleEventId"]
+    >().toEqualTypeOf<LifecycleEventId | null>();
   });
 });
 

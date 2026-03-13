@@ -1,12 +1,11 @@
 import { sql } from "drizzle-orm";
-import { check, foreignKey, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { check, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
 import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { archivableConsistencyCheck } from "../../helpers/check.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
-import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
 
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
@@ -26,11 +25,9 @@ export const journalEntries = pgTable(
   },
   (t) => [
     index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt),
+    // fronting_session_id FK is application-enforced only — PostgreSQL cannot
+    // enforce FKs against a partitioned table without the partition key (ADR 019).
     index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
-    foreignKey({
-      columns: [t.frontingSessionId],
-      foreignColumns: [frontingSessions.id],
-    }).onDelete("set null"),
     versionCheckFor("journal_entries", t.version),
     check(
       "journal_entries_archived_consistency_check",
