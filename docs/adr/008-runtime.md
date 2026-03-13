@@ -20,7 +20,7 @@ The API server needs a JavaScript/TypeScript runtime. The runtime choice affects
 Key factors:
 
 - **Single binary compilation**: `bun build --compile` produces a self-contained executable (~96MB including runtime). Combined with embedded SQLite, self-hosters can deploy a single file — no runtime installation, no `node_modules`.
-- **Built-in SQLite**: Bun has native SQLite support, eliminating the need for `better-sqlite3` native compilation.
+- **Built-in SQLite**: Bun has native SQLite support, eliminating the need for `better-sqlite3-multiple-ciphers` native compilation.
 - **Performance**: Faster startup and HTTP throughput than Node.js in benchmarks.
 - **Hono compatibility**: Hono runs on both Bun and Node.js with no code changes. If Bun stability becomes a concern at 500K scale, switching to Node.js requires only a deployment change, not a code change.
 

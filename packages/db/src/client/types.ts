@@ -7,7 +7,7 @@ export interface PgDatabaseClient {
   readonly db: PostgresJsDatabase;
 }
 
-/** A SQLite database client wrapping better-sqlite3. */
+/** A SQLite database client wrapping better-sqlite3-multiple-ciphers. */
 export interface SqliteDatabaseClient {
   readonly dialect: "sqlite";
   readonly db: BetterSQLite3Database;

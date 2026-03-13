@@ -79,17 +79,17 @@ tooling/
 
 ## Tech Stack
 
-| Layer            | Technology                                      | Decision Record                                        |
-| ---------------- | ----------------------------------------------- | ------------------------------------------------------ |
-| Frontend         | Expo (React Native) + TypeScript                | [ADR 002](docs/adr/002-frontend-framework.md)          |
-| API              | Hono on Bun + tRPC (internal) + REST (public)   | [ADR 003](docs/adr/003-api-framework.md)               |
-| Database         | PostgreSQL + Drizzle ORM / SQLite (self-hosted) | [ADR 004](docs/adr/004-database.md)                    |
-| Offline Sync     | Custom CRDT (Automerge)                         | [ADR 005](docs/adr/005-offline-sync.md)                |
-| Encryption       | libsodium (E2E, zero-knowledge server)          | [ADR 006](docs/adr/006-encryption.md)                  |
-| Real-Time        | WebSockets + SSE + Valkey                       | [ADR 007](docs/adr/007-realtime.md)                    |
-| Runtime          | Bun (Node.js fallback)                          | [ADR 008](docs/adr/008-runtime.md)                     |
-| Media            | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md)          |
-| Job Queue        | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)             |
+| Layer        | Technology                                      | Decision Record                               |
+| ------------ | ----------------------------------------------- | --------------------------------------------- |
+| Frontend     | Expo (React Native) + TypeScript                | [ADR 002](docs/adr/002-frontend-framework.md) |
+| API          | Hono on Bun + tRPC (internal) + REST (public)   | [ADR 003](docs/adr/003-api-framework.md)      |
+| Database     | PostgreSQL + Drizzle ORM / SQLite (self-hosted) | [ADR 004](docs/adr/004-database.md)           |
+| Offline Sync | Custom CRDT (Automerge)                         | [ADR 005](docs/adr/005-offline-sync.md)       |
+| Encryption   | libsodium (E2E, zero-knowledge server)          | [ADR 006](docs/adr/006-encryption.md)         |
+| Real-Time    | WebSockets + SSE + Valkey                       | [ADR 007](docs/adr/007-realtime.md)           |
+| Runtime      | Bun (Node.js fallback)                          | [ADR 008](docs/adr/008-runtime.md)            |
+| Media        | S3-compatible (MinIO for self-hosted)           | [ADR 009](docs/adr/009-blob-media-storage.md) |
+| Job Queue    | BullMQ (Valkey) / SQLite (self-hosted fallback) | [ADR 010](docs/adr/010-background-jobs.md)    |
 
 All dependencies verified AGPL-3.0 compatible — see [license audit](docs/audits/001-license-compatibility.md).
 

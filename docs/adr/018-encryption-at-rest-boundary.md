@@ -41,10 +41,12 @@ boundary.
 
 #### SQLite
 
-- **SQLCipher**: planned for local encryption-at-rest per ADR 006. Currently
-  using `better-sqlite3` during development. Migration to SQLCipher is a
-  separate infrastructure task (see follow-up bean).
-- **Mobile**: the mobile app's SQLite database will use SQLCipher to encrypt the
+- **SQLCipher**: implemented via `better-sqlite3-multiple-ciphers` (SQLCipher 4.x,
+  AES-256). The `createDatabase()` factory accepts an optional `encryptionKey`
+  (hex-encoded) which issues `PRAGMA cipher='sqlcipher'` and `PRAGMA key` before
+  any other operations. When no key is provided, the database is unencrypted
+  (development default). Key delivery is via `SQLITE_ENCRYPTION_KEY` env var.
+- **Mobile**: the mobile app's SQLite database uses SQLCipher to encrypt the
   entire database file, protecting locally cached data if the device is
   compromised.
 
@@ -89,5 +91,5 @@ This is enforced at two layers for defense-in-depth:
 - The distinction between E2E encryption (application guarantee) and at-rest
   encryption (infrastructure guarantee) is now documented, preventing confusion
   in security reviews.
-- SQLCipher migration remains a separate task to be completed before production
-  mobile releases.
+- SQLCipher is available for all SQLite deployments via `SQLITE_ENCRYPTION_KEY`.
+  Production and mobile deployments should always set this key.
