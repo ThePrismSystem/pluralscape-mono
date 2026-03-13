@@ -17,6 +17,7 @@ export const systemSettings = pgTable(
       .unique()
       .references(() => systems.id, { onDelete: "cascade" }),
     locale: varchar("locale", { length: 255 }),
+    /** Must use Argon2id — PINs are low-entropy (4-6 digits) and trivially reversible with weak hashes. */
     pinHash: varchar("pin_hash", { length: 512 }),
     biometricEnabled: boolean("biometric_enabled").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),

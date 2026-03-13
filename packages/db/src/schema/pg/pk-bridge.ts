@@ -23,7 +23,9 @@ export const pkBridgeState = pgTable(
       .notNull()
       .$type<PKSyncDirection>(),
     pkTokenEncrypted: pgBinary("pk_token_encrypted").notNull(),
+    /** T1 encrypted: contains member name→PK ID mappings. Must be encrypted before storage. */
     entityMappings: pgBinary("entity_mappings").notNull(),
+    /** T1 encrypted: may contain member names in error context. Must be encrypted before storage. */
     errorLog: pgBinary("error_log").notNull(),
     lastSyncAt: pgTimestamp("last_sync_at"),
     ...timestamps(),

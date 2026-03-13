@@ -33,6 +33,7 @@ export const webhookConfigs = sqliteTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     url: text("url").notNull(),
+    /** T3 (server-readable): raw HMAC signing key used by the server to sign outbound webhook payloads. */
     secret: sqliteBinary("secret").notNull(),
     eventTypes: sqliteJson("event_types").notNull().$type<readonly WebhookEventType[]>(),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),

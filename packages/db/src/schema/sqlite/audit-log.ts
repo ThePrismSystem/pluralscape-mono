@@ -23,7 +23,9 @@ export const auditLog = sqliteTable(
     eventType: text("event_type").notNull().$type<AuditEventType>(),
     /** Named "timestamp" (not "createdAt") to reflect when the event occurred, not row creation. */
     timestamp: sqliteTimestamp("timestamp").notNull(),
+    /** GDPR personal data — subject to retention policy. Account purge must nullify. */
     ipAddress: text("ip_address"),
+    /** GDPR personal data — subject to retention policy. Account purge must nullify. */
     userAgent: text("user_agent"),
     actor: sqliteJson("actor").notNull().$type<DbAuditActor>(),
     detail: text("detail"),

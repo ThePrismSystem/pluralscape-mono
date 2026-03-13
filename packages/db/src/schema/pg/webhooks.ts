@@ -31,6 +31,7 @@ export const webhookConfigs = pgTable(
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
     url: varchar("url", { length: 2048 }).notNull(),
+    /** T3 (server-readable): raw HMAC signing key used by the server to sign outbound webhook payloads. */
     secret: pgBinary("secret").notNull(),
     eventTypes: jsonb("event_types").notNull().$type<readonly WebhookEventType[]>(),
     enabled: boolean("enabled").notNull().default(true),
