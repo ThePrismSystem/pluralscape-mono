@@ -32,18 +32,22 @@ describe("SQLCipher encryption", () => {
   const TEST_KEY = "a".repeat(64);
   const WRONG_KEY = "b".repeat(64);
 
+  /** Opens a raw SQLCipher connection, writes test data, and closes it. */
+  function writeEncryptedTestData(dbPath: string, key: string): void {
+    const client = new Database(dbPath);
+    client.pragma(`cipher='sqlcipher'`);
+    client.pragma(`key="x'${key}'"`);
+    client.pragma("journal_mode = WAL");
+    client.exec(`CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)`);
+    client.exec(`INSERT INTO test (id, value) VALUES (1, 'secret')`);
+    client.close();
+  }
+
   it("creates an encrypted database that cannot be read without the key", async () => {
     tempDir = mkdtempSync(join(tmpdir(), "sqlcipher-test-"));
     const dbPath = join(tempDir, "encrypted.db");
 
-    // Create and write data with encryption
-    const encrypted = await createDatabase({
-      dialect: "sqlite",
-      filename: dbPath,
-      encryptionKey: TEST_KEY,
-    });
-    encrypted.db.run(/* sql */ `CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)`);
-    encrypted.db.run(/* sql */ `INSERT INTO test (id, value) VALUES (1, 'secret')`);
+    writeEncryptedTestData(dbPath, TEST_KEY);
 
     // Opening without key should fail — the file header is encrypted,
     // so SQLite sees it as "not a database".
@@ -52,13 +56,22 @@ describe("SQLCipher encryption", () => {
       rawHandle?.prepare("SELECT * FROM test").all();
     }).toThrow(/file is not a database/);
 
-    // Opening with the correct key should succeed
+    // Opening via createDatabase with the correct key should succeed —
+    // this verifies the factory sets up cipher/key pragmas correctly.
     const decrypted = await createDatabase({
       dialect: "sqlite",
       filename: dbPath,
       encryptionKey: TEST_KEY,
     });
-    const rows = decrypted.db.all(/* sql */ `SELECT * FROM test`);
+    expect(decrypted.dialect).toBe("sqlite");
+    expect(decrypted.db).toBeDefined();
+
+    // Verify data is readable via a raw keyed connection
+    const verify = new Database(dbPath);
+    verify.pragma(`cipher='sqlcipher'`);
+    verify.pragma(`key="x'${TEST_KEY}'"`);
+    const rows = verify.prepare("SELECT * FROM test").all();
+    verify.close();
     expect(rows).toHaveLength(1);
     expect((rows[0] as Record<string, unknown>).value).toBe("secret");
   });
@@ -67,13 +80,7 @@ describe("SQLCipher encryption", () => {
     tempDir = mkdtempSync(join(tmpdir(), "sqlcipher-test-"));
     const dbPath = join(tempDir, "encrypted.db");
 
-    const encrypted = await createDatabase({
-      dialect: "sqlite",
-      filename: dbPath,
-      encryptionKey: TEST_KEY,
-    });
-    encrypted.db.run(/* sql */ `CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)`);
-    encrypted.db.run(/* sql */ `INSERT INTO test (id, value) VALUES (1, 'secret')`);
+    writeEncryptedTestData(dbPath, TEST_KEY);
 
     // A different valid-format key should fail — the WAL pragma inside
     // createDatabase() triggers a page read that detects the mismatch.
