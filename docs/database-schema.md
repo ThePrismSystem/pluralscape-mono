@@ -40,7 +40,7 @@ erDiagram
     sessions {
         varchar id PK
         varchar account_id FK
-        jsonb device_info
+        blob encrypted_data "T1 - device info inside"
         boolean revoked
         timestamp last_active
         timestamp expires_at
@@ -107,8 +107,10 @@ erDiagram
         varchar id PK
         varchar system_id FK
         boolean enabled
-        integer interval_minutes
+        integer interval_minutes "nullable"
         boolean waking_hours_only
+        varchar waking_start "nullable"
+        varchar waking_end "nullable"
         blob encrypted_data "T1"
     }
 
@@ -120,6 +122,7 @@ erDiagram
         timestamp responded_at
         boolean dismissed
         varchar responded_by_member_id FK
+        blob encrypted_data "T1"
     }
 
     accounts ||--|| systems : "owns"
@@ -252,6 +255,7 @@ erDiagram
         varchar subsystem_id FK
         varchar layer_id FK
         varchar system_id FK
+        blob encrypted_data "T1, nullable"
     }
 
     subsystem_side_system_links {
@@ -259,6 +263,7 @@ erDiagram
         varchar subsystem_id FK
         varchar side_system_id FK
         varchar system_id FK
+        blob encrypted_data "T1, nullable"
     }
 
     side_system_layer_links {
@@ -266,6 +271,7 @@ erDiagram
         varchar side_system_id FK
         varchar layer_id FK
         varchar system_id FK
+        blob encrypted_data "T1, nullable"
     }
 
     systems ||--o{ subsystems : "has"
@@ -344,6 +350,7 @@ erDiagram
         varchar kind
         varchar status
         timestamp ends_at
+        timestamp closed_at "nullable"
         boolean allow_multiple_votes
         integer max_votes_per_member
         boolean allow_abstain
@@ -356,8 +363,9 @@ erDiagram
         varchar poll_id FK
         varchar system_id FK
         varchar option_id "nullable, no FK - inside encrypted_data"
-        jsonb voter
+        jsonb voter "nullable"
         boolean is_veto
+        timestamp voted_at
         blob encrypted_data "T1"
     }
 
@@ -409,9 +417,9 @@ erDiagram
     }
 
     fronting_sessions {
-        varchar id PK
+        varchar id PK "composite PK with start_time (partitioned)"
         varchar system_id FK
-        timestamp start_time
+        timestamp start_time PK "composite PK with id"
         timestamp end_time "nullable - NULL means currently fronting"
         varchar member_id FK "nullable"
         varchar fronting_type
@@ -430,6 +438,7 @@ erDiagram
     fronting_comments {
         varchar id PK
         varchar fronting_session_id FK
+        timestamp session_start_time "denormalized partition key for FK"
         varchar system_id FK
         varchar member_id FK "nullable"
         blob encrypted_data "T1"
@@ -461,9 +470,7 @@ erDiagram
     fronting_reports {
         varchar id PK
         varchar system_id FK
-        jsonb date_range
-        jsonb member_breakdowns
-        jsonb chart_data
+        blob encrypted_data "T1 - date range, breakdowns, chart data inside"
         varchar format
         timestamp generated_at
     }
@@ -692,7 +699,7 @@ erDiagram
         varchar entity_type
         varchar entity_id
         varchar operation
-        binary change_data
+        binary encrypted_change_data
         timestamp synced_at
     }
 
@@ -704,6 +711,7 @@ erDiagram
         integer local_version
         integer remote_version
         varchar resolution "nullable"
+        text details "nullable"
         timestamp resolved_at
     }
 
@@ -739,6 +747,7 @@ erDiagram
         varchar system_id FK
         varchar platform
         varchar token
+        timestamp last_active_at "nullable"
         timestamp revoked_at
     }
 
@@ -792,6 +801,7 @@ erDiagram
         varchar status
         integer progress_percent
         jsonb error_log
+        integer warning_count
         integer chunks_total
         integer chunks_completed
         timestamp completed_at
@@ -812,8 +822,10 @@ erDiagram
         varchar account_id FK
         varchar status
         varchar confirmation_phrase
+        timestamp requested_at
         timestamp scheduled_purge_at
         timestamp confirmed_at
+        timestamp cancelled_at "nullable"
         timestamp completed_at
     }
 
@@ -869,7 +881,7 @@ erDiagram
         varchar id PK
         varchar system_id FK
         varchar storage_key "S3 object key"
-        varchar mime_type
+        varchar mime_type "nullable"
         bigint size_bytes
         integer encryption_tier "1=T1, 2=T2"
         varchar bucket_id FK "nullable - T2 blobs"
@@ -907,8 +919,9 @@ erDiagram
         varchar key_type "metadata or crypto"
         varchar token_hash
         jsonb scopes
-        jsonb scoped_bucket_ids
+        jsonb scoped_bucket_ids "nullable"
         binary encrypted_key_material "null for metadata keys"
+        timestamp last_used_at "nullable"
         timestamp revoked_at
         timestamp expires_at
         blob encrypted_data "T1"
@@ -932,7 +945,9 @@ erDiagram
         varchar status
         integer http_status
         integer attempt_count
+        timestamp last_attempt_at "nullable"
         timestamp next_retry_at
+        blob encrypted_data "T1, nullable"
     }
 
     accounts ||--o{ api_keys : "owns"
@@ -955,14 +970,14 @@ erDiagram
         varchar id PK
     }
 
-    pk_bridge_state {
+    pk_bridge_configs {
         varchar id PK
         varchar system_id FK "unique"
         boolean enabled
         varchar sync_direction
         binary pk_token_encrypted
-        binary entity_mappings
-        binary error_log
+        blob entity_mappings "encrypted blob"
+        blob error_log "encrypted blob"
         timestamp last_sync_at
     }
 
@@ -973,7 +988,7 @@ erDiagram
         blob encrypted_data "T1"
     }
 
-    systems ||--o| pk_bridge_state : "has"
+    systems ||--o| pk_bridge_configs : "has"
     systems ||--o{ safe_mode_content : "has"
 ```
 
@@ -1027,16 +1042,16 @@ Full-text search index maintained as a derived table. Populated/invalidated by a
 ```mermaid
 erDiagram
     search_index {
-        varchar id PK
-        varchar system_id "no FK - denormalized"
-        varchar entity_type
-        varchar entity_id
-        text search_vector "tsvector for PG full-text search"
-        timestamp indexed_at
+        varchar system_id PK "composite PK"
+        varchar entity_type PK "composite PK"
+        varchar entity_id PK "composite PK"
+        text title "NOT NULL, default empty"
+        text content "NOT NULL, default empty"
+        tsvector search_vector "GENERATED from title + content"
     }
 ```
 
-**Note:** `search_index` has no FK constraints by design — it is a derived/cached table and may lag behind the source data. Stale entries are tolerated and cleaned up via `rebuildSearchIndex`.
+**Note:** `search_index` has no FK constraints by design — it is a derived/cached table populated via raw DDL (not Drizzle). `search_vector` is a `GENERATED ALWAYS AS` column using weighted tsvector (`title` = A, `content` = B). Self-hosted only — cloud deployments must not populate this table (search remains client-side via SQLite FTS5). Stale entries are tolerated and cleaned up via `rebuildSearchIndex`.
 
 ---
 
