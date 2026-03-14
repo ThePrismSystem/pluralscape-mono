@@ -2,6 +2,7 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
   ArchivedMember,
+  ArchivedMemberPhoto,
   KnownSaturationLevel,
   KnownTag,
   Member,
@@ -237,6 +238,26 @@ describe("MemberPhoto", () => {
   it("has sortOrder and nullable caption", () => {
     expectTypeOf<MemberPhoto["sortOrder"]>().toEqualTypeOf<number>();
     expectTypeOf<MemberPhoto["caption"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<MemberPhoto["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedMemberPhoto", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedMemberPhoto["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedMemberPhoto["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves MemberPhoto fields", () => {
+    expectTypeOf<ArchivedMemberPhoto["id"]>().toEqualTypeOf<MemberPhotoId>();
+    expectTypeOf<ArchivedMemberPhoto["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<ArchivedMemberPhoto["imageSource"]>().toEqualTypeOf<ImageSource>();
   });
 });
 

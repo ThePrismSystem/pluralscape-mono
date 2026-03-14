@@ -77,7 +77,11 @@ export interface MemberPhoto {
   readonly imageSource: ImageSource;
   readonly sortOrder: number;
   readonly caption: string | null;
+  readonly archived: false;
 }
+
+/** An archived member photo — preserves all data with archive metadata. */
+export type ArchivedMemberPhoto = Archived<MemberPhoto>;
 
 /** An archived member — preserves all data with archive metadata. */
 export type ArchivedMember = Archived<Member>;

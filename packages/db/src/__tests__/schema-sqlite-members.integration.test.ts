@@ -412,5 +412,83 @@ describe("SQLite members schema", () => {
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
+
+    it("defaults archived to false and archivedAt to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(memberPhotos)
+        .values({
+          id,
+          memberId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(memberPhotos).where(eq(memberPhotos.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(memberPhotos)
+        .values({
+          id,
+          memberId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(memberPhotos).where(eq(memberPhotos.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO member_photos (id, member_id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), memberId, systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO member_photos (id, member_id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), memberId, systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 });

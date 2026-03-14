@@ -53,6 +53,7 @@ export const memberPhotos = sqliteTable(
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("member_photos_system_id_idx").on(t.systemId),
@@ -62,6 +63,10 @@ export const memberPhotos = sqliteTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("cascade"),
     versionCheckFor("member_photos", t.version),
+    check(
+      "member_photos_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

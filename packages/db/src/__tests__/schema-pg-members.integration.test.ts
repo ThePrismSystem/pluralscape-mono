@@ -374,5 +374,77 @@ describe("PG members schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(memberPhotos).values({
+        id,
+        memberId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(memberPhotos).where(eq(memberPhotos.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(memberPhotos).values({
+        id,
+        memberId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      const rows = await db.select().from(memberPhotos).where(eq(memberPhotos.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO member_photos (id, member_id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, 1, true, NULL)",
+          [crypto.randomUUID(), memberId, systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO member_photos (id, member_id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, $5, 1, false, $6)",
+          [crypto.randomUUID(), memberId, systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 });

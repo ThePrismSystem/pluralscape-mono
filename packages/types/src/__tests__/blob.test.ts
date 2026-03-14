@@ -1,6 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
+  ArchivedBlobMetadata,
   BlobDownloadRef,
   BlobMetadata,
   BlobPurpose,
@@ -68,6 +69,26 @@ describe("BlobMetadata", () => {
     expectTypeOf<BlobMetadata["checksum"]>().toBeString();
     expectTypeOf<BlobMetadata["uploadedAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<BlobMetadata["thumbnailOfBlobId"]>().toEqualTypeOf<BlobId | null>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<BlobMetadata["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedBlobMetadata", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedBlobMetadata["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedBlobMetadata["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves BlobMetadata fields", () => {
+    expectTypeOf<ArchivedBlobMetadata["id"]>().toEqualTypeOf<BlobId>();
+    expectTypeOf<ArchivedBlobMetadata["systemId"]>().toEqualTypeOf<SystemId>();
+    expectTypeOf<ArchivedBlobMetadata["purpose"]>().toEqualTypeOf<BlobPurpose>();
   });
 });
 

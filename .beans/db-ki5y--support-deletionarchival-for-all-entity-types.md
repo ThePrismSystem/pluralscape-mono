@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: high
 created_at: 2026-03-13T23:47:17Z
-updated_at: 2026-03-14T00:44:26Z
+updated_at: 2026-03-14T02:03:01Z
 ---
 
 All entity types need a user-facing way to remove accidentally created entries. Currently only 9 entities support archival (members, custom fronts, journal entries, wiki pages, groups, channels, messages, notes, field definitions). All other entities can only be removed via system-level CASCADE (account deletion), which means accidental entries are permanently stuck.
@@ -95,7 +95,7 @@ This is universal — no entity type is exempt (except immutable audit trails: l
 - [ ] Commit 3: Structure domain archival
 - [ ] Commit 4: Communication domain archival
 - [ ] Commit 5: Innerworld + Privacy/Social archival
-- [ ] Commit 6: Infrastructure domain archival
+- [x] Commit 6: Infrastructure domain archival
 - [ ] Commit 7: Media domain archival
 - [ ] Commit 8: Drizzle migration
 - [ ] Commit 9: FK audit documentation
