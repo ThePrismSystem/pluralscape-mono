@@ -1,11 +1,11 @@
 ---
 # sync-pl87
 title: Automerge integration
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:35:02Z
-updated_at: 2026-03-14T22:18:04Z
+updated_at: 2026-03-14T22:50:20Z
 parent: sync-xlhb
 blocking:
   - sync-5jne
@@ -40,3 +40,23 @@ Automerge library integration and document structure definitions
 ## References
 
 - ADR 005 (Automerge)
+
+## Summary of Changes
+
+- Defined typed Automerge schemas for all 6 sync document types (schemas/)
+- Added ENTITY_CRDT_STRATEGIES registry for all 40+ entity types (strategies/)
+- Implemented createDocument() factory with per-type and generic variants (factories/)
+- Defined SyncStorageAdapter and SyncNetworkAdapter interfaces (adapters/)
+- Added typed encrypted roundtrip tests for SystemCoreDocument, FrontingDocument, ChatDocument
+- Added performance test verifying 1000-change merge criterion
+- Updated index.ts to export all new modules
+- 138 tests passing, typecheck clean, lint clean
+
+## Summary of Changes
+
+- Typed Automerge schemas for all 6 document types (schemas/)
+- ENTITY_CRDT_STRATEGIES registry for all 40+ entity types (strategies/)
+- createDocument() factory with per-type and generic variants (factories/)
+- SyncStorageAdapter and SyncNetworkAdapter interfaces (adapters/)
+- Typed encrypted roundtrip tests and performance test (1000 change merge <3s)
+- 138 tests passing, typecheck clean, lint clean
