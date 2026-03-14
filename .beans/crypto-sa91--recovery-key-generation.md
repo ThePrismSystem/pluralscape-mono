@@ -1,11 +1,11 @@
 ---
 # crypto-sa91
 title: Recovery key generation
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:34:10Z
-updated_at: 2026-03-08T13:35:45Z
+updated_at: 2026-03-14T07:05:35Z
 parent: crypto-gd8f
 blocked_by:
   - crypto-afug
@@ -35,3 +35,11 @@ Recovery key generation and master key recovery
 ## References
 
 - ADR 011 (Key Lifecycle and Recovery)
+
+## Summary of Changes
+
+- Added `generateRecoveryKey(masterKey)` — 32 random bytes, RFC 4648 base32, 13×4 dash-separated groups, encrypts master key, memzeros recovery bytes
+- Added `recoverMasterKey(displayKey, encryptedMasterKey)` — validates format, decodes base32, decrypts, memzeros in finally
+- Added `isValidRecoveryKeyFormat(displayKey)` — regex validation for 13 groups of 4 base32 chars
+- Base32 encode/decode implemented from scratch with named constants for all magic numbers
+- 27 unit tests covering roundtrips, format validation, wrong-key errors, tamper detection, and memzero paths
