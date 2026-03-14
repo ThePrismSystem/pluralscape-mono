@@ -48,6 +48,8 @@ export {
   BOX_PUBLIC_KEY_BYTES,
   BOX_SECRET_KEY_BYTES,
   BOX_SEED_BYTES,
+  GENERIC_HASH_BYTES_MAX,
+  GENERIC_HASH_BYTES_MIN,
   KDF_BYTES_MAX,
   KDF_BYTES_MIN,
   KDF_CONTEXT_BYTES,
@@ -59,6 +61,8 @@ export {
   PWHASH_OPSLIMIT_MOBILE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_SALT_BYTES,
+  SAFETY_NUMBER_ITERATIONS,
+  SAFETY_NUMBER_VERSION,
   SIGN_BYTES,
   SIGN_PUBLIC_KEY_BYTES,
   SIGN_SECRET_KEY_BYTES,
@@ -131,3 +135,7 @@ export { decryptThenVerify, sign, signThenEncrypt, verify } from "./sign.js";
 // ── Key storage ──────────────────────────────────────────────────────
 export type { KeyStorageOpts, SecureKeyStorage } from "./key-storage.js";
 export { createWebKeyStorage } from "./web-key-storage.js";
+
+// ── Safety Number verification ───────────────────────────────────────
+export type { SafetyNumber } from "./safety-number.js";
+export { computeSafetyNumber } from "./safety-number.js";

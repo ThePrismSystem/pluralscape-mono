@@ -23,6 +23,7 @@ import {
   assertBoxPublicKey,
   assertBoxSecretKey,
   assertBoxSeed,
+  assertGenericHashLength,
   assertKdfContext,
   assertKdfMasterKey,
   assertKdfSubkeyLength,
@@ -246,6 +247,14 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
   kdfKeygen(): KdfMasterKey {
     const sodium = this.lib();
     return sodium.crypto_kdf_keygen() as KdfMasterKey;
+  }
+
+  // ── Generic Hash (BLAKE2b) ────────────────────────────────────────
+
+  genericHash(hashLength: number, message: Uint8Array, key?: Uint8Array | null): Uint8Array {
+    assertGenericHashLength(hashLength);
+    const sodium = this.lib();
+    return sodium.crypto_generichash(hashLength, message, key ?? null);
   }
 
   // ── Random ────────────────────────────────────────────────────────

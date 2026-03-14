@@ -118,6 +118,11 @@ export interface SodiumAdapter {
   /** Generate a random KDF master key. */
   kdfKeygen(): KdfMasterKey;
 
+  // ── Generic Hash (BLAKE2b) ────────────────────────────────────────
+
+  /** Compute a BLAKE2b hash. Output length must be 16-64 bytes. */
+  genericHash(hashLength: number, message: Uint8Array, key?: Uint8Array | null): Uint8Array;
+
   // ── Random ────────────────────────────────────────────────────────
 
   /** Generate cryptographically secure random bytes. */
