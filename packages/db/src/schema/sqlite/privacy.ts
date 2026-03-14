@@ -138,13 +138,16 @@ export const friendCodes = sqliteTable(
     accountId: text("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    code: text("code").notNull().unique(),
+    code: text("code").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     expiresAt: sqliteTimestamp("expires_at"),
     ...archivable(),
   },
   (t) => [
-    index("friend_codes_account_id_idx").on(t.accountId),
+    index("friend_codes_account_archived_idx").on(t.accountId, t.archived),
+    uniqueIndex("friend_codes_code_uniq")
+      .on(t.code)
+      .where(sql`${t.archived} = 0`),
     check(
       "friend_codes_expires_at_check",
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,

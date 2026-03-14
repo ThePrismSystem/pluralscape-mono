@@ -251,7 +251,7 @@ export const SQLITE_DDL = {
     CREATE TABLE friend_codes (
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      code TEXT NOT NULL UNIQUE,
+      code TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       expires_at INTEGER,
       archived INTEGER NOT NULL DEFAULT 0,
@@ -262,7 +262,8 @@ export const SQLITE_DDL = {
     )
   `,
   friendCodesIndexes: `
-    CREATE INDEX friend_codes_account_id_idx ON friend_codes (account_id)
+    CREATE INDEX friend_codes_account_archived_idx ON friend_codes (account_id, archived);
+    CREATE UNIQUE INDEX friend_codes_code_uniq ON friend_codes (code) WHERE archived = 0
   `,
   friendBucketAssignments: `
     CREATE TABLE friend_bucket_assignments (
@@ -1096,7 +1097,7 @@ export const SQLITE_DDL = {
     )
   `,
   webhookConfigsIndexes: `
-    CREATE INDEX webhook_configs_system_id_archived_idx ON webhook_configs (system_id, archived)
+    CREATE INDEX webhook_configs_system_archived_idx ON webhook_configs (system_id, archived)
   `,
   webhookDeliveries: `
     CREATE TABLE webhook_deliveries (
@@ -1200,7 +1201,7 @@ export const SQLITE_DDL = {
     )
   `,
   timerConfigsIndexes: `
-    CREATE INDEX timer_configs_system_id_archived_idx ON timer_configs (system_id, archived)
+    CREATE INDEX timer_configs_system_archived_idx ON timer_configs (system_id, archived)
   `,
   checkInRecords: `
     CREATE TABLE check_in_records (

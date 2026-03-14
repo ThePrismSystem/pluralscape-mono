@@ -42,7 +42,7 @@ export const webhookConfigs = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("webhook_configs_system_id_archived_idx").on(t.systemId, t.archived),
+    index("webhook_configs_system_archived_idx").on(t.systemId, t.archived),
     unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
     archivableConsistencyCheckFor("webhook_configs", t.archived, t.archivedAt),
   ],

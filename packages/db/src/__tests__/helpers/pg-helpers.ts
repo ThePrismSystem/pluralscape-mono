@@ -253,7 +253,7 @@ export const PG_DDL = {
     CREATE TABLE friend_codes (
       id VARCHAR(50) PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      code VARCHAR(255) NOT NULL UNIQUE,
+      code VARCHAR(255) NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       expires_at TIMESTAMPTZ,
       archived BOOLEAN NOT NULL DEFAULT false,
@@ -264,7 +264,8 @@ export const PG_DDL = {
     )
   `,
   friendCodesIndexes: `
-    CREATE INDEX friend_codes_account_id_idx ON friend_codes (account_id)
+    CREATE INDEX friend_codes_account_archived_idx ON friend_codes (account_id, archived);
+    CREATE UNIQUE INDEX friend_codes_code_uniq ON friend_codes (code) WHERE archived = false
   `,
   friendBucketAssignments: `
     CREATE TABLE friend_bucket_assignments (
@@ -1101,7 +1102,7 @@ export const PG_DDL = {
     )
   `,
   webhookConfigsIndexes: `
-    CREATE INDEX webhook_configs_system_id_archived_idx ON webhook_configs (system_id, archived)
+    CREATE INDEX webhook_configs_system_archived_idx ON webhook_configs (system_id, archived)
   `,
   webhookDeliveries: `
     CREATE TABLE webhook_deliveries (
@@ -1186,7 +1187,7 @@ export const PG_DDL = {
     )
   `,
   timerConfigsIndexes: `
-    CREATE INDEX timer_configs_system_id_archived_idx ON timer_configs (system_id, archived)
+    CREATE INDEX timer_configs_system_archived_idx ON timer_configs (system_id, archived)
   `,
   checkInRecords: `
     CREATE TABLE check_in_records (
