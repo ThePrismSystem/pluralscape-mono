@@ -13,6 +13,7 @@ export type SignSecretKey = CryptoBrand<"SignSecretKey">;
 export type Signature = CryptoBrand<"Signature">;
 export type KdfMasterKey = CryptoBrand<"KdfMasterKey">;
 export type PwhashSalt = CryptoBrand<"PwhashSalt">;
+export type EncryptedKeyGrant = CryptoBrand<"EncryptedKeyGrant">;
 
 // ── Keypair types ────────────────────────────────────────────────────
 export interface BoxKeypair {

@@ -1,11 +1,11 @@
 ---
 # crypto-cqyz
 title: Key grant operations
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-08T13:34:05Z
-updated_at: 2026-03-08T13:35:50Z
+updated_at: 2026-03-14T10:41:34Z
 parent: crypto-gd8f
 blocked_by:
   - crypto-l3hj
@@ -38,3 +38,11 @@ Asymmetric key grant creation and decryption for Privacy Bucket sharing
 
 - ADR 006 (Privacy Bucket Model)
 - encryption-research.md section 4.1
+
+## Summary of Changes
+
+- Added `key-grants.ts` with `createKeyGrant`, `decryptKeyGrant`, and `createKeyGrants` (batch)
+- Wire format: `[24B nonce] [MAC + plaintext envelope]`; envelope binds bucketId + keyVersion before boxing
+- Envelope memzeroed in `finally` block on all code paths, matching `signThenEncrypt` pattern
+- 19 tests covering roundtrip, auth failures, binding checks, batch, validation, and full lifecycle integration
+- All exports added to `index.ts`
