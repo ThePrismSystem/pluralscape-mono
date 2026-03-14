@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   check,
   foreignKey,
@@ -64,7 +65,9 @@ export const notificationConfigs = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    uniqueIndex("notification_configs_system_id_event_type_idx").on(t.systemId, t.eventType),
+    uniqueIndex("notification_configs_system_id_event_type_idx")
+      .on(t.systemId, t.eventType)
+      .where(sql`${t.archived} = 0`),
     check(
       "notification_configs_event_type_check",
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),

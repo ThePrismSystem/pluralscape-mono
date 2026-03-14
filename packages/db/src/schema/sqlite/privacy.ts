@@ -7,6 +7,7 @@ import {
   sqliteTable,
   text,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
@@ -117,7 +118,9 @@ export const friendConnections = sqliteTable(
     index("friend_connections_account_status_idx").on(t.accountId, t.status),
     index("friend_connections_friend_status_idx").on(t.friendAccountId, t.status),
     index("friend_connections_account_archived_idx").on(t.accountId, t.archived),
-    unique("friend_connections_account_friend_uniq").on(t.accountId, t.friendAccountId),
+    uniqueIndex("friend_connections_account_friend_uniq")
+      .on(t.accountId, t.friendAccountId)
+      .where(sql`${t.archived} = 0`),
     unique("friend_connections_id_account_id_unique").on(t.id, t.accountId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.accountId} != ${t.friendAccountId}`),

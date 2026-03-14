@@ -80,7 +80,7 @@ export const checkInRecords = pgTable(
     }).onDelete("set null"),
     index("check_in_records_system_pending_idx")
       .on(t.systemId, t.scheduledAt)
-      .where(sql`${t.respondedAt} IS NULL AND ${t.dismissed} = false`),
+      .where(sql`${t.respondedAt} IS NULL AND ${t.dismissed} = false AND ${t.archived} = false`),
     check(
       "check_in_records_archived_consistency_check",
       archivableConsistencyCheck(t.archived, t.archivedAt),

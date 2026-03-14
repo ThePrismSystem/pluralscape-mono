@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgTable, primaryKey, unique, varchar } from "drizzle-orm/pg-core";
+import {
+  check,
+  index,
+  integer,
+  pgTable,
+  primaryKey,
+  unique,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/pg-core";
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
@@ -115,7 +124,9 @@ export const friendConnections = pgTable(
     index("friend_connections_account_status_idx").on(t.accountId, t.status),
     index("friend_connections_friend_status_idx").on(t.friendAccountId, t.status),
     index("friend_connections_account_archived_idx").on(t.accountId, t.archived),
-    unique("friend_connections_account_friend_uniq").on(t.accountId, t.friendAccountId),
+    uniqueIndex("friend_connections_account_friend_uniq")
+      .on(t.accountId, t.friendAccountId)
+      .where(sql`${t.archived} = false`),
     unique("friend_connections_id_account_id_unique").on(t.id, t.accountId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.accountId} != ${t.friendAccountId}`),

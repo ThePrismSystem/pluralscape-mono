@@ -232,7 +232,6 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
-      UNIQUE (account_id, friend_account_id),
       UNIQUE (id, account_id),
       CHECK (account_id != friend_account_id),
       CHECK (version >= 1),
@@ -242,7 +241,8 @@ export const SQLITE_DDL = {
   friendConnectionsIndexes: `
     CREATE INDEX friend_connections_account_status_idx ON friend_connections (account_id, status);
     CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_account_id, status);
-    CREATE INDEX friend_connections_account_archived_idx ON friend_connections (account_id, archived)
+    CREATE INDEX friend_connections_account_archived_idx ON friend_connections (account_id, archived);
+    CREATE UNIQUE INDEX friend_connections_account_friend_uniq ON friend_connections (account_id, friend_account_id) WHERE archived = 0
   `,
   friendCodes: `
     CREATE TABLE friend_codes (
@@ -1046,7 +1046,7 @@ export const SQLITE_DDL = {
     )
   `,
   notificationConfigsIndexes: `
-    CREATE UNIQUE INDEX notification_configs_system_id_event_type_idx ON notification_configs (system_id, event_type)
+    CREATE UNIQUE INDEX notification_configs_system_id_event_type_idx ON notification_configs (system_id, event_type) WHERE archived = 0
   `,
   friendNotificationPreferences: `
     CREATE TABLE friend_notification_preferences (
@@ -1225,7 +1225,7 @@ export const SQLITE_DDL = {
     CREATE INDEX check_in_records_system_id_idx ON check_in_records (system_id);
     CREATE INDEX check_in_records_timer_config_id_idx ON check_in_records (timer_config_id);
     CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at);
-    CREATE INDEX check_in_records_system_pending_idx ON check_in_records (system_id, scheduled_at) WHERE responded_at IS NULL AND dismissed = 0
+    CREATE INDEX check_in_records_system_pending_idx ON check_in_records (system_id, scheduled_at) WHERE responded_at IS NULL AND dismissed = 0 AND archived = 0
   `,
   // Import/Export
   importJobs: `
