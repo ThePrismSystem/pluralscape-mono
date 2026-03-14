@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { apiKeys } from "../schema/pg/api-keys.js";
 import { accounts } from "../schema/pg/auth.js";
@@ -36,6 +36,11 @@ describe("PG webhooks schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(webhookDeliveries);
+    await db.delete(webhookConfigs);
   });
 
   describe("webhook_configs", () => {
@@ -205,6 +210,32 @@ describe("PG webhooks schema", () => {
       const rows = await db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(webhookConfigs).values({
+        id,
+        systemId,
+        url: "https://example.com/hook",
+        secret: new Uint8Array([1]),
+        eventTypes: [],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const updateNow = Date.now();
+      await db
+        .update(webhookConfigs)
+        .set({ archived: true, archivedAt: updateNow })
+        .where(eq(webhookConfigs.id, id));
+      const rows = await db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(updateNow);
     });
 
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
@@ -618,6 +649,41 @@ describe("PG webhooks schema", () => {
       const rows = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const whId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(webhookConfigs).values({
+        id: whId,
+        systemId,
+        url: "https://example.com/hook",
+        secret: new Uint8Array([1]),
+        eventTypes: [],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(webhookDeliveries).values({
+        id,
+        webhookId: whId,
+        systemId,
+        eventType: "member.created",
+        createdAt: now,
+      });
+
+      const updateNow = Date.now();
+      await db
+        .update(webhookDeliveries)
+        .set({ archived: true, archivedAt: updateNow })
+        .where(eq(webhookDeliveries.id, id));
+      const rows = await db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(updateNow);
     });
 
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {

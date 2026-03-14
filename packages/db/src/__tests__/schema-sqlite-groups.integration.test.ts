@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { groupMemberships, groups } from "../schema/sqlite/groups.js";
@@ -69,6 +69,11 @@ describe("SQLite groups schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(groupMemberships).run();
+    db.delete(groups).run();
   });
 
   describe("groups", () => {

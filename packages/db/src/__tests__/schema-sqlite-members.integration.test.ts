@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { members, memberPhotos } from "../schema/sqlite/members.js";
@@ -49,6 +49,11 @@ describe("SQLite members schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(memberPhotos).run();
+    db.delete(members).run();
   });
 
   describe("members", () => {
@@ -252,6 +257,29 @@ describe("SQLite members schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(members)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(members).set({ archived: true, archivedAt: now }).where(eq(members.id, id)).run();
+
+      const rows = db.select().from(members).where(eq(members.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 
@@ -489,6 +517,34 @@ describe("SQLite members schema", () => {
           )
           .run(crypto.randomUUID(), memberId, systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(memberPhotos)
+        .values({
+          id,
+          memberId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(memberPhotos)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(memberPhotos.id, id))
+        .run();
+
+      const rows = db.select().from(memberPhotos).where(eq(memberPhotos.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 });

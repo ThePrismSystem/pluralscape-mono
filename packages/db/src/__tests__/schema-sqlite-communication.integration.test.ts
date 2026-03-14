@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import {
@@ -66,6 +66,16 @@ describe("SQLite communication schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(acknowledgements).run();
+    db.delete(pollVotes).run();
+    db.delete(polls).run();
+    db.delete(boardMessages).run();
+    db.delete(notes).run();
+    db.delete(messages).run();
+    db.delete(channels).run();
   });
 
   describe("channels", () => {
@@ -195,6 +205,22 @@ describe("SQLite communication schema", () => {
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const channelId = insertChannel(systemId);
+      const now = Date.now();
+
+      db.update(channels)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(channels.id, channelId))
+        .run();
+
+      const rows = db.select().from(channels).where(eq(channels.id, channelId)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
   });
 
   describe("messages", () => {
@@ -301,6 +327,32 @@ describe("SQLite communication schema", () => {
           )
           .run(crypto.randomUUID(), channelId, systemId, now, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const channelId = insertChannel(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(messages)
+        .values({
+          id,
+          channelId,
+          systemId,
+          timestamp: now,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(messages).set({ archived: true, archivedAt: now }).where(eq(messages.id, id)).run();
+
+      const rows = db.select().from(messages).where(eq(messages.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
 
     it("allows replyToId referencing nonexistent message (no self-FK)", () => {
@@ -491,6 +543,33 @@ describe("SQLite communication schema", () => {
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(boardMessages)
+        .values({
+          id,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(boardMessages)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(boardMessages.id, id))
+        .run();
+
+      const rows = db.select().from(boardMessages).where(eq(boardMessages.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
   });
 
   describe("notes", () => {
@@ -629,6 +708,29 @@ describe("SQLite communication schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(notes)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(notes).set({ archived: true, archivedAt: now }).where(eq(notes.id, id)).run();
+
+      const rows = db.select().from(notes).where(eq(notes.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 
@@ -885,6 +987,19 @@ describe("SQLite communication schema", () => {
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const pollId = insertPoll(systemId);
+      const now = Date.now();
+
+      db.update(polls).set({ archived: true, archivedAt: now }).where(eq(polls.id, pollId)).run();
+
+      const rows = db.select().from(polls).where(eq(polls.id, pollId)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
   });
 
   describe("poll_votes", () => {
@@ -1100,6 +1215,33 @@ describe("SQLite communication schema", () => {
           .run(crypto.randomUUID(), pollId, systemId, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const pollId = insertPoll(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(pollVotes)
+        .values({
+          id,
+          pollId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+        })
+        .run();
+
+      db.update(pollVotes)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(pollVotes.id, id))
+        .run();
+
+      const rows = db.select().from(pollVotes).where(eq(pollVotes.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
   });
 
   describe("acknowledgements", () => {
@@ -1312,6 +1454,31 @@ describe("SQLite communication schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(acknowledgements)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+        })
+        .run();
+
+      db.update(acknowledgements)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(acknowledgements.id, id))
+        .run();
+
+      const rows = db.select().from(acknowledgements).where(eq(acknowledgements.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 });

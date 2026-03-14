@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { members } from "../schema/sqlite/members.js";
@@ -39,6 +39,11 @@ describe("SQLite timers schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(checkInRecords).run();
+    db.delete(timerConfigs).run();
   });
 
   describe("timer_configs", () => {
@@ -298,6 +303,32 @@ describe("SQLite timers schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(timerConfigs)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(timerConfigs.id, id))
+        .run();
+
+      const rows = db.select().from(timerConfigs).where(eq(timerConfigs.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 
@@ -745,6 +776,42 @@ describe("SQLite timers schema", () => {
           )
           .run(crypto.randomUUID(), systemId, timerId, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id: timerId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(checkInRecords)
+        .values({
+          id,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+        })
+        .run();
+
+      db.update(checkInRecords)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(checkInRecords.id, id))
+        .run();
+
+      const rows = db.select().from(checkInRecords).where(eq(checkInRecords.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 });

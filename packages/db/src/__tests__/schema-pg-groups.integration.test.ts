@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { groupMemberships, groups } from "../schema/pg/groups.js";
@@ -74,6 +74,11 @@ describe("PG groups schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(groupMemberships);
+    await db.delete(groups);
   });
 
   // ── groups ──────────────────────────────────────────────────────────
@@ -190,6 +195,32 @@ describe("PG groups schema", () => {
       const rows = await db.select().from(groups).where(eq(groups.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(groups).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(groups)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(groups.id, id));
+
+      const rows = await db.select().from(groups).where(eq(groups.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
     });
 
     it("cascades on system deletion", async () => {

@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import {
@@ -79,6 +79,13 @@ describe("PG fronting schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(frontingComments);
+    await db.delete(switches);
+    await db.delete(frontingSessions);
+    await db.delete(customFronts);
   });
 
   describe("fronting_sessions", () => {
@@ -539,6 +546,21 @@ describe("PG fronting schema", () => {
       expect(rows[0]?.archivedAt).toBe(now);
     });
 
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const { id, startTime } = await insertFrontingSession(systemId);
+
+      const now = Date.now();
+      await db
+        .update(frontingSessions)
+        .set({ archived: true, archivedAt: now })
+        .where(and(eq(frontingSessions.id, id), eq(frontingSessions.startTime, startTime)));
+      const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -726,6 +748,30 @@ describe("PG fronting schema", () => {
       expect(rows[0]?.archivedAt).toBe(now);
     });
 
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(switches).values({
+        id,
+        systemId,
+        timestamp: now,
+        memberIds: ["mem_test1"],
+        createdAt: now,
+      });
+
+      const updateNow = Date.now();
+      await db
+        .update(switches)
+        .set({ archived: true, archivedAt: updateNow })
+        .where(eq(switches.id, id));
+      const rows = await db.select().from(switches).where(eq(switches.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(updateNow);
+    });
+
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -830,6 +876,21 @@ describe("PG fronting schema", () => {
         archivedAt: now,
       });
 
+      const rows = await db.select().from(customFronts).where(eq(customFronts.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = await insertCustomFront(systemId);
+
+      const now = Date.now();
+      await db
+        .update(customFronts)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(customFronts.id, id));
       const rows = await db.select().from(customFronts).where(eq(customFronts.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
@@ -1145,6 +1206,33 @@ describe("PG fronting schema", () => {
       const rows = await db.select().from(frontingComments).where(eq(frontingComments.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const { id: sessionId, startTime: sessionStartTime } = await insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(frontingComments).values({
+        id,
+        frontingSessionId: sessionId,
+        systemId,
+        sessionStartTime,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const updateNow = Date.now();
+      await db
+        .update(frontingComments)
+        .set({ archived: true, archivedAt: updateNow })
+        .where(eq(frontingComments.id, id));
+      const rows = await db.select().from(frontingComments).where(eq(frontingComments.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(updateNow);
     });
 
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {

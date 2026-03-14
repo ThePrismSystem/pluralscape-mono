@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { members, memberPhotos } from "../schema/pg/members.js";
@@ -45,6 +45,11 @@ describe("PG members schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(memberPhotos);
+    await db.delete(members);
   });
 
   describe("members", () => {
@@ -166,6 +171,31 @@ describe("PG members schema", () => {
       const rows = await db.select().from(members).where(eq(members.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(members).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(members)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(members.id, id));
+
+      const rows = await db.select().from(members).where(eq(members.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
     });
 
     it("updates version and updatedAt correctly", async () => {
@@ -417,6 +447,33 @@ describe("PG members schema", () => {
       const rows = await db.select().from(memberPhotos).where(eq(memberPhotos.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(memberPhotos).values({
+        id,
+        memberId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(memberPhotos)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(memberPhotos.id, id));
+
+      const rows = await db.select().from(memberPhotos).where(eq(memberPhotos.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
     });
 
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {

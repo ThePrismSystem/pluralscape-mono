@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import {
@@ -78,6 +78,15 @@ describe("PG privacy schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(friendCodes);
+    await db.delete(friendBucketAssignments);
+    await db.delete(friendConnections);
+    await db.delete(keyGrants);
+    await db.delete(bucketContentTags);
+    await db.delete(buckets);
   });
 
   describe("buckets", () => {
@@ -198,6 +207,18 @@ describe("PG privacy schema", () => {
         archivedAt: now,
       });
 
+      const rows = await db.select().from(buckets).where(eq(buckets.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = await insertBucket(systemId);
+
+      const now = Date.now();
+      await db.update(buckets).set({ archived: true, archivedAt: now }).where(eq(buckets.id, id));
       const rows = await db.select().from(buckets).where(eq(buckets.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
@@ -619,6 +640,77 @@ describe("PG privacy schema", () => {
       expect(rows[0]?.archivedAt).toBe(now);
     });
 
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      await insertSystem(friendAccountId);
+      const id = await insertFriendConnection(accountId, friendAccountId);
+
+      const now = Date.now();
+      await db
+        .update(friendConnections)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(friendConnections.id, id));
+      const rows = await db.select().from(friendConnections).where(eq(friendConnections.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("allows duplicate (accountId, friendAccountId) when both rows are archived", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      await insertSystem(friendAccountId);
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: crypto.randomUUID(),
+        accountId,
+        friendAccountId,
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      await db.insert(friendConnections).values({
+        id: crypto.randomUUID(),
+        accountId,
+        friendAccountId,
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+    });
+
+    it("rejects duplicate (accountId, friendAccountId) when both rows are active", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      await insertSystem(friendAccountId);
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: crypto.randomUUID(),
+        accountId,
+        friendAccountId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(friendConnections).values({
+          id: crypto.randomUUID(),
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
     it("rejects archived=true with archivedAt=null via CHECK", async () => {
       const accountId = await insertAccount();
       await insertSystem(accountId);
@@ -825,6 +917,29 @@ describe("PG privacy schema", () => {
       const rows = await db.select().from(friendCodes).where(eq(friendCodes.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendCodes).values({
+        id,
+        accountId,
+        code: `CODE_${crypto.randomUUID()}`,
+        createdAt: now,
+      });
+
+      const updateNow = Date.now();
+      await db
+        .update(friendCodes)
+        .set({ archived: true, archivedAt: updateNow })
+        .where(eq(friendCodes.id, id));
+      const rows = await db.select().from(friendCodes).where(eq(friendCodes.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(updateNow);
     });
 
     it("rejects archived=true with archivedAt=null via CHECK", async () => {

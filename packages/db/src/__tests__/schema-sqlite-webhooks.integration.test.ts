@@ -257,6 +257,34 @@ describe("SQLite webhooks schema", () => {
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(webhookConfigs)
+        .values({
+          id,
+          systemId,
+          url: "https://example.com/hook",
+          secret: new Uint8Array([1]),
+          eventTypes: [],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(webhookConfigs)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(webhookConfigs.id, id))
+        .run();
+
+      const rows = db.select().from(webhookConfigs).where(eq(webhookConfigs.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
   });
 
   describe("webhook_deliveries", () => {
@@ -585,6 +613,30 @@ describe("SQLite webhooks schema", () => {
           )
           .run(crypto.randomUUID(), deliveryWhId, deliverySystemId, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(webhookDeliveries)
+        .values({
+          id,
+          webhookId: deliveryWhId,
+          systemId: deliverySystemId,
+          eventType: "member.created",
+          createdAt: now,
+        })
+        .run();
+
+      db.update(webhookDeliveries)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(webhookDeliveries.id, id))
+        .run();
+
+      const rows = db.select().from(webhookDeliveries).where(eq(webhookDeliveries.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 });

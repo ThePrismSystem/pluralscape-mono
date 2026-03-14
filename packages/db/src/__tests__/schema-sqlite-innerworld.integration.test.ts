@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
   innerworldCanvas,
@@ -32,6 +32,11 @@ describe("SQLite Innerworld Schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(innerworldEntities).run();
+    db.delete(innerworldRegions).run();
   });
 
   function setupSystem(): string {
@@ -149,6 +154,35 @@ describe("SQLite Innerworld Schema", () => {
     ).toThrow(/CHECK|constraint/i);
   });
 
+  it("innerworld_regions updates archived from false to true", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+    const regionId = crypto.randomUUID();
+
+    db.insert(innerworldRegions)
+      .values({
+        id: regionId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+
+    db.update(innerworldRegions)
+      .set({ archived: true, archivedAt: now })
+      .where(eq(innerworldRegions.id, regionId))
+      .run();
+
+    const rows = db
+      .select()
+      .from(innerworldRegions)
+      .where(eq(innerworldRegions.id, regionId))
+      .all();
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(now);
+  });
+
   it("round-trips innerworldEntities with all fields", () => {
     const systemId = setupSystem();
     const now = Date.now();
@@ -264,6 +298,35 @@ describe("SQLite Innerworld Schema", () => {
         )
         .run(crypto.randomUUID(), systemId, now, now, now),
     ).toThrow(/CHECK|constraint/i);
+  });
+
+  it("innerworld_entities updates archived from false to true", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+    const entityId = crypto.randomUUID();
+
+    db.insert(innerworldEntities)
+      .values({
+        id: entityId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+
+    db.update(innerworldEntities)
+      .set({ archived: true, archivedAt: now })
+      .where(eq(innerworldEntities.id, entityId))
+      .run();
+
+    const rows = db
+      .select()
+      .from(innerworldEntities)
+      .where(eq(innerworldEntities.id, entityId))
+      .all();
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(now);
   });
 
   it("round-trips innerworldCanvas (1:1 pattern, systemId as PK)", () => {

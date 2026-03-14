@@ -475,4 +475,33 @@ describe("SQLite blob_metadata schema", () => {
         ),
     ).toThrow(/CHECK|constraint/i);
   });
+
+  it("updates archived from false to true", () => {
+    const accountId = insertAccount();
+    const systemId = insertSystem(accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    db.insert(blobMetadata)
+      .values({
+        id,
+        systemId,
+        storageKey: `blobs/${crypto.randomUUID()}`,
+        sizeBytes: 100,
+        encryptionTier: 1,
+        purpose: "avatar",
+        checksum: "a".repeat(64),
+        uploadedAt: now,
+      })
+      .run();
+
+    db.update(blobMetadata)
+      .set({ archived: true, archivedAt: now })
+      .where(eq(blobMetadata.id, id))
+      .run();
+
+    const rows = db.select().from(blobMetadata).where(eq(blobMetadata.id, id)).all();
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(now);
+  });
 });

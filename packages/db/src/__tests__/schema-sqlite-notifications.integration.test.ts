@@ -52,6 +52,7 @@ describe("SQLite notifications schema", () => {
     db.delete(friendNotificationPreferences).run();
     db.delete(notificationConfigs).run();
     db.delete(deviceTokens).run();
+    db.delete(friendConnections).run();
   });
 
   describe("device_tokens", () => {
@@ -419,6 +420,95 @@ describe("SQLite notifications schema", () => {
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(notificationConfigs)
+        .values({
+          id,
+          systemId,
+          eventType: "switch-reminder",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(notificationConfigs)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(notificationConfigs.id, id))
+        .run();
+
+      const rows = db
+        .select()
+        .from(notificationConfigs)
+        .where(eq(notificationConfigs.id, id))
+        .all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("allows duplicate (systemId, eventType) when both rows are archived", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      db.insert(notificationConfigs)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "switch-reminder",
+          archived: true,
+          archivedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(notificationConfigs)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "switch-reminder",
+          archived: true,
+          archivedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+    });
+
+    it("rejects duplicate (systemId, eventType) when both rows are active", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      db.insert(notificationConfigs)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          eventType: "switch-reminder",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(notificationConfigs)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            eventType: "switch-reminder",
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
   });
 
   describe("friend_notification_preferences", () => {
@@ -676,6 +766,139 @@ describe("SQLite notifications schema", () => {
           )
           .run(crypto.randomUUID(), accountId, fcId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      const fcId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendConnections)
+        .values({
+          id: fcId,
+          accountId,
+          friendAccountId,
+          status: "accepted",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(friendNotificationPreferences)
+        .values({
+          id,
+          accountId,
+          friendConnectionId: fcId,
+          enabledEventTypes: [],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(friendNotificationPreferences)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(friendNotificationPreferences.id, id))
+        .run();
+
+      const rows = db
+        .select()
+        .from(friendNotificationPreferences)
+        .where(eq(friendNotificationPreferences.id, id))
+        .all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("allows duplicate (accountId, friendConnectionId) when both rows are archived", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      const fcId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendConnections)
+        .values({
+          id: fcId,
+          accountId,
+          friendAccountId,
+          status: "accepted",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(friendNotificationPreferences)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          friendConnectionId: fcId,
+          enabledEventTypes: [],
+          archived: true,
+          archivedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(friendNotificationPreferences)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          friendConnectionId: fcId,
+          enabledEventTypes: [],
+          archived: true,
+          archivedAt: now,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+    });
+
+    it("rejects duplicate (accountId, friendConnectionId) when both rows are active", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      const fcId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendConnections)
+        .values({
+          id: fcId,
+          accountId,
+          friendAccountId,
+          status: "accepted",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.insert(friendNotificationPreferences)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          friendConnectionId: fcId,
+          enabledEventTypes: [],
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(friendNotificationPreferences)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            friendConnectionId: fcId,
+            enabledEventTypes: [],
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
   });
 });

@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
   innerworldCanvas,
@@ -30,6 +30,11 @@ describe("PG Innerworld Schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(innerworldEntities);
+    await db.delete(innerworldRegions);
   });
 
   async function setupSystem(): Promise<string> {
@@ -110,6 +115,33 @@ describe("PG Innerworld Schema", () => {
       .where(eq(innerworldRegions.id, regionId));
     expect(rows[0]?.archived).toBe(true);
     expect(rows[0]?.archivedAt).toBe(now);
+  });
+
+  it("innerworld_regions updates archived from false to true", async () => {
+    const systemId = await setupSystem();
+    const now = Date.now();
+    const regionId = crypto.randomUUID();
+
+    await db.insert(innerworldRegions).values({
+      id: regionId,
+      systemId,
+      encryptedData: testBlob(),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const archiveTime = Date.now();
+    await db
+      .update(innerworldRegions)
+      .set({ archived: true, archivedAt: archiveTime })
+      .where(eq(innerworldRegions.id, regionId));
+
+    const rows = await db
+      .select()
+      .from(innerworldRegions)
+      .where(eq(innerworldRegions.id, regionId));
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(archiveTime);
   });
 
   it("innerworld_regions rejects archived=true with archivedAt=null via CHECK", async () => {
@@ -205,6 +237,33 @@ describe("PG Innerworld Schema", () => {
       .where(eq(innerworldEntities.id, entityId));
     expect(rows[0]?.archived).toBe(true);
     expect(rows[0]?.archivedAt).toBe(now);
+  });
+
+  it("innerworld_entities updates archived from false to true", async () => {
+    const systemId = await setupSystem();
+    const now = Date.now();
+    const entityId = crypto.randomUUID();
+
+    await db.insert(innerworldEntities).values({
+      id: entityId,
+      systemId,
+      encryptedData: testBlob(new Uint8Array([1])),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const archiveTime = Date.now();
+    await db
+      .update(innerworldEntities)
+      .set({ archived: true, archivedAt: archiveTime })
+      .where(eq(innerworldEntities.id, entityId));
+
+    const rows = await db
+      .select()
+      .from(innerworldEntities)
+      .where(eq(innerworldEntities.id, entityId));
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(archiveTime);
   });
 
   it("innerworld_entities rejects archived=true with archivedAt=null via CHECK", async () => {

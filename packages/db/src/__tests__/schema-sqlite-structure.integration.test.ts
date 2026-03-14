@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { members } from "../schema/sqlite/members.js";
@@ -112,6 +112,19 @@ describe("SQLite structure schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(subsystemLayerLinks).run();
+    db.delete(subsystemSideSystemLinks).run();
+    db.delete(sideSystemLayerLinks).run();
+    db.delete(subsystemMemberships).run();
+    db.delete(sideSystemMemberships).run();
+    db.delete(layerMemberships).run();
+    db.delete(relationships).run();
+    db.delete(subsystems).run();
+    db.delete(sideSystems).run();
+    db.delete(layers).run();
   });
 
   describe("relationships", () => {
@@ -436,6 +449,33 @@ describe("SQLite structure schema", () => {
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(relationships)
+        .values({
+          id,
+          systemId,
+          type: "sibling",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(relationships)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(relationships.id, id))
+        .run();
+
+      const rows = db.select().from(relationships).where(eq(relationships.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
   });
 
   describe("subsystems", () => {
@@ -645,6 +685,22 @@ describe("SQLite structure schema", () => {
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
     });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = insertSubsystem(systemId);
+      const now = Date.now();
+
+      db.update(subsystems)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(subsystems.id, id))
+        .run();
+
+      const rows = db.select().from(subsystems).where(eq(subsystems.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
   });
 
   describe("side_systems", () => {
@@ -789,6 +845,22 @@ describe("SQLite structure schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = insertSideSystem(systemId);
+      const now = Date.now();
+
+      db.update(sideSystems)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(sideSystems.id, id))
+        .run();
+
+      const rows = db.select().from(sideSystems).where(eq(sideSystems.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 
@@ -940,6 +1012,22 @@ describe("SQLite structure schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = insertLayer(systemId, 0);
+      const now = Date.now();
+
+      db.update(layers)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(layers.id, id))
+        .run();
+
+      const rows = db.select().from(layers).where(eq(layers.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 
