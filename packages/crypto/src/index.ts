@@ -108,3 +108,18 @@ export {
   generateIdentityKeypair,
   serializePublicKey,
 } from "./identity.js";
+
+// ── Bucket key management ───────────────────────────────────────────
+export type { BucketKeyCache } from "./bucket-key-cache.js";
+export { createBucketKeyCache } from "./bucket-key-cache.js";
+export type { RotatedBucketKey, WrappedBucketKey } from "./bucket-keys.js";
+export {
+  decryptBucketKey,
+  encryptBucketKey,
+  generateBucketKey,
+  rotateBucketKey,
+} from "./bucket-keys.js";
+
+// ── Recovery key ────────────────────────────────────────────────────
+export type { RecoveryKeyResult } from "./recovery.js";
+export { generateRecoveryKey, isValidRecoveryKeyFormat, recoverMasterKey } from "./recovery.js";

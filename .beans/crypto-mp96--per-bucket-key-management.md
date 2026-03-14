@@ -1,11 +1,11 @@
 ---
 # crypto-mp96
 title: Per-bucket key management
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-03-08T13:34:02Z
-updated_at: 2026-03-08T13:35:46Z
+updated_at: 2026-03-14T06:50:27Z
 parent: crypto-gd8f
 blocked_by:
   - crypto-xbjk
