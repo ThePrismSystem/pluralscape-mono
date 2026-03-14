@@ -14,21 +14,14 @@ export type CrdtStorageType =
   | "junction-map"
   | "singleton-lww";
 
-/** Which document type contains this entity. */
-export type CrdtDocumentType =
-  | "system-core"
-  | "fronting"
-  | "chat"
-  | "journal"
-  | "privacy-config"
-  | "bucket";
+import type { SyncDocumentType } from "../document-types.js";
 
 /** The full CRDT strategy for a single entity type. */
 export interface CrdtStrategy {
   /** How the entity is stored in Automerge. */
   readonly storageType: CrdtStorageType;
   /** Which document contains this entity type. */
-  readonly document: CrdtDocumentType;
+  readonly document: SyncDocumentType;
   /**
    * Human-readable description of mutation semantics.
    * Summarises which fields are mutable after creation and what wins on conflict.
@@ -176,7 +169,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     storageType: "append-lww",
     document: "fronting",
     mutationSemantics:
-      "Append via map key assignment; endTime and comment are LWW-mutable after creation",
+      "Append via map key assignment; endTime, comment, positionality, and archived are LWW-mutable after creation",
   },
   "fronting-comment": {
     storageType: "lww-map",

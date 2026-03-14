@@ -10,9 +10,6 @@ import {
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
-import type { FrontingDocument } from "../schemas/fronting.js";
-import type { PrivacyConfigDocument } from "../schemas/privacy-config.js";
-import type { SystemCoreDocument } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 
@@ -34,33 +31,11 @@ function makeKeys(): DocumentKeys {
   };
 }
 
-function makeSystemCoreSessions(
-  base: Automerge.Doc<SystemCoreDocument>,
+function makeSessions<T>(
+  base: Automerge.Doc<T>,
   keys: DocumentKeys,
-  docId = "doc-cr-001",
-): [EncryptedSyncSession<SystemCoreDocument>, EncryptedSyncSession<SystemCoreDocument>] {
-  return [
-    new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
-    new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
-  ];
-}
-
-function makeFrontingSessions(
-  base: Automerge.Doc<FrontingDocument>,
-  keys: DocumentKeys,
-  docId = "doc-fronting-001",
-): [EncryptedSyncSession<FrontingDocument>, EncryptedSyncSession<FrontingDocument>] {
-  return [
-    new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
-    new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
-  ];
-}
-
-function makePrivacyConfigSessions(
-  base: Automerge.Doc<PrivacyConfigDocument>,
-  keys: DocumentKeys,
-  docId = "doc-privacy-001",
-): [EncryptedSyncSession<PrivacyConfigDocument>, EncryptedSyncSession<PrivacyConfigDocument>] {
+  docId: string,
+): [EncryptedSyncSession<T>, EncryptedSyncSession<T>] {
   return [
     new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
     new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
@@ -80,7 +55,7 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
 
   it("1a — concurrent edits to different fields both survive", () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSystemCoreSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
     // Seed a member in both sessions
     const seedEnv = sessionA.change((d) => {
@@ -125,7 +100,7 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
 
   it("1b — concurrent edits to same field converge deterministically (LWW)", () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSystemCoreSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
     const seedEnv = sessionA.change((d) => {
       d.members["mem_1"] = {
@@ -172,7 +147,7 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
 
   it("1c — concurrent archive + edit: both changes apply independently", () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSystemCoreSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
     const seedEnv = sessionA.change((d) => {
       d.members["mem_1"] = {
@@ -229,7 +204,7 @@ describe("Category 2: concurrent appends to lists", () => {
 
   it("2a — concurrent appends to switches list: both entries present after merge", () => {
     const base = createFrontingDocument();
-    const [sessionA, sessionB] = makeFrontingSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-fronting-001");
 
     const envA = sessionA.change((d) => {
       d.switches.push({
@@ -276,7 +251,7 @@ describe("Category 3: concurrent FrontingSession end time", () => {
 
   it("3a — concurrent end-time writes converge to a single LWW winner", () => {
     const base = createFrontingDocument();
-    const [sessionA, sessionB] = makeFrontingSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-fronting-001");
 
     const seedEnv = sessionA.change((d) => {
       d.sessions["fs_1"] = {
@@ -342,7 +317,7 @@ describe("Category 4: junction add-wins semantics", () => {
 
   it("4a — concurrent add on A and no-op on B: junction is present after merge", () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSystemCoreSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
     const envA = sessionA.change((d) => {
       d.groupMemberships["g1_m1"] = true;
@@ -358,7 +333,7 @@ describe("Category 4: junction add-wins semantics", () => {
 
   it("4b — two concurrent adds to different keys: both junctions present", () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSystemCoreSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
     const envA = sessionA.change((d) => {
       d.groupMemberships["g1_m1"] = true;
@@ -390,7 +365,7 @@ describe("Category 5: concurrent KeyGrant revocation", () => {
 
   it("5a — concurrent revocations both result in a revoked state", () => {
     const base = createPrivacyConfigDocument();
-    const [sessionA, sessionB] = makePrivacyConfigSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-privacy-001");
 
     const seedEnv = sessionA.change((d) => {
       d.keyGrants["kg_1"] = {
@@ -441,7 +416,7 @@ describe("Category 6: CheckInRecord concurrent respond + dismiss", () => {
 
   it("6a — concurrent respond and dismiss converge to a single state", () => {
     const base = createFrontingDocument();
-    const [sessionA, sessionB] = makeFrontingSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-fronting-001");
 
     const seedEnv = sessionA.change((d) => {
       d.checkInRecords["cr_1"] = {
@@ -510,7 +485,7 @@ describe("Category 7: FriendConnection nested assignedBuckets", () => {
 
   it("7a — concurrent bucket adds to different keys: both present after merge", () => {
     const base = createPrivacyConfigDocument();
-    const [sessionA, sessionB] = makePrivacyConfigSessions(base, keys);
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-privacy-001");
 
     const seedEnv = sessionA.change((d) => {
       d.friendConnections["fc_1"] = {

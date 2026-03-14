@@ -6,4 +6,5 @@ export {
   createJournalDocument,
   createPrivacyConfigDocument,
   createSystemCoreDocument,
+  fromDoc,
 } from "./document-factory.js";

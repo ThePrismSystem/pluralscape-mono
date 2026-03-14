@@ -16,10 +16,7 @@ import type { SystemCoreDocument } from "../schemas/system-core.js";
  * (they lack an explicit index signature). We cast through unknown to satisfy
  * the constraint while preserving the correct return type.
  */
-function fromDoc<T>(init: T): Automerge.Doc<T> {
-  // Automerge.from<T> requires T extends Record<string, unknown>, which our
-  // document interfaces don't satisfy (missing index signature). We use an
-  // explicit unknown intermediate to satisfy the constraint without a double cast.
+export function fromDoc<T>(init: T): Automerge.Doc<T> {
   const asUnknown: unknown = init;
   return Automerge.from(asUnknown as Record<string, unknown>) as Automerge.Doc<T>;
 }

@@ -1,3 +1,4 @@
+import type { SyncDocumentType } from "../document-types.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 
 // ── Manifest ─────────────────────────────────────────────────────────
@@ -10,8 +11,8 @@ import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../type
 export interface SyncManifestEntry {
   /** Unique document identifier (e.g. "system-core-sys_abc", "chat-ch_xyz-2026-03"). */
   readonly docId: string;
-  /** Document type string: "system-core" | "fronting" | "chat" | "journal" | "privacy-config" | "bucket". */
-  readonly docType: string;
+  /** Which sync document type this entry represents. */
+  readonly docType: SyncDocumentType;
   /** Key type determining which encryption key is used. */
   readonly keyType: "master" | "bucket";
   /** Present for bucket documents — identifies which bucket. */
@@ -19,7 +20,7 @@ export interface SyncManifestEntry {
   /** Present for chat documents — identifies which channel. */
   readonly channelId: string | undefined;
   /** Present for time-split documents (e.g. "2026-Q1", "2026-03", "2026"). */
-  readonly timePeriod: string | null | undefined;
+  readonly timePeriod: string | null;
   /** Unix milliseconds when the document was created on the server. */
   readonly createdAt: number;
   /** Unix milliseconds when the last change was received. */

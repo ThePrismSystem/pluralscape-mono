@@ -38,7 +38,7 @@ import type { FrontingDocument } from "../schemas/fronting.js";
 import type { SystemCoreDocument } from "../schemas/system-core.js";
 import type { BucketKeyCache, KdfMasterKey, SodiumAdapter, SignKeypair } from "@pluralscape/crypto";
 
-const s = (v: string) => new Automerge.ImmutableString(v);
+const s = (v: string): Automerge.ImmutableString => new Automerge.ImmutableString(v);
 
 let sodium: SodiumAdapter;
 let masterKey: KdfMasterKey;
@@ -210,16 +210,16 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
       });
 
       const envelope = sessionA.change((doc) => {
-        // junction key: {memberId}_{groupId}
-        doc.groupMemberships["mem_1_grp_a"] = true;
-        doc.groupMemberships["mem_2_grp_a"] = true;
+        // junction key: {groupId}_{memberId}
+        doc.groupMemberships["grp_a_mem_1"] = true;
+        doc.groupMemberships["grp_a_mem_2"] = true;
       });
       relay.submit(envelope);
 
       sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
 
-      expect(sessionB.document.groupMemberships["mem_1_grp_a"]).toBe(true);
-      expect(sessionB.document.groupMemberships["mem_2_grp_a"]).toBe(true);
+      expect(sessionB.document.groupMemberships["grp_a_mem_1"]).toBe(true);
+      expect(sessionB.document.groupMemberships["grp_a_mem_2"]).toBe(true);
       expect(Object.keys(sessionB.document.groupMemberships)).toHaveLength(2);
     } finally {
       resolver.dispose();

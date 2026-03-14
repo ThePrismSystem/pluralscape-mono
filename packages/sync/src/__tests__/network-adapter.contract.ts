@@ -10,27 +10,12 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
+import { makeSnapshot, nonce, pubkey, sig } from "./test-crypto-helpers.js";
+
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
-import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
-import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
+import type { EncryptedChangeEnvelope } from "../types.js";
 
 // ── Test data builders ─────────────────────────────────────────────────
-
-// Cast test byte arrays to branded types — these are contract test fixtures,
-// not real cryptographic material. We use an explicit unknown intermediate
-// to satisfy the brand constraint without importing internal assertion functions.
-function nonce(fill: number): AeadNonce {
-  const bytes: unknown = new Uint8Array(24).fill(fill);
-  return bytes as AeadNonce;
-}
-function pubkey(fill: number): SignPublicKey {
-  const bytes: unknown = new Uint8Array(32).fill(fill);
-  return bytes as SignPublicKey;
-}
-function sig(fill: number): Signature {
-  const bytes: unknown = new Uint8Array(64).fill(fill);
-  return bytes as Signature;
-}
 
 /** Builds a change payload (no seq) suitable for submitChange. */
 function makeChangePayload(fill: number, documentId: string): Omit<EncryptedChangeEnvelope, "seq"> {
@@ -39,17 +24,6 @@ function makeChangePayload(fill: number, documentId: string): Omit<EncryptedChan
     ciphertext: new Uint8Array([1, 2, 3, fill]),
     nonce: nonce(fill),
     signature: sig(2),
-    authorPublicKey: pubkey(1),
-  };
-}
-
-function makeSnapshot(version: number, documentId: string): EncryptedSnapshotEnvelope {
-  return {
-    documentId,
-    snapshotVersion: version,
-    ciphertext: new Uint8Array([10, 20, 30, version]),
-    nonce: nonce(version),
-    signature: sig(3),
     authorPublicKey: pubkey(1),
   };
 }
@@ -129,7 +103,7 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
         await adapter.submitSnapshot(docId, makeSnapshot(2, docId));
         const loaded = await adapter.fetchLatestSnapshot(docId);
         // Should return the highest version submitted, regardless of order
-        expect(loaded?.snapshotVersion).toBeGreaterThanOrEqual(2);
+        expect(loaded?.snapshotVersion).toBe(3);
       });
     });
 

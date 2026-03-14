@@ -16,7 +16,7 @@ Automerge library integration and document structure definitions
 
 ## Scope
 
-- `automerge-repo` v2.5.x with pluggable storage/network adapters
+- `@automerge/automerge` with custom sync session and pluggable adapter interfaces
 - Document schema definitions matching domain types from types-im7i
 - Automerge 3.0 changes: strings are natively collaborative, RawString→ImmutableString
 - Binary document serialization
@@ -28,7 +28,7 @@ Automerge library integration and document structure definitions
 
 ## Acceptance Criteria
 
-- [ ] automerge-repo installed and configured
+- [x] @automerge/automerge integrated (no automerge-repo — custom EncryptedSyncSession)
 - [ ] Document schemas defined for each topology document type
 - [ ] Create/load/fork/merge operations working
 - [ ] Binary serialization for storage
@@ -50,13 +50,4 @@ Automerge library integration and document structure definitions
 - Added typed encrypted roundtrip tests for SystemCoreDocument, FrontingDocument, ChatDocument
 - Added performance test verifying 1000-change merge criterion
 - Updated index.ts to export all new modules
-- 138 tests passing, typecheck clean, lint clean
-
-## Summary of Changes
-
-- Typed Automerge schemas for all 6 document types (schemas/)
-- ENTITY_CRDT_STRATEGIES registry for all 40+ entity types (strategies/)
-- createDocument() factory with per-type and generic variants (factories/)
-- SyncStorageAdapter and SyncNetworkAdapter interfaces (adapters/)
-- Typed encrypted roundtrip tests and performance test (1000 change merge <3s)
 - 138 tests passing, typecheck clean, lint clean

@@ -78,7 +78,6 @@ export type { BucketProjectionDocument } from "./schemas/bucket.js";
 // ── CRDT strategies ───────────────────────────────────────────────────
 export { ENTITY_CRDT_STRATEGIES } from "./strategies/crdt-strategies.js";
 export type {
-  CrdtDocumentType,
   CrdtStorageType,
   CrdtStrategy,
   SyncedEntityType,
@@ -93,6 +92,7 @@ export {
   createJournalDocument,
   createPrivacyConfigDocument,
   createBucketDocument,
+  fromDoc,
 } from "./factories/document-factory.js";
 
 // ── Adapter interfaces ────────────────────────────────────────────────

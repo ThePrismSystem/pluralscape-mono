@@ -10,27 +10,12 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { makeSnapshot, nonce, pubkey, sig } from "./test-crypto-helpers.js";
+
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
-import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
-import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
+import type { EncryptedChangeEnvelope } from "../types.js";
 
 // ── Test data builders ─────────────────────────────────────────────────
-
-// Cast test byte arrays to branded types — these are contract test fixtures,
-// not real cryptographic material. We use an explicit unknown intermediate
-// to satisfy the brand constraint without importing internal assertion functions.
-function nonce(fill: number): AeadNonce {
-  const bytes: unknown = new Uint8Array(24).fill(fill);
-  return bytes as AeadNonce;
-}
-function pubkey(fill: number): SignPublicKey {
-  const bytes: unknown = new Uint8Array(32).fill(fill);
-  return bytes as SignPublicKey;
-}
-function sig(fill: number): Signature {
-  const bytes: unknown = new Uint8Array(64).fill(fill);
-  return bytes as Signature;
-}
 
 function makeChange(seq: number, documentId: string): EncryptedChangeEnvelope {
   return {
@@ -39,17 +24,6 @@ function makeChange(seq: number, documentId: string): EncryptedChangeEnvelope {
     ciphertext: new Uint8Array([1, 2, 3, seq]),
     nonce: nonce(seq),
     signature: sig(2),
-    authorPublicKey: pubkey(1),
-  };
-}
-
-function makeSnapshot(version: number, documentId: string): EncryptedSnapshotEnvelope {
-  return {
-    documentId,
-    snapshotVersion: version,
-    ciphertext: new Uint8Array([10, 20, 30, version]),
-    nonce: nonce(version),
-    signature: sig(3),
     authorPublicKey: pubkey(1),
   };
 }

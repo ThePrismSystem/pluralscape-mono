@@ -4,8 +4,8 @@ import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.j
 
 /**
  * CRDT representation of a FrontingSession (append-lww map, keyed by FrontingSessionId).
- * New sessions are added by assigning to the map; endTime and comment are mutable
- * after creation via LWW per field.
+ * New sessions are added by assigning to the map; endTime, comment, positionality, and
+ * archived are mutable after creation via LWW per field.
  */
 export interface CrdtFrontingSession extends CrdtAuditFields {
   id: CrdtString;

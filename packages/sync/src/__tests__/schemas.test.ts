@@ -1,6 +1,8 @@
 import * as Automerge from "@automerge/automerge";
 import { describe, expect, it } from "vitest";
 
+import { fromDoc } from "../factories/document-factory.js";
+
 import type {
   BucketProjectionDocument,
   ChatDocument,
@@ -14,19 +16,8 @@ import type {
 
 const s = (val: string): Automerge.ImmutableString => new Automerge.ImmutableString(val);
 
-/**
- * Automerge.from<T> requires T extends Record<string, unknown>, which plain
- * document interfaces don't satisfy due to the missing index signature.
- * This helper casts through unknown to bypass the constraint while keeping
- * full type safety on the returned Doc<T>.
- */
-function fromSchema<T>(init: T): Automerge.Doc<T> {
-  const asUnknown: unknown = init;
-  return Automerge.from(asUnknown as Record<string, unknown>) as Automerge.Doc<T>;
-}
-
 function makeSystemCoreDoc(): Automerge.Doc<SystemCoreDocument> {
-  return fromSchema<SystemCoreDocument>({
+  return fromDoc<SystemCoreDocument>({
     system: {
       id: s("sys_test"),
       name: s("Test System"),
@@ -86,7 +77,7 @@ function makeSystemCoreDoc(): Automerge.Doc<SystemCoreDocument> {
 }
 
 function makeFrontingDoc(): Automerge.Doc<FrontingDocument> {
-  return fromSchema<FrontingDocument>({
+  return fromDoc<FrontingDocument>({
     sessions: {},
     comments: {},
     switches: [],
@@ -95,7 +86,7 @@ function makeFrontingDoc(): Automerge.Doc<FrontingDocument> {
 }
 
 function makeChatDoc(): Automerge.Doc<ChatDocument> {
-  return fromSchema<ChatDocument>({
+  return fromDoc<ChatDocument>({
     channel: {
       id: s("ch_test"),
       systemId: s("sys_test"),
@@ -117,7 +108,7 @@ function makeChatDoc(): Automerge.Doc<ChatDocument> {
 }
 
 function makeJournalDoc(): Automerge.Doc<JournalDocument> {
-  return fromSchema<JournalDocument>({
+  return fromDoc<JournalDocument>({
     entries: {},
     wikiPages: {},
     notes: {},
@@ -125,7 +116,7 @@ function makeJournalDoc(): Automerge.Doc<JournalDocument> {
 }
 
 function makePrivacyConfigDoc(): Automerge.Doc<PrivacyConfigDocument> {
-  return fromSchema<PrivacyConfigDocument>({
+  return fromDoc<PrivacyConfigDocument>({
     buckets: {},
     contentTags: {},
     friendConnections: {},
@@ -135,7 +126,7 @@ function makePrivacyConfigDoc(): Automerge.Doc<PrivacyConfigDocument> {
 }
 
 function makeBucketDoc(): Automerge.Doc<BucketProjectionDocument> {
-  return fromSchema<BucketProjectionDocument>({
+  return fromDoc<BucketProjectionDocument>({
     members: {},
     memberPhotos: {},
     groups: {},

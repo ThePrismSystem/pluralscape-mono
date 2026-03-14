@@ -199,7 +199,7 @@ Every entity type from `packages/types/src/ids.ts` is listed below with its docu
 | `poll`                | `chat-{channelId}`   | Master   | LWW map                                                                                 |
 | `poll-option`         | `chat-{channelId}`   | Master   | LWW map                                                                                 |
 | `poll-vote`           | `chat-{channelId}`   | Master   | Append-only                                                                             |
-| `acknowledgement`     | `chat-{channelId}`   | Master   | Append-only                                                                             |
+| `acknowledgement`     | `chat-{channelId}`   | Master   | Append + LWW (map keyed by ID; confirmed, confirmedAt, archived are mutable)            |
 | `journal-entry`       | `journal`            | Master   | Append + LWW                                                                            |
 | `wiki-page`           | `journal`            | Master   | LWW map                                                                                 |
 | `note`                | `journal`            | Master   | LWW map                                                                                 |
