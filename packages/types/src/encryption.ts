@@ -215,8 +215,8 @@ export type ClientSubsystem = Subsystem;
  * T1 encrypted: label
  * T3 plaintext: type, sourceMemberId, targetMemberId, bidirectional
  *
- * Intentionally omits AuditMetadata — relationships are immutable entities
- * that are only created or deleted, never updated. Only createdAt is tracked.
+ * Intentionally omits AuditMetadata — relationships use a simpler audit model
+ * with only createdAt tracked (no updatedAt).
  */
 export interface ServerRelationship {
   readonly id: RelationshipId;

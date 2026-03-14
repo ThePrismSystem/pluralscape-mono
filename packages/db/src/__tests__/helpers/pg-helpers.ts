@@ -367,13 +367,17 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (source_member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (target_member_id) REFERENCES members(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   relationshipsIndexes: `
-    CREATE INDEX relationships_system_id_idx ON relationships (system_id)
+    CREATE INDEX relationships_system_id_idx ON relationships (system_id);
+    CREATE INDEX relationships_system_archived_idx ON relationships (system_id, archived)
   `,
   subsystems: `
     CREATE TABLE subsystems (
@@ -387,13 +391,17 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (parent_subsystem_id) REFERENCES subsystems(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   subsystemsIndexes: `
-    CREATE INDEX subsystems_system_id_idx ON subsystems (system_id)
+    CREATE INDEX subsystems_system_id_idx ON subsystems (system_id);
+    CREATE INDEX subsystems_system_archived_idx ON subsystems (system_id, archived)
   `,
   sideSystems: `
     CREATE TABLE side_systems (
@@ -403,12 +411,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   sideSystemsIndexes: `
-    CREATE INDEX side_systems_system_id_idx ON side_systems (system_id)
+    CREATE INDEX side_systems_system_id_idx ON side_systems (system_id);
+    CREATE INDEX side_systems_system_archived_idx ON side_systems (system_id, archived)
   `,
   layers: `
     CREATE TABLE layers (
@@ -419,12 +431,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   layersIndexes: `
-    CREATE INDEX layers_system_id_idx ON layers (system_id)
+    CREATE INDEX layers_system_id_idx ON layers (system_id);
+    CREATE INDEX layers_system_archived_idx ON layers (system_id, archived)
   `,
   subsystemMemberships: `
     CREATE TABLE subsystem_memberships (
