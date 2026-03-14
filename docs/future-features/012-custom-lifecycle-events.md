@@ -28,14 +28,6 @@ Every system experiences its internal dynamics differently. While the built-in l
 
 Without custom event types, systems must either shoehorn these experiences into existing categories (losing specificity) or record them only in journal entries (losing the structured, queryable nature of lifecycle events). Custom event types let systems extend the lifecycle tracking system to match their actual experiences.
 
-## User Stories
-
-- As a system administrator, I want to define a custom lifecycle event type (e.g., "blending episode") so that I can track system experiences that do not fit the built-in categories.
-- As a system member, I want to record a lifecycle event using a custom type so that it appears in the system timeline alongside built-in events with consistent formatting.
-- As a system member, I want to see custom event types in the lifecycle event creation form alongside built-in types so that I do not have to use a separate workflow for custom events.
-- As a system administrator, I want to assign an icon and color to a custom event type so that it is visually distinguishable in the system timeline.
-- As a system member, I want custom lifecycle events to remain visible even if their type definition is later deleted so that the system's historical record is preserved.
-
 ## Proposed Behavior
 
 ### Defining Custom Event Types
@@ -44,7 +36,7 @@ In the system settings, a "Custom Lifecycle Events" section lists all defined cu
 
 - **Name**: A short label for the event type (e.g., "Blending Episode", "Walk-In", "Age Shift").
 - **Description**: An optional longer explanation of what this event type represents.
-- **Applicable fields**: Which data fields are relevant when recording an event of this type. Options include: affected member(s), notes, date/time, and custom data fields. This determines which input fields appear in the event creation form.
+- **Applicable fields**: Which data fields are relevant when recording an event of this type. Options include: affected member(s), notes, date/time, custom data fields, system structure entity references (subsystem, side system, layer), and inner world entity references (regions, entities). This determines which input fields appear in the event creation form.
 - **Icon**: An optional icon from the app's icon set.
 - **Color**: An optional accent color for timeline display.
 
@@ -87,8 +79,10 @@ The `LifecycleEvent` union type gains a new `CustomLifecycleEvent` variant:
 CustomLifecycleEvent {
   eventType: "custom"
   definitionId: string
-  memberIds: string[]  // affected members (optional per definition)
-  notes: string        // free-text notes (optional per definition)
+  memberIds: string[]              // affected members (optional per definition)
+  structureEntityIds: string[]     // subsystem, side system, or layer refs (optional)
+  innerworldEntityIds: string[]    // innerworld region or entity refs (optional)
+  notes: string                    // free-text notes (optional per definition)
   customData: Record<string, unknown>  // additional data fields
 }
 ```
@@ -117,7 +111,7 @@ Custom event data (notes, affected members, custom fields) follows the same encr
 
 ## Open Questions
 
-- Should custom events support custom data fields beyond free-text notes? For example, a "blending episode" event might want structured fields for "intensity" (numeric) and "members involved" (member list). This overlaps with the custom fields system (future feature 010) and could use the same FieldDefinition mechanism, but scoped to lifecycle events.
+- Should custom events support custom data fields beyond free-text notes and entity references? For example, a "blending episode" event might want structured fields for "intensity" (numeric) and "members involved" (member list). This overlaps with the custom fields system (future feature 009) and could use the same FieldDefinition mechanism, but scoped to lifecycle events.
 - Should custom type definitions have a category or grouping system? Systems with many custom types might want to organize them (e.g., "Internal Events," "Relationship Events," "Therapeutic Events"). This adds UI complexity but improves discoverability.
 - How should custom events be handled in data export and import? The export must include both the event data and the type definitions so that imported data can be displayed correctly. If importing into a system that already has different custom types, ID remapping and potential name conflicts must be resolved.
 - Should custom types support a "retired" state (hidden from the creation form but still recognized for existing events) as an alternative to deletion? This avoids orphaned events while keeping the creation form clean.

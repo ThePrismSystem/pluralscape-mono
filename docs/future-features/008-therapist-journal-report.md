@@ -8,7 +8,7 @@
 | Category             | journaling                                                                                                                    |
 | Estimated Complexity | high                                                                                                                          |
 | Dependencies         | Journaling (feature spec 7), fronting history (feature spec 2), privacy buckets (feature spec 4)                              |
-| Related Features     | 007-outtrigger-analytics (optional inclusion), 008-traumaversary-tracking (context), fronting history report (feature spec 2) |
+| Related Features     | 006-outtrigger-analytics (optional inclusion), 007-traumaversary-tracking (context), fronting history report (feature spec 2) |
 
 ## Summary
 
@@ -17,14 +17,6 @@ Generate formatted, shareable reports from selected journal entries for use in t
 ## Motivation
 
 Journal entries are a core therapeutic tool for plural systems. Many therapists ask their clients to share journal excerpts, but the process of manually selecting, copying, and formatting entries is tedious and error-prone. Worse, it often means sharing via unencrypted channels (email, printed screenshots) with no structural context about who wrote what or what was happening at the time. A dedicated report generation feature streamlines this workflow, adds valuable context (fronting data, timeline, authorship), and ensures that privacy bucket controls are respected -- therapists see only what the system has explicitly chosen to share. This reduces session time spent on logistics and increases time spent on therapeutic work.
-
-## User Stories
-
-- As a system, I want to generate a formatted report from my journal entries for a specific date range so that I can share a structured overview with my therapist before our session.
-- As a system, I want the report to show which member authored each journal entry so that my therapist can understand the perspectives of different members.
-- As a system, I want to include fronting context in the report so that my therapist can see who was fronting when each entry was written, even if the author and fronter were different.
-- As a system, I want the report to respect privacy bucket boundaries so that only entries tagged with buckets my therapist has access to are included, preventing accidental disclosure of private content.
-- As a system, I want to optionally include outtrigger analytics in the report so that my therapist can see patterns in what triggers switches alongside the journal narrative.
 
 ## Proposed Behavior
 
@@ -69,14 +61,14 @@ The generated report includes:
 
 **Optional: Outtrigger Analytics Section**
 
-- If the user opts to include outtrigger analysis (from feature 007), a summary section is appended with:
+- If the user opts to include outtrigger analysis (from feature 006), a summary section is appended with:
   - Top outtrigger reasons for the report's date range.
   - Sentiment distribution chart.
   - Per-member outtrigger patterns for members who authored entries in the report.
 
 **Optional: Traumaversary Context**
 
-- If any traumaversaries (from feature 008) fall within the report's date range, they can be optionally listed for temporal context.
+- If any traumaversaries (from feature 007) fall within the report's date range, they can be optionally listed for temporal context.
 
 **Footer**
 

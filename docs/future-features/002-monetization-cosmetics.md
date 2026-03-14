@@ -24,15 +24,6 @@ Cosmetic monetization solves this by offering optional visual enhancements that 
 
 The key constraint is that revenue covers server costs only. This is not a profit-driven model. If costs are covered, there is no pressure to upsell or expand the premium offering into functional territory.
 
-## User Stories
-
-- As a system, I want to purchase premium themes so that I can customize the app's appearance to better reflect our identity.
-- As a system, I want to use an avatar frame assembler so that member avatars can have unique visual treatments (borders, shapes, backgrounds) that distinguish them.
-- As a system, I want a supporter badge visible on the friend network so that friends can see we support the project, and so we feel good about contributing.
-- As a user who cannot afford to pay, I want confidence that I will never be locked out of any feature so that I can use the app without anxiety about future paywalls.
-- As a self-hosted user, I want the same functional features as hosted users so that choosing to self-host does not mean a degraded experience (cosmetics may not apply to self-hosted instances).
-- As a system with littles, I want to know that cosmetic purchases are clearly labeled and require confirmation so that accidental purchases are prevented, especially in Littles Safe Mode.
-
 ## Proposed Behavior
 
 ### Premium Themes

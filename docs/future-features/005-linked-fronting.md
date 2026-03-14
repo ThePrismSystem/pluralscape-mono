@@ -18,14 +18,6 @@ Linked fronting allows systems to define relationships between members where sta
 
 Many systems have members who consistently front together. This may be due to subsystem relationships, protector dynamics, co-conscious partnerships, or simply the way their system works. Currently, users must manually start and end fronting sessions for each member individually, even when the pairing is predictable. This adds unnecessary friction to front logging and increases the chance of incomplete records (forgetting to log the linked member). By allowing systems to define front links, the app can automate these predictable patterns while keeping the user in control.
 
-## User Stories
-
-- As a system member, I want to link my fronting to my protector so that when I start fronting, their session is automatically started too, reducing the number of taps needed to log accurately.
-- As a system, I want to define one-directional links so that when our little starts fronting, their caretaker is automatically brought forward, but the caretaker can front independently without triggering the little.
-- As a system member, I want to override a linked session so that I can end my fronting without ending my linked partner's session when they're still present.
-- As a system, I want a visual indicator on linked fronting sessions so that we can distinguish between independently started sessions and those triggered by a link.
-- As a system, I want the app to detect and prevent link cycles so that we don't accidentally create infinite cascading front triggers.
-
 ## Proposed Behavior
 
 ### Link Configuration
@@ -86,8 +78,6 @@ When creating or modifying links, the app runs cycle detection on the link graph
 
 ## Open Questions
 
-- Should links work across subsystem boundaries (e.g., a member in subsystem A linked to a member in subsystem B)? Given that subsystems can front independently, cross-subsystem links add complexity around which fronting context the link operates in.
 - What should the maximum link chain depth be, and should it be configurable per-system? A depth of 5 seems reasonable as a default, but polyfragmented systems with complex structures might need more.
-- Should linked sessions have independent comments and positionality, or should they inherit from the triggering session? Independent seems more correct (the linked member may have a different experience of the front), but inherited could reduce logging effort.
 - Should there be a "link group" concept where multiple members are linked as a set (any one triggers all others) rather than defining individual pairwise links?
 - How should links interact with custom fronts? Can a member be linked to a custom front (e.g., when member A fronts, the "Blurry" custom front is also automatically logged)?

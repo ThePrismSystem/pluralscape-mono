@@ -22,14 +22,6 @@ Journal entries capture qualitative experiences, but many systems also want to t
 
 This is especially valuable for systems working with therapists. Trends in self-reported data over weeks or months can surface patterns that are hard to notice in free-text entries alone. Combining a dissociation intensity rating with the fronting context of who wrote the entry allows per-member trend analysis -- a protector's anxiety levels over time, or a little's comfort ratings session by session.
 
-## User Stories
-
-- As a system member, I want to quickly rate my anxiety level on a 1-10 scale when writing a journal entry so that I can track how my anxiety changes over time without needing a separate app.
-- As a system administrator, I want to define custom numeric fields (like "dissociation intensity" or "energy level") that appear on all journal entries so that our system has consistent tracking categories.
-- As a system member, I want to view charts showing how a specific field's values trend over time so that I can identify patterns and share insights with my therapist.
-- As a system member, I want to see analytics broken down by which member authored the entry so that I can compare how different headmates experience and rate the same metrics.
-- As a system member, I want filling in custom fields to be optional and fast so that it does not slow down the journaling experience when I just want to write.
-
 ## Proposed Behavior
 
 ### Defining Fields
@@ -81,7 +73,7 @@ Field definitions and values sync between devices using the same CRDT mechanism 
 ## Open Questions
 
 - Should fields be pre-filled based on the most recent previous entry's values, to speed up data entry for fields that change incrementally? This could be helpful but might also introduce bias (anchoring to the previous value).
-- Should there be "quick entry" templates that bundle common field combinations (e.g., a "daily check-in" template with anxiety, dissociation, and energy fields pre-selected)? How would these interact with future feature 012 (member templates)?
+- Should there be "quick entry" templates that bundle common field combinations (e.g., a "daily check-in" template with anxiety, dissociation, and energy fields pre-selected)? How would these interact with future feature 011 (member templates)?
 - How should field values be handled when an entry has multiple authors due to co-fronting? Options include: one set of values per entry (reflecting the collective experience), one set per author (each co-fronter rates independently), or letting the authors decide per entry.
 - Should field definitions support a "default value" or "not applicable" option, distinct from leaving the field blank? Blank could mean "skipped" while N/A means "this field does not apply to this entry."
 - Should there be an import mechanism for historical data from external tracking apps (e.g., CSV import of mood ratings with timestamps)?

@@ -18,11 +18,6 @@
 
 {Why this feature is valuable. What user need does it address?}
 
-## User Stories
-
-- As a {role}, I want to {action} so that {benefit}
-- ...
-
 ## Proposed Behavior
 
 {Detailed description of how the feature would work from the user's perspective}

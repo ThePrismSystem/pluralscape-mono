@@ -8,7 +8,7 @@
 | Category             | journaling                                                                                                  |
 | Estimated Complexity | low                                                                                                         |
 | Dependencies         | Launch feature L3 (fronting snapshot on journal entries), fronting engine                                   |
-| Related Features     | features.md Section 2 (fronting), features.md Section 7 (journaling), future feature 009 (therapist report) |
+| Related Features     | features.md Section 2 (fronting), features.md Section 7 (journaling), future feature 008 (therapist report) |
 
 ## Summary
 
@@ -22,15 +22,7 @@ Journal entries are deeply personal records, and understanding who was fronting 
 
 Currently, the journal entry records its author (the member who created it), but not the full fronting picture. During co-fronting, multiple members may be influencing the writing even if only one is recorded as the author. Showing the complete fronting context at the time of writing captures this nuance.
 
-This feature also supports future feature 009 (therapist report generation), where fronting context alongside journal entries provides therapists with a richer picture of system dynamics.
-
-## User Stories
-
-- As a system member reviewing old journal entries, I want to see who was fronting when the entry was written so that I can understand the emotional and situational context of what was recorded.
-- As a system member, I want to tap on a member shown in the fronting context to navigate to their profile so that I can quickly reference that member's details.
-- As a system member, I want the fronting context to show co-fronting information so that I understand the full picture of who was present, not just the primary fronter.
-- As a system member, I want a fallback display when no snapshot was captured so that older entries still show approximate fronting context based on fronting history.
-- As a system administrator, I want to optionally enable always-visible fronting context on all entries so that our system consistently sees this information without needing to expand a section each time.
+This feature also supports future feature 008 (therapist report generation), where fronting context alongside journal entries provides therapists with a richer picture of system dynamics.
 
 ## Proposed Behavior
 
@@ -98,10 +90,9 @@ The fallback lookup queries only local decrypted data. No server request is made
 
 The fronting context bar does not introduce any new data that the server can observe. It is purely a client-side display feature that combines two existing categories of decrypted data (journal entries and fronting sessions).
 
-If a journal entry is shared via a privacy bucket (e.g., with a therapist through future feature 009), the fronting snapshot is part of the entry blob and would be shared alongside the entry content. The sharing system's per-bucket encryption handles access control.
+If a journal entry is shared via a privacy bucket (e.g., with a therapist through future feature 008), the fronting snapshot is part of the entry blob and would be shared alongside the entry content. The sharing system's per-bucket encryption handles access control.
 
 ## Open Questions
 
 - Should the fronting context show changes if fronting changed during a long writing session? For example, if a member started writing, then a switch happened mid-entry, the context could show a timeline of fronting changes during the writing period. This requires tracking entry start time (not just creation/save time).
 - How should the context bar display compactly when many members were co-fronting (e.g., 5+ members)? Options include a scrollable row, a "+N more" overflow indicator, or a grid layout.
-- Should the fronting context be editable after the fact? If the snapshot was incorrect (e.g., the wrong member was logged as fronting), the user might want to correct it. However, editing a snapshot conflicts with the append-only principle of fronting data. One approach: allow adding a "correction note" without modifying the original snapshot.
