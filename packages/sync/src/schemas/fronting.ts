@@ -1,0 +1,101 @@
+import type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
+
+// ── fronting session ─────────────────────────────────────────────────
+
+/**
+ * CRDT representation of a FrontingSession (append-lww map, keyed by FrontingSessionId).
+ * New sessions are added by assigning to the map; endTime and comment are mutable
+ * after creation via LWW per field.
+ */
+export interface CrdtFrontingSession extends CrdtAuditFields {
+  id: CrdtString;
+  systemId: CrdtString;
+  memberId: CrdtString;
+  startTime: number;
+  /** LWW — set on switch-out. Null while session is active. */
+  endTime: number | null;
+  /** FrontingType string: "fronting" | "co-conscious" */
+  frontingType: CrdtString;
+  comment: CrdtOptionalString;
+  customFrontId: CrdtOptionalString;
+  /** JSON-serialized EntityReference<"subsystem"|"side-system"|"layer"> | null */
+  linkedStructure: CrdtOptionalString;
+  positionality: CrdtOptionalString;
+  /** JSON-serialized outtrigger object | null */
+  outtrigger: CrdtOptionalString;
+  archived: boolean;
+}
+
+// ── fronting comment ─────────────────────────────────────────────────
+
+/** CRDT representation of a FrontingComment (LWW map, keyed by FrontingCommentId). */
+export interface CrdtFrontingComment extends CrdtAuditFields {
+  id: CrdtString;
+  frontingSessionId: CrdtString;
+  systemId: CrdtString;
+  memberId: CrdtString;
+  content: CrdtString;
+  archived: boolean;
+}
+
+// ── switch ───────────────────────────────────────────────────────────
+
+/**
+ * CRDT representation of a Switch (append-only list element).
+ * Immutable once appended — records the moment control transfers.
+ */
+export interface CrdtSwitch {
+  id: CrdtString;
+  systemId: CrdtString;
+  /** JSON-serialized [MemberId, ...MemberId[]] */
+  memberIds: CrdtString;
+  timestamp: number;
+  archived: boolean;
+}
+
+// ── check-in record ──────────────────────────────────────────────────
+
+/**
+ * CRDT representation of a CheckInRecord (append-lww map, keyed by CheckInRecordId).
+ *
+ * Topology correction: was append-only in v1 spec. Modeled as map because
+ * respondedByMemberId, respondedAt, and dismissed are mutated after creation.
+ *
+ * Post-merge normalization: if respondedByMemberId is non-null, dismissed must
+ * be false (response takes priority over dismiss when both happen concurrently).
+ */
+export interface CrdtCheckInRecord extends CrdtAuditFields {
+  id: CrdtString;
+  timerConfigId: CrdtString;
+  systemId: CrdtString;
+  scheduledAt: number;
+  /** LWW — set when a member responds. */
+  respondedByMemberId: CrdtOptionalString;
+  /** LWW — set when a member responds. */
+  respondedAt: number | null;
+  /** LWW — set when dismissed. See normalization rule in conflict-resolution.md. */
+  dismissed: boolean;
+  archived: boolean;
+}
+
+// ── document ─────────────────────────────────────────────────────────
+
+/**
+ * Automerge document schema for the fronting document.
+ *
+ * Contains all fronting activity — the highest-frequency write path in the
+ * application. Time-split by calendar quarter when document exceeds 5 MB.
+ *
+ * Encryption key: Master key
+ * Naming: fronting-{systemId} (splits to fronting-{systemId}-{YYYY-QN})
+ */
+export interface FrontingDocument {
+  /** Append-lww map: sessions are added by ID assignment; endTime/comment are mutable. */
+  sessions: Record<string, CrdtFrontingSession>;
+  /** LWW map keyed by FrontingCommentId. */
+  comments: Record<string, CrdtFrontingComment>;
+  /** Append-only list of switch events. Immutable once appended. */
+  switches: CrdtSwitch[];
+  /** Append-lww map: records are added by ID assignment; response fields are mutable. */
+  checkInRecords: Record<string, CrdtCheckInRecord>;
+}
