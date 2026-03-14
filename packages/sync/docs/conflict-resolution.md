@@ -23,6 +23,10 @@ Rationale:
 - Future collaborative editing fields (journal content): would use plain `string`.
 - V1: **all string fields use `ImmutableString`** — character-level collaborative editing is deferred.
 
+**Automerge.Text deferred to V2.** In Automerge 3.x, a plain `string` property is the collaborative text type (equivalent to `Automerge.Text` in 2.x). V1 uses `ImmutableString` for all string fields, including journal `blocks` (stored as serialized JSON). Fields that would benefit from character-level collaborative editing (e.g., shared journal content, wiki pages) would switch to plain `string` in V2+, after the app-layer merge semantics and UI for collaborative editing are designed.
+
+**Automerge.Counter not used.** Numeric aggregates (e.g., vote counts) are computed at read time from source data (the `votes[]` append-only list) rather than maintained as CRDT counters. This avoids counter drift from concurrent increments and keeps the document schema simpler — counters are a derived view, not stored state.
+
 ---
 
 ## Storage Type Taxonomy
@@ -219,6 +223,21 @@ PrivacyConfigDocument {
   keyGrants: Record<id, CrdtKeyGrant>                 // append-lww
 }
 ```
+
+---
+
+## Document-Level Merge Semantics
+
+The table below summarizes the dominant merge profile for each document type. Individual entity strategies are detailed in the per-entity tables above.
+
+| Document type    | Dominant merge profile                   | Key characteristics                                                                                                                                                                         |
+| ---------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `system-core`    | LWW maps + junction add-wins             | All entity maps are LWW per field; junctions are `Record<string, true>` (add-wins). Post-merge cycle detection required for group/subsystem/innerworld-region hierarchies.                  |
+| `fronting`       | Append-only + append-lww                 | `switches[]` is append-only; `sessions` and `checkInRecords` are append-lww. Time-split by month eliminates merge conflicts for historical periods.                                         |
+| `chat`           | Primarily append-only; LWW metadata      | `messages[]` and `votes[]` are append-only. Edit chains resolved at application layer via `editOf` links. Time-split by month. Board messages use append-lww for `pinned`/`sortOrder`.      |
+| `journal`        | Append-lww entries + LWW wiki/notes      | Journal entries mutable after creation (title, blocks, tags). Wiki pages and notes are fully LWW.                                                                                           |
+| `privacy-config` | LWW maps; security-critical revocation   | Key grants are append-lww; `revokedAt` is the only mutable field. Any revocation wins — idempotent from a security perspective. `assignedBuckets` nested map uses add-wins.                 |
+| `bucket`         | Read-only projections; owner writes only | Bucket documents are derived projections from master-key documents, filtered by `BucketVisibilityScope`. Friends never write to bucket documents — no merge conflicts from the friend side. |
 
 ---
 
