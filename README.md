@@ -16,6 +16,11 @@ Milestone 0 (infrastructure and governance) is complete. Within Milestone 1, the
 - Test framework setup — Vitest workspace with coverage enforcement
 - Encryption primitives (`@pluralscape/crypto`) — master key derivation, symmetric encryption, identity keypairs, libsodium cross-platform bindings
 - Sync proof-of-concept (`@pluralscape/sync`) — encrypted CRDT relay with Automerge
+- Launch feature types — fronting snapshots, outtrigger, member duplication, lifecycle events, system snapshots (L2-L10)
+- Entity archival — archived/archived_at columns across all non-audit entity types with consistency checks and partial indexes
+- RLS policy bootstrapping — row-level security policies for all tenant-scoped tables
+- SQLCipher encryption-at-rest — encrypted SQLite for self-hosted deployments
+- Database schema documentation — full ER diagrams for all 40+ tables
 
 Remaining M1 work: encryption layer completion (key recovery, per-bucket keys, rotation), sync protocol design, blob storage, background jobs, i18n, and nomenclature system.
 
@@ -23,14 +28,14 @@ See the full [milestone roadmap](docs/planning/milestones.md) and [feature speci
 
 ## Test Suite
 
-2,338 tests across 132 test files — all passing.
+2,889 tests across 144 test files — all passing.
 
 | Metric     | Coverage |
 | ---------- | -------- |
-| Statements | 95.01%   |
-| Branches   | 83.77%   |
-| Functions  | 98.48%   |
-| Lines      | 94.97%   |
+| Statements | 96.46%   |
+| Branches   | 86.29%   |
+| Functions  | 99.03%   |
+| Lines      | 96.43%   |
 
 Coverage by package:
 
@@ -185,7 +190,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 18 accepted ADRs cover the full stack from licensing through encryption-at-rest boundaries. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 22 accepted ADRs cover the full stack from licensing through system snapshots. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 
