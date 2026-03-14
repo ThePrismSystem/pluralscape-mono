@@ -140,3 +140,12 @@ export { createWebKeyStorage } from "./web-key-storage.js";
 // ── Safety Number verification ───────────────────────────────────────
 export type { SafetyNumber } from "./safety-number.js";
 export { computeSafetyNumber } from "./safety-number.js";
+
+// ── Key grants (Privacy Bucket sharing) ──────────────────────────────
+export type {
+  CreateKeyGrantParams,
+  CreateKeyGrantsBatchParams,
+  DecryptKeyGrantParams,
+  KeyGrantBlob,
+} from "./key-grants.js";
+export { createKeyGrant, createKeyGrants, decryptKeyGrant } from "./key-grants.js";
