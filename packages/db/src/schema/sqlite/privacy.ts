@@ -10,8 +10,8 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
 import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -30,11 +30,17 @@ export const buckets = sqliteTable(
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("buckets_system_id_idx").on(t.systemId),
+    index("buckets_system_archived_idx").on(t.systemId, t.archived),
     unique("buckets_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("buckets", t.version),
+    check(
+      "buckets_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -105,15 +111,21 @@ export const friendConnections = sqliteTable(
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("friend_connections_account_status_idx").on(t.accountId, t.status),
     index("friend_connections_friend_status_idx").on(t.friendAccountId, t.status),
+    index("friend_connections_account_archived_idx").on(t.accountId, t.archived),
     unique("friend_connections_account_friend_uniq").on(t.accountId, t.friendAccountId),
     unique("friend_connections_id_account_id_unique").on(t.id, t.accountId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.accountId} != ${t.friendAccountId}`),
     versionCheckFor("friend_connections", t.version),
+    check(
+      "friend_connections_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -127,6 +139,7 @@ export const friendCodes = sqliteTable(
     code: text("code").notNull().unique(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     expiresAt: sqliteTimestamp("expires_at"),
+    ...archivable(),
   },
   (t) => [
     index("friend_codes_account_id_idx").on(t.accountId),
@@ -135,6 +148,10 @@ export const friendCodes = sqliteTable(
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
     ),
     check("friend_codes_code_min_length_check", sql`length(${t.code}) >= 8`),
+    check(
+      "friend_codes_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

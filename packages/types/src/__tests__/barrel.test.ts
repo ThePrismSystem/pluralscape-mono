@@ -228,8 +228,13 @@ import type {
   ApiError,
   ApiResponse,
   ArchivedCustomFront,
+  ArchivedFriendCode,
+  ArchivedFriendConnection,
   ArchivedGroup,
+  ArchivedInnerWorldEntity,
+  ArchivedInnerWorldRegion,
   ArchivedMember,
+  ArchivedPrivacyBucket,
   ArchitectureType,
   KnownArchitectureType,
   StructureVisualProps,
@@ -397,12 +402,15 @@ describe("barrel exports", () => {
 
   it("exports privacy types", () => {
     expectTypeOf<PrivacyBucket>().toBeObject();
+    expectTypeOf<ArchivedPrivacyBucket>().toBeObject();
     expectTypeOf<BucketContentTag>().toBeObject();
     expectTypeOf<BucketVisibilityScope>().toBeString();
     expectTypeOf<KeyGrant>().toBeObject();
     expectTypeOf<FriendConnectionStatus>().toBeString();
     expectTypeOf<FriendConnection>().toBeObject();
+    expectTypeOf<ArchivedFriendConnection>().toBeObject();
     expectTypeOf<FriendCode>().toBeObject();
+    expectTypeOf<ArchivedFriendCode>().toBeObject();
     expectTypeOf<BucketAccessCheck>().toBeObject();
     expectTypeOf<FriendVisibilitySettings>().toBeObject();
   });
@@ -699,7 +707,9 @@ describe("barrel exports", () => {
     expectTypeOf<MemberEntity>().toBeObject();
     expectTypeOf<LandmarkEntity>().toBeObject();
     expectTypeOf<InnerWorldEntity>().toBeObject();
+    expectTypeOf<ArchivedInnerWorldEntity>().toBeObject();
     expectTypeOf<InnerWorldRegion>().toBeObject();
+    expectTypeOf<ArchivedInnerWorldRegion>().toBeObject();
     expectTypeOf<InnerWorldCanvas>().toBeObject();
     expectTypeOf<SubsystemEntity>().toBeObject();
     expectTypeOf<SideSystemEntity>().toBeObject();

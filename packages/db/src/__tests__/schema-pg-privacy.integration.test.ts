@@ -162,6 +162,72 @@ describe("PG privacy schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(buckets).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(buckets).where(eq(buckets.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(buckets).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      const rows = await db.select().from(buckets).where(eq(buckets.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO buckets (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x010203'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO buckets (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x010203'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("bucket_content_tags", () => {
@@ -508,6 +574,80 @@ describe("PG privacy schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      await insertSystem(friendAccountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id,
+        accountId,
+        friendAccountId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(friendConnections).where(eq(friendConnections.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      await insertSystem(friendAccountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id,
+        accountId,
+        friendAccountId,
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      const rows = await db.select().from(friendConnections).where(eq(friendConnections.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      await insertSystem(friendAccountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO friend_connections (id, account_id, friend_account_id, status, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, 'pending', $4, $5, 1, true, NULL)",
+          [crypto.randomUUID(), accountId, friendAccountId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const friendAccountId = await insertAccount();
+      await insertSystem(friendAccountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO friend_connections (id, account_id, friend_account_id, status, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, 'pending', $4, $5, 1, false, $6)",
+          [crypto.randomUUID(), accountId, friendAccountId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("friend_codes", () => {
@@ -647,6 +787,70 @@ describe("PG privacy schema", () => {
           expiresAt: now,
         }),
       ).rejects.toThrow();
+    });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendCodes).values({
+        id,
+        accountId,
+        code: `CODE_${crypto.randomUUID()}`,
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(friendCodes).where(eq(friendCodes.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendCodes).values({
+        id,
+        accountId,
+        code: `CODE_${crypto.randomUUID()}`,
+        createdAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      const rows = await db.select().from(friendCodes).where(eq(friendCodes.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO friend_codes (id, account_id, code, created_at, archived, archived_at) VALUES ($1, $2, $3, $4, true, NULL)",
+          [crypto.randomUUID(), accountId, `CODE_${crypto.randomUUID()}`, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO friend_codes (id, account_id, code, created_at, archived, archived_at) VALUES ($1, $2, $3, $4, false, $5)",
+          [crypto.randomUUID(), accountId, `CODE_${crypto.randomUUID()}`, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
   });
 

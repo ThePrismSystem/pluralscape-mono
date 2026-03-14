@@ -2,8 +2,8 @@ import { sql } from "drizzle-orm";
 import { check, index, integer, pgTable, primaryKey, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
@@ -23,11 +23,17 @@ export const buckets = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("buckets_system_id_idx").on(t.systemId),
+    index("buckets_system_archived_idx").on(t.systemId, t.archived),
     unique("buckets_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("buckets", t.version),
+    check(
+      "buckets_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -103,15 +109,21 @@ export const friendConnections = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data"),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("friend_connections_account_status_idx").on(t.accountId, t.status),
     index("friend_connections_friend_status_idx").on(t.friendAccountId, t.status),
+    index("friend_connections_account_archived_idx").on(t.accountId, t.archived),
     unique("friend_connections_account_friend_uniq").on(t.accountId, t.friendAccountId),
     unique("friend_connections_id_account_id_unique").on(t.id, t.accountId),
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.accountId} != ${t.friendAccountId}`),
     versionCheckFor("friend_connections", t.version),
+    check(
+      "friend_connections_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -125,6 +137,7 @@ export const friendCodes = pgTable(
     code: varchar("code", { length: 255 }).notNull().unique(),
     createdAt: pgTimestamp("created_at").notNull(),
     expiresAt: pgTimestamp("expires_at"),
+    ...archivable(),
   },
   (t) => [
     index("friend_codes_account_id_idx").on(t.accountId),
@@ -133,6 +146,10 @@ export const friendCodes = pgTable(
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
     ),
     check("friend_codes_code_min_length_check", sql`length(${t.code}) >= 8`),
+    check(
+      "friend_codes_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

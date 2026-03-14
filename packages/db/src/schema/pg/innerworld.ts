@@ -1,7 +1,8 @@
-import { foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { check, foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import { archivableConsistencyCheck } from "../../helpers/check.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
@@ -20,15 +21,21 @@ export const innerworldRegions = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("innerworld_regions_system_id_idx").on(t.systemId),
+    index("innerworld_regions_system_archived_idx").on(t.systemId, t.archived),
     unique("innerworld_regions_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentRegionId, t.systemId],
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     versionCheckFor("innerworld_regions", t.version),
+    check(
+      "innerworld_regions_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -43,15 +50,21 @@ export const innerworldEntities = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("innerworld_entities_system_id_idx").on(t.systemId),
     index("innerworld_entities_region_id_idx").on(t.regionId),
+    index("innerworld_entities_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
     versionCheckFor("innerworld_entities", t.version),
+    check(
+      "innerworld_entities_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

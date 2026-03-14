@@ -12,6 +12,8 @@ import type {
 } from "../ids.js";
 import type { ImageSource } from "../image-source.js";
 import type {
+  ArchivedInnerWorldEntity,
+  ArchivedInnerWorldRegion,
   InnerWorldCanvas,
   InnerWorldEntity,
   InnerWorldRegion,
@@ -22,7 +24,7 @@ import type {
   SubsystemEntity,
   VisualProperties,
 } from "../innerworld.js";
-import type { AuditMetadata } from "../utility.js";
+import type { Archived, AuditMetadata } from "../utility.js";
 
 describe("VisualProperties", () => {
   it("has exactly the expected keys", () => {
@@ -157,6 +159,20 @@ describe("InnerWorldEntity", () => {
     expectTypeOf<InnerWorldEntity["positionX"]>().toEqualTypeOf<number>();
     expectTypeOf<InnerWorldEntity["positionY"]>().toEqualTypeOf<number>();
   });
+
+  it("has archived: false on all variants", () => {
+    expectTypeOf<InnerWorldEntity["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedInnerWorldEntity", () => {
+  it("is Archived<InnerWorldEntity>", () => {
+    expectTypeOf<ArchivedInnerWorldEntity>().toEqualTypeOf<Archived<InnerWorldEntity>>();
+  });
+
+  it("has archived: true and archivedAt", () => {
+    expectTypeOf<ArchivedInnerWorldEntity["archived"]>().toEqualTypeOf<true>();
+  });
 });
 
 describe("InnerWorldRegion", () => {
@@ -173,6 +189,20 @@ describe("InnerWorldRegion", () => {
     expectTypeOf<InnerWorldRegion["visual"]>().toEqualTypeOf<VisualProperties>();
     expectTypeOf<InnerWorldRegion["accessType"]>().toEqualTypeOf<"open" | "gatekept">();
     expectTypeOf<InnerWorldRegion["gatekeeperMemberIds"]>().toEqualTypeOf<readonly MemberId[]>();
+  });
+
+  it("has archived: false", () => {
+    expectTypeOf<InnerWorldRegion["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedInnerWorldRegion", () => {
+  it("is Archived<InnerWorldRegion>", () => {
+    expectTypeOf<ArchivedInnerWorldRegion>().toEqualTypeOf<Archived<InnerWorldRegion>>();
+  });
+
+  it("has archived: true and archivedAt", () => {
+    expectTypeOf<ArchivedInnerWorldRegion["archived"]>().toEqualTypeOf<true>();
   });
 });
 

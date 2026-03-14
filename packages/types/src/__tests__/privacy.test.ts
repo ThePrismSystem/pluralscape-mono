@@ -9,6 +9,9 @@ import type {
   SystemId,
 } from "../ids.js";
 import type {
+  ArchivedFriendCode,
+  ArchivedFriendConnection,
+  ArchivedPrivacyBucket,
   BucketAccessCheck,
   BucketContentEntityType,
   BucketContentTag,
@@ -22,7 +25,7 @@ import type {
   PrivacyBucket,
 } from "../privacy.js";
 import type { UnixMillis } from "../timestamps.js";
-import type { AuditMetadata } from "../utility.js";
+import type { Archived, AuditMetadata } from "../utility.js";
 
 describe("PrivacyBucket", () => {
   it("extends AuditMetadata", () => {
@@ -34,6 +37,20 @@ describe("PrivacyBucket", () => {
     expectTypeOf<PrivacyBucket["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<PrivacyBucket["name"]>().toBeString();
     expectTypeOf<PrivacyBucket["description"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("has archived: false", () => {
+    expectTypeOf<PrivacyBucket["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedPrivacyBucket", () => {
+  it("is Archived<PrivacyBucket>", () => {
+    expectTypeOf<ArchivedPrivacyBucket>().toEqualTypeOf<Archived<PrivacyBucket>>();
+  });
+
+  it("has archived: true", () => {
+    expectTypeOf<ArchivedPrivacyBucket["archived"]>().toEqualTypeOf<true>();
   });
 });
 
@@ -138,6 +155,20 @@ describe("FriendConnection", () => {
     expectTypeOf<FriendConnection["assignedBucketIds"]>().toEqualTypeOf<readonly BucketId[]>();
     expectTypeOf<FriendConnection["visibility"]>().toEqualTypeOf<FriendVisibilitySettings>();
   });
+
+  it("has archived: false", () => {
+    expectTypeOf<FriendConnection["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedFriendConnection", () => {
+  it("is Archived<FriendConnection>", () => {
+    expectTypeOf<ArchivedFriendConnection>().toEqualTypeOf<Archived<FriendConnection>>();
+  });
+
+  it("has archived: true", () => {
+    expectTypeOf<ArchivedFriendConnection["archived"]>().toEqualTypeOf<true>();
+  });
 });
 
 describe("FriendVisibilitySettings", () => {
@@ -166,6 +197,20 @@ describe("FriendCode", () => {
     expectTypeOf<FriendCode["code"]>().toBeString();
     expectTypeOf<FriendCode["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<FriendCode["expiresAt"]>().toEqualTypeOf<UnixMillis | null>();
+  });
+
+  it("has archived: false", () => {
+    expectTypeOf<FriendCode["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedFriendCode", () => {
+  it("is Archived<FriendCode>", () => {
+    expectTypeOf<ArchivedFriendCode>().toEqualTypeOf<Archived<FriendCode>>();
+  });
+
+  it("has archived: true", () => {
+    expectTypeOf<ArchivedFriendCode["archived"]>().toEqualTypeOf<true>();
   });
 });
 

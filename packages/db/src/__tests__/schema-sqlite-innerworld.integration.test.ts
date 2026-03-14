@@ -73,6 +73,82 @@ describe("SQLite Innerworld Schema", () => {
     expect(rows[0]).not.toHaveProperty("gatekeeperMemberIds");
   });
 
+  it("innerworld_regions defaults archived to false and archivedAt to null", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+    const regionId = crypto.randomUUID();
+
+    db.insert(innerworldRegions)
+      .values({
+        id: regionId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+
+    const rows = db
+      .select()
+      .from(innerworldRegions)
+      .where(eq(innerworldRegions.id, regionId))
+      .all();
+    expect(rows[0]?.archived).toBe(false);
+    expect(rows[0]?.archivedAt).toBeNull();
+  });
+
+  it("innerworld_regions round-trips archived: true with archivedAt", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+    const regionId = crypto.randomUUID();
+
+    db.insert(innerworldRegions)
+      .values({
+        id: regionId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      })
+      .run();
+
+    const rows = db
+      .select()
+      .from(innerworldRegions)
+      .where(eq(innerworldRegions.id, regionId))
+      .all();
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(now);
+  });
+
+  it("innerworld_regions rejects archived=true with archivedAt=null via CHECK", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          "INSERT INTO innerworld_regions (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'010203', ?, ?, 1, 1, NULL)",
+        )
+        .run(crypto.randomUUID(), systemId, now, now),
+    ).toThrow(/CHECK|constraint/i);
+  });
+
+  it("innerworld_regions rejects archived=false with archivedAt set via CHECK", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          "INSERT INTO innerworld_regions (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'010203', ?, ?, 1, 0, ?)",
+        )
+        .run(crypto.randomUUID(), systemId, now, now, now),
+    ).toThrow(/CHECK|constraint/i);
+  });
+
   it("round-trips innerworldEntities with all fields", () => {
     const systemId = setupSystem();
     const now = Date.now();
@@ -112,6 +188,82 @@ describe("SQLite Innerworld Schema", () => {
     expect(rows[0]?.systemId).toBe(systemId);
     expect(rows[0]?.regionId).toBe(regionId);
     expect(rows[0]?.encryptedData).toEqual(testBlob(new Uint8Array([40, 50, 60])));
+  });
+
+  it("innerworld_entities defaults archived to false and archivedAt to null", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+    const entityId = crypto.randomUUID();
+
+    db.insert(innerworldEntities)
+      .values({
+        id: entityId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
+
+    const rows = db
+      .select()
+      .from(innerworldEntities)
+      .where(eq(innerworldEntities.id, entityId))
+      .all();
+    expect(rows[0]?.archived).toBe(false);
+    expect(rows[0]?.archivedAt).toBeNull();
+  });
+
+  it("innerworld_entities round-trips archived: true with archivedAt", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+    const entityId = crypto.randomUUID();
+
+    db.insert(innerworldEntities)
+      .values({
+        id: entityId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      })
+      .run();
+
+    const rows = db
+      .select()
+      .from(innerworldEntities)
+      .where(eq(innerworldEntities.id, entityId))
+      .all();
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(now);
+  });
+
+  it("innerworld_entities rejects archived=true with archivedAt=null via CHECK", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          "INSERT INTO innerworld_entities (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'010203', ?, ?, 1, 1, NULL)",
+        )
+        .run(crypto.randomUUID(), systemId, now, now),
+    ).toThrow(/CHECK|constraint/i);
+  });
+
+  it("innerworld_entities rejects archived=false with archivedAt set via CHECK", () => {
+    const systemId = setupSystem();
+    const now = Date.now();
+
+    expect(() =>
+      client
+        .prepare(
+          "INSERT INTO innerworld_entities (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'010203', ?, ?, 1, 0, ?)",
+        )
+        .run(crypto.randomUUID(), systemId, now, now, now),
+    ).toThrow(/CHECK|constraint/i);
   });
 
   it("round-trips innerworldCanvas (1:1 pattern, systemId as PK)", () => {
