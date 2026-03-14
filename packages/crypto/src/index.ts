@@ -127,3 +127,7 @@ export { generateRecoveryKey, isValidRecoveryKeyFormat, recoverMasterKey } from 
 
 // ── Signature operations ─────────────────────────────────────────────
 export { decryptThenVerify, sign, signThenEncrypt, verify } from "./sign.js";
+
+// ── Key storage ──────────────────────────────────────────────────────
+export type { KeyStorageOpts, SecureKeyStorage } from "./key-storage.js";
+export { createWebKeyStorage } from "./web-key-storage.js";
