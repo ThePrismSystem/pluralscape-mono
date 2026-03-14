@@ -55,10 +55,13 @@ export function createWebKeyStorage(): SecureKeyStorage {
 
     clearAll(): Promise<void> {
       const adapter = getSodium();
-      for (const key of store.values()) {
-        adapter.memzero(key);
+      try {
+        for (const key of store.values()) {
+          adapter.memzero(key);
+        }
+      } finally {
+        store.clear();
       }
-      store.clear();
       return Promise.resolve();
     },
 

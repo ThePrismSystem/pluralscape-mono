@@ -53,6 +53,15 @@ describe("sign / verify", () => {
     const sig = sign(data, kp.secretKey);
     expect(verify(data, sig, kp.publicKey)).toBe(true);
   });
+
+  it("corrupted signature fails verification", () => {
+    const kp = getSodium().signKeypair();
+    const data = new TextEncoder().encode("integrity check");
+    const sig = sign(data, kp.secretKey);
+    const corrupted = new Uint8Array(sig);
+    corrupted[0] = (corrupted[0] ?? 0) ^ 0xff;
+    expect(verify(data, corrupted as typeof sig, kp.publicKey)).toBe(false);
+  });
 });
 
 describe("signThenEncrypt / decryptThenVerify", () => {

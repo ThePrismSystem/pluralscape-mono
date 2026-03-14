@@ -24,6 +24,12 @@ const BYTES_PER_GROUP = 5;
 /** Number of 5-byte groups in a fingerprint (30 bytes / 5 bytes = 6 groups). */
 const GROUPS_PER_FINGERPRINT = SAFETY_NUMBER_HASH_BYTES / BYTES_PER_GROUP;
 
+if (SAFETY_NUMBER_HASH_BYTES % BYTES_PER_GROUP !== 0) {
+  throw new Error(
+    `SAFETY_NUMBER_HASH_BYTES (${String(SAFETY_NUMBER_HASH_BYTES)}) must be divisible by BYTES_PER_GROUP (${String(BYTES_PER_GROUP)})`,
+  );
+}
+
 /** Modulus for converting 5 bytes into a 5-digit decimal number (0-99999). */
 const DIGIT_MODULUS = 100_000;
 

@@ -71,23 +71,12 @@ describe("computeSafetyNumber", () => {
   });
 
   it("leading zeros are preserved in each group", () => {
-    // Run many pairs until we find one with a leading-zero group, or
-    // at minimum verify the format allows it (the digit encoding zero-pads to 5 digits)
-    let foundLeadingZero = false;
-    for (let i = 0; i < 50; i++) {
-      const sn = computeSafetyNumber(makeKey(), `u${String(i)}`, makeKey(), `v${String(i)}`);
-      const groups = sn.displayString.trim().split(" ");
-      if (groups.some((g) => g.startsWith("0"))) {
-        foundLeadingZero = true;
-        break;
-      }
-    }
-    // If we find one, good. If not, that's statistically unlikely but not a bug.
-    // The real assertion is that every group is exactly 5 digits.
     const sn = computeSafetyNumber(makeKey(), "u", makeKey(), "v");
     const groups = sn.displayString.trim().split(" ");
-    expect(groups.every((g) => g.length === 5)).toBe(true);
-    void foundLeadingZero;
+    for (const g of groups) {
+      expect(g).toHaveLength(5);
+      expect(/^\d{5}$/.test(g)).toBe(true);
+    }
   });
 
   it("self-verification: identical keys produce a valid safety number", () => {
@@ -114,5 +103,22 @@ describe("computeSafetyNumber", () => {
     const kp2 = makeKey();
     const longId = "a".repeat(1000);
     expect(() => computeSafetyNumber(kp1, longId, kp2, longId)).not.toThrow();
+  });
+
+  it("handles Unicode stableId (emoji, CJK, multi-byte)", () => {
+    const kp1 = makeKey();
+    const kp2 = makeKey();
+    const sn = computeSafetyNumber(
+      kp1,
+      "\u{1F30D}\u5B89\u5168\u00FC\u00E9",
+      kp2,
+      "\u{1F525}\u4E16\u754C\u00F1",
+    );
+    const groups = sn.displayString.trim().split(" ");
+    expect(groups).toHaveLength(12);
+    for (const g of groups) {
+      expect(g).toHaveLength(5);
+      expect(/^\d{5}$/.test(g)).toBe(true);
+    }
   });
 });

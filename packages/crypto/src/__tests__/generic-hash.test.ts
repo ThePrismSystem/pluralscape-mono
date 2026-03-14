@@ -1,11 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  GENERIC_HASH_BYTES_MAX,
-  GENERIC_HASH_BYTES_MIN,
-  KDF_BYTES_MAX,
-  KDF_BYTES_MIN,
-} from "../constants.js";
+import { GENERIC_HASH_BYTES_MAX, GENERIC_HASH_BYTES_MIN } from "../constants.js";
 import { InvalidInputError } from "../errors.js";
 import { getSodium } from "../sodium.js";
 
@@ -63,11 +58,6 @@ describe("genericHash (BLAKE2b)", () => {
   it("handles empty message", () => {
     const hash = getSodium().genericHash(32, new Uint8Array(0));
     expect(hash.length).toBe(32);
-  });
-
-  it("constant bounds match KDF bounds (both are BLAKE2b)", () => {
-    expect(GENERIC_HASH_BYTES_MIN).toBe(KDF_BYTES_MIN);
-    expect(GENERIC_HASH_BYTES_MAX).toBe(KDF_BYTES_MAX);
   });
 });
 

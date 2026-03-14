@@ -2,6 +2,7 @@ import { SIGN_BYTES } from "./constants.js";
 import { InvalidInputError, SignatureVerificationError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 import { decrypt, encrypt } from "./symmetric.js";
+import { assertSignature } from "./validation.js";
 
 import type { EncryptedPayload } from "./symmetric.js";
 import type { AeadKey, Signature, SignPublicKey, SignSecretKey } from "./types.js";
@@ -29,7 +30,11 @@ export function signThenEncrypt(
   const combined = new Uint8Array(SIGN_BYTES + data.length);
   combined.set(sig, 0);
   combined.set(data, SIGN_BYTES);
-  return encrypt(combined, encryptionKey);
+  try {
+    return encrypt(combined, encryptionKey);
+  } finally {
+    getSodium().memzero(combined);
+  }
 }
 
 /**
@@ -49,7 +54,9 @@ export function decryptThenVerify(
       `Decrypted payload too short: expected at least ${String(SIGN_BYTES)} bytes for signature, got ${String(combined.length)}.`,
     );
   }
-  const sig = combined.subarray(0, SIGN_BYTES) as Signature;
+  const sigBytes = combined.subarray(0, SIGN_BYTES);
+  assertSignature(sigBytes);
+  const sig = sigBytes as Signature;
   const data = combined.subarray(SIGN_BYTES);
   if (!verify(data, sig, signingPublicKey)) {
     throw new SignatureVerificationError();

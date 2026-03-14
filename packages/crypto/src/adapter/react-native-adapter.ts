@@ -201,7 +201,7 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
     } catch (error: unknown) {
       // After input validation, libsodium throws Error for invalid signatures.
       // Rethrow non-Error exceptions to avoid swallowing system failures.
-      if (error instanceof Error) {
+      if (error instanceof Error && error.message.includes("incorrect signature")) {
         return false;
       }
       throw error;
