@@ -86,6 +86,20 @@ export {
   encryptStream,
 } from "./symmetric.js";
 
+// ── Tier helpers ────────────────────────────────────────────────────
+export type { Tier2EncryptParams } from "./tiers.js";
+export {
+  decryptTier1,
+  decryptTier1Batch,
+  decryptTier2,
+  decryptTier2Batch,
+  encryptTier1,
+  encryptTier1Batch,
+  encryptTier2,
+  encryptTier2Batch,
+  wrapTier3,
+} from "./tiers.js";
+
 // ── Identity keypairs ───────────────────────────────────────────────
 export type { EncryptedPrivateKey, IdentityKeypair } from "./identity.js";
 export {
