@@ -90,9 +90,9 @@ export function assertKdfSubkeyLength(len: number): void {
 }
 
 export function validateKeyVersion(keyVersion: number): number {
-  if (!Number.isInteger(keyVersion) || keyVersion < 0) {
+  if (!Number.isSafeInteger(keyVersion) || keyVersion < 0) {
     throw new InvalidInputError(
-      `keyVersion must be a non-negative integer, got ${String(keyVersion)}`,
+      `keyVersion must be a non-negative safe integer, got ${String(keyVersion)}`,
     );
   }
   return keyVersion;

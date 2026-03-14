@@ -20,6 +20,15 @@ export interface WrappedBucketKey {
 }
 
 /**
+ * Re-encrypts a single payload from an old bucket key to a new one.
+ *
+ * Decrypts with the old key and re-encrypts with the new key.
+ * Safe to call multiple times. Not safe to call after either the old
+ * or new key has been zeroed from memory.
+ */
+export type ReEncryptFn = (payload: EncryptedPayload) => EncryptedPayload;
+
+/**
  * Result of a bucket key rotation.
  *
  * `reEncrypt` re-encrypts a payload from the old bucket key to the new one.
@@ -28,7 +37,7 @@ export interface WrappedBucketKey {
 export interface RotatedBucketKey {
   readonly newKey: AeadKey;
   readonly newVersion: number;
-  readonly reEncrypt: (payload: EncryptedPayload) => EncryptedPayload;
+  readonly reEncrypt: ReEncryptFn;
 }
 
 /** Generate a fresh random 256-bit bucket symmetric key. */
@@ -56,6 +65,7 @@ export function encryptBucketKey(
     masterKey,
   );
   try {
+    assertAeadKey(wrappingKey);
     const result = encrypt(bucketKey, wrappingKey as AeadKey);
     return { ciphertext: result.ciphertext, nonce: result.nonce, keyVersion };
   } finally {
@@ -78,6 +88,7 @@ export function decryptBucketKey(wrapped: WrappedBucketKey, masterKey: KdfMaster
     masterKey,
   );
   try {
+    assertAeadKey(wrappingKey);
     const raw = decrypt(
       { ciphertext: wrapped.ciphertext, nonce: wrapped.nonce },
       wrappingKey as AeadKey,
@@ -93,12 +104,14 @@ export function decryptBucketKey(wrapped: WrappedBucketKey, masterKey: KdfMaster
  * Rotate a bucket key: generate a new key and return a re-encryption helper.
  *
  * `reEncrypt` decrypts a payload with the old key and re-encrypts with the new key.
- * The caller is responsible for zeroing both the old and new keys when done.
+ * The caller is responsible for zeroing both the old and new keys when done,
+ * including on error paths (e.g., if `reEncrypt` throws mid-rotation).
  */
 export function rotateBucketKey(oldKey: AeadKey, currentVersion: number): RotatedBucketKey {
   validateKeyVersion(currentVersion);
   const newKey = generateBucketKey();
   const newVersion = currentVersion + 1;
+  validateKeyVersion(newVersion);
   const reEncrypt = (payload: EncryptedPayload): EncryptedPayload => {
     const plaintext = decrypt(payload, oldKey);
     return encrypt(plaintext, newKey);

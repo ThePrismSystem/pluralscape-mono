@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import { createBucketKeyCache } from "../bucket-key-cache.js";
 import { generateBucketKey } from "../bucket-keys.js";
-import { _resetForTesting, configureSodium, getSodium, initSodium } from "../sodium.js";
+import { getSodium } from "../sodium.js";
+
+import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
 import type { BucketKeyCache } from "../bucket-key-cache.js";
 import type { AeadKey } from "../types.js";
@@ -15,16 +16,8 @@ const bucket3 = "bucket-003" as BucketId;
 
 let cache: BucketKeyCache;
 
-beforeAll(async () => {
-  _resetForTesting();
-  const adapter = new WasmSodiumAdapter();
-  configureSodium(adapter);
-  await initSodium();
-});
-
-afterAll(() => {
-  _resetForTesting();
-});
+beforeAll(setupSodium);
+afterAll(teardownSodium);
 
 beforeEach(() => {
   cache = createBucketKeyCache();

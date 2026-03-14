@@ -1,7 +1,7 @@
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 import { decrypt, encrypt } from "./symmetric.js";
-import { assertKdfMasterKey } from "./validation.js";
+import { assertAeadKey, assertKdfMasterKey } from "./validation.js";
 
 import type { EncryptedPayload } from "./symmetric.js";
 import type { AeadKey, KdfMasterKey } from "./types.js";
@@ -36,6 +36,15 @@ const RECOVERY_KEY_BYTES = 32;
 /** Number of base32 characters per display group. */
 const RECOVERY_KEY_GROUP_SIZE = 4;
 
+/** Look up a base32 character by index, throwing on out-of-range (unreachable). */
+function base32CharAt(index: number): string {
+  const char = BASE32_ALPHABET[index];
+  if (char === undefined) {
+    throw new Error(`Unreachable: base32 index ${String(index)} out of range`);
+  }
+  return char;
+}
+
 /** Encode bytes to unpadded base32 (RFC 4648). */
 function encodeBase32(bytes: Uint8Array): string {
   let result = "";
@@ -47,12 +56,12 @@ function encodeBase32(bytes: Uint8Array): string {
     bitsLeft += BITS_PER_BYTE;
     while (bitsLeft >= BITS_PER_B32_CHAR) {
       bitsLeft -= BITS_PER_B32_CHAR;
-      result += BASE32_ALPHABET[(buffer >> bitsLeft) & B32_CHAR_MASK] ?? "";
+      result += base32CharAt((buffer >> bitsLeft) & B32_CHAR_MASK);
     }
   }
 
   if (bitsLeft > 0) {
-    result += BASE32_ALPHABET[(buffer << (BITS_PER_B32_CHAR - bitsLeft)) & B32_CHAR_MASK] ?? "";
+    result += base32CharAt((buffer << (BITS_PER_B32_CHAR - bitsLeft)) & B32_CHAR_MASK);
   }
 
   return result;
@@ -110,6 +119,7 @@ export function generateRecoveryKey(masterKey: KdfMasterKey): RecoveryKeyResult 
       groups.push(encoded.slice(i, i + RECOVERY_KEY_GROUP_SIZE));
     }
     const displayKey = groups.join("-");
+    assertAeadKey(recoveryKeyBytes);
     const encryptedMasterKey = encrypt(masterKey, recoveryKeyBytes as AeadKey);
     return { displayKey, encryptedMasterKey };
   } finally {
@@ -134,13 +144,17 @@ export function recoverMasterKey(
     );
   }
   const normalized = displayKey.replace(/-/g, "");
-  const recoveryKeyBytes = decodeBase32(normalized);
   const adapter = getSodium();
+  let recoveryKeyBytes: Uint8Array | undefined;
   try {
+    recoveryKeyBytes = decodeBase32(normalized);
+    assertAeadKey(recoveryKeyBytes);
     const raw = decrypt(encryptedMasterKey, recoveryKeyBytes as AeadKey);
     assertKdfMasterKey(raw);
     return raw as KdfMasterKey;
   } finally {
-    adapter.memzero(recoveryKeyBytes);
+    if (recoveryKeyBytes !== undefined) {
+      adapter.memzero(recoveryKeyBytes);
+    }
   }
 }

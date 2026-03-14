@@ -1,28 +1,23 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 import { deriveMasterKey, generateSalt } from "../master-key.js";
 import { generateRecoveryKey, isValidRecoveryKeyFormat, recoverMasterKey } from "../recovery.js";
-import { _resetForTesting, configureSodium, getSodium, initSodium } from "../sodium.js";
+import { getSodium } from "../sodium.js";
+
+import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
 import type { KdfMasterKey } from "../types.js";
 
 let masterKey: KdfMasterKey;
 
 beforeAll(async () => {
-  _resetForTesting();
-  const adapter = new WasmSodiumAdapter();
-  configureSodium(adapter);
-  await initSodium();
-
+  await setupSodium();
   const salt = generateSalt();
   masterKey = await deriveMasterKey("test-password", salt, "mobile");
 });
 
-afterAll(() => {
-  _resetForTesting();
-});
+afterAll(teardownSodium);
 
 describe("generateRecoveryKey", () => {
   it("returns a displayKey and encryptedMasterKey", () => {

@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
 import {
   decryptBucketKey,
   encryptBucketKey,
@@ -9,8 +8,10 @@ import {
 } from "../bucket-keys.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 import { deriveMasterKey, generateSalt } from "../master-key.js";
-import { _resetForTesting, configureSodium, getSodium, initSodium } from "../sodium.js";
+import { getSodium } from "../sodium.js";
 import { encrypt } from "../symmetric.js";
+
+import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
 import type { AeadKey, KdfMasterKey } from "../types.js";
 
@@ -18,19 +19,13 @@ let masterKey: KdfMasterKey;
 let masterKey2: KdfMasterKey;
 
 beforeAll(async () => {
-  _resetForTesting();
-  const adapter = new WasmSodiumAdapter();
-  configureSodium(adapter);
-  await initSodium();
-
+  await setupSodium();
   const salt = generateSalt();
   masterKey = await deriveMasterKey("test-password", salt, "mobile");
   masterKey2 = await deriveMasterKey("different-password", salt, "mobile");
 });
 
-afterAll(() => {
-  _resetForTesting();
-});
+afterAll(teardownSodium);
 
 describe("generateBucketKey", () => {
   it("returns a 32-byte AeadKey", () => {
@@ -164,6 +159,51 @@ describe("rotateBucketKey", () => {
 
   it("fractional currentVersion throws InvalidInputError", () => {
     expect(() => rotateBucketKey(oldKey, 0.5)).toThrow(InvalidInputError);
+  });
+});
+
+describe("KDF parameter regression", () => {
+  it("wrapping key uses KDF context 'bktkeywp' subkey 1", () => {
+    const bucketKey = generateBucketKey();
+    const wrapped = encryptBucketKey(bucketKey, masterKey, 0);
+    const sodium = getSodium();
+    const manualWrappingKey = sodium.kdfDeriveFromKey(32, 1, "bktkeywp", masterKey);
+    try {
+      const decrypted = sodium.aeadDecrypt(
+        wrapped.ciphertext,
+        wrapped.nonce,
+        null,
+        manualWrappingKey as AeadKey,
+      );
+      expect(decrypted).toEqual(bucketKey);
+    } finally {
+      sodium.memzero(manualWrappingKey);
+    }
+  });
+});
+
+describe("version overflow", () => {
+  it("MAX_SAFE_INTEGER version throws on rotation (overflow)", () => {
+    const key = generateBucketKey();
+    expect(() => rotateBucketKey(key, Number.MAX_SAFE_INTEGER)).toThrow(InvalidInputError);
+  });
+});
+
+describe("chained rotation", () => {
+  it("key1 → key2 → key3 preserves data", () => {
+    const key1 = generateBucketKey();
+    const plaintext = new TextEncoder().encode("system journal");
+    const encrypted1 = encrypt(plaintext, key1);
+
+    const { newKey: key2, reEncrypt: reEncrypt1 } = rotateBucketKey(key1, 0);
+    const encrypted2 = reEncrypt1(encrypted1);
+
+    const { newKey: key3, reEncrypt: reEncrypt2 } = rotateBucketKey(key2, 1);
+    const encrypted3 = reEncrypt2(encrypted2);
+
+    const sodium = getSodium();
+    const decrypted = sodium.aeadDecrypt(encrypted3.ciphertext, encrypted3.nonce, null, key3);
+    expect(decrypted).toEqual(plaintext);
   });
 });
 

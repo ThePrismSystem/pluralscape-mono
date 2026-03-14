@@ -112,7 +112,7 @@ export {
 // ── Bucket key management ───────────────────────────────────────────
 export type { BucketKeyCache } from "./bucket-key-cache.js";
 export { createBucketKeyCache } from "./bucket-key-cache.js";
-export type { RotatedBucketKey, WrappedBucketKey } from "./bucket-keys.js";
+export type { ReEncryptFn, RotatedBucketKey, WrappedBucketKey } from "./bucket-keys.js";
 export {
   decryptBucketKey,
   encryptBucketKey,
