@@ -79,7 +79,7 @@ Reports are generated entirely client-side and saved to the device. They are not
 - Outtrigger reason data is among the most sensitive data in the app. Outtrigger reasons may describe trauma triggers, abuse situations, or other deeply personal content. All outtrigger data is T1 encrypted (zero-knowledge). The server never has access to this data in any form.
 - All analytics computation happens exclusively on the client, on decrypted data held in memory. No analytics results, intermediate computations, or aggregated statistics are ever sent to the server.
 - Generated reports (HTML/PDF) are unencrypted files saved to the device. Users must be warned that exported reports leave the encrypted environment. Reports should include a header noting they contain sensitive decrypted data.
-- If outtrigger analytics are optionally included in therapist reports (see feature 009), the same privacy bucket controls apply -- only outtrigger data associated with fronting sessions visible to the therapist's bucket are included.
+- If outtrigger analytics are optionally included in therapist reports (see feature 008), the same privacy bucket controls apply -- only outtrigger data associated with fronting sessions visible to the therapist's bucket are included.
 
 ## Open Questions
 

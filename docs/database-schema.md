@@ -524,6 +524,7 @@ erDiagram
         varchar entity_type PK "composite PK"
         varchar entity_id PK "composite PK"
         varchar bucket_id PK "composite PK, FK"
+        varchar system_id FK
     }
 
     key_grants {
@@ -554,6 +555,7 @@ erDiagram
     friend_bucket_assignments {
         varchar friend_connection_id PK "composite PK, FK"
         varchar bucket_id PK "composite PK, FK"
+        varchar system_id FK
     }
 
     systems ||--o{ buckets : "owns"
@@ -764,7 +766,7 @@ erDiagram
 
     friend_connections {
         varchar id PK
-        varchar system_id FK
+        varchar account_id FK
     }
 
     device_tokens {
