@@ -41,6 +41,10 @@ export interface AuditMetadata {
 /**
  * Transforms an archivable entity type into its archived variant.
  * Replaces `archived: false` with `archived: true` and adds `archivedAt`.
+ *
+ * Note: Uses Omit which is non-distributive over unions. Archived<X | Y>
+ * flattens to intersection of common keys. Each Archived<X> should be
+ * defined separately. Narrowing still works on individually-defined aliases.
  */
 export type Archived<T extends { readonly archived: false }> = Omit<T, "archived"> & {
   readonly archived: true;

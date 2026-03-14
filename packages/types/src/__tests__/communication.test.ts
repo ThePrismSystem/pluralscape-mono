@@ -4,6 +4,9 @@ import type {
   AcknowledgementRequest,
   ArchivedAcknowledgementRequest,
   ArchivedBoardMessage,
+  ArchivedChannel,
+  ArchivedChatMessage,
+  ArchivedNote,
   ArchivedPoll,
   ArchivedPollVote,
   BoardMessage,
@@ -46,6 +49,21 @@ describe("Channel", () => {
   });
 });
 
+describe("ArchivedChannel", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedChannel["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedChannel["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Channel fields", () => {
+    expectTypeOf<ArchivedChannel["id"]>().toEqualTypeOf<ChannelId>();
+    expectTypeOf<ArchivedChannel["systemId"]>().toEqualTypeOf<SystemId>();
+  });
+});
+
 describe("ChatMessage", () => {
   it("extends AuditMetadata", () => {
     expectTypeOf<ChatMessage>().toExtend<AuditMetadata>();
@@ -62,6 +80,21 @@ describe("ChatMessage", () => {
     expectTypeOf<ChatMessage["replyToId"]>().toEqualTypeOf<MessageId | null>();
     expectTypeOf<ChatMessage["timestamp"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<ChatMessage["editedAt"]>().toEqualTypeOf<UnixMillis | null>();
+  });
+});
+
+describe("ArchivedChatMessage", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedChatMessage["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedChatMessage["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core ChatMessage fields", () => {
+    expectTypeOf<ArchivedChatMessage["id"]>().toEqualTypeOf<MessageId>();
+    expectTypeOf<ArchivedChatMessage["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 
@@ -111,6 +144,21 @@ describe("Note", () => {
     expectTypeOf<Note["title"]>().toBeString();
     expectTypeOf<Note["content"]>().toBeString();
     expectTypeOf<Note["backgroundColor"]>().toEqualTypeOf<HexColor | null>();
+  });
+});
+
+describe("ArchivedNote", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedNote["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedNote["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Note fields", () => {
+    expectTypeOf<ArchivedNote["id"]>().toEqualTypeOf<NoteId>();
+    expectTypeOf<ArchivedNote["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 
