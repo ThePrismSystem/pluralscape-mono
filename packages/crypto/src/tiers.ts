@@ -1,8 +1,7 @@
 import { KDF_KEY_BYTES } from "./constants.js";
-import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 import { decryptJSON, encryptJSON } from "./symmetric.js";
-import { assertAeadNonce } from "./validation.js";
+import { assertAeadNonce, validateKeyVersion } from "./validation.js";
 
 import type { SodiumAdapter } from "./adapter/interface.js";
 import type { EncryptedPayload } from "./symmetric.js";
@@ -39,15 +38,10 @@ function deriveDataKey(adapter: SodiumAdapter, masterKey: KdfMasterKey): AeadKey
   ) as AeadKey;
 }
 
-/** Validate that keyVersion is a non-negative integer (or undefined → null). */
-function validateKeyVersion(keyVersion: number | undefined): number | null {
+/** Resolve optional keyVersion: undefined → null, validate if provided. */
+function resolveKeyVersion(keyVersion: number | undefined): number | null {
   if (keyVersion === undefined) return null;
-  if (!Number.isInteger(keyVersion) || keyVersion < 0) {
-    throw new InvalidInputError(
-      `keyVersion must be a non-negative integer, got ${String(keyVersion)}`,
-    );
-  }
-  return keyVersion;
+  return validateKeyVersion(keyVersion);
 }
 
 /** Construct a T1EncryptedBlob from an EncryptedPayload. */
@@ -119,7 +113,7 @@ export function decryptTier1(blob: T1EncryptedBlob, masterKey: KdfMasterKey): un
  * Caller must zero `bucketKey` via `adapter.memzero()` after use.
  */
 export function encryptTier2(data: unknown, params: Tier2EncryptParams): T2EncryptedBlob {
-  const version = validateKeyVersion(params.keyVersion);
+  const version = resolveKeyVersion(params.keyVersion);
   const payload = encryptJSON(data, params.bucketKey);
   return buildT2Blob(payload, params.bucketId, version);
 }

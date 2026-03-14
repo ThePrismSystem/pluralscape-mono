@@ -88,3 +88,12 @@ export function assertKdfSubkeyLength(len: number): void {
     );
   }
 }
+
+export function validateKeyVersion(keyVersion: number): number {
+  if (!Number.isInteger(keyVersion) || keyVersion < 0) {
+    throw new InvalidInputError(
+      `keyVersion must be a non-negative integer, got ${String(keyVersion)}`,
+    );
+  }
+  return keyVersion;
+}
