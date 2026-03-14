@@ -142,6 +142,9 @@ export { createWebKeyStorage } from "./web-key-storage.js";
 export type { SafetyNumber } from "./safety-number.js";
 export { computeSafetyNumber } from "./safety-number.js";
 
+// ── Sync key derivation ──────────────────────────────────────────────
+export { deriveSyncEncryptionKey } from "./sync-keys.js";
+
 // ── Key grants (Privacy Bucket sharing) ──────────────────────────────
 export type {
   CreateKeyGrantParams,

@@ -278,6 +278,9 @@ importers:
       '@pluralscape/crypto':
         specifier: workspace:*
         version: link:../crypto
+      '@pluralscape/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@pluralscape/eslint-config':
         specifier: workspace:*
