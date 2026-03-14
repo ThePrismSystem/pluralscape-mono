@@ -1,7 +1,10 @@
 import { KDF_KEY_BYTES } from "./constants.js";
+import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 import { decryptJSON, encryptJSON } from "./symmetric.js";
+import { assertAeadNonce } from "./validation.js";
 
+import type { SodiumAdapter } from "./adapter/interface.js";
 import type { EncryptedPayload } from "./symmetric.js";
 import type { AeadKey, AeadNonce, KdfMasterKey } from "./types.js";
 import type { BucketId, T1EncryptedBlob, T2EncryptedBlob } from "@pluralscape/types";
@@ -12,7 +15,12 @@ const KDF_CONTEXT_DATA = "dataencr";
 /** KDF sub-key ID for T1 data encryption. */
 const SUBKEY_DATA_ENCRYPTION = 1;
 
-/** Parameters for T2 (per-bucket) encryption. */
+/**
+ * Parameters for T2 (per-bucket) encryption.
+ *
+ * The caller is responsible for zeroing `bucketKey` via `adapter.memzero()`
+ * after all encryption/decryption operations are complete.
+ */
 export interface Tier2EncryptParams {
   readonly bucketKey: AeadKey;
   readonly bucketId: BucketId;
@@ -22,14 +30,24 @@ export interface Tier2EncryptParams {
 // ── Internal helpers ───────────────────────────────────────────────
 
 /** Derive a data-encryption sub-key from the master key via KDF. */
-function deriveDataKey(masterKey: KdfMasterKey): AeadKey {
-  const adapter = getSodium();
+function deriveDataKey(adapter: SodiumAdapter, masterKey: KdfMasterKey): AeadKey {
   return adapter.kdfDeriveFromKey(
     KDF_KEY_BYTES,
     SUBKEY_DATA_ENCRYPTION,
     KDF_CONTEXT_DATA,
     masterKey,
   ) as AeadKey;
+}
+
+/** Validate that keyVersion is a non-negative integer (or undefined → null). */
+function validateKeyVersion(keyVersion: number | undefined): number | null {
+  if (keyVersion === undefined) return null;
+  if (!Number.isInteger(keyVersion) || keyVersion < 0) {
+    throw new InvalidInputError(
+      `keyVersion must be a non-negative integer, got ${String(keyVersion)}`,
+    );
+  }
+  return keyVersion;
 }
 
 /** Construct a T1EncryptedBlob from an EncryptedPayload. */
@@ -60,10 +78,9 @@ function buildT2Blob(
   };
 }
 
-/** Extract an EncryptedPayload from a blob, casting nonce to AeadNonce. */
+/** Extract an EncryptedPayload from a blob, validating nonce length. */
 function blobToPayload(blob: T1EncryptedBlob | T2EncryptedBlob): EncryptedPayload {
-  // Safe cast: blob-codec.ts validates nonce length on deserialization,
-  // and our buildT*Blob functions produce correct nonces from encryptJSON.
+  assertAeadNonce(blob.nonce);
   return {
     ciphertext: blob.ciphertext,
     nonce: blob.nonce as AeadNonce,
@@ -75,7 +92,7 @@ function blobToPayload(blob: T1EncryptedBlob | T2EncryptedBlob): EncryptedPayloa
 /** Encrypt data with the system master key (T1 zero-knowledge). */
 export function encryptTier1(data: unknown, masterKey: KdfMasterKey): T1EncryptedBlob {
   const adapter = getSodium();
-  const dataKey = deriveDataKey(masterKey);
+  const dataKey = deriveDataKey(adapter, masterKey);
   try {
     return buildT1Blob(encryptJSON(data, dataKey));
   } finally {
@@ -86,7 +103,7 @@ export function encryptTier1(data: unknown, masterKey: KdfMasterKey): T1Encrypte
 /** Decrypt a T1 blob using the system master key. */
 export function decryptTier1(blob: T1EncryptedBlob, masterKey: KdfMasterKey): unknown {
   const adapter = getSodium();
-  const dataKey = deriveDataKey(masterKey);
+  const dataKey = deriveDataKey(adapter, masterKey);
   try {
     return decryptJSON(blobToPayload(blob), dataKey);
   } finally {
@@ -96,13 +113,22 @@ export function decryptTier1(blob: T1EncryptedBlob, masterKey: KdfMasterKey): un
 
 // ── T2: Per-bucket encryption ──────────────────────────────────────
 
-/** Encrypt data with a bucket-specific key (T2 per-bucket). */
+/**
+ * Encrypt data with a bucket-specific key (T2 per-bucket).
+ *
+ * Caller must zero `bucketKey` via `adapter.memzero()` after use.
+ */
 export function encryptTier2(data: unknown, params: Tier2EncryptParams): T2EncryptedBlob {
+  const version = validateKeyVersion(params.keyVersion);
   const payload = encryptJSON(data, params.bucketKey);
-  return buildT2Blob(payload, params.bucketId, params.keyVersion ?? null);
+  return buildT2Blob(payload, params.bucketId, version);
 }
 
-/** Decrypt a T2 blob using the bucket key. */
+/**
+ * Decrypt a T2 blob using the bucket key.
+ *
+ * Caller must zero `bucketKey` via `adapter.memzero()` after use.
+ */
 export function decryptTier2(blob: T2EncryptedBlob, bucketKey: AeadKey): unknown {
   return decryptJSON(blobToPayload(blob), bucketKey);
 }
@@ -123,7 +149,7 @@ export function encryptTier1Batch(
 ): T1EncryptedBlob[] {
   if (items.length === 0) return [];
   const adapter = getSodium();
-  const dataKey = deriveDataKey(masterKey);
+  const dataKey = deriveDataKey(adapter, masterKey);
   try {
     return items.map((item) => buildT1Blob(encryptJSON(item, dataKey)));
   } finally {
@@ -138,7 +164,7 @@ export function decryptTier1Batch(
 ): unknown[] {
   if (blobs.length === 0) return [];
   const adapter = getSodium();
-  const dataKey = deriveDataKey(masterKey);
+  const dataKey = deriveDataKey(adapter, masterKey);
   try {
     return blobs.map((blob) => decryptJSON(blobToPayload(blob), dataKey));
   } finally {

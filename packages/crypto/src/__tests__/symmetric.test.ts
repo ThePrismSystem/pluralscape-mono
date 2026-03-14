@@ -127,6 +127,18 @@ describe("encryptJSON/decryptJSON", () => {
     expect(() => decryptJSON(payload, wrongKey)).toThrow(DecryptionFailedError);
   });
 
+  it("undefined throws InvalidInputError", () => {
+    expect(() => encryptJSON(undefined, key)).toThrow(InvalidInputError);
+  });
+
+  it("function throws InvalidInputError", () => {
+    expect(() => encryptJSON(() => {}, key)).toThrow(InvalidInputError);
+  });
+
+  it("symbol throws InvalidInputError", () => {
+    expect(() => encryptJSON(Symbol("test"), key)).toThrow(InvalidInputError);
+  });
+
   it("non-JSON plaintext throws DecryptionFailedError with SyntaxError cause", () => {
     // Encrypt raw non-JSON text, then try to decrypt as JSON
     const notJson = encoder.encode("this is not json");

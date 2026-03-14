@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
-import { DecryptionFailedError } from "../errors.js";
+import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 import { deriveMasterKey, generateSalt } from "../master-key.js";
 import { _resetForTesting, configureSodium, getSodium, initSodium } from "../sodium.js";
 import {
@@ -94,6 +94,18 @@ describe("encryptTier1/decryptTier1", () => {
     expect(result).toEqual(data);
   });
 
+  it("tampered nonce throws DecryptionFailedError", () => {
+    const blob = encryptTier1({ data: "nonce test" }, masterKey);
+    const tampered = new Uint8Array(blob.nonce);
+    tampered[0] = (tampered[0] ?? 0) ^ 0xff;
+    const tamperedBlob: T1EncryptedBlob = { ...blob, nonce: tampered };
+    expect(() => decryptTier1(tamperedBlob, masterKey)).toThrow(DecryptionFailedError);
+  });
+
+  it("undefined input throws InvalidInputError", () => {
+    expect(() => encryptTier1(undefined, masterKey)).toThrow(InvalidInputError);
+  });
+
   it("derived key is cleaned up via memzero", () => {
     const sodium = getSodium();
     const memzeroSpy = vi.spyOn(sodium, "memzero");
@@ -154,6 +166,59 @@ describe("encryptTier2/decryptTier2", () => {
     const tamperedBlob: T2EncryptedBlob = { ...blob, ciphertext: tampered };
     expect(() => decryptTier2(tamperedBlob, bucketKey)).toThrow(DecryptionFailedError);
   });
+
+  it("tampered nonce throws DecryptionFailedError", () => {
+    const blob = encryptTier2({ data: "nonce test" }, { bucketKey, bucketId });
+    const tampered = new Uint8Array(blob.nonce);
+    tampered[0] = (tampered[0] ?? 0) ^ 0xff;
+    const tamperedBlob: T2EncryptedBlob = { ...blob, nonce: tampered };
+    expect(() => decryptTier2(tamperedBlob, bucketKey)).toThrow(DecryptionFailedError);
+  });
+
+  it("two encryptions produce different ciphertexts", () => {
+    const data = { same: "data" };
+    const blob1 = encryptTier2(data, { bucketKey, bucketId });
+    const blob2 = encryptTier2(data, { bucketKey, bucketId });
+    expect(blob1.ciphertext).not.toEqual(blob2.ciphertext);
+  });
+
+  it("roundtrips complex nested data", () => {
+    const data = {
+      members: [{ name: "Alice" }, { name: "Bob" }],
+      meta: { nested: { deep: true } },
+      count: 0,
+      active: false,
+      tags: ["a", "b"],
+      nullable: null,
+    };
+    const blob = encryptTier2(data, { bucketKey, bucketId });
+    const result = decryptTier2(blob, bucketKey);
+    expect(result).toEqual(data);
+  });
+
+  it("algorithm field is xchacha20-poly1305", () => {
+    const blob = encryptTier2({ test: true }, { bucketKey, bucketId });
+    expect(blob.algorithm).toBe("xchacha20-poly1305");
+  });
+
+  it("keyVersion: 0 roundtrips correctly", () => {
+    const blob = encryptTier2({ test: true }, { bucketKey, bucketId, keyVersion: 0 });
+    expect(blob.keyVersion).toBe(0);
+    const result = decryptTier2(blob, bucketKey);
+    expect(result).toEqual({ test: true });
+  });
+
+  it("negative keyVersion throws InvalidInputError", () => {
+    expect(() => encryptTier2({ test: true }, { bucketKey, bucketId, keyVersion: -1 })).toThrow(
+      InvalidInputError,
+    );
+  });
+
+  it("fractional keyVersion throws InvalidInputError", () => {
+    expect(() => encryptTier2({ test: true }, { bucketKey, bucketId, keyVersion: 1.5 })).toThrow(
+      InvalidInputError,
+    );
+  });
 });
 
 describe("wrapTier3", () => {
@@ -172,6 +237,15 @@ describe("wrapTier3", () => {
     expect(wrapTier3("hello")).toBe("hello");
     expect(wrapTier3(42)).toBe(42);
     expect(wrapTier3(true)).toBe(true);
+  });
+
+  it("works with null", () => {
+    expect(wrapTier3(null)).toBeNull();
+  });
+
+  it("works with undefined", () => {
+    const undef: unknown = undefined;
+    expect(wrapTier3(undef)).toBeUndefined();
   });
 });
 
@@ -227,6 +301,36 @@ describe("encryptTier1Batch/decryptTier1Batch", () => {
     memzeroSpy.mockRestore();
   });
 
+  it("decryptTier1Batch memzero called exactly once", () => {
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    const items = [{ a: 1 }, { b: 2 }, { c: 3 }];
+    const blobs = encryptTier1Batch(items, masterKey);
+    memzeroSpy.mockClear();
+    decryptTier1Batch(blobs, masterKey);
+    expect(memzeroSpy).toHaveBeenCalledTimes(1);
+    memzeroSpy.mockRestore();
+  });
+
+  it("decryptTier1Batch memzero on error path", () => {
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    const items = [{ a: 1 }, { b: 2 }];
+    const blobs = encryptTier1Batch(items, masterKey);
+    memzeroSpy.mockClear();
+    expect(() => decryptTier1Batch(blobs, masterKey2)).toThrow(DecryptionFailedError);
+    expect(memzeroSpy).toHaveBeenCalledTimes(1);
+    memzeroSpy.mockRestore();
+  });
+
+  it("single-item batch roundtrip", () => {
+    const items = [{ solo: true }];
+    const blobs = encryptTier1Batch(items, masterKey);
+    expect(blobs).toHaveLength(1);
+    const results = decryptTier1Batch(blobs, masterKey);
+    expect(results).toEqual(items);
+  });
+
   it("partial corruption throws DecryptionFailedError", () => {
     const items = [{ a: 1 }, { b: 2 }, { c: 3 }];
     const blobs = encryptTier1Batch(items, masterKey);
@@ -265,5 +369,12 @@ describe("encryptTier2Batch/decryptTier2Batch", () => {
     expect(blobs).toEqual([]);
     const results = decryptTier2Batch([], bucketKey);
     expect(results).toEqual([]);
+  });
+
+  it("wrong key throws DecryptionFailedError", () => {
+    const wrongKey = getSodium().aeadKeygen();
+    const items = [{ x: 1 }, { y: 2 }];
+    const blobs = encryptTier2Batch(items, { bucketKey, bucketId });
+    expect(() => decryptTier2Batch(blobs, wrongKey)).toThrow(DecryptionFailedError);
   });
 });

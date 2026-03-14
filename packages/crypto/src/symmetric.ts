@@ -32,7 +32,13 @@ export function decrypt(payload: EncryptedPayload, key: AeadKey, aad?: Uint8Arra
 
 /** Encrypt a JSON-serializable value. */
 export function encryptJSON(data: unknown, key: AeadKey, aad?: Uint8Array): EncryptedPayload {
-  const plaintext = new TextEncoder().encode(JSON.stringify(data));
+  // JSON.stringify returns undefined at runtime for non-serializable values
+  // (undefined, functions, symbols), despite TypeScript typing it as string.
+  const json = JSON.stringify(data) as string | undefined;
+  if (json === undefined) {
+    throw new InvalidInputError("Value is not JSON-serializable (undefined, function, or symbol).");
+  }
+  const plaintext = new TextEncoder().encode(json);
   return encrypt(plaintext, key, aad);
 }
 
