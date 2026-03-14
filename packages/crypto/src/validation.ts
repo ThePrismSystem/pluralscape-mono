@@ -5,6 +5,8 @@ import {
   BOX_PUBLIC_KEY_BYTES,
   BOX_SECRET_KEY_BYTES,
   BOX_SEED_BYTES,
+  GENERIC_HASH_BYTES_MAX,
+  GENERIC_HASH_BYTES_MIN,
   KDF_BYTES_MAX,
   KDF_BYTES_MIN,
   KDF_CONTEXT_BYTES,
@@ -85,6 +87,14 @@ export function assertKdfSubkeyLength(len: number): void {
   if (len < KDF_BYTES_MIN || len > KDF_BYTES_MAX) {
     throw new InvalidInputError(
       `KDF subkey length must be between ${String(KDF_BYTES_MIN)} and ${String(KDF_BYTES_MAX)}, got ${String(len)}`,
+    );
+  }
+}
+
+export function assertGenericHashLength(len: number): void {
+  if (len < GENERIC_HASH_BYTES_MIN || len > GENERIC_HASH_BYTES_MAX) {
+    throw new InvalidInputError(
+      `Generic hash length must be between ${String(GENERIC_HASH_BYTES_MIN)} and ${String(GENERIC_HASH_BYTES_MAX)}, got ${String(len)}`,
     );
   }
 }

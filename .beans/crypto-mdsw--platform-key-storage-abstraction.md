@@ -1,11 +1,11 @@
 ---
 # crypto-mdsw
 title: Platform key storage abstraction
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:34:20Z
-updated_at: 2026-03-08T13:35:44Z
+updated_at: 2026-03-14T09:35:45Z
 parent: crypto-gd8f
 blocked_by:
   - crypto-d2tj
@@ -24,14 +24,18 @@ Platform-specific secure key storage interface
 
 ## Acceptance Criteria
 
-- [ ] SecureKeyStorage interface defined and exported
-- [ ] Web implementation (in-memory) complete
-- [ ] iOS/Android stubs with implementation notes
-- [ ] Biometric requirement flag
-- [ ] Accessibility options for iOS
-- [ ] Unit test: web implementation store/retrieve/delete
-- [ ] Clear-all method for session teardown
+- [x] SecureKeyStorage interface defined and exported
+- [x] Web implementation (in-memory) complete
+- [x] iOS/Android stubs with implementation notes
+- [x] Biometric requirement flag
+- [x] Accessibility options for iOS
+- [x] Unit test: web implementation store/retrieve/delete
+- [x] Clear-all method for session teardown
 
 ## References
 
 - encryption-research.md sections 2, 5
+
+## Summary of Changes
+
+Defined SecureKeyStorage interface and KeyStorageOpts type in key-storage.ts. Implemented createWebKeyStorage() backed by Map with memzero-on-remove semantics and copy semantics for store/retrieve. 19 tests passing.

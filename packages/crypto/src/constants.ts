@@ -82,6 +82,25 @@ export const KDF_BYTES_MIN = 16;
 /** Maximum derived sub-key size in bytes. */
 export const KDF_BYTES_MAX = 64;
 
+// ── Generic Hash (BLAKE2b) ───────────────────────────────────────────
+
+/** Minimum output length for BLAKE2b generic hash, in bytes. */
+export const GENERIC_HASH_BYTES_MIN = 16;
+
+/** Maximum output length for BLAKE2b generic hash, in bytes. */
+export const GENERIC_HASH_BYTES_MAX = 64;
+
+// ── Safety Number ────────────────────────────────────────────────────
+
+/** Version tag prepended to safety number fingerprint inputs. */
+export const SAFETY_NUMBER_VERSION = 1;
+
+/** Number of BLAKE2b iterations used to compute a safety number fingerprint. */
+export const SAFETY_NUMBER_ITERATIONS = 5200;
+
+/** Output length in bytes for each user's fingerprint before digit encoding. */
+export const SAFETY_NUMBER_HASH_BYTES = 30;
+
 /** All sodium constants as a single frozen object. */
 export const SODIUM_CONSTANTS = Object.freeze({
   AEAD_KEY_BYTES,
@@ -107,4 +126,6 @@ export const SODIUM_CONSTANTS = Object.freeze({
   KDF_CONTEXT_BYTES,
   KDF_BYTES_MIN,
   KDF_BYTES_MAX,
+  GENERIC_HASH_BYTES_MIN,
+  GENERIC_HASH_BYTES_MAX,
 } as const);

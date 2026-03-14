@@ -74,4 +74,10 @@ declare module "react-native-libsodium" {
     key: Uint8Array,
   ): Uint8Array;
   function crypto_kdf_keygen(): Uint8Array;
+
+  function crypto_generichash(
+    hashLength: number,
+    message: Uint8Array,
+    key?: Uint8Array | null,
+  ): Uint8Array;
 }

@@ -23,6 +23,7 @@ import {
   assertBoxPublicKey,
   assertBoxSecretKey,
   assertBoxSeed,
+  assertGenericHashLength,
   assertKdfContext,
   assertKdfMasterKey,
   assertKdfSubkeyLength,
@@ -200,7 +201,7 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
     } catch (error: unknown) {
       // After input validation, libsodium throws Error for invalid signatures.
       // Rethrow non-Error exceptions to avoid swallowing system failures.
-      if (error instanceof Error) {
+      if (error instanceof Error && error.message.includes("incorrect signature")) {
         return false;
       }
       throw error;
@@ -246,6 +247,14 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
   kdfKeygen(): KdfMasterKey {
     const sodium = this.lib();
     return sodium.crypto_kdf_keygen() as KdfMasterKey;
+  }
+
+  // ── Generic Hash (BLAKE2b) ────────────────────────────────────────
+
+  genericHash(hashLength: number, message: Uint8Array, key?: Uint8Array | null): Uint8Array {
+    assertGenericHashLength(hashLength);
+    const sodium = this.lib();
+    return sodium.crypto_generichash(hashLength, message, key ?? null);
   }
 
   // ── Random ────────────────────────────────────────────────────────

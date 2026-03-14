@@ -29,6 +29,7 @@ function stubAdapter(overrides: Partial<SodiumAdapter> = {}): SodiumAdapter {
     pwhash: noop,
     kdfDeriveFromKey: noop,
     kdfKeygen: noop,
+    genericHash: noop,
     randomBytes: noop,
     memzero: noop,
     ...overrides,
