@@ -106,11 +106,17 @@ export const boardMessages = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("board_messages_system_id_idx").on(t.systemId),
+    index("board_messages_system_archived_idx").on(t.systemId, t.archived),
     check("board_messages_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("board_messages", t.version),
+    check(
+      "board_messages_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -161,9 +167,11 @@ export const polls = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("polls_system_id_idx").on(t.systemId),
+    index("polls_system_archived_idx").on(t.systemId, t.archived),
     unique("polls_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.createdByMemberId, t.systemId],
@@ -173,6 +181,7 @@ export const polls = pgTable(
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
     versionCheckFor("polls", t.version),
+    check("polls_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
   ],
 );
 
@@ -190,6 +199,7 @@ export const pollVotes = pgTable(
     votedAt: pgTimestamp("voted_at"),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
+    ...archivable(),
   },
   (t) => [
     index("poll_votes_poll_id_idx").on(t.pollId),
@@ -198,6 +208,10 @@ export const pollVotes = pgTable(
       columns: [t.pollId, t.systemId],
       foreignColumns: [polls.id, polls.systemId],
     }).onDelete("cascade"),
+    check(
+      "poll_votes_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -212,6 +226,7 @@ export const acknowledgements = pgTable(
     confirmed: boolean("confirmed").notNull().default(false),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
+    ...archivable(),
   },
   (t) => [
     index("acknowledgements_system_id_confirmed_idx").on(t.systemId, t.confirmed),
@@ -219,6 +234,10 @@ export const acknowledgements = pgTable(
       columns: [t.createdByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
+    check(
+      "acknowledgements_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

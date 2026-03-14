@@ -128,6 +128,7 @@ export type {
 // ── Privacy ────────────────────────────────────────────────────────
 export type {
   PrivacyBucket,
+  ArchivedPrivacyBucket,
   BucketContentEntityType,
   BucketContentTag,
   BucketVisibilityScope,
@@ -135,7 +136,9 @@ export type {
   FriendConnectionStatus,
   FriendVisibilitySettings,
   FriendConnection,
+  ArchivedFriendConnection,
   FriendCode,
+  ArchivedFriendCode,
   BucketAccessCheck,
   FriendBucketAssignment,
 } from "./privacy.js";
@@ -403,13 +406,17 @@ export type {
   ChatMessage,
   ArchivedChatMessage,
   BoardMessage,
+  ArchivedBoardMessage,
   Note,
   ArchivedNote,
   PollOption,
   PollKind,
   Poll,
+  ArchivedPoll,
   PollVote,
+  ArchivedPollVote,
   AcknowledgementRequest,
+  ArchivedAcknowledgementRequest,
 } from "./communication.js";
 
 // ── Lifecycle ─────────────────────────────────────────────────────
@@ -500,8 +507,10 @@ export type {
   SideSystemEntity,
   LayerEntity,
   InnerWorldEntity,
+  ArchivedInnerWorldEntity,
   InnerWorldEntityType,
   InnerWorldRegion,
+  ArchivedInnerWorldRegion,
   InnerWorldCanvas,
 } from "./innerworld.js";
 

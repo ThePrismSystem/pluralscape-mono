@@ -177,12 +177,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   bucketsIndexes: `
-    CREATE INDEX buckets_system_id_idx ON buckets (system_id)
+    CREATE INDEX buckets_system_id_idx ON buckets (system_id);
+    CREATE INDEX buckets_system_archived_idx ON buckets (system_id, archived)
   `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
@@ -225,15 +229,19 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (account_id, friend_account_id),
       UNIQUE (id, account_id),
       CHECK (account_id != friend_account_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   friendConnectionsIndexes: `
     CREATE INDEX friend_connections_account_status_idx ON friend_connections (account_id, status);
-    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_account_id, status)
+    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_account_id, status);
+    CREATE INDEX friend_connections_account_archived_idx ON friend_connections (account_id, archived)
   `,
   friendCodes: `
     CREATE TABLE friend_codes (
@@ -242,8 +250,11 @@ export const PG_DDL = {
       code VARCHAR(255) NOT NULL UNIQUE,
       created_at TIMESTAMPTZ NOT NULL,
       expires_at TIMESTAMPTZ,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       CHECK (expires_at IS NULL OR expires_at > created_at),
-      CHECK (length(code) >= 8)
+      CHECK (length(code) >= 8),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   friendCodesIndexes: `
@@ -754,11 +765,15 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      CHECK (version >= 1)
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   boardMessagesIndexes: `
-    CREATE INDEX board_messages_system_id_idx ON board_messages (system_id)
+    CREATE INDEX board_messages_system_id_idx ON board_messages (system_id);
+    CREATE INDEX board_messages_system_archived_idx ON board_messages (system_id, archived)
   `,
   notes: `
     CREATE TABLE notes (
@@ -797,13 +812,17 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   pollsIndexes: `
-    CREATE INDEX polls_system_id_idx ON polls (system_id)
+    CREATE INDEX polls_system_id_idx ON polls (system_id);
+    CREATE INDEX polls_system_archived_idx ON polls (system_id, archived)
   `,
   pollVotes: `
     CREATE TABLE poll_votes (
@@ -816,7 +835,10 @@ export const PG_DDL = {
       voted_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (poll_id, system_id) REFERENCES polls(id, system_id) ON DELETE CASCADE
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      FOREIGN KEY (poll_id, system_id) REFERENCES polls(id, system_id) ON DELETE CASCADE,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   pollVotesIndexes: `
@@ -831,7 +853,10 @@ export const PG_DDL = {
       confirmed BOOLEAN NOT NULL DEFAULT false,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   acknowledgementsIndexes: `
@@ -926,13 +951,17 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   innerworldRegionsIndexes: `
-    CREATE INDEX innerworld_regions_system_id_idx ON innerworld_regions (system_id)
+    CREATE INDEX innerworld_regions_system_id_idx ON innerworld_regions (system_id);
+    CREATE INDEX innerworld_regions_system_archived_idx ON innerworld_regions (system_id, archived)
   `,
   innerworldEntities: `
     CREATE TABLE innerworld_entities (
@@ -943,13 +972,17 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   innerworldEntitiesIndexes: `
     CREATE INDEX innerworld_entities_system_id_idx ON innerworld_entities (system_id);
-    CREATE INDEX innerworld_entities_region_id_idx ON innerworld_entities (region_id)
+    CREATE INDEX innerworld_entities_region_id_idx ON innerworld_entities (region_id);
+    CREATE INDEX innerworld_entities_system_archived_idx ON innerworld_entities (system_id, archived)
   `,
   innerworldCanvas: `
     CREATE TABLE innerworld_canvas (

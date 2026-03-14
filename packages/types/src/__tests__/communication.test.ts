@@ -2,6 +2,10 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import type {
   AcknowledgementRequest,
+  ArchivedAcknowledgementRequest,
+  ArchivedBoardMessage,
+  ArchivedPoll,
+  ArchivedPollVote,
   BoardMessage,
   Channel,
   ChatMessage,
@@ -74,6 +78,25 @@ describe("BoardMessage", () => {
     expectTypeOf<BoardMessage["pinned"]>().toEqualTypeOf<boolean>();
     expectTypeOf<BoardMessage["sortOrder"]>().toEqualTypeOf<number>();
   });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<BoardMessage["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedBoardMessage", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedBoardMessage["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedBoardMessage["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core BoardMessage fields", () => {
+    expectTypeOf<ArchivedBoardMessage["id"]>().toEqualTypeOf<BoardMessageId>();
+    expectTypeOf<ArchivedBoardMessage["systemId"]>().toEqualTypeOf<SystemId>();
+  });
 });
 
 describe("Note", () => {
@@ -128,6 +151,25 @@ describe("Poll", () => {
     expectTypeOf<Poll["allowAbstain"]>().toEqualTypeOf<boolean>();
     expectTypeOf<Poll["allowVeto"]>().toEqualTypeOf<boolean>();
   });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<Poll["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedPoll", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedPoll["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedPoll["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Poll fields", () => {
+    expectTypeOf<ArchivedPoll["id"]>().toEqualTypeOf<PollId>();
+    expectTypeOf<ArchivedPoll["systemId"]>().toEqualTypeOf<SystemId>();
+  });
 });
 
 describe("PollVote", () => {
@@ -137,7 +179,7 @@ describe("PollVote", () => {
 
   it("has exactly the expected keys", () => {
     expectTypeOf<keyof PollVote>().toEqualTypeOf<
-      "id" | "pollId" | "optionId" | "voter" | "comment" | "isVeto" | "votedAt"
+      "id" | "pollId" | "optionId" | "voter" | "comment" | "isVeto" | "votedAt" | "archived"
     >();
   });
 
@@ -151,6 +193,25 @@ describe("PollVote", () => {
     expectTypeOf<PollVote["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<PollVote["isVeto"]>().toEqualTypeOf<boolean>();
     expectTypeOf<PollVote["votedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<PollVote["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedPollVote", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedPollVote["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedPollVote["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core PollVote fields", () => {
+    expectTypeOf<ArchivedPollVote["id"]>().toEqualTypeOf<PollVoteId>();
+    expectTypeOf<ArchivedPollVote["pollId"]>().toEqualTypeOf<PollId>();
   });
 });
 
@@ -167,5 +228,24 @@ describe("AcknowledgementRequest", () => {
     expectTypeOf<AcknowledgementRequest["message"]>().toBeString();
     expectTypeOf<AcknowledgementRequest["confirmed"]>().toEqualTypeOf<boolean>();
     expectTypeOf<AcknowledgementRequest["confirmedAt"]>().toEqualTypeOf<UnixMillis | null>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<AcknowledgementRequest["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedAcknowledgementRequest", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedAcknowledgementRequest["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedAcknowledgementRequest["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core AcknowledgementRequest fields", () => {
+    expectTypeOf<ArchivedAcknowledgementRequest["id"]>().toEqualTypeOf<AcknowledgementId>();
+    expectTypeOf<ArchivedAcknowledgementRequest["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });

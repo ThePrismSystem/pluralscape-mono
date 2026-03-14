@@ -56,7 +56,11 @@ export interface BoardMessage extends AuditMetadata {
   readonly content: string;
   readonly pinned: boolean;
   readonly sortOrder: number;
+  readonly archived: false;
 }
+
+/** An archived board message. */
+export type ArchivedBoardMessage = Archived<BoardMessage>;
 
 /** A private note within a system. */
 export interface Note extends AuditMetadata {
@@ -102,7 +106,11 @@ export interface Poll extends AuditMetadata {
   readonly maxVotesPerMember: number;
   readonly allowAbstain: boolean;
   readonly allowVeto: boolean;
+  readonly archived: false;
 }
+
+/** An archived poll. */
+export type ArchivedPoll = Archived<Poll>;
 
 /** A vote cast on a poll option. Null optionId indicates abstain. */
 export interface PollVote {
@@ -113,7 +121,11 @@ export interface PollVote {
   readonly comment: string | null;
   readonly isVeto: boolean;
   readonly votedAt: UnixMillis;
+  readonly archived: false;
 }
+
+/** An archived poll vote. */
+export type ArchivedPollVote = Archived<PollVote>;
 
 /** A request for a member to acknowledge a message or decision. */
 export interface AcknowledgementRequest extends AuditMetadata {
@@ -124,4 +136,8 @@ export interface AcknowledgementRequest extends AuditMetadata {
   readonly message: string;
   readonly confirmed: boolean;
   readonly confirmedAt: UnixMillis | null;
+  readonly archived: false;
 }
+
+/** An archived acknowledgement request. */
+export type ArchivedAcknowledgementRequest = Archived<AcknowledgementRequest>;
