@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: high
 created_at: 2026-03-13T23:47:17Z
-updated_at: 2026-03-14T02:49:54Z
+updated_at: 2026-03-14T03:44:07Z
 ---
 
 All entity types need a user-facing way to remove accidentally created entries. Currently only 9 entities support archival (members, custom fronts, journal entries, wiki pages, groups, channels, messages, notes, field definitions). All other entities can only be removed via system-level CASCADE (account deletion), which means accidental entries are permanently stuck.
@@ -117,3 +117,5 @@ Added soft-archival support to all 24 non-audit entity tables across PG and SQLi
 - FK dependency audit at `docs/audits/011-entity-archival-fk-audit.md`
 
 PR: https://github.com/ThePrismSystem/pluralscape-mono/pull/103
+
+## PR Review Fix Implementation\n\nAddressing all 8 items from PR #103 review:\n- [ ] Commit 1: Add partial filter to friend_notification_preferences and wiki_pages unique indexes\n- [ ] Commit 2: Regenerate migrations\n- [ ] Commit 3: Make Archived<T> distributive and fix ServerRelationship comment\n- [ ] Commit 4: Extract archivableConsistencyCheckFor helper\n- [ ] Commit 5: Add afterEach cleanup, UPDATE path tests, and partial index tests

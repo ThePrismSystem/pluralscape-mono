@@ -54,7 +54,9 @@ export const wikiPages = sqliteTable(
   },
   (t) => [
     index("wiki_pages_system_archived_idx").on(t.systemId, t.archived),
-    uniqueIndex("wiki_pages_system_id_slug_hash_idx").on(t.systemId, t.slugHash),
+    uniqueIndex("wiki_pages_system_id_slug_hash_idx")
+      .on(t.systemId, t.slugHash)
+      .where(sql`${t.archived} = 0`),
     versionCheckFor("wiki_pages", t.version),
     check(
       "wiki_pages_archived_consistency_check",

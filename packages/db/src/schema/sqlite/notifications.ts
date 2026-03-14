@@ -94,10 +94,9 @@ export const friendNotificationPreferences = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    uniqueIndex("friend_notification_prefs_account_id_friend_connection_id_idx").on(
-      t.accountId,
-      t.friendConnectionId,
-    ),
+    uniqueIndex("friend_notification_prefs_account_id_friend_connection_id_idx")
+      .on(t.accountId, t.friendConnectionId)
+      .where(sql`${t.archived} = 0`),
     foreignKey({
       columns: [t.friendConnectionId, t.accountId],
       foreignColumns: [friendConnections.id, friendConnections.accountId],

@@ -906,7 +906,7 @@ export const PG_DDL = {
     CREATE INDEX wiki_pages_system_archived_idx ON wiki_pages (system_id, archived)
   `,
   wikiPagesUniqueSlugIndex: `
-    CREATE UNIQUE INDEX wiki_pages_system_id_slug_hash_idx ON wiki_pages (system_id, slug_hash)
+    CREATE UNIQUE INDEX wiki_pages_system_id_slug_hash_idx ON wiki_pages (system_id, slug_hash) WHERE archived = false
   `,
   // Groups
   groups: `
@@ -1067,7 +1067,7 @@ export const PG_DDL = {
     )
   `,
   friendNotificationPreferencesIndexes: `
-    CREATE UNIQUE INDEX friend_notification_prefs_account_id_friend_connection_id_idx ON friend_notification_preferences (account_id, friend_connection_id)
+    CREATE UNIQUE INDEX friend_notification_prefs_account_id_friend_connection_id_idx ON friend_notification_preferences (account_id, friend_connection_id) WHERE archived = false
   `,
   // Snapshots
   systemSnapshots: `
