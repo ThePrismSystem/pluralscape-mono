@@ -8,7 +8,7 @@ import type {
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata, EntityReference } from "./utility.js";
+import type { Archived, AuditMetadata, EntityReference } from "./utility.js";
 
 /** Whether a member is fully fronting or co-conscious. */
 export type FrontingType = "fronting" | "co-conscious";
@@ -79,10 +79,7 @@ export interface CustomFront extends AuditMetadata {
 }
 
 /** An archived custom front — preserves all data with archive metadata. */
-export type ArchivedCustomFront = Omit<CustomFront, "archived"> & {
-  readonly archived: true;
-  readonly archivedAt: UnixMillis;
-};
+export type ArchivedCustomFront = Archived<CustomFront>;
 
 /** Computed snapshot of the current co-fronting state. Not persisted. */
 export interface CoFrontState {

@@ -1,11 +1,11 @@
 ---
 # db-ki5y
 title: Support deletion/archival for all entity types
-status: todo
+status: in-progress
 type: feature
 priority: high
 created_at: 2026-03-13T23:47:17Z
-updated_at: 2026-03-13T23:51:31Z
+updated_at: 2026-03-14T00:44:26Z
 ---
 
 All entity types need a user-facing way to remove accidentally created entries. Currently only 9 entities support archival (members, custom fronts, journal entries, wiki pages, groups, channels, messages, notes, field definitions). All other entities can only be removed via system-level CASCADE (account deletion), which means accidental entries are permanently stuck.
@@ -87,3 +87,18 @@ This is universal — no entity type is exempt (except immutable audit trails: l
 ### Migration
 
 - [ ] Generate Drizzle migration for new columns
+
+## Implementation Notes
+
+- [ ] Commit 1: Archived<T> utility type + generalize ArchivalEvent
+- [ ] Commit 2: Fronting domain archival
+- [ ] Commit 3: Structure domain archival
+- [ ] Commit 4: Communication domain archival
+- [ ] Commit 5: Innerworld + Privacy/Social archival
+- [ ] Commit 6: Infrastructure domain archival
+- [ ] Commit 7: Media domain archival
+- [ ] Commit 8: Drizzle migration
+- [ ] Commit 9: FK audit documentation
+
+Switches comment in schema overridden — they are archivable/deletable per user decision.
+Generalize ArchivalEvent to use EntityReference instead of memberId.

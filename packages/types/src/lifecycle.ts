@@ -70,10 +70,10 @@ export interface DiscoveryEvent extends LifecycleEventBase {
   readonly memberId: MemberId;
 }
 
-/** A member is archived (non-destructive removal). */
+/** An entity is archived (non-destructive removal). */
 export interface ArchivalEvent extends LifecycleEventBase {
   readonly eventType: "archival";
-  readonly memberId: MemberId;
+  readonly entity: EntityReference;
 }
 
 /** A subsystem forms from a member or group of members. */

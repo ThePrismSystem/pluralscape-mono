@@ -85,6 +85,7 @@ export type {
   DeepReadonly,
   DateRange,
   AuditMetadata,
+  Archived,
   SortDirection,
   EntityReference,
 } from "./utility.js";
@@ -391,9 +392,12 @@ export type {
 // ── Communication ─────────────────────────────────────────────────
 export type {
   Channel,
+  ArchivedChannel,
   ChatMessage,
+  ArchivedChatMessage,
   BoardMessage,
   Note,
+  ArchivedNote,
   PollOption,
   PollKind,
   Poll,
@@ -425,6 +429,7 @@ export type {
   FieldType,
   FieldBucketVisibility,
   FieldDefinition,
+  ArchivedFieldDefinition,
   FieldValue,
   FieldValueUnion,
 } from "./custom-fields.js";

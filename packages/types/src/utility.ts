@@ -38,6 +38,15 @@ export interface AuditMetadata {
   readonly version: number;
 }
 
+/**
+ * Transforms an archivable entity type into its archived variant.
+ * Replaces `archived: false` with `archived: true` and adds `archivedAt`.
+ */
+export type Archived<T extends { readonly archived: false }> = Omit<T, "archived"> & {
+  readonly archived: true;
+  readonly archivedAt: UnixMillis;
+};
+
 /** Sort direction for queries. */
 export type SortDirection = "asc" | "desc";
 

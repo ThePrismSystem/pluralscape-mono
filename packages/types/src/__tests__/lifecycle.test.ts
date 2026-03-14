@@ -26,6 +26,7 @@ import type {
   UnmergeEvent,
 } from "../lifecycle.js";
 import type { UnixMillis } from "../timestamps.js";
+import type { EntityReference } from "../utility.js";
 
 describe("LifecycleEvent base fields", () => {
   it("all variants share common fields", () => {
@@ -97,7 +98,7 @@ describe("DiscoveryEvent", () => {
 describe("ArchivalEvent", () => {
   it("has correct discriminator and fields", () => {
     expectTypeOf<ArchivalEvent["eventType"]>().toEqualTypeOf<"archival">();
-    expectTypeOf<ArchivalEvent["memberId"]>().toEqualTypeOf<MemberId>();
+    expectTypeOf<ArchivalEvent["entity"]>().toEqualTypeOf<EntityReference>();
   });
 });
 
@@ -162,7 +163,7 @@ describe("LifecycleEvent discriminated union", () => {
           return event.memberId;
         case "archival":
           expectTypeOf(event).toEqualTypeOf<ArchivalEvent>();
-          return event.memberId;
+          return event.entity.entityId;
         case "subsystem-formation":
           expectTypeOf(event).toEqualTypeOf<SubsystemFormationEvent>();
           return event.resultSubsystemId;

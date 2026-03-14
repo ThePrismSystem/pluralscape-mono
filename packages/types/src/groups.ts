@@ -1,7 +1,6 @@
 import type { GroupId, HexColor, MemberId, SystemId } from "./ids.js";
 import type { ImageSource } from "./image-source.js";
-import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** A user-defined group (folder) for organizing members. */
 export interface Group extends AuditMetadata {
@@ -18,10 +17,7 @@ export interface Group extends AuditMetadata {
 }
 
 /** An archived group — preserves all data with archive metadata. */
-export type ArchivedGroup = Omit<Group, "archived"> & {
-  readonly archived: true;
-  readonly archivedAt: UnixMillis;
-};
+export type ArchivedGroup = Archived<Group>;
 
 /** Junction linking a member to a group. */
 export interface GroupMembership {

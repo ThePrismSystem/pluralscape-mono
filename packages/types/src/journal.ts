@@ -10,7 +10,7 @@ import type {
   WikiPageId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata, EntityReference } from "./utility.js";
+import type { Archived, AuditMetadata, EntityReference } from "./utility.js";
 
 // ── Journal Block types (discriminated union) ──────────────────────
 
@@ -156,10 +156,7 @@ export interface JournalEntry extends AuditMetadata {
 }
 
 /** An archived journal entry. */
-export interface ArchivedJournalEntry extends Omit<JournalEntry, "archived">, AuditMetadata {
-  readonly archived: true;
-  readonly archivedAt: UnixMillis;
-}
+export type ArchivedJournalEntry = Archived<JournalEntry>;
 
 // ── Wiki pages ─────────────────────────────────────────────────────
 
@@ -177,7 +174,4 @@ export interface WikiPage extends AuditMetadata {
 }
 
 /** An archived wiki page. */
-export interface ArchivedWikiPage extends Omit<WikiPage, "archived">, AuditMetadata {
-  readonly archived: true;
-  readonly archivedAt: UnixMillis;
-}
+export type ArchivedWikiPage = Archived<WikiPage>;
