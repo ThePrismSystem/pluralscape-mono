@@ -1,11 +1,11 @@
 ---
 # sync-l0ky
 title: Conflict resolution strategy per entity type
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-03-09T12:13:02Z
-updated_at: 2026-03-09T12:13:02Z
+updated_at: 2026-03-14T22:18:04Z
 parent: sync-mxeg
 ---
 

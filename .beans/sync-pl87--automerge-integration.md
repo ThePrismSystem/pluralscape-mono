@@ -1,11 +1,11 @@
 ---
 # sync-pl87
 title: Automerge integration
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-03-08T13:35:02Z
-updated_at: 2026-03-08T13:36:25Z
+updated_at: 2026-03-14T22:18:04Z
 parent: sync-xlhb
 blocking:
   - sync-5jne
