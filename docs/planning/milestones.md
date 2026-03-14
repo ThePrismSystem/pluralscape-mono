@@ -24,7 +24,11 @@ Epics:
 - ~~Database schema (`packages/db`)~~ [COMPLETED] — 40+ tables, dual-dialect (PG + SQLite), RLS, constraint closure, encryption contracts
 - ~~Database schema hardening~~ [COMPLETED] — 29 tasks: indexes, encryption, sync queue fixes, full-text search, varchar right-sizing
 - ~~Test framework setup~~ [COMPLETED] — Vitest workspace, coverage enforcement, test factories (2,338 tests)
-- Launch feature types: fronting snapshot types (L3), outtrigger types (L5), lifecycle event types for structure-move and innerworld-move (L8/L9), system snapshot types and table (L10)
+- ~~Launch feature types (L2-L10)~~ [COMPLETED] — non-system accounts, fronting snapshots, member duplication, outtrigger, multi-system verification, system duplication, lifecycle events, innerworld-move, system snapshots
+- ~~Entity archival~~ [COMPLETED] — archived/archived_at columns across all non-audit entity types with consistency checks and partial indexes
+- ~~RLS policy bootstrapping~~ [COMPLETED] — row-level security policies for all tenant-scoped tables
+- ~~SQLCipher encryption-at-rest~~ [COMPLETED] — encrypted SQLite for self-hosted deployments
+- ~~Database schema documentation~~ [COMPLETED] — full ER diagrams for all 40+ tables
 - Encryption layer (`packages/crypto`) — ADR 006 (foundation complete: key derivation, symmetric crypto, identity keypairs; remaining: per-bucket keys, key rotation, recovery)
 - Sync protocol design (`packages/sync`) — ADR 005 (encrypted CRDT relay PoC complete; remaining: document topology, conflict resolution, partial replication)
 - Blob storage strategy — ADR 009
@@ -32,7 +36,6 @@ Epics:
 - Key recovery protocol — ADR 011
 - i18n infrastructure (features.md section 11)
 - Nomenclature system (features.md section 12)
-- Database schema documentation (ER diagram pending)
 
 ## Milestone 2: API Core
 
@@ -183,7 +186,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 ## Architecture Decision Records
 
-20 accepted ADRs cover the full stack:
+22 accepted ADRs cover the full stack:
 
 - [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
 - [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
@@ -197,6 +200,8 @@ These features are tracked but may be deferred past initial launch. Each has a d
 - [ADR 016: Messages Partitioning](../adr/016-messages-partitioning.md) — hash-based partitioning for the messages table
 - [ADR 017: Audit Log Partitioning](../adr/017-audit-log-partitioning.md) — time-based partitioning with automated retention
 - [ADR 018: Encryption-at-Rest Boundary](../adr/018-encryption-at-rest-boundary.md) — DB-layer encryption boundary for tier-2/tier-3 data
+- [ADR 019: Fronting Sessions Partitioning](../adr/019-fronting-sessions-partitioning.md) — time-based partitioning for active fronting session performance
+- [ADR 020: RLS Denormalization](../adr/020-rls-denormalization.md) — cached system_id/account_id on all tables for RLS policy efficiency
 - [ADR 021: Non-System Account Model](../adr/021-non-system-accounts.md) — viewer accounts, account-level friend connections
 - [ADR 022: System Structure Snapshots](../adr/022-system-snapshots.md) — point-in-time structure captures, manual and scheduled triggers
 

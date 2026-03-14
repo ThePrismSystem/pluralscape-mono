@@ -152,7 +152,6 @@ erDiagram
         varchar id PK
         varchar system_id FK
         blob encrypted_data "T1"
-        boolean archived
     }
 
     member_photos {
@@ -169,7 +168,6 @@ erDiagram
         varchar parent_group_id FK "self-ref, nullable"
         integer sort_order
         blob encrypted_data "T1"
-        boolean archived
     }
 
     group_memberships {
@@ -314,7 +312,6 @@ erDiagram
         varchar parent_id FK "self-ref, nullable"
         integer sort_order
         blob encrypted_data "T1"
-        boolean archived
     }
 
     messages {
@@ -325,7 +322,6 @@ erDiagram
         timestamp timestamp
         timestamp edited_at
         blob encrypted_data "T1"
-        boolean archived
     }
 
     board_messages {
@@ -341,7 +337,6 @@ erDiagram
         varchar system_id FK
         varchar member_id FK "nullable"
         blob encrypted_data "T1"
-        boolean archived
     }
 
     polls {
@@ -414,7 +409,6 @@ erDiagram
         varchar id PK
         varchar system_id FK
         blob encrypted_data "T1"
-        boolean archived
     }
 
     fronting_sessions {
@@ -594,7 +588,6 @@ erDiagram
         varchar system_id FK
         varchar fronting_session_id FK "nullable"
         blob encrypted_data "T1"
-        boolean archived
     }
 
     wiki_pages {
@@ -602,7 +595,6 @@ erDiagram
         varchar system_id FK
         varchar slug_hash "64-char hash, unique per system"
         blob encrypted_data "T1"
-        boolean archived
     }
 
     systems ||--o{ journal_entries : "has"
@@ -675,7 +667,6 @@ erDiagram
         boolean required
         integer sort_order
         blob encrypted_data "T1"
-        boolean archived
     }
 
     field_values {

@@ -5,7 +5,7 @@ status: in-progress
 type: feature
 priority: high
 created_at: 2026-03-13T23:47:17Z
-updated_at: 2026-03-14T03:44:07Z
+updated_at: 2026-03-14T04:39:03Z
 ---
 
 All entity types need a user-facing way to remove accidentally created entries. Currently only 9 entities support archival (members, custom fronts, journal entries, wiki pages, groups, channels, messages, notes, field definitions). All other entities can only be removed via system-level CASCADE (account deletion), which means accidental entries are permanently stuck.
@@ -118,4 +118,17 @@ Added soft-archival support to all 24 non-audit entity tables across PG and SQLi
 
 PR: https://github.com/ThePrismSystem/pluralscape-mono/pull/103
 
-## PR Review Fix Implementation\n\nAddressing all 8 items from PR #103 review:\n- [ ] Commit 1: Add partial filter to friend_notification_preferences and wiki_pages unique indexes\n- [ ] Commit 2: Regenerate migrations\n- [ ] Commit 3: Make Archived<T> distributive and fix ServerRelationship comment\n- [ ] Commit 4: Extract archivableConsistencyCheckFor helper\n- [ ] Commit 5: Add afterEach cleanup, UPDATE path tests, and partial index tests
+## PR Review Fix Implementation\n\nAddressing all 8 items from PR #103 review:\n- [x] Commit 1: Add partial filter to friend_notification_preferences and wiki_pages unique indexes\n- [x] Commit 2: Regenerate migrations\n- [x] Commit 3: Make Archived<T> distributive and fix ServerRelationship comment\n- [x] Commit 4: Extract archivableConsistencyCheckFor helper\n- [x] Commit 5: Add afterEach cleanup, UPDATE path tests, and partial index tests
+
+## PR #103 Review Changes (2026-03-14)
+
+Addressed 6 of 8 review suggestions (2 were invalid):
+
+- [x] Standardized archived index naming: removed redundant `_id` from timer_configs and webhook_configs indexes
+- [x] Converted friend_codes.code from UNIQUE constraint to partial unique index (active rows only)
+- [x] Regenerated PG and SQLite migrations (0003_fuzzy_blizzard, 0003_cynical_warbird)
+- [x] Added bucket unarchival tests (true→false) for PG and SQLite
+- [x] Added check_in_records partial index tests for both platforms
+- [x] Added friend_codes partial index tests (duplicate archived codes, code reuse) for both platforms
+- [x] Added switches archival comment explaining data-correction rationale
+- [x] Renamed 10 communication test descriptions to include archivedAt assertion
