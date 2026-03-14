@@ -15,6 +15,13 @@
       "when": 1773457322709,
       "tag": "0001_absent_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773459912502,
+      "tag": "0002_flashy_riptide",
+      "breakpoints": true
     }
   ]
 }

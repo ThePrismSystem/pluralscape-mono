@@ -15,6 +15,13 @@
       "when": 1773457320308,
       "tag": "0001_spicy_stardust",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773459909905,
+      "tag": "0002_careless_rafael_vega",
+      "breakpoints": true
     }
   ]
 }
