@@ -77,7 +77,7 @@ Note: polls and acknowledgements are cooperative guardrails within a system, not
 
 ## 5. Inter-System Messaging (future)
 
-Tracked as a potential future feature; may be deferred past initial launch. See [future feature doc](../future-features/001-inter-system-messaging.md) for detailed design.
+Tracked as a potential future feature; may be deferred past initial launch.
 
 - **External DMs** — between specific members of different systems
 - **Per-member external inboxes** — each member has their own inbox for cross-system messages
@@ -163,7 +163,7 @@ Full-text search across all entity types, powered by local SQLite FTS5. Search r
 - **Rate limiting** — intelligent backoff
 - **API documentation** — auto-generated from endpoint definitions
 - **Integration guides** — step-by-step guides for common languages (Python, JavaScript/TypeScript, Go, Rust, C#) covering authentication, metadata endpoints, and encrypted data decryption
-- **Client SDKs** (future) — official libraries for common languages that handle authentication and libsodium decryption, so third-party developers don't need to implement the crypto stack themselves. See [future feature doc](../future-features/004-client-sdks.md) for detailed design.
+- **Client SDKs** (future) — official libraries for common languages that handle authentication and libsodium decryption, so third-party developers don't need to implement the crypto stack themselves. See [future feature doc](../future-features/003-client-sdks.md) for detailed design.
 
 ## 10. Data Portability
 
@@ -293,16 +293,15 @@ Two deployment tiers. ADR 012.
 - Feature parity with hosted service
 - Docker Compose file with all services preconfigured
 
-## 19. Widget and Wearable Support (future)
+## 19. Widget Support (future)
 
-Tracked as a potential future feature; may be deferred past initial launch. See [future feature doc](../future-features/002-widget-wearable-support.md) for detailed design.
+Tracked as a potential future feature; may be deferred past initial launch. See [future feature doc](../future-features/001-widget-support.md) for detailed design.
 
-- Home screen widgets (quick front switching, current fronter display)
-- Apple Watch companion (front switching, current fronter glance)
+- Home screen widgets (quick front switching, current fronter display, timeline overview)
 
 ## 20. Monetization (post-launch)
 
-Cosmetic only — revenue covers server costs exclusively. No functional features paywalled, ever. See [future feature doc](../future-features/003-monetization-cosmetics.md) for detailed design.
+Cosmetic only — revenue covers server costs exclusively. No functional features paywalled, ever. See [future feature doc](../future-features/002-monetization-cosmetics.md) for detailed design.
 
 - Premium themes (gradient customization)
 - Avatar frame assembler (geometric shapes, borders, backgrounds)

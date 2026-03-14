@@ -16,15 +16,7 @@ A system for tracking recurring dates that hold significance for the system -- t
 
 ## Motivation
 
-Recurring significant dates are a reality for many plural systems. Traumaversaries (anniversaries of traumatic events), discovery dates (when members were first discovered), and other milestones can bring up strong emotions, dissociative episodes, or increased switching. Being caught off-guard by these dates is distressing. Proactive awareness -- knowing a difficult date is approaching -- allows systems to prepare coping strategies, schedule therapy sessions, arrange support, and warn trusted friends. Currently, systems must track these dates externally (calendar apps, paper notes) which fragments their management tools and may expose sensitive information to non-E2E-encrypted services.
-
-## User Stories
-
-- As a system, I want to track recurring traumaversary dates so that we are not caught off-guard by difficult anniversaries.
-- As a system, I want configurable reminders (e.g., 3 days before, 1 day before) so that I have time to prepare coping strategies and arrange support.
-- As a system, I want to optionally share upcoming traumaversaries with my therapist via privacy buckets so that they can be aware and prepared for our sessions.
-- As a system, I want a journaling prompt to appear on traumaversary dates so that I have a structured space to process my feelings.
-- As a system member, I want to associate traumaversaries with specific members so that the members most affected are aware and can be supported.
+Recurring significant dates are a reality for many plural systems. Traumaversaries (anniversaries of traumatic events), discovery dates (when members were first discovered), and other milestones can bring up strong emotions, dissociative episodes, or increased switching. Being caught off-guard by these dates is distressing. Proactive awareness -- knowing a difficult date is approaching -- allows systems to prepare coping strategies, schedule therapy sessions, arrange support, and notify trusted friends. Currently, systems must track these dates externally (calendar apps, paper notes) which fragments their management tools and may expose sensitive information to non-E2E-encrypted services.
 
 ## Proposed Behavior
 

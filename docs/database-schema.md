@@ -23,6 +23,7 @@ Core authentication and credential tables. All sensitive blobs here are T1 (per-
 erDiagram
     accounts {
         varchar id PK
+        varchar account_type "default 'system'"
         varchar email_hash
         varchar email_salt
         varchar password_hash
@@ -480,9 +481,32 @@ erDiagram
 
 ---
 
-## 7. Privacy (Buckets & Friends)
+## 7. System Snapshots
 
-Privacy Buckets use tag-based intersection logic to control which content is visible to which friends. Bucket keys are T2 (per-bucket symmetric keys). Friend connections are directional — A→B and B→A are separate rows.
+Point-in-time snapshots of system structure state. The encrypted blob contains the full serialized state of members, structure, groups, and innerworld. Trigger values: `manual`, `scheduled-daily`, `scheduled-weekly`.
+
+```mermaid
+erDiagram
+    systems {
+        varchar id PK
+    }
+
+    system_snapshots {
+        varchar id PK
+        varchar system_id FK
+        varchar snapshot_trigger "manual, scheduled-daily, scheduled-weekly"
+        blob encrypted_data "T1 - serialized system state"
+        timestamp created_at
+    }
+
+    systems ||--o{ system_snapshots : "has"
+```
+
+---
+
+## 8. Privacy (Buckets & Friends)
+
+Privacy Buckets use tag-based intersection logic to control which content is visible to which friends. Bucket keys are T2 (per-bucket symmetric keys). Friend connections and friend codes are account-level (not system-level). Friend connections are directional — A→B and B→A are separate rows.
 
 ```mermaid
 erDiagram
@@ -500,12 +524,14 @@ erDiagram
         varchar entity_type PK "composite PK"
         varchar entity_id PK "composite PK"
         varchar bucket_id PK "composite PK, FK"
+        varchar system_id FK
     }
 
     key_grants {
         varchar id PK
         varchar bucket_id FK
-        varchar friend_system_id FK
+        varchar system_id FK
+        varchar friend_account_id FK
         binary encrypted_key "bucket key re-encrypted for friend"
         integer key_version
         timestamp revoked_at
@@ -513,15 +539,15 @@ erDiagram
 
     friend_connections {
         varchar id PK
-        varchar system_id FK
-        varchar friend_system_id FK
+        varchar account_id FK
+        varchar friend_account_id FK
         varchar status
         blob encrypted_data "T1"
     }
 
     friend_codes {
         varchar id PK
-        varchar system_id FK
+        varchar account_id FK
         varchar code "unique"
         timestamp expires_at
     }
@@ -529,15 +555,17 @@ erDiagram
     friend_bucket_assignments {
         varchar friend_connection_id PK "composite PK, FK"
         varchar bucket_id PK "composite PK, FK"
+        varchar system_id FK
     }
 
     systems ||--o{ buckets : "owns"
     buckets ||--o{ bucket_content_tags : "tags"
     buckets ||--o{ key_grants : "grants key to"
-    systems ||--o{ key_grants : "receives (friend)"
-    systems ||--o{ friend_connections : "from"
-    systems ||--o{ friend_connections : "to (friend)"
-    systems ||--o{ friend_codes : "issues"
+    systems ||--o{ key_grants : "scopes"
+    accounts ||--o{ key_grants : "receives (friend)"
+    accounts ||--o{ friend_connections : "from"
+    accounts ||--o{ friend_connections : "to (friend)"
+    accounts ||--o{ friend_codes : "issues"
     friend_connections ||--o{ friend_bucket_assignments : "has"
     buckets ||--o{ friend_bucket_assignments : "assigned in"
 ```
@@ -546,7 +574,7 @@ erDiagram
 
 ---
 
-## 8. Journal & Wiki
+## 9. Journal & Wiki
 
 Journal entries can be linked to a fronting session for contextual tracking. Wiki pages are identified by a server-side slug hash.
 
@@ -584,7 +612,7 @@ erDiagram
 
 ---
 
-## 9. Innerworld
+## 10. Innerworld
 
 The system's internal mental landscape. Regions are hierarchical (parent/child). Entities (characters, objects, locations) live in regions. The canvas is a 1:1 per-system layout document.
 
@@ -621,7 +649,7 @@ erDiagram
 
 ---
 
-## 10. Custom Fields
+## 11. Custom Fields
 
 System-defined fields that extend member (or system-level) profiles. Values are per-member or system-level. Visibility is controlled per-bucket.
 
@@ -672,7 +700,7 @@ erDiagram
 
 ---
 
-## 11. Sync
+## 12. Sync
 
 CRDT-based offline sync infrastructure. `sync_documents` tracks Automerge document state per entity. `sync_queue` is the ordered change log. `sync_conflicts` records unresolved or resolved CRDT merges.
 
@@ -722,7 +750,7 @@ erDiagram
 
 ---
 
-## 12. Notifications
+## 13. Notifications
 
 Push notification device registration, per-event-type config, and friend-specific notification preferences.
 
@@ -738,7 +766,7 @@ erDiagram
 
     friend_connections {
         varchar id PK
-        varchar system_id FK
+        varchar account_id FK
     }
 
     device_tokens {
@@ -761,7 +789,7 @@ erDiagram
 
     friend_notification_preferences {
         varchar id PK
-        varchar system_id FK
+        varchar account_id FK
         varchar friend_connection_id FK
         jsonb enabled_event_types
     }
@@ -769,13 +797,13 @@ erDiagram
     accounts ||--o{ device_tokens : "registers"
     systems ||--o{ device_tokens : "scopes"
     systems ||--o{ notification_configs : "configures"
-    systems ||--o{ friend_notification_preferences : "has"
+    accounts ||--o{ friend_notification_preferences : "has"
     friend_connections ||--o{ friend_notification_preferences : "per friend"
 ```
 
 ---
 
-## 13. Jobs & Lifecycle
+## 14. Jobs & Lifecycle
 
 Import/export pipelines, account purge lifecycle, and application-domain lifecycle events (e.g., member discovery milestones). Audit log is append-only and partitioned by timestamp in production.
 
@@ -863,7 +891,7 @@ erDiagram
 
 ---
 
-## 14. Media & Blob
+## 15. Media & Blob
 
 S3-compatible blob storage metadata. Each blob belongs to a system and optionally to a privacy bucket (T2) or uses the system key (T1). Thumbnails self-reference the table.
 
@@ -898,7 +926,7 @@ erDiagram
 
 ---
 
-## 15. API Keys & Webhooks
+## 16. API Keys & Webhooks
 
 Programmatic API access (public REST API) and outbound webhook delivery. API keys can be scoped to specific buckets. Webhook configs reference an optional crypto API key for payload signing.
 
@@ -960,7 +988,7 @@ erDiagram
 
 ---
 
-## 16. Integration (PK Bridge & Safe Mode)
+## 17. Integration (PK Bridge & Safe Mode)
 
 PluralKit bridge state for bidirectional sync. Safe mode content is simplified UI content for Littles Mode.
 
@@ -994,7 +1022,7 @@ erDiagram
 
 ---
 
-## 17. Key Rotation
+## 18. Key Rotation
 
 Tracks in-progress and completed bucket key rotation jobs. Each rotation re-encrypts all T2 content tagged to a bucket from the old key version to the new one. Workers claim items to process.
 
@@ -1035,7 +1063,7 @@ erDiagram
 
 ---
 
-## 18. Search
+## 19. Search
 
 Full-text search index maintained as a derived table. Populated/invalidated by application-layer triggers after entity writes. Not directly owned by any domain entity via FK.
 
@@ -1065,11 +1093,13 @@ erDiagram
     accounts ||--o{ sessions : "has"
     accounts ||--o{ auth_keys : "has"
     accounts ||--o{ api_keys : "owns"
+    accounts ||--o{ friend_connections : "has"
     systems ||--o{ members : "contains"
     systems ||--o{ buckets : "owns"
     systems ||--o{ fronting_sessions : "tracks"
     systems ||--o{ channels : "has"
     systems ||--o{ journal_entries : "has"
+    systems ||--o{ system_snapshots : "snapshots"
     systems ||--o{ sync_documents : "syncs"
     buckets ||--o{ key_grants : "grants"
     buckets ||--o{ bucket_content_tags : "tags"

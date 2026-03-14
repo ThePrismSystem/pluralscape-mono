@@ -31,16 +31,6 @@ members = client.members.list()  # automatically decrypted
 
 By providing SDKs, we expand the ecosystem of third-party tools, encourage community innovation, and ensure that integrations handle encryption correctly rather than rolling their own (potentially insecure) implementations.
 
-## User Stories
-
-- As a developer building a Discord bot for my system, I want an official Python SDK so that I can display currently fronting members in my Discord server without implementing libsodium decryption myself.
-- As a developer building a web dashboard, I want a JavaScript/TypeScript SDK so that I can render member profiles and fronting timelines with automatic decryption.
-- As a developer building a system automation tool, I want a Go SDK so that I can integrate fronting data into my infrastructure with a language I am comfortable with.
-- As a developer concerned about security, I want the SDK to handle all crypto operations correctly so that I do not accidentally leak decrypted data or mishandle key material.
-- As a developer, I want the SDK to handle pagination, rate limiting, and error retries automatically so that I can focus on my application logic.
-- As a developer with a metadata-only integration, I want the SDK to work with metadata keys (no crypto) for simple use cases so that I do not need to set up crypto keys when I only need timestamps and connection status.
-- As the Pluralscape maintainer team, I want the SDKs to be the canonical reference implementations of the crypto protocol so that we can point developers to them instead of maintaining separate documentation for every edge case.
-
 ## Proposed Behavior
 
 ### SDK Architecture

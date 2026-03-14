@@ -8,7 +8,7 @@
 | Category             | analytics                                                                            |
 | Estimated Complexity | high                                                                                 |
 | Dependencies         | L5 (outtrigger reason field on fronting sessions)                                    |
-| Related Features     | 009-therapist-journal-report (report inclusion), fronting analytics (feature spec 2) |
+| Related Features     | 008-therapist-journal-report (report inclusion), fronting analytics (feature spec 2) |
 
 ## Summary
 
@@ -17,14 +17,6 @@ Client-side analytics on decrypted outtrigger reason data from fronting sessions
 ## Motivation
 
 Outtrigger reasons capture why a switch happened -- what external or internal event prompted a change in who is fronting. Over time, this data reveals patterns that are therapeutically valuable: which situations consistently bring specific members forward, whether certain times of day or days of the week correlate with specific switch triggers, and how outtrigger patterns change over months or years. Currently, identifying these patterns requires manual review of individual fronting sessions, which is impractical for systems with frequent switches. Automated analysis surfaces these patterns without requiring manual correlation, and exportable reports make it easy to bring structured insights to therapy sessions.
-
-## User Stories
-
-- As a system, I want to see which outtrigger reasons occur most frequently so that I can identify recurring patterns and discuss them with our therapist.
-- As a system member, I want to see my personal outtrigger pattern so that I understand what situations tend to bring me forward and can prepare for them.
-- As a system, I want to see how our outtrigger reasons correlate with time of day and day of week so that I can identify environmental patterns (e.g., work stress triggers on weekday mornings).
-- As a system, I want to export an outtrigger analytics report as a PDF so that I can share it with my therapist without giving them app access.
-- As a system, I want the app to suggest auto-populating outtrigger reason fields based on my historical data so that logging switches is faster and more consistent.
 
 ## Proposed Behavior
 
@@ -62,10 +54,6 @@ A dedicated analytics view (accessible from the fronting section) presents outtr
 - Ability to overlay multiple categories on the same chart.
 - Rolling averages to smooth out noise.
 
-### Auto-Suggestion
-
-Based on historical outtrigger data, the app can suggest outtrigger reasons when logging a new switch. Suggestions are presented as tappable chips, ranked by frequency (optionally filtered by current time-of-day and day-of-week for contextual relevance). Per-member custom suggestion lists can be generated from each member's historical patterns.
-
 ### Report Export
 
 Reports can be generated in HTML or PDF format, including:
@@ -85,15 +73,13 @@ Reports are generated entirely client-side and saved to the device. They are not
 - **Chart rendering**: Use a cross-platform charting library compatible with React Native (e.g., Victory Native, react-native-chart-kit, or a WebView-based solution like ECharts for more complex visualizations).
 - **PDF generation**: Client-side PDF generation from rendered charts and data. Options include react-native-html-to-pdf or similar. Charts may need to be rendered as images first.
 - **Performance**: For systems with thousands of switches, analysis should be lazy-loaded and cached. Consider background computation with progress indicators for large datasets.
-- **Auto-suggestion model**: Simple frequency-based ranking, optionally weighted by recency and temporal context. No ML required -- a frequency table with time-of-day buckets is sufficient.
 
 ## Privacy and Encryption Implications
 
 - Outtrigger reason data is among the most sensitive data in the app. Outtrigger reasons may describe trauma triggers, abuse situations, or other deeply personal content. All outtrigger data is T1 encrypted (zero-knowledge). The server never has access to this data in any form.
 - All analytics computation happens exclusively on the client, on decrypted data held in memory. No analytics results, intermediate computations, or aggregated statistics are ever sent to the server.
 - Generated reports (HTML/PDF) are unencrypted files saved to the device. Users must be warned that exported reports leave the encrypted environment. Reports should include a header noting they contain sensitive decrypted data.
-- Auto-suggestion data (frequency tables, common reasons) is derived from T1 data and stored locally in the encrypted local database.
-- If outtrigger analytics are optionally included in therapist reports (see feature 009), the same privacy bucket controls apply -- only outtrigger data associated with fronting sessions visible to the therapist's bucket are included.
+- If outtrigger analytics are optionally included in therapist reports (see feature 008), the same privacy bucket controls apply -- only outtrigger data associated with fronting sessions visible to the therapist's bucket are included.
 
 ## Open Questions
 
@@ -101,4 +87,5 @@ Reports are generated entirely client-side and saved to the device. They are not
 - Should the system be able to learn and suggest outtrigger categories (user-defined tags like "work", "trauma", "social") that can be assigned to freetext reasons for easier filtering? This would be a structured overlay on unstructured data.
 - How should outtrigger analytics integrate with journal entries? If a journal entry was written during the same fronting session that has an outtrigger reason, should the analytics view link to that entry for deeper context?
 - What is the minimum dataset size before analytics become meaningful? Should the feature show a "not enough data" state and suggest how many more logged outtrigger reasons are needed for useful analysis?
-- Should there be a way to exclude specific outtrigger entries from analysis (e.g., entries the system considers noise or errors) without deleting them from the fronting record?
+- Should there be a way to exclude specific outtrigger entries from analysis (e.g., entries the system considers noise, errors, or content that would be triggering to review) without deleting them from the fronting record?
+- Should the analytics view for outtrigger data be gated behind an optional trigger warning modal/screen, given that reviewing aggregated outtrigger patterns could surface difficult content?

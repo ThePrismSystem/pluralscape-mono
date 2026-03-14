@@ -165,20 +165,21 @@ Epics:
 
 These features are tracked but may be deferred past initial launch. Each has a detailed design document in `docs/future-features/`.
 
-- Inter-system messaging (features.md section 5) — [future feature doc](../future-features/001-inter-system-messaging.md)
-- Widget / wearable support (features.md section 19) — [future feature doc](../future-features/002-widget-wearable-support.md)
-- Official client SDKs (features.md section 9) — [future feature doc](../future-features/004-client-sdks.md)
+- Inter-system messaging (features.md section 5)
+- Widget support (features.md section 19) — [future feature doc](../future-features/001-widget-support.md)
+- Official client SDKs (features.md section 9) — [future feature doc](../future-features/003-client-sdks.md)
 - Multi-system support verification (L6) and system duplication (L7)
 - System snapshots (L10, ADR 022)
-- New/rediscovered alter onboarding — [future feature doc](../future-features/005-alter-onboarding.md)
-- Linked fronting — [future feature doc](../future-features/006-linked-fronting.md)
-- Outtrigger analytics — [future feature doc](../future-features/007-outtrigger-analytics.md)
-- Traumaversary tracking — [future feature doc](../future-features/008-traumaversary-tracking.md)
-- Therapist journal report — [future feature doc](../future-features/009-therapist-journal-report.md)
-- Journal custom fields — [future feature doc](../future-features/010-journal-custom-fields.md)
-- Journal fronting context — [future feature doc](../future-features/011-journal-fronting-context.md)
-- Member creation templates — [future feature doc](../future-features/012-member-templates.md)
-- Custom lifecycle event types — [future feature doc](../future-features/013-custom-lifecycle-events.md)
+- Member onboarding resources — [future feature doc](../future-features/004-member-onboarding-resources.md)
+- Linked fronting — [future feature doc](../future-features/005-linked-fronting.md)
+- Outtrigger analytics — [future feature doc](../future-features/006-outtrigger-analytics.md)
+- Traumaversary tracking — [future feature doc](../future-features/007-traumaversary-tracking.md)
+- Therapist journal report — [future feature doc](../future-features/008-therapist-journal-report.md)
+- Journal custom fields — [future feature doc](../future-features/009-journal-custom-fields.md)
+- Journal fronting context — [future feature doc](../future-features/010-journal-fronting-context.md)
+- Member creation templates — [future feature doc](../future-features/011-member-templates.md)
+- Custom lifecycle event types — [future feature doc](../future-features/012-custom-lifecycle-events.md)
+- Cosmetic monetization — [future feature doc](../future-features/002-monetization-cosmetics.md)
 
 ## Architecture Decision Records
 
