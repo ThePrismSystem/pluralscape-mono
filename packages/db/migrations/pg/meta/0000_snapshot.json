@@ -1,5 +1,5 @@
 {
-  "id": "3ef5595c-48c1-4ca5-96cd-3fbced87a353",
+  "id": "0e4a2bf7-6d1f-4b22-a2a9-590bfe16ab92",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -10,19 +10,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
@@ -80,8 +80,8 @@
           "method": "btree",
           "with": {}
         },
-        "account_purge_requests_pending_unique_idx": {
-          "name": "account_purge_requests_pending_unique_idx",
+        "account_purge_requests_active_unique_idx": {
+          "name": "account_purge_requests_active_unique_idx",
           "columns": [
             {
               "expression": "account_id",
@@ -91,7 +91,7 @@
             }
           ],
           "isUnique": true,
-          "where": "status = 'pending'",
+          "where": "\"account_purge_requests\".\"status\" IN ('pending', 'confirmed', 'processing')",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -125,9 +125,16 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
+        },
+        "account_type": {
+          "name": "account_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'system'"
         },
         "email_hash": {
           "name": "email_hash",
@@ -151,7 +158,7 @@
           "name": "kdf_salt",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -195,6 +202,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "accounts_account_type_check": {
+          "name": "accounts_account_type_check",
+          "value": "\"accounts\".\"account_type\" IS NULL OR \"accounts\".\"account_type\" IN ($1, $2)"
+        },
         "accounts_version_check": {
           "name": "accounts_version_check",
           "value": "\"accounts\".\"version\" >= 1"
@@ -208,19 +219,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "created_by_member_id": {
           "name": "created_by_member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -242,27 +253,31 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
-        "acknowledgements_system_id_idx": {
-          "name": "acknowledgements_system_id_idx",
+        "acknowledgements_system_id_confirmed_idx": {
+          "name": "acknowledgements_system_id_confirmed_idx",
           "columns": [
             {
               "expression": "system_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "acknowledgements_confirmed_idx": {
-          "name": "acknowledgements_confirmed_idx",
-          "columns": [
+            },
             {
               "expression": "confirmed",
               "isExpression": false,
@@ -286,12 +301,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "acknowledgements_created_by_member_id_members_id_fk": {
-          "name": "acknowledgements_created_by_member_id_members_id_fk",
+        "acknowledgements_created_by_member_id_system_id_members_id_system_id_fk": {
+          "name": "acknowledgements_created_by_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "acknowledgements",
           "tableTo": "members",
-          "columnsFrom": ["created_by_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["created_by_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -299,7 +314,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "acknowledgements_archived_consistency_check": {
+          "name": "acknowledgements_archived_consistency_check",
+          "value": "(\"acknowledgements\".\"archived\" = true) = (\"acknowledgements\".\"archived_at\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.api_keys": {
@@ -308,31 +328,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "key_type": {
           "name": "key_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -345,6 +359,12 @@
         "scopes": {
           "name": "scopes",
           "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": true
         },
@@ -472,12 +492,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "api_keys_system_id_systems_id_fk": {
-          "name": "api_keys_system_id_systems_id_fk",
+        "api_keys_system_id_account_id_systems_id_account_id_fk": {
+          "name": "api_keys_system_id_account_id_systems_id_account_id_fk",
           "tableFrom": "api_keys",
           "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["system_id", "account_id"],
+          "columnsTo": ["id", "account_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -503,25 +523,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": true,
+          "type": "varchar(50)",
+          "primaryKey": false,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "event_type": {
           "name": "event_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -599,11 +619,38 @@
           "method": "btree",
           "with": {}
         },
-        "audit_log_event_type_idx": {
-          "name": "audit_log_event_type_idx",
+        "audit_log_system_event_type_timestamp_idx": {
+          "name": "audit_log_system_event_type_timestamp_idx",
           "columns": [
             {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
               "expression": "event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "timestamp",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_log_timestamp_idx": {
+          "name": "audit_log_timestamp_idx",
+          "columns": [
+            {
+              "expression": "timestamp",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -635,13 +682,28 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "compositePrimaryKeys": {
+        "audit_log_id_timestamp_pk": {
+          "name": "audit_log_id_timestamp_pk",
+          "columns": ["id", "timestamp"]
+        }
+      },
+      "uniqueConstraints": {
+        "audit_log_id_unique": {
+          "name": "audit_log_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "timestamp"]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "audit_log_event_type_check": {
           "name": "audit_log_event_type_check",
           "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"
+        },
+        "audit_log_detail_length_check": {
+          "name": "audit_log_detail_length_check",
+          "value": "\"audit_log\".\"detail\" IS NULL OR length(\"audit_log\".\"detail\") <= 2048"
         }
       },
       "isRLSEnabled": false
@@ -652,13 +714,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -676,7 +738,7 @@
         },
         "key_type": {
           "name": "key_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -732,13 +794,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -768,19 +830,19 @@
         },
         "bucket_id": {
           "name": "bucket_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "purpose": {
           "name": "purpose",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "thumbnail_of_blob_id": {
           "name": "thumbnail_of_blob_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -795,14 +857,33 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
-        "blob_metadata_system_id_idx": {
-          "name": "blob_metadata_system_id_idx",
+        "blob_metadata_system_id_purpose_idx": {
+          "name": "blob_metadata_system_id_purpose_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "purpose",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -876,9 +957,21 @@
           "name": "blob_metadata_size_bytes_check",
           "value": "\"blob_metadata\".\"size_bytes\" > 0"
         },
+        "blob_metadata_size_bytes_max_check": {
+          "name": "blob_metadata_size_bytes_max_check",
+          "value": "\"blob_metadata\".\"size_bytes\" <= 10737418240"
+        },
         "blob_metadata_encryption_tier_check": {
           "name": "blob_metadata_encryption_tier_check",
           "value": "\"blob_metadata\".\"encryption_tier\" IN (1, 2)"
+        },
+        "blob_metadata_checksum_length_check": {
+          "name": "blob_metadata_checksum_length_check",
+          "value": "length(\"blob_metadata\".\"checksum\") = 64"
+        },
+        "blob_metadata_archived_consistency_check": {
+          "name": "blob_metadata_archived_consistency_check",
+          "value": "(\"blob_metadata\".\"archived\" = true) = (\"blob_metadata\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -889,13 +982,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -936,6 +1029,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -944,6 +1050,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "board_messages_system_archived_idx": {
+          "name": "board_messages_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -977,6 +1104,10 @@
         "board_messages_version_check": {
           "name": "board_messages_version_check",
           "value": "\"board_messages\".\"version\" >= 1"
+        },
+        "board_messages_archived_consistency_check": {
+          "name": "board_messages_archived_consistency_check",
+          "value": "(\"board_messages\".\"archived\" = true) = (\"board_messages\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -987,35 +1118,35 @@
       "columns": {
         "entity_type": {
           "name": "entity_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_id": {
           "name": "entity_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "bucket_id": {
           "name": "bucket_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         }
       },
       "indexes": {
-        "bucket_content_tags_entity_idx": {
-          "name": "bucket_content_tags_entity_idx",
+        "bucket_content_tags_bucket_id_idx": {
+          "name": "bucket_content_tags_bucket_id_idx",
           "columns": [
             {
-              "expression": "entity_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "entity_id",
+              "expression": "bucket_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1026,11 +1157,11 @@
           "method": "btree",
           "with": {}
         },
-        "bucket_content_tags_bucket_id_idx": {
-          "name": "bucket_content_tags_bucket_id_idx",
+        "bucket_content_tags_system_id_idx": {
+          "name": "bucket_content_tags_system_id_idx",
           "columns": [
             {
-              "expression": "bucket_id",
+              "expression": "system_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1048,6 +1179,15 @@
           "tableFrom": "bucket_content_tags",
           "tableTo": "buckets",
           "columnsFrom": ["bucket_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bucket_content_tags_system_id_systems_id_fk": {
+          "name": "bucket_content_tags_system_id_systems_id_fk",
+          "tableFrom": "bucket_content_tags",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -1075,13 +1215,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "bucket_id": {
           "name": "bucket_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1099,7 +1245,7 @@
         },
         "state": {
           "name": "state",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'initiated'"
@@ -1158,6 +1304,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "bucket_key_rotations_system_id_idx": {
+          "name": "bucket_key_rotations_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1166,6 +1327,15 @@
           "tableFrom": "bucket_key_rotations",
           "tableTo": "buckets",
           "columnsFrom": ["bucket_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bucket_key_rotations_system_id_systems_id_fk": {
+          "name": "bucket_key_rotations_system_id_systems_id_fk",
+          "tableFrom": "bucket_key_rotations",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -1196,31 +1366,37 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "rotation_id": {
           "name": "rotation_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_type": {
           "name": "entity_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_id": {
           "name": "entity_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
@@ -1293,6 +1469,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "bucket_rotation_items_system_id_idx": {
+          "name": "bucket_rotation_items_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1301,6 +1492,15 @@
           "tableFrom": "bucket_rotation_items",
           "tableTo": "bucket_key_rotations",
           "columnsFrom": ["rotation_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bucket_rotation_items_system_id_systems_id_fk": {
+          "name": "bucket_rotation_items_system_id_systems_id_fk",
+          "tableFrom": "bucket_rotation_items",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -1323,13 +1523,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1357,6 +1557,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -1365,6 +1578,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "buckets_system_archived_idx": {
+          "name": "buckets_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1400,6 +1634,10 @@
         "buckets_version_check": {
           "name": "buckets_version_check",
           "value": "\"buckets\".\"version\" >= 1"
+        },
+        "buckets_archived_consistency_check": {
+          "name": "buckets_archived_consistency_check",
+          "value": "(\"buckets\".\"archived\" = true) = (\"buckets\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -1410,25 +1648,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "type": {
           "name": "type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "parent_id": {
           "name": "parent_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -1504,12 +1742,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "channels_parent_id_channels_id_fk": {
-          "name": "channels_parent_id_channels_id_fk",
+        "channels_parent_id_system_id_channels_id_system_id_fk": {
+          "name": "channels_parent_id_system_id_channels_id_system_id_fk",
           "tableFrom": "channels",
           "tableTo": "channels",
-          "columnsFrom": ["parent_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["parent_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1549,19 +1787,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "timer_config_id": {
           "name": "timer_config_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1586,13 +1824,26 @@
         },
         "responded_by_member_id": {
           "name": "responded_by_member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "encrypted_data": {
           "name": "encrypted_data",
           "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
           "primaryKey": false,
           "notNull": false
         }
@@ -1642,6 +1893,28 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "check_in_records_system_pending_idx": {
+          "name": "check_in_records_system_pending_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scheduled_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"check_in_records\".\"responded_at\" IS NULL AND \"check_in_records\".\"dismissed\" = false",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -1663,12 +1936,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "check_in_records_responded_by_member_id_members_id_fk": {
-          "name": "check_in_records_responded_by_member_id_members_id_fk",
+        "check_in_records_responded_by_member_id_system_id_members_id_system_id_fk": {
+          "name": "check_in_records_responded_by_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "check_in_records",
           "tableTo": "members",
-          "columnsFrom": ["responded_by_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["responded_by_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1676,7 +1949,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "check_in_records_archived_consistency_check": {
+          "name": "check_in_records_archived_consistency_check",
+          "value": "(\"check_in_records\".\"archived\" = true) = (\"check_in_records\".\"archived_at\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.custom_fronts": {
@@ -1685,13 +1963,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1763,7 +2041,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "custom_fronts_id_system_id_unique": {
+          "name": "custom_fronts_id_system_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "system_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "custom_fronts_version_check": {
@@ -1783,25 +2067,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "platform": {
           "name": "platform",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -1898,7 +2182,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "device_tokens_token_platform_unique": {
+          "name": "device_tokens_token_platform_unique",
+          "nullsNotDistinct": false,
+          "columns": ["token", "platform"]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "device_tokens_platform_check": {
@@ -1914,31 +2204,31 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "source_session_id": {
           "name": "source_session_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "target_session_id": {
           "name": "target_session_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
@@ -2046,6 +2336,10 @@
         "device_transfer_requests_expires_at_check": {
           "name": "device_transfer_requests_expires_at_check",
           "value": "\"device_transfer_requests\".\"expires_at\" > \"device_transfer_requests\".\"created_at\""
+        },
+        "device_transfer_requests_key_material_check": {
+          "name": "device_transfer_requests_key_material_check",
+          "value": "\"device_transfer_requests\".\"status\" != 'approved' OR \"device_transfer_requests\".\"encrypted_key_material\" IS NOT NULL"
         }
       },
       "isRLSEnabled": false
@@ -2056,38 +2350,38 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "format": {
           "name": "format",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
         },
         "blob_id": {
           "name": "blob_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2152,15 +2446,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "export_requests_system_id_systems_id_fk": {
-          "name": "export_requests_system_id_systems_id_fk",
-          "tableFrom": "export_requests",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "export_requests_blob_id_blob_metadata_id_fk": {
           "name": "export_requests_blob_id_blob_metadata_id_fk",
           "tableFrom": "export_requests",
@@ -2168,6 +2453,15 @@
           "columnsFrom": ["blob_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "export_requests_system_id_account_id_systems_id_account_id_fk": {
+          "name": "export_requests_system_id_account_id_systems_id_account_id_fk",
+          "tableFrom": "export_requests",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id", "account_id"],
+          "columnsTo": ["id", "account_id"],
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -2192,18 +2486,55 @@
       "columns": {
         "field_definition_id": {
           "name": "field_definition_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "bucket_id": {
           "name": "bucket_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "field_bucket_visibility_bucket_id_idx": {
+          "name": "field_bucket_visibility_bucket_id_idx",
+          "columns": [
+            {
+              "expression": "bucket_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "field_bucket_visibility_system_id_idx": {
+          "name": "field_bucket_visibility_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "field_bucket_visibility_field_definition_id_field_definitions_id_fk": {
           "name": "field_bucket_visibility_field_definition_id_field_definitions_id_fk",
@@ -2219,6 +2550,15 @@
           "tableFrom": "field_bucket_visibility",
           "tableTo": "buckets",
           "columnsFrom": ["bucket_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "field_bucket_visibility_system_id_systems_id_fk": {
+          "name": "field_bucket_visibility_system_id_systems_id_fk",
+          "tableFrom": "field_bucket_visibility",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2241,33 +2581,35 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "field_type": {
           "name": "field_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "required": {
           "name": "required",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         },
         "sort_order": {
           "name": "sort_order",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": 0
         },
         "encrypted_data": {
           "name": "encrypted_data",
@@ -2367,25 +2709,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "field_definition_id": {
           "name": "field_definition_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "member_id": {
           "name": "member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -2501,12 +2843,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "field_values_member_id_members_id_fk": {
-          "name": "field_values_member_id_members_id_fk",
+        "field_values_member_id_system_id_members_id_system_id_fk": {
+          "name": "field_values_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "field_values",
           "tableTo": "members",
-          "columnsFrom": ["member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2528,18 +2870,55 @@
       "columns": {
         "friend_connection_id": {
           "name": "friend_connection_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "bucket_id": {
           "name": "bucket_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "friend_bucket_assignments_bucket_id_idx": {
+          "name": "friend_bucket_assignments_bucket_id_idx",
+          "columns": [
+            {
+              "expression": "bucket_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "friend_bucket_assignments_system_id_idx": {
+          "name": "friend_bucket_assignments_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "friend_bucket_assignments_friend_connection_id_friend_connections_id_fk": {
           "name": "friend_bucket_assignments_friend_connection_id_friend_connections_id_fk",
@@ -2555,6 +2934,15 @@
           "tableFrom": "friend_bucket_assignments",
           "tableTo": "buckets",
           "columnsFrom": ["bucket_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "friend_bucket_assignments_system_id_systems_id_fk": {
+          "name": "friend_bucket_assignments_system_id_systems_id_fk",
+          "tableFrom": "friend_bucket_assignments",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2577,13 +2965,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(255)",
+        "account_id": {
+          "name": "account_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -2604,14 +2992,27 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
-        "friend_codes_system_id_idx": {
-          "name": "friend_codes_system_id_idx",
+        "friend_codes_account_id_idx": {
+          "name": "friend_codes_account_id_idx",
           "columns": [
             {
-              "expression": "system_id",
+              "expression": "account_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2624,11 +3025,11 @@
         }
       },
       "foreignKeys": {
-        "friend_codes_system_id_systems_id_fk": {
-          "name": "friend_codes_system_id_systems_id_fk",
+        "friend_codes_account_id_accounts_id_fk": {
+          "name": "friend_codes_account_id_accounts_id_fk",
           "tableFrom": "friend_codes",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
+          "tableTo": "accounts",
+          "columnsFrom": ["account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2647,6 +3048,14 @@
         "friend_codes_expires_at_check": {
           "name": "friend_codes_expires_at_check",
           "value": "\"friend_codes\".\"expires_at\" IS NULL OR \"friend_codes\".\"expires_at\" > \"friend_codes\".\"created_at\""
+        },
+        "friend_codes_code_min_length_check": {
+          "name": "friend_codes_code_min_length_check",
+          "value": "length(\"friend_codes\".\"code\") >= 8"
+        },
+        "friend_codes_archived_consistency_check": {
+          "name": "friend_codes_archived_consistency_check",
+          "value": "(\"friend_codes\".\"archived\" = true) = (\"friend_codes\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -2657,25 +3066,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(255)",
+        "account_id": {
+          "name": "account_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
-        "friend_system_id": {
-          "name": "friend_system_id",
-          "type": "varchar(255)",
+        "friend_account_id": {
+          "name": "friend_account_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
@@ -2704,14 +3113,27 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
-        "friend_connections_system_status_idx": {
-          "name": "friend_connections_system_status_idx",
+        "friend_connections_account_status_idx": {
+          "name": "friend_connections_account_status_idx",
           "columns": [
             {
-              "expression": "system_id",
+              "expression": "account_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2728,11 +3150,38 @@
           "method": "btree",
           "with": {}
         },
-        "friend_connections_friend_system_id_idx": {
-          "name": "friend_connections_friend_system_id_idx",
+        "friend_connections_friend_status_idx": {
+          "name": "friend_connections_friend_status_idx",
           "columns": [
             {
-              "expression": "friend_system_id",
+              "expression": "friend_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "friend_connections_account_archived_idx": {
+          "name": "friend_connections_account_archived_idx",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2745,20 +3194,20 @@
         }
       },
       "foreignKeys": {
-        "friend_connections_system_id_systems_id_fk": {
-          "name": "friend_connections_system_id_systems_id_fk",
+        "friend_connections_account_id_accounts_id_fk": {
+          "name": "friend_connections_account_id_accounts_id_fk",
           "tableFrom": "friend_connections",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
+          "tableTo": "accounts",
+          "columnsFrom": ["account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "friend_connections_friend_system_id_systems_id_fk": {
-          "name": "friend_connections_friend_system_id_systems_id_fk",
+        "friend_connections_friend_account_id_accounts_id_fk": {
+          "name": "friend_connections_friend_account_id_accounts_id_fk",
           "tableFrom": "friend_connections",
-          "tableTo": "systems",
-          "columnsFrom": ["friend_system_id"],
+          "tableTo": "accounts",
+          "columnsFrom": ["friend_account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2766,15 +3215,15 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "friend_connections_system_friend_uniq": {
-          "name": "friend_connections_system_friend_uniq",
+        "friend_connections_account_friend_uniq": {
+          "name": "friend_connections_account_friend_uniq",
           "nullsNotDistinct": false,
-          "columns": ["system_id", "friend_system_id"]
+          "columns": ["account_id", "friend_account_id"]
         },
-        "friend_connections_id_system_id_unique": {
-          "name": "friend_connections_id_system_id_unique",
+        "friend_connections_id_account_id_unique": {
+          "name": "friend_connections_id_account_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["id", "system_id"]
+          "columns": ["id", "account_id"]
         }
       },
       "policies": {},
@@ -2785,11 +3234,15 @@
         },
         "friend_connections_no_self_check": {
           "name": "friend_connections_no_self_check",
-          "value": "\"friend_connections\".\"system_id\" != \"friend_connections\".\"friend_system_id\""
+          "value": "\"friend_connections\".\"account_id\" != \"friend_connections\".\"friend_account_id\""
         },
         "friend_connections_version_check": {
           "name": "friend_connections_version_check",
           "value": "\"friend_connections\".\"version\" >= 1"
+        },
+        "friend_connections_archived_consistency_check": {
+          "name": "friend_connections_archived_consistency_check",
+          "value": "(\"friend_connections\".\"archived\" = true) = (\"friend_connections\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -2800,19 +3253,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(255)",
+        "account_id": {
+          "name": "account_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "friend_connection_id": {
           "name": "friend_connection_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -2833,14 +3286,27 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
-        "friend_notification_prefs_system_id_friend_connection_id_idx": {
-          "name": "friend_notification_prefs_system_id_friend_connection_id_idx",
+        "friend_notification_prefs_account_id_friend_connection_id_idx": {
+          "name": "friend_notification_prefs_account_id_friend_connection_id_idx",
           "columns": [
             {
-              "expression": "system_id",
+              "expression": "account_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2859,21 +3325,21 @@
         }
       },
       "foreignKeys": {
-        "friend_notification_preferences_system_id_systems_id_fk": {
-          "name": "friend_notification_preferences_system_id_systems_id_fk",
+        "friend_notification_preferences_account_id_accounts_id_fk": {
+          "name": "friend_notification_preferences_account_id_accounts_id_fk",
           "tableFrom": "friend_notification_preferences",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
+          "tableTo": "accounts",
+          "columnsFrom": ["account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "friend_notification_preferences_friend_connection_id_system_id_friend_connections_id_system_id_fk": {
-          "name": "friend_notification_preferences_friend_connection_id_system_id_friend_connections_id_system_id_fk",
+        "friend_notification_preferences_friend_connection_id_account_id_friend_connections_id_account_id_fk": {
+          "name": "friend_notification_preferences_friend_connection_id_account_id_friend_connections_id_account_id_fk",
           "tableFrom": "friend_notification_preferences",
           "tableTo": "friend_connections",
-          "columnsFrom": ["friend_connection_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
+          "columnsFrom": ["friend_connection_id", "account_id"],
+          "columnsTo": ["id", "account_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2881,7 +3347,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "friend_notification_preferences_archived_consistency_check": {
+          "name": "friend_notification_preferences_archived_consistency_check",
+          "value": "(\"friend_notification_preferences\".\"archived\" = true) = (\"friend_notification_preferences\".\"archived_at\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.fronting_comments": {
@@ -2890,25 +3361,31 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "fronting_session_id": {
           "name": "fronting_session_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_start_time": {
+          "name": "session_start_time",
+          "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
         },
         "member_id": {
           "name": "member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2936,6 +3413,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -2959,6 +3449,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "fronting_comments_session_start_idx": {
+          "name": "fronting_comments_session_start_idx",
+          "columns": [
+            {
+              "expression": "session_start_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2971,21 +3476,21 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "fronting_comments_fronting_session_id_system_id_fronting_sessions_id_system_id_fk": {
-          "name": "fronting_comments_fronting_session_id_system_id_fronting_sessions_id_system_id_fk",
+        "fronting_comments_fronting_session_id_system_id_session_start_time_fronting_sessions_id_system_id_start_time_fk": {
+          "name": "fronting_comments_fronting_session_id_system_id_session_start_time_fronting_sessions_id_system_id_start_time_fk",
           "tableFrom": "fronting_comments",
           "tableTo": "fronting_sessions",
-          "columnsFrom": ["fronting_session_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
+          "columnsFrom": ["fronting_session_id", "system_id", "session_start_time"],
+          "columnsTo": ["id", "system_id", "start_time"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "fronting_comments_member_id_members_id_fk": {
-          "name": "fronting_comments_member_id_members_id_fk",
+        "fronting_comments_member_id_system_id_members_id_system_id_fk": {
+          "name": "fronting_comments_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "fronting_comments",
           "tableTo": "members",
-          "columnsFrom": ["member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2997,6 +3502,10 @@
         "fronting_comments_version_check": {
           "name": "fronting_comments_version_check",
           "value": "\"fronting_comments\".\"version\" >= 1"
+        },
+        "fronting_comments_archived_consistency_check": {
+          "name": "fronting_comments_archived_consistency_check",
+          "value": "(\"fronting_comments\".\"archived\" = true) = (\"fronting_comments\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -3007,37 +3516,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
-        "date_range": {
-          "name": "date_range",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "member_breakdowns": {
-          "name": "member_breakdowns",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "chart_data": {
-          "name": "chart_data",
-          "type": "jsonb",
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": true
         },
         "format": {
           "name": "format",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -3093,13 +3590,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": true,
+          "type": "varchar(50)",
+          "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -3117,19 +3614,20 @@
         },
         "member_id": {
           "name": "member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "fronting_type": {
           "name": "fronting_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "'fronting'"
         },
         "custom_front_id": {
           "name": "custom_front_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -3163,6 +3661,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3171,6 +3682,33 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "fronting_sessions_system_member_start_idx": {
+          "name": "fronting_sessions_system_member_start_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "member_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3207,6 +3745,70 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "fronting_sessions_system_type_start_idx": {
+          "name": "fronting_sessions_system_type_start_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "fronting_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "fronting_sessions_active_idx": {
+          "name": "fronting_sessions_active_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"fronting_sessions\".\"end_time\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "fronting_sessions_system_archived_idx": {
+          "name": "fronting_sessions_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3219,12 +3821,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "fronting_sessions_member_id_members_id_fk": {
-          "name": "fronting_sessions_member_id_members_id_fk",
+        "fronting_sessions_member_id_system_id_members_id_system_id_fk": {
+          "name": "fronting_sessions_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "fronting_sessions",
           "tableTo": "members",
-          "columnsFrom": ["member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3238,12 +3840,17 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "fronting_sessions_id_start_time_pk": {
+          "name": "fronting_sessions_id_start_time_pk",
+          "columns": ["id", "start_time"]
+        }
+      },
       "uniqueConstraints": {
         "fronting_sessions_id_system_id_unique": {
           "name": "fronting_sessions_id_system_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["id", "system_id"]
+          "columns": ["id", "system_id", "start_time"]
         }
       },
       "policies": {},
@@ -3259,6 +3866,14 @@
         "fronting_sessions_version_check": {
           "name": "fronting_sessions_version_check",
           "value": "\"fronting_sessions\".\"version\" >= 1"
+        },
+        "fronting_sessions_archived_consistency_check": {
+          "name": "fronting_sessions_archived_consistency_check",
+          "value": "(\"fronting_sessions\".\"archived\" = true) = (\"fronting_sessions\".\"archived_at\" IS NOT NULL)"
+        },
+        "fronting_sessions_subject_check": {
+          "name": "fronting_sessions_subject_check",
+          "value": "\"fronting_sessions\".\"member_id\" IS NOT NULL OR \"fronting_sessions\".\"custom_front_id\" IS NOT NULL"
         }
       },
       "isRLSEnabled": false
@@ -3269,19 +3884,19 @@
       "columns": {
         "group_id": {
           "name": "group_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "member_id": {
           "name": "member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -3370,19 +3985,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "parent_group_id": {
           "name": "parent_group_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -3458,12 +4073,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "groups_parent_group_id_groups_id_fk": {
-          "name": "groups_parent_group_id_groups_id_fk",
+        "groups_parent_group_id_system_id_groups_id_system_id_fk": {
+          "name": "groups_parent_group_id_system_id_groups_id_system_id_fk",
           "tableFrom": "groups",
           "tableTo": "groups",
-          "columnsFrom": ["parent_group_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["parent_group_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3499,31 +4114,31 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "source": {
           "name": "source",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
@@ -3628,12 +4243,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "import_jobs_system_id_systems_id_fk": {
-          "name": "import_jobs_system_id_systems_id_fk",
+        "import_jobs_system_id_account_id_systems_id_account_id_fk": {
+          "name": "import_jobs_system_id_account_id_systems_id_account_id_fk",
           "tableFrom": "import_jobs",
           "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["system_id", "account_id"],
+          "columnsTo": ["id", "account_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3657,6 +4272,10 @@
         "import_jobs_chunks_check": {
           "name": "import_jobs_chunks_check",
           "value": "\"import_jobs\".\"chunks_total\" IS NULL OR \"import_jobs\".\"chunks_completed\" <= \"import_jobs\".\"chunks_total\""
+        },
+        "import_jobs_error_log_length_check": {
+          "name": "import_jobs_error_log_length_check",
+          "value": "\"import_jobs\".\"error_log\" IS NULL OR jsonb_array_length(\"import_jobs\".\"error_log\") <= $1"
         }
       },
       "isRLSEnabled": false
@@ -3667,7 +4286,7 @@
       "columns": {
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
@@ -3726,19 +4345,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "region_id": {
           "name": "region_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -3766,6 +4385,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3789,6 +4421,27 @@
           "columns": [
             {
               "expression": "region_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "innerworld_entities_system_archived_idx": {
+          "name": "innerworld_entities_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3827,6 +4480,10 @@
         "innerworld_entities_version_check": {
           "name": "innerworld_entities_version_check",
           "value": "\"innerworld_entities\".\"version\" >= 1"
+        },
+        "innerworld_entities_archived_consistency_check": {
+          "name": "innerworld_entities_archived_consistency_check",
+          "value": "(\"innerworld_entities\".\"archived\" = true) = (\"innerworld_entities\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -3837,19 +4494,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "parent_region_id": {
           "name": "parent_region_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -3877,6 +4534,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3885,6 +4555,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "innerworld_regions_system_archived_idx": {
+          "name": "innerworld_regions_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3906,12 +4597,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "innerworld_regions_parent_region_id_innerworld_regions_id_fk": {
-          "name": "innerworld_regions_parent_region_id_innerworld_regions_id_fk",
+        "innerworld_regions_parent_region_id_system_id_innerworld_regions_id_system_id_fk": {
+          "name": "innerworld_regions_parent_region_id_system_id_innerworld_regions_id_system_id_fk",
           "tableFrom": "innerworld_regions",
           "tableTo": "innerworld_regions",
-          "columnsFrom": ["parent_region_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["parent_region_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3929,6 +4620,10 @@
         "innerworld_regions_version_check": {
           "name": "innerworld_regions_version_check",
           "value": "\"innerworld_regions\".\"version\" >= 1"
+        },
+        "innerworld_regions_archived_consistency_check": {
+          "name": "innerworld_regions_archived_consistency_check",
+          "value": "(\"innerworld_regions\".\"archived\" = true) = (\"innerworld_regions\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -3939,19 +4634,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "fronting_session_id": {
           "name": "fronting_session_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -4041,15 +4736,6 @@
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "journal_entries_fronting_session_id_fronting_sessions_id_fk": {
-          "name": "journal_entries_fronting_session_id_fronting_sessions_id_fk",
-          "tableFrom": "journal_entries",
-          "tableTo": "fronting_sessions",
-          "columnsFrom": ["fronting_session_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -4073,19 +4759,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "bucket_id": {
           "name": "bucket_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
-        "friend_system_id": {
-          "name": "friend_system_id",
-          "type": "varchar(255)",
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "friend_account_id": {
+          "name": "friend_account_id",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -4115,17 +4807,53 @@
         }
       },
       "indexes": {
+        "key_grants_system_id_idx": {
+          "name": "key_grants_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "key_grants_friend_bucket_idx": {
           "name": "key_grants_friend_bucket_idx",
           "columns": [
             {
-              "expression": "friend_system_id",
+              "expression": "friend_account_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
               "expression": "bucket_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "key_grants_friend_revoked_idx": {
+          "name": "key_grants_friend_revoked_idx",
+          "columns": [
+            {
+              "expression": "friend_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "revoked_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4162,11 +4890,20 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "key_grants_friend_system_id_systems_id_fk": {
-          "name": "key_grants_friend_system_id_systems_id_fk",
+        "key_grants_system_id_systems_id_fk": {
+          "name": "key_grants_system_id_systems_id_fk",
           "tableFrom": "key_grants",
           "tableTo": "systems",
-          "columnsFrom": ["friend_system_id"],
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "key_grants_friend_account_id_accounts_id_fk": {
+          "name": "key_grants_friend_account_id_accounts_id_fk",
+          "tableFrom": "key_grants",
+          "tableTo": "accounts",
+          "columnsFrom": ["friend_account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -4177,7 +4914,7 @@
         "key_grants_bucket_friend_version_uniq": {
           "name": "key_grants_bucket_friend_version_uniq",
           "nullsNotDistinct": false,
-          "columns": ["bucket_id", "friend_system_id", "key_version"]
+          "columns": ["bucket_id", "friend_account_id", "key_version"]
         }
       },
       "policies": {},
@@ -4195,19 +4932,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "layer_id": {
           "name": "layer_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -4288,13 +5025,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -4328,6 +5065,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -4336,6 +5086,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "layers_system_archived_idx": {
+          "name": "layers_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4371,6 +5142,10 @@
         "layers_version_check": {
           "name": "layers_version_check",
           "value": "\"layers\".\"version\" >= 1"
+        },
+        "layers_archived_consistency_check": {
+          "name": "layers_archived_consistency_check",
+          "value": "(\"layers\".\"archived\" = true) = (\"layers\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -4381,21 +5156,21 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "event_type": {
           "name": "event_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "occurred_at": {
           "name": "occurred_at",
@@ -4477,7 +5252,7 @@
       "checkConstraints": {
         "lifecycle_events_event_type_check": {
           "name": "lifecycle_events_event_type_check",
-          "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
+          "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
         }
       },
       "isRLSEnabled": false
@@ -4488,19 +5263,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "member_id": {
           "name": "member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -4535,6 +5310,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -4602,6 +5390,10 @@
         "member_photos_version_check": {
           "name": "member_photos_version_check",
           "value": "\"member_photos\".\"version\" >= 1"
+        },
+        "member_photos_archived_consistency_check": {
+          "name": "member_photos_archived_consistency_check",
+          "value": "(\"member_photos\".\"archived\" = true) = (\"member_photos\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -4612,13 +5404,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -4662,24 +5454,15 @@
         }
       },
       "indexes": {
-        "members_system_id_idx": {
-          "name": "members_system_id_idx",
+        "members_system_id_archived_idx": {
+          "name": "members_system_id_archived_idx",
           "columns": [
             {
               "expression": "system_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "members_archived_idx": {
-          "name": "members_archived_idx",
-          "columns": [
+            },
             {
               "expression": "archived",
               "isExpression": false,
@@ -4746,25 +5529,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": true,
+          "type": "varchar(50)",
+          "primaryKey": false,
           "notNull": true
         },
         "channel_id": {
           "name": "channel_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "reply_to_id": {
           "name": "reply_to_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -4890,23 +5673,24 @@
           "columnsTo": ["id", "system_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "messages_reply_to_id_messages_id_fk": {
-          "name": "messages_reply_to_id_messages_id_fk",
-          "tableFrom": "messages",
-          "tableTo": "messages",
-          "columnsFrom": ["reply_to_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "messages_id_timestamp_pk": {
+          "name": "messages_id_timestamp_pk",
+          "columns": ["id", "timestamp"]
+        }
+      },
       "uniqueConstraints": {
-        "messages_id_system_id_unique": {
-          "name": "messages_id_system_id_unique",
+        "messages_id_unique": {
+          "name": "messages_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["id", "system_id"]
+          "columns": ["id", "timestamp"]
+        },
+        "messages_id_system_id_timestamp_unique": {
+          "name": "messages_id_system_id_timestamp_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "system_id", "timestamp"]
         }
       },
       "policies": {},
@@ -4928,7 +5712,7 @@
       "columns": {
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
@@ -4987,19 +5771,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "member_id": {
           "name": "member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -5084,12 +5868,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "notes_member_id_members_id_fk": {
-          "name": "notes_member_id_members_id_fk",
+        "notes_member_id_system_id_members_id_system_id_fk": {
+          "name": "notes_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "notes",
           "tableTo": "members",
-          "columnsFrom": ["member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5115,19 +5899,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "event_type": {
           "name": "event_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -5156,6 +5940,19 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -5199,23 +5996,27 @@
         "notification_configs_event_type_check": {
           "name": "notification_configs_event_type_check",
           "value": "\"notification_configs\".\"event_type\" IS NULL OR \"notification_configs\".\"event_type\" IN ($1, $2, $3, $4, $5, $6)"
+        },
+        "notification_configs_archived_consistency_check": {
+          "name": "notification_configs_archived_consistency_check",
+          "value": "(\"notification_configs\".\"archived\" = true) = (\"notification_configs\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
     },
-    "public.pk_bridge_state": {
-      "name": "pk_bridge_state",
+    "public.pk_bridge_configs": {
+      "name": "pk_bridge_configs",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -5228,7 +6029,7 @@
         },
         "sync_direction": {
           "name": "sync_direction",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -5277,8 +6078,8 @@
         }
       },
       "indexes": {
-        "pk_bridge_state_system_id_idx": {
-          "name": "pk_bridge_state_system_id_idx",
+        "pk_bridge_configs_system_id_idx": {
+          "name": "pk_bridge_configs_system_id_idx",
           "columns": [
             {
               "expression": "system_id",
@@ -5294,9 +6095,9 @@
         }
       },
       "foreignKeys": {
-        "pk_bridge_state_system_id_systems_id_fk": {
-          "name": "pk_bridge_state_system_id_systems_id_fk",
-          "tableFrom": "pk_bridge_state",
+        "pk_bridge_configs_system_id_systems_id_fk": {
+          "name": "pk_bridge_configs_system_id_systems_id_fk",
+          "tableFrom": "pk_bridge_configs",
           "tableTo": "systems",
           "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
@@ -5308,13 +6109,13 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "pk_bridge_state_sync_direction_check": {
-          "name": "pk_bridge_state_sync_direction_check",
-          "value": "\"pk_bridge_state\".\"sync_direction\" IS NULL OR \"pk_bridge_state\".\"sync_direction\" IN ($1, $2, $3)"
+        "pk_bridge_configs_sync_direction_check": {
+          "name": "pk_bridge_configs_sync_direction_check",
+          "value": "\"pk_bridge_configs\".\"sync_direction\" IS NULL OR \"pk_bridge_configs\".\"sync_direction\" IN ($1, $2, $3)"
         },
-        "pk_bridge_state_version_check": {
-          "name": "pk_bridge_state_version_check",
-          "value": "\"pk_bridge_state\".\"version\" >= 1"
+        "pk_bridge_configs_version_check": {
+          "name": "pk_bridge_configs_version_check",
+          "value": "\"pk_bridge_configs\".\"version\" >= 1"
         }
       },
       "isRLSEnabled": false
@@ -5325,25 +6126,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "poll_id": {
           "name": "poll_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "option_id": {
           "name": "option_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -5357,7 +6158,8 @@
           "name": "is_veto",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         },
         "voted_at": {
           "name": "voted_at",
@@ -5376,6 +6178,19 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -5433,7 +6248,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "poll_votes_archived_consistency_check": {
+          "name": "poll_votes_archived_consistency_check",
+          "value": "(\"poll_votes\".\"archived\" = true) = (\"poll_votes\".\"archived_at\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.polls": {
@@ -5442,31 +6262,31 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "created_by_member_id": {
           "name": "created_by_member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "kind": {
           "name": "kind",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'open'"
@@ -5531,6 +6351,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -5539,6 +6372,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "polls_system_archived_idx": {
+          "name": "polls_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5560,12 +6414,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "polls_created_by_member_id_members_id_fk": {
-          "name": "polls_created_by_member_id_members_id_fk",
+        "polls_created_by_member_id_system_id_members_id_system_id_fk": {
+          "name": "polls_created_by_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "polls",
           "tableTo": "members",
-          "columnsFrom": ["created_by_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["created_by_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5595,6 +6449,10 @@
         "polls_version_check": {
           "name": "polls_version_check",
           "value": "\"polls\".\"version\" >= 1"
+        },
+        "polls_archived_consistency_check": {
+          "name": "polls_archived_consistency_check",
+          "value": "(\"polls\".\"archived\" = true) = (\"polls\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -5605,13 +6463,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -5661,6 +6519,7 @@
             }
           ],
           "isUnique": false,
+          "where": "\"recovery_keys\".\"revoked_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -5689,39 +6548,40 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "source_member_id": {
           "name": "source_member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "target_member_id": {
           "name": "target_member_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
         "type": {
           "name": "type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "bidirectional": {
           "name": "bidirectional",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         },
         "encrypted_data": {
           "name": "encrypted_data",
@@ -5747,6 +6607,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -5755,6 +6628,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "relationships_system_archived_idx": {
+          "name": "relationships_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5776,21 +6670,21 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "relationships_source_member_id_members_id_fk": {
-          "name": "relationships_source_member_id_members_id_fk",
+        "relationships_source_member_id_system_id_members_id_system_id_fk": {
+          "name": "relationships_source_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "relationships",
           "tableTo": "members",
-          "columnsFrom": ["source_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["source_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "relationships_target_member_id_members_id_fk": {
-          "name": "relationships_target_member_id_members_id_fk",
+        "relationships_target_member_id_system_id_members_id_system_id_fk": {
+          "name": "relationships_target_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "relationships",
           "tableTo": "members",
-          "columnsFrom": ["target_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["target_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5806,6 +6700,10 @@
         "relationships_version_check": {
           "name": "relationships_version_check",
           "value": "\"relationships\".\"version\" >= 1"
+        },
+        "relationships_archived_consistency_check": {
+          "name": "relationships_archived_consistency_check",
+          "value": "(\"relationships\".\"archived\" = true) = (\"relationships\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -5816,13 +6714,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -5830,7 +6728,8 @@
           "name": "sort_order",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": 0
         },
         "encrypted_data": {
           "name": "encrypted_data",
@@ -5909,19 +6808,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
-        "device_info": {
-          "name": "device_info",
-          "type": "jsonb",
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": false
         },
@@ -5967,21 +6866,6 @@
           "method": "btree",
           "with": {}
         },
-        "sessions_revoked_idx": {
-          "name": "sessions_revoked_idx",
-          "columns": [
-            {
-              "expression": "revoked",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "sessions_revoked_last_active_idx": {
           "name": "sessions_revoked_last_active_idx",
           "columns": [
@@ -6014,6 +6898,7 @@
             }
           ],
           "isUnique": false,
+          "where": "\"sessions\".\"expires_at\" IS NOT NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -6033,7 +6918,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "sessions_expires_at_check": {
+          "name": "sessions_expires_at_check",
+          "value": "\"sessions\".\"expires_at\" IS NULL OR \"sessions\".\"expires_at\" > \"sessions\".\"created_at\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.side_system_layer_links": {
@@ -6042,25 +6932,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "side_system_id": {
           "name": "side_system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "layer_id": {
           "name": "layer_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6156,19 +7046,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "side_system_id": {
           "name": "side_system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6249,13 +7139,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6283,6 +7173,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -6291,6 +7194,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "side_systems_system_archived_idx": {
+          "name": "side_systems_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6326,6 +7250,10 @@
         "side_systems_version_check": {
           "name": "side_systems_version_check",
           "value": "\"side_systems\".\"version\" >= 1"
+        },
+        "side_systems_archived_consistency_check": {
+          "name": "side_systems_archived_consistency_check",
+          "value": "(\"side_systems\".\"archived\" = true) = (\"side_systems\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -6336,25 +7264,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "subsystem_id": {
           "name": "subsystem_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "layer_id": {
           "name": "layer_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6450,19 +7378,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "subsystem_id": {
           "name": "subsystem_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6543,25 +7471,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "subsystem_id": {
           "name": "subsystem_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "side_system_id": {
           "name": "side_system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6657,19 +7585,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "parent_subsystem_id": {
           "name": "parent_subsystem_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -6683,11 +7611,12 @@
           "name": "has_core",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": false
         },
         "discovery_status": {
           "name": "discovery_status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -6715,6 +7644,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -6723,6 +7665,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "subsystems_system_archived_idx": {
+          "name": "subsystems_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6744,12 +7707,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "subsystems_parent_subsystem_id_subsystems_id_fk": {
-          "name": "subsystems_parent_subsystem_id_subsystems_id_fk",
+        "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk": {
+          "name": "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk",
           "tableFrom": "subsystems",
           "tableTo": "subsystems",
-          "columnsFrom": ["parent_subsystem_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["parent_subsystem_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6771,6 +7734,10 @@
         "subsystems_version_check": {
           "name": "subsystems_version_check",
           "value": "\"subsystems\".\"version\" >= 1"
+        },
+        "subsystems_archived_consistency_check": {
+          "name": "subsystems_archived_consistency_check",
+          "value": "(\"subsystems\".\"archived\" = true) = (\"subsystems\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -6781,13 +7748,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": true,
+          "type": "varchar(50)",
+          "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6815,6 +7782,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -6851,7 +7831,12 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "switches_id_timestamp_pk": {
+          "name": "switches_id_timestamp_pk",
+          "columns": ["id", "timestamp"]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
@@ -6862,6 +7847,10 @@
         "switches_version_check": {
           "name": "switches_version_check",
           "value": "\"switches\".\"version\" >= 1"
+        },
+        "switches_archived_consistency_check": {
+          "name": "switches_archived_consistency_check",
+          "value": "(\"switches\".\"archived\" = true) = (\"switches\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -6872,25 +7861,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_type": {
           "name": "entity_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_id": {
           "name": "entity_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6908,7 +7897,7 @@
         },
         "resolution": {
           "name": "resolution",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -6992,25 +7981,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_type": {
           "name": "entity_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_id": {
           "name": "entity_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -7087,6 +8076,10 @@
         "sync_documents_version_check": {
           "name": "sync_documents_version_check",
           "value": "\"sync_documents\".\"version\" >= 1"
+        },
+        "sync_documents_automerge_heads_size_check": {
+          "name": "sync_documents_automerge_heads_size_check",
+          "value": "\"sync_documents\".\"automerge_heads\" IS NULL OR octet_length(\"sync_documents\".\"automerge_heads\") <= $1"
         }
       },
       "isRLSEnabled": false
@@ -7097,36 +8090,42 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
+          "notNull": true
+        },
+        "seq": {
+          "name": "seq",
+          "type": "serial",
+          "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_type": {
           "name": "entity_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "entity_id": {
           "name": "entity_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "operation": {
           "name": "operation",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
-        "change_data": {
-          "name": "change_data",
+        "encrypted_change_data": {
+          "name": "encrypted_change_data",
           "type": "bytea",
           "primaryKey": false,
           "notNull": true
@@ -7193,6 +8192,21 @@
           "method": "btree",
           "with": {}
         },
+        "sync_queue_seq_idx": {
+          "name": "sync_queue_seq_idx",
+          "columns": [
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "sync_queue_unsynced_idx": {
           "name": "sync_queue_unsynced_idx",
           "columns": [
@@ -7201,10 +8215,32 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
+            },
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
             }
           ],
           "isUnique": false,
-          "where": "synced_at IS NULL",
+          "where": "\"sync_queue\".\"synced_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sync_queue_cleanup_idx": {
+          "name": "sync_queue_cleanup_idx",
+          "columns": [
+            {
+              "expression": "synced_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"sync_queue\".\"synced_at\" IS NOT NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -7238,13 +8274,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -7318,6 +8354,90 @@
         "system_settings_version_check": {
           "name": "system_settings_version_check",
           "value": "\"system_settings\".\"version\" >= 1"
+        },
+        "system_settings_pin_hash_kdf_check": {
+          "name": "system_settings_pin_hash_kdf_check",
+          "value": "\"system_settings\".\"pin_hash\" IS NULL OR \"system_settings\".\"pin_hash\" LIKE '$argon2id$%'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.system_snapshots": {
+      "name": "system_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "snapshot_trigger": {
+          "name": "snapshot_trigger",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "system_snapshots_system_created_idx": {
+          "name": "system_snapshots_system_created_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "system_snapshots_system_id_systems_id_fk": {
+          "name": "system_snapshots_system_id_systems_id_fk",
+          "tableFrom": "system_snapshots",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "system_snapshots_snapshot_trigger_check": {
+          "name": "system_snapshots_snapshot_trigger_check",
+          "value": "\"system_snapshots\".\"snapshot_trigger\" IS NULL OR \"system_snapshots\".\"snapshot_trigger\" IN ($1, $2, $3)"
         }
       },
       "isRLSEnabled": false
@@ -7328,13 +8448,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "account_id": {
           "name": "account_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -7393,7 +8513,13 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "systems_id_account_id_unique": {
+          "name": "systems_id_account_id_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "account_id"]
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "systems_version_check": {
@@ -7409,13 +8535,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -7474,6 +8600,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -7482,6 +8621,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "timer_configs_system_id_archived_idx": {
+          "name": "timer_configs_system_id_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7517,6 +8677,18 @@
         "timer_configs_version_check": {
           "name": "timer_configs_version_check",
           "value": "\"timer_configs\".\"version\" >= 1"
+        },
+        "timer_configs_waking_start_format": {
+          "name": "timer_configs_waking_start_format",
+          "value": "\"timer_configs\".\"waking_start\" IS NULL OR \"timer_configs\".\"waking_start\" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'"
+        },
+        "timer_configs_waking_end_format": {
+          "name": "timer_configs_waking_end_format",
+          "value": "\"timer_configs\".\"waking_end\" IS NULL OR \"timer_configs\".\"waking_end\" ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'"
+        },
+        "timer_configs_archived_consistency_check": {
+          "name": "timer_configs_archived_consistency_check",
+          "value": "(\"timer_configs\".\"archived\" = true) = (\"timer_configs\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -7527,13 +8699,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -7564,7 +8736,7 @@
         },
         "crypto_key_id": {
           "name": "crypto_key_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": false
         },
@@ -7579,6 +8751,19 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -7587,6 +8772,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "webhook_configs_system_id_archived_idx": {
+          "name": "webhook_configs_system_id_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7627,7 +8833,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "webhook_configs_archived_consistency_check": {
+          "name": "webhook_configs_archived_consistency_check",
+          "value": "(\"webhook_configs\".\"archived\" = true) = (\"webhook_configs\".\"archived_at\" IS NOT NULL)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.webhook_deliveries": {
@@ -7636,31 +8847,31 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "webhook_id": {
           "name": "webhook_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "event_type": {
           "name": "event_type",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
@@ -7701,6 +8912,19 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -7754,6 +8978,50 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "webhook_deliveries_terminal_created_at_idx": {
+          "name": "webhook_deliveries_terminal_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"webhook_deliveries\".\"status\" IN ('success', 'failed')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "webhook_deliveries_system_retry_idx": {
+          "name": "webhook_deliveries_system_retry_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "next_retry_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"webhook_deliveries\".\"status\" NOT IN ('success', 'failed')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -7795,6 +9063,10 @@
         "webhook_deliveries_http_status_check": {
           "name": "webhook_deliveries_http_status_check",
           "value": "\"webhook_deliveries\".\"http_status\" IS NULL OR (\"webhook_deliveries\".\"http_status\" >= 100 AND \"webhook_deliveries\".\"http_status\" <= 599)"
+        },
+        "webhook_deliveries_archived_consistency_check": {
+          "name": "webhook_deliveries_archived_consistency_check",
+          "value": "(\"webhook_deliveries\".\"archived\" = true) = (\"webhook_deliveries\".\"archived_at\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -7805,19 +9077,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": true,
           "notNull": true
         },
         "system_id": {
           "name": "system_id",
-          "type": "varchar(255)",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
-        "slug": {
-          "name": "slug",
-          "type": "varchar(255)",
+        "slug_hash": {
+          "name": "slug_hash",
+          "type": "varchar(64)",
           "primaryKey": false,
           "notNull": true
         },
@@ -7876,8 +9148,8 @@
           "method": "btree",
           "with": {}
         },
-        "wiki_pages_system_id_slug_idx": {
-          "name": "wiki_pages_system_id_slug_idx",
+        "wiki_pages_system_archived_idx": {
+          "name": "wiki_pages_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
@@ -7886,7 +9158,28 @@
               "nulls": "last"
             },
             {
-              "expression": "slug",
+              "expression": "archived",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "wiki_pages_system_id_slug_hash_idx": {
+          "name": "wiki_pages_system_id_slug_hash_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slug_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7920,6 +9213,10 @@
         "wiki_pages_archived_consistency_check": {
           "name": "wiki_pages_archived_consistency_check",
           "value": "(\"wiki_pages\".\"archived\" = true) = (\"wiki_pages\".\"archived_at\" IS NOT NULL)"
+        },
+        "wiki_pages_slug_hash_length_check": {
+          "name": "wiki_pages_slug_hash_length_check",
+          "value": "length(\"wiki_pages\".\"slug_hash\") = 64"
         }
       },
       "isRLSEnabled": false
