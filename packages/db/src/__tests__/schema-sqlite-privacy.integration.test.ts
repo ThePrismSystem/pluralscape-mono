@@ -274,6 +274,28 @@ describe("SQLite privacy schema", () => {
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
     });
+
+    it("updates archived from true back to false (unarchival)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = insertBucket(systemId);
+      const now = Date.now();
+
+      db.update(buckets)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(buckets.id, id))
+        .run();
+
+      const unarchiveNow = Date.now();
+      db.update(buckets)
+        .set({ archived: false, archivedAt: null, updatedAt: unarchiveNow })
+        .where(eq(buckets.id, id))
+        .run();
+
+      const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
   });
 
   describe("bucket_content_tags", () => {
@@ -1092,6 +1114,69 @@ describe("SQLite privacy schema", () => {
       const rows = db.select().from(friendCodes).where(eq(friendCodes.id, id)).all();
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("allows duplicate code when both rows are archived", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const code = `FC-${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          code,
+          createdAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          code,
+          createdAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(friendCodes).where(eq(friendCodes.code, code)).all();
+      expect(rows).toHaveLength(2);
+    });
+
+    it("allows reuse of archived code for a new active entry", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const code = `FC-${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          code,
+          createdAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          code,
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(friendCodes).where(eq(friendCodes.code, code)).all();
+      expect(rows).toHaveLength(2);
+      expect(rows.filter((r) => !r.archived)).toHaveLength(1);
     });
   });
 

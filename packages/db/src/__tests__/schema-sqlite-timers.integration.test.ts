@@ -728,6 +728,48 @@ describe("SQLite timers schema", () => {
       expect(rows[0]?.archivedAt).toBe(now);
     });
 
+    it("excludes archived pending check-ins from system_pending partial index", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(timerConfigs)
+        .values({
+          id: timerId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const activeId = crypto.randomUUID();
+      const archivedId = crypto.randomUUID();
+
+      db.insert(checkInRecords)
+        .values([
+          { id: activeId, systemId, timerConfigId: timerId, scheduledAt: now },
+          {
+            id: archivedId,
+            systemId,
+            timerConfigId: timerId,
+            scheduledAt: now,
+            archived: true,
+            archivedAt: now,
+          },
+        ])
+        .run();
+
+      const pending = client
+        .prepare(
+          "SELECT id FROM check_in_records WHERE system_id = ? AND responded_at IS NULL AND dismissed = 0 AND archived = 0 ORDER BY scheduled_at",
+        )
+        .all(systemId) as Array<{ id: string }>;
+      expect(pending).toHaveLength(1);
+      expect(pending[0]?.id).toBe(activeId);
+    });
+
     it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);

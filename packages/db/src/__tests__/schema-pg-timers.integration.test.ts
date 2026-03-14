@@ -680,6 +680,43 @@ describe("PG timers schema", () => {
       expect(rows[0]?.archivedAt).toBe(updateNow);
     });
 
+    it("excludes archived pending check-ins from system_pending partial index", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const activeId = crypto.randomUUID();
+      const archivedId = crypto.randomUUID();
+
+      await db.insert(checkInRecords).values([
+        { id: activeId, systemId, timerConfigId: timerId, scheduledAt: now },
+        {
+          id: archivedId,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+          archived: true,
+          archivedAt: now,
+        },
+      ]);
+
+      const pending = await client.query<{ id: string }>(
+        "SELECT id FROM check_in_records WHERE system_id = $1 AND responded_at IS NULL AND dismissed = false AND archived = false ORDER BY scheduled_at",
+        [systemId],
+      );
+      expect(pending.rows).toHaveLength(1);
+      expect(pending.rows[0]?.id).toBe(activeId);
+    });
+
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
