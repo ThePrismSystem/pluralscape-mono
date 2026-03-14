@@ -8,8 +8,20 @@ import {
   validateKeyVersion,
 } from "./validation.js";
 
-import type { AeadKey, BoxNonce, BoxPublicKey, BoxSecretKey } from "./types.js";
+import type { AeadKey, BoxNonce, BoxPublicKey, BoxSecretKey, EncryptedKeyGrant } from "./types.js";
 import type { BucketId } from "@pluralscape/types";
+
+/**
+ * Key grant wire format:
+ *
+ * Outer blob: [24B nonce] [16B MAC + encrypted envelope]
+ *
+ * Envelope plaintext: [uint16le id-length] [id UTF-8 bytes] [uint32le keyVersion] [32B bucket key]
+ *
+ * The envelope is encrypted with crypto_box (XSalsa20-Poly1305) so that
+ * tampering with the binding metadata (bucket ID, key version) causes
+ * authenticated decryption to fail.
+ */
 
 /** Size of a uint16 field in the envelope, in bytes. */
 const UINT16_BYTES = 2;
@@ -29,40 +41,36 @@ const MIN_BLOB_BYTES =
 
 /** An encrypted bucket key grant, suitable for storage on the server. */
 export interface KeyGrantBlob {
-  readonly encryptedBucketKey: Uint8Array;
+  readonly encryptedBucketKey: EncryptedKeyGrant;
 }
 
-export interface CreateKeyGrantParams {
+/** Fields shared by single and batch key grant creation. */
+interface KeyGrantBaseParams {
   readonly bucketKey: AeadKey;
   readonly bucketId: BucketId;
   readonly keyVersion: number;
-  readonly recipientPublicKey: BoxPublicKey;
   readonly senderSecretKey: BoxSecretKey;
 }
 
+export interface CreateKeyGrantParams extends KeyGrantBaseParams {
+  readonly recipientPublicKey: BoxPublicKey;
+}
+
+export interface CreateKeyGrantsBatchParams extends KeyGrantBaseParams {
+  readonly recipientPublicKeys: readonly BoxPublicKey[];
+}
+
 export interface DecryptKeyGrantParams {
-  readonly encryptedBucketKey: Uint8Array;
+  readonly encryptedBucketKey: EncryptedKeyGrant;
   readonly bucketId: BucketId;
   readonly keyVersion: number;
   readonly senderPublicKey: BoxPublicKey;
   readonly recipientSecretKey: BoxSecretKey;
 }
 
-export interface CreateKeyGrantsBatchParams {
-  readonly bucketKey: AeadKey;
-  readonly bucketId: BucketId;
-  readonly keyVersion: number;
-  readonly recipientPublicKeys: readonly BoxPublicKey[];
-  readonly senderSecretKey: BoxSecretKey;
-}
-
 /**
  * Build the plaintext envelope that binds the bucket key to its bucket ID and version.
- *
- * Format: [uint16le id-length] [id UTF-8 bytes] [uint32le keyVersion] [32B bucket key]
- *
- * The envelope is used as plaintext for crypto_box so that tampering with the
- * binding metadata causes decryption (MAC) failure.
+ * See wire format documentation above for envelope layout.
  */
 function buildEnvelope(bucketId: BucketId, keyVersion: number, bucketKey: AeadKey): Uint8Array {
   const idBytes = new TextEncoder().encode(bucketId);
@@ -73,16 +81,22 @@ function buildEnvelope(bucketId: BucketId, keyVersion: number, bucketKey: AeadKe
   }
   const envelope = new Uint8Array(UINT16_BYTES + idBytes.length + UINT32_BYTES + AEAD_KEY_BYTES);
   const view = new DataView(envelope.buffer, envelope.byteOffset, envelope.byteLength);
-  view.setUint16(0, idBytes.length, true /* little-endian */);
-  envelope.set(idBytes, UINT16_BYTES);
-  view.setUint32(UINT16_BYTES + idBytes.length, keyVersion, true /* little-endian */);
-  envelope.set(bucketKey, UINT16_BYTES + idBytes.length + UINT32_BYTES);
+  let offset = 0;
+  view.setUint16(offset, idBytes.length, true /* little-endian */);
+  offset += UINT16_BYTES;
+  envelope.set(idBytes, offset);
+  offset += idBytes.length;
+  view.setUint32(offset, keyVersion, true /* little-endian */);
+  offset += UINT32_BYTES;
+  envelope.set(bucketKey, offset);
   return envelope;
 }
 
 /**
- * Parse and validate the decrypted envelope. Throws InvalidInputError if
- * the extracted bucket ID or key version does not match the expected values.
+ * Parse and validate the decrypted envelope.
+ * See wire format documentation above for envelope layout.
+ *
+ * @throws InvalidInputError if the extracted bucket ID or key version does not match expected values.
  */
 function parseEnvelope(
   plaintext: Uint8Array,
@@ -102,7 +116,9 @@ function parseEnvelope(
     );
   }
 
-  const idBytes = plaintext.subarray(UINT16_BYTES, UINT16_BYTES + idLen);
+  let offset = UINT16_BYTES;
+  const idBytes = plaintext.subarray(offset, offset + idLen);
+  offset += idLen;
   const extractedId = new TextDecoder().decode(idBytes);
   if (extractedId !== expectedBucketId) {
     throw new InvalidInputError(
@@ -110,25 +126,42 @@ function parseEnvelope(
     );
   }
 
-  const extractedVersion = view.getUint32(UINT16_BYTES + idLen, true);
+  const extractedVersion = view.getUint32(offset, true);
+  offset += UINT32_BYTES;
   if (extractedVersion !== expectedKeyVersion) {
     throw new InvalidInputError(
       `Key grant key version mismatch: expected ${String(expectedKeyVersion)}, got ${String(extractedVersion)}.`,
     );
   }
 
-  const keyBytes = plaintext.subarray(UINT16_BYTES + idLen + UINT32_BYTES);
+  const keyBytes = plaintext.subarray(offset);
   assertAeadKey(keyBytes);
   return keyBytes as AeadKey;
 }
 
 /**
+ * Seal an envelope for a single recipient using crypto_box.
+ * Returns the concatenated [nonce || ciphertext] blob.
+ */
+function sealEnvelope(
+  envelope: Uint8Array,
+  recipientPublicKey: BoxPublicKey,
+  senderSecretKey: BoxSecretKey,
+): EncryptedKeyGrant {
+  const adapter = getSodium();
+  const nonce = adapter.randomBytes(BOX_NONCE_BYTES) as BoxNonce;
+  const ciphertext = adapter.boxEasy(envelope, nonce, recipientPublicKey, senderSecretKey);
+  const result = new Uint8Array(BOX_NONCE_BYTES + ciphertext.length);
+  result.set(nonce, 0);
+  result.set(ciphertext, BOX_NONCE_BYTES);
+  return result as EncryptedKeyGrant;
+}
+
+/**
  * Encrypt a bucket key for a single recipient using crypto_box (XSalsa20-Poly1305).
+ * See wire format documentation above for blob layout.
  *
- * The plaintext envelope binds the bucket ID and key version so that any tampering
- * with these fields causes authenticated decryption to fail.
- *
- * Wire format: [24B nonce] [16B MAC + encrypted envelope]
+ * @throws InvalidInputError on invalid inputs (bad key sizes, invalid keyVersion, oversized bucketId).
  */
 export function createKeyGrant(params: CreateKeyGrantParams): KeyGrantBlob {
   const { bucketKey, bucketId, keyVersion, recipientPublicKey, senderSecretKey } = params;
@@ -137,26 +170,21 @@ export function createKeyGrant(params: CreateKeyGrantParams): KeyGrantBlob {
   assertBoxPublicKey(recipientPublicKey);
   assertBoxSecretKey(senderSecretKey);
 
-  const adapter = getSodium();
-  const nonce = adapter.randomBytes(BOX_NONCE_BYTES) as BoxNonce;
   const envelope = buildEnvelope(bucketId, keyVersion, bucketKey);
   try {
-    const ciphertext = adapter.boxEasy(envelope, nonce, recipientPublicKey, senderSecretKey);
-    const encryptedBucketKey = new Uint8Array(BOX_NONCE_BYTES + ciphertext.length);
-    encryptedBucketKey.set(nonce, 0);
-    encryptedBucketKey.set(ciphertext, BOX_NONCE_BYTES);
+    const encryptedBucketKey = sealEnvelope(envelope, recipientPublicKey, senderSecretKey);
     return { encryptedBucketKey };
   } finally {
-    adapter.memzero(envelope);
+    getSodium().memzero(envelope);
   }
 }
 
 /**
  * Decrypt a key grant to recover the bucket key.
+ * See wire format documentation above for blob layout.
  *
- * Verifies the AAD binding (bucket ID and key version) after decryption.
- * Throws DecryptionFailedError on wrong keys or tampered ciphertext.
- * Throws InvalidInputError on binding mismatches or malformed input.
+ * @throws DecryptionFailedError on wrong keys or tampered ciphertext.
+ * @throws InvalidInputError on binding mismatches or malformed input.
  */
 export function decryptKeyGrant(params: DecryptKeyGrantParams): AeadKey {
   const { encryptedBucketKey, bucketId, keyVersion, senderPublicKey, recipientSecretKey } = params;
@@ -164,10 +192,9 @@ export function decryptKeyGrant(params: DecryptKeyGrantParams): AeadKey {
   assertBoxPublicKey(senderPublicKey);
   assertBoxSecretKey(recipientSecretKey);
 
-  const MIN_BLOB_LENGTH = MIN_BLOB_BYTES;
-  if (encryptedBucketKey.length < MIN_BLOB_LENGTH) {
+  if (encryptedBucketKey.length < MIN_BLOB_BYTES) {
     throw new InvalidInputError(
-      `Encrypted bucket key blob too short: minimum ${String(MIN_BLOB_LENGTH)} bytes, got ${String(encryptedBucketKey.length)}.`,
+      `Encrypted bucket key blob too short: minimum ${String(MIN_BLOB_BYTES)} bytes, got ${String(encryptedBucketKey.length)}.`,
     );
   }
 
@@ -183,9 +210,13 @@ export function decryptKeyGrant(params: DecryptKeyGrantParams): AeadKey {
 
 /**
  * Encrypt a bucket key for multiple recipients in a single call.
+ * See wire format documentation above for blob layout.
  *
  * The envelope is built once and reused for all grants. Each grant gets a fresh
  * random nonce. The envelope is memzeroed in a finally block after all grants are created.
+ *
+ * @throws InvalidInputError on invalid inputs (bad key sizes, invalid keyVersion, oversized bucketId,
+ *   empty recipients, or invalid recipient public key).
  */
 export function createKeyGrants(params: CreateKeyGrantsBatchParams): readonly KeyGrantBlob[] {
   const { bucketKey, bucketId, keyVersion, recipientPublicKeys, senderSecretKey } = params;
@@ -197,19 +228,18 @@ export function createKeyGrants(params: CreateKeyGrantsBatchParams): readonly Ke
     throw new InvalidInputError("recipientPublicKeys must not be empty.");
   }
 
-  const adapter = getSodium();
+  // Validate all recipient keys eagerly before building the envelope
+  for (const pk of recipientPublicKeys) {
+    assertBoxPublicKey(pk);
+  }
+
   const envelope = buildEnvelope(bucketId, keyVersion, bucketKey);
   try {
     return recipientPublicKeys.map((recipientPublicKey) => {
-      assertBoxPublicKey(recipientPublicKey);
-      const nonce = adapter.randomBytes(BOX_NONCE_BYTES) as BoxNonce;
-      const ciphertext = adapter.boxEasy(envelope, nonce, recipientPublicKey, senderSecretKey);
-      const encryptedBucketKey = new Uint8Array(BOX_NONCE_BYTES + ciphertext.length);
-      encryptedBucketKey.set(nonce, 0);
-      encryptedBucketKey.set(ciphertext, BOX_NONCE_BYTES);
+      const encryptedBucketKey = sealEnvelope(envelope, recipientPublicKey, senderSecretKey);
       return { encryptedBucketKey };
     });
   } finally {
-    adapter.memzero(envelope);
+    getSodium().memzero(envelope);
   }
 }

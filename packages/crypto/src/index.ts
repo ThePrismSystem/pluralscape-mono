@@ -10,6 +10,7 @@ export type {
   BoxPublicKey,
   BoxSecretKey,
   CryptoKeypair,
+  EncryptedKeyGrant,
   KdfMasterKey,
   PwhashSalt,
   Signature,

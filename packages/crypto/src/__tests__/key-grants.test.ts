@@ -9,7 +9,7 @@ import { decrypt, encrypt } from "../symmetric.js";
 
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
-import type { BoxKeypair } from "../types.js";
+import type { BoxKeypair, EncryptedKeyGrant } from "../types.js";
 import type { BucketId } from "@pluralscape/types";
 
 beforeAll(setupSodium);
@@ -177,7 +177,7 @@ describe("createKeyGrant", () => {
       senderSecretKey: sender.secretKey,
     });
 
-    const tampered = new Uint8Array(blob.encryptedBucketKey);
+    const tampered = new Uint8Array(blob.encryptedBucketKey) as EncryptedKeyGrant;
     const firstCiphertextByte = tampered[BOX_NONCE_BYTES];
     if (firstCiphertextByte === undefined) throw new Error("blob too short to tamper");
     tampered[BOX_NONCE_BYTES] = firstCiphertextByte ^ 0xff;
@@ -310,7 +310,7 @@ describe("input validation", () => {
 
     expect(() =>
       decryptKeyGrant({
-        encryptedBucketKey: new Uint8Array(10),
+        encryptedBucketKey: new Uint8Array(10) as EncryptedKeyGrant,
         bucketId: makeBucketId(),
         keyVersion: 1,
         senderPublicKey: sender.publicKey,
@@ -322,21 +322,65 @@ describe("input validation", () => {
   it("envelope is memzeroed after create", () => {
     const adapter = getSodium();
     const memzeroSpy = vi.spyOn(adapter, "memzero");
+    try {
+      const sender = makeBoxKeypair();
+      const recipient = makeBoxKeypair();
+      const bucketKey = generateBucketKey();
 
+      createKeyGrant({
+        bucketKey,
+        bucketId: makeBucketId(),
+        keyVersion: 1,
+        recipientPublicKey: recipient.publicKey,
+        senderSecretKey: sender.secretKey,
+      });
+
+      expect(memzeroSpy).toHaveBeenCalled();
+    } finally {
+      memzeroSpy.mockRestore();
+    }
+  });
+
+  it("bucket ID at uint16 max UTF-8 bytes throws InvalidInputError", () => {
     const sender = makeBoxKeypair();
     const recipient = makeBoxKeypair();
     const bucketKey = generateBucketKey();
+    const longId = makeBucketId("a".repeat(65536));
 
-    createKeyGrant({
+    expect(() =>
+      createKeyGrant({
+        bucketKey,
+        bucketId: longId,
+        keyVersion: 1,
+        recipientPublicKey: recipient.publicKey,
+        senderSecretKey: sender.secretKey,
+      }),
+    ).toThrow(InvalidInputError);
+  });
+
+  it("roundtrip with Unicode bucket ID", () => {
+    const sender = makeBoxKeypair();
+    const recipient = makeBoxKeypair();
+    const bucketKey = generateBucketKey();
+    const bucketId = makeBucketId("bucket-\u03B1\u03B2\u03B3-\u65E5\u672C\u8A9E");
+
+    const blob = createKeyGrant({
       bucketKey,
-      bucketId: makeBucketId(),
+      bucketId,
       keyVersion: 1,
       recipientPublicKey: recipient.publicKey,
       senderSecretKey: sender.secretKey,
     });
 
-    expect(memzeroSpy).toHaveBeenCalled();
-    memzeroSpy.mockRestore();
+    const recovered = decryptKeyGrant({
+      encryptedBucketKey: blob.encryptedBucketKey,
+      bucketId,
+      keyVersion: 1,
+      senderPublicKey: sender.publicKey,
+      recipientSecretKey: recipient.secretKey,
+    });
+
+    expect(recovered).toEqual(bucketKey);
   });
 });
 
