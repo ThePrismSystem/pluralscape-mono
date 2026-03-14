@@ -218,8 +218,9 @@ export type ClientSubsystem = Subsystem;
  * T1 encrypted: label
  * T3 plaintext: type, sourceMemberId, targetMemberId, bidirectional, archived
  *
- * Intentionally omits AuditMetadata — relationships use a simpler audit model
- * with only createdAt tracked (no updatedAt).
+ * ServerRelationship exposes only createdAt; the DB stores updatedAt and
+ * version via timestamps()/versioned() but they are not included in the
+ * server-side projection.
  */
 export interface ServerRelationship {
   readonly id: RelationshipId;
