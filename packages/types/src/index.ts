@@ -103,6 +103,7 @@ export type {
   Tag,
   MemberPhoto,
   ArchivedMember,
+  ArchivedMemberPhoto,
   MemberListItem,
   SystemListItem,
   SystemDuplicationScope,
@@ -346,6 +347,7 @@ export type {
   EncryptionTier,
   BlobPurpose,
   BlobMetadata,
+  ArchivedBlobMetadata,
   BlobUploadRequest,
   BlobDownloadRef,
 } from "./blob.js";
@@ -358,10 +360,12 @@ export type {
   WebhookDeliveryStatus,
   WebhookEventType,
   WebhookConfig,
+  ArchivedWebhookConfig,
   PlaintextWebhookPayload,
   EncryptedWebhookPayload,
   WebhookDeliveryPayload,
   WebhookDelivery,
+  ArchivedWebhookDelivery,
 } from "./webhooks.js";
 
 // ── Notifications ─────────────────────────────────────────────
@@ -370,9 +374,11 @@ export type {
   DeviceToken,
   NotificationEventType,
   NotificationConfig,
+  ArchivedNotificationConfig,
   NotificationPayload,
   FriendNotificationEventType,
   FriendNotificationPreference,
+  ArchivedFriendNotificationPreference,
 } from "./notifications.js";
 
 // ── Realtime ──────────────────────────────────────────────────
@@ -474,7 +480,12 @@ export type {
 } from "./journal.js";
 
 // ── Timer ─────────────────────────────────────────────────────────
-export type { TimerConfig, CheckInRecord } from "./timer.js";
+export type {
+  TimerConfig,
+  ArchivedTimerConfig,
+  CheckInRecord,
+  ArchivedCheckInRecord,
+} from "./timer.js";
 
 // ── Key Rotation ─────────────────────────────────────────────────
 export type {

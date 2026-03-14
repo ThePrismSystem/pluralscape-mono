@@ -9,6 +9,8 @@ import type {
   SystemId,
 } from "../ids.js";
 import type {
+  ArchivedFriendNotificationPreference,
+  ArchivedNotificationConfig,
   DeviceToken,
   FriendNotificationEventType,
   FriendNotificationPreference,
@@ -77,6 +79,14 @@ describe("NotificationConfig", () => {
     expectTypeOf<NotificationConfig["enabled"]>().toEqualTypeOf<boolean>();
     expectTypeOf<NotificationConfig["pushEnabled"]>().toEqualTypeOf<boolean>();
   });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<NotificationConfig["archived"]>().toEqualTypeOf<false>();
+  });
+
+  it("ArchivedNotificationConfig has archived as true literal", () => {
+    expectTypeOf<ArchivedNotificationConfig["archived"]>().toEqualTypeOf<true>();
+  });
 });
 
 describe("NotificationPayload", () => {
@@ -123,6 +133,14 @@ describe("FriendNotificationPreference", () => {
     expectTypeOf<FriendNotificationPreference["enabledEventTypes"]>().toEqualTypeOf<
       readonly FriendNotificationEventType[]
     >();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<FriendNotificationPreference["archived"]>().toEqualTypeOf<false>();
+  });
+
+  it("ArchivedFriendNotificationPreference has archived as true literal", () => {
+    expectTypeOf<ArchivedFriendNotificationPreference["archived"]>().toEqualTypeOf<true>();
   });
 });
 

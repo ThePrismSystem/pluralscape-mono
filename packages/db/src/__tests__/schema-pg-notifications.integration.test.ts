@@ -309,6 +309,78 @@ describe("PG notifications schema", () => {
       expect(rows[0]?.enabled).toBe(false);
       expect(rows[0]?.pushEnabled).toBe(false);
     });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(notificationConfigs).values({
+        id,
+        systemId,
+        eventType: "switch-reminder",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(notificationConfigs)
+        .where(eq(notificationConfigs.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(notificationConfigs).values({
+        id,
+        systemId,
+        eventType: "check-in-due",
+        archived: true,
+        archivedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(notificationConfigs)
+        .where(eq(notificationConfigs.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO notification_configs (id, system_id, event_type, enabled, push_enabled, created_at, updated_at, archived, archived_at) VALUES ($1, $2, 'switch-reminder', true, true, $3, $4, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO notification_configs (id, system_id, event_type, enabled, push_enabled, created_at, updated_at, archived, archived_at) VALUES ($1, $2, 'switch-reminder', true, true, $3, $4, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("friend_notification_preferences", () => {
@@ -413,6 +485,120 @@ describe("PG notifications schema", () => {
           updatedAt: now,
         }),
       ).rejects.toThrow();
+    });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const fcId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: fcId,
+        accountId,
+        friendAccountId: await insertAccount(),
+        status: "accepted",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(friendNotificationPreferences).values({
+        id,
+        accountId,
+        friendConnectionId: fcId,
+        enabledEventTypes: [],
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(friendNotificationPreferences)
+        .where(eq(friendNotificationPreferences.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const fcId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: fcId,
+        accountId,
+        friendAccountId: await insertAccount(),
+        status: "accepted",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(friendNotificationPreferences).values({
+        id,
+        accountId,
+        friendConnectionId: fcId,
+        enabledEventTypes: [],
+        archived: true,
+        archivedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(friendNotificationPreferences)
+        .where(eq(friendNotificationPreferences.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const fcId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: fcId,
+        accountId,
+        friendAccountId: await insertAccount(),
+        status: "accepted",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        client.query(
+          "INSERT INTO friend_notification_preferences (id, account_id, friend_connection_id, enabled_event_types, created_at, updated_at, archived, archived_at) VALUES ($1, $2, $3, '[]', $4, $5, true, NULL)",
+          [crypto.randomUUID(), accountId, fcId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      await insertSystem(accountId);
+      const fcId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(friendConnections).values({
+        id: fcId,
+        accountId,
+        friendAccountId: await insertAccount(),
+        status: "accepted",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        client.query(
+          "INSERT INTO friend_notification_preferences (id, account_id, friend_connection_id, enabled_event_types, created_at, updated_at, archived, archived_at) VALUES ($1, $2, $3, '[]', $4, $5, false, $6)",
+          [crypto.randomUUID(), accountId, fcId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
   });
 });

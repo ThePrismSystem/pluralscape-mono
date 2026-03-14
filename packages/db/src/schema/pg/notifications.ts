@@ -11,8 +11,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
-import { timestamps } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
+import { archivable, timestamps } from "../../helpers/audit.pg.js";
+import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
 
@@ -67,12 +67,17 @@ export const notificationConfigs = pgTable(
     enabled: boolean("enabled").notNull().default(true),
     pushEnabled: boolean("push_enabled").notNull().default(true),
     ...timestamps(),
+    ...archivable(),
   },
   (t) => [
     uniqueIndex("notification_configs_system_id_event_type_idx").on(t.systemId, t.eventType),
     check(
       "notification_configs_event_type_check",
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
+    ),
+    check(
+      "notification_configs_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
     ),
   ],
 );
@@ -89,6 +94,7 @@ export const friendNotificationPreferences = pgTable(
       .notNull()
       .$type<readonly FriendNotificationEventType[]>(),
     ...timestamps(),
+    ...archivable(),
   },
   (t) => [
     uniqueIndex("friend_notification_prefs_account_id_friend_connection_id_idx").on(
@@ -99,6 +105,10 @@ export const friendNotificationPreferences = pgTable(
       columns: [t.friendConnectionId, t.accountId],
       foreignColumns: [friendConnections.id, friendConnections.accountId],
     }).onDelete("cascade"),
+    check(
+      "friend_notification_preferences_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

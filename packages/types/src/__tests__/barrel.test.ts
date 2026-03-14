@@ -25,6 +25,7 @@ import type {
   AuditActor,
   AuditEventType,
   AuditLogEntry,
+  ArchivedBlobMetadata,
   BlobDownloadRef,
   BlobMetadata,
   BlobPurpose,
@@ -111,6 +112,7 @@ import type {
   MetadataApiKey,
   Note,
   NotificationConfig,
+  ArchivedNotificationConfig,
   NotificationConfigId,
   NotificationEventType,
   NotificationPayload,
@@ -190,10 +192,14 @@ import type {
   SubscriptionId,
   SyncStateChangedEvent,
   TimerConfig,
+  ArchivedTimerConfig,
+  ArchivedCheckInRecord,
   UnmergeEvent,
   VisualProperties,
   WebhookConfig,
+  ArchivedWebhookConfig,
   WebhookDelivery,
+  ArchivedWebhookDelivery,
   WebhookDeliveryId,
   WebhookDeliveryPayload,
   WebhookEventType,
@@ -234,6 +240,7 @@ import type {
   ArchivedInnerWorldEntity,
   ArchivedInnerWorldRegion,
   ArchivedMember,
+  ArchivedMemberPhoto,
   ArchivedPrivacyBucket,
   ArchitectureType,
   KnownArchitectureType,
@@ -269,6 +276,7 @@ import type {
   FriendConnectionStatus,
   FriendNotificationEventType,
   FriendNotificationPreference,
+  ArchivedFriendNotificationPreference,
   FriendNotificationPreferenceId,
   FriendVisibilitySettings,
   FrontingComment,
@@ -374,6 +382,7 @@ describe("barrel exports", () => {
     expectTypeOf<System>().toBeObject();
     expectTypeOf<Member>().toBeObject();
     expectTypeOf<ArchivedMember>().toBeObject();
+    expectTypeOf<ArchivedMemberPhoto>().toBeObject();
     expectTypeOf<MemberListItem>().toBeObject();
     expectTypeOf<ImageSource>().toBeObject();
     expectTypeOf<KnownSaturationLevel>().toBeString();
@@ -577,6 +586,7 @@ describe("barrel exports", () => {
     expectTypeOf<BlobPurpose>().toBeString();
     expectTypeOf<EncryptionTier>().toBeNumber();
     expectTypeOf<BlobMetadata>().toBeObject();
+    expectTypeOf<ArchivedBlobMetadata>().toBeObject();
     expectTypeOf<BlobUploadRequest>().toBeObject();
     expectTypeOf<BlobDownloadRef>().toBeObject();
   });
@@ -591,19 +601,23 @@ describe("barrel exports", () => {
     expectTypeOf<WebhookDeliveryId>().toExtend<string>();
     expectTypeOf<WebhookEventType>().toBeString();
     expectTypeOf<WebhookConfig>().toBeObject();
+    expectTypeOf<ArchivedWebhookConfig>().toBeObject();
     expectTypeOf<PlaintextWebhookPayload>().toBeObject();
     expectTypeOf<EncryptedWebhookPayload>().toBeObject();
     expectTypeOf<WebhookDeliveryPayload>().toBeObject();
     expectTypeOf<WebhookDelivery>().toBeObject();
+    expectTypeOf<ArchivedWebhookDelivery>().toBeObject();
   });
 
   it("exports notification types", () => {
     expectTypeOf<DeviceToken>().toBeObject();
     expectTypeOf<NotificationEventType>().toBeString();
     expectTypeOf<NotificationConfig>().toBeObject();
+    expectTypeOf<ArchivedNotificationConfig>().toBeObject();
     expectTypeOf<NotificationPayload>().toBeObject();
     expectTypeOf<FriendNotificationEventType>().toBeString();
     expectTypeOf<FriendNotificationPreference>().toBeObject();
+    expectTypeOf<ArchivedFriendNotificationPreference>().toBeObject();
     expectTypeOf<FriendNotificationPreferenceId>().toExtend<string>();
   });
 
@@ -685,7 +699,9 @@ describe("barrel exports", () => {
 
   it("exports timer types", () => {
     expectTypeOf<TimerConfig>().toBeObject();
+    expectTypeOf<ArchivedTimerConfig>().toBeObject();
     expectTypeOf<CheckInRecord>().toBeObject();
+    expectTypeOf<ArchivedCheckInRecord>().toBeObject();
   });
 
   it("exports analytics types", () => {

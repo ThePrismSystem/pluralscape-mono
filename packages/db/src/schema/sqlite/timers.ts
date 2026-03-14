@@ -10,8 +10,8 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { sqliteTimeFormatCheck } from "../../helpers/check.js";
+import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
+import { archivableConsistencyCheck, sqliteTimeFormatCheck } from "../../helpers/check.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -33,13 +33,19 @@ export const timerConfigs = sqliteTable(
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("timer_configs_system_id_idx").on(t.systemId),
+    index("timer_configs_system_id_archived_idx").on(t.systemId, t.archived),
     unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("timer_configs", t.version),
     check("timer_configs_waking_start_format", sqliteTimeFormatCheck(t.wakingStart)),
     check("timer_configs_waking_end_format", sqliteTimeFormatCheck(t.wakingEnd)),
+    check(
+      "timer_configs_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -56,6 +62,7 @@ export const checkInRecords = sqliteTable(
     dismissed: integer("dismissed", { mode: "boolean" }).notNull().default(false),
     respondedByMemberId: text("responded_by_member_id"),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
+    ...archivable(),
   },
   (t) => [
     index("check_in_records_system_id_idx").on(t.systemId),
@@ -72,6 +79,10 @@ export const checkInRecords = sqliteTable(
     index("check_in_records_system_pending_idx")
       .on(t.systemId, t.scheduledAt)
       .where(sql`${t.respondedAt} IS NULL AND ${t.dismissed} = 0`),
+    check(
+      "check_in_records_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

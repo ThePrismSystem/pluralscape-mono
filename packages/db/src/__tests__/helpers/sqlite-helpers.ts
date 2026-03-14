@@ -162,8 +162,11 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
       FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   // Privacy
@@ -1036,7 +1039,10 @@ export const SQLITE_DDL = {
       push_enabled INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      CHECK (event_type IS NULL OR event_type IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert'))
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      CHECK (event_type IS NULL OR event_type IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert')),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   notificationConfigsIndexes: `
@@ -1050,7 +1056,10 @@ export const SQLITE_DDL = {
       enabled_event_types TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   friendNotificationPreferencesIndexes: `
@@ -1081,11 +1090,15 @@ export const SQLITE_DDL = {
       crypto_key_id TEXT REFERENCES api_keys(id) ON DELETE SET NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      UNIQUE (id, system_id)
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      UNIQUE (id, system_id),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   webhookConfigsIndexes: `
-    CREATE INDEX webhook_configs_system_id_idx ON webhook_configs (system_id)
+    CREATE INDEX webhook_configs_system_id_idx ON webhook_configs (system_id);
+    CREATE INDEX webhook_configs_system_id_archived_idx ON webhook_configs (system_id, archived)
   `,
   webhookDeliveries: `
     CREATE TABLE webhook_deliveries (
@@ -1100,11 +1113,14 @@ export const SQLITE_DDL = {
       next_retry_at INTEGER,
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
       FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE,
       CHECK (event_type IS NULL OR event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
       CHECK (status IS NULL OR status IN ('pending', 'success', 'failed')),
       CHECK (attempt_count >= 0),
-      CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599))
+      CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599)),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   webhookDeliveriesIndexes: `
@@ -1128,6 +1144,8 @@ export const SQLITE_DDL = {
       thumbnail_of_blob_id TEXT,
       checksum TEXT NOT NULL,
       uploaded_at INTEGER NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
       UNIQUE (id, system_id),
       FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
       FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
@@ -1135,7 +1153,8 @@ export const SQLITE_DDL = {
       CHECK (size_bytes > 0),
       CHECK (size_bytes <= 10737418240),
       CHECK (encryption_tier IN (1, 2)),
-      CHECK (length(checksum) = 64)
+      CHECK (length(checksum) = 64),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   blobMetadataIndexes: `
@@ -1156,6 +1175,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
       UNIQUE (id, system_id),
       CHECK (version >= 1),
       CHECK (waking_start IS NULL OR (
@@ -1175,11 +1196,13 @@ export const SQLITE_DDL = {
         AND (substr(waking_end, 1, 1) < '2' OR substr(waking_end, 2, 1) <= '3')
         AND substr(waking_end, 4, 1) BETWEEN '0' AND '5'
         AND substr(waking_end, 5, 1) BETWEEN '0' AND '9'
-      ))
+      )),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   timerConfigsIndexes: `
-    CREATE INDEX timer_configs_system_id_idx ON timer_configs (system_id)
+    CREATE INDEX timer_configs_system_id_idx ON timer_configs (system_id);
+    CREATE INDEX timer_configs_system_id_archived_idx ON timer_configs (system_id, archived)
   `,
   checkInRecords: `
     CREATE TABLE check_in_records (
@@ -1191,8 +1214,11 @@ export const SQLITE_DDL = {
       dismissed INTEGER NOT NULL DEFAULT 0,
       responded_by_member_id TEXT,
       encrypted_data BLOB,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
       FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL
+      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   checkInRecordsIndexes: `

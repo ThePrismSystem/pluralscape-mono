@@ -164,8 +164,11 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   // Privacy
@@ -1041,7 +1044,10 @@ export const PG_DDL = {
       enabled BOOLEAN NOT NULL DEFAULT true,
       push_enabled BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMPTZ NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL
+      updated_at TIMESTAMPTZ NOT NULL,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   notificationConfigsIndexes: `
@@ -1055,7 +1061,10 @@ export const PG_DDL = {
       enabled_event_types JSONB NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   friendNotificationPreferencesIndexes: `
@@ -1086,11 +1095,15 @@ export const PG_DDL = {
       crypto_key_id VARCHAR(50) REFERENCES api_keys(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      UNIQUE (id, system_id)
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      UNIQUE (id, system_id),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   webhookConfigsIndexes: `
-    CREATE INDEX webhook_configs_system_id_idx ON webhook_configs (system_id)
+    CREATE INDEX webhook_configs_system_id_idx ON webhook_configs (system_id);
+    CREATE INDEX webhook_configs_system_id_archived_idx ON webhook_configs (system_id, archived)
   `,
   webhookDeliveries: `
     CREATE TABLE webhook_deliveries (
@@ -1105,9 +1118,12 @@ export const PG_DDL = {
       next_retry_at TIMESTAMPTZ,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       CHECK (attempt_count >= 0),
       CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599)),
-      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   webhookDeliveriesIndexes: `
@@ -1131,13 +1147,16 @@ export const PG_DDL = {
       thumbnail_of_blob_id VARCHAR(50),
       checksum VARCHAR(255) NOT NULL,
       uploaded_at TIMESTAMPTZ NOT NULL,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
       FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       CHECK (size_bytes > 0),
       CHECK (size_bytes <= 10737418240),
       CHECK (encryption_tier IN (1, 2)),
-      CHECK (length(checksum) = 64)
+      CHECK (length(checksum) = 64),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   blobMetadataIndexes: `
@@ -1158,14 +1177,18 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       CHECK (version >= 1),
       CHECK (waking_start IS NULL OR waking_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
-      CHECK (waking_end IS NULL OR waking_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')
+      CHECK (waking_end IS NULL OR waking_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   timerConfigsIndexes: `
-    CREATE INDEX timer_configs_system_id_idx ON timer_configs (system_id)
+    CREATE INDEX timer_configs_system_id_idx ON timer_configs (system_id);
+    CREATE INDEX timer_configs_system_id_archived_idx ON timer_configs (system_id, archived)
   `,
   checkInRecords: `
     CREATE TABLE check_in_records (
@@ -1177,8 +1200,11 @@ export const PG_DDL = {
       dismissed BOOLEAN NOT NULL DEFAULT false,
       responded_by_member_id VARCHAR(50),
       encrypted_data BYTEA,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL
+      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   checkInRecordsIndexes: `
