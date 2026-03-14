@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   check,
   foreignKey,
@@ -10,7 +11,11 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { timestamps } from "../../helpers/audit.sqlite.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+} from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
 
@@ -61,13 +66,17 @@ export const notificationConfigs = sqliteTable(
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     pushEnabled: integer("push_enabled", { mode: "boolean" }).notNull().default(true),
     ...timestamps(),
+    ...archivable(),
   },
   (t) => [
-    uniqueIndex("notification_configs_system_id_event_type_idx").on(t.systemId, t.eventType),
+    uniqueIndex("notification_configs_system_id_event_type_idx")
+      .on(t.systemId, t.eventType)
+      .where(sql`${t.archived} = 0`),
     check(
       "notification_configs_event_type_check",
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
     ),
+    archivableConsistencyCheckFor("notification_configs", t.archived, t.archivedAt),
   ],
 );
 
@@ -83,16 +92,17 @@ export const friendNotificationPreferences = sqliteTable(
       .notNull()
       .$type<readonly FriendNotificationEventType[]>(),
     ...timestamps(),
+    ...archivable(),
   },
   (t) => [
-    uniqueIndex("friend_notification_prefs_account_id_friend_connection_id_idx").on(
-      t.accountId,
-      t.friendConnectionId,
-    ),
+    uniqueIndex("friend_notification_prefs_account_id_friend_connection_id_idx")
+      .on(t.accountId, t.friendConnectionId)
+      .where(sql`${t.archived} = 0`),
     foreignKey({
       columns: [t.friendConnectionId, t.accountId],
       foreignColumns: [friendConnections.id, friendConnections.accountId],
     }).onDelete("cascade"),
+    archivableConsistencyCheckFor("friend_notification_preferences", t.archived, t.archivedAt),
   ],
 );
 

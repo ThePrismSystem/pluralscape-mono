@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e3f14c3f-12f0-4d87-a2a5-22a1392732e6",
-  "prevId": "1fa0243c-4023-4790-86ed-e5645cadb2f1",
+  "id": "0580e29b-959f-4f6c-9851-060871967a01",
+  "prevId": "6a1db51c-9522-4136-9e88-143ae78ce091",
   "tables": {
     "account_purge_requests": {
       "name": "account_purge_requests",
@@ -78,11 +78,11 @@
           "columns": ["account_id"],
           "isUnique": false
         },
-        "account_purge_requests_pending_unique_idx": {
-          "name": "account_purge_requests_pending_unique_idx",
+        "account_purge_requests_active_unique_idx": {
+          "name": "account_purge_requests_active_unique_idx",
           "columns": ["account_id"],
           "isUnique": true,
-          "where": "status = 'pending'"
+          "where": "\"account_purge_requests\".\"status\" IN ('pending', 'confirmed', 'processing')"
         }
       },
       "foreignKeys": {
@@ -114,6 +114,14 @@
           "primaryKey": true,
           "notNull": true,
           "autoincrement": false
+        },
+        "account_type": {
+          "name": "account_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'system'"
         },
         "email_hash": {
           "name": "email_hash",
@@ -177,6 +185,10 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "accounts_account_type_check": {
+          "name": "accounts_account_type_check",
+          "value": "\"accounts\".\"account_type\" IS NULL OR \"accounts\".\"account_type\" IN (?, ?)"
+        },
         "accounts_version_check": {
           "name": "accounts_version_check",
           "value": "\"accounts\".\"version\" >= 1"
@@ -228,17 +240,32 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "acknowledgements_system_id_idx": {
-          "name": "acknowledgements_system_id_idx",
-          "columns": ["system_id"],
+        "acknowledgements_system_id_confirmed_idx": {
+          "name": "acknowledgements_system_id_confirmed_idx",
+          "columns": ["system_id", "confirmed"],
           "isUnique": false
         },
-        "acknowledgements_confirmed_idx": {
-          "name": "acknowledgements_confirmed_idx",
-          "columns": ["confirmed"],
+        "acknowledgements_system_archived_idx": {
+          "name": "acknowledgements_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -252,19 +279,24 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "acknowledgements_created_by_member_id_members_id_fk": {
-          "name": "acknowledgements_created_by_member_id_members_id_fk",
+        "acknowledgements_created_by_member_id_system_id_members_id_system_id_fk": {
+          "name": "acknowledgements_created_by_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "acknowledgements",
           "tableTo": "members",
-          "columnsFrom": ["created_by_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["created_by_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "acknowledgements_archived_consistency_check": {
+          "name": "acknowledgements_archived_consistency_check",
+          "value": "(\"acknowledgements\".\"archived\" = true) = (\"acknowledgements\".\"archived_at\" IS NOT NULL)"
+        }
+      }
     },
     "api_keys": {
       "name": "api_keys",
@@ -290,13 +322,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "key_type": {
           "name": "key_type",
           "type": "text",
@@ -314,6 +339,13 @@
         "scopes": {
           "name": "scopes",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "blob",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -427,7 +459,7 @@
         "id": {
           "name": "id",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -499,10 +531,20 @@
           "columns": ["system_id", "timestamp"],
           "isUnique": false
         },
-        "audit_log_event_type_idx": {
-          "name": "audit_log_event_type_idx",
-          "columns": ["event_type"],
+        "audit_log_system_event_type_timestamp_idx": {
+          "name": "audit_log_system_event_type_timestamp_idx",
+          "columns": ["system_id", "event_type", "timestamp"],
           "isUnique": false
+        },
+        "audit_log_timestamp_idx": {
+          "name": "audit_log_timestamp_idx",
+          "columns": ["timestamp"],
+          "isUnique": false
+        },
+        "audit_log_id_unique": {
+          "name": "audit_log_id_unique",
+          "columns": ["id", "timestamp"],
+          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -525,12 +567,21 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "audit_log_id_timestamp_pk": {
+          "columns": ["id", "timestamp"],
+          "name": "audit_log_id_timestamp_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {
         "audit_log_event_type_check": {
           "name": "audit_log_event_type_check",
           "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        },
+        "audit_log_detail_length_check": {
+          "name": "audit_log_detail_length_check",
+          "value": "\"audit_log\".\"detail\" IS NULL OR length(\"audit_log\".\"detail\") <= 2048"
         }
       }
     },
@@ -686,12 +737,32 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "blob_metadata_system_id_idx": {
-          "name": "blob_metadata_system_id_idx",
-          "columns": ["system_id"],
+        "blob_metadata_system_id_purpose_idx": {
+          "name": "blob_metadata_system_id_purpose_idx",
+          "columns": ["system_id", "purpose"],
+          "isUnique": false
+        },
+        "blob_metadata_system_archived_idx": {
+          "name": "blob_metadata_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "blob_metadata_storage_key_idx": {
@@ -745,9 +816,21 @@
           "name": "blob_metadata_size_bytes_check",
           "value": "\"blob_metadata\".\"size_bytes\" > 0"
         },
+        "blob_metadata_size_bytes_max_check": {
+          "name": "blob_metadata_size_bytes_max_check",
+          "value": "\"blob_metadata\".\"size_bytes\" <= 10737418240"
+        },
         "blob_metadata_encryption_tier_check": {
           "name": "blob_metadata_encryption_tier_check",
           "value": "\"blob_metadata\".\"encryption_tier\" IN (1, 2)"
+        },
+        "blob_metadata_checksum_length_check": {
+          "name": "blob_metadata_checksum_length_check",
+          "value": "length(\"blob_metadata\".\"checksum\") = 64"
+        },
+        "blob_metadata_archived_consistency_check": {
+          "name": "blob_metadata_archived_consistency_check",
+          "value": "(\"blob_metadata\".\"archived\" = true) = (\"blob_metadata\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -811,12 +894,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "board_messages_system_id_idx": {
-          "name": "board_messages_system_id_idx",
-          "columns": ["system_id"],
+        "board_messages_system_archived_idx": {
+          "name": "board_messages_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -841,6 +939,10 @@
         "board_messages_version_check": {
           "name": "board_messages_version_check",
           "value": "\"board_messages\".\"version\" >= 1"
+        },
+        "board_messages_archived_consistency_check": {
+          "name": "board_messages_archived_consistency_check",
+          "value": "(\"board_messages\".\"archived\" = true) = (\"board_messages\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -867,17 +969,24 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "bucket_content_tags_entity_idx": {
-          "name": "bucket_content_tags_entity_idx",
-          "columns": ["entity_type", "entity_id"],
-          "isUnique": false
-        },
         "bucket_content_tags_bucket_id_idx": {
           "name": "bucket_content_tags_bucket_id_idx",
           "columns": ["bucket_id"],
+          "isUnique": false
+        },
+        "bucket_content_tags_system_id_idx": {
+          "name": "bucket_content_tags_system_id_idx",
+          "columns": ["system_id"],
           "isUnique": false
         }
       },
@@ -887,6 +996,15 @@
           "tableFrom": "bucket_content_tags",
           "tableTo": "buckets",
           "columnsFrom": ["bucket_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bucket_content_tags_system_id_systems_id_fk": {
+          "name": "bucket_content_tags_system_id_systems_id_fk",
+          "tableFrom": "bucket_content_tags",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -918,6 +1036,13 @@
         },
         "bucket_id": {
           "name": "bucket_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "system_id": {
+          "name": "system_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -988,6 +1113,11 @@
           "name": "bucket_key_rotations_bucket_state_idx",
           "columns": ["bucket_id", "state"],
           "isUnique": false
+        },
+        "bucket_key_rotations_system_id_idx": {
+          "name": "bucket_key_rotations_system_id_idx",
+          "columns": ["system_id"],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -996,6 +1126,15 @@
           "tableFrom": "bucket_key_rotations",
           "tableTo": "buckets",
           "columnsFrom": ["bucket_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bucket_key_rotations_system_id_systems_id_fk": {
+          "name": "bucket_key_rotations_system_id_systems_id_fk",
+          "tableFrom": "bucket_key_rotations",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -1030,6 +1169,13 @@
         },
         "rotation_id": {
           "name": "rotation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "system_id": {
+          "name": "system_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -1097,6 +1243,11 @@
           "name": "bucket_rotation_items_status_claimed_by_idx",
           "columns": ["status", "claimed_by"],
           "isUnique": false
+        },
+        "bucket_rotation_items_system_id_idx": {
+          "name": "bucket_rotation_items_system_id_idx",
+          "columns": ["system_id"],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -1105,6 +1256,15 @@
           "tableFrom": "bucket_rotation_items",
           "tableTo": "bucket_key_rotations",
           "columnsFrom": ["rotation_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bucket_rotation_items_system_id_systems_id_fk": {
+          "name": "bucket_rotation_items_system_id_systems_id_fk",
+          "tableFrom": "bucket_rotation_items",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -1164,12 +1324,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "buckets_system_id_idx": {
-          "name": "buckets_system_id_idx",
-          "columns": ["system_id"],
+        "buckets_system_archived_idx": {
+          "name": "buckets_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "buckets_id_system_id_unique": {
@@ -1195,6 +1370,10 @@
         "buckets_version_check": {
           "name": "buckets_version_check",
           "value": "\"buckets\".\"version\" >= 1"
+        },
+        "buckets_archived_consistency_check": {
+          "name": "buckets_archived_consistency_check",
+          "value": "(\"buckets\".\"archived\" = true) = (\"buckets\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -1282,9 +1461,9 @@
         }
       },
       "indexes": {
-        "channels_system_id_idx": {
-          "name": "channels_system_id_idx",
-          "columns": ["system_id"],
+        "channels_system_archived_idx": {
+          "name": "channels_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "channels_id_system_id_unique": {
@@ -1303,12 +1482,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "channels_parent_id_channels_id_fk": {
-          "name": "channels_parent_id_channels_id_fk",
+        "channels_parent_id_system_id_channels_id_system_id_fk": {
+          "name": "channels_parent_id_system_id_channels_id_system_id_fk",
           "tableFrom": "channels",
           "tableTo": "channels",
-          "columnsFrom": ["parent_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["parent_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1393,6 +1572,21 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -1410,6 +1604,12 @@
           "name": "check_in_records_scheduled_at_idx",
           "columns": ["scheduled_at"],
           "isUnique": false
+        },
+        "check_in_records_system_pending_idx": {
+          "name": "check_in_records_system_pending_idx",
+          "columns": ["system_id", "scheduled_at"],
+          "isUnique": false,
+          "where": "\"check_in_records\".\"responded_at\" IS NULL AND \"check_in_records\".\"dismissed\" = 0 AND \"check_in_records\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
@@ -1431,19 +1631,24 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "check_in_records_responded_by_member_id_members_id_fk": {
-          "name": "check_in_records_responded_by_member_id_members_id_fk",
+        "check_in_records_responded_by_member_id_system_id_members_id_system_id_fk": {
+          "name": "check_in_records_responded_by_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "check_in_records",
           "tableTo": "members",
-          "columnsFrom": ["responded_by_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["responded_by_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "check_in_records_archived_consistency_check": {
+          "name": "check_in_records_archived_consistency_check",
+          "value": "(\"check_in_records\".\"archived\" = true) = (\"check_in_records\".\"archived_at\" IS NOT NULL)"
+        }
+      }
     },
     "custom_fronts": {
       "name": "custom_fronts",
@@ -1508,9 +1713,9 @@
         }
       },
       "indexes": {
-        "custom_fronts_system_id_idx": {
-          "name": "custom_fronts_system_id_idx",
-          "columns": ["system_id"],
+        "custom_fronts_system_archived_idx": {
+          "name": "custom_fronts_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -1613,6 +1818,11 @@
           "name": "device_tokens_revoked_at_idx",
           "columns": ["revoked_at"],
           "isUnique": false
+        },
+        "device_tokens_token_platform_unique": {
+          "name": "device_tokens_token_platform_unique",
+          "columns": ["token", "platform"],
+          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -1901,9 +2111,27 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "field_bucket_visibility_bucket_id_idx": {
+          "name": "field_bucket_visibility_bucket_id_idx",
+          "columns": ["bucket_id"],
+          "isUnique": false
+        },
+        "field_bucket_visibility_system_id_idx": {
+          "name": "field_bucket_visibility_system_id_idx",
+          "columns": ["system_id"],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "field_bucket_visibility_field_definition_id_field_definitions_id_fk": {
           "name": "field_bucket_visibility_field_definition_id_field_definitions_id_fk",
@@ -1919,6 +2147,15 @@
           "tableFrom": "field_bucket_visibility",
           "tableTo": "buckets",
           "columnsFrom": ["bucket_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "field_bucket_visibility_system_id_systems_id_fk": {
+          "name": "field_bucket_visibility_system_id_systems_id_fk",
+          "tableFrom": "field_bucket_visibility",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -1954,22 +2191,24 @@
           "name": "field_type",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "required": {
           "name": "required",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "sort_order": {
           "name": "sort_order",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         },
         "encrypted_data": {
           "name": "encrypted_data",
@@ -2017,9 +2256,9 @@
         }
       },
       "indexes": {
-        "field_definitions_system_id_idx": {
-          "name": "field_definitions_system_id_idx",
-          "columns": ["system_id"],
+        "field_definitions_system_archived_idx": {
+          "name": "field_definitions_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "field_definitions_id_system_id_unique": {
@@ -2155,12 +2394,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "field_values_member_id_members_id_fk": {
-          "name": "field_values_member_id_members_id_fk",
+        "field_values_member_id_system_id_members_id_system_id_fk": {
+          "name": "field_values_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "field_values",
           "tableTo": "members",
-          "columnsFrom": ["member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2190,9 +2429,27 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "friend_bucket_assignments_bucket_id_idx": {
+          "name": "friend_bucket_assignments_bucket_id_idx",
+          "columns": ["bucket_id"],
+          "isUnique": false
+        },
+        "friend_bucket_assignments_system_id_idx": {
+          "name": "friend_bucket_assignments_system_id_idx",
+          "columns": ["system_id"],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "friend_bucket_assignments_friend_connection_id_friend_connections_id_fk": {
           "name": "friend_bucket_assignments_friend_connection_id_friend_connections_id_fk",
@@ -2208,6 +2465,15 @@
           "tableFrom": "friend_bucket_assignments",
           "tableTo": "buckets",
           "columnsFrom": ["bucket_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "friend_bucket_assignments_system_id_systems_id_fk": {
+          "name": "friend_bucket_assignments_system_id_systems_id_fk",
+          "tableFrom": "friend_bucket_assignments",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2232,8 +2498,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "system_id": {
-          "name": "system_id",
+        "account_id": {
+          "name": "account_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -2259,26 +2525,42 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "friend_codes_code_unique": {
-          "name": "friend_codes_code_unique",
-          "columns": ["code"],
-          "isUnique": true
-        },
-        "friend_codes_system_id_idx": {
-          "name": "friend_codes_system_id_idx",
-          "columns": ["system_id"],
+        "friend_codes_account_archived_idx": {
+          "name": "friend_codes_account_archived_idx",
+          "columns": ["account_id", "archived"],
           "isUnique": false
+        },
+        "friend_codes_code_uniq": {
+          "name": "friend_codes_code_uniq",
+          "columns": ["code"],
+          "isUnique": true,
+          "where": "\"friend_codes\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
-        "friend_codes_system_id_systems_id_fk": {
-          "name": "friend_codes_system_id_systems_id_fk",
+        "friend_codes_account_id_accounts_id_fk": {
+          "name": "friend_codes_account_id_accounts_id_fk",
           "tableFrom": "friend_codes",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
+          "tableTo": "accounts",
+          "columnsFrom": ["account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2290,6 +2572,14 @@
         "friend_codes_expires_at_check": {
           "name": "friend_codes_expires_at_check",
           "value": "\"friend_codes\".\"expires_at\" IS NULL OR \"friend_codes\".\"expires_at\" > \"friend_codes\".\"created_at\""
+        },
+        "friend_codes_code_min_length_check": {
+          "name": "friend_codes_code_min_length_check",
+          "value": "length(\"friend_codes\".\"code\") >= 8"
+        },
+        "friend_codes_archived_consistency_check": {
+          "name": "friend_codes_archived_consistency_check",
+          "value": "(\"friend_codes\".\"archived\" = true) = (\"friend_codes\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -2303,15 +2593,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "system_id": {
-          "name": "system_id",
+        "account_id": {
+          "name": "account_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "friend_system_id": {
-          "name": "friend_system_id",
+        "friend_account_id": {
+          "name": "friend_account_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -2353,45 +2643,66 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "friend_connections_system_status_idx": {
-          "name": "friend_connections_system_status_idx",
-          "columns": ["system_id", "status"],
+        "friend_connections_account_status_idx": {
+          "name": "friend_connections_account_status_idx",
+          "columns": ["account_id", "status"],
           "isUnique": false
         },
-        "friend_connections_friend_system_id_idx": {
-          "name": "friend_connections_friend_system_id_idx",
-          "columns": ["friend_system_id"],
+        "friend_connections_friend_status_idx": {
+          "name": "friend_connections_friend_status_idx",
+          "columns": ["friend_account_id", "status"],
           "isUnique": false
         },
-        "friend_connections_system_friend_uniq": {
-          "name": "friend_connections_system_friend_uniq",
-          "columns": ["system_id", "friend_system_id"],
-          "isUnique": true
+        "friend_connections_account_archived_idx": {
+          "name": "friend_connections_account_archived_idx",
+          "columns": ["account_id", "archived"],
+          "isUnique": false
         },
-        "friend_connections_id_system_id_unique": {
-          "name": "friend_connections_id_system_id_unique",
-          "columns": ["id", "system_id"],
+        "friend_connections_account_friend_uniq": {
+          "name": "friend_connections_account_friend_uniq",
+          "columns": ["account_id", "friend_account_id"],
+          "isUnique": true,
+          "where": "\"friend_connections\".\"archived\" = 0"
+        },
+        "friend_connections_id_account_id_unique": {
+          "name": "friend_connections_id_account_id_unique",
+          "columns": ["id", "account_id"],
           "isUnique": true
         }
       },
       "foreignKeys": {
-        "friend_connections_system_id_systems_id_fk": {
-          "name": "friend_connections_system_id_systems_id_fk",
+        "friend_connections_account_id_accounts_id_fk": {
+          "name": "friend_connections_account_id_accounts_id_fk",
           "tableFrom": "friend_connections",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
+          "tableTo": "accounts",
+          "columnsFrom": ["account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "friend_connections_friend_system_id_systems_id_fk": {
-          "name": "friend_connections_friend_system_id_systems_id_fk",
+        "friend_connections_friend_account_id_accounts_id_fk": {
+          "name": "friend_connections_friend_account_id_accounts_id_fk",
           "tableFrom": "friend_connections",
-          "tableTo": "systems",
-          "columnsFrom": ["friend_system_id"],
+          "tableTo": "accounts",
+          "columnsFrom": ["friend_account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -2406,11 +2717,15 @@
         },
         "friend_connections_no_self_check": {
           "name": "friend_connections_no_self_check",
-          "value": "\"friend_connections\".\"system_id\" != \"friend_connections\".\"friend_system_id\""
+          "value": "\"friend_connections\".\"account_id\" != \"friend_connections\".\"friend_account_id\""
         },
         "friend_connections_version_check": {
           "name": "friend_connections_version_check",
           "value": "\"friend_connections\".\"version\" >= 1"
+        },
+        "friend_connections_archived_consistency_check": {
+          "name": "friend_connections_archived_consistency_check",
+          "value": "(\"friend_connections\".\"archived\" = true) = (\"friend_connections\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -2424,8 +2739,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "system_id": {
-          "name": "system_id",
+        "account_id": {
+          "name": "account_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -2458,38 +2773,59 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "friend_notification_prefs_system_id_friend_connection_id_idx": {
-          "name": "friend_notification_prefs_system_id_friend_connection_id_idx",
-          "columns": ["system_id", "friend_connection_id"],
-          "isUnique": true
+        "friend_notification_prefs_account_id_friend_connection_id_idx": {
+          "name": "friend_notification_prefs_account_id_friend_connection_id_idx",
+          "columns": ["account_id", "friend_connection_id"],
+          "isUnique": true,
+          "where": "\"friend_notification_preferences\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
-        "friend_notification_preferences_system_id_systems_id_fk": {
-          "name": "friend_notification_preferences_system_id_systems_id_fk",
+        "friend_notification_preferences_account_id_accounts_id_fk": {
+          "name": "friend_notification_preferences_account_id_accounts_id_fk",
           "tableFrom": "friend_notification_preferences",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
+          "tableTo": "accounts",
+          "columnsFrom": ["account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "friend_notification_preferences_friend_connection_id_system_id_friend_connections_id_system_id_fk": {
-          "name": "friend_notification_preferences_friend_connection_id_system_id_friend_connections_id_system_id_fk",
+        "friend_notification_preferences_friend_connection_id_account_id_friend_connections_id_account_id_fk": {
+          "name": "friend_notification_preferences_friend_connection_id_account_id_friend_connections_id_account_id_fk",
           "tableFrom": "friend_notification_preferences",
           "tableTo": "friend_connections",
-          "columnsFrom": ["friend_connection_id", "system_id"],
-          "columnsTo": ["id", "system_id"],
+          "columnsFrom": ["friend_connection_id", "account_id"],
+          "columnsTo": ["id", "account_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "friend_notification_preferences_archived_consistency_check": {
+          "name": "friend_notification_preferences_archived_consistency_check",
+          "value": "(\"friend_notification_preferences\".\"archived\" = true) = (\"friend_notification_preferences\".\"archived_at\" IS NOT NULL)"
+        }
+      }
     },
     "fronting_comments": {
       "name": "fronting_comments",
@@ -2550,12 +2886,32 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
         "fronting_comments_session_created_idx": {
           "name": "fronting_comments_session_created_idx",
           "columns": ["fronting_session_id", "created_at"],
+          "isUnique": false
+        },
+        "fronting_comments_system_archived_idx": {
+          "name": "fronting_comments_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -2578,12 +2934,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "fronting_comments_member_id_members_id_fk": {
-          "name": "fronting_comments_member_id_members_id_fk",
+        "fronting_comments_member_id_system_id_members_id_system_id_fk": {
+          "name": "fronting_comments_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "fronting_comments",
           "tableTo": "members",
-          "columnsFrom": ["member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2594,6 +2950,10 @@
         "fronting_comments_version_check": {
           "name": "fronting_comments_version_check",
           "value": "\"fronting_comments\".\"version\" >= 1"
+        },
+        "fronting_comments_archived_consistency_check": {
+          "name": "fronting_comments_archived_consistency_check",
+          "value": "(\"fronting_comments\".\"archived\" = true) = (\"fronting_comments\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -2614,23 +2974,9 @@
           "notNull": true,
           "autoincrement": false
         },
-        "date_range": {
-          "name": "date_range",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "member_breakdowns": {
-          "name": "member_breakdowns",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "chart_data": {
-          "name": "chart_data",
-          "type": "text",
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "blob",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -2719,8 +3065,9 @@
           "name": "fronting_type",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'fronting'"
         },
         "custom_front_id": {
           "name": "custom_front_id",
@@ -2764,6 +3111,21 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -2772,9 +3134,30 @@
           "columns": ["system_id", "start_time"],
           "isUnique": false
         },
+        "fronting_sessions_system_member_start_idx": {
+          "name": "fronting_sessions_system_member_start_idx",
+          "columns": ["system_id", "member_id", "start_time"],
+          "isUnique": false
+        },
         "fronting_sessions_system_end_idx": {
           "name": "fronting_sessions_system_end_idx",
           "columns": ["system_id", "end_time"],
+          "isUnique": false
+        },
+        "fronting_sessions_system_type_start_idx": {
+          "name": "fronting_sessions_system_type_start_idx",
+          "columns": ["system_id", "fronting_type", "start_time"],
+          "isUnique": false
+        },
+        "fronting_sessions_active_idx": {
+          "name": "fronting_sessions_active_idx",
+          "columns": ["system_id"],
+          "isUnique": false,
+          "where": "\"fronting_sessions\".\"end_time\" IS NULL"
+        },
+        "fronting_sessions_system_archived_idx": {
+          "name": "fronting_sessions_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "fronting_sessions_id_system_id_unique": {
@@ -2793,12 +3176,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "fronting_sessions_member_id_members_id_fk": {
-          "name": "fronting_sessions_member_id_members_id_fk",
+        "fronting_sessions_member_id_system_id_members_id_system_id_fk": {
+          "name": "fronting_sessions_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "fronting_sessions",
           "tableTo": "members",
-          "columnsFrom": ["member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2826,6 +3209,14 @@
         "fronting_sessions_version_check": {
           "name": "fronting_sessions_version_check",
           "value": "\"fronting_sessions\".\"version\" >= 1"
+        },
+        "fronting_sessions_archived_consistency_check": {
+          "name": "fronting_sessions_archived_consistency_check",
+          "value": "(\"fronting_sessions\".\"archived\" = true) = (\"fronting_sessions\".\"archived_at\" IS NOT NULL)"
+        },
+        "fronting_sessions_subject_check": {
+          "name": "fronting_sessions_subject_check",
+          "value": "\"fronting_sessions\".\"member_id\" IS NOT NULL OR \"fronting_sessions\".\"custom_front_id\" IS NOT NULL"
         }
       }
     },
@@ -2988,9 +3379,9 @@
         }
       },
       "indexes": {
-        "groups_system_id_idx": {
-          "name": "groups_system_id_idx",
-          "columns": ["system_id"],
+        "groups_system_archived_idx": {
+          "name": "groups_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "groups_id_system_id_unique": {
@@ -3009,12 +3400,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "groups_parent_group_id_groups_id_fk": {
-          "name": "groups_parent_group_id_groups_id_fk",
+        "groups_parent_group_id_system_id_groups_id_system_id_fk": {
+          "name": "groups_parent_group_id_system_id_groups_id_system_id_fk",
           "tableFrom": "groups",
           "tableTo": "groups",
-          "columnsFrom": ["parent_group_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["parent_group_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3185,6 +3576,10 @@
         "import_jobs_chunks_check": {
           "name": "import_jobs_chunks_check",
           "value": "\"import_jobs\".\"chunks_total\" IS NULL OR \"import_jobs\".\"chunks_completed\" <= \"import_jobs\".\"chunks_total\""
+        },
+        "import_jobs_error_log_length_check": {
+          "name": "import_jobs_error_log_length_check",
+          "value": "\"import_jobs\".\"error_log\" IS NULL OR json_array_length(\"import_jobs\".\"error_log\") <= ?"
         }
       }
     },
@@ -3301,17 +3696,32 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "innerworld_entities_system_id_idx": {
-          "name": "innerworld_entities_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "innerworld_entities_region_id_idx": {
           "name": "innerworld_entities_region_id_idx",
           "columns": ["region_id"],
+          "isUnique": false
+        },
+        "innerworld_entities_system_archived_idx": {
+          "name": "innerworld_entities_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -3341,6 +3751,10 @@
         "innerworld_entities_version_check": {
           "name": "innerworld_entities_version_check",
           "value": "\"innerworld_entities\".\"version\" >= 1"
+        },
+        "innerworld_entities_archived_consistency_check": {
+          "name": "innerworld_entities_archived_consistency_check",
+          "value": "(\"innerworld_entities\".\"archived\" = true) = (\"innerworld_entities\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -3396,12 +3810,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "innerworld_regions_system_id_idx": {
-          "name": "innerworld_regions_system_id_idx",
-          "columns": ["system_id"],
+        "innerworld_regions_system_archived_idx": {
+          "name": "innerworld_regions_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "innerworld_regions_id_system_id_unique": {
@@ -3420,12 +3849,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "innerworld_regions_parent_region_id_innerworld_regions_id_fk": {
-          "name": "innerworld_regions_parent_region_id_innerworld_regions_id_fk",
+        "innerworld_regions_parent_region_id_system_id_innerworld_regions_id_system_id_fk": {
+          "name": "innerworld_regions_parent_region_id_system_id_innerworld_regions_id_system_id_fk",
           "tableFrom": "innerworld_regions",
           "tableTo": "innerworld_regions",
-          "columnsFrom": ["parent_region_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["parent_region_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3436,6 +3865,10 @@
         "innerworld_regions_version_check": {
           "name": "innerworld_regions_version_check",
           "value": "\"innerworld_regions\".\"version\" >= 1"
+        },
+        "innerworld_regions_archived_consistency_check": {
+          "name": "innerworld_regions_archived_consistency_check",
+          "value": "(\"innerworld_regions\".\"archived\" = true) = (\"innerworld_regions\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -3444,10 +3877,10 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "integer",
+          "type": "text",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": true
+          "autoincrement": false
         },
         "system_id": {
           "name": "system_id",
@@ -3621,7 +4054,7 @@
         },
         "jobs_type_check": {
           "name": "jobs_type_check",
-          "value": "\"jobs\".\"type\" IS NULL OR \"jobs\".\"type\" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "value": "\"jobs\".\"type\" IS NULL OR \"jobs\".\"type\" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         },
         "jobs_attempts_max_check": {
           "name": "jobs_attempts_max_check",
@@ -3708,6 +4141,11 @@
           "columns": ["system_id", "created_at"],
           "isUnique": false
         },
+        "journal_entries_system_archived_idx": {
+          "name": "journal_entries_system_archived_idx",
+          "columns": ["system_id", "archived"],
+          "isUnique": false
+        },
         "journal_entries_fronting_session_id_idx": {
           "name": "journal_entries_fronting_session_id_idx",
           "columns": ["fronting_session_id"],
@@ -3764,8 +4202,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "friend_system_id": {
-          "name": "friend_system_id",
+        "system_id": {
+          "name": "system_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "friend_account_id": {
+          "name": "friend_account_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -3801,9 +4246,19 @@
         }
       },
       "indexes": {
+        "key_grants_system_id_idx": {
+          "name": "key_grants_system_id_idx",
+          "columns": ["system_id"],
+          "isUnique": false
+        },
         "key_grants_friend_bucket_idx": {
           "name": "key_grants_friend_bucket_idx",
-          "columns": ["friend_system_id", "bucket_id"],
+          "columns": ["friend_account_id", "bucket_id"],
+          "isUnique": false
+        },
+        "key_grants_friend_revoked_idx": {
+          "name": "key_grants_friend_revoked_idx",
+          "columns": ["friend_account_id", "revoked_at"],
           "isUnique": false
         },
         "key_grants_revoked_at_idx": {
@@ -3813,7 +4268,7 @@
         },
         "key_grants_bucket_friend_version_uniq": {
           "name": "key_grants_bucket_friend_version_uniq",
-          "columns": ["bucket_id", "friend_system_id", "key_version"],
+          "columns": ["bucket_id", "friend_account_id", "key_version"],
           "isUnique": true
         }
       },
@@ -3827,11 +4282,20 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "key_grants_friend_system_id_systems_id_fk": {
-          "name": "key_grants_friend_system_id_systems_id_fk",
+        "key_grants_system_id_systems_id_fk": {
+          "name": "key_grants_system_id_systems_id_fk",
           "tableFrom": "key_grants",
           "tableTo": "systems",
-          "columnsFrom": ["friend_system_id"],
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "key_grants_friend_account_id_accounts_id_fk": {
+          "name": "key_grants_friend_account_id_accounts_id_fk",
+          "tableFrom": "key_grants",
+          "tableTo": "accounts",
+          "columnsFrom": ["friend_account_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -3973,12 +4437,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "layers_system_id_idx": {
-          "name": "layers_system_id_idx",
-          "columns": ["system_id"],
+        "layers_system_archived_idx": {
+          "name": "layers_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "layers_id_system_id_unique": {
@@ -4004,6 +4483,10 @@
         "layers_version_check": {
           "name": "layers_version_check",
           "value": "\"layers\".\"version\" >= 1"
+        },
+        "layers_archived_consistency_check": {
+          "name": "layers_archived_consistency_check",
+          "value": "(\"layers\".\"archived\" = true) = (\"layers\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -4028,7 +4511,7 @@
           "name": "event_type",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "occurred_at": {
@@ -4081,7 +4564,7 @@
       "checkConstraints": {
         "lifecycle_events_event_type_check": {
           "name": "lifecycle_events_event_type_check",
-          "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         }
       }
     },
@@ -4145,12 +4628,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "member_photos_system_id_idx": {
-          "name": "member_photos_system_id_idx",
-          "columns": ["system_id"],
+        "member_photos_system_archived_idx": {
+          "name": "member_photos_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "member_photos_member_sort_idx": {
@@ -4185,6 +4683,10 @@
         "member_photos_version_check": {
           "name": "member_photos_version_check",
           "value": "\"member_photos\".\"version\" >= 1"
+        },
+        "member_photos_archived_consistency_check": {
+          "name": "member_photos_archived_consistency_check",
+          "value": "(\"member_photos\".\"archived\" = true) = (\"member_photos\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -4251,14 +4753,9 @@
         }
       },
       "indexes": {
-        "members_system_id_idx": {
-          "name": "members_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
-        "members_archived_idx": {
-          "name": "members_archived_idx",
-          "columns": ["archived"],
+        "members_system_id_archived_idx": {
+          "name": "members_system_id_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "members_created_at_idx": {
@@ -4302,7 +4799,7 @@
         "id": {
           "name": "id",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -4392,9 +4889,9 @@
           "columns": ["channel_id", "timestamp"],
           "isUnique": false
         },
-        "messages_system_id_idx": {
-          "name": "messages_system_id_idx",
-          "columns": ["system_id"],
+        "messages_system_archived_idx": {
+          "name": "messages_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "messages_reply_to_id_idx": {
@@ -4402,9 +4899,14 @@
           "columns": ["reply_to_id"],
           "isUnique": false
         },
-        "messages_id_system_id_unique": {
-          "name": "messages_id_system_id_unique",
-          "columns": ["id", "system_id"],
+        "messages_id_unique": {
+          "name": "messages_id_unique",
+          "columns": ["id", "timestamp"],
+          "isUnique": true
+        },
+        "messages_id_system_id_timestamp_unique": {
+          "name": "messages_id_system_id_timestamp_unique",
+          "columns": ["id", "system_id", "timestamp"],
           "isUnique": true
         }
       },
@@ -4426,18 +4928,14 @@
           "columnsTo": ["id", "system_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "messages_reply_to_id_messages_id_fk": {
-          "name": "messages_reply_to_id_messages_id_fk",
-          "tableFrom": "messages",
-          "tableTo": "messages",
-          "columnsFrom": ["reply_to_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "messages_id_timestamp_pk": {
+          "columns": ["id", "timestamp"],
+          "name": "messages_id_timestamp_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {
         "messages_version_check": {
@@ -4581,9 +5079,9 @@
         }
       },
       "indexes": {
-        "notes_system_id_idx": {
-          "name": "notes_system_id_idx",
-          "columns": ["system_id"],
+        "notes_system_archived_idx": {
+          "name": "notes_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "notes_member_id_idx": {
@@ -4602,12 +5100,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "notes_member_id_members_id_fk": {
-          "name": "notes_member_id_members_id_fk",
+        "notes_member_id_system_id_members_id_system_id_fk": {
+          "name": "notes_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "notes",
           "tableTo": "members",
-          "columnsFrom": ["member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4678,13 +5176,29 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
         "notification_configs_system_id_event_type_idx": {
           "name": "notification_configs_system_id_event_type_idx",
           "columns": ["system_id", "event_type"],
-          "isUnique": true
+          "isUnique": true,
+          "where": "\"notification_configs\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
@@ -4704,11 +5218,15 @@
         "notification_configs_event_type_check": {
           "name": "notification_configs_event_type_check",
           "value": "\"notification_configs\".\"event_type\" IS NULL OR \"notification_configs\".\"event_type\" IN (?, ?, ?, ?, ?, ?)"
+        },
+        "notification_configs_archived_consistency_check": {
+          "name": "notification_configs_archived_consistency_check",
+          "value": "(\"notification_configs\".\"archived\" = true) = (\"notification_configs\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
-    "pk_bridge_state": {
-      "name": "pk_bridge_state",
+    "pk_bridge_configs": {
+      "name": "pk_bridge_configs",
       "columns": {
         "id": {
           "name": "id",
@@ -4791,16 +5309,16 @@
         }
       },
       "indexes": {
-        "pk_bridge_state_system_id_idx": {
-          "name": "pk_bridge_state_system_id_idx",
+        "pk_bridge_configs_system_id_idx": {
+          "name": "pk_bridge_configs_system_id_idx",
           "columns": ["system_id"],
           "isUnique": true
         }
       },
       "foreignKeys": {
-        "pk_bridge_state_system_id_systems_id_fk": {
-          "name": "pk_bridge_state_system_id_systems_id_fk",
-          "tableFrom": "pk_bridge_state",
+        "pk_bridge_configs_system_id_systems_id_fk": {
+          "name": "pk_bridge_configs_system_id_systems_id_fk",
+          "tableFrom": "pk_bridge_configs",
           "tableTo": "systems",
           "columnsFrom": ["system_id"],
           "columnsTo": ["id"],
@@ -4811,13 +5329,13 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
-        "pk_bridge_state_sync_direction_check": {
-          "name": "pk_bridge_state_sync_direction_check",
-          "value": "\"pk_bridge_state\".\"sync_direction\" IS NULL OR \"pk_bridge_state\".\"sync_direction\" IN (?, ?, ?)"
+        "pk_bridge_configs_sync_direction_check": {
+          "name": "pk_bridge_configs_sync_direction_check",
+          "value": "\"pk_bridge_configs\".\"sync_direction\" IS NULL OR \"pk_bridge_configs\".\"sync_direction\" IN (?, ?, ?)"
         },
-        "pk_bridge_state_version_check": {
-          "name": "pk_bridge_state_version_check",
-          "value": "\"pk_bridge_state\".\"version\" >= 1"
+        "pk_bridge_configs_version_check": {
+          "name": "pk_bridge_configs_version_check",
+          "value": "\"pk_bridge_configs\".\"version\" >= 1"
         }
       }
     },
@@ -4863,8 +5381,9 @@
           "name": "is_veto",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "voted_at": {
           "name": "voted_at",
@@ -4886,6 +5405,21 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -4894,9 +5428,9 @@
           "columns": ["poll_id"],
           "isUnique": false
         },
-        "poll_votes_system_id_idx": {
-          "name": "poll_votes_system_id_idx",
-          "columns": ["system_id"],
+        "poll_votes_system_archived_idx": {
+          "name": "poll_votes_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -4922,7 +5456,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "poll_votes_archived_consistency_check": {
+          "name": "poll_votes_archived_consistency_check",
+          "value": "(\"poll_votes\".\"archived\" = true) = (\"poll_votes\".\"archived_at\" IS NOT NULL)"
+        }
+      }
     },
     "polls": {
       "name": "polls",
@@ -4952,7 +5491,7 @@
           "name": "kind",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "status": {
@@ -5033,12 +5572,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "polls_system_id_idx": {
-          "name": "polls_system_id_idx",
-          "columns": ["system_id"],
+        "polls_system_archived_idx": {
+          "name": "polls_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "polls_id_system_id_unique": {
@@ -5057,12 +5611,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "polls_created_by_member_id_members_id_fk": {
-          "name": "polls_created_by_member_id_members_id_fk",
+        "polls_created_by_member_id_system_id_members_id_system_id_fk": {
+          "name": "polls_created_by_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "polls",
           "tableTo": "members",
-          "columnsFrom": ["created_by_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["created_by_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5085,6 +5639,10 @@
         "polls_version_check": {
           "name": "polls_version_check",
           "value": "\"polls\".\"version\" >= 1"
+        },
+        "polls_archived_consistency_check": {
+          "name": "polls_archived_consistency_check",
+          "value": "(\"polls\".\"archived\" = true) = (\"polls\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -5136,7 +5694,8 @@
         "recovery_keys_revoked_at_idx": {
           "name": "recovery_keys_revoked_at_idx",
           "columns": ["revoked_at"],
-          "isUnique": false
+          "isUnique": false,
+          "where": "\"recovery_keys\".\"revoked_at\" IS NULL"
         }
       },
       "foreignKeys": {
@@ -5189,15 +5748,16 @@
           "name": "type",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "bidirectional": {
           "name": "bidirectional",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "encrypted_data": {
           "name": "encrypted_data",
@@ -5227,12 +5787,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "relationships_system_id_idx": {
-          "name": "relationships_system_id_idx",
-          "columns": ["system_id"],
+        "relationships_system_archived_idx": {
+          "name": "relationships_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -5246,21 +5821,21 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "relationships_source_member_id_members_id_fk": {
-          "name": "relationships_source_member_id_members_id_fk",
+        "relationships_source_member_id_system_id_members_id_system_id_fk": {
+          "name": "relationships_source_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "relationships",
           "tableTo": "members",
-          "columnsFrom": ["source_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["source_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "relationships_target_member_id_members_id_fk": {
-          "name": "relationships_target_member_id_members_id_fk",
+        "relationships_target_member_id_system_id_members_id_system_id_fk": {
+          "name": "relationships_target_member_id_system_id_members_id_system_id_fk",
           "tableFrom": "relationships",
           "tableTo": "members",
-          "columnsFrom": ["target_member_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["target_member_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5275,6 +5850,10 @@
         "relationships_version_check": {
           "name": "relationships_version_check",
           "value": "\"relationships\".\"version\" >= 1"
+        },
+        "relationships_archived_consistency_check": {
+          "name": "relationships_archived_consistency_check",
+          "value": "(\"relationships\".\"archived\" = true) = (\"relationships\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -5299,8 +5878,9 @@
           "name": "sort_order",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         },
         "encrypted_data": {
           "name": "encrypted_data",
@@ -5376,9 +5956,9 @@
           "notNull": true,
           "autoincrement": false
         },
-        "device_info": {
-          "name": "device_info",
-          "type": "text",
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "blob",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -5419,11 +5999,6 @@
           "columns": ["account_id"],
           "isUnique": false
         },
-        "sessions_revoked_idx": {
-          "name": "sessions_revoked_idx",
-          "columns": ["revoked"],
-          "isUnique": false
-        },
         "sessions_revoked_last_active_idx": {
           "name": "sessions_revoked_last_active_idx",
           "columns": ["revoked", "last_active"],
@@ -5432,7 +6007,8 @@
         "sessions_expires_at_idx": {
           "name": "sessions_expires_at_idx",
           "columns": ["expires_at"],
-          "isUnique": false
+          "isUnique": false,
+          "where": "\"sessions\".\"expires_at\" IS NOT NULL"
         }
       },
       "foreignKeys": {
@@ -5671,12 +6247,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "side_systems_system_id_idx": {
-          "name": "side_systems_system_id_idx",
-          "columns": ["system_id"],
+        "side_systems_system_archived_idx": {
+          "name": "side_systems_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "side_systems_id_system_id_unique": {
@@ -5702,6 +6293,10 @@
         "side_systems_version_check": {
           "name": "side_systems_version_check",
           "value": "\"side_systems\".\"version\" >= 1"
+        },
+        "side_systems_archived_consistency_check": {
+          "name": "side_systems_archived_consistency_check",
+          "value": "(\"side_systems\".\"archived\" = true) = (\"side_systems\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -6007,8 +6602,9 @@
           "name": "has_core",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "discovery_status": {
           "name": "discovery_status",
@@ -6045,12 +6641,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "subsystems_system_id_idx": {
-          "name": "subsystems_system_id_idx",
-          "columns": ["system_id"],
+        "subsystems_system_archived_idx": {
+          "name": "subsystems_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "subsystems_id_system_id_unique": {
@@ -6069,12 +6680,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "subsystems_parent_subsystem_id_subsystems_id_fk": {
-          "name": "subsystems_parent_subsystem_id_subsystems_id_fk",
+        "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk": {
+          "name": "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk",
           "tableFrom": "subsystems",
           "tableTo": "subsystems",
-          "columnsFrom": ["parent_subsystem_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": ["parent_subsystem_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6089,6 +6700,10 @@
         "subsystems_version_check": {
           "name": "subsystems_version_check",
           "value": "\"subsystems\".\"version\" >= 1"
+        },
+        "subsystems_archived_consistency_check": {
+          "name": "subsystems_archived_consistency_check",
+          "value": "(\"subsystems\".\"archived\" = true) = (\"subsystems\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -6137,12 +6752,32 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
         "switches_system_timestamp_idx": {
           "name": "switches_system_timestamp_idx",
           "columns": ["system_id", "timestamp"],
+          "isUnique": false
+        },
+        "switches_system_archived_idx": {
+          "name": "switches_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -6167,6 +6802,10 @@
         "switches_version_check": {
           "name": "switches_version_check",
           "value": "\"switches\".\"version\" >= 1"
+        },
+        "switches_archived_consistency_check": {
+          "name": "switches_archived_consistency_check",
+          "value": "(\"switches\".\"archived\" = true) = (\"switches\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -6360,6 +6999,10 @@
         "sync_documents_version_check": {
           "name": "sync_documents_version_check",
           "value": "\"sync_documents\".\"version\" >= 1"
+        },
+        "sync_documents_automerge_heads_size_check": {
+          "name": "sync_documents_automerge_heads_size_check",
+          "value": "\"sync_documents\".\"automerge_heads\" IS NULL OR length(\"sync_documents\".\"automerge_heads\") <= ?"
         }
       }
     },
@@ -6408,8 +7051,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "change_data": {
-          "name": "change_data",
+        "encrypted_change_data": {
+          "name": "encrypted_change_data",
           "type": "blob",
           "primaryKey": false,
           "notNull": true,
@@ -6443,13 +7086,19 @@
         },
         "sync_queue_unsynced_idx": {
           "name": "sync_queue_unsynced_idx",
-          "columns": ["system_id"],
+          "columns": ["system_id", "seq"],
           "isUnique": false,
           "where": "\"sync_queue\".\"synced_at\" IS NULL"
         },
-        "sync_queue_seq_idx": {
-          "name": "sync_queue_seq_idx",
-          "columns": ["seq"],
+        "sync_queue_cleanup_idx": {
+          "name": "sync_queue_cleanup_idx",
+          "columns": ["synced_at"],
+          "isUnique": false,
+          "where": "\"sync_queue\".\"synced_at\" IS NOT NULL"
+        },
+        "sync_queue_system_id_seq_idx": {
+          "name": "sync_queue_system_id_seq_idx",
+          "columns": ["system_id", "seq"],
           "isUnique": true
         }
       },
@@ -6566,6 +7215,76 @@
         "system_settings_version_check": {
           "name": "system_settings_version_check",
           "value": "\"system_settings\".\"version\" >= 1"
+        },
+        "system_settings_pin_hash_kdf_check": {
+          "name": "system_settings_pin_hash_kdf_check",
+          "value": "\"system_settings\".\"pin_hash\" IS NULL OR \"system_settings\".\"pin_hash\" LIKE '$argon2id$%'"
+        }
+      }
+    },
+    "system_snapshots": {
+      "name": "system_snapshots",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "system_id": {
+          "name": "system_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "snapshot_trigger": {
+          "name": "snapshot_trigger",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "encrypted_data": {
+          "name": "encrypted_data",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "system_snapshots_system_created_idx": {
+          "name": "system_snapshots_system_created_idx",
+          "columns": ["system_id", "created_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "system_snapshots_system_id_systems_id_fk": {
+          "name": "system_snapshots_system_id_systems_id_fk",
+          "tableFrom": "system_snapshots",
+          "tableTo": "systems",
+          "columnsFrom": ["system_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "system_snapshots_snapshot_trigger_check": {
+          "name": "system_snapshots_snapshot_trigger_check",
+          "value": "\"system_snapshots\".\"snapshot_trigger\" IS NULL OR \"system_snapshots\".\"snapshot_trigger\" IN (?, ?, ?)"
         }
       }
     },
@@ -6724,12 +7443,27 @@
           "notNull": true,
           "autoincrement": false,
           "default": 1
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "timer_configs_system_id_idx": {
-          "name": "timer_configs_system_id_idx",
-          "columns": ["system_id"],
+        "timer_configs_system_archived_idx": {
+          "name": "timer_configs_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "timer_configs_id_system_id_unique": {
@@ -6755,6 +7489,18 @@
         "timer_configs_version_check": {
           "name": "timer_configs_version_check",
           "value": "\"timer_configs\".\"version\" >= 1"
+        },
+        "timer_configs_waking_start_format": {
+          "name": "timer_configs_waking_start_format",
+          "value": "\"timer_configs\".\"waking_start\" IS NULL OR (\n    length(\"timer_configs\".\"waking_start\") = 5\n    AND substr(\"timer_configs\".\"waking_start\", 3, 1) = ':'\n    AND substr(\"timer_configs\".\"waking_start\", 1, 1) BETWEEN '0' AND '2'\n    AND substr(\"timer_configs\".\"waking_start\", 2, 1) BETWEEN '0' AND '9'\n    AND (substr(\"timer_configs\".\"waking_start\", 1, 1) < '2' OR substr(\"timer_configs\".\"waking_start\", 2, 1) <= '3')\n    AND substr(\"timer_configs\".\"waking_start\", 4, 1) BETWEEN '0' AND '5'\n    AND substr(\"timer_configs\".\"waking_start\", 5, 1) BETWEEN '0' AND '9'\n  )"
+        },
+        "timer_configs_waking_end_format": {
+          "name": "timer_configs_waking_end_format",
+          "value": "\"timer_configs\".\"waking_end\" IS NULL OR (\n    length(\"timer_configs\".\"waking_end\") = 5\n    AND substr(\"timer_configs\".\"waking_end\", 3, 1) = ':'\n    AND substr(\"timer_configs\".\"waking_end\", 1, 1) BETWEEN '0' AND '2'\n    AND substr(\"timer_configs\".\"waking_end\", 2, 1) BETWEEN '0' AND '9'\n    AND (substr(\"timer_configs\".\"waking_end\", 1, 1) < '2' OR substr(\"timer_configs\".\"waking_end\", 2, 1) <= '3')\n    AND substr(\"timer_configs\".\"waking_end\", 4, 1) BETWEEN '0' AND '5'\n    AND substr(\"timer_configs\".\"waking_end\", 5, 1) BETWEEN '0' AND '9'\n  )"
+        },
+        "timer_configs_archived_consistency_check": {
+          "name": "timer_configs_archived_consistency_check",
+          "value": "(\"timer_configs\".\"archived\" = true) = (\"timer_configs\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -6824,12 +7570,27 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
-        "webhook_configs_system_id_idx": {
-          "name": "webhook_configs_system_id_idx",
-          "columns": ["system_id"],
+        "webhook_configs_system_archived_idx": {
+          "name": "webhook_configs_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "webhook_configs_id_system_id_unique": {
@@ -6860,7 +7621,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "webhook_configs_archived_consistency_check": {
+          "name": "webhook_configs_archived_consistency_check",
+          "value": "(\"webhook_configs\".\"archived\" = true) = (\"webhook_configs\".\"archived_at\" IS NOT NULL)"
+        }
+      }
     },
     "webhook_deliveries": {
       "name": "webhook_deliveries",
@@ -6943,6 +7709,21 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "archived_at": {
+          "name": "archived_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -6960,6 +7741,18 @@
           "name": "webhook_deliveries_status_next_retry_at_idx",
           "columns": ["status", "next_retry_at"],
           "isUnique": false
+        },
+        "webhook_deliveries_terminal_created_at_idx": {
+          "name": "webhook_deliveries_terminal_created_at_idx",
+          "columns": ["created_at"],
+          "isUnique": false,
+          "where": "\"webhook_deliveries\".\"status\" IN ('success', 'failed')"
+        },
+        "webhook_deliveries_system_retry_idx": {
+          "name": "webhook_deliveries_system_retry_idx",
+          "columns": ["system_id", "status", "next_retry_at"],
+          "isUnique": false,
+          "where": "\"webhook_deliveries\".\"status\" NOT IN ('success', 'failed')"
         }
       },
       "foreignKeys": {
@@ -7000,6 +7793,10 @@
         "webhook_deliveries_http_status_check": {
           "name": "webhook_deliveries_http_status_check",
           "value": "\"webhook_deliveries\".\"http_status\" IS NULL OR (\"webhook_deliveries\".\"http_status\" >= 100 AND \"webhook_deliveries\".\"http_status\" <= 599)"
+        },
+        "webhook_deliveries_archived_consistency_check": {
+          "name": "webhook_deliveries_archived_consistency_check",
+          "value": "(\"webhook_deliveries\".\"archived\" = true) = (\"webhook_deliveries\".\"archived_at\" IS NOT NULL)"
         }
       }
     },
@@ -7020,8 +7817,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "slug": {
-          "name": "slug",
+        "slug_hash": {
+          "name": "slug_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -7073,15 +7870,16 @@
         }
       },
       "indexes": {
-        "wiki_pages_system_id_idx": {
-          "name": "wiki_pages_system_id_idx",
-          "columns": ["system_id"],
+        "wiki_pages_system_archived_idx": {
+          "name": "wiki_pages_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
-        "wiki_pages_system_id_slug_idx": {
-          "name": "wiki_pages_system_id_slug_idx",
-          "columns": ["system_id", "slug"],
-          "isUnique": true
+        "wiki_pages_system_id_slug_hash_idx": {
+          "name": "wiki_pages_system_id_slug_hash_idx",
+          "columns": ["system_id", "slug_hash"],
+          "isUnique": true,
+          "where": "\"wiki_pages\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
@@ -7105,6 +7903,10 @@
         "wiki_pages_archived_consistency_check": {
           "name": "wiki_pages_archived_consistency_check",
           "value": "(\"wiki_pages\".\"archived\" = true) = (\"wiki_pages\".\"archived_at\" IS NOT NULL)"
+        },
+        "wiki_pages_slug_hash_length_check": {
+          "name": "wiki_pages_slug_hash_length_check",
+          "value": "length(\"wiki_pages\".\"slug_hash\") = 64"
         }
       }
     }

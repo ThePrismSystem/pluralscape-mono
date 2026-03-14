@@ -11,7 +11,13 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
 import { pgTimeFormatCheck } from "../../helpers/check.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
@@ -35,13 +41,15 @@ export const timerConfigs = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
-    index("timer_configs_system_id_idx").on(t.systemId),
+    index("timer_configs_system_archived_idx").on(t.systemId, t.archived),
     unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("timer_configs", t.version),
     check("timer_configs_waking_start_format", pgTimeFormatCheck(t.wakingStart)),
     check("timer_configs_waking_end_format", pgTimeFormatCheck(t.wakingEnd)),
+    archivableConsistencyCheckFor("timer_configs", t.archived, t.archivedAt),
   ],
 );
 
@@ -58,6 +66,7 @@ export const checkInRecords = pgTable(
     dismissed: boolean("dismissed").notNull().default(false),
     respondedByMemberId: varchar("responded_by_member_id", { length: ID_MAX_LENGTH }),
     encryptedData: pgEncryptedBlob("encrypted_data"),
+    ...archivable(),
   },
   (t) => [
     index("check_in_records_system_id_idx").on(t.systemId),
@@ -73,7 +82,8 @@ export const checkInRecords = pgTable(
     }).onDelete("set null"),
     index("check_in_records_system_pending_idx")
       .on(t.systemId, t.scheduledAt)
-      .where(sql`${t.respondedAt} IS NULL AND ${t.dismissed} = false`),
+      .where(sql`${t.respondedAt} IS NULL AND ${t.dismissed} = false AND ${t.archived} = false`),
+    archivableConsistencyCheckFor("check_in_records", t.archived, t.archivedAt),
   ],
 );
 

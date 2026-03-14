@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import {
@@ -77,6 +77,12 @@ describe("SQLite custom fields schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(fieldBucketVisibility).run();
+    db.delete(fieldValues).run();
+    db.delete(fieldDefinitions).run();
   });
 
   describe("field_definitions", () => {
@@ -276,6 +282,33 @@ describe("SQLite custom fields schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldDefinitions)
+        .values({
+          id,
+          systemId,
+          fieldType: "text",
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(fieldDefinitions)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(fieldDefinitions.id, id))
+        .run();
+
+      const rows = db.select().from(fieldDefinitions).where(eq(fieldDefinitions.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 

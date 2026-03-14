@@ -1,11 +1,11 @@
 ---
 # db-ki5y
 title: Support deletion/archival for all entity types
-status: todo
+status: in-progress
 type: feature
 priority: high
 created_at: 2026-03-13T23:47:17Z
-updated_at: 2026-03-13T23:51:31Z
+updated_at: 2026-03-14T03:44:07Z
 ---
 
 All entity types need a user-facing way to remove accidentally created entries. Currently only 9 entities support archival (members, custom fronts, journal entries, wiki pages, groups, channels, messages, notes, field definitions). All other entities can only be removed via system-level CASCADE (account deletion), which means accidental entries are permanently stuck.
@@ -87,3 +87,35 @@ This is universal — no entity type is exempt (except immutable audit trails: l
 ### Migration
 
 - [ ] Generate Drizzle migration for new columns
+
+## Implementation Notes
+
+- [ ] Commit 1: Archived<T> utility type + generalize ArchivalEvent
+- [ ] Commit 2: Fronting domain archival
+- [ ] Commit 3: Structure domain archival
+- [ ] Commit 4: Communication domain archival
+- [ ] Commit 5: Innerworld + Privacy/Social archival
+- [x] Commit 6: Infrastructure domain archival
+- [ ] Commit 7: Media domain archival
+- [ ] Commit 8: Drizzle migration
+- [ ] Commit 9: FK audit documentation
+
+Switches comment in schema overridden — they are archivable/deletable per user decision.
+Generalize ArchivalEvent to use EntityReference instead of memberId.
+
+## Summary of Changes
+
+Added soft-archival support to all 24 non-audit entity tables across PG and SQLite schemas. Key deliverables:
+
+- `Archived<T>` generic utility type in `packages/types/src/utility.ts`
+- `archived: false` discriminant + `ArchivedX` type aliases for every affected domain type
+- `ArchivalEvent` generalized to use `EntityReference` instead of `memberId: MemberId`
+- `...archivable()` columns + `archivableConsistencyCheck()` CHECK constraint on 24 tables
+- Composite `(system_id, archived)` indexes on 13 high-traffic listing tables
+- Integration tests (PG + SQLite) for every modified table (4 tests each)
+- Drizzle migrations regenerated from scratch (pre-production)
+- FK dependency audit at `docs/audits/011-entity-archival-fk-audit.md`
+
+PR: https://github.com/ThePrismSystem/pluralscape-mono/pull/103
+
+## PR Review Fix Implementation\n\nAddressing all 8 items from PR #103 review:\n- [ ] Commit 1: Add partial filter to friend_notification_preferences and wiki_pages unique indexes\n- [ ] Commit 2: Regenerate migrations\n- [ ] Commit 3: Make Archived<T> distributive and fix ServerRelationship comment\n- [ ] Commit 4: Extract archivableConsistencyCheckFor helper\n- [ ] Commit 5: Add afterEach cleanup, UPDATE path tests, and partial index tests

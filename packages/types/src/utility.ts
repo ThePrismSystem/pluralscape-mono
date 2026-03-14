@@ -38,6 +38,20 @@ export interface AuditMetadata {
   readonly version: number;
 }
 
+/**
+ * Transforms an archivable entity type into its archived variant.
+ * Replaces `archived: false` with `archived: true` and adds `archivedAt`.
+ *
+ * Distributive over unions: `Archived<A | B>` correctly produces
+ * `Archived<A> | Archived<B>`, preserving discriminant properties
+ * (e.g., on FrontingSession, Layer, InnerWorldEntity unions).
+ */
+export type Archived<T extends { readonly archived: false }> = T extends {
+  readonly archived: false;
+}
+  ? Omit<T, "archived"> & { readonly archived: true; readonly archivedAt: UnixMillis }
+  : never;
+
 /** Sort direction for queries. */
 export type SortDirection = "asc" | "desc";
 

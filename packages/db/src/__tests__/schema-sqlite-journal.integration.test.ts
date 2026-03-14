@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import { frontingSessions } from "../schema/sqlite/fronting.js";
@@ -40,6 +40,11 @@ describe("SQLite journal schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(journalEntries).run();
+    db.delete(wikiPages).run();
   });
 
   describe("journal_entries", () => {
@@ -194,6 +199,32 @@ describe("SQLite journal schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now, now),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(journalEntries)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(journalEntries)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(journalEntries.id, id))
+        .run();
+
+      const rows = db.select().from(journalEntries).where(eq(journalEntries.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
     });
   });
 
@@ -363,6 +394,33 @@ describe("SQLite journal schema", () => {
       ).toThrow(/CHECK|constraint/i);
     });
 
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(wikiPages)
+        .values({
+          id,
+          systemId,
+          slugHash: "g".repeat(64),
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.update(wikiPages)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(wikiPages.id, id))
+        .run();
+
+      const rows = db.select().from(wikiPages).where(eq(wikiPages.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
     it("rejects slug_hash shorter than 64 chars", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
@@ -381,6 +439,74 @@ describe("SQLite journal schema", () => {
           })
           .run(),
       ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("allows duplicate (systemId, slugHash) when both rows are archived", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const slugHash = "h".repeat(64);
+      const now = Date.now();
+
+      db.insert(wikiPages)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          slugHash,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      db.insert(wikiPages)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          slugHash,
+          encryptedData: testBlob(new Uint8Array([2])),
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(wikiPages).where(eq(wikiPages.systemId, systemId)).all();
+      expect(rows.filter((r) => r.slugHash === slugHash)).toHaveLength(2);
+    });
+
+    it("rejects duplicate (systemId, slugHash) when both rows are active", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const slugHash = "i".repeat(64);
+      const now = Date.now();
+
+      db.insert(wikiPages)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          slugHash,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(wikiPages)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            slugHash,
+            encryptedData: testBlob(new Uint8Array([2])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
   });
 });

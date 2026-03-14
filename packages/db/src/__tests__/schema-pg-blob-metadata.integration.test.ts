@@ -295,4 +295,125 @@ describe("PG blob_metadata schema", () => {
       }),
     ).rejects.toThrow(/check|constraint/i);
   });
+
+  it("defaults archived to false and archivedAt to null", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(blobMetadata).values({
+      id,
+      systemId,
+      storageKey: `blobs/${crypto.randomUUID()}`,
+      sizeBytes: 100,
+      encryptionTier: 1,
+      purpose: "avatar",
+      checksum: "a".repeat(64),
+      uploadedAt: now,
+    });
+
+    const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
+    expect(rows[0]?.archived).toBe(false);
+    expect(rows[0]?.archivedAt).toBeNull();
+  });
+
+  it("round-trips archived: true with archivedAt timestamp", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(blobMetadata).values({
+      id,
+      systemId,
+      storageKey: `blobs/${crypto.randomUUID()}`,
+      sizeBytes: 100,
+      encryptionTier: 1,
+      purpose: "avatar",
+      checksum: "a".repeat(64),
+      uploadedAt: now,
+      archived: true,
+      archivedAt: now,
+    });
+
+    const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(now);
+  });
+
+  it("updates archived from false to true", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    await db.insert(blobMetadata).values({
+      id,
+      systemId,
+      storageKey: `blobs/${crypto.randomUUID()}`,
+      sizeBytes: 100,
+      encryptionTier: 1,
+      purpose: "avatar",
+      checksum: "a".repeat(64),
+      uploadedAt: now,
+    });
+
+    const archiveTime = Date.now();
+    await db
+      .update(blobMetadata)
+      .set({ archived: true, archivedAt: archiveTime })
+      .where(eq(blobMetadata.id, id));
+
+    const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
+    expect(rows[0]?.archived).toBe(true);
+    expect(rows[0]?.archivedAt).toBe(archiveTime);
+  });
+
+  it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const now = Date.now();
+
+    await expect(
+      client.query(
+        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at, archived, archived_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NULL)`,
+        [
+          crypto.randomUUID(),
+          systemId,
+          `blobs/${crypto.randomUUID()}`,
+          100,
+          1,
+          "avatar",
+          "a".repeat(64),
+          now,
+        ],
+      ),
+    ).rejects.toThrow(/check|constraint/i);
+  });
+
+  it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const now = Date.now();
+
+    await expect(
+      client.query(
+        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at, archived, archived_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9)`,
+        [
+          crypto.randomUUID(),
+          systemId,
+          `blobs/${crypto.randomUUID()}`,
+          100,
+          1,
+          "avatar",
+          "a".repeat(64),
+          now,
+          now,
+        ],
+      ),
+    ).rejects.toThrow(/check|constraint/i);
+  });
 });

@@ -1,5 +1,5 @@
 import type { BucketId, FieldDefinitionId, FieldValueId, MemberId, SystemId } from "./ids.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** The supported field types for custom fields. */
 export type FieldType =
@@ -29,7 +29,11 @@ export interface FieldDefinition extends AuditMetadata {
   readonly options: readonly string[] | null;
   readonly required: boolean;
   readonly sortOrder: number;
+  readonly archived: false;
 }
+
+/** An archived field definition. */
+export type ArchivedFieldDefinition = Archived<FieldDefinition>;
 
 /** A value stored for a specific field on a member. */
 export interface FieldValue extends AuditMetadata {

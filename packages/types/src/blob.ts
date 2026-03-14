@@ -1,5 +1,6 @@
 import type { BlobId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
+import type { Archived } from "./utility.js";
 
 /** Encryption tier for stored blobs: 1 = at-rest only, 2 = at-rest + per-bucket key. */
 export type EncryptionTier = 1 | 2;
@@ -29,7 +30,11 @@ export interface BlobMetadata {
   readonly uploadedAt: UnixMillis;
   /** Links this blob as a thumbnail of another blob. Null if not a thumbnail. */
   readonly thumbnailOfBlobId: BlobId | null;
+  readonly archived: false;
 }
+
+/** An archived blob metadata entry — preserves all data with archive metadata. */
+export type ArchivedBlobMetadata = Archived<BlobMetadata>;
 
 /** A request to upload a blob. */
 export interface BlobUploadRequest {

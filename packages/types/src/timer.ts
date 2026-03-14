@@ -1,6 +1,6 @@
 import type { CheckInRecordId, MemberId, SystemId, TimerId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** Configuration for a recurring dissociation check-in timer. */
 export interface TimerConfig extends AuditMetadata {
@@ -12,7 +12,11 @@ export interface TimerConfig extends AuditMetadata {
   readonly wakingEnd: string | null;
   readonly promptText: string;
   readonly enabled: boolean;
+  readonly archived: false;
 }
+
+/** An archived timer config. */
+export type ArchivedTimerConfig = Archived<TimerConfig>;
 
 /** A record of a scheduled check-in and its response. */
 export interface CheckInRecord extends AuditMetadata {
@@ -23,4 +27,8 @@ export interface CheckInRecord extends AuditMetadata {
   readonly respondedByMemberId: MemberId | null;
   readonly respondedAt: UnixMillis | null;
   readonly dismissed: boolean;
+  readonly archived: false;
 }
+
+/** An archived check-in record. */
+export type ArchivedCheckInRecord = Archived<CheckInRecord>;

@@ -11,7 +11,13 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
@@ -38,9 +44,10 @@ export const relationships = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
-    index("relationships_system_id_idx").on(t.systemId),
+    index("relationships_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({
       columns: [t.sourceMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
@@ -51,6 +58,7 @@ export const relationships = pgTable(
     }).onDelete("set null"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
     versionCheckFor("relationships", t.version),
+    archivableConsistencyCheckFor("relationships", t.archived, t.archivedAt),
   ],
 );
 
@@ -70,9 +78,10 @@ export const subsystems = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
-    index("subsystems_system_id_idx").on(t.systemId),
+    index("subsystems_system_archived_idx").on(t.systemId, t.archived),
     unique("subsystems_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentSubsystemId, t.systemId],
@@ -80,6 +89,7 @@ export const subsystems = pgTable(
     }).onDelete("set null"),
     check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
     versionCheckFor("subsystems", t.version),
+    archivableConsistencyCheckFor("subsystems", t.archived, t.archivedAt),
   ],
 );
 
@@ -93,11 +103,13 @@ export const sideSystems = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
-    index("side_systems_system_id_idx").on(t.systemId),
+    index("side_systems_system_archived_idx").on(t.systemId, t.archived),
     unique("side_systems_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("side_systems", t.version),
+    archivableConsistencyCheckFor("side_systems", t.archived, t.archivedAt),
   ],
 );
 
@@ -113,11 +125,13 @@ export const layers = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
-    index("layers_system_id_idx").on(t.systemId),
+    index("layers_system_archived_idx").on(t.systemId, t.archived),
     unique("layers_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("layers", t.version),
+    archivableConsistencyCheckFor("layers", t.archived, t.archivedAt),
   ],
 );
 

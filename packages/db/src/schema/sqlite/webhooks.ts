@@ -15,7 +15,11 @@ import {
   sqliteJson,
   sqliteTimestamp,
 } from "../../columns/sqlite.js";
-import { timestamps } from "../../helpers/audit.sqlite.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+} from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
 
@@ -41,10 +45,12 @@ export const webhookConfigs = sqliteTable(
       onDelete: "set null",
     }),
     ...timestamps(),
+    ...archivable(),
   },
   (t) => [
-    index("webhook_configs_system_id_idx").on(t.systemId),
+    index("webhook_configs_system_archived_idx").on(t.systemId, t.archived),
     unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
+    archivableConsistencyCheckFor("webhook_configs", t.archived, t.archivedAt),
   ],
 );
 
@@ -64,6 +70,7 @@ export const webhookDeliveries = sqliteTable(
     nextRetryAt: sqliteTimestamp("next_retry_at"),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
     createdAt: sqliteTimestamp("created_at").notNull(),
+    ...archivable(),
   },
   (t) => [
     index("webhook_deliveries_webhook_id_idx").on(t.webhookId),
@@ -86,6 +93,7 @@ export const webhookDeliveries = sqliteTable(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,
     ),
+    archivableConsistencyCheckFor("webhook_deliveries", t.archived, t.archivedAt),
   ],
 );
 

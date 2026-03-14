@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import {
@@ -61,6 +61,16 @@ describe("PG communication schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(acknowledgements);
+    await db.delete(pollVotes);
+    await db.delete(polls);
+    await db.delete(boardMessages);
+    await db.delete(notes);
+    await db.delete(messages);
+    await db.delete(channels);
   });
 
   describe("channels", () => {
@@ -179,6 +189,22 @@ describe("PG communication schema", () => {
       expect(rows[0]?.archivedAt).toBe(now);
     });
 
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const channelId = await insertChannel(systemId);
+
+      const archiveTime = Date.now();
+      await db
+        .update(channels)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(channels.id, channelId));
+
+      const rows = await db.select().from(channels).where(eq(channels.id, channelId));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
+    });
+
     it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -255,6 +281,34 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(messages).where(eq(messages.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const channelId = await insertChannel(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(messages).values({
+        id,
+        channelId,
+        systemId,
+        timestamp: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(messages)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(messages.id, id));
+
+      const rows = await db.select().from(messages).where(eq(messages.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
     });
 
     it("round-trips editedAt", async () => {
@@ -516,6 +570,100 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(boardMessages).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived state", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(boardMessages).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        archived: true,
+        archivedAt: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(boardMessages).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(boardMessages)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(boardMessages.id, id));
+
+      const rows = await db.select().from(boardMessages).where(eq(boardMessages.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO board_messages (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO board_messages (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("notes", () => {
@@ -559,7 +707,7 @@ describe("PG communication schema", () => {
       expect(rows[0]?.memberId).toBeNull();
     });
 
-    it("defaults archived to false", async () => {
+    it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -597,6 +745,31 @@ describe("PG communication schema", () => {
       const rows = await db.select().from(notes).where(eq(notes.id, id));
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(notes).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(notes)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(notes.id, id));
+
+      const rows = await db.select().from(notes).where(eq(notes.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
     });
 
     it("cascades on system deletion", async () => {
@@ -817,6 +990,84 @@ describe("PG communication schema", () => {
         }),
       ).rejects.toThrow();
     });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+
+      const rows = await db.select().from(polls).where(eq(polls.id, pollId));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived state", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(polls).values({
+        id,
+        systemId,
+        kind: "standard",
+        allowMultipleVotes: false,
+        maxVotesPerMember: 1,
+        allowAbstain: false,
+        allowVeto: false,
+        archived: true,
+        archivedAt: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(polls).where(eq(polls.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+
+      const archiveTime = Date.now();
+      await db
+        .update(polls)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(polls.id, pollId));
+
+      const rows = await db.select().from(polls).where(eq(polls.id, pollId));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO polls (id, system_id, kind, allow_multiple_votes, max_votes_per_member, allow_abstain, allow_veto, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 'standard', false, 1, false, false, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO polls (id, system_id, kind, allow_multiple_votes, max_votes_per_member, allow_abstain, allow_veto, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 'standard', false, 1, false, false, '\\x0102'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("poll_votes", () => {
@@ -945,6 +1196,102 @@ describe("PG communication schema", () => {
       expect(rows[0]?.isVeto).toBe(false);
       expect(rows[0]?.votedAt).toBeNull();
     });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(pollVotes).values({
+        id,
+        pollId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived state", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(pollVotes).values({
+        id,
+        pollId,
+        systemId,
+        archived: true,
+        archivedAt: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(pollVotes).values({
+        id,
+        pollId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(pollVotes)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(pollVotes.id, id));
+
+      const rows = await db.select().from(pollVotes).where(eq(pollVotes.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, true, NULL)",
+          [crypto.randomUUID(), pollId, systemId, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const pollId = await insertPoll(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO poll_votes (id, poll_id, system_id, encrypted_data, created_at, archived, archived_at) VALUES ($1, $2, $3, '\\x0102'::bytea, $4, false, $5)",
+          [crypto.randomUUID(), pollId, systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   describe("acknowledgements", () => {
@@ -1072,6 +1419,94 @@ describe("PG communication schema", () => {
           createdAt: now,
         }),
       ).rejects.toThrow();
+    });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(acknowledgements).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived state", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(acknowledgements).values({
+        id,
+        systemId,
+        archived: true,
+        archivedAt: now,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(acknowledgements).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(acknowledgements)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(acknowledgements.id, id));
+
+      const rows = await db.select().from(acknowledgements).where(eq(acknowledgements.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, true, NULL)",
+          [crypto.randomUUID(), systemId, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO acknowledgements (id, system_id, encrypted_data, created_at, archived, archived_at) VALUES ($1, $2, '\\x0102'::bytea, $3, false, $4)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
   });
 });

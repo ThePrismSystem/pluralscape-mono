@@ -2,8 +2,14 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -25,12 +31,9 @@ export const customFronts = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("custom_fronts_system_id_idx").on(t.systemId),
+    index("custom_fronts_system_archived_idx").on(t.systemId, t.archived),
     versionCheckFor("custom_fronts", t.version),
-    check(
-      "custom_fronts_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("custom_fronts", t.archived, t.archivedAt),
   ],
 );
 
@@ -56,6 +59,7 @@ export const frontingSessions = sqliteTable(
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
@@ -65,6 +69,7 @@ export const frontingSessions = sqliteTable(
     index("fronting_sessions_active_idx")
       .on(t.systemId)
       .where(sql`${t.endTime} IS NULL`),
+    index("fronting_sessions_system_archived_idx").on(t.systemId, t.archived),
     check(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
@@ -80,6 +85,7 @@ export const frontingSessions = sqliteTable(
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
     versionCheckFor("fronting_sessions", t.version),
+    archivableConsistencyCheckFor("fronting_sessions", t.archived, t.archivedAt),
     // Invariant: every session must have at least one subject (member or custom front).
     // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
     // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
@@ -92,7 +98,8 @@ export const frontingSessions = sqliteTable(
   ],
 );
 
-// Switches are immutable timeline events and are not archivable.
+// Switches are archivable to support data correction (e.g., mistakenly recorded switches).
+// Archived switches are excluded from display but preserved for audit integrity.
 export const switches = sqliteTable(
   "switches",
   {
@@ -109,11 +116,14 @@ export const switches = sqliteTable(
     memberIds: sqliteJson("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
+    index("switches_system_archived_idx").on(t.systemId, t.archived),
     check("switches_member_ids_check", sql`json_array_length(${t.memberIds}) >= 1`),
     versionCheckFor("switches", t.version),
+    archivableConsistencyCheckFor("switches", t.archived, t.archivedAt),
   ],
 );
 
@@ -129,9 +139,11 @@ export const frontingComments = sqliteTable(
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
+    index("fronting_comments_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({
       columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
@@ -141,6 +153,7 @@ export const frontingComments = sqliteTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     versionCheckFor("fronting_comments", t.version),
+    archivableConsistencyCheckFor("fronting_comments", t.archived, t.archivedAt),
   ],
 );
 

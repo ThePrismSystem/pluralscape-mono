@@ -1,7 +1,6 @@
 import type { HexColor, MemberId, MemberPhotoId, SystemId, SystemSettingsId } from "./ids.js";
 import type { ImageSource } from "./image-source.js";
-import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** A plural system — the top-level account entity. */
 export interface System extends AuditMetadata {
@@ -78,13 +77,14 @@ export interface MemberPhoto {
   readonly imageSource: ImageSource;
   readonly sortOrder: number;
   readonly caption: string | null;
+  readonly archived: false;
 }
 
+/** An archived member photo — preserves all data with archive metadata. */
+export type ArchivedMemberPhoto = Archived<MemberPhoto>;
+
 /** An archived member — preserves all data with archive metadata. */
-export type ArchivedMember = Omit<Member, "archived"> & {
-  readonly archived: true;
-  readonly archivedAt: UnixMillis;
-};
+export type ArchivedMember = Archived<Member>;
 
 /** Lightweight projection of a member for list views. */
 export interface MemberListItem {

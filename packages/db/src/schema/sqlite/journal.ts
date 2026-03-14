@@ -2,8 +2,13 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
 
 import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
@@ -25,16 +30,14 @@ export const journalEntries = sqliteTable(
   },
   (t) => [
     index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt),
+    index("journal_entries_system_archived_idx").on(t.systemId, t.archived),
     index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
     foreignKey({
       columns: [t.frontingSessionId],
       foreignColumns: [frontingSessions.id],
     }).onDelete("set null"),
     versionCheckFor("journal_entries", t.version),
-    check(
-      "journal_entries_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("journal_entries", t.archived, t.archivedAt),
   ],
 );
 
@@ -52,14 +55,12 @@ export const wikiPages = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("wiki_pages_system_id_idx").on(t.systemId),
     index("wiki_pages_system_archived_idx").on(t.systemId, t.archived),
-    uniqueIndex("wiki_pages_system_id_slug_hash_idx").on(t.systemId, t.slugHash),
+    uniqueIndex("wiki_pages_system_id_slug_hash_idx")
+      .on(t.systemId, t.slugHash)
+      .where(sql`${t.archived} = 0`),
     versionCheckFor("wiki_pages", t.version),
-    check(
-      "wiki_pages_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("wiki_pages", t.archived, t.archivedAt),
     check("wiki_pages_slug_hash_length_check", sql`length(${t.slugHash}) = 64`),
   ],
 );

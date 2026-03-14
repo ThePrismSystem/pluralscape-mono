@@ -1,7 +1,7 @@
 import type { EncryptedString } from "./encryption.js";
 import type { ApiKeyId, SystemId, WebhookDeliveryId, WebhookId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** Status of a webhook delivery attempt. */
 export type WebhookDeliveryStatus = "pending" | "success" | "failed";
@@ -35,7 +35,11 @@ export interface WebhookConfig extends AuditMetadata {
   readonly enabled: boolean;
   /** Crypto key for encrypted webhook payloads. Null for plaintext delivery. */
   readonly cryptoKeyId: ApiKeyId | null;
+  readonly archived: false;
 }
+
+/** An archived webhook config. */
+export type ArchivedWebhookConfig = Archived<WebhookConfig>;
 
 /** A plaintext webhook delivery payload. */
 export interface PlaintextWebhookPayload {
@@ -62,4 +66,8 @@ export interface WebhookDelivery {
   readonly statusCode: number | null;
   readonly deliveredAt: UnixMillis;
   readonly success: boolean;
+  readonly archived: false;
 }
+
+/** An archived webhook delivery. */
+export type ArchivedWebhookDelivery = Archived<WebhookDelivery>;

@@ -1,6 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
+  ArchivedFieldDefinition,
   FieldBucketVisibility,
   FieldDefinition,
   FieldType,
@@ -8,6 +9,7 @@ import type {
   FieldValueUnion,
 } from "../custom-fields.js";
 import type { BucketId, FieldDefinitionId, FieldValueId, MemberId, SystemId } from "../ids.js";
+import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 
 describe("FieldType", () => {
@@ -74,6 +76,21 @@ describe("FieldDefinition", () => {
     expectTypeOf<FieldDefinition["options"]>().toEqualTypeOf<readonly string[] | null>();
     expectTypeOf<FieldDefinition["required"]>().toEqualTypeOf<boolean>();
     expectTypeOf<FieldDefinition["sortOrder"]>().toEqualTypeOf<number>();
+  });
+});
+
+describe("ArchivedFieldDefinition", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedFieldDefinition["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedFieldDefinition["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core FieldDefinition fields", () => {
+    expectTypeOf<ArchivedFieldDefinition["id"]>().toEqualTypeOf<FieldDefinitionId>();
+    expectTypeOf<ArchivedFieldDefinition["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 

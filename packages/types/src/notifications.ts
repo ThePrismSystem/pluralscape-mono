@@ -7,7 +7,7 @@ import type {
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** Platforms that can receive push notifications. */
 export type DeviceTokenPlatform = "ios" | "android" | "web";
@@ -40,7 +40,11 @@ export interface NotificationConfig extends AuditMetadata {
   readonly eventType: NotificationEventType;
   readonly enabled: boolean;
   readonly pushEnabled: boolean;
+  readonly archived: false;
 }
+
+/** An archived notification config. */
+export type ArchivedNotificationConfig = Archived<NotificationConfig>;
 
 /** A notification payload ready for delivery. */
 export interface NotificationPayload {
@@ -61,4 +65,8 @@ export interface FriendNotificationPreference extends AuditMetadata {
   readonly friendConnectionId: FriendConnectionId;
   readonly accountId: AccountId;
   readonly enabledEventTypes: readonly FriendNotificationEventType[];
+  readonly archived: false;
 }
+
+/** An archived friend notification preference. */
+export type ArchivedFriendNotificationPreference = Archived<FriendNotificationPreference>;

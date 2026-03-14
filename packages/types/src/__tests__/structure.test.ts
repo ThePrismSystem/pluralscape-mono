@@ -12,6 +12,10 @@ import type {
 import type { ImageSource } from "../image-source.js";
 import type {
   ArchitectureType,
+  ArchivedLayer,
+  ArchivedRelationship,
+  ArchivedSideSystem,
+  ArchivedSubsystem,
   DiscoveryStatus,
   GatekeptLayer,
   KnownArchitectureType,
@@ -94,6 +98,10 @@ describe("Relationship", () => {
     expectTypeOf<Relationship["createdAt"]>().toEqualTypeOf<UnixMillis>();
   });
 
+  it("has archived as false literal", () => {
+    expectTypeOf<Relationship["archived"]>().toEqualTypeOf<false>();
+  });
+
   it("has exact shape", () => {
     expectTypeOf<keyof Relationship>().toEqualTypeOf<
       | "id"
@@ -104,7 +112,23 @@ describe("Relationship", () => {
       | "label"
       | "bidirectional"
       | "createdAt"
+      | "archived"
     >();
+  });
+});
+
+describe("ArchivedRelationship", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedRelationship["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedRelationship["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Relationship fields", () => {
+    expectTypeOf<ArchivedRelationship["id"]>().toEqualTypeOf<RelationshipId>();
+    expectTypeOf<ArchivedRelationship["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 
@@ -293,6 +317,25 @@ describe("Subsystem", () => {
   it("has recursive parentSubsystemId", () => {
     expectTypeOf<Subsystem["parentSubsystemId"]>().toEqualTypeOf<SubsystemId | null>();
   });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<Subsystem["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedSubsystem", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedSubsystem["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedSubsystem["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Subsystem fields", () => {
+    expectTypeOf<ArchivedSubsystem["id"]>().toEqualTypeOf<SubsystemId>();
+    expectTypeOf<ArchivedSubsystem["systemId"]>().toEqualTypeOf<SystemId>();
+  });
 });
 
 describe("SideSystem", () => {
@@ -312,6 +355,25 @@ describe("SideSystem", () => {
     expectTypeOf<SideSystem["color"]>().toEqualTypeOf<HexColor | null>();
     expectTypeOf<SideSystem["imageSource"]>().toEqualTypeOf<ImageSource | null>();
     expectTypeOf<SideSystem["emoji"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<SideSystem["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedSideSystem", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedSideSystem["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedSideSystem["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core SideSystem fields", () => {
+    expectTypeOf<ArchivedSideSystem["id"]>().toEqualTypeOf<SideSystemId>();
+    expectTypeOf<ArchivedSideSystem["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 
@@ -343,6 +405,26 @@ describe("Layer", () => {
     expectTypeOf<Layer["color"]>().toEqualTypeOf<HexColor | null>();
     expectTypeOf<Layer["imageSource"]>().toEqualTypeOf<ImageSource | null>();
     expectTypeOf<Layer["emoji"]>().toEqualTypeOf<string | null>();
+  });
+
+  it("has archived as false literal on both variants", () => {
+    expectTypeOf<OpenLayer["archived"]>().toEqualTypeOf<false>();
+    expectTypeOf<GatekeptLayer["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedLayer", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedLayer["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedLayer["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Layer fields", () => {
+    expectTypeOf<ArchivedLayer["id"]>().toEqualTypeOf<LayerId>();
+    expectTypeOf<ArchivedLayer["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 

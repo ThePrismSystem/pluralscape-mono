@@ -2,6 +2,13 @@ import { describe, expectTypeOf, it } from "vitest";
 
 import type {
   AcknowledgementRequest,
+  ArchivedAcknowledgementRequest,
+  ArchivedBoardMessage,
+  ArchivedChannel,
+  ArchivedChatMessage,
+  ArchivedNote,
+  ArchivedPoll,
+  ArchivedPollVote,
   BoardMessage,
   Channel,
   ChatMessage,
@@ -42,6 +49,21 @@ describe("Channel", () => {
   });
 });
 
+describe("ArchivedChannel", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedChannel["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedChannel["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Channel fields", () => {
+    expectTypeOf<ArchivedChannel["id"]>().toEqualTypeOf<ChannelId>();
+    expectTypeOf<ArchivedChannel["systemId"]>().toEqualTypeOf<SystemId>();
+  });
+});
+
 describe("ChatMessage", () => {
   it("extends AuditMetadata", () => {
     expectTypeOf<ChatMessage>().toExtend<AuditMetadata>();
@@ -61,6 +83,21 @@ describe("ChatMessage", () => {
   });
 });
 
+describe("ArchivedChatMessage", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedChatMessage["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedChatMessage["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core ChatMessage fields", () => {
+    expectTypeOf<ArchivedChatMessage["id"]>().toEqualTypeOf<MessageId>();
+    expectTypeOf<ArchivedChatMessage["systemId"]>().toEqualTypeOf<SystemId>();
+  });
+});
+
 describe("BoardMessage", () => {
   it("extends AuditMetadata", () => {
     expectTypeOf<BoardMessage>().toExtend<AuditMetadata>();
@@ -73,6 +110,25 @@ describe("BoardMessage", () => {
     expectTypeOf<BoardMessage["content"]>().toBeString();
     expectTypeOf<BoardMessage["pinned"]>().toEqualTypeOf<boolean>();
     expectTypeOf<BoardMessage["sortOrder"]>().toEqualTypeOf<number>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<BoardMessage["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedBoardMessage", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedBoardMessage["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedBoardMessage["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core BoardMessage fields", () => {
+    expectTypeOf<ArchivedBoardMessage["id"]>().toEqualTypeOf<BoardMessageId>();
+    expectTypeOf<ArchivedBoardMessage["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 
@@ -88,6 +144,21 @@ describe("Note", () => {
     expectTypeOf<Note["title"]>().toBeString();
     expectTypeOf<Note["content"]>().toBeString();
     expectTypeOf<Note["backgroundColor"]>().toEqualTypeOf<HexColor | null>();
+  });
+});
+
+describe("ArchivedNote", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedNote["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedNote["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Note fields", () => {
+    expectTypeOf<ArchivedNote["id"]>().toEqualTypeOf<NoteId>();
+    expectTypeOf<ArchivedNote["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });
 
@@ -128,6 +199,25 @@ describe("Poll", () => {
     expectTypeOf<Poll["allowAbstain"]>().toEqualTypeOf<boolean>();
     expectTypeOf<Poll["allowVeto"]>().toEqualTypeOf<boolean>();
   });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<Poll["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedPoll", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedPoll["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedPoll["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core Poll fields", () => {
+    expectTypeOf<ArchivedPoll["id"]>().toEqualTypeOf<PollId>();
+    expectTypeOf<ArchivedPoll["systemId"]>().toEqualTypeOf<SystemId>();
+  });
 });
 
 describe("PollVote", () => {
@@ -137,7 +227,7 @@ describe("PollVote", () => {
 
   it("has exactly the expected keys", () => {
     expectTypeOf<keyof PollVote>().toEqualTypeOf<
-      "id" | "pollId" | "optionId" | "voter" | "comment" | "isVeto" | "votedAt"
+      "id" | "pollId" | "optionId" | "voter" | "comment" | "isVeto" | "votedAt" | "archived"
     >();
   });
 
@@ -151,6 +241,25 @@ describe("PollVote", () => {
     expectTypeOf<PollVote["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<PollVote["isVeto"]>().toEqualTypeOf<boolean>();
     expectTypeOf<PollVote["votedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<PollVote["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedPollVote", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedPollVote["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedPollVote["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core PollVote fields", () => {
+    expectTypeOf<ArchivedPollVote["id"]>().toEqualTypeOf<PollVoteId>();
+    expectTypeOf<ArchivedPollVote["pollId"]>().toEqualTypeOf<PollId>();
   });
 });
 
@@ -167,5 +276,24 @@ describe("AcknowledgementRequest", () => {
     expectTypeOf<AcknowledgementRequest["message"]>().toBeString();
     expectTypeOf<AcknowledgementRequest["confirmed"]>().toEqualTypeOf<boolean>();
     expectTypeOf<AcknowledgementRequest["confirmedAt"]>().toEqualTypeOf<UnixMillis | null>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<AcknowledgementRequest["archived"]>().toEqualTypeOf<false>();
+  });
+});
+
+describe("ArchivedAcknowledgementRequest", () => {
+  it("has archived as true literal", () => {
+    expectTypeOf<ArchivedAcknowledgementRequest["archived"]>().toEqualTypeOf<true>();
+  });
+
+  it("has archivedAt timestamp", () => {
+    expectTypeOf<ArchivedAcknowledgementRequest["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+  });
+
+  it("preserves core AcknowledgementRequest fields", () => {
+    expectTypeOf<ArchivedAcknowledgementRequest["id"]>().toEqualTypeOf<AcknowledgementId>();
+    expectTypeOf<ArchivedAcknowledgementRequest["systemId"]>().toEqualTypeOf<SystemId>();
   });
 });

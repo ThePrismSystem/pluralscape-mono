@@ -9,7 +9,7 @@ import type {
 } from "./ids.js";
 import type { ImageSource } from "./image-source.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** The kind of relationship between two members. */
 export type RelationshipType =
@@ -24,7 +24,7 @@ export type RelationshipType =
   | "source"
   | "custom";
 
-/** An immutable relationship between two members. Created or deleted, never updated. */
+/** A relationship between two members. */
 export interface Relationship {
   readonly id: RelationshipId;
   readonly systemId: SystemId;
@@ -35,7 +35,10 @@ export interface Relationship {
   readonly label: string | null;
   readonly bidirectional: boolean;
   readonly createdAt: UnixMillis;
+  readonly archived: false;
 }
+
+export type ArchivedRelationship = Archived<Relationship>;
 
 /** Well-known architectural patterns for a system's internal structure. */
 export type KnownArchitectureType =
@@ -92,7 +95,10 @@ export interface Subsystem extends AuditMetadata, StructureVisualProps {
   readonly architectureType: ArchitectureType | null;
   readonly hasCore: boolean;
   readonly discoveryStatus: DiscoveryStatus;
+  readonly archived: false;
 }
+
+export type ArchivedSubsystem = Archived<Subsystem>;
 
 /** A parallel group that exists alongside the main system — not nested. */
 export interface SideSystem extends AuditMetadata, StructureVisualProps {
@@ -100,7 +106,10 @@ export interface SideSystem extends AuditMetadata, StructureVisualProps {
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
+  readonly archived: false;
 }
+
+export type ArchivedSideSystem = Archived<SideSystem>;
 
 /** Shared fields for all layer variants. */
 interface LayerBase extends AuditMetadata, StructureVisualProps {
@@ -108,6 +117,7 @@ interface LayerBase extends AuditMetadata, StructureVisualProps {
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
+  readonly archived: false;
 }
 
 /** A freely accessible layer with no gatekeeper. */
@@ -124,6 +134,8 @@ export interface GatekeptLayer extends LayerBase {
 
 /** A distinct layer or region within the system's internal landscape. */
 export type Layer = OpenLayer | GatekeptLayer;
+
+export type ArchivedLayer = Archived<Layer>;
 
 /** Junction linking a member to a subsystem. */
 export interface SubsystemMembership {

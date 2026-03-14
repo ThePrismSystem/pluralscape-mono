@@ -13,7 +13,7 @@ import type {
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata, EntityReference } from "./utility.js";
+import type { Archived, AuditMetadata, EntityReference } from "./utility.js";
 
 /** A communication channel or category within a system. */
 export interface Channel extends AuditMetadata {
@@ -24,7 +24,11 @@ export interface Channel extends AuditMetadata {
   /** Parent category ID. Null for categories and uncategorized channels. */
   readonly parentId: ChannelId | null;
   readonly sortOrder: number;
+  readonly archived: false;
 }
+
+/** An archived channel. */
+export type ArchivedChannel = Archived<Channel>;
 
 /** A real-time chat message in a channel. */
 export interface ChatMessage extends AuditMetadata {
@@ -38,7 +42,11 @@ export interface ChatMessage extends AuditMetadata {
   readonly replyToId: MessageId | null;
   readonly timestamp: UnixMillis;
   readonly editedAt: UnixMillis | null;
+  readonly archived: false;
 }
+
+/** An archived chat message. */
+export type ArchivedChatMessage = Archived<ChatMessage>;
 
 /** A longer-form message posted to a board. */
 export interface BoardMessage extends AuditMetadata {
@@ -48,7 +56,11 @@ export interface BoardMessage extends AuditMetadata {
   readonly content: string;
   readonly pinned: boolean;
   readonly sortOrder: number;
+  readonly archived: false;
 }
+
+/** An archived board message. */
+export type ArchivedBoardMessage = Archived<BoardMessage>;
 
 /** A private note within a system. */
 export interface Note extends AuditMetadata {
@@ -58,7 +70,11 @@ export interface Note extends AuditMetadata {
   readonly title: string;
   readonly content: string;
   readonly backgroundColor: HexColor | null;
+  readonly archived: false;
 }
+
+/** An archived note. */
+export type ArchivedNote = Archived<Note>;
 
 /** A single option within a poll. */
 export interface PollOption {
@@ -90,7 +106,11 @@ export interface Poll extends AuditMetadata {
   readonly maxVotesPerMember: number;
   readonly allowAbstain: boolean;
   readonly allowVeto: boolean;
+  readonly archived: false;
 }
+
+/** An archived poll. */
+export type ArchivedPoll = Archived<Poll>;
 
 /** A vote cast on a poll option. Null optionId indicates abstain. */
 export interface PollVote {
@@ -101,7 +121,11 @@ export interface PollVote {
   readonly comment: string | null;
   readonly isVeto: boolean;
   readonly votedAt: UnixMillis;
+  readonly archived: false;
 }
+
+/** An archived poll vote. */
+export type ArchivedPollVote = Archived<PollVote>;
 
 /** A request for a member to acknowledge a message or decision. */
 export interface AcknowledgementRequest extends AuditMetadata {
@@ -112,4 +136,8 @@ export interface AcknowledgementRequest extends AuditMetadata {
   readonly message: string;
   readonly confirmed: boolean;
   readonly confirmedAt: UnixMillis | null;
+  readonly archived: false;
 }
+
+/** An archived acknowledgement request. */
+export type ArchivedAcknowledgementRequest = Archived<AcknowledgementRequest>;

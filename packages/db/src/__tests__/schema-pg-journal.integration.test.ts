@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { frontingSessions } from "../schema/pg/fronting.js";
@@ -35,6 +35,11 @@ describe("PG journal schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(wikiPages);
+    await db.delete(journalEntries);
   });
 
   describe("journal_entries", () => {
@@ -132,6 +137,31 @@ describe("PG journal schema", () => {
       expect(rows[0]?.archivedAt).toBe(now);
     });
 
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(journalEntries).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(journalEntries)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(journalEntries.id, id));
+
+      const rows = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
+    });
+
     it("cascades on system deletion", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
@@ -221,6 +251,32 @@ describe("PG journal schema", () => {
       expect(rows[0]?.archived).toBe(false);
       expect(rows[0]?.archivedAt).toBeNull();
       expect(rows[0]?.version).toBe(1);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(wikiPages).values({
+        id,
+        systemId,
+        slugHash: "g".repeat(64),
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const archiveTime = Date.now();
+      await db
+        .update(wikiPages)
+        .set({ archived: true, archivedAt: archiveTime })
+        .where(eq(wikiPages.id, id));
+
+      const rows = await db.select().from(wikiPages).where(eq(wikiPages.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(archiveTime);
     });
 
     it("enforces unique (system_id, slug_hash)", async () => {
@@ -338,6 +394,65 @@ describe("PG journal schema", () => {
           systemId,
           slugHash: "a".repeat(32),
           encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("allows duplicate (systemId, slugHash) when both rows are archived", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const slugHash = "h".repeat(64);
+      const now = Date.now();
+
+      await db.insert(wikiPages).values({
+        id: crypto.randomUUID(),
+        systemId,
+        slugHash,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      await db.insert(wikiPages).values({
+        id: crypto.randomUUID(),
+        systemId,
+        slugHash,
+        encryptedData: testBlob(new Uint8Array([2])),
+        createdAt: now,
+        updatedAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      const rows = await db.select().from(wikiPages).where(eq(wikiPages.systemId, systemId));
+      expect(rows.filter((r) => r.slugHash === slugHash)).toHaveLength(2);
+    });
+
+    it("rejects duplicate (systemId, slugHash) when both rows are active", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const slugHash = "i".repeat(64);
+      const now = Date.now();
+
+      await db.insert(wikiPages).values({
+        id: crypto.randomUUID(),
+        systemId,
+        slugHash,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(wikiPages).values({
+          id: crypto.randomUUID(),
+          systemId,
+          slugHash,
+          encryptedData: testBlob(new Uint8Array([2])),
           createdAt: now,
           updatedAt: now,
         }),

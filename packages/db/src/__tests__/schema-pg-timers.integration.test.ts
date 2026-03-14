@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
 import { members } from "../schema/pg/members.js";
@@ -36,6 +36,11 @@ describe("PG timers schema", () => {
 
   afterAll(async () => {
     await client.close();
+  });
+
+  afterEach(async () => {
+    await db.delete(checkInRecords);
+    await db.delete(timerConfigs);
   });
 
   describe("timer_configs", () => {
@@ -205,6 +210,96 @@ describe("PG timers schema", () => {
       expect(rows[0]?.wakingHoursOnly).toBeNull();
       expect(rows[0]?.wakingStart).toBeNull();
       expect(rows[0]?.wakingEnd).toBeNull();
+    });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(timerConfigs).where(eq(timerConfigs.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        archived: true,
+        archivedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(timerConfigs).where(eq(timerConfigs.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const updateNow = Date.now();
+      await db
+        .update(timerConfigs)
+        .set({ archived: true, archivedAt: updateNow })
+        .where(eq(timerConfigs.id, id));
+      const rows = await db.select().from(timerConfigs).where(eq(timerConfigs.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(updateNow);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO timer_configs (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x01'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO timer_configs (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, '\\x01'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
   });
 
@@ -501,6 +596,169 @@ describe("PG timers schema", () => {
       );
       expect(pending.rows).toHaveLength(1);
       expect(pending.rows[0]?.id).toBe(pendingId);
+    });
+
+    it("defaults archived to false and archivedAt to null", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db
+        .insert(checkInRecords)
+        .values({ id, systemId, timerConfigId: timerId, scheduledAt: now });
+
+      const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.insert(checkInRecords).values({
+        id,
+        systemId,
+        timerConfigId: timerId,
+        scheduledAt: now,
+        archived: true,
+        archivedAt: now,
+      });
+
+      const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from false to true", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db
+        .insert(checkInRecords)
+        .values({ id, systemId, timerConfigId: timerId, scheduledAt: now });
+
+      const updateNow = Date.now();
+      await db
+        .update(checkInRecords)
+        .set({ archived: true, archivedAt: updateNow })
+        .where(eq(checkInRecords.id, id));
+      const rows = await db.select().from(checkInRecords).where(eq(checkInRecords.id, id));
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(updateNow);
+    });
+
+    it("excludes archived pending check-ins from system_pending partial index", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const activeId = crypto.randomUUID();
+      const archivedId = crypto.randomUUID();
+
+      await db.insert(checkInRecords).values([
+        { id: activeId, systemId, timerConfigId: timerId, scheduledAt: now },
+        {
+          id: archivedId,
+          systemId,
+          timerConfigId: timerId,
+          scheduledAt: now,
+          archived: true,
+          archivedAt: now,
+        },
+      ]);
+
+      const pending = await client.query<{ id: string }>(
+        "SELECT id FROM check_in_records WHERE system_id = $1 AND responded_at IS NULL AND dismissed = false AND archived = false ORDER BY scheduled_at",
+        [systemId],
+      );
+      expect(pending.rows).toHaveLength(1);
+      expect(pending.rows[0]?.id).toBe(activeId);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        client.query(
+          "INSERT INTO check_in_records (id, system_id, timer_config_id, scheduled_at, archived, archived_at) VALUES ($1, $2, $3, $4, true, NULL)",
+          [crypto.randomUUID(), systemId, timerId, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const timerId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(timerConfigs).values({
+        id: timerId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        client.query(
+          "INSERT INTO check_in_records (id, system_id, timer_config_id, scheduled_at, archived, archived_at) VALUES ($1, $2, $3, $4, false, $5)",
+          [crypto.randomUUID(), systemId, timerId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
   });
 });

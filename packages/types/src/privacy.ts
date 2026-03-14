@@ -7,7 +7,7 @@ import type {
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** A privacy bucket — a named container for access-controlled content. */
 export interface PrivacyBucket extends AuditMetadata {
@@ -15,7 +15,11 @@ export interface PrivacyBucket extends AuditMetadata {
   readonly systemId: SystemId;
   readonly name: string;
   readonly description: string | null;
+  readonly archived: false;
 }
+
+/** An archived privacy bucket. */
+export type ArchivedPrivacyBucket = Archived<PrivacyBucket>;
 
 /**
  * Entity types that can be tagged in privacy buckets.
@@ -107,7 +111,11 @@ export interface FriendConnection extends AuditMetadata {
   readonly status: FriendConnectionStatus;
   readonly assignedBucketIds: readonly BucketId[];
   readonly visibility: FriendVisibilitySettings;
+  readonly archived: false;
 }
+
+/** An archived friend connection. */
+export type ArchivedFriendConnection = Archived<FriendConnection>;
 
 /** An immutable, optionally expiring friend code used to initiate connections. */
 export interface FriendCode {
@@ -116,7 +124,11 @@ export interface FriendCode {
   readonly code: string;
   readonly createdAt: UnixMillis;
   readonly expiresAt: UnixMillis | null;
+  readonly archived: false;
 }
+
+/** An archived friend code. */
+export type ArchivedFriendCode = Archived<FriendCode>;
 
 /** A junction mapping a friend connection to a privacy bucket. */
 export interface FriendBucketAssignment {

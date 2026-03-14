@@ -9,7 +9,7 @@ import type {
   SystemId,
 } from "./ids.js";
 import type { ImageSource } from "./image-source.js";
-import type { AuditMetadata } from "./utility.js";
+import type { Archived, AuditMetadata } from "./utility.js";
 
 /** Visual styling properties for innerworld entities. */
 export interface VisualProperties {
@@ -31,6 +31,7 @@ interface InnerWorldEntityBase extends AuditMetadata {
   readonly positionY: number;
   readonly visual: VisualProperties;
   readonly regionId: InnerWorldRegionId | null;
+  readonly archived: false;
 }
 
 /** An innerworld entity representing a member's presence. */
@@ -72,6 +73,9 @@ export type InnerWorldEntity =
   | SideSystemEntity
   | LayerEntity;
 
+/** An archived innerworld entity. */
+export type ArchivedInnerWorldEntity = Archived<InnerWorldEntity>;
+
 /** The set of valid innerworld entity type strings. */
 export type InnerWorldEntityType = InnerWorldEntity["entityType"];
 
@@ -86,7 +90,11 @@ export interface InnerWorldRegion extends AuditMetadata {
   readonly boundaryData: readonly { readonly x: number; readonly y: number }[];
   readonly accessType: "open" | "gatekept";
   readonly gatekeeperMemberIds: readonly MemberId[];
+  readonly archived: false;
 }
+
+/** An archived innerworld region. */
+export type ArchivedInnerWorldRegion = Archived<InnerWorldRegion>;
 
 /** The viewport state for the innerworld canvas. */
 export interface InnerWorldCanvas {

@@ -5,6 +5,8 @@ import type { ApiKeyId, SystemId, WebhookDeliveryId, WebhookId } from "../ids.js
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 import type {
+  ArchivedWebhookConfig,
+  ArchivedWebhookDelivery,
   EncryptedWebhookPayload,
   PlaintextWebhookPayload,
   WebhookConfig,
@@ -80,6 +82,14 @@ describe("WebhookConfig", () => {
     expectTypeOf<WebhookConfig["enabled"]>().toEqualTypeOf<boolean>();
     expectTypeOf<WebhookConfig["cryptoKeyId"]>().toEqualTypeOf<ApiKeyId | null>();
   });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<WebhookConfig["archived"]>().toEqualTypeOf<false>();
+  });
+
+  it("ArchivedWebhookConfig has archived as true literal", () => {
+    expectTypeOf<ArchivedWebhookConfig["archived"]>().toEqualTypeOf<true>();
+  });
 });
 
 describe("WebhookDeliveryPayload", () => {
@@ -106,5 +116,13 @@ describe("WebhookDelivery", () => {
     expectTypeOf<WebhookDelivery["statusCode"]>().toEqualTypeOf<number | null>();
     expectTypeOf<WebhookDelivery["deliveredAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<WebhookDelivery["success"]>().toEqualTypeOf<boolean>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<WebhookDelivery["archived"]>().toEqualTypeOf<false>();
+  });
+
+  it("ArchivedWebhookDelivery has archived as true literal", () => {
+    expectTypeOf<ArchivedWebhookDelivery["archived"]>().toEqualTypeOf<true>();
   });
 });

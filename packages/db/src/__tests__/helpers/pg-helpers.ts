@@ -164,9 +164,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE CASCADE,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
+  `,
+  memberPhotosIndexes: `
+    CREATE INDEX member_photos_system_archived_idx ON member_photos (system_id, archived);
+    CREATE INDEX member_photos_member_sort_idx ON member_photos (member_id, sort_order)
   `,
   // Privacy
   buckets: `
@@ -177,12 +184,15 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   bucketsIndexes: `
-    CREATE INDEX buckets_system_id_idx ON buckets (system_id)
+    CREATE INDEX buckets_system_archived_idx ON buckets (system_id, archived)
   `,
   bucketContentTags: `
     CREATE TABLE bucket_content_tags (
@@ -225,29 +235,37 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      UNIQUE (account_id, friend_account_id),
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, account_id),
       CHECK (account_id != friend_account_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   friendConnectionsIndexes: `
     CREATE INDEX friend_connections_account_status_idx ON friend_connections (account_id, status);
-    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_account_id, status)
+    CREATE INDEX friend_connections_friend_status_idx ON friend_connections (friend_account_id, status);
+    CREATE INDEX friend_connections_account_archived_idx ON friend_connections (account_id, archived);
+    CREATE UNIQUE INDEX friend_connections_account_friend_uniq ON friend_connections (account_id, friend_account_id) WHERE archived = false
   `,
   friendCodes: `
     CREATE TABLE friend_codes (
       id VARCHAR(50) PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      code VARCHAR(255) NOT NULL UNIQUE,
+      code VARCHAR(255) NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       expires_at TIMESTAMPTZ,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       CHECK (expires_at IS NULL OR expires_at > created_at),
-      CHECK (length(code) >= 8)
+      CHECK (length(code) >= 8),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   friendCodesIndexes: `
-    CREATE INDEX friend_codes_account_id_idx ON friend_codes (account_id)
+    CREATE INDEX friend_codes_account_archived_idx ON friend_codes (account_id, archived);
+    CREATE UNIQUE INDEX friend_codes_code_uniq ON friend_codes (code) WHERE archived = false
   `,
   friendBucketAssignments: `
     CREATE TABLE friend_bucket_assignments (
@@ -276,12 +294,15 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       PRIMARY KEY (id, start_time),
       CHECK (end_time IS NULL OR end_time > start_time),
       UNIQUE (id, system_id, start_time),
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
       CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL)),
       CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL)
     )
   `,
@@ -289,7 +310,8 @@ export const PG_DDL = {
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
     CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
     CREATE INDEX fronting_sessions_system_type_start_idx ON fronting_sessions (system_id, fronting_type, start_time);
-    CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL
+    CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL;
+    CREATE INDEX fronting_sessions_system_archived_idx ON fronting_sessions (system_id, archived)
   `,
   switches: `
     CREATE TABLE switches (
@@ -299,12 +321,16 @@ export const PG_DDL = {
       member_ids JSONB NOT NULL CHECK (jsonb_array_length(member_ids) >= 1),
       created_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       PRIMARY KEY (id, timestamp),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   switchesIndexes: `
-    CREATE INDEX switches_system_timestamp_idx ON switches (system_id, timestamp)
+    CREATE INDEX switches_system_timestamp_idx ON switches (system_id, timestamp);
+    CREATE INDEX switches_system_archived_idx ON switches (system_id, archived)
   `,
   customFronts: `
     CREATE TABLE custom_fronts (
@@ -322,7 +348,7 @@ export const PG_DDL = {
     )
   `,
   customFrontsIndexes: `
-    CREATE INDEX custom_fronts_system_id_idx ON custom_fronts (system_id)
+    CREATE INDEX custom_fronts_system_archived_idx ON custom_fronts (system_id, archived)
   `,
   frontingComments: `
     CREATE TABLE fronting_comments (
@@ -335,14 +361,18 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (fronting_session_id, system_id, session_start_time) REFERENCES fronting_sessions(id, system_id, start_time) ON DELETE CASCADE,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   frontingCommentsIndexes: `
     CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (fronting_session_id, created_at);
-    CREATE INDEX fronting_comments_session_start_idx ON fronting_comments (session_start_time)
+    CREATE INDEX fronting_comments_session_start_idx ON fronting_comments (session_start_time);
+    CREATE INDEX fronting_comments_system_archived_idx ON fronting_comments (system_id, archived)
   `,
   // Structure
   relationships: `
@@ -357,13 +387,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (source_member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (target_member_id) REFERENCES members(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   relationshipsIndexes: `
-    CREATE INDEX relationships_system_id_idx ON relationships (system_id)
+    CREATE INDEX relationships_system_archived_idx ON relationships (system_id, archived)
   `,
   subsystems: `
     CREATE TABLE subsystems (
@@ -377,13 +410,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (parent_subsystem_id) REFERENCES subsystems(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   subsystemsIndexes: `
-    CREATE INDEX subsystems_system_id_idx ON subsystems (system_id)
+    CREATE INDEX subsystems_system_archived_idx ON subsystems (system_id, archived)
   `,
   sideSystems: `
     CREATE TABLE side_systems (
@@ -393,12 +429,15 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   sideSystemsIndexes: `
-    CREATE INDEX side_systems_system_id_idx ON side_systems (system_id)
+    CREATE INDEX side_systems_system_archived_idx ON side_systems (system_id, archived)
   `,
   layers: `
     CREATE TABLE layers (
@@ -409,12 +448,15 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   layersIndexes: `
-    CREATE INDEX layers_system_id_idx ON layers (system_id)
+    CREATE INDEX layers_system_archived_idx ON layers (system_id, archived)
   `,
   subsystemMemberships: `
     CREATE TABLE subsystem_memberships (
@@ -529,7 +571,7 @@ export const PG_DDL = {
     )
   `,
   fieldDefinitionsIndexes: `
-    CREATE INDEX field_definitions_system_id_idx ON field_definitions (system_id)
+    CREATE INDEX field_definitions_system_archived_idx ON field_definitions (system_id, archived)
   `,
   fieldValues: `
     CREATE TABLE field_values (
@@ -690,7 +732,7 @@ export const PG_DDL = {
     )
   `,
   channelsIndexes: `
-    CREATE INDEX channels_system_id_idx ON channels (system_id)
+    CREATE INDEX channels_system_archived_idx ON channels (system_id, archived)
   `,
   messages: `
     CREATE TABLE messages (
@@ -715,7 +757,7 @@ export const PG_DDL = {
   `,
   messagesIndexes: `
     CREATE INDEX messages_channel_id_timestamp_idx ON messages (channel_id, timestamp);
-    CREATE INDEX messages_system_id_idx ON messages (system_id);
+    CREATE INDEX messages_system_archived_idx ON messages (system_id, archived);
     CREATE INDEX messages_reply_to_id_idx ON messages (reply_to_id)
   `,
   boardMessages: `
@@ -728,11 +770,14 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      CHECK (version >= 1)
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   boardMessagesIndexes: `
-    CREATE INDEX board_messages_system_id_idx ON board_messages (system_id)
+    CREATE INDEX board_messages_system_archived_idx ON board_messages (system_id, archived)
   `,
   notes: `
     CREATE TABLE notes (
@@ -751,7 +796,7 @@ export const PG_DDL = {
     )
   `,
   notesIndexes: `
-    CREATE INDEX notes_system_id_idx ON notes (system_id);
+    CREATE INDEX notes_system_archived_idx ON notes (system_id, archived);
     CREATE INDEX notes_member_id_idx ON notes (member_id)
   `,
   polls: `
@@ -771,13 +816,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   pollsIndexes: `
-    CREATE INDEX polls_system_id_idx ON polls (system_id)
+    CREATE INDEX polls_system_archived_idx ON polls (system_id, archived)
   `,
   pollVotes: `
     CREATE TABLE poll_votes (
@@ -790,12 +838,15 @@ export const PG_DDL = {
       voted_at TIMESTAMPTZ,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (poll_id, system_id) REFERENCES polls(id, system_id) ON DELETE CASCADE
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      FOREIGN KEY (poll_id, system_id) REFERENCES polls(id, system_id) ON DELETE CASCADE,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   pollVotesIndexes: `
     CREATE INDEX poll_votes_poll_id_idx ON poll_votes (poll_id);
-    CREATE INDEX poll_votes_system_id_idx ON poll_votes (system_id)
+    CREATE INDEX poll_votes_system_archived_idx ON poll_votes (system_id, archived)
   `,
   acknowledgements: `
     CREATE TABLE acknowledgements (
@@ -805,11 +856,15 @@ export const PG_DDL = {
       confirmed BOOLEAN NOT NULL DEFAULT false,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      FOREIGN KEY (created_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   acknowledgementsIndexes: `
-    CREATE INDEX acknowledgements_system_id_confirmed_idx ON acknowledgements (system_id, confirmed)
+    CREATE INDEX acknowledgements_system_id_confirmed_idx ON acknowledgements (system_id, confirmed);
+    CREATE INDEX acknowledgements_system_archived_idx ON acknowledgements (system_id, archived)
   `,
   // Journal
   journalEntries: `
@@ -829,6 +884,7 @@ export const PG_DDL = {
   `,
   journalEntriesIndexes: `
     CREATE INDEX journal_entries_system_id_created_at_idx ON journal_entries (system_id, created_at);
+    CREATE INDEX journal_entries_system_archived_idx ON journal_entries (system_id, archived);
     CREATE INDEX journal_entries_fronting_session_id_idx ON journal_entries (fronting_session_id)
   `,
   wikiPages: `
@@ -848,10 +904,10 @@ export const PG_DDL = {
     )
   `,
   wikiPagesIndexes: `
-    CREATE INDEX wiki_pages_system_id_idx ON wiki_pages (system_id)
+    CREATE INDEX wiki_pages_system_archived_idx ON wiki_pages (system_id, archived)
   `,
   wikiPagesUniqueSlugIndex: `
-    CREATE UNIQUE INDEX wiki_pages_system_id_slug_hash_idx ON wiki_pages (system_id, slug_hash)
+    CREATE UNIQUE INDEX wiki_pages_system_id_slug_hash_idx ON wiki_pages (system_id, slug_hash) WHERE archived = false
   `,
   // Groups
   groups: `
@@ -873,7 +929,7 @@ export const PG_DDL = {
     )
   `,
   groupsIndexes: `
-    CREATE INDEX groups_system_id_idx ON groups (system_id)
+    CREATE INDEX groups_system_archived_idx ON groups (system_id, archived)
   `,
   groupMemberships: `
     CREATE TABLE group_memberships (
@@ -900,13 +956,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (parent_region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   innerworldRegionsIndexes: `
-    CREATE INDEX innerworld_regions_system_id_idx ON innerworld_regions (system_id)
+    CREATE INDEX innerworld_regions_system_archived_idx ON innerworld_regions (system_id, archived)
   `,
   innerworldEntities: `
     CREATE TABLE innerworld_entities (
@@ -917,13 +976,16 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (region_id) REFERENCES innerworld_regions(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   innerworldEntitiesIndexes: `
-    CREATE INDEX innerworld_entities_system_id_idx ON innerworld_entities (system_id);
-    CREATE INDEX innerworld_entities_region_id_idx ON innerworld_entities (region_id)
+    CREATE INDEX innerworld_entities_region_id_idx ON innerworld_entities (region_id);
+    CREATE INDEX innerworld_entities_system_archived_idx ON innerworld_entities (system_id, archived)
   `,
   innerworldCanvas: `
     CREATE TABLE innerworld_canvas (
@@ -982,11 +1044,14 @@ export const PG_DDL = {
       enabled BOOLEAN NOT NULL DEFAULT true,
       push_enabled BOOLEAN NOT NULL DEFAULT true,
       created_at TIMESTAMPTZ NOT NULL,
-      updated_at TIMESTAMPTZ NOT NULL
+      updated_at TIMESTAMPTZ NOT NULL,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   notificationConfigsIndexes: `
-    CREATE UNIQUE INDEX notification_configs_system_id_event_type_idx ON notification_configs (system_id, event_type)
+    CREATE UNIQUE INDEX notification_configs_system_id_event_type_idx ON notification_configs (system_id, event_type) WHERE archived = false
   `,
   friendNotificationPreferences: `
     CREATE TABLE friend_notification_preferences (
@@ -996,11 +1061,14 @@ export const PG_DDL = {
       enabled_event_types JSONB NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      FOREIGN KEY (friend_connection_id, account_id) REFERENCES friend_connections(id, account_id) ON DELETE CASCADE,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   friendNotificationPreferencesIndexes: `
-    CREATE UNIQUE INDEX friend_notification_prefs_account_id_friend_connection_id_idx ON friend_notification_preferences (account_id, friend_connection_id)
+    CREATE UNIQUE INDEX friend_notification_prefs_account_id_friend_connection_id_idx ON friend_notification_preferences (account_id, friend_connection_id) WHERE archived = false
   `,
   // Snapshots
   systemSnapshots: `
@@ -1027,11 +1095,14 @@ export const PG_DDL = {
       crypto_key_id VARCHAR(50) REFERENCES api_keys(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
-      UNIQUE (id, system_id)
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
+      UNIQUE (id, system_id),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   webhookConfigsIndexes: `
-    CREATE INDEX webhook_configs_system_id_idx ON webhook_configs (system_id)
+    CREATE INDEX webhook_configs_system_archived_idx ON webhook_configs (system_id, archived)
   `,
   webhookDeliveries: `
     CREATE TABLE webhook_deliveries (
@@ -1046,9 +1117,12 @@ export const PG_DDL = {
       next_retry_at TIMESTAMPTZ,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       CHECK (attempt_count >= 0),
       CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599)),
-      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   webhookDeliveriesIndexes: `
@@ -1072,17 +1146,21 @@ export const PG_DDL = {
       thumbnail_of_blob_id VARCHAR(50),
       checksum VARCHAR(255) NOT NULL,
       uploaded_at TIMESTAMPTZ NOT NULL,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       FOREIGN KEY (bucket_id) REFERENCES buckets(id) ON DELETE SET NULL,
       FOREIGN KEY (thumbnail_of_blob_id) REFERENCES blob_metadata(id) ON DELETE SET NULL,
       CHECK (size_bytes > 0),
       CHECK (size_bytes <= 10737418240),
       CHECK (encryption_tier IN (1, 2)),
-      CHECK (length(checksum) = 64)
+      CHECK (length(checksum) = 64),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   blobMetadataIndexes: `
     CREATE INDEX blob_metadata_system_id_purpose_idx ON blob_metadata (system_id, purpose);
+    CREATE INDEX blob_metadata_system_archived_idx ON blob_metadata (system_id, archived);
     CREATE UNIQUE INDEX blob_metadata_storage_key_idx ON blob_metadata (storage_key)
   `,
   // Timers
@@ -1099,14 +1177,17 @@ export const PG_DDL = {
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       UNIQUE (id, system_id),
       CHECK (version >= 1),
       CHECK (waking_start IS NULL OR waking_start ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
-      CHECK (waking_end IS NULL OR waking_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$')
+      CHECK (waking_end IS NULL OR waking_end ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   timerConfigsIndexes: `
-    CREATE INDEX timer_configs_system_id_idx ON timer_configs (system_id)
+    CREATE INDEX timer_configs_system_archived_idx ON timer_configs (system_id, archived)
   `,
   checkInRecords: `
     CREATE TABLE check_in_records (
@@ -1118,15 +1199,18 @@ export const PG_DDL = {
       dismissed BOOLEAN NOT NULL DEFAULT false,
       responded_by_member_id VARCHAR(50),
       encrypted_data BYTEA,
+      archived BOOLEAN NOT NULL DEFAULT false,
+      archived_at TIMESTAMPTZ,
       FOREIGN KEY (timer_config_id, system_id) REFERENCES timer_configs(id, system_id) ON DELETE CASCADE,
-      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL
+      FOREIGN KEY (responded_by_member_id) REFERENCES members(id) ON DELETE SET NULL,
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   checkInRecordsIndexes: `
     CREATE INDEX check_in_records_system_id_idx ON check_in_records (system_id);
     CREATE INDEX check_in_records_timer_config_id_idx ON check_in_records (timer_config_id);
     CREATE INDEX check_in_records_scheduled_at_idx ON check_in_records (scheduled_at);
-    CREATE INDEX check_in_records_system_pending_idx ON check_in_records (system_id, scheduled_at) WHERE responded_at IS NULL AND dismissed = false
+    CREATE INDEX check_in_records_system_pending_idx ON check_in_records (system_id, scheduled_at) WHERE responded_at IS NULL AND dismissed = false AND archived = false
   `,
   // Import/Export
   importJobs: `
@@ -1400,6 +1484,7 @@ export async function createPgMemberTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.memberPhotos);
+  await pgExec(client, PG_DDL.memberPhotosIndexes);
 }
 
 export async function createPgPrivacyTables(client: PGlite): Promise<void> {
@@ -1744,6 +1829,7 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.memberPhotos);
+  await pgExec(client, PG_DDL.memberPhotosIndexes);
   // Privacy
   await pgExec(client, PG_DDL.buckets);
   await pgExec(client, PG_DDL.bucketsIndexes);

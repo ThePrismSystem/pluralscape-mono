@@ -1,7 +1,12 @@
 import { describe, expectTypeOf, it } from "vitest";
 
 import type { CheckInRecordId, MemberId, SystemId, TimerId } from "../ids.js";
-import type { CheckInRecord, TimerConfig } from "../timer.js";
+import type {
+  ArchivedCheckInRecord,
+  ArchivedTimerConfig,
+  CheckInRecord,
+  TimerConfig,
+} from "../timer.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata } from "../utility.js";
 
@@ -20,6 +25,14 @@ describe("TimerConfig", () => {
     expectTypeOf<TimerConfig["promptText"]>().toBeString();
     expectTypeOf<TimerConfig["enabled"]>().toEqualTypeOf<boolean>();
   });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<TimerConfig["archived"]>().toEqualTypeOf<false>();
+  });
+
+  it("ArchivedTimerConfig has archived as true literal", () => {
+    expectTypeOf<ArchivedTimerConfig["archived"]>().toEqualTypeOf<true>();
+  });
 });
 
 describe("CheckInRecord", () => {
@@ -36,6 +49,7 @@ describe("CheckInRecord", () => {
       | "respondedByMemberId"
       | "respondedAt"
       | "dismissed"
+      | "archived"
       | "createdAt"
       | "updatedAt"
       | "version"
@@ -50,5 +64,13 @@ describe("CheckInRecord", () => {
     expectTypeOf<CheckInRecord["respondedByMemberId"]>().toEqualTypeOf<MemberId | null>();
     expectTypeOf<CheckInRecord["respondedAt"]>().toEqualTypeOf<UnixMillis | null>();
     expectTypeOf<CheckInRecord["dismissed"]>().toEqualTypeOf<boolean>();
+  });
+
+  it("has archived as false literal", () => {
+    expectTypeOf<CheckInRecord["archived"]>().toEqualTypeOf<false>();
+  });
+
+  it("ArchivedCheckInRecord has archived as true literal", () => {
+    expectTypeOf<ArchivedCheckInRecord["archived"]>().toEqualTypeOf<true>();
   });
 });

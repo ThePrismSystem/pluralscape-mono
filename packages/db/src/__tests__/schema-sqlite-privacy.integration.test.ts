@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
 import {
@@ -84,6 +84,15 @@ describe("SQLite privacy schema", () => {
 
   afterAll(() => {
     client.close();
+  });
+
+  afterEach(() => {
+    db.delete(friendBucketAssignments).run();
+    db.delete(keyGrants).run();
+    db.delete(friendCodes).run();
+    db.delete(friendConnections).run();
+    db.delete(bucketContentTags).run();
+    db.delete(buckets).run();
   });
 
   describe("buckets", () => {
@@ -176,6 +185,116 @@ describe("SQLite privacy schema", () => {
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("defaults archived to false and archivedAt to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(buckets)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(buckets)
+        .values({
+          id,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO buckets (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'010203', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO buckets (id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, X'010203', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = insertBucket(systemId);
+      const now = Date.now();
+
+      db.update(buckets)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(buckets.id, id))
+        .run();
+
+      const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("updates archived from true back to false (unarchival)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = insertBucket(systemId);
+      const now = Date.now();
+
+      db.update(buckets)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(buckets.id, id))
+        .run();
+
+      const unarchiveNow = Date.now();
+      db.update(buckets)
+        .set({ archived: false, archivedAt: null, updatedAt: unarchiveNow })
+        .where(eq(buckets.id, id))
+        .run();
+
+      const rows = db.select().from(buckets).where(eq(buckets.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
     });
   });
 
@@ -578,6 +697,167 @@ describe("SQLite privacy schema", () => {
           .run(),
       ).toThrow();
     });
+
+    it("defaults archived to false and archivedAt to null", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      insertSystem(friendAccountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendConnections)
+        .values({
+          id,
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(friendConnections).where(eq(friendConnections.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      insertSystem(friendAccountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendConnections)
+        .values({
+          id,
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(friendConnections).where(eq(friendConnections.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      insertSystem(friendAccountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO friend_connections (id, account_id, friend_account_id, status, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, 'pending', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), accountId, friendAccountId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      insertSystem(friendAccountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO friend_connections (id, account_id, friend_account_id, status, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, 'pending', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), accountId, friendAccountId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      insertSystem(friendAccountId);
+      const id = insertFriendConnection(accountId, friendAccountId);
+      const now = Date.now();
+
+      db.update(friendConnections)
+        .set({ archived: true, archivedAt: now, updatedAt: now })
+        .where(eq(friendConnections.id, id))
+        .run();
+
+      const rows = db.select().from(friendConnections).where(eq(friendConnections.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("allows duplicate (accountId, friendAccountId) when both rows are archived", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      insertSystem(friendAccountId);
+      const now = Date.now();
+
+      db.insert(friendConnections)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      db.insert(friendConnections)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+    });
+
+    it("rejects duplicate (accountId, friendAccountId) when both rows are active", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const friendAccountId = insertAccount();
+      insertSystem(friendAccountId);
+      const now = Date.now();
+
+      db.insert(friendConnections)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          friendAccountId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(friendConnections)
+          .values({
+            id: crypto.randomUUID(),
+            accountId,
+            friendAccountId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
   });
 
   describe("friend_codes", () => {
@@ -739,6 +1019,164 @@ describe("SQLite privacy schema", () => {
           })
           .run(),
       ).toThrow();
+    });
+
+    it("defaults archived to false and archivedAt to null", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendCodes)
+        .values({
+          id,
+          accountId,
+          code: `FC-${crypto.randomUUID()}`,
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(friendCodes).where(eq(friendCodes.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendCodes)
+        .values({
+          id,
+          accountId,
+          code: `FC-${crypto.randomUUID()}`,
+          createdAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(friendCodes).where(eq(friendCodes.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO friend_codes (id, account_id, code, created_at, archived, archived_at) VALUES (?, ?, ?, ?, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), accountId, `FC-${crypto.randomUUID()}`, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO friend_codes (id, account_id, code, created_at, archived, archived_at) VALUES (?, ?, ?, ?, 0, ?)",
+          )
+          .run(crypto.randomUUID(), accountId, `FC-${crypto.randomUUID()}`, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("updates archived from false to true", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(friendCodes)
+        .values({
+          id,
+          accountId,
+          code: `FC-${crypto.randomUUID()}`,
+          createdAt: now,
+        })
+        .run();
+
+      db.update(friendCodes)
+        .set({ archived: true, archivedAt: now })
+        .where(eq(friendCodes.id, id))
+        .run();
+
+      const rows = db.select().from(friendCodes).where(eq(friendCodes.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("allows duplicate code when both rows are archived", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const code = `FC-${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          code,
+          createdAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          code,
+          createdAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(friendCodes).where(eq(friendCodes.code, code)).all();
+      expect(rows).toHaveLength(2);
+    });
+
+    it("allows reuse of archived code for a new active entry", () => {
+      const accountId = insertAccount();
+      insertSystem(accountId);
+      const code = `FC-${crypto.randomUUID()}`;
+      const now = Date.now();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          code,
+          createdAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      db.insert(friendCodes)
+        .values({
+          id: crypto.randomUUID(),
+          accountId,
+          code,
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(friendCodes).where(eq(friendCodes.code, code)).all();
+      expect(rows).toHaveLength(2);
+      expect(rows.filter((r) => !r.archived)).toHaveLength(1);
     });
   });
 

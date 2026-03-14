@@ -1,8 +1,13 @@
-import { check, foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { foreignKey, index, integer, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
@@ -26,10 +31,7 @@ export const members = pgTable(
     index("members_created_at_idx").on(t.createdAt),
     unique("members_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("members", t.version),
-    check(
-      "members_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("members", t.archived, t.archivedAt),
   ],
 );
 
@@ -46,15 +48,17 @@ export const memberPhotos = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
-    index("member_photos_system_id_idx").on(t.systemId),
+    index("member_photos_system_archived_idx").on(t.systemId, t.archived),
     index("member_photos_member_sort_idx").on(t.memberId, t.sortOrder),
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("cascade"),
     versionCheckFor("member_photos", t.version),
+    archivableConsistencyCheckFor("member_photos", t.archived, t.archivedAt),
   ],
 );
 

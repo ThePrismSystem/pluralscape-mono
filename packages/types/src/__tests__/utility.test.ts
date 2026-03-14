@@ -3,6 +3,7 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 import type { EntityType } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type {
+  Archived,
   AuditMetadata,
   CreateInput,
   DateRange,
@@ -169,6 +170,49 @@ describe("SortDirection", () => {
     assertType<SortDirection>("desc");
     // @ts-expect-error invalid sort direction
     assertType<SortDirection>("up");
+  });
+});
+
+describe("Archived", () => {
+  it("replaces archived: false with archived: true and adds archivedAt", () => {
+    interface TestEntity {
+      readonly id: string;
+      readonly name: string;
+      readonly archived: false;
+    }
+
+    type ArchivedTest = Archived<TestEntity>;
+    expectTypeOf<ArchivedTest["archived"]>().toEqualTypeOf<true>();
+    expectTypeOf<ArchivedTest["archivedAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<ArchivedTest["id"]>().toBeString();
+    expectTypeOf<ArchivedTest["name"]>().toBeString();
+  });
+
+  it("preserves all fields except archived from the original type", () => {
+    interface TestEntity extends AuditMetadata {
+      readonly id: string;
+      readonly name: string;
+      readonly description: string | null;
+      readonly archived: false;
+    }
+
+    type ArchivedTest = Archived<TestEntity>;
+    expectTypeOf<ArchivedTest["id"]>().toBeString();
+    expectTypeOf<ArchivedTest["name"]>().toBeString();
+    expectTypeOf<ArchivedTest["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<ArchivedTest["createdAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<ArchivedTest["updatedAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<ArchivedTest["version"]>().toEqualTypeOf<number>();
+  });
+
+  it("rejects types without archived: false", () => {
+    interface NoArchived {
+      readonly id: string;
+    }
+
+    // @ts-expect-error type without archived: false cannot be used with Archived
+    const _check: Archived<NoArchived> = {} as never;
+    void _check;
   });
 });
 

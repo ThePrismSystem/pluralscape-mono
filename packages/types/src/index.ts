@@ -85,6 +85,7 @@ export type {
   DeepReadonly,
   DateRange,
   AuditMetadata,
+  Archived,
   SortDirection,
   EntityReference,
 } from "./utility.js";
@@ -102,6 +103,7 @@ export type {
   Tag,
   MemberPhoto,
   ArchivedMember,
+  ArchivedMemberPhoto,
   MemberListItem,
   SystemListItem,
   SystemDuplicationScope,
@@ -114,8 +116,11 @@ export type {
   ActiveFrontingSession,
   CompletedFrontingSession,
   FrontingSession,
+  ArchivedFrontingSession,
   FrontingComment,
+  ArchivedFrontingComment,
   Switch,
+  ArchivedSwitch,
   CustomFront,
   ArchivedCustomFront,
   CoFrontState,
@@ -124,6 +129,7 @@ export type {
 // ── Privacy ────────────────────────────────────────────────────────
 export type {
   PrivacyBucket,
+  ArchivedPrivacyBucket,
   BucketContentEntityType,
   BucketContentTag,
   BucketVisibilityScope,
@@ -131,7 +137,9 @@ export type {
   FriendConnectionStatus,
   FriendVisibilitySettings,
   FriendConnection,
+  ArchivedFriendConnection,
   FriendCode,
+  ArchivedFriendCode,
   BucketAccessCheck,
   FriendBucketAssignment,
 } from "./privacy.js";
@@ -140,6 +148,7 @@ export type {
 export type {
   RelationshipType,
   Relationship,
+  ArchivedRelationship,
   KnownArchitectureType,
   ArchitectureType,
   StructureVisualProps,
@@ -148,8 +157,11 @@ export type {
   SystemProfile,
   LayerAccessType,
   Subsystem,
+  ArchivedSubsystem,
   SideSystem,
+  ArchivedSideSystem,
   Layer,
+  ArchivedLayer,
   OpenLayer,
   GatekeptLayer,
   SubsystemMembership,
@@ -335,6 +347,7 @@ export type {
   EncryptionTier,
   BlobPurpose,
   BlobMetadata,
+  ArchivedBlobMetadata,
   BlobUploadRequest,
   BlobDownloadRef,
 } from "./blob.js";
@@ -347,10 +360,12 @@ export type {
   WebhookDeliveryStatus,
   WebhookEventType,
   WebhookConfig,
+  ArchivedWebhookConfig,
   PlaintextWebhookPayload,
   EncryptedWebhookPayload,
   WebhookDeliveryPayload,
   WebhookDelivery,
+  ArchivedWebhookDelivery,
 } from "./webhooks.js";
 
 // ── Notifications ─────────────────────────────────────────────
@@ -359,9 +374,11 @@ export type {
   DeviceToken,
   NotificationEventType,
   NotificationConfig,
+  ArchivedNotificationConfig,
   NotificationPayload,
   FriendNotificationEventType,
   FriendNotificationPreference,
+  ArchivedFriendNotificationPreference,
 } from "./notifications.js";
 
 // ── Realtime ──────────────────────────────────────────────────
@@ -391,14 +408,21 @@ export type {
 // ── Communication ─────────────────────────────────────────────────
 export type {
   Channel,
+  ArchivedChannel,
   ChatMessage,
+  ArchivedChatMessage,
   BoardMessage,
+  ArchivedBoardMessage,
   Note,
+  ArchivedNote,
   PollOption,
   PollKind,
   Poll,
+  ArchivedPoll,
   PollVote,
+  ArchivedPollVote,
   AcknowledgementRequest,
+  ArchivedAcknowledgementRequest,
 } from "./communication.js";
 
 // ── Lifecycle ─────────────────────────────────────────────────────
@@ -425,6 +449,7 @@ export type {
   FieldType,
   FieldBucketVisibility,
   FieldDefinition,
+  ArchivedFieldDefinition,
   FieldValue,
   FieldValueUnion,
 } from "./custom-fields.js";
@@ -455,7 +480,12 @@ export type {
 } from "./journal.js";
 
 // ── Timer ─────────────────────────────────────────────────────────
-export type { TimerConfig, CheckInRecord } from "./timer.js";
+export type {
+  TimerConfig,
+  ArchivedTimerConfig,
+  CheckInRecord,
+  ArchivedCheckInRecord,
+} from "./timer.js";
 
 // ── Key Rotation ─────────────────────────────────────────────────
 export type {
@@ -488,8 +518,10 @@ export type {
   SideSystemEntity,
   LayerEntity,
   InnerWorldEntity,
+  ArchivedInnerWorldEntity,
   InnerWorldEntityType,
   InnerWorldRegion,
+  ArchivedInnerWorldRegion,
   InnerWorldCanvas,
 } from "./innerworld.js";
 

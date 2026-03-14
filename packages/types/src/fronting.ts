@@ -8,7 +8,7 @@ import type {
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
-import type { AuditMetadata, EntityReference } from "./utility.js";
+import type { Archived, AuditMetadata, EntityReference } from "./utility.js";
 
 /** Whether a member is fully fronting or co-conscious. */
 export type FrontingType = "fronting" | "co-conscious";
@@ -35,6 +35,7 @@ interface FrontingSessionBase extends AuditMetadata {
     readonly reason: string;
     readonly sentiment: OuttriggerSentiment;
   } | null;
+  readonly archived: false;
 }
 
 /** A fronting session that is still active (no end time). */
@@ -54,18 +55,29 @@ export interface FrontingComment extends AuditMetadata {
   readonly systemId: SystemId;
   readonly memberId: MemberId;
   readonly content: string;
+  readonly archived: false;
 }
+
+/** An archived fronting comment. */
+export type ArchivedFrontingComment = Archived<FrontingComment>;
 
 /** A fronting session — discriminated on `endTime` (null = active). */
 export type FrontingSession = ActiveFrontingSession | CompletedFrontingSession;
 
-/** An immutable event recording a switch between members. */
+/** An archived fronting session. */
+export type ArchivedFrontingSession = Archived<FrontingSession>;
+
+/** An event recording a switch between members. */
 export interface Switch {
   readonly id: SwitchId;
   readonly systemId: SystemId;
   readonly memberIds: readonly [MemberId, ...MemberId[]];
   readonly timestamp: UnixMillis;
+  readonly archived: false;
 }
+
+/** An archived switch. */
+export type ArchivedSwitch = Archived<Switch>;
 
 /** A user-defined abstract cognitive state logged like a member. */
 export interface CustomFront extends AuditMetadata {
@@ -79,10 +91,7 @@ export interface CustomFront extends AuditMetadata {
 }
 
 /** An archived custom front — preserves all data with archive metadata. */
-export type ArchivedCustomFront = Omit<CustomFront, "archived"> & {
-  readonly archived: true;
-  readonly archivedAt: UnixMillis;
-};
+export type ArchivedCustomFront = Archived<CustomFront>;
 
 /** Computed snapshot of the current co-fronting state. Not persisted. */
 export interface CoFrontState {
