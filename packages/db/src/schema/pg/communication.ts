@@ -13,8 +13,14 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
 
@@ -49,10 +55,7 @@ export const channels = pgTable(
     check("channels_type_check", enumCheck(t.type, CHANNEL_TYPES)),
     check("channels_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("channels", t.version),
-    check(
-      "channels_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("channels", t.archived, t.archivedAt),
   ],
 );
 
@@ -87,10 +90,7 @@ export const messages = pgTable(
       foreignColumns: [channels.id, channels.systemId],
     }).onDelete("cascade"),
     versionCheckFor("messages", t.version),
-    check(
-      "messages_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("messages", t.archived, t.archivedAt),
   ],
 );
 
@@ -112,10 +112,7 @@ export const boardMessages = pgTable(
     index("board_messages_system_archived_idx").on(t.systemId, t.archived),
     check("board_messages_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("board_messages", t.version),
-    check(
-      "board_messages_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("board_messages", t.archived, t.archivedAt),
   ],
 );
 
@@ -140,7 +137,7 @@ export const notes = pgTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     versionCheckFor("notes", t.version),
-    check("notes_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
+    archivableConsistencyCheckFor("notes", t.archived, t.archivedAt),
   ],
 );
 
@@ -179,7 +176,7 @@ export const polls = pgTable(
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
     versionCheckFor("polls", t.version),
-    check("polls_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
+    archivableConsistencyCheckFor("polls", t.archived, t.archivedAt),
   ],
 );
 
@@ -206,10 +203,7 @@ export const pollVotes = pgTable(
       columns: [t.pollId, t.systemId],
       foreignColumns: [polls.id, polls.systemId],
     }).onDelete("cascade"),
-    check(
-      "poll_votes_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("poll_votes", t.archived, t.archivedAt),
   ],
 );
 
@@ -233,10 +227,7 @@ export const acknowledgements = pgTable(
       columns: [t.createdByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
-    check(
-      "acknowledgements_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("acknowledgements", t.archived, t.archivedAt),
   ],
 );
 

@@ -12,8 +12,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { archivable, timestamps } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import { archivable, archivableConsistencyCheckFor, timestamps } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
 
@@ -44,10 +44,7 @@ export const webhookConfigs = pgTable(
   (t) => [
     index("webhook_configs_system_id_archived_idx").on(t.systemId, t.archived),
     unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
-    check(
-      "webhook_configs_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("webhook_configs", t.archived, t.archivedAt),
   ],
 );
 
@@ -103,10 +100,7 @@ export const webhookDeliveries = pgTable(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,
     ),
-    check(
-      "webhook_deliveries_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("webhook_deliveries", t.archived, t.archivedAt),
   ],
 );
 

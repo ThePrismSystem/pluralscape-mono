@@ -11,8 +11,12 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+} from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -72,10 +76,7 @@ export const notificationConfigs = sqliteTable(
       "notification_configs_event_type_check",
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
     ),
-    check(
-      "notification_configs_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("notification_configs", t.archived, t.archivedAt),
   ],
 );
 
@@ -101,10 +102,7 @@ export const friendNotificationPreferences = sqliteTable(
       columns: [t.friendConnectionId, t.accountId],
       foreignColumns: [friendConnections.id, friendConnections.accountId],
     }).onDelete("cascade"),
-    check(
-      "friend_notification_preferences_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("friend_notification_preferences", t.archived, t.archivedAt),
   ],
 );
 

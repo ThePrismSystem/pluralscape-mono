@@ -1,8 +1,13 @@
-import { check, foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
 
 import { systems } from "./systems.js";
 
@@ -30,10 +35,7 @@ export const innerworldRegions = sqliteTable(
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     versionCheckFor("innerworld_regions", t.version),
-    check(
-      "innerworld_regions_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("innerworld_regions", t.archived, t.archivedAt),
   ],
 );
 
@@ -58,10 +60,7 @@ export const innerworldEntities = sqliteTable(
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
     versionCheckFor("innerworld_entities", t.version),
-    check(
-      "innerworld_entities_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("innerworld_entities", t.archived, t.archivedAt),
   ],
 );
 

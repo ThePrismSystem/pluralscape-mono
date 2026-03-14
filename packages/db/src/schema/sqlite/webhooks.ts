@@ -15,8 +15,12 @@ import {
   sqliteJson,
   sqliteTimestamp,
 } from "../../columns/sqlite.js";
-import { archivable, timestamps } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+} from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { apiKeys } from "./api-keys.js";
@@ -46,10 +50,7 @@ export const webhookConfigs = sqliteTable(
   (t) => [
     index("webhook_configs_system_id_archived_idx").on(t.systemId, t.archived),
     unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
-    check(
-      "webhook_configs_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("webhook_configs", t.archived, t.archivedAt),
   ],
 );
 
@@ -92,10 +93,7 @@ export const webhookDeliveries = sqliteTable(
       "webhook_deliveries_http_status_check",
       sql`${t.httpStatus} IS NULL OR (${t.httpStatus} >= 100 AND ${t.httpStatus} <= 599)`,
     ),
-    check(
-      "webhook_deliveries_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("webhook_deliveries", t.archived, t.archivedAt),
   ],
 );
 

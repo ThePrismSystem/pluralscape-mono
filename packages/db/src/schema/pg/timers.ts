@@ -11,8 +11,14 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, pgTimeFormatCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
+import { pgTimeFormatCheck } from "../../helpers/check.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { members } from "./members.js";
@@ -43,10 +49,7 @@ export const timerConfigs = pgTable(
     versionCheckFor("timer_configs", t.version),
     check("timer_configs_waking_start_format", pgTimeFormatCheck(t.wakingStart)),
     check("timer_configs_waking_end_format", pgTimeFormatCheck(t.wakingEnd)),
-    check(
-      "timer_configs_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("timer_configs", t.archived, t.archivedAt),
   ],
 );
 
@@ -80,10 +83,7 @@ export const checkInRecords = pgTable(
     index("check_in_records_system_pending_idx")
       .on(t.systemId, t.scheduledAt)
       .where(sql`${t.respondedAt} IS NULL AND ${t.dismissed} = false AND ${t.archived} = false`),
-    check(
-      "check_in_records_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("check_in_records", t.archived, t.archivedAt),
   ],
 );
 

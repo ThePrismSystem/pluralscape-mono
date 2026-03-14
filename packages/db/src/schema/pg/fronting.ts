@@ -11,8 +11,14 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { FRONTING_TYPES } from "../../helpers/enums.js";
 
@@ -38,10 +44,7 @@ export const customFronts = pgTable(
     index("custom_fronts_system_archived_idx").on(t.systemId, t.archived),
     unique("custom_fronts_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("custom_fronts", t.version),
-    check(
-      "custom_fronts_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("custom_fronts", t.archived, t.archivedAt),
   ],
 );
 
@@ -99,10 +102,7 @@ export const frontingSessions = pgTable(
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
     versionCheckFor("fronting_sessions", t.version),
-    check(
-      "fronting_sessions_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("fronting_sessions", t.archived, t.archivedAt),
     // Invariant: every session must have at least one subject (member or custom front).
     // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
     // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
@@ -142,10 +142,7 @@ export const switches = pgTable(
     index("switches_system_archived_idx").on(t.systemId, t.archived),
     check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
     versionCheckFor("switches", t.version),
-    check(
-      "switches_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("switches", t.archived, t.archivedAt),
   ],
 );
 
@@ -178,10 +175,7 @@ export const frontingComments = pgTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     versionCheckFor("fronting_comments", t.version),
-    check(
-      "fronting_comments_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("fronting_comments", t.archived, t.archivedAt),
   ],
 );
 

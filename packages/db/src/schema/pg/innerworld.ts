@@ -1,8 +1,13 @@
-import { check, foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
+import { foreignKey, index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/constants.js";
 
 import { systems } from "./systems.js";
@@ -31,10 +36,7 @@ export const innerworldRegions = pgTable(
       foreignColumns: [t.id, t.systemId],
     }).onDelete("set null"),
     versionCheckFor("innerworld_regions", t.version),
-    check(
-      "innerworld_regions_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("innerworld_regions", t.archived, t.archivedAt),
   ],
 );
 
@@ -59,10 +61,7 @@ export const innerworldEntities = pgTable(
       foreignColumns: [innerworldRegions.id],
     }).onDelete("set null"),
     versionCheckFor("innerworld_entities", t.version),
-    check(
-      "innerworld_entities_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("innerworld_entities", t.archived, t.archivedAt),
   ],
 );
 

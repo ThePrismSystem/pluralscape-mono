@@ -12,8 +12,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
-import { archivable, timestamps } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import { archivable, archivableConsistencyCheckFor, timestamps } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { DEVICE_TOKEN_PLATFORMS, NOTIFICATION_EVENT_TYPES } from "../../helpers/enums.js";
 
@@ -78,10 +78,7 @@ export const notificationConfigs = pgTable(
       "notification_configs_event_type_check",
       enumCheck(t.eventType, NOTIFICATION_EVENT_TYPES),
     ),
-    check(
-      "notification_configs_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("notification_configs", t.archived, t.archivedAt),
   ],
 );
 
@@ -107,10 +104,7 @@ export const friendNotificationPreferences = pgTable(
       columns: [t.friendConnectionId, t.accountId],
       foreignColumns: [friendConnections.id, friendConnections.accountId],
     }).onDelete("cascade"),
-    check(
-      "friend_notification_preferences_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("friend_notification_preferences", t.archived, t.archivedAt),
   ],
 );
 

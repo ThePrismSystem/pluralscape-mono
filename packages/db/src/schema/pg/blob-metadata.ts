@@ -12,8 +12,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
-import { archivable } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import { archivable, archivableConsistencyCheckFor } from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH, MAX_BLOB_SIZE_BYTES } from "../../helpers/constants.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
@@ -62,10 +62,7 @@ export const blobMetadata = pgTable(
     ),
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
     check("blob_metadata_checksum_length_check", sql`length(${t.checksum}) = 64`),
-    check(
-      "blob_metadata_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("blob_metadata", t.archived, t.archivedAt),
   ],
 );
 

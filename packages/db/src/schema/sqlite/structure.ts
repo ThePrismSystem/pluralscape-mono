@@ -9,8 +9,14 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -47,10 +53,7 @@ export const relationships = sqliteTable(
     }).onDelete("set null"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
     versionCheckFor("relationships", t.version),
-    check(
-      "relationships_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("relationships", t.archived, t.archivedAt),
   ],
 );
 
@@ -79,10 +82,7 @@ export const subsystems = sqliteTable(
     }).onDelete("set null"),
     check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
     versionCheckFor("subsystems", t.version),
-    check(
-      "subsystems_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("subsystems", t.archived, t.archivedAt),
   ],
 );
 
@@ -102,10 +102,7 @@ export const sideSystems = sqliteTable(
     index("side_systems_system_archived_idx").on(t.systemId, t.archived),
     unique("side_systems_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("side_systems", t.version),
-    check(
-      "side_systems_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("side_systems", t.archived, t.archivedAt),
   ],
 );
 
@@ -127,10 +124,7 @@ export const layers = sqliteTable(
     index("layers_system_archived_idx").on(t.systemId, t.archived),
     unique("layers_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("layers", t.version),
-    check(
-      "layers_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("layers", t.archived, t.archivedAt),
   ],
 );
 

@@ -2,8 +2,13 @@ import { sql } from "drizzle-orm";
 import { check, foreignKey, index, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
 
 import { frontingSessions } from "./fronting.js";
 import { systems } from "./systems.js";
@@ -32,10 +37,7 @@ export const journalEntries = sqliteTable(
       foreignColumns: [frontingSessions.id],
     }).onDelete("set null"),
     versionCheckFor("journal_entries", t.version),
-    check(
-      "journal_entries_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("journal_entries", t.archived, t.archivedAt),
   ],
 );
 
@@ -58,10 +60,7 @@ export const wikiPages = sqliteTable(
       .on(t.systemId, t.slugHash)
       .where(sql`${t.archived} = 0`),
     versionCheckFor("wiki_pages", t.version),
-    check(
-      "wiki_pages_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("wiki_pages", t.archived, t.archivedAt),
     check("wiki_pages_slug_hash_length_check", sql`length(${t.slugHash}) = 64`),
   ],
 );

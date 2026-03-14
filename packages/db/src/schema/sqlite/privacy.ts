@@ -11,8 +11,14 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteBinary, sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { BUCKET_CONTENT_ENTITY_TYPES, FRIEND_CONNECTION_STATUSES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -37,10 +43,7 @@ export const buckets = sqliteTable(
     index("buckets_system_archived_idx").on(t.systemId, t.archived),
     unique("buckets_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("buckets", t.version),
-    check(
-      "buckets_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("buckets", t.archived, t.archivedAt),
   ],
 );
 
@@ -124,10 +127,7 @@ export const friendConnections = sqliteTable(
     check("friend_connections_status_check", enumCheck(t.status, FRIEND_CONNECTION_STATUSES)),
     check("friend_connections_no_self_check", sql`${t.accountId} != ${t.friendAccountId}`),
     versionCheckFor("friend_connections", t.version),
-    check(
-      "friend_connections_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("friend_connections", t.archived, t.archivedAt),
   ],
 );
 
@@ -150,10 +150,7 @@ export const friendCodes = sqliteTable(
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,
     ),
     check("friend_codes_code_min_length_check", sql`length(${t.code}) >= 8`),
-    check(
-      "friend_codes_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("friend_codes", t.archived, t.archivedAt),
   ],
 );
 

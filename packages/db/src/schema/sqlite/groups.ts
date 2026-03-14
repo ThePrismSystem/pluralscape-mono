@@ -11,8 +11,13 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -42,10 +47,7 @@ export const groups = sqliteTable(
     }).onDelete("set null"),
     check("groups_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("groups", t.version),
-    check(
-      "groups_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("groups", t.archived, t.archivedAt),
   ],
 );
 

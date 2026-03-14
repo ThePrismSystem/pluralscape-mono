@@ -13,8 +13,14 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
+import { enumCheck } from "../../helpers/check.js";
 import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
 import { FIELD_TYPES } from "../../helpers/enums.js";
 
@@ -47,10 +53,7 @@ export const fieldDefinitions = pgTable(
     unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
     versionCheckFor("field_definitions", t.version),
-    check(
-      "field_definitions_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("field_definitions", t.archived, t.archivedAt),
   ],
 );
 

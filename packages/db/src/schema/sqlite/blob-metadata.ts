@@ -11,8 +11,8 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import { archivable, archivableConsistencyCheckFor } from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { MAX_BLOB_SIZE_BYTES } from "../../helpers/constants.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
@@ -62,10 +62,7 @@ export const blobMetadata = sqliteTable(
     ),
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
     check("blob_metadata_checksum_length_check", sql`length(${t.checksum}) = 64`),
-    check(
-      "blob_metadata_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("blob_metadata", t.archived, t.archivedAt),
   ],
 );
 

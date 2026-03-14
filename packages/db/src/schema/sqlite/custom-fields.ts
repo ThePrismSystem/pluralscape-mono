@@ -12,8 +12,14 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { FIELD_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -43,10 +49,7 @@ export const fieldDefinitions = sqliteTable(
     unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
     versionCheckFor("field_definitions", t.version),
-    check(
-      "field_definitions_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("field_definitions", t.archived, t.archivedAt),
   ],
 );
 

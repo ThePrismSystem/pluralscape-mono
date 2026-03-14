@@ -11,8 +11,14 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import { sqliteEncryptedBlob, sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
-import { archivable, timestamps, versioned, versionCheckFor } from "../../helpers/audit.sqlite.js";
-import { archivableConsistencyCheck, enumCheck } from "../../helpers/check.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.sqlite.js";
+import { enumCheck } from "../../helpers/check.js";
 import { CHANNEL_TYPES, POLL_KINDS, POLL_STATUSES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
@@ -46,10 +52,7 @@ export const channels = sqliteTable(
     check("channels_type_check", enumCheck(t.type, CHANNEL_TYPES)),
     check("channels_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("channels", t.version),
-    check(
-      "channels_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("channels", t.archived, t.archivedAt),
   ],
 );
 
@@ -83,10 +86,7 @@ export const messages = sqliteTable(
     // reply_to_id is a soft reference — no FK constraint.
     // PG can't self-FK on a single column when PK is composite (id, timestamp).
     versionCheckFor("messages", t.version),
-    check(
-      "messages_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("messages", t.archived, t.archivedAt),
   ],
 );
 
@@ -108,10 +108,7 @@ export const boardMessages = sqliteTable(
     index("board_messages_system_archived_idx").on(t.systemId, t.archived),
     check("board_messages_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("board_messages", t.version),
-    check(
-      "board_messages_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("board_messages", t.archived, t.archivedAt),
   ],
 );
 
@@ -136,7 +133,7 @@ export const notes = sqliteTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     versionCheckFor("notes", t.version),
-    check("notes_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
+    archivableConsistencyCheckFor("notes", t.archived, t.archivedAt),
   ],
 );
 
@@ -172,7 +169,7 @@ export const polls = sqliteTable(
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
     versionCheckFor("polls", t.version),
-    check("polls_archived_consistency_check", archivableConsistencyCheck(t.archived, t.archivedAt)),
+    archivableConsistencyCheckFor("polls", t.archived, t.archivedAt),
   ],
 );
 
@@ -199,10 +196,7 @@ export const pollVotes = sqliteTable(
       columns: [t.pollId, t.systemId],
       foreignColumns: [polls.id, polls.systemId],
     }).onDelete("cascade"),
-    check(
-      "poll_votes_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("poll_votes", t.archived, t.archivedAt),
   ],
 );
 
@@ -226,10 +220,7 @@ export const acknowledgements = sqliteTable(
       columns: [t.createdByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
-    check(
-      "acknowledgements_archived_consistency_check",
-      archivableConsistencyCheck(t.archived, t.archivedAt),
-    ),
+    archivableConsistencyCheckFor("acknowledgements", t.archived, t.archivedAt),
   ],
 );
 

@@ -2,7 +2,7 @@ import { boolean, check, integer } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../columns/pg.js";
 
-import { versionCheck } from "./check.js";
+import { archivableConsistencyCheck, versionCheck } from "./check.js";
 
 import type { AnyColumn } from "drizzle-orm";
 
@@ -51,4 +51,19 @@ export function versionCheckFor(
   versionCol: AnyColumn,
 ): ReturnType<typeof check> {
   return check(`${tableName}_version_check`, versionCheck(versionCol));
+}
+
+/**
+ * Returns a named archivable consistency CHECK constraint for a PG table.
+ * Pair with `archivable()` in the column definition.
+ */
+export function archivableConsistencyCheckFor(
+  tableName: string,
+  archivedCol: AnyColumn,
+  archivedAtCol: AnyColumn,
+): ReturnType<typeof check> {
+  return check(
+    `${tableName}_archived_consistency_check`,
+    archivableConsistencyCheck(archivedCol, archivedAtCol),
+  );
 }
