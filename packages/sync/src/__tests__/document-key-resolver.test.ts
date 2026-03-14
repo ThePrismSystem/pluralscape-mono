@@ -33,7 +33,7 @@ beforeAll(async () => {
 });
 
 afterAll(() => {
-  bucketKeyCache.clearAll();
+  sodium.memzero(signingKeys.secretKey);
   sodium.memzero(masterKey);
 });
 
@@ -43,10 +43,11 @@ describe("DocumentKeyResolver", () => {
   afterEach(() => {
     resolver?.dispose();
     resolver = undefined;
+    bucketKeyCache.clearAll();
   });
 
   function makeResolver(): DocumentKeyResolver {
-    resolver = new DocumentKeyResolver({
+    resolver = DocumentKeyResolver.create({
       masterKey,
       signingKeys,
       bucketKeyCache,
@@ -55,7 +56,7 @@ describe("DocumentKeyResolver", () => {
     return resolver;
   }
 
-  describe("master-key documents", () => {
+  describe("derived-key documents", () => {
     it("resolves system-core document to derived sync key + signing keys", () => {
       const r = makeResolver();
       const keys = r.resolveKeys("system-core-sys_abc");
@@ -64,7 +65,7 @@ describe("DocumentKeyResolver", () => {
       expect(keys.signingKeys).toBe(signingKeys);
     });
 
-    it("returns same encryption key for all master-key doc types", () => {
+    it("returns same encryption key for all derived-key doc types", () => {
       const r = makeResolver();
       const k1 = r.resolveKeys("system-core-sys_a");
       const k2 = r.resolveKeys("fronting-sys_a");
@@ -108,23 +109,23 @@ describe("DocumentKeyResolver", () => {
       try {
         r.resolveKeys("bucket-bkt_nope");
         expect.fail("should have thrown");
-      } catch (e) {
-        expect(e).toBeInstanceOf(BucketKeyNotFoundError);
-        expect((e as BucketKeyNotFoundError).bucketId).toBe("bkt_nope");
+      } catch (err) {
+        expect(err).toBeInstanceOf(BucketKeyNotFoundError);
+        expect((err as BucketKeyNotFoundError).bucketId).toBe("bkt_nope");
       }
     });
   });
 
   describe("cross-key-type isolation", () => {
-    it("master-key encryption key differs from bucket key", () => {
+    it("derived-key encryption key differs from bucket key", () => {
       const bucketId = "bkt_iso" as BucketId;
       const bucketKey = generateBucketKey();
       bucketKeyCache.set(bucketId, bucketKey);
 
       const r = makeResolver();
-      const masterKeys = r.resolveKeys("system-core-sys_a");
+      const derivedKeys = r.resolveKeys("system-core-sys_a");
       const bucketKeys = r.resolveKeys("bucket-bkt_iso");
-      expect(masterKeys.encryptionKey).not.toBe(bucketKeys.encryptionKey);
+      expect(derivedKeys.encryptionKey).not.toBe(bucketKeys.encryptionKey);
     });
   });
 

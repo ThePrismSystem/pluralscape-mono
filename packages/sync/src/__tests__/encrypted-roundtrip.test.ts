@@ -12,6 +12,7 @@ import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
+import { SignatureVerificationError } from "../encrypted-sync.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
@@ -45,12 +46,13 @@ beforeAll(async () => {
 
 afterAll(() => {
   bucketKeyCache.clearAll();
+  sodium.memzero(signingKeys.secretKey);
   sodium.memzero(masterKey);
 });
 
 describe("encrypted roundtrip with real key hierarchy", () => {
   it("master-key roundtrip: sync changes between two sessions", () => {
-    const resolver = new DocumentKeyResolver({
+    const resolver = DocumentKeyResolver.create({
       masterKey,
       signingKeys,
       bucketKeyCache,
@@ -95,7 +97,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     const bucketKey = generateBucketKey();
     bucketKeyCache.set(bucketId, bucketKey);
 
-    const resolver = new DocumentKeyResolver({
+    const resolver = DocumentKeyResolver.create({
       masterKey,
       signingKeys,
       bucketKeyCache,
@@ -140,7 +142,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     const bucketKey = generateBucketKey();
     bucketKeyCache.set(bucketId, bucketKey);
 
-    const resolver = new DocumentKeyResolver({
+    const resolver = DocumentKeyResolver.create({
       masterKey,
       signingKeys,
       bucketKeyCache,
@@ -187,7 +189,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
   });
 
   it("snapshot roundtrip: create and load snapshot with real keys", () => {
-    const resolver = new DocumentKeyResolver({
+    const resolver = DocumentKeyResolver.create({
       masterKey,
       signingKeys,
       bucketKeyCache,
@@ -242,13 +244,13 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     const cache1 = createBucketKeyCache();
     const cache2 = createBucketKeyCache();
 
-    const resolver1 = new DocumentKeyResolver({
+    const resolver1 = DocumentKeyResolver.create({
       masterKey: masterKey1,
       signingKeys: identity1.signing,
       bucketKeyCache: cache1,
       sodium,
     });
-    const resolver2 = new DocumentKeyResolver({
+    const resolver2 = DocumentKeyResolver.create({
       masterKey: masterKey2,
       signingKeys: identity2.signing,
       bucketKeyCache: cache2,
@@ -296,6 +298,44 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       cache2.clearAll();
       sodium.memzero(masterKey1);
       sodium.memzero(masterKey2);
+    }
+  });
+
+  it("rejects tampered ciphertext through full resolver-to-session pipeline", () => {
+    const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
+    try {
+      const docId = "system-core-sys_tamper";
+      const keys = resolver.resolveKeys(docId);
+      const base = Automerge.from<DocSchema>({ members: [] });
+      const relay = new EncryptedRelay();
+
+      const sessionA = new EncryptedSyncSession({
+        doc: Automerge.clone(base),
+        keys,
+        documentId: docId,
+        sodium,
+      });
+      const envelope = sessionA.change((doc) => {
+        doc.members.push({ name: "Tamper Test", pronouns: "they/them", description: "integrity" });
+      });
+
+      // Tamper with ciphertext before relay
+      const tampered = new Uint8Array(envelope.ciphertext);
+      tampered[0] = (tampered[0] ?? 0) ^ 0xff;
+      relay.submit({ ...envelope, ciphertext: tampered });
+
+      // Session B should reject the tampered envelope
+      const sessionB = new EncryptedSyncSession({
+        doc: Automerge.clone(base),
+        keys,
+        documentId: docId,
+        sodium,
+      });
+      expect(() => {
+        sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      }).toThrow(SignatureVerificationError);
+    } finally {
+      resolver.dispose();
     }
   });
 });

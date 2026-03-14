@@ -10,7 +10,6 @@ import type {
   SignKeypair,
   SodiumAdapter,
 } from "@pluralscape/crypto";
-import type { BucketId } from "@pluralscape/types";
 
 /** Configuration for constructing a DocumentKeyResolver. */
 export interface DocumentKeyResolverConfig {
@@ -34,7 +33,7 @@ export class BucketKeyNotFoundError extends Error {
 /**
  * Maps sync document IDs to the correct DocumentKeys for EncryptedSyncSession.
  *
- * For master-key documents (system-core, fronting, chat, journal, privacy-config),
+ * For derived-key documents (system-core, fronting, chat, journal, privacy-config),
  * derives a sync-specific encryption key via KDF ("syncdocx" context).
  *
  * For bucket documents, looks up the per-bucket key from the BucketKeyCache.
@@ -51,11 +50,26 @@ export class DocumentKeyResolver {
   private readonly sodium: SodiumAdapter;
   private disposed = false;
 
-  constructor(config: DocumentKeyResolverConfig) {
-    this.syncKey = deriveSyncEncryptionKey(config.masterKey, config.sodium);
-    this.signingKeys = config.signingKeys;
-    this.bucketKeyCache = config.bucketKeyCache;
-    this.sodium = config.sodium;
+  private constructor(
+    syncKey: AeadKey,
+    signingKeys: SignKeypair,
+    bucketKeyCache: BucketKeyCache,
+    sodium: SodiumAdapter,
+  ) {
+    this.syncKey = syncKey;
+    this.signingKeys = signingKeys;
+    this.bucketKeyCache = bucketKeyCache;
+    this.sodium = sodium;
+  }
+
+  static create(config: DocumentKeyResolverConfig): DocumentKeyResolver {
+    const syncKey = deriveSyncEncryptionKey(config.masterKey, config.sodium);
+    return new DocumentKeyResolver(
+      syncKey,
+      config.signingKeys,
+      config.bucketKeyCache,
+      config.sodium,
+    );
   }
 
   /** Resolve a document ID to the encryption key and signing keys for sync. */
@@ -67,8 +81,7 @@ export class DocumentKeyResolver {
     const parsed = parseDocumentId(documentId);
 
     if (parsed.keyType === "bucket") {
-      const bucketId = parsed.entityId as BucketId;
-      const bucketKey = this.bucketKeyCache.get(bucketId);
+      const bucketKey = this.bucketKeyCache.get(parsed.entityId);
       if (bucketKey === undefined) {
         throw new BucketKeyNotFoundError(parsed.entityId);
       }
@@ -83,7 +96,7 @@ export class DocumentKeyResolver {
     if (this.disposed) {
       return;
     }
-    this.sodium.memzero(this.syncKey);
     this.disposed = true;
+    this.sodium.memzero(this.syncKey);
   }
 }

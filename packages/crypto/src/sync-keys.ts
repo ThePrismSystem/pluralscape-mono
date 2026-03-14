@@ -1,5 +1,6 @@
 import { KDF_KEY_BYTES } from "./constants.js";
 import { getSodium } from "./sodium.js";
+import { assertAeadKey } from "./validation.js";
 
 import type { SodiumAdapter } from "./adapter/interface.js";
 import type { AeadKey, KdfMasterKey } from "./types.js";
@@ -31,10 +32,12 @@ const SUBKEY_SYNC_ENCRYPTION = 1;
  */
 export function deriveSyncEncryptionKey(masterKey: KdfMasterKey, adapter?: SodiumAdapter): AeadKey {
   const sodium = adapter ?? getSodium();
-  return sodium.kdfDeriveFromKey(
+  const result = sodium.kdfDeriveFromKey(
     KDF_KEY_BYTES,
     SUBKEY_SYNC_ENCRYPTION,
     KDF_CONTEXT_SYNC,
     masterKey,
-  ) as AeadKey;
+  );
+  assertAeadKey(result);
+  return result as AeadKey;
 }

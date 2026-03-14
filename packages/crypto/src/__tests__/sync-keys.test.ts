@@ -74,16 +74,16 @@ describe("deriveSyncEncryptionKey", () => {
     }
   });
 
-  it("produces a key different from T1 data key (different KDF context)", () => {
+  it("produces a key different from a key derived with a different KDF context", () => {
     const masterKey = makeMasterKey();
     try {
       const syncKey = deriveSyncEncryptionKey(masterKey);
-      const dataKey = getSodium().kdfDeriveFromKey(KDF_KEY_BYTES, 1, "dataencr", masterKey);
+      const otherKey = getSodium().kdfDeriveFromKey(KDF_KEY_BYTES, 1, "othrcntx", masterKey);
       try {
-        expect(new Uint8Array(syncKey)).not.toEqual(new Uint8Array(dataKey));
+        expect(new Uint8Array(syncKey)).not.toEqual(new Uint8Array(otherKey));
       } finally {
         sodium.memzero(syncKey);
-        sodium.memzero(dataKey);
+        sodium.memzero(otherKey);
       }
     } finally {
       sodium.memzero(masterKey);

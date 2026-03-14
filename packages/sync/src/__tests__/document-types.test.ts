@@ -8,7 +8,7 @@ describe("parseDocumentId", () => {
       const result = parseDocumentId("system-core-sys_abc");
       expect(result).toEqual({
         documentType: "system-core",
-        keyType: "master",
+        keyType: "derived",
         entityId: "sys_abc",
         timePeriod: null,
       });
@@ -20,7 +20,7 @@ describe("parseDocumentId", () => {
       const result = parseDocumentId("fronting-sys_abc");
       expect(result).toEqual({
         documentType: "fronting",
-        keyType: "master",
+        keyType: "derived",
         entityId: "sys_abc",
         timePeriod: null,
       });
@@ -30,7 +30,7 @@ describe("parseDocumentId", () => {
       const result = parseDocumentId("fronting-sys_x-2026-Q1");
       expect(result).toEqual({
         documentType: "fronting",
-        keyType: "master",
+        keyType: "derived",
         entityId: "sys_x",
         timePeriod: "2026-Q1",
       });
@@ -49,7 +49,7 @@ describe("parseDocumentId", () => {
       const result = parseDocumentId("chat-ch_abc");
       expect(result).toEqual({
         documentType: "chat",
-        keyType: "master",
+        keyType: "derived",
         entityId: "ch_abc",
         timePeriod: null,
       });
@@ -59,7 +59,7 @@ describe("parseDocumentId", () => {
       const result = parseDocumentId("chat-ch_x-2026-03");
       expect(result).toEqual({
         documentType: "chat",
-        keyType: "master",
+        keyType: "derived",
         entityId: "ch_x",
         timePeriod: "2026-03",
       });
@@ -76,7 +76,7 @@ describe("parseDocumentId", () => {
       const result = parseDocumentId("journal-sys_abc");
       expect(result).toEqual({
         documentType: "journal",
-        keyType: "master",
+        keyType: "derived",
         entityId: "sys_abc",
         timePeriod: null,
       });
@@ -86,7 +86,7 @@ describe("parseDocumentId", () => {
       const result = parseDocumentId("journal-sys_x-2026");
       expect(result).toEqual({
         documentType: "journal",
-        keyType: "master",
+        keyType: "derived",
         entityId: "sys_x",
         timePeriod: "2026",
       });
@@ -98,7 +98,7 @@ describe("parseDocumentId", () => {
       const result = parseDocumentId("privacy-config-sys_abc");
       expect(result).toEqual({
         documentType: "privacy-config",
-        keyType: "master",
+        keyType: "derived",
         entityId: "sys_abc",
         timePeriod: null,
       });
@@ -118,16 +118,16 @@ describe("parseDocumentId", () => {
   });
 
   describe("key type assignment", () => {
-    it("all non-bucket types return keyType master", () => {
-      const masterDocs = [
+    it("all non-bucket types return keyType derived", () => {
+      const derivedDocs = [
         "system-core-sys_a",
         "fronting-sys_a",
         "chat-ch_a",
         "journal-sys_a",
         "privacy-config-sys_a",
       ];
-      for (const docId of masterDocs) {
-        expect(parseDocumentId(docId).keyType).toBe("master");
+      for (const docId of derivedDocs) {
+        expect(parseDocumentId(docId).keyType).toBe("derived");
       }
     });
 
@@ -153,14 +153,13 @@ describe("parseDocumentId", () => {
       expect(() => parseDocumentId("nohyphens")).toThrow(InvalidDocumentIdError);
     });
 
+    it("throws when entity ID has no underscore", () => {
+      expect(() => parseDocumentId("fronting-2024-Q1")).toThrow(InvalidDocumentIdError);
+    });
+
     it("includes the invalid document ID in the error message", () => {
-      try {
-        parseDocumentId("bad-id");
-        expect.fail("should have thrown");
-      } catch (e) {
-        expect(e).toBeInstanceOf(InvalidDocumentIdError);
-        expect((e as InvalidDocumentIdError).message).toContain("bad-id");
-      }
+      expect(() => parseDocumentId("bad-id")).toThrow(InvalidDocumentIdError);
+      expect(() => parseDocumentId("bad-id")).toThrow(/bad-id/);
     });
   });
 });

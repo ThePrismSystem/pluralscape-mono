@@ -1,3 +1,5 @@
+import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
+
 /** Sync document types matching the document topology spec (Section 3). */
 export type SyncDocumentType =
   | "system-core"
@@ -8,15 +10,46 @@ export type SyncDocumentType =
   | "bucket";
 
 /** Which encryption key tier a document uses. */
-export type DocumentKeyType = "master" | "bucket";
+export type DocumentKeyType = "derived" | "bucket";
 
 /** Parsed components of a document ID. */
-export interface ParsedDocumentId {
-  readonly documentType: SyncDocumentType;
-  readonly keyType: DocumentKeyType;
-  readonly entityId: string;
-  readonly timePeriod: string | null;
-}
+export type ParsedDocumentId =
+  | {
+      readonly documentType: "system-core";
+      readonly keyType: "derived";
+      readonly entityId: SystemId;
+      readonly timePeriod: null;
+    }
+  | {
+      readonly documentType: "fronting";
+      readonly keyType: "derived";
+      readonly entityId: SystemId;
+      readonly timePeriod: string | null;
+    }
+  | {
+      readonly documentType: "chat";
+      readonly keyType: "derived";
+      readonly entityId: ChannelId;
+      readonly timePeriod: string | null;
+    }
+  | {
+      readonly documentType: "journal";
+      readonly keyType: "derived";
+      readonly entityId: SystemId;
+      readonly timePeriod: string | null;
+    }
+  | {
+      readonly documentType: "privacy-config";
+      readonly keyType: "derived";
+      readonly entityId: SystemId;
+      readonly timePeriod: null;
+    }
+  | {
+      readonly documentType: "bucket";
+      readonly keyType: "bucket";
+      readonly entityId: BucketId;
+      readonly timePeriod: null;
+    };
 
 /** Thrown when a document ID cannot be parsed. */
 export class InvalidDocumentIdError extends Error {
@@ -35,37 +68,35 @@ const MONTH_RE = /-(\d{4}-(?:0[1-9]|1[0-2]))$/;
 /** Year time-split suffix: -YYYY */
 const YEAR_RE = /-(\d{4})$/;
 
-interface PrefixConfig {
-  readonly prefix: string;
-  readonly documentType: SyncDocumentType;
-  readonly keyType: DocumentKeyType;
-  readonly timeSplitPattern: RegExp | null;
-}
-
 /** Multi-word prefixes checked first to avoid ambiguity. */
-const PREFIX_CONFIGS: readonly PrefixConfig[] = [
+const PREFIX_CONFIGS = [
   {
     prefix: "system-core-",
     documentType: "system-core",
-    keyType: "master",
+    keyType: "derived",
     timeSplitPattern: null,
   },
   {
     prefix: "privacy-config-",
     documentType: "privacy-config",
-    keyType: "master",
+    keyType: "derived",
     timeSplitPattern: null,
   },
   {
     prefix: "fronting-",
     documentType: "fronting",
-    keyType: "master",
+    keyType: "derived",
     timeSplitPattern: QUARTER_RE,
   },
-  { prefix: "chat-", documentType: "chat", keyType: "master", timeSplitPattern: MONTH_RE },
-  { prefix: "journal-", documentType: "journal", keyType: "master", timeSplitPattern: YEAR_RE },
+  { prefix: "chat-", documentType: "chat", keyType: "derived", timeSplitPattern: MONTH_RE },
+  { prefix: "journal-", documentType: "journal", keyType: "derived", timeSplitPattern: YEAR_RE },
   { prefix: "bucket-", documentType: "bucket", keyType: "bucket", timeSplitPattern: null },
-];
+] as const satisfies readonly {
+  prefix: string;
+  documentType: SyncDocumentType;
+  keyType: DocumentKeyType;
+  timeSplitPattern: RegExp | null;
+}[];
 
 /**
  * Parse a document ID into its components.
@@ -92,24 +123,64 @@ export function parseDocumentId(documentId: string): ParsedDocumentId {
       let entityId = rest;
       let timePeriod: string | null = null;
 
-      if (config.timeSplitPattern !== null) {
-        const match = config.timeSplitPattern.exec(rest);
-        if (match?.[1]) {
-          timePeriod = match[1];
-          entityId = rest.slice(0, match.index);
-        }
+      const match = config.timeSplitPattern?.exec(rest);
+      if (match?.[1]) {
+        timePeriod = match[1];
+        entityId = rest.slice(0, match.index);
       }
 
       if (entityId.length === 0) {
         throw new InvalidDocumentIdError(documentId);
       }
 
-      return {
-        documentType: config.documentType,
-        keyType: config.keyType,
-        entityId,
-        timePeriod,
-      };
+      if (!entityId.includes("_")) {
+        throw new InvalidDocumentIdError(documentId);
+      }
+
+      switch (config.documentType) {
+        case "system-core":
+          return {
+            documentType: "system-core",
+            keyType: "derived",
+            entityId: entityId as SystemId,
+            timePeriod: null,
+          };
+        case "fronting":
+          return {
+            documentType: "fronting",
+            keyType: "derived",
+            entityId: entityId as SystemId,
+            timePeriod,
+          };
+        case "chat":
+          return {
+            documentType: "chat",
+            keyType: "derived",
+            entityId: entityId as ChannelId,
+            timePeriod,
+          };
+        case "journal":
+          return {
+            documentType: "journal",
+            keyType: "derived",
+            entityId: entityId as SystemId,
+            timePeriod,
+          };
+        case "privacy-config":
+          return {
+            documentType: "privacy-config",
+            keyType: "derived",
+            entityId: entityId as SystemId,
+            timePeriod: null,
+          };
+        case "bucket":
+          return {
+            documentType: "bucket",
+            keyType: "bucket",
+            entityId: entityId as BucketId,
+            timePeriod: null,
+          };
+      }
     }
   }
 
