@@ -1,11 +1,11 @@
 ---
 # crypto-sa91
 title: Recovery key generation
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-03-08T13:34:10Z
-updated_at: 2026-03-08T13:35:45Z
+updated_at: 2026-03-14T06:50:27Z
 parent: crypto-gd8f
 blocked_by:
   - crypto-afug
