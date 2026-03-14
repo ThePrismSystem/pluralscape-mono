@@ -36,7 +36,6 @@ export const relationships = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("relationships_system_id_idx").on(t.systemId),
     index("relationships_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({
       columns: [t.sourceMemberId, t.systemId],
@@ -72,7 +71,6 @@ export const subsystems = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("subsystems_system_id_idx").on(t.systemId),
     index("subsystems_system_archived_idx").on(t.systemId, t.archived),
     unique("subsystems_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
@@ -101,7 +99,6 @@ export const sideSystems = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("side_systems_system_id_idx").on(t.systemId),
     index("side_systems_system_archived_idx").on(t.systemId, t.archived),
     unique("side_systems_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("side_systems", t.version),
@@ -127,7 +124,6 @@ export const layers = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("layers_system_id_idx").on(t.systemId),
     index("layers_system_archived_idx").on(t.systemId, t.archived),
     unique("layers_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("layers", t.version),

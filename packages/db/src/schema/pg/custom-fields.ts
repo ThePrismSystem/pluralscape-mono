@@ -43,7 +43,7 @@ export const fieldDefinitions = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("field_definitions_system_id_idx").on(t.systemId),
+    index("field_definitions_system_archived_idx").on(t.systemId, t.archived),
     unique("field_definitions_id_system_id_unique").on(t.id, t.systemId),
     check("field_definitions_field_type_check", enumCheck(t.fieldType, FIELD_TYPES)),
     versionCheckFor("field_definitions", t.version),

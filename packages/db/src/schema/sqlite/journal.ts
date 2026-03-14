@@ -25,6 +25,7 @@ export const journalEntries = sqliteTable(
   },
   (t) => [
     index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt),
+    index("journal_entries_system_archived_idx").on(t.systemId, t.archived),
     index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
     foreignKey({
       columns: [t.frontingSessionId],
@@ -52,7 +53,6 @@ export const wikiPages = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("wiki_pages_system_id_idx").on(t.systemId),
     index("wiki_pages_system_archived_idx").on(t.systemId, t.archived),
     uniqueIndex("wiki_pages_system_id_slug_hash_idx").on(t.systemId, t.slugHash),
     versionCheckFor("wiki_pages", t.version),

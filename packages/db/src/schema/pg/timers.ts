@@ -38,7 +38,6 @@ export const timerConfigs = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("timer_configs_system_id_idx").on(t.systemId),
     index("timer_configs_system_id_archived_idx").on(t.systemId, t.archived),
     unique("timer_configs_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("timer_configs", t.version),

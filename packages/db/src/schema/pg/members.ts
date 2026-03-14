@@ -49,7 +49,7 @@ export const memberPhotos = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("member_photos_system_id_idx").on(t.systemId),
+    index("member_photos_system_archived_idx").on(t.systemId, t.archived),
     index("member_photos_member_sort_idx").on(t.memberId, t.sortOrder),
     foreignKey({
       columns: [t.memberId, t.systemId],

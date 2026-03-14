@@ -35,7 +35,7 @@ export const customFronts = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("custom_fronts_system_id_idx").on(t.systemId),
+    index("custom_fronts_system_archived_idx").on(t.systemId, t.archived),
     unique("custom_fronts_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("custom_fronts", t.version),
     check(
@@ -139,6 +139,7 @@ export const switches = pgTable(
   (t) => [
     primaryKey({ columns: [t.id, t.timestamp] }),
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
+    index("switches_system_archived_idx").on(t.systemId, t.archived),
     check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
     versionCheckFor("switches", t.version),
     check(
@@ -167,6 +168,7 @@ export const frontingComments = pgTable(
   (t) => [
     index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
     index("fronting_comments_session_start_idx").on(t.sessionStartTime),
+    index("fronting_comments_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({
       columns: [t.frontingSessionId, t.systemId, t.sessionStartTime],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId, frontingSessions.startTime],

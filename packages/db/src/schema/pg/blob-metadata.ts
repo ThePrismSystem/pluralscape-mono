@@ -43,6 +43,7 @@ export const blobMetadata = pgTable(
   },
   (t) => [
     index("blob_metadata_system_id_purpose_idx").on(t.systemId, t.purpose),
+    index("blob_metadata_system_archived_idx").on(t.systemId, t.archived),
     uniqueIndex("blob_metadata_storage_key_idx").on(t.storageKey),
     unique("blob_metadata_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({

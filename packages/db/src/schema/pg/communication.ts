@@ -40,7 +40,7 @@ export const channels = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("channels_system_id_idx").on(t.systemId),
+    index("channels_system_archived_idx").on(t.systemId, t.archived),
     unique("channels_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentId, t.systemId],
@@ -79,7 +79,7 @@ export const messages = pgTable(
     primaryKey({ columns: [t.id, t.timestamp] }),
     unique("messages_id_unique").on(t.id, t.timestamp),
     index("messages_channel_id_timestamp_idx").on(t.channelId, t.timestamp),
-    index("messages_system_id_idx").on(t.systemId),
+    index("messages_system_archived_idx").on(t.systemId, t.archived),
     index("messages_reply_to_id_idx").on(t.replyToId),
     unique("messages_id_system_id_timestamp_unique").on(t.id, t.systemId, t.timestamp),
     foreignKey({
@@ -109,7 +109,6 @@ export const boardMessages = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("board_messages_system_id_idx").on(t.systemId),
     index("board_messages_system_archived_idx").on(t.systemId, t.archived),
     check("board_messages_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("board_messages", t.version),
@@ -134,7 +133,7 @@ export const notes = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("notes_system_id_idx").on(t.systemId),
+    index("notes_system_archived_idx").on(t.systemId, t.archived),
     index("notes_member_id_idx").on(t.memberId),
     foreignKey({
       columns: [t.memberId, t.systemId],
@@ -170,7 +169,6 @@ export const polls = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("polls_system_id_idx").on(t.systemId),
     index("polls_system_archived_idx").on(t.systemId, t.archived),
     unique("polls_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
@@ -203,7 +201,7 @@ export const pollVotes = pgTable(
   },
   (t) => [
     index("poll_votes_poll_id_idx").on(t.pollId),
-    index("poll_votes_system_id_idx").on(t.systemId),
+    index("poll_votes_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({
       columns: [t.pollId, t.systemId],
       foreignColumns: [polls.id, polls.systemId],
@@ -230,6 +228,7 @@ export const acknowledgements = pgTable(
   },
   (t) => [
     index("acknowledgements_system_id_confirmed_idx").on(t.systemId, t.confirmed),
+    index("acknowledgements_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({
       columns: [t.createdByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],

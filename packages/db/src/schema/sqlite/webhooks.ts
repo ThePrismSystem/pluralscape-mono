@@ -44,7 +44,6 @@ export const webhookConfigs = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("webhook_configs_system_id_idx").on(t.systemId),
     index("webhook_configs_system_id_archived_idx").on(t.systemId, t.archived),
     unique("webhook_configs_id_system_id_unique").on(t.id, t.systemId),
     check(

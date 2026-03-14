@@ -25,7 +25,7 @@ export const customFronts = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("custom_fronts_system_id_idx").on(t.systemId),
+    index("custom_fronts_system_archived_idx").on(t.systemId, t.archived),
     versionCheckFor("custom_fronts", t.version),
     check(
       "custom_fronts_archived_consistency_check",
@@ -118,6 +118,7 @@ export const switches = sqliteTable(
   },
   (t) => [
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
+    index("switches_system_archived_idx").on(t.systemId, t.archived),
     check("switches_member_ids_check", sql`json_array_length(${t.memberIds}) >= 1`),
     versionCheckFor("switches", t.version),
     check(
@@ -143,6 +144,7 @@ export const frontingComments = sqliteTable(
   },
   (t) => [
     index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
+    index("fronting_comments_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({
       columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],

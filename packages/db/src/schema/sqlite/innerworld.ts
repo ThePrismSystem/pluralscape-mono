@@ -23,7 +23,6 @@ export const innerworldRegions = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("innerworld_regions_system_id_idx").on(t.systemId),
     index("innerworld_regions_system_archived_idx").on(t.systemId, t.archived),
     unique("innerworld_regions_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
@@ -52,7 +51,6 @@ export const innerworldEntities = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("innerworld_entities_system_id_idx").on(t.systemId),
     index("innerworld_entities_region_id_idx").on(t.regionId),
     index("innerworld_entities_system_archived_idx").on(t.systemId, t.archived),
     foreignKey({

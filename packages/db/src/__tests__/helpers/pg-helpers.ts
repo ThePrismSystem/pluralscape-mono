@@ -171,6 +171,10 @@ export const PG_DDL = {
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
+  memberPhotosIndexes: `
+    CREATE INDEX member_photos_system_archived_idx ON member_photos (system_id, archived);
+    CREATE INDEX member_photos_member_sort_idx ON member_photos (member_id, sort_order)
+  `,
   // Privacy
   buckets: `
     CREATE TABLE buckets (
@@ -188,7 +192,6 @@ export const PG_DDL = {
     )
   `,
   bucketsIndexes: `
-    CREATE INDEX buckets_system_id_idx ON buckets (system_id);
     CREATE INDEX buckets_system_archived_idx ON buckets (system_id, archived)
   `,
   bucketContentTags: `
@@ -325,7 +328,8 @@ export const PG_DDL = {
     )
   `,
   switchesIndexes: `
-    CREATE INDEX switches_system_timestamp_idx ON switches (system_id, timestamp)
+    CREATE INDEX switches_system_timestamp_idx ON switches (system_id, timestamp);
+    CREATE INDEX switches_system_archived_idx ON switches (system_id, archived)
   `,
   customFronts: `
     CREATE TABLE custom_fronts (
@@ -343,7 +347,7 @@ export const PG_DDL = {
     )
   `,
   customFrontsIndexes: `
-    CREATE INDEX custom_fronts_system_id_idx ON custom_fronts (system_id)
+    CREATE INDEX custom_fronts_system_archived_idx ON custom_fronts (system_id, archived)
   `,
   frontingComments: `
     CREATE TABLE fronting_comments (
@@ -366,7 +370,8 @@ export const PG_DDL = {
   `,
   frontingCommentsIndexes: `
     CREATE INDEX fronting_comments_session_created_idx ON fronting_comments (fronting_session_id, created_at);
-    CREATE INDEX fronting_comments_session_start_idx ON fronting_comments (session_start_time)
+    CREATE INDEX fronting_comments_session_start_idx ON fronting_comments (session_start_time);
+    CREATE INDEX fronting_comments_system_archived_idx ON fronting_comments (system_id, archived)
   `,
   // Structure
   relationships: `
@@ -390,7 +395,6 @@ export const PG_DDL = {
     )
   `,
   relationshipsIndexes: `
-    CREATE INDEX relationships_system_id_idx ON relationships (system_id);
     CREATE INDEX relationships_system_archived_idx ON relationships (system_id, archived)
   `,
   subsystems: `
@@ -414,7 +418,6 @@ export const PG_DDL = {
     )
   `,
   subsystemsIndexes: `
-    CREATE INDEX subsystems_system_id_idx ON subsystems (system_id);
     CREATE INDEX subsystems_system_archived_idx ON subsystems (system_id, archived)
   `,
   sideSystems: `
@@ -433,7 +436,6 @@ export const PG_DDL = {
     )
   `,
   sideSystemsIndexes: `
-    CREATE INDEX side_systems_system_id_idx ON side_systems (system_id);
     CREATE INDEX side_systems_system_archived_idx ON side_systems (system_id, archived)
   `,
   layers: `
@@ -453,7 +455,6 @@ export const PG_DDL = {
     )
   `,
   layersIndexes: `
-    CREATE INDEX layers_system_id_idx ON layers (system_id);
     CREATE INDEX layers_system_archived_idx ON layers (system_id, archived)
   `,
   subsystemMemberships: `
@@ -569,7 +570,7 @@ export const PG_DDL = {
     )
   `,
   fieldDefinitionsIndexes: `
-    CREATE INDEX field_definitions_system_id_idx ON field_definitions (system_id)
+    CREATE INDEX field_definitions_system_archived_idx ON field_definitions (system_id, archived)
   `,
   fieldValues: `
     CREATE TABLE field_values (
@@ -730,7 +731,7 @@ export const PG_DDL = {
     )
   `,
   channelsIndexes: `
-    CREATE INDEX channels_system_id_idx ON channels (system_id)
+    CREATE INDEX channels_system_archived_idx ON channels (system_id, archived)
   `,
   messages: `
     CREATE TABLE messages (
@@ -755,7 +756,7 @@ export const PG_DDL = {
   `,
   messagesIndexes: `
     CREATE INDEX messages_channel_id_timestamp_idx ON messages (channel_id, timestamp);
-    CREATE INDEX messages_system_id_idx ON messages (system_id);
+    CREATE INDEX messages_system_archived_idx ON messages (system_id, archived);
     CREATE INDEX messages_reply_to_id_idx ON messages (reply_to_id)
   `,
   boardMessages: `
@@ -775,7 +776,6 @@ export const PG_DDL = {
     )
   `,
   boardMessagesIndexes: `
-    CREATE INDEX board_messages_system_id_idx ON board_messages (system_id);
     CREATE INDEX board_messages_system_archived_idx ON board_messages (system_id, archived)
   `,
   notes: `
@@ -795,7 +795,7 @@ export const PG_DDL = {
     )
   `,
   notesIndexes: `
-    CREATE INDEX notes_system_id_idx ON notes (system_id);
+    CREATE INDEX notes_system_archived_idx ON notes (system_id, archived);
     CREATE INDEX notes_member_id_idx ON notes (member_id)
   `,
   polls: `
@@ -824,7 +824,6 @@ export const PG_DDL = {
     )
   `,
   pollsIndexes: `
-    CREATE INDEX polls_system_id_idx ON polls (system_id);
     CREATE INDEX polls_system_archived_idx ON polls (system_id, archived)
   `,
   pollVotes: `
@@ -846,7 +845,7 @@ export const PG_DDL = {
   `,
   pollVotesIndexes: `
     CREATE INDEX poll_votes_poll_id_idx ON poll_votes (poll_id);
-    CREATE INDEX poll_votes_system_id_idx ON poll_votes (system_id)
+    CREATE INDEX poll_votes_system_archived_idx ON poll_votes (system_id, archived)
   `,
   acknowledgements: `
     CREATE TABLE acknowledgements (
@@ -863,7 +862,8 @@ export const PG_DDL = {
     )
   `,
   acknowledgementsIndexes: `
-    CREATE INDEX acknowledgements_system_id_confirmed_idx ON acknowledgements (system_id, confirmed)
+    CREATE INDEX acknowledgements_system_id_confirmed_idx ON acknowledgements (system_id, confirmed);
+    CREATE INDEX acknowledgements_system_archived_idx ON acknowledgements (system_id, archived)
   `,
   // Journal
   journalEntries: `
@@ -883,6 +883,7 @@ export const PG_DDL = {
   `,
   journalEntriesIndexes: `
     CREATE INDEX journal_entries_system_id_created_at_idx ON journal_entries (system_id, created_at);
+    CREATE INDEX journal_entries_system_archived_idx ON journal_entries (system_id, archived);
     CREATE INDEX journal_entries_fronting_session_id_idx ON journal_entries (fronting_session_id)
   `,
   wikiPages: `
@@ -902,7 +903,7 @@ export const PG_DDL = {
     )
   `,
   wikiPagesIndexes: `
-    CREATE INDEX wiki_pages_system_id_idx ON wiki_pages (system_id)
+    CREATE INDEX wiki_pages_system_archived_idx ON wiki_pages (system_id, archived)
   `,
   wikiPagesUniqueSlugIndex: `
     CREATE UNIQUE INDEX wiki_pages_system_id_slug_hash_idx ON wiki_pages (system_id, slug_hash)
@@ -927,7 +928,7 @@ export const PG_DDL = {
     )
   `,
   groupsIndexes: `
-    CREATE INDEX groups_system_id_idx ON groups (system_id)
+    CREATE INDEX groups_system_archived_idx ON groups (system_id, archived)
   `,
   groupMemberships: `
     CREATE TABLE group_memberships (
@@ -963,7 +964,6 @@ export const PG_DDL = {
     )
   `,
   innerworldRegionsIndexes: `
-    CREATE INDEX innerworld_regions_system_id_idx ON innerworld_regions (system_id);
     CREATE INDEX innerworld_regions_system_archived_idx ON innerworld_regions (system_id, archived)
   `,
   innerworldEntities: `
@@ -983,7 +983,6 @@ export const PG_DDL = {
     )
   `,
   innerworldEntitiesIndexes: `
-    CREATE INDEX innerworld_entities_system_id_idx ON innerworld_entities (system_id);
     CREATE INDEX innerworld_entities_region_id_idx ON innerworld_entities (region_id);
     CREATE INDEX innerworld_entities_system_archived_idx ON innerworld_entities (system_id, archived)
   `,
@@ -1102,7 +1101,6 @@ export const PG_DDL = {
     )
   `,
   webhookConfigsIndexes: `
-    CREATE INDEX webhook_configs_system_id_idx ON webhook_configs (system_id);
     CREATE INDEX webhook_configs_system_id_archived_idx ON webhook_configs (system_id, archived)
   `,
   webhookDeliveries: `
@@ -1161,6 +1159,7 @@ export const PG_DDL = {
   `,
   blobMetadataIndexes: `
     CREATE INDEX blob_metadata_system_id_purpose_idx ON blob_metadata (system_id, purpose);
+    CREATE INDEX blob_metadata_system_archived_idx ON blob_metadata (system_id, archived);
     CREATE UNIQUE INDEX blob_metadata_storage_key_idx ON blob_metadata (storage_key)
   `,
   // Timers
@@ -1187,7 +1186,6 @@ export const PG_DDL = {
     )
   `,
   timerConfigsIndexes: `
-    CREATE INDEX timer_configs_system_id_idx ON timer_configs (system_id);
     CREATE INDEX timer_configs_system_id_archived_idx ON timer_configs (system_id, archived)
   `,
   checkInRecords: `
@@ -1485,6 +1483,7 @@ export async function createPgMemberTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.memberPhotos);
+  await pgExec(client, PG_DDL.memberPhotosIndexes);
 }
 
 export async function createPgPrivacyTables(client: PGlite): Promise<void> {
@@ -1829,6 +1828,7 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.members);
   await pgExec(client, PG_DDL.membersIndexes);
   await pgExec(client, PG_DDL.memberPhotos);
+  await pgExec(client, PG_DDL.memberPhotosIndexes);
   // Privacy
   await pgExec(client, PG_DDL.buckets);
   await pgExec(client, PG_DDL.bucketsIndexes);

@@ -34,7 +34,7 @@ export const groups = sqliteTable(
     ...archivable(),
   },
   (t) => [
-    index("groups_system_id_idx").on(t.systemId),
+    index("groups_system_archived_idx").on(t.systemId, t.archived),
     unique("groups_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.parentGroupId, t.systemId],

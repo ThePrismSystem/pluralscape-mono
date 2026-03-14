@@ -25,6 +25,7 @@ export const journalEntries = pgTable(
   },
   (t) => [
     index("journal_entries_system_id_created_at_idx").on(t.systemId, t.createdAt),
+    index("journal_entries_system_archived_idx").on(t.systemId, t.archived),
     // fronting_session_id FK is application-enforced only — PostgreSQL cannot
     // enforce FKs against a partitioned table without the partition key (ADR 019).
     index("journal_entries_fronting_session_id_idx").on(t.frontingSessionId),
@@ -50,7 +51,6 @@ export const wikiPages = pgTable(
     ...archivable(),
   },
   (t) => [
-    index("wiki_pages_system_id_idx").on(t.systemId),
     index("wiki_pages_system_archived_idx").on(t.systemId, t.archived),
     uniqueIndex("wiki_pages_system_id_slug_hash_idx").on(t.systemId, t.slugHash),
     versionCheckFor("wiki_pages", t.version),
