@@ -35,6 +35,7 @@ interface FrontingSessionBase extends AuditMetadata {
     readonly reason: string;
     readonly sentiment: OuttriggerSentiment;
   } | null;
+  readonly archived: false;
 }
 
 /** A fronting session that is still active (no end time). */
@@ -54,18 +55,29 @@ export interface FrontingComment extends AuditMetadata {
   readonly systemId: SystemId;
   readonly memberId: MemberId;
   readonly content: string;
+  readonly archived: false;
 }
+
+/** An archived fronting comment. */
+export type ArchivedFrontingComment = Archived<FrontingComment>;
 
 /** A fronting session — discriminated on `endTime` (null = active). */
 export type FrontingSession = ActiveFrontingSession | CompletedFrontingSession;
 
-/** An immutable event recording a switch between members. */
+/** An archived fronting session. */
+export type ArchivedFrontingSession = Archived<FrontingSession>;
+
+/** An event recording a switch between members. */
 export interface Switch {
   readonly id: SwitchId;
   readonly systemId: SystemId;
   readonly memberIds: readonly [MemberId, ...MemberId[]];
   readonly timestamp: UnixMillis;
+  readonly archived: false;
 }
+
+/** An archived switch. */
+export type ArchivedSwitch = Archived<Switch>;
 
 /** A user-defined abstract cognitive state logged like a member. */
 export interface CustomFront extends AuditMetadata {

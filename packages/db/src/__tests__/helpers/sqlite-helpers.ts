@@ -274,19 +274,24 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
       CHECK (end_time IS NULL OR end_time > start_time),
       UNIQUE (id, system_id),
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
       FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
       CHECK (version >= 1),
-      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL)
+      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   frontingSessionsIndexes: `
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
+    CREATE INDEX fronting_sessions_system_member_start_idx ON fronting_sessions (system_id, member_id, start_time);
     CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
     CREATE INDEX fronting_sessions_system_type_start_idx ON fronting_sessions (system_id, fronting_type, start_time);
-    CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL
+    CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL;
+    CREATE INDEX fronting_sessions_system_archived_idx ON fronting_sessions (system_id, archived)
   `,
   switches: `
     CREATE TABLE switches (
@@ -296,7 +301,10 @@ export const SQLITE_DDL = {
       member_ids TEXT NOT NULL CHECK (json_array_length(member_ids) >= 1),
       created_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
-      CHECK (version >= 1)
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   switchesIndexes: `
@@ -329,9 +337,12 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       version INTEGER NOT NULL DEFAULT 1,
+      archived INTEGER NOT NULL DEFAULT 0,
+      archived_at INTEGER,
       FOREIGN KEY (fronting_session_id, system_id) REFERENCES fronting_sessions(id, system_id) ON DELETE CASCADE,
       FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
-      CHECK (version >= 1)
+      CHECK (version >= 1),
+      CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
   frontingCommentsIndexes: `

@@ -505,6 +505,72 @@ describe("SQLite fronting schema", () => {
       expect(rows[0]?.memberId).toBeNull();
       expect(rows[0]?.customFrontId).toBe(customFrontId);
     });
+
+    it("defaults archived to false and archivedAt to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = insertFrontingSession(systemId);
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          memberId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO fronting_sessions (id, system_id, member_id, start_time, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, ?, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), systemId, memberId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO fronting_sessions (id, system_id, member_id, start_time, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), systemId, memberId, now, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
   });
 
   describe("switches", () => {
@@ -636,6 +702,78 @@ describe("SQLite fronting schema", () => {
           )
           .run(crypto.randomUUID(), systemId, now, now),
       ).toThrow(/constraint/i);
+    });
+
+    it("defaults archived to false and archivedAt to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(switches)
+        .values({
+          id,
+          systemId,
+          timestamp: now,
+          memberIds: ["mem_test1"],
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(switches)
+        .values({
+          id,
+          systemId,
+          timestamp: now,
+          memberIds: ["mem_test1"],
+          createdAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version, archived, archived_at) VALUES (?, ?, ?, '["m1"]', ?, 1, 1, NULL)`,
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version, archived, archived_at) VALUES (?, ?, ?, '["m1"]', ?, 1, 0, ?)`,
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
     });
   });
 
@@ -986,6 +1124,84 @@ describe("SQLite fronting schema", () => {
           })
           .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("defaults archived to false and archivedAt to null", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingComments)
+        .values({
+          id,
+          frontingSessionId: sessionId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.archivedAt).toBeNull();
+    });
+
+    it("round-trips archived: true with archivedAt timestamp", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(frontingComments)
+        .values({
+          id,
+          frontingSessionId: sessionId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+          archived: true,
+          archivedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingComments).where(eq(frontingComments.id, id)).all();
+      expect(rows[0]?.archived).toBe(true);
+      expect(rows[0]?.archivedAt).toBe(now);
+    });
+
+    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO fronting_comments (id, fronting_session_id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 1, NULL)",
+          )
+          .run(crypto.randomUUID(), sessionId, systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const sessionId = insertFrontingSession(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO fronting_comments (id, fronting_session_id, system_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES (?, ?, ?, X'0102', ?, ?, 1, 0, ?)",
+          )
+          .run(crypto.randomUUID(), sessionId, systemId, now, now, now),
+      ).toThrow(/CHECK|constraint/i);
     });
   });
 

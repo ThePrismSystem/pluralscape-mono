@@ -56,6 +56,7 @@ export const frontingSessions = sqliteTable(
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
@@ -65,6 +66,7 @@ export const frontingSessions = sqliteTable(
     index("fronting_sessions_active_idx")
       .on(t.systemId)
       .where(sql`${t.endTime} IS NULL`),
+    index("fronting_sessions_system_archived_idx").on(t.systemId, t.archived),
     check(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
@@ -80,6 +82,10 @@ export const frontingSessions = sqliteTable(
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
     versionCheckFor("fronting_sessions", t.version),
+    check(
+      "fronting_sessions_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
     // Invariant: every session must have at least one subject (member or custom front).
     // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
     // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
@@ -92,7 +98,6 @@ export const frontingSessions = sqliteTable(
   ],
 );
 
-// Switches are immutable timeline events and are not archivable.
 export const switches = sqliteTable(
   "switches",
   {
@@ -109,11 +114,16 @@ export const switches = sqliteTable(
     memberIds: sqliteJson("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: sqliteTimestamp("created_at").notNull(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
     check("switches_member_ids_check", sql`json_array_length(${t.memberIds}) >= 1`),
     versionCheckFor("switches", t.version),
+    check(
+      "switches_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -129,6 +139,7 @@ export const frontingComments = sqliteTable(
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
@@ -141,6 +152,10 @@ export const frontingComments = sqliteTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     versionCheckFor("fronting_comments", t.version),
+    check(
+      "fronting_comments_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 

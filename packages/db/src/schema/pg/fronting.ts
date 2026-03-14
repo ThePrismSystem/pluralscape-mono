@@ -67,6 +67,7 @@ export const frontingSessions = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     // Composite PK (id, start_time) required by PARTITION BY RANGE (start_time). This diverges
@@ -79,6 +80,7 @@ export const frontingSessions = pgTable(
     index("fronting_sessions_active_idx")
       .on(t.systemId)
       .where(sql`${t.endTime} IS NULL`),
+    index("fronting_sessions_system_archived_idx").on(t.systemId, t.archived),
     check(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
@@ -97,6 +99,10 @@ export const frontingSessions = pgTable(
       foreignColumns: [customFronts.id],
     }).onDelete("set null"),
     versionCheckFor("fronting_sessions", t.version),
+    check(
+      "fronting_sessions_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
     // Invariant: every session must have at least one subject (member or custom front).
     // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
     // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
@@ -109,7 +115,6 @@ export const frontingSessions = pgTable(
   ],
 );
 
-// Switches are immutable timeline events and are not archivable.
 // NOTE: The production migration adds PARTITION BY RANGE ("timestamp") which Drizzle
 // cannot express. Running drizzle-kit generate for this table requires manual verification.
 // See migration 0014 for details.
@@ -129,12 +134,17 @@ export const switches = pgTable(
     memberIds: jsonb("member_ids").notNull().$type<readonly [string, ...string[]]>(),
     createdAt: pgTimestamp("created_at").notNull(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     primaryKey({ columns: [t.id, t.timestamp] }),
     index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
     check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
     versionCheckFor("switches", t.version),
+    check(
+      "switches_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
@@ -152,6 +162,7 @@ export const frontingComments = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("fronting_comments_session_created_idx").on(t.frontingSessionId, t.createdAt),
@@ -165,6 +176,10 @@ export const frontingComments = pgTable(
       foreignColumns: [members.id, members.systemId],
     }).onDelete("set null"),
     versionCheckFor("fronting_comments", t.version),
+    check(
+      "fronting_comments_archived_consistency_check",
+      archivableConsistencyCheck(t.archived, t.archivedAt),
+    ),
   ],
 );
 
