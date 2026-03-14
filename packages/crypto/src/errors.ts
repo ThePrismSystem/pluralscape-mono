@@ -71,6 +71,14 @@ export class KeyStorageFailedError extends Error {
   }
 }
 
+/** Thrown when Ed25519 signature verification fails. */
+export class SignatureVerificationError extends Error {
+  override readonly name = "SignatureVerificationError" as const;
+  constructor(message = "Signature verification failed.", options?: ErrorOptions) {
+    super(message, options);
+  }
+}
+
 /** Thrown when biometric authentication fails after max retries. */
 export class BiometricFailedError extends Error {
   override readonly name = "BiometricFailedError" as const;

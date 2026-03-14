@@ -34,6 +34,7 @@ export {
   InvalidInputError,
   KeysLockedError,
   KeyStorageFailedError,
+  SignatureVerificationError,
   UnsupportedOperationError,
 } from "./errors.js";
 
@@ -123,3 +124,6 @@ export {
 // ── Recovery key ────────────────────────────────────────────────────
 export type { RecoveryKeyResult } from "./recovery.js";
 export { generateRecoveryKey, isValidRecoveryKeyFormat, recoverMasterKey } from "./recovery.js";
+
+// ── Signature operations ─────────────────────────────────────────────
+export { decryptThenVerify, sign, signThenEncrypt, verify } from "./sign.js";
