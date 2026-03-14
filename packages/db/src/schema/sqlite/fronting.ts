@@ -98,6 +98,8 @@ export const frontingSessions = sqliteTable(
   ],
 );
 
+// Switches are archivable to support data correction (e.g., mistakenly recorded switches).
+// Archived switches are excluded from display but preserved for audit integrity.
 export const switches = sqliteTable(
   "switches",
   {

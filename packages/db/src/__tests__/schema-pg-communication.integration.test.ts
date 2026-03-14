@@ -571,7 +571,7 @@ describe("PG communication schema", () => {
       expect(rows).toHaveLength(0);
     });
 
-    it("defaults archived to false", async () => {
+    it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -707,7 +707,7 @@ describe("PG communication schema", () => {
       expect(rows[0]?.memberId).toBeNull();
     });
 
-    it("defaults archived to false", async () => {
+    it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -991,7 +991,7 @@ describe("PG communication schema", () => {
       ).rejects.toThrow();
     });
 
-    it("defaults archived to false", async () => {
+    it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
@@ -1197,7 +1197,7 @@ describe("PG communication schema", () => {
       expect(rows[0]?.votedAt).toBeNull();
     });
 
-    it("defaults archived to false", async () => {
+    it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const pollId = await insertPoll(systemId);
@@ -1421,7 +1421,7 @@ describe("PG communication schema", () => {
       ).rejects.toThrow();
     });
 
-    it("defaults archived to false", async () => {
+    it("defaults archived to false and archivedAt to null", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const id = crypto.randomUUID();

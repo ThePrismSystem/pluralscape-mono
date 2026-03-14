@@ -115,6 +115,9 @@ export const frontingSessions = pgTable(
   ],
 );
 
+// Switches are archivable to support data correction (e.g., mistakenly recorded switches).
+// Archived switches are excluded from display but preserved for audit integrity.
+
 // NOTE: The production migration adds PARTITION BY RANGE ("timestamp") which Drizzle
 // cannot express. Running drizzle-kit generate for this table requires manual verification.
 // See migration 0014 for details.

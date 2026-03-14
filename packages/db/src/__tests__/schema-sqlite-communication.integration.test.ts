@@ -470,7 +470,7 @@ describe("SQLite communication schema", () => {
       expect(rows).toHaveLength(0);
     });
 
-    it("defaults archived to false", () => {
+    it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -617,7 +617,7 @@ describe("SQLite communication schema", () => {
       expect(rows[0]?.memberId).toBeNull();
     });
 
-    it("defaults archived to false", () => {
+    it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
@@ -922,7 +922,7 @@ describe("SQLite communication schema", () => {
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
 
-    it("defaults archived to false", () => {
+    it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
@@ -1140,7 +1140,7 @@ describe("SQLite communication schema", () => {
       expect(rows[0]?.votedAt).toBeNull();
     });
 
-    it("defaults archived to false", () => {
+    it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const pollId = insertPoll(systemId);
@@ -1386,7 +1386,7 @@ describe("SQLite communication schema", () => {
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
 
-    it("defaults archived to false", () => {
+    it("defaults archived to false and archivedAt to null", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const id = crypto.randomUUID();
