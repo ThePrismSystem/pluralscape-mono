@@ -8,6 +8,15 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   maxBackoffMs: 30_000,
 };
 
+/** Shared policy for heavy background maintenance jobs (5min base, 30min cap). */
+const HEAVY_BACKOFF: RetryPolicy = {
+  maxRetries: 2,
+  backoffMs: 300_000,
+  backoffMultiplier: 5,
+  maxBackoffMs: 1_800_000,
+  strategy: "exponential",
+};
+
 /**
  * Default retry policies for all 15 job types.
  *
@@ -36,13 +45,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     maxBackoffMs: 60_000,
     strategy: "exponential",
   },
-  "blob-cleanup": {
-    maxRetries: 2,
-    backoffMs: 300_000, // 5 minutes
-    backoffMultiplier: 5,
-    maxBackoffMs: 1_800_000, // 30 minutes
-    strategy: "exponential",
-  },
+  "blob-cleanup": HEAVY_BACKOFF,
   "export-generate": {
     maxRetries: 3,
     backoffMs: 1_000,
@@ -71,27 +74,9 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     maxBackoffMs: 30_000,
     strategy: "linear",
   },
-  "analytics-compute": {
-    maxRetries: 2,
-    backoffMs: 300_000,
-    backoffMultiplier: 5,
-    maxBackoffMs: 1_800_000,
-    strategy: "exponential",
-  },
-  "account-purge": {
-    maxRetries: 3,
-    backoffMs: 60_000, // 1 minute
-    backoffMultiplier: 5,
-    maxBackoffMs: 1_800_000,
-    strategy: "exponential",
-  },
-  "bucket-key-rotation": {
-    maxRetries: 2,
-    backoffMs: 300_000,
-    backoffMultiplier: 5,
-    maxBackoffMs: 1_800_000,
-    strategy: "exponential",
-  },
+  "analytics-compute": HEAVY_BACKOFF,
+  "account-purge": { ...HEAVY_BACKOFF, maxRetries: 3, backoffMs: 60_000 },
+  "bucket-key-rotation": HEAVY_BACKOFF,
   "report-generate": {
     maxRetries: 3,
     backoffMs: 1_000,
@@ -99,25 +84,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     maxBackoffMs: 60_000,
     strategy: "exponential",
   },
-  "sync-queue-cleanup": {
-    maxRetries: 2,
-    backoffMs: 300_000,
-    backoffMultiplier: 5,
-    maxBackoffMs: 1_800_000,
-    strategy: "exponential",
-  },
-  "audit-log-cleanup": {
-    maxRetries: 2,
-    backoffMs: 300_000,
-    backoffMultiplier: 5,
-    maxBackoffMs: 1_800_000,
-    strategy: "exponential",
-  },
-  "partition-maintenance": {
-    maxRetries: 2,
-    backoffMs: 300_000,
-    backoffMultiplier: 5,
-    maxBackoffMs: 1_800_000,
-    strategy: "exponential",
-  },
+  "sync-queue-cleanup": HEAVY_BACKOFF,
+  "audit-log-cleanup": HEAVY_BACKOFF,
+  "partition-maintenance": HEAVY_BACKOFF,
 };
