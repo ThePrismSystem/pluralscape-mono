@@ -56,10 +56,12 @@ docs/local-audits/
 
 # Agent config (per-contributor)
 CLAUDE.md
+.claude/
 
 # Temporary files
 .tmp/
 *.log
+*.patch
 .pnpm-debug.log
 
 # OS
