@@ -77,9 +77,13 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const queue = factory();
         const key = "idem-key-pending";
         await queue.enqueue(makeJobParams({ idempotencyKey: key }));
-        await expect(queue.enqueue(makeJobParams({ idempotencyKey: key }))).rejects.toThrow(
-          IdempotencyConflictError,
-        );
+        try {
+          await queue.enqueue(makeJobParams({ idempotencyKey: key }));
+          expect.unreachable("Expected IdempotencyConflictError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(IdempotencyConflictError);
+          expect((err as IdempotencyConflictError).idempotencyKey).toBe(key);
+        }
       });
 
       it("throws IdempotencyConflictError for running job with same key", async () => {
@@ -208,15 +212,30 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         expect(onComplete.mock.calls[0]?.[0].status).toBe("completed");
       });
 
-      it("throws JobNotFoundError for unknown job", async () => {
+      it("throws JobNotFoundError with jobId for unknown job", async () => {
         const queue = factory();
-        await expect(queue.acknowledge(GHOST_JOB_ID, {})).rejects.toThrow(JobNotFoundError);
+        try {
+          await queue.acknowledge(GHOST_JOB_ID, {});
+          expect.unreachable("Expected JobNotFoundError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(JobNotFoundError);
+          expect((err as JobNotFoundError).jobId).toBe(GHOST_JOB_ID);
+        }
       });
 
-      it("rejects acknowledge on a pending job", async () => {
+      it("rejects acknowledge on a pending job with transition details", async () => {
         const queue = factory();
         const job = await queue.enqueue(makeJobParams());
-        await expect(queue.acknowledge(job.id, {})).rejects.toThrow(InvalidJobTransitionError);
+        try {
+          await queue.acknowledge(job.id, {});
+          expect.unreachable("Expected InvalidJobTransitionError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(InvalidJobTransitionError);
+          const ite = err as InvalidJobTransitionError;
+          expect(ite.jobId).toBe(job.id);
+          expect(ite.currentStatus).toBe("pending");
+          expect(ite.attemptedAction).toBe("acknowledge");
+        }
       });
 
       it("rejects double acknowledge on a completed job", async () => {
@@ -258,10 +277,19 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         expect(onFail).toHaveBeenCalledOnce();
       });
 
-      it("rejects fail on a pending job", async () => {
+      it("rejects fail on a pending job with transition details", async () => {
         const queue = factory();
         const job = await queue.enqueue(makeJobParams());
-        await expect(queue.fail(job.id, "nope")).rejects.toThrow(InvalidJobTransitionError);
+        try {
+          await queue.fail(job.id, "nope");
+          expect.unreachable("Expected InvalidJobTransitionError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(InvalidJobTransitionError);
+          const ite = err as InvalidJobTransitionError;
+          expect(ite.jobId).toBe(job.id);
+          expect(ite.currentStatus).toBe("pending");
+          expect(ite.attemptedAction).toBe("fail");
+        }
       });
     });
 
