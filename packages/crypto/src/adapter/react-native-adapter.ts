@@ -33,6 +33,7 @@ import {
   assertSignature,
 } from "../validation.js";
 
+import type { NativeMemzero } from "../lifecycle-types.js";
 import type {
   AeadKey,
   AeadNonce,
@@ -54,9 +55,17 @@ type RNSodium = typeof import("react-native-libsodium");
 
 export class ReactNativeSodiumAdapter implements SodiumAdapter {
   private sodium: RNSodium | null = null;
+  private readonly nativeMemzero: NativeMemzero | undefined;
 
   readonly constants: SodiumConstants = SODIUM_CONSTANTS;
-  readonly supportsSecureMemzero = false;
+
+  get supportsSecureMemzero(): boolean {
+    return this.nativeMemzero !== undefined;
+  }
+
+  constructor(nativeMemzero?: NativeMemzero) {
+    this.nativeMemzero = nativeMemzero;
+  }
 
   async init(): Promise<void> {
     if (this.sodium !== null) {
@@ -267,12 +276,17 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
   // ── Memory ────────────────────────────────────────────────────────
 
   /**
-   * Best-effort memzero. react-native-libsodium does not expose sodium_memzero.
-   * This polyfill uses Uint8Array.fill(0), which may be optimized away by the
-   * JS engine. For security-critical zeroing, ensure the buffer is not referenced
-   * elsewhere after this call.
+   * Secure memzero when NativeMemzero is provided; best-effort polyfill otherwise.
+   *
+   * Without NativeMemzero, uses Uint8Array.fill(0) which may be optimized away
+   * by Hermes. Provide a NativeMemzero via the constructor for cryptographically
+   * secure zeroing backed by platform-native APIs.
    */
   memzero(buffer: Uint8Array): void {
-    buffer.fill(0);
+    if (this.nativeMemzero !== undefined) {
+      this.nativeMemzero.memzero(buffer);
+    } else {
+      buffer.fill(0);
+    }
   }
 }
