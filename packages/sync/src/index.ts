@@ -138,3 +138,36 @@ export type {
   DocumentLoadRequest,
 } from "./replication-profiles.js";
 export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_CONFIG } from "./replication-profiles.js";
+
+// ── Protocol messages ──────────────────────────────────────────────────
+export type {
+  TransportState,
+  SyncTransport,
+  SyncMessageBase,
+  DocumentVersionEntry,
+  DocumentCatchup,
+  SyncErrorCode,
+  AuthenticateRequest,
+  ManifestRequest,
+  SubscribeRequest,
+  UnsubscribeRequest,
+  FetchSnapshotRequest,
+  FetchChangesRequest,
+  SubmitChangeRequest,
+  SubmitSnapshotRequest,
+  DocumentLoadRequest as ProtocolDocumentLoadRequest,
+  AuthenticateResponse,
+  ManifestResponse,
+  SubscribeResponse,
+  DocumentUpdate,
+  SnapshotResponse,
+  ChangesResponse,
+  ChangeAccepted,
+  SnapshotAccepted,
+  ManifestChanged,
+  SyncError,
+  ClientMessage,
+  ServerMessage,
+  SyncMessage,
+} from "./protocol.js";
+export { SYNC_PROTOCOL_VERSION } from "./protocol.js";
