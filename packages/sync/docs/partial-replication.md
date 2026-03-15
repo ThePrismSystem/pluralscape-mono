@@ -247,8 +247,8 @@ When multiple documents need syncing (initial sync or catch-up), documents are p
 Non-subscribed documents (historical periods, lite-profile journal entries) can be loaded on-demand:
 
 ```typescript
-interface DocumentLoadRequest {
-  documentId: string;
+interface OnDemandLoadRequest {
+  docId: string;
   persist: boolean; // true = store locally; false = memory only
 }
 ```

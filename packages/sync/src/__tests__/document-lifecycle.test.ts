@@ -359,7 +359,14 @@ describe("Time-split configuration", () => {
   });
 
   it("DOCUMENT_SIZE_LIMITS covers all document types", () => {
-    const types = ["system-core", "fronting", "chat", "journal", "privacy-config", "bucket"];
+    const types = [
+      "system-core",
+      "fronting",
+      "chat",
+      "journal",
+      "privacy-config",
+      "bucket",
+    ] as const;
     for (const t of types) {
       expect(DOCUMENT_SIZE_LIMITS[t]).toBeGreaterThan(0);
     }

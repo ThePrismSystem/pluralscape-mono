@@ -14,27 +14,28 @@ export interface OwnerFullProfile {
  * Owner (lite) profile: syncs only current-period documents and active channels.
  * Used on low-storage devices (wearables, budget phones).
  */
-export interface OwnerLiteConfig {
+export interface OwnerLiteProfile {
   readonly profileType: "owner-lite";
   /**
    * Number of days since last update within which a chat channel is considered active.
    * Channels outside this window are excluded unless pinned.
+   * Must be a positive integer (1-365).
    * Default: 30 days.
    */
   readonly activeChannelWindowDays: number;
 }
 
 /** Friend profile: syncs only bucket documents for which the friend has a non-revoked KeyGrant. */
-export interface FriendProfileConfig {
+export interface FriendProfile {
   readonly profileType: "friend";
   /** The friend's system ID, used to filter KeyGrants. */
   readonly friendSystemId: string;
-  /** Set of bucket IDs for which the friend has an active (non-revoked) KeyGrant. */
-  readonly grantedBucketIds: ReadonlySet<string>;
+  /** Bucket IDs for which the friend has an active (non-revoked) KeyGrant. */
+  readonly grantedBucketIds: readonly string[];
 }
 
 /** Union of all replication profile configurations. */
-export type ReplicationProfile = OwnerFullProfile | OwnerLiteConfig | FriendProfileConfig;
+export type ReplicationProfile = OwnerFullProfile | OwnerLiteProfile | FriendProfile;
 
 // ── Document sync state ───────────────────────────────────────────────
 
@@ -84,9 +85,9 @@ export interface SubscriptionSet {
  * Used for loading historical periods, lite-profile journal entries, and other
  * non-subscribed documents on user demand.
  */
-export interface DocumentLoadRequest {
+export interface OnDemandLoadRequest {
   /** The document ID to load. Must be in the manifest and pass access checks. */
-  readonly documentId: string;
+  readonly docId: string;
   /**
    * If true, the loaded document is persisted to local storage and included
    * in future sync (as an on-demand document, not a subscription).
@@ -103,7 +104,7 @@ export const DEFAULT_OWNER_FULL_PROFILE: OwnerFullProfile = {
 } as const;
 
 /** Default owner-lite configuration: 30-day active channel window. */
-export const DEFAULT_OWNER_LITE_CONFIG: OwnerLiteConfig = {
+export const DEFAULT_OWNER_LITE_PROFILE: OwnerLiteProfile = {
   profileType: "owner-lite",
   activeChannelWindowDays: 30,
 } as const;

@@ -77,6 +77,8 @@ export type SyncErrorCode =
   | "AUTH_EXPIRED" // Session token has expired; re-authenticate
   | "PERMISSION_DENIED" // Access to document or system not granted
   | "DOCUMENT_NOT_FOUND" // Requested docId not in manifest
+  | "DOCUMENT_LOAD_DENIED" // On-demand load denied (access check failed or doc not loadable)
+  | "SNAPSHOT_NOT_FOUND" // No snapshot exists for the requested document
   | "VERSION_CONFLICT" // SnapshotVersion not strictly increasing
   | "MALFORMED_MESSAGE" // Message failed schema validation or size limit
   | "QUOTA_EXCEEDED" // Storage budget exceeded (see document-lifecycle.md §6)
@@ -93,8 +95,11 @@ export type SyncErrorCode =
 export interface AuthenticateRequest extends SyncMessageBase {
   readonly type: "AuthenticateRequest";
   /** Must equal SYNC_PROTOCOL_VERSION. Mismatch produces PROTOCOL_MISMATCH error. */
-  readonly protocolVersion: number;
-  /** Session token obtained from the auth service. */
+  readonly protocolVersion: typeof SYNC_PROTOCOL_VERSION;
+  /**
+   * Session token obtained from the auth service.
+   * @security Must be transmitted over TLS. Never log or persist session tokens in plaintext.
+   */
   readonly sessionToken: string;
   /** The system ID this client belongs to. */
   readonly systemId: string;
@@ -184,7 +189,7 @@ export interface SubmitSnapshotRequest extends SyncMessageBase {
  */
 export interface DocumentLoadRequest extends SyncMessageBase {
   readonly type: "DocumentLoadRequest";
-  readonly documentId: string;
+  readonly docId: string;
   /**
    * Whether the client intends to persist this document locally.
    * Informational — does not affect server behavior or access checks.

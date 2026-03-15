@@ -257,7 +257,7 @@ interface SnapshotAccepted extends SyncMessageBase {
 ```typescript
 interface DocumentLoadRequest extends SyncMessageBase {
   readonly type: "DocumentLoadRequest";
-  readonly documentId: string;
+  readonly docId: string;
   /**
    * Whether the client intends to persist this document locally.
    * Informational — does not affect server behavior.
@@ -389,6 +389,8 @@ type SyncErrorCode =
   | "AUTH_EXPIRED" // Session token has expired; re-authenticate
   | "PERMISSION_DENIED" // Access to document or system not granted
   | "DOCUMENT_NOT_FOUND" // Requested docId not in manifest
+  | "DOCUMENT_LOAD_DENIED" // On-demand load denied (access check failed)
+  | "SNAPSHOT_NOT_FOUND" // No snapshot exists for the requested document
   | "VERSION_CONFLICT" // SnapshotVersion not strictly increasing
   | "MALFORMED_MESSAGE" // Message failed schema validation or size limit
   | "QUOTA_EXCEEDED" // Storage budget exceeded (see document-lifecycle.md §6)
@@ -399,18 +401,20 @@ type SyncErrorCode =
 
 ### Recovery strategies per error code
 
-| Code                 | Recovery                                                              |
-| -------------------- | --------------------------------------------------------------------- |
-| `AUTH_FAILED`        | Re-authenticate from scratch; refresh session token from auth service |
-| `AUTH_EXPIRED`       | Refresh session token, then reconnect                                 |
-| `PERMISSION_DENIED`  | Do not retry; surface to user if unexpected                           |
-| `DOCUMENT_NOT_FOUND` | Re-fetch manifest; document may have been removed                     |
-| `VERSION_CONFLICT`   | Re-fetch latest snapshot; discard conflicting local snapshot          |
-| `MALFORMED_MESSAGE`  | Inspect message construction; do not retry unchanged                  |
-| `QUOTA_EXCEEDED`     | Surface to user; evict archived documents, then retry                 |
-| `RATE_LIMITED`       | Exponential backoff starting at 1 second                              |
-| `PROTOCOL_MISMATCH`  | Upgrade client; do not retry                                          |
-| `INTERNAL_ERROR`     | Exponential backoff starting at 5 seconds                             |
+| Code                   | Recovery                                                              |
+| ---------------------- | --------------------------------------------------------------------- |
+| `AUTH_FAILED`          | Re-authenticate from scratch; refresh session token from auth service |
+| `AUTH_EXPIRED`         | Refresh session token, then reconnect                                 |
+| `PERMISSION_DENIED`    | Do not retry; surface to user if unexpected                           |
+| `DOCUMENT_NOT_FOUND`   | Re-fetch manifest; document may have been removed                     |
+| `DOCUMENT_LOAD_DENIED` | Do not retry; verify KeyGrant status and access permissions           |
+| `SNAPSHOT_NOT_FOUND`   | Fall back to full change replay; document may not have been compacted |
+| `VERSION_CONFLICT`     | Re-fetch latest snapshot; discard conflicting local snapshot          |
+| `MALFORMED_MESSAGE`    | Inspect message construction; do not retry unchanged                  |
+| `QUOTA_EXCEEDED`       | Surface to user; evict archived documents, then retry                 |
+| `RATE_LIMITED`         | Exponential backoff starting at 1 second                              |
+| `PROTOCOL_MISMATCH`    | Upgrade client; do not retry                                          |
+| `INTERNAL_ERROR`       | Exponential backoff starting at 5 seconds                             |
 
 ---
 

@@ -8,6 +8,7 @@ export type {
   TimeSplitUnit,
   StorageBudget,
   CompactionCheck,
+  SyncPriorityCategory,
   ConflictNotification,
   ConflictResolutionStrategy,
   CycleBreak,
@@ -131,13 +132,13 @@ export type {
   ReplicationProfileType,
   ReplicationProfile,
   OwnerFullProfile,
-  OwnerLiteConfig,
-  FriendProfileConfig,
+  OwnerLiteProfile,
+  FriendProfile,
   DocumentSyncState,
   SubscriptionSet,
-  DocumentLoadRequest,
+  OnDemandLoadRequest,
 } from "./replication-profiles.js";
-export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_CONFIG } from "./replication-profiles.js";
+export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_PROFILE } from "./replication-profiles.js";
 
 // ── Protocol messages ──────────────────────────────────────────────────
 export type {
@@ -155,7 +156,7 @@ export type {
   FetchChangesRequest,
   SubmitChangeRequest,
   SubmitSnapshotRequest,
-  DocumentLoadRequest as ProtocolDocumentLoadRequest,
+  DocumentLoadRequest,
   AuthenticateResponse,
   ManifestResponse,
   SubscribeResponse,

@@ -268,13 +268,13 @@ Archival is performed server-side and reflected in the manifest as `archived: tr
 
 ### 7.2 Archive Behavior
 
-| Behavior              | Rule                                                                                      |
-| --------------------- | ----------------------------------------------------------------------------------------- |
-| Not synced by default | Archived documents are not included in initial sync or incremental sync subscriptions     |
-| On-demand loadable    | Client can request an archived document via `DocumentLoadRequest { documentId, persist }` |
-| Un-archival on write  | Writing a change to an archived document automatically un-archives it in the manifest     |
-| Retained indefinitely | Server retains archived documents; non-destructive data principle                         |
-| Readable              | Reads from archived documents are always permitted                                        |
+| Behavior              | Rule                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| Not synced by default | Archived documents are not included in initial sync or incremental sync subscriptions |
+| On-demand loadable    | Client can request an archived document via `OnDemandLoadRequest { docId, persist }`  |
+| Un-archival on write  | Writing a change to an archived document automatically un-archives it in the manifest |
+| Retained indefinitely | Server retains archived documents; non-destructive data principle                     |
+| Readable              | Reads from archived documents are always permitted                                    |
 
 ### 7.3 UI Experience
 
