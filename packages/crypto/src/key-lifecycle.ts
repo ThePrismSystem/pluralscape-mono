@@ -2,6 +2,7 @@ import { decryptBucketKey } from "./bucket-keys.js";
 import { AEAD_NONCE_BYTES } from "./constants.js";
 import { InvalidStateTransitionError, KeysLockedError } from "./errors.js";
 import { deriveMasterKey } from "./master-key.js";
+import { assertKdfMasterKey } from "./validation.js";
 
 import type { WrappedBucketKey } from "./bucket-keys.js";
 import type { IdentityKeypair } from "./identity.js";
@@ -13,7 +14,14 @@ import type {
   SecurityPresetLevel,
   TimerHandle,
 } from "./lifecycle-types.js";
-import type { AeadKey, AeadNonce, BoxKeypair, KdfMasterKey, SignKeypair } from "./types.js";
+import type {
+  AeadKey,
+  AeadNonce,
+  BoxKeypair,
+  KdfMasterKey,
+  PwhashSalt,
+  SignKeypair,
+} from "./types.js";
 import type { BucketId } from "@pluralscape/types";
 
 /** Master key storage identifier in SecureKeyStorage. */
@@ -66,19 +74,23 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
   async unlockWithPassword(password: string, salt: Uint8Array): Promise<void> {
     this.assertUnlockable();
 
-    const masterKey = await deriveMasterKey(
-      password,
-      salt as Parameters<typeof deriveMasterKey>[1],
-      "mobile",
-    );
+    const masterKey = await deriveMasterKey(password, salt as PwhashSalt, "mobile");
+    const identityKeys = this.deps.deriveIdentityKeys(masterKey);
+
+    try {
+      await this.deps.storage.store(MASTER_KEY_STORAGE_ID, masterKey, {
+        requireBiometric: this.deps.config.requireBiometric,
+        accessibility: "afterFirstUnlock",
+      });
+    } catch (error: unknown) {
+      this.deps.sodium.memzero(identityKeys.signing.secretKey);
+      this.deps.sodium.memzero(identityKeys.encryption.secretKey);
+      this.deps.sodium.memzero(masterKey);
+      throw error;
+    }
+
     this.masterKey = masterKey;
-    this.identityKeys = this.deps.deriveIdentityKeys(masterKey);
-
-    await this.deps.storage.store(MASTER_KEY_STORAGE_ID, masterKey, {
-      requireBiometric: this.deps.config.requireBiometric,
-      accessibility: "afterFirstUnlock",
-    });
-
+    this.identityKeys = identityKeys;
     this.currentState = "unlocked";
     this.startInactivityTimer();
   }
@@ -93,6 +105,7 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
       throw new KeysLockedError("Biometric unlock failed: no master key in secure storage.");
     }
 
+    assertKdfMasterKey(stored);
     this.masterKey = stored as KdfMasterKey;
     this.identityKeys = this.deps.deriveIdentityKeys(this.masterKey);
 
@@ -107,30 +120,20 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
       return;
     }
 
-    this.cancelTimers();
-
-    try {
-      await this.deps.onBeforeLock?.();
-    } catch {
-      // Lock must proceed even if onBeforeLock fails
-    }
-
-    this.clearKeyMaterial();
+    const onBeforeLockError = await this.teardownKeys();
     this.currentState = "locked";
+    if (onBeforeLockError !== undefined) {
+      throw onBeforeLockError;
+    }
   }
 
   async logout(): Promise<void> {
-    this.cancelTimers();
-
-    try {
-      await this.deps.onBeforeLock?.();
-    } catch {
-      // Logout must proceed even if onBeforeLock fails
-    }
-
-    this.clearKeyMaterial();
+    const onBeforeLockError = await this.teardownKeys();
     await this.deps.storage.clearAll();
     this.currentState = "terminated";
+    if (onBeforeLockError !== undefined) {
+      throw onBeforeLockError;
+    }
   }
 
   // ── Background / foreground ─────────────────────────────────────────
@@ -141,18 +144,12 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
     }
 
     this.cancelInactivityTimer();
-
-    if (this.deps.config.graceTimeoutMs === 0) {
-      this.currentState = "grace";
-      this.graceTimer = this.deps.clock.setTimeout(() => {
-        void this.lock();
-      }, 0);
-    } else {
-      this.currentState = "grace";
-      this.graceTimer = this.deps.clock.setTimeout(() => {
-        void this.lock();
-      }, this.deps.config.graceTimeoutMs);
-    }
+    this.currentState = "grace";
+    this.graceTimer = this.deps.clock.setTimeout(() => {
+      this.lock().catch(() => {
+        // onBeforeLock error; keys already cleared by teardownKeys()
+      });
+    }, this.deps.config.graceTimeoutMs);
   }
 
   onForeground(): void {
@@ -177,18 +174,23 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
   // ── Key getters ─────────────────────────────────────────────────────
 
   getMasterKey(): KdfMasterKey {
-    this.assertKeysAvailable();
-    return this.masterKey as KdfMasterKey;
+    if (this.masterKey === null) {
+      throw new KeysLockedError();
+    }
+    return this.masterKey;
   }
 
   getIdentityKeys(): { readonly sign: SignKeypair; readonly box: BoxKeypair } {
-    this.assertKeysAvailable();
-    const keys = this.identityKeys as IdentityKeypair;
-    return { sign: keys.signing, box: keys.encryption };
+    if (this.identityKeys === null) {
+      throw new KeysLockedError();
+    }
+    return { sign: this.identityKeys.signing, box: this.identityKeys.encryption };
   }
 
   getBucketKey(bucketId: BucketId, encryptedKey: Uint8Array, keyVersion: number): AeadKey {
-    this.assertKeysAvailable();
+    if (this.masterKey === null) {
+      throw new KeysLockedError();
+    }
 
     const cached = this.deps.bucketKeyCache.get(bucketId);
     if (cached !== undefined) {
@@ -200,7 +202,7 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
     const ciphertext = encryptedKey.slice(AEAD_NONCE_BYTES);
 
     const wrapped: WrappedBucketKey = { ciphertext, nonce, keyVersion };
-    const decrypted = decryptBucketKey(wrapped, this.masterKey as KdfMasterKey);
+    const decrypted = decryptBucketKey(wrapped, this.masterKey);
 
     this.deps.bucketKeyCache.set(bucketId, decrypted);
     return decrypted;
@@ -214,10 +216,24 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
     }
   }
 
-  private assertKeysAvailable(): void {
-    if (this.currentState !== "unlocked" && this.currentState !== "grace") {
-      throw new KeysLockedError();
+  /**
+   * Cancel timers, run onBeforeLock, clear all key material.
+   * Returns the onBeforeLock error (if any) for the caller to re-throw
+   * after completing its state transition.
+   */
+  private async teardownKeys(): Promise<Error | undefined> {
+    this.cancelInactivityTimer();
+    this.cancelGraceTimer();
+
+    let onBeforeLockError: Error | undefined;
+    try {
+      await this.deps.onBeforeLock?.();
+    } catch (error: unknown) {
+      onBeforeLockError = error instanceof Error ? error : new Error(String(error));
     }
+
+    this.clearKeyMaterial();
+    return onBeforeLockError;
   }
 
   /**
@@ -246,7 +262,9 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
   private startInactivityTimer(): void {
     this.cancelInactivityTimer();
     this.inactivityTimer = this.deps.clock.setTimeout(() => {
-      void this.lock();
+      this.lock().catch(() => {
+        // onBeforeLock error; keys already cleared by teardownKeys()
+      });
     }, this.deps.config.inactivityTimeoutMs);
   }
 
@@ -262,10 +280,5 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
       this.deps.clock.clearTimeout(this.graceTimer);
       this.graceTimer = null;
     }
-  }
-
-  private cancelTimers(): void {
-    this.cancelInactivityTimer();
-    this.cancelGraceTimer();
   }
 }
