@@ -26,7 +26,9 @@ function MockDatabase(): void {
   // @ts-expect-error -- mock constructor assigning pragma
   this.pragma = vi.fn();
 }
-const mockDrizzle = vi.fn(() => ({ mock: true }));
+const mockDrizzle = vi
+  .fn<(db: InstanceType<typeof Database>) => { mock: boolean }>()
+  .mockReturnValue({ mock: true });
 
 vi.mock("better-sqlite3", () => ({
   default: MockDatabase,
@@ -41,6 +43,17 @@ describe("createDatabase", () => {
     const client = await createDatabase({ dialect: "sqlite", filename: ":memory:" });
     expect(client.dialect).toBe("sqlite");
     expect(client.db).toBeDefined();
+  });
+
+  it("enables foreign_keys pragma on SQLite connections", async () => {
+    mockDrizzle.mockClear();
+    await createDatabase({ dialect: "sqlite", filename: ":memory:" });
+    // mockDrizzle receives the real better-sqlite3 Database instance as first arg
+    const rawDb = mockDrizzle.mock.calls[0]?.[0];
+    if (!rawDb) throw new Error("Expected drizzle to be called with database instance");
+    const fkStatus = rawDb.pragma("foreign_keys") as Array<Record<string, number>>;
+    expect(fkStatus[0]?.["foreign_keys"]).toBe(1);
+    rawDb.close();
   });
 });
 

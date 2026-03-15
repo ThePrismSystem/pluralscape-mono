@@ -62,6 +62,7 @@ export async function createDatabase(config: DatabaseConfig): Promise<DatabaseCl
           client.pragma(`key="x'${config.encryptionKey}'"`);
         }
         client.pragma("journal_mode = WAL");
+        client.pragma("foreign_keys = ON");
       } catch (err) {
         client.close();
         throw err;
