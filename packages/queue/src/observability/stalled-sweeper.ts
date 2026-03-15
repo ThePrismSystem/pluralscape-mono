@@ -21,6 +21,7 @@ export class StalledJobSweeper {
   private readonly logger: JobLogger | undefined;
   private readonly onSweep: ((count: number) => void) | undefined;
   private timer: ReturnType<typeof setInterval> | null = null;
+  private sweeping = false;
 
   constructor(queue: JobQueue, options?: StalledSweeperOptions) {
     this.queue = queue;
@@ -48,6 +49,8 @@ export class StalledJobSweeper {
   }
 
   async sweep(): Promise<void> {
+    if (this.sweeping) return;
+    this.sweeping = true;
     try {
       const stalled = await this.queue.findStalledJobs();
       if (stalled.length > 0) {
@@ -65,6 +68,8 @@ export class StalledJobSweeper {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger?.error("stalled-sweeper.sweep-error", { error: message });
+    } finally {
+      this.sweeping = false;
     }
   }
 }

@@ -78,6 +78,47 @@ describe("StalledJobSweeper", () => {
     );
   });
 
+  it("skips sweep when a previous sweep is still running", async () => {
+    const queue = new InMemoryJobQueue();
+    const sweeper = new StalledJobSweeper(queue);
+
+    let resolveFirst!: () => void;
+    const blockingPromise = new Promise<readonly import("@pluralscape/types").JobDefinition[]>(
+      (resolve) => {
+        resolveFirst = () => { resolve([]); };
+      },
+    );
+
+    const spy = vi.spyOn(queue, "findStalledJobs").mockReturnValueOnce(blockingPromise);
+
+    // Start first sweep (will block)
+    const firstSweep = sweeper.sweep();
+
+    // Second sweep should be skipped (guard active)
+    await sweeper.sweep();
+
+    // Unblock first sweep
+    resolveFirst();
+    await firstSweep;
+
+    // findStalledJobs called only once (the second sweep was skipped)
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("resets sweeping flag even when sweep throws", async () => {
+    const queue = new InMemoryJobQueue();
+    const sweeper = new StalledJobSweeper(queue);
+
+    const spy = vi.spyOn(queue, "findStalledJobs").mockRejectedValueOnce(new Error("db down"));
+    await sweeper.sweep();
+
+    // Second sweep should execute (flag was reset in finally)
+    spy.mockResolvedValueOnce([]);
+    await sweeper.sweep();
+
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
   it("sweep() does not throw when findStalledJobs() rejects (logs error instead)", async () => {
     const queue = new InMemoryJobQueue();
     const error = vi.fn();
