@@ -9,7 +9,8 @@ public class NativeMemzeroModule: Module {
                 guard let baseAddress = ptr.baseAddress else { return }
                 // memset_s (C11 Annex K) is guaranteed not to be optimized away,
                 // unlike memset which compilers may elide as a dead store.
-                _ = memset_s(baseAddress, ptr.count, 0, ptr.count)
+                let result = memset_s(baseAddress, ptr.count, 0, ptr.count)
+                assert(result == 0, "memset_s failed with error code \(result)")
             }
         }
     }

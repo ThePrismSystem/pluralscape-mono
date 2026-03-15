@@ -13,7 +13,7 @@ interface NativeMemzeroModuleType {
  */
 export const NativeMemzeroModule = requireNativeModule<NativeMemzeroModuleType>("NativeMemzero");
 
-/** Raw native memzero function suitable for wrapNativeMemzero(). */
+/** Bound native memzero function for wrapNativeMemzero(). */
 export function nativeMemzeroFn(buffer: Uint8Array): void {
   NativeMemzeroModule.memzero(buffer);
 }
