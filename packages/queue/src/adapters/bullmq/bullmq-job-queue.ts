@@ -446,39 +446,35 @@ export class BullMQJobQueue implements JobQueue {
   }
 
   async listJobs(filter: JobFilter): Promise<readonly JobDefinition[]> {
-    // Get jobs from BullMQ across relevant states
+    // Collect all jobs from BullMQ + cancelled store
     const bullmqStates = this.mapStatusToBullMQStates(filter.status);
     const bullmqJobs = bullmqStates.length > 0 ? await this.queue.getJobs(bullmqStates) : [];
 
-    let results: JobDefinition[] = bullmqJobs.map((j) =>
+    const allJobs: JobDefinition[] = bullmqJobs.map((j) =>
       fromStoredData(j.id as JobId, j.data as StoredJobData),
     );
 
-    // Include cancelled jobs if status filter allows
     if (filter.status === undefined || filter.status === "cancelled") {
       const cancelledKeys = await this.scanKeys(`${this.prefix}:cancelled:*`);
       for (const key of cancelledKeys) {
         const raw = await this.redis.get(key);
         if (raw !== null) {
           const id = key.replace(`${this.prefix}:cancelled:`, "") as JobId;
-          results.push(fromStoredData(id, JSON.parse(raw) as StoredJobData));
+          allJobs.push(fromStoredData(id, JSON.parse(raw) as StoredJobData));
         }
       }
     }
 
-    // Apply filters
-    if (filter.type !== undefined) {
-      results = results.filter((j) => j.type === filter.type);
-    }
-    if (filter.status !== undefined) {
-      results = results.filter((j) => j.status === filter.status);
-    }
-    if (filter.systemId !== undefined) {
-      results = results.filter((j) => j.systemId === filter.systemId);
-    }
+    // Single-pass filter
+    const filtered = allJobs.filter((j) => {
+      if (filter.type !== undefined && j.type !== filter.type) return false;
+      if (filter.status !== undefined && j.status !== filter.status) return false;
+      if (filter.systemId !== undefined && j.systemId !== filter.systemId) return false;
+      return true;
+    });
 
     // Sort by priority then createdAt
-    results.sort((a, b) => {
+    filtered.sort((a, b) => {
       if (a.priority !== b.priority) return a.priority - b.priority;
       return a.createdAt - b.createdAt;
     });
@@ -486,7 +482,7 @@ export class BullMQJobQueue implements JobQueue {
     // Pagination
     const offset = filter.offset ?? 0;
     const limit = filter.limit;
-    return results.slice(offset, limit !== undefined ? offset + limit : undefined);
+    return filtered.slice(offset, limit !== undefined ? offset + limit : undefined);
   }
 
   async listDeadLettered(
