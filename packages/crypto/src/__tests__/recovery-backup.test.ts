@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AEAD_NONCE_BYTES } from "../constants.js";
+import { AEAD_NONCE_BYTES, AEAD_TAG_BYTES } from "../constants.js";
 import { InvalidInputError } from "../errors.js";
 import { generateMasterKey } from "../master-key-wrap.js";
 import { deserializeRecoveryBackup, serializeRecoveryBackup } from "../recovery-backup.js";
@@ -53,10 +53,15 @@ describe("serializeRecoveryBackup / deserializeRecoveryBackup", () => {
     expect(() => deserializeRecoveryBackup(new Uint8Array(0))).toThrow(InvalidInputError);
   });
 
-  it("accepts blob exactly AEAD_NONCE_BYTES long (zero-length ciphertext)", () => {
+  it("rejects blob of exactly AEAD_NONCE_BYTES (no authentication tag)", () => {
     const blob = new Uint8Array(AEAD_NONCE_BYTES);
+    expect(() => deserializeRecoveryBackup(blob)).toThrow(InvalidInputError);
+  });
+
+  it("accepts blob of exactly nonce + tag length (minimum valid)", () => {
+    const blob = new Uint8Array(AEAD_NONCE_BYTES + AEAD_TAG_BYTES);
     const result = deserializeRecoveryBackup(blob);
     expect(result.nonce.length).toBe(AEAD_NONCE_BYTES);
-    expect(result.ciphertext.length).toBe(0);
+    expect(result.ciphertext.length).toBe(AEAD_TAG_BYTES);
   });
 });

@@ -136,7 +136,7 @@ function parseEnvelope(
 
   const keyBytes = plaintext.subarray(offset);
   assertAeadKey(keyBytes);
-  return keyBytes as AeadKey;
+  return keyBytes;
 }
 
 /**

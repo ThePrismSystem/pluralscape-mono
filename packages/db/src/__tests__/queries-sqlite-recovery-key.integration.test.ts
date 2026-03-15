@@ -150,6 +150,16 @@ describe("recovery key queries (SQLite)", () => {
       expect(all[0]?.revokedAt).toBe(revokedAt);
     });
 
+    it("throws when revoking nonexistent ID", () => {
+      expect(() =>
+        { sqliteRevokeRecoveryKey(
+          db as BetterSQLite3Database<Record<string, unknown>>,
+          "nonexistent-id",
+          Date.now(),
+        ); },
+      ).toThrow("Recovery key not found.");
+    });
+
     it("does not affect other rows", () => {
       const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
       const row1 = makeRow(accountId);
@@ -191,6 +201,18 @@ describe("recovery key queries (SQLite)", () => {
 
       const created = all.find((r) => r.id === newRow.id);
       expect(created?.revokedAt).toBeNull();
+    });
+
+    it("throws when revokeId does not exist", () => {
+      const accountId = sqliteInsertAccount(db as BetterSQLite3Database<Record<string, unknown>>);
+      const newRow = makeRow(accountId);
+      expect(() =>
+        { sqliteReplaceRecoveryKeyBackup(db as BetterSQLite3Database<Record<string, unknown>>, {
+          revokeId: "nonexistent-id",
+          revokedAt: Date.now(),
+          newRow,
+        }); },
+      ).toThrow("Recovery key not found.");
     });
 
     it("new key is the only active key after replacement", () => {

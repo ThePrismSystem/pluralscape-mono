@@ -1,30 +1,12 @@
-import {
-  KDF_KEY_BYTES,
-  PWHASH_MEMLIMIT_INTERACTIVE,
-  PWHASH_MEMLIMIT_MOBILE,
-  PWHASH_OPSLIMIT_MOBILE,
-  PWHASH_OPSLIMIT_MODERATE,
-} from "./constants.js";
+import { KDF_KEY_BYTES } from "./constants.js";
 import { InvalidInputError } from "./errors.js";
+import { PROFILE_PARAMS, type PwhashProfile } from "./master-key.js";
 import { getSodium } from "./sodium.js";
 import { decrypt, encrypt } from "./symmetric.js";
-import { assertKdfMasterKey } from "./validation.js";
+import { assertAeadKey, assertKdfMasterKey } from "./validation.js";
 
-import type { PwhashProfile } from "./master-key.js";
 import type { EncryptedPayload } from "./symmetric.js";
 import type { AeadKey, KdfMasterKey, PwhashSalt } from "./types.js";
-
-interface ProfileParams {
-  readonly opsLimit: number;
-  readonly memLimit: number;
-}
-
-const PROFILE_PARAMS: Readonly<Record<PwhashProfile, ProfileParams>> = {
-  // Server: 3 iterations + 64 MiB (not 256 MiB) to avoid OOM on constrained deployments.
-  // Higher iteration count compensates for the reduced memory parameter.
-  server: { opsLimit: PWHASH_OPSLIMIT_MODERATE, memLimit: PWHASH_MEMLIMIT_INTERACTIVE },
-  mobile: { opsLimit: PWHASH_OPSLIMIT_MOBILE, memLimit: PWHASH_MEMLIMIT_MOBILE },
-};
 
 /**
  * Generate a random persistent MasterKey (32 bytes).
@@ -60,7 +42,8 @@ export function derivePasswordKey(
   try {
     const { opsLimit, memLimit } = PROFILE_PARAMS[profile];
     const derived = adapter.pwhash(KDF_KEY_BYTES, passwordBytes, salt, opsLimit, memLimit);
-    return Promise.resolve(derived as AeadKey);
+    assertAeadKey(derived);
+    return Promise.resolve(derived);
   } finally {
     adapter.memzero(passwordBytes);
   }

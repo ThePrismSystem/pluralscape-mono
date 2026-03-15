@@ -64,6 +64,13 @@ describe("derivePasswordKey", () => {
     expect(() => derivePasswordKey("", salt, "mobile")).toThrow("Password must not be empty.");
   });
 
+  it("derives key with server profile", async () => {
+    const salt = generateSalt();
+    const key = await derivePasswordKey("test-password", salt, "server");
+    expect(key).toBeInstanceOf(Uint8Array);
+    expect(key.length).toBe(32);
+  });
+
   it("memzeros password bytes", async () => {
     const sodium = getSodium();
     const memzeroSpy = vi.spyOn(sodium, "memzero");

@@ -39,5 +39,5 @@ export function deriveSyncEncryptionKey(masterKey: KdfMasterKey, adapter?: Sodiu
     masterKey,
   );
   assertAeadKey(result);
-  return result as AeadKey;
+  return result;
 }

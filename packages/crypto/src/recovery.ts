@@ -4,7 +4,7 @@ import { decrypt, encrypt } from "./symmetric.js";
 import { assertAeadKey, assertKdfMasterKey } from "./validation.js";
 
 import type { EncryptedPayload } from "./symmetric.js";
-import type { AeadKey, KdfMasterKey } from "./types.js";
+import type { KdfMasterKey } from "./types.js";
 
 /** Result of generating a recovery key. */
 export interface RecoveryKeyResult {
@@ -120,7 +120,7 @@ export function generateRecoveryKey(masterKey: KdfMasterKey): RecoveryKeyResult 
     }
     const displayKey = groups.join("-");
     assertAeadKey(recoveryKeyBytes);
-    const encryptedMasterKey = encrypt(masterKey, recoveryKeyBytes as AeadKey);
+    const encryptedMasterKey = encrypt(masterKey, recoveryKeyBytes);
     return { displayKey, encryptedMasterKey };
   } finally {
     adapter.memzero(recoveryKeyBytes);
@@ -149,7 +149,7 @@ export function recoverMasterKey(
   try {
     recoveryKeyBytes = decodeBase32(normalized);
     assertAeadKey(recoveryKeyBytes);
-    const raw = decrypt(encryptedMasterKey, recoveryKeyBytes as AeadKey);
+    const raw = decrypt(encryptedMasterKey, recoveryKeyBytes);
     assertKdfMasterKey(raw);
     return raw;
   } finally {

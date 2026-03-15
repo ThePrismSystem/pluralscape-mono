@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { recoveryKeys as pgRecoveryKeys } from "../schema/pg/auth.js";
 import { recoveryKeys as sqliteRecoveryKeys } from "../schema/sqlite/auth.js";
@@ -53,13 +53,12 @@ export async function pgGetActiveRecoveryKey<
   const rows = await db
     .select()
     .from(pgRecoveryKeys)
-    .where(eq(pgRecoveryKeys.accountId, accountId))
+    .where(and(eq(pgRecoveryKeys.accountId, accountId), isNull(pgRecoveryKeys.revokedAt)))
     .limit(1);
-  const row = rows.find((r) => r.revokedAt === null);
-  return row ?? null;
+  return rows[0] ?? null;
 }
 
-/** Set revokedAt on a recovery key row. */
+/** Set revokedAt on a recovery key row. Throws if no matching row exists. */
 export async function pgRevokeRecoveryKey<
   TSchema extends Record<string, unknown> = Record<string, never>,
 >(
@@ -67,7 +66,14 @@ export async function pgRevokeRecoveryKey<
   id: string,
   revokedAt: number,
 ): Promise<void> {
-  await db.update(pgRecoveryKeys).set({ revokedAt }).where(eq(pgRecoveryKeys.id, id));
+  const rows = await db
+    .update(pgRecoveryKeys)
+    .set({ revokedAt })
+    .where(eq(pgRecoveryKeys.id, id))
+    .returning();
+  if (rows.length === 0) {
+    throw new Error("Recovery key not found.");
+  }
 }
 
 /**
@@ -87,10 +93,14 @@ export async function pgReplaceRecoveryKeyBackup<
     createdAt: input.newRow.createdAt,
   };
   await db.transaction(async (tx) => {
-    await tx
+    const revoked = await tx
       .update(pgRecoveryKeys)
       .set({ revokedAt: input.revokedAt })
-      .where(eq(pgRecoveryKeys.id, input.revokeId));
+      .where(eq(pgRecoveryKeys.id, input.revokeId))
+      .returning();
+    if (revoked.length === 0) {
+      throw new Error("Recovery key not found.");
+    }
     await tx.insert(pgRecoveryKeys).values(newRow);
   });
 }
@@ -118,17 +128,24 @@ export function sqliteGetActiveRecoveryKey<
   const rows = db
     .select()
     .from(sqliteRecoveryKeys)
-    .where(eq(sqliteRecoveryKeys.accountId, accountId))
+    .where(and(eq(sqliteRecoveryKeys.accountId, accountId), isNull(sqliteRecoveryKeys.revokedAt)))
+    .limit(1)
     .all();
-  const row = rows.find((r) => r.revokedAt === null);
-  return row ?? null;
+  return rows[0] ?? null;
 }
 
-/** Set revokedAt on a recovery key row. */
+/** Set revokedAt on a recovery key row. Throws if no matching row exists. */
 export function sqliteRevokeRecoveryKey<
   TSchema extends Record<string, unknown> = Record<string, never>,
 >(db: BetterSQLite3Database<TSchema>, id: string, revokedAt: number): void {
-  db.update(sqliteRecoveryKeys).set({ revokedAt }).where(eq(sqliteRecoveryKeys.id, id)).run();
+  const result = db
+    .update(sqliteRecoveryKeys)
+    .set({ revokedAt })
+    .where(eq(sqliteRecoveryKeys.id, id))
+    .run();
+  if (result.changes === 0) {
+    throw new Error("Recovery key not found.");
+  }
 }
 
 /**
@@ -139,10 +156,14 @@ export function sqliteReplaceRecoveryKeyBackup<
   TSchema extends Record<string, unknown> = Record<string, never>,
 >(db: BetterSQLite3Database<TSchema>, input: ReplaceRecoveryKeyInput): void {
   db.transaction((tx) => {
-    tx.update(sqliteRecoveryKeys)
+    const result = tx
+      .update(sqliteRecoveryKeys)
       .set({ revokedAt: input.revokedAt })
       .where(eq(sqliteRecoveryKeys.id, input.revokeId))
       .run();
+    if (result.changes === 0) {
+      throw new Error("Recovery key not found.");
+    }
     tx.insert(sqliteRecoveryKeys)
       .values({
         id: input.newRow.id,

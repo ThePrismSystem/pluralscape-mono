@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { PWHASH_SALT_BYTES } from "../constants.js";
 import {
@@ -151,6 +151,17 @@ describe("encodeQRPayload / decodeQRPayload", () => {
     const payload = JSON.stringify({ requestId: "uuid", code: "12345678" });
     expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
   });
+
+  it("invalid hex in salt throws InvalidInputError", () => {
+    const payload = JSON.stringify({ requestId: "uuid", code: "12345678", salt: "ZZZZ" });
+    expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
+  });
+
+  it("wrong-length salt hex throws InvalidInputError", () => {
+    // 4 hex chars = 2 bytes, not the required 16
+    const payload = JSON.stringify({ requestId: "uuid", code: "12345678", salt: "aabb" });
+    expect(() => decodeQRPayload(payload)).toThrow(InvalidInputError);
+  });
 });
 
 describe("isValidTransferCode", () => {
@@ -175,5 +186,44 @@ describe("isValidTransferCode", () => {
 
   it("rejects empty string", () => {
     expect(isValidTransferCode("")).toBe(false);
+  });
+});
+
+describe("memzero behavior", () => {
+  it("deriveTransferKey zeroes codeBytes", async () => {
+    const sodium = (await import("../sodium.js")).getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    const { verificationCode, codeSalt } = generateTransferCode();
+    deriveTransferKey(verificationCode, codeSalt, "mobile");
+    expect(memzeroSpy).toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+  });
+
+  it("encryptForTransfer zeroes transferKey", async () => {
+    const sodium = (await import("../sodium.js")).getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    const masterKey = generateMasterKey();
+    const { verificationCode, codeSalt } = generateTransferCode();
+    const transferKey = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    encryptForTransfer(masterKey, transferKey);
+    // memzero called for codeBytes in deriveTransferKey + transferKey in encryptForTransfer
+    expect(memzeroSpy).toHaveBeenCalledTimes(2);
+    memzeroSpy.mockRestore();
+  });
+
+  it("decryptFromTransfer zeroes transferKey", async () => {
+    const sodium = (await import("../sodium.js")).getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    const masterKey = generateMasterKey();
+    const { verificationCode, codeSalt } = generateTransferCode();
+    const encKey = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    const payload = encryptForTransfer(masterKey, encKey);
+    memzeroSpy.mockClear();
+    const decKey = deriveTransferKey(verificationCode, codeSalt, "mobile");
+    memzeroSpy.mockClear();
+    decryptFromTransfer(payload, decKey);
+    // memzero called for transferKey in decryptFromTransfer
+    expect(memzeroSpy).toHaveBeenCalled();
+    memzeroSpy.mockRestore();
   });
 });

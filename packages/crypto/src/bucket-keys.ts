@@ -66,7 +66,7 @@ export function encryptBucketKey(
   );
   try {
     assertAeadKey(wrappingKey);
-    const result = encrypt(bucketKey, wrappingKey as AeadKey);
+    const result = encrypt(bucketKey, wrappingKey);
     return { ciphertext: result.ciphertext, nonce: result.nonce, keyVersion };
   } finally {
     adapter.memzero(wrappingKey);
@@ -89,12 +89,9 @@ export function decryptBucketKey(wrapped: WrappedBucketKey, masterKey: KdfMaster
   );
   try {
     assertAeadKey(wrappingKey);
-    const raw = decrypt(
-      { ciphertext: wrapped.ciphertext, nonce: wrapped.nonce },
-      wrappingKey as AeadKey,
-    );
+    const raw = decrypt({ ciphertext: wrapped.ciphertext, nonce: wrapped.nonce }, wrappingKey);
     assertAeadKey(raw);
-    return raw as AeadKey;
+    return raw;
   } finally {
     adapter.memzero(wrappingKey);
   }

@@ -124,6 +124,21 @@ describe("resetPasswordViaRecoveryKey", () => {
     ).rejects.toThrow(InvalidInputError);
   });
 
+  it("tampered backup throws DecryptionFailedError", async () => {
+    const masterKey = generateMasterKey();
+    const { displayKey, encryptedBackup } = await makeBackup(masterKey);
+    const tampered = new Uint8Array(encryptedBackup);
+    tampered[tampered.length - 1] = (tampered[tampered.length - 1] ?? 0) ^ 0xff;
+    await expect(
+      resetPasswordViaRecoveryKey({
+        displayKey,
+        encryptedBackup: tampered,
+        newPassword: "test",
+        pwhashProfile: "mobile",
+      }),
+    ).rejects.toThrow(DecryptionFailedError);
+  });
+
   it("memzeros the intermediate password key", async () => {
     const masterKey = generateMasterKey();
     const { displayKey, encryptedBackup } = await makeBackup(masterKey);
