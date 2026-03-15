@@ -1,4 +1,4 @@
-import { KDF_KEY_BYTES } from "./constants.js";
+import { KDF_KEY_BYTES, MIN_PASSWORD_LENGTH } from "./constants.js";
 import { InvalidInputError } from "./errors.js";
 import { PROFILE_PARAMS, type PwhashProfile } from "./master-key.js";
 import { getSodium } from "./sodium.js";
@@ -34,8 +34,10 @@ export function derivePasswordKey(
   salt: PwhashSalt,
   profile: PwhashProfile,
 ): Promise<AeadKey> {
-  if (password.length === 0) {
-    throw new InvalidInputError("Password must not be empty.");
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new InvalidInputError(
+      `Password must be at least ${String(MIN_PASSWORD_LENGTH)} characters.`,
+    );
   }
   const adapter = getSodium();
   const passwordBytes = new TextEncoder().encode(password);
