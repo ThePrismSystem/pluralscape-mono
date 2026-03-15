@@ -11,6 +11,7 @@ import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../../policies/index.js"
 import {
   DEFAULT_TIMEOUT_MS,
   IDEM_RESERVATION_TTL_SEC,
+  MAX_DEQUEUE_BATCH,
   PUT_BACK_DELAY_MS,
   SCAN_COUNT,
 } from "../../queue.constants.js";
@@ -229,9 +230,7 @@ export class BullMQJobQueue implements JobQueue {
     let result: JobDefinition | null = null;
 
     try {
-      // Try to get up to 20 jobs to find a matching one
-      const MAX_FETCH = 20;
-      for (let i = 0; i < MAX_FETCH; i++) {
+      for (let i = 0; i < MAX_DEQUEUE_BATCH; i++) {
         // getNextJob may return undefined when no jobs available
         const job = (await this.fetchWorker.getNextJob(this.token)) as BullMQJob | undefined;
         if (job === undefined) break;
