@@ -6,7 +6,7 @@ import {
   NoHandlersRegisteredError,
   WorkerAlreadyRunningError,
 } from "../../errors.js";
-import { pollBackoffMs } from "../../queue.constants.js";
+import { ACK_RETRY_DELAY_MS, MAX_ACK_RETRIES, pollBackoffMs } from "../../queue.constants.js";
 
 import { fromStoredData } from "./job-mapper.js";
 
@@ -201,12 +201,32 @@ export class BullMQJobWorker implements JobWorker {
         return;
       }
 
-      // Handler succeeded — delegate to queue for completion hooks
-      try {
-        await this.queue.acknowledge(job.id, {});
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.logger?.error("worker.acknowledge-delegation-error", { jobId: job.id, error: msg });
+      // Handler succeeded — acknowledge with retry
+      let ackAttempt = 0;
+      while (ackAttempt < MAX_ACK_RETRIES) {
+        try {
+          await this.queue.acknowledge(job.id, {});
+          break;
+        } catch (err) {
+          ackAttempt++;
+          const msg = err instanceof Error ? err.message : String(err);
+          if (ackAttempt >= MAX_ACK_RETRIES) {
+            this.logger?.error("worker.acknowledge-exhausted", {
+              jobId: job.id,
+              error: msg,
+              attempts: ackAttempt,
+            });
+          } else {
+            this.logger?.warn("worker.acknowledge-retry", {
+              jobId: job.id,
+              error: msg,
+              attempt: ackAttempt,
+            });
+            await new Promise<void>((r) => {
+              setTimeout(r, ACK_RETRY_DELAY_MS);
+            });
+          }
+        }
       }
     } finally {
       this.inFlight.delete(jobId);

@@ -19,6 +19,12 @@ export const POLL_BACKOFF_BASE_MS = 100;
 /** Maximum delay in ms for poll backoff. */
 export const MAX_POLL_BACKOFF_MS = 30_000;
 
+/** Maximum number of retries for a failed acknowledge call. */
+export const MAX_ACK_RETRIES = 3;
+
+/** Delay in ms between acknowledge retry attempts. */
+export const ACK_RETRY_DELAY_MS = 50;
+
 /** Calculates backoff delay for poll failures using exponential backoff with cap. */
 export function pollBackoffMs(consecutiveFailures: number): number {
   if (consecutiveFailures <= 0) return 0;

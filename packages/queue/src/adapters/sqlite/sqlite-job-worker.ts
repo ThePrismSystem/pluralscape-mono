@@ -5,7 +5,7 @@ import {
   NoHandlersRegisteredError,
   WorkerAlreadyRunningError,
 } from "../../errors.js";
-import { pollBackoffMs } from "../../queue.constants.js";
+import { ACK_RETRY_DELAY_MS, MAX_ACK_RETRIES, pollBackoffMs } from "../../queue.constants.js";
 
 import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
@@ -156,11 +156,31 @@ export class SqliteJobWorker implements JobWorker {
         return;
       }
 
-      try {
-        await this.queue.acknowledge(job.id, {});
-      } catch (ackErr) {
-        const ackMsg = ackErr instanceof Error ? ackErr.message : String(ackErr);
-        this.logger?.error("worker.acknowledge-failed", { jobId: job.id, error: ackMsg });
+      let ackAttempt = 0;
+      while (ackAttempt < MAX_ACK_RETRIES) {
+        try {
+          await this.queue.acknowledge(job.id, {});
+          break;
+        } catch (err) {
+          ackAttempt++;
+          const msg = err instanceof Error ? err.message : String(err);
+          if (ackAttempt >= MAX_ACK_RETRIES) {
+            this.logger?.error("worker.acknowledge-exhausted", {
+              jobId: job.id,
+              error: msg,
+              attempts: ackAttempt,
+            });
+          } else {
+            this.logger?.warn("worker.acknowledge-retry", {
+              jobId: job.id,
+              error: msg,
+              attempt: ackAttempt,
+            });
+            await new Promise<void>((r) => {
+              setTimeout(r, ACK_RETRY_DELAY_MS);
+            });
+          }
+        }
       }
     } finally {
       this.inFlight.delete(job.id);
