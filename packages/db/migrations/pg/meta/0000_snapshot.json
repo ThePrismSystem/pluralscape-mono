@@ -1,5 +1,5 @@
 {
-  "id": "0e4a2bf7-6d1f-4b22-a2a9-590bfe16ab92",
+  "id": "0dd87433-b221-44d3-b4c2-5f55ec545525",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -160,6 +160,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "encrypted_master_key": {
+          "name": "encrypted_master_key",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamptz",
@@ -280,6 +286,27 @@
             },
             {
               "expression": "confirmed",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "acknowledgements_system_archived_idx": {
+          "name": "acknowledgements_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -699,7 +726,7 @@
       "checkConstraints": {
         "audit_log_event_type_check": {
           "name": "audit_log_event_type_check",
-          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)"
+          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)"
         },
         "audit_log_detail_length_check": {
           "name": "audit_log_detail_length_check",
@@ -894,6 +921,27 @@
           "method": "btree",
           "with": {}
         },
+        "blob_metadata_system_archived_idx": {
+          "name": "blob_metadata_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "blob_metadata_storage_key_idx": {
           "name": "blob_metadata_storage_key_idx",
           "columns": [
@@ -1045,21 +1093,6 @@
         }
       },
       "indexes": {
-        "board_messages_system_id_idx": {
-          "name": "board_messages_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "board_messages_system_archived_idx": {
           "name": "board_messages_system_archived_idx",
           "columns": [
@@ -1573,21 +1606,6 @@
         }
       },
       "indexes": {
-        "buckets_system_id_idx": {
-          "name": "buckets_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "buckets_system_archived_idx": {
           "name": "buckets_system_archived_idx",
           "columns": [
@@ -1716,11 +1734,17 @@
         }
       },
       "indexes": {
-        "channels_system_id_idx": {
-          "name": "channels_system_id_idx",
+        "channels_system_archived_idx": {
+          "name": "channels_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1911,7 +1935,7 @@
             }
           ],
           "isUnique": false,
-          "where": "\"check_in_records\".\"responded_at\" IS NULL AND \"check_in_records\".\"dismissed\" = false",
+          "where": "\"check_in_records\".\"responded_at\" IS NULL AND \"check_in_records\".\"dismissed\" = false AND \"check_in_records\".\"archived\" = false",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -2013,11 +2037,17 @@
         }
       },
       "indexes": {
-        "custom_fronts_system_id_idx": {
-          "name": "custom_fronts_system_id_idx",
+        "custom_fronts_system_archived_idx": {
+          "name": "custom_fronts_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2651,11 +2681,17 @@
         }
       },
       "indexes": {
-        "field_definitions_system_id_idx": {
-          "name": "field_definitions_system_id_idx",
+        "field_definitions_system_archived_idx": {
+          "name": "field_definitions_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3008,17 +3044,39 @@
         }
       },
       "indexes": {
-        "friend_codes_account_id_idx": {
-          "name": "friend_codes_account_id_idx",
+        "friend_codes_account_archived_idx": {
+          "name": "friend_codes_account_archived_idx",
           "columns": [
             {
               "expression": "account_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
+            },
+            {
+              "expression": "archived",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "friend_codes_code_uniq": {
+          "name": "friend_codes_code_uniq",
+          "columns": [
+            {
+              "expression": "code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"friend_codes\".\"archived\" = false",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -3036,13 +3094,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "friend_codes_code_unique": {
-          "name": "friend_codes_code_unique",
-          "nullsNotDistinct": false,
-          "columns": ["code"]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
         "friend_codes_expires_at_check": {
@@ -3191,6 +3243,28 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "friend_connections_account_friend_uniq": {
+          "name": "friend_connections_account_friend_uniq",
+          "columns": [
+            {
+              "expression": "account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "friend_account_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"friend_connections\".\"archived\" = false",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3215,11 +3289,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "friend_connections_account_friend_uniq": {
-          "name": "friend_connections_account_friend_uniq",
-          "nullsNotDistinct": false,
-          "columns": ["account_id", "friend_account_id"]
-        },
         "friend_connections_id_account_id_unique": {
           "name": "friend_connections_id_account_id_unique",
           "nullsNotDistinct": false,
@@ -3319,6 +3388,7 @@
             }
           ],
           "isUnique": true,
+          "where": "\"friend_notification_preferences\".\"archived\" = false",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -3455,6 +3525,27 @@
           "columns": [
             {
               "expression": "session_start_time",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "fronting_comments_system_archived_idx": {
+          "name": "fronting_comments_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4047,11 +4138,17 @@
         }
       },
       "indexes": {
-        "groups_system_id_idx": {
-          "name": "groups_system_id_idx",
+        "groups_system_archived_idx": {
+          "name": "groups_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4401,21 +4498,6 @@
         }
       },
       "indexes": {
-        "innerworld_entities_system_id_idx": {
-          "name": "innerworld_entities_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "innerworld_entities_region_id_idx": {
           "name": "innerworld_entities_region_id_idx",
           "columns": [
@@ -4550,21 +4632,6 @@
         }
       },
       "indexes": {
-        "innerworld_regions_system_id_idx": {
-          "name": "innerworld_regions_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "innerworld_regions_system_archived_idx": {
           "name": "innerworld_regions_system_archived_idx",
           "columns": [
@@ -4701,6 +4768,27 @@
             },
             {
               "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "journal_entries_system_archived_idx": {
+          "name": "journal_entries_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5081,21 +5169,6 @@
         }
       },
       "indexes": {
-        "layers_system_id_idx": {
-          "name": "layers_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "layers_system_archived_idx": {
           "name": "layers_system_archived_idx",
           "columns": [
@@ -5326,11 +5399,17 @@
         }
       },
       "indexes": {
-        "member_photos_system_id_idx": {
-          "name": "member_photos_system_id_idx",
+        "member_photos_system_archived_idx": {
+          "name": "member_photos_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5624,11 +5703,17 @@
           "method": "btree",
           "with": {}
         },
-        "messages_system_id_idx": {
-          "name": "messages_system_id_idx",
+        "messages_system_archived_idx": {
+          "name": "messages_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5827,11 +5912,17 @@
         }
       },
       "indexes": {
-        "notes_system_id_idx": {
-          "name": "notes_system_id_idx",
+        "notes_system_archived_idx": {
+          "name": "notes_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5973,6 +6064,7 @@
             }
           ],
           "isUnique": true,
+          "where": "\"notification_configs\".\"archived\" = false",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -6209,11 +6301,17 @@
           "method": "btree",
           "with": {}
         },
-        "poll_votes_system_id_idx": {
-          "name": "poll_votes_system_id_idx",
+        "poll_votes_system_archived_idx": {
+          "name": "poll_votes_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6367,21 +6465,6 @@
         }
       },
       "indexes": {
-        "polls_system_id_idx": {
-          "name": "polls_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "polls_system_archived_idx": {
           "name": "polls_system_archived_idx",
           "columns": [
@@ -6623,21 +6706,6 @@
         }
       },
       "indexes": {
-        "relationships_system_id_idx": {
-          "name": "relationships_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "relationships_system_archived_idx": {
           "name": "relationships_system_archived_idx",
           "columns": [
@@ -7189,21 +7257,6 @@
         }
       },
       "indexes": {
-        "side_systems_system_id_idx": {
-          "name": "side_systems_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "side_systems_system_archived_idx": {
           "name": "side_systems_system_archived_idx",
           "columns": [
@@ -7660,21 +7713,6 @@
         }
       },
       "indexes": {
-        "subsystems_system_id_idx": {
-          "name": "subsystems_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "subsystems_system_archived_idx": {
           "name": "subsystems_system_archived_idx",
           "columns": [
@@ -7809,6 +7847,27 @@
             },
             {
               "expression": "timestamp",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "switches_system_archived_idx": {
+          "name": "switches_system_archived_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -8616,23 +8675,8 @@
         }
       },
       "indexes": {
-        "timer_configs_system_id_idx": {
-          "name": "timer_configs_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "timer_configs_system_id_archived_idx": {
-          "name": "timer_configs_system_id_archived_idx",
+        "timer_configs_system_archived_idx": {
+          "name": "timer_configs_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
@@ -8767,23 +8811,8 @@
         }
       },
       "indexes": {
-        "webhook_configs_system_id_idx": {
-          "name": "webhook_configs_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "webhook_configs_system_id_archived_idx": {
-          "name": "webhook_configs_system_id_archived_idx",
+        "webhook_configs_system_archived_idx": {
+          "name": "webhook_configs_system_archived_idx",
           "columns": [
             {
               "expression": "system_id",
@@ -9133,21 +9162,6 @@
         }
       },
       "indexes": {
-        "wiki_pages_system_id_idx": {
-          "name": "wiki_pages_system_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "wiki_pages_system_archived_idx": {
           "name": "wiki_pages_system_archived_idx",
           "columns": [
@@ -9186,6 +9200,7 @@
             }
           ],
           "isUnique": true,
+          "where": "\"wiki_pages\".\"archived\" = false",
           "concurrently": false,
           "method": "btree",
           "with": {}

@@ -82,12 +82,15 @@ The Hono application does not configure any security response headers. Missing h
 ```typescript
 import { secureHeaders } from "hono/secure-headers";
 
-app.use("*", secureHeaders({
-  contentSecurityPolicy: { defaultSrc: ["'self'"] },
-  strictTransportSecurity: "max-age=63072000; includeSubDomains",
-  xContentTypeOptions: "nosniff",
-  xFrameOptions: "DENY",
-}));
+app.use(
+  "*",
+  secureHeaders({
+    contentSecurityPolicy: { defaultSrc: ["'self'"] },
+    strictTransportSecurity: "max-age=63072000; includeSubDomains",
+    xContentTypeOptions: "nosniff",
+    xFrameOptions: "DENY",
+  }),
+);
 ```
 
 ### References
@@ -118,11 +121,14 @@ No rate limiting middleware is configured. Critical for authentication endpoints
 Use Hono's rate limiter or a Redis-backed solution:
 
 ```typescript
-app.use("/api/auth/*", rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per window
-  keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "unknown",
-}));
+app.use(
+  "/api/auth/*",
+  rateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 attempts per window
+    keyGenerator: (c) => c.req.header("x-forwarded-for") ?? "unknown",
+  }),
+);
 ```
 
 ### References
@@ -147,11 +153,14 @@ No CORS middleware is configured. The Hono app will accept requests from any ori
 ```typescript
 import { cors } from "hono/cors";
 
-app.use("*", cors({
-  origin: ["https://your-domain.com"],
-  allowMethods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
-}));
+app.use(
+  "*",
+  cors({
+    origin: ["https://your-domain.com"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 ```
 
 ### References
@@ -314,6 +323,7 @@ The device transfer code uses 8 decimal digits (~26.5 bits of entropy). While pr
 ### Mitigation
 
 The 5-minute timeout effectively prevents online brute force. For higher security:
+
 - Increase to 10-12 digits (adds ~7-13 bits)
 - Use the "server" profile (3 ops, 64 MiB) for the transfer KDF
 - Add attempt limiting on the server relay
@@ -349,18 +359,18 @@ The audit-log cleanup query functions exist in `packages/db/src/queries/audit-lo
 
 The following areas were tested and found to be well-implemented:
 
-| Area | Finding | Location |
-|------|---------|----------|
-| Dependencies | 0 known CVEs across 976 packages | pnpm audit |
-| SQL Injection | Drizzle ORM parameterized queries throughout; RLS uses set_config() | All query code |
-| Command Injection | No exec/spawn calls in production code | All source files |
-| Prototype Pollution | No __proto__ or prototype manipulation | All source files |
-| XSS | No dangerouslySetInnerHTML, innerHTML, or eval in production | All source files |
-| RLS Fail-Closed | NULLIF(current_setting(..., true), '') prevents leaks on unset vars | `packages/db/src/rls/policies.ts:17-19` |
-| Key Zeroing | All key derivation functions memzero in finally blocks | All crypto modules |
-| Sync Integrity | AEAD + Ed25519 signatures on all sync envelopes | `packages/sync/src/encrypted-sync.ts` |
-| Encryption Algorithms | XChaCha20-Poly1305 (AEAD), Ed25519, Argon2id — all modern, well-chosen | `packages/crypto/` |
-| Key Derivation | KEK/DEK pattern, deterministic identity from master key, isolated KDF contexts | `packages/crypto/src/master-key-wrap.ts`, `identity.ts` |
-| Stream Encryption | Chunk AAD prevents reordering/truncation attacks | `packages/crypto/src/symmetric.ts:64-70` |
-| Key Grants | Authenticated envelope encryption binds bucketId + keyVersion | `packages/crypto/src/key-grants.ts` |
-| SSRF | No outbound HTTP requests in production code | All source files |
+| Area                  | Finding                                                                        | Location                                                |
+| --------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| Dependencies          | 0 known CVEs across 976 packages                                               | pnpm audit                                              |
+| SQL Injection         | Drizzle ORM parameterized queries throughout; RLS uses set_config()            | All query code                                          |
+| Command Injection     | No exec/spawn calls in production code                                         | All source files                                        |
+| Prototype Pollution   | No **proto** or prototype manipulation                                         | All source files                                        |
+| XSS                   | No dangerouslySetInnerHTML, innerHTML, or eval in production                   | All source files                                        |
+| RLS Fail-Closed       | NULLIF(current_setting(..., true), '') prevents leaks on unset vars            | `packages/db/src/rls/policies.ts:17-19`                 |
+| Key Zeroing           | All key derivation functions memzero in finally blocks                         | All crypto modules                                      |
+| Sync Integrity        | AEAD + Ed25519 signatures on all sync envelopes                                | `packages/sync/src/encrypted-sync.ts`                   |
+| Encryption Algorithms | XChaCha20-Poly1305 (AEAD), Ed25519, Argon2id — all modern, well-chosen         | `packages/crypto/`                                      |
+| Key Derivation        | KEK/DEK pattern, deterministic identity from master key, isolated KDF contexts | `packages/crypto/src/master-key-wrap.ts`, `identity.ts` |
+| Stream Encryption     | Chunk AAD prevents reordering/truncation attacks                               | `packages/crypto/src/symmetric.ts:64-70`                |
+| Key Grants            | Authenticated envelope encryption binds bucketId + keyVersion                  | `packages/crypto/src/key-grants.ts`                     |
+| SSRF                  | No outbound HTTP requests in production code                                   | All source files                                        |

@@ -12,6 +12,7 @@ export type {
   CryptoKeypair,
   EncryptedKeyGrant,
   KdfMasterKey,
+  KeyVersion,
   PwhashSalt,
   Signature,
   SignKeypair,

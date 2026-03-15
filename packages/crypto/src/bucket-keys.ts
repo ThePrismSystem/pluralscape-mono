@@ -4,7 +4,7 @@ import { decrypt, encrypt } from "./symmetric.js";
 import { assertAeadKey, validateKeyVersion } from "./validation.js";
 
 import type { EncryptedPayload } from "./symmetric.js";
-import type { AeadKey, AeadNonce, KdfMasterKey } from "./types.js";
+import type { AeadKey, AeadNonce, KdfMasterKey, KeyVersion } from "./types.js";
 
 /** KDF context for bucket key wrapping (must be exactly 8 bytes). */
 const KDF_CONTEXT = "bktkeywp";
@@ -16,7 +16,7 @@ const SUBKEY_BUCKET_KEY_WRAPPING = 1;
 export interface WrappedBucketKey {
   readonly ciphertext: Uint8Array;
   readonly nonce: AeadNonce;
-  readonly keyVersion: number;
+  readonly keyVersion: KeyVersion;
 }
 
 /**
@@ -36,7 +36,7 @@ export type ReEncryptFn = (payload: EncryptedPayload) => EncryptedPayload;
  */
 export interface RotatedBucketKey {
   readonly newKey: AeadKey;
-  readonly newVersion: number;
+  readonly newVersion: KeyVersion;
   readonly reEncrypt: ReEncryptFn;
 }
 
@@ -56,7 +56,7 @@ export function encryptBucketKey(
   masterKey: KdfMasterKey,
   keyVersion: number,
 ): WrappedBucketKey {
-  validateKeyVersion(keyVersion);
+  const validVersion = validateKeyVersion(keyVersion);
   const adapter = getSodium();
   const wrappingKey = adapter.kdfDeriveFromKey(
     KDF_KEY_BYTES,
@@ -67,7 +67,7 @@ export function encryptBucketKey(
   try {
     assertAeadKey(wrappingKey);
     const result = encrypt(bucketKey, wrappingKey);
-    return { ciphertext: result.ciphertext, nonce: result.nonce, keyVersion };
+    return { ciphertext: result.ciphertext, nonce: result.nonce, keyVersion: validVersion };
   } finally {
     adapter.memzero(wrappingKey);
   }
@@ -107,8 +107,7 @@ export function decryptBucketKey(wrapped: WrappedBucketKey, masterKey: KdfMaster
 export function rotateBucketKey(oldKey: AeadKey, currentVersion: number): RotatedBucketKey {
   validateKeyVersion(currentVersion);
   const newKey = generateBucketKey();
-  const newVersion = currentVersion + 1;
-  validateKeyVersion(newVersion);
+  const newVersion = validateKeyVersion(currentVersion + 1);
   const reEncrypt = (payload: EncryptedPayload): EncryptedPayload => {
     const plaintext = decrypt(payload, oldKey);
     return encrypt(plaintext, newKey);

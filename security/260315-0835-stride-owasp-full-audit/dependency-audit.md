@@ -20,16 +20,16 @@
 
 ## Key Dependencies
 
-| Package | Version | Purpose | Notes |
-|---------|---------|---------|-------|
-| hono | ^4.12.7 | HTTP framework | Well-maintained, Cloudflare-backed |
-| drizzle-orm | ^0.45.1 | ORM | Parameterized queries prevent SQL injection |
-| postgres | ^3.4.5 | PG client | Maintained by porsager |
-| better-sqlite3-multiple-ciphers | ^12.6.2 | SQLite + SQLCipher | Fork with encryption support |
-| libsodium-wrappers-sumo | ^0.8.2 | Cryptography | Maintained by jedisct1; sumo build includes all algorithms |
-| @automerge/automerge | ^3.2.4 | CRDT library | For encrypted sync protocol |
-| zod | ^4.3.6 | Schema validation | Used with tRPC (not yet implemented) |
-| @trpc/server | ^11.0.0-rc.730 | API framework | RC version (pre-release) |
+| Package                         | Version        | Purpose            | Notes                                                      |
+| ------------------------------- | -------------- | ------------------ | ---------------------------------------------------------- |
+| hono                            | ^4.12.7        | HTTP framework     | Well-maintained, Cloudflare-backed                         |
+| drizzle-orm                     | ^0.45.1        | ORM                | Parameterized queries prevent SQL injection                |
+| postgres                        | ^3.4.5         | PG client          | Maintained by porsager                                     |
+| better-sqlite3-multiple-ciphers | ^12.6.2        | SQLite + SQLCipher | Fork with encryption support                               |
+| libsodium-wrappers-sumo         | ^0.8.2         | Cryptography       | Maintained by jedisct1; sumo build includes all algorithms |
+| @automerge/automerge            | ^3.2.4         | CRDT library       | For encrypted sync protocol                                |
+| zod                             | ^4.3.6         | Schema validation  | Used with tRPC (not yet implemented)                       |
+| @trpc/server                    | ^11.0.0-rc.730 | API framework      | RC version (pre-release)                                   |
 
 ## Dependency Overrides
 

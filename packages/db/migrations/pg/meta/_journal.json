@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1773454797311,
-      "tag": "0000_flawless_carmella_unuscione",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1773457320308,
-      "tag": "0001_spicy_stardust",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1773459909905,
-      "tag": "0002_careless_rafael_vega",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1773462389183,
-      "tag": "0003_fuzzy_blizzard",
+      "when": 1773614779676,
+      "tag": "0000_amused_susan_delgado",
       "breakpoints": true
     }
   ]

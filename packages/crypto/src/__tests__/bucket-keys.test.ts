@@ -49,7 +49,7 @@ describe("encryptBucketKey / decryptBucketKey", () => {
   });
 
   it("roundtrips: decrypt returns original key bytes", () => {
-    const wrapped = encryptBucketKey(bucketKey, masterKey, 0);
+    const wrapped = encryptBucketKey(bucketKey, masterKey, 1);
     const recovered = decryptBucketKey(wrapped, masterKey);
     expect(recovered).toEqual(bucketKey);
   });
@@ -59,11 +59,8 @@ describe("encryptBucketKey / decryptBucketKey", () => {
     expect(wrapped.keyVersion).toBe(7);
   });
 
-  it("keyVersion 0 is valid", () => {
-    const wrapped = encryptBucketKey(bucketKey, masterKey, 0);
-    expect(wrapped.keyVersion).toBe(0);
-    const recovered = decryptBucketKey(wrapped, masterKey);
-    expect(recovered).toEqual(bucketKey);
+  it("keyVersion 0 throws InvalidInputError", () => {
+    expect(() => encryptBucketKey(bucketKey, masterKey, 0)).toThrow(InvalidInputError);
   });
 
   it("negative keyVersion throws InvalidInputError", () => {
@@ -123,7 +120,7 @@ describe("rotateBucketKey", () => {
   });
 
   it("newKey differs from oldKey", () => {
-    const { newKey } = rotateBucketKey(oldKey, 0);
+    const { newKey } = rotateBucketKey(oldKey, 1);
     expect(newKey).not.toEqual(oldKey);
   });
 
@@ -133,7 +130,7 @@ describe("rotateBucketKey", () => {
   });
 
   it("reEncrypt roundtrips: old-encrypted data → reEncrypt → decrypt with newKey", () => {
-    const { newKey, reEncrypt } = rotateBucketKey(oldKey, 0);
+    const { newKey, reEncrypt } = rotateBucketKey(oldKey, 1);
     const plaintext = new TextEncoder().encode("fronting log entry");
     const original = encrypt(plaintext, oldKey);
     const reEncrypted = reEncrypt(original);
@@ -143,7 +140,7 @@ describe("rotateBucketKey", () => {
   });
 
   it("old key cannot decrypt re-encrypted data", () => {
-    const { reEncrypt } = rotateBucketKey(oldKey, 0);
+    const { reEncrypt } = rotateBucketKey(oldKey, 1);
     const plaintext = new TextEncoder().encode("member data");
     const original = encrypt(plaintext, oldKey);
     const reEncrypted = reEncrypt(original);
@@ -165,7 +162,7 @@ describe("rotateBucketKey", () => {
 describe("KDF parameter regression", () => {
   it("wrapping key uses KDF context 'bktkeywp' subkey 1", () => {
     const bucketKey = generateBucketKey();
-    const wrapped = encryptBucketKey(bucketKey, masterKey, 0);
+    const wrapped = encryptBucketKey(bucketKey, masterKey, 1);
     const sodium = getSodium();
     const manualWrappingKey = sodium.kdfDeriveFromKey(32, 1, "bktkeywp", masterKey);
     try {
@@ -195,10 +192,10 @@ describe("chained rotation", () => {
     const plaintext = new TextEncoder().encode("system journal");
     const encrypted1 = encrypt(plaintext, key1);
 
-    const { newKey: key2, reEncrypt: reEncrypt1 } = rotateBucketKey(key1, 0);
+    const { newKey: key2, reEncrypt: reEncrypt1 } = rotateBucketKey(key1, 1);
     const encrypted2 = reEncrypt1(encrypted1);
 
-    const { newKey: key3, reEncrypt: reEncrypt2 } = rotateBucketKey(key2, 1);
+    const { newKey: key3, reEncrypt: reEncrypt2 } = rotateBucketKey(key2, 2);
     const encrypted3 = reEncrypt2(encrypted2);
 
     const sodium = getSodium();

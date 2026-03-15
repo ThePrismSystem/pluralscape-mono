@@ -40,29 +40,29 @@ The primary risk area is the **API layer**, which is in early development and la
 
 ### STRIDE
 
-| Category | Tested | Findings |
-|----------|--------|----------|
-| Spoofing | Yes | 3 (auth middleware, CORS, transfer code) |
-| Tampering | Yes | 1 (SQLite FK) |
-| Repudiation | Yes | 0 (audit logging well-designed) |
-| Information Disclosure | Yes | 3 (headers, webhook secret, audit PII) |
-| Denial of Service | Yes | 1 (rate limiting) |
-| Elevation of Privilege | Yes | 1 (auth middleware) |
+| Category               | Tested | Findings                                 |
+| ---------------------- | ------ | ---------------------------------------- |
+| Spoofing               | Yes    | 3 (auth middleware, CORS, transfer code) |
+| Tampering              | Yes    | 1 (SQLite FK)                            |
+| Repudiation            | Yes    | 0 (audit logging well-designed)          |
+| Information Disclosure | Yes    | 3 (headers, webhook secret, audit PII)   |
+| Denial of Service      | Yes    | 1 (rate limiting)                        |
+| Elevation of Privilege | Yes    | 1 (auth middleware)                      |
 
 ### OWASP Top 10
 
-| Category | Status |
-|----------|--------|
-| A01 Broken Access Control | Pass (RLS fail-closed) |
-| A02 Cryptographic Failures | Partial (strong crypto; webhook secret + transfer code gaps) |
-| A03 Injection | Pass (no injection vectors found) |
-| A04 Insecure Design | Issues (rate limiting, SQLite FK, QR design) |
-| A05 Security Misconfiguration | Issues (no middleware configured) |
-| A06 Vulnerable Components | Pass (0 CVEs) |
-| A07 Auth Failures | Issues (no auth middleware, no password policy) |
-| A08 Data Integrity | Pass (Ed25519 + AEAD on all sync data) |
-| A09 Logging Failures | Partial (good events, PII retention gap) |
-| A10 SSRF | Pass (no outbound HTTP) |
+| Category                      | Status                                                       |
+| ----------------------------- | ------------------------------------------------------------ |
+| A01 Broken Access Control     | Pass (RLS fail-closed)                                       |
+| A02 Cryptographic Failures    | Partial (strong crypto; webhook secret + transfer code gaps) |
+| A03 Injection                 | Pass (no injection vectors found)                            |
+| A04 Insecure Design           | Issues (rate limiting, SQLite FK, QR design)                 |
+| A05 Security Misconfiguration | Issues (no middleware configured)                            |
+| A06 Vulnerable Components     | Pass (0 CVEs)                                                |
+| A07 Auth Failures             | Issues (no auth middleware, no password policy)              |
+| A08 Data Integrity            | Pass (Ed25519 + AEAD on all sync data)                       |
+| A09 Logging Failures          | Partial (good events, PII retention gap)                     |
+| A10 SSRF                      | Pass (no outbound HTTP)                                      |
 
 ## Key Strengths
 

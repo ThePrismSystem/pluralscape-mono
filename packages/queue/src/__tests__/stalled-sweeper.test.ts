@@ -85,7 +85,9 @@ describe("StalledJobSweeper", () => {
     let resolveFirst!: () => void;
     const blockingPromise = new Promise<readonly import("@pluralscape/types").JobDefinition[]>(
       (resolve) => {
-        resolveFirst = () => { resolve([]); };
+        resolveFirst = () => {
+          resolve([]);
+        };
       },
     );
 

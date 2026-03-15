@@ -90,6 +90,11 @@ export const GENERIC_HASH_BYTES_MIN = 16;
 /** Maximum output length for BLAKE2b generic hash, in bytes. */
 export const GENERIC_HASH_BYTES_MAX = 64;
 
+// ── Password Validation ─────────────────────────────────────────────
+
+/** Minimum password length enforced at the application layer. */
+export const MIN_PASSWORD_LENGTH = 8;
+
 // ── Safety Number ────────────────────────────────────────────────────
 
 /** Version tag prepended to safety number fingerprint inputs. */

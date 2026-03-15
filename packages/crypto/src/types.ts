@@ -2,6 +2,12 @@
 declare const __cryptoBrand: unique symbol;
 type CryptoBrand<B extends string> = Uint8Array & { readonly [__cryptoBrand]: B };
 
+declare const __numericBrand: unique symbol;
+type NumericBrand<B extends string> = number & { readonly [__numericBrand]: B };
+
+// ── Branded numeric types ───────────────────────────────────────────
+export type KeyVersion = NumericBrand<"KeyVersion">;
+
 // ── Branded key/nonce/signature types ────────────────────────────────
 export type AeadKey = CryptoBrand<"AeadKey">;
 export type AeadNonce = CryptoBrand<"AeadNonce">;

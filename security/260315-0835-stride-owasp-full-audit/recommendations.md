@@ -43,10 +43,13 @@ app.use("*", secureHeaders());
 
 ```typescript
 import { cors } from "hono/cors";
-app.use("*", cors({
-  origin: (origin) => allowedOrigins.includes(origin) ? origin : null,
-  credentials: true,
-}));
+app.use(
+  "*",
+  cors({
+    origin: (origin) => (allowedOrigins.includes(origin) ? origin : null),
+    credentials: true,
+  }),
+);
 ```
 
 ### 4. Add Error Handler
@@ -128,7 +131,8 @@ await jobQueue.enqueue({
 ```typescript
 // packages/crypto/src/validation.ts
 export function validateKeyVersion(keyVersion: number): number {
-  if (!Number.isSafeInteger(keyVersion) || keyVersion < 1) { // Changed from 0 to 1
+  if (!Number.isSafeInteger(keyVersion) || keyVersion < 1) {
+    // Changed from 0 to 1
     throw new InvalidInputError(
       `keyVersion must be a positive safe integer, got ${String(keyVersion)}`,
     );

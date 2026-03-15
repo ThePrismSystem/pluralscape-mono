@@ -62,7 +62,12 @@ describe("deriveMasterKey", () => {
   });
 
   it("rejects empty password with InvalidInputError", () => {
-    expect(() => deriveMasterKey("", salt, "server")).toThrow(InvalidInputError);
+    expect(() => deriveMasterKey("", salt, "server")).toThrow(/at least 8 characters/);
+  });
+
+  it("rejects short password with InvalidInputError", () => {
+    expect(() => deriveMasterKey("short", salt, "server")).toThrow(InvalidInputError);
+    expect(() => deriveMasterKey("1234567", salt, "server")).toThrow(/at least 8 characters/);
   });
 });
 

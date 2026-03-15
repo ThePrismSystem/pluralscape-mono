@@ -1,5 +1,6 @@
 import {
   KDF_KEY_BYTES,
+  MIN_PASSWORD_LENGTH,
   PWHASH_MEMLIMIT_INTERACTIVE,
   PWHASH_MEMLIMIT_MOBILE,
   PWHASH_OPSLIMIT_MOBILE,
@@ -45,8 +46,10 @@ export function deriveMasterKey(
   salt: PwhashSalt,
   profile: PwhashProfile,
 ): Promise<KdfMasterKey> {
-  if (password.length === 0) {
-    throw new InvalidInputError("Password must not be empty.");
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    throw new InvalidInputError(
+      `Password must be at least ${String(MIN_PASSWORD_LENGTH)} characters.`,
+    );
   }
   const adapter = getSodium();
   const passwordBytes = new TextEncoder().encode(password);

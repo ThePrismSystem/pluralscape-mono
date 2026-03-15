@@ -201,11 +201,10 @@ describe("encryptTier2/decryptTier2", () => {
     expect(blob.algorithm).toBe("xchacha20-poly1305");
   });
 
-  it("keyVersion: 0 roundtrips correctly", () => {
-    const blob = encryptTier2({ test: true }, { bucketKey, bucketId, keyVersion: 0 });
-    expect(blob.keyVersion).toBe(0);
-    const result = decryptTier2(blob, bucketKey);
-    expect(result).toEqual({ test: true });
+  it("keyVersion: 0 throws InvalidInputError", () => {
+    expect(() => encryptTier2({ test: true }, { bucketKey, bucketId, keyVersion: 0 })).toThrow(
+      InvalidInputError,
+    );
   });
 
   it("negative keyVersion throws InvalidInputError", () => {

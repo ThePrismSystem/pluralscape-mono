@@ -61,7 +61,20 @@ describe("derivePasswordKey", () => {
 
   it("throws InvalidInputError for empty password", () => {
     const salt = generateSalt();
-    expect(() => derivePasswordKey("", salt, "mobile")).toThrow("Password must not be empty.");
+    expect(() => derivePasswordKey("", salt, "mobile")).toThrow(/at least 8 characters/);
+  });
+
+  it("throws InvalidInputError for short password", () => {
+    const salt = generateSalt();
+    expect(() => derivePasswordKey("short", salt, "mobile")).toThrow(/at least 8 characters/);
+    expect(() => derivePasswordKey("1234567", salt, "mobile")).toThrow(/at least 8 characters/);
+  });
+
+  it("accepts password of exactly 8 characters", async () => {
+    const salt = generateSalt();
+    const key = await derivePasswordKey("12345678", salt, "mobile");
+    expect(key).toBeInstanceOf(Uint8Array);
+    expect(key.length).toBe(32);
   });
 
   it("derives key with server profile", async () => {
