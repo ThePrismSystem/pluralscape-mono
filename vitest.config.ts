@@ -73,6 +73,8 @@ export default defineConfig({
         "packages/queue/src/heartbeat.ts",
         "packages/queue/src/job-queue.ts",
         "packages/queue/src/job-worker.ts",
+        // queue: BullMQ adapter requires live Valkey — tested via integration tests
+        "packages/queue/src/adapters/bullmq/**/*.ts",
         // storage: interface-only files (no executable code)
         "packages/storage/src/interface.ts",
       ],
