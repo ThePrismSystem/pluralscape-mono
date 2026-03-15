@@ -5,17 +5,22 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./sqlite": "./src/adapters/sqlite/index.ts",
     "./policies": "./src/policies/index.ts",
     "./dlq": "./src/dlq/index.ts",
     "./testing": "./src/__tests__/testing-exports.ts"
   },
   "dependencies": {
-    "@pluralscape/types": "workspace:*"
+    "@pluralscape/db": "workspace:*",
+    "@pluralscape/types": "workspace:*",
+    "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/bun": "^1.2.4",
+    "better-sqlite3-multiple-ciphers": "^12.6.2",
     "eslint": "^10.0.3",
     "typescript": "^5.7.3"
   },
