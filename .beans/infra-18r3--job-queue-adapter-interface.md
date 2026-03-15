@@ -1,11 +1,11 @@
 ---
 # infra-18r3
 title: Job queue adapter interface
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:24Z
-updated_at: 2026-03-08T19:57:24Z
+updated_at: 2026-03-15T02:42:54Z
 parent: infra-m2t5
 ---
 

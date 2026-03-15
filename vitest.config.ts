@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-const PACKAGES = ["types", "db", "crypto", "sync", "api-client"];
+const PACKAGES = ["types", "db", "crypto", "sync", "api-client", "queue", "storage"];
 
 function projectConfig(name: string, root: string) {
   return {
@@ -66,6 +66,14 @@ export default defineConfig({
         "packages/db/src/schema/**/*.ts",
         // DB query helpers are tested via integration tests, not unit tests
         "packages/db/src/queries/**/*.ts",
+        // queue: interface-only files (no executable code)
+        "packages/queue/src/types.ts",
+        "packages/queue/src/event-hooks.ts",
+        "packages/queue/src/heartbeat.ts",
+        "packages/queue/src/job-queue.ts",
+        "packages/queue/src/job-worker.ts",
+        // storage: interface-only files (no executable code)
+        "packages/storage/src/interface.ts",
       ],
       reporter: ["text", "lcov", "html"],
       reportsDirectory: "./coverage",

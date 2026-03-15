@@ -1,11 +1,11 @@
 ---
 # infra-psh9
 title: Storage adapter interface
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:31Z
-updated_at: 2026-03-08T19:57:31Z
+updated_at: 2026-03-15T02:42:54Z
 parent: infra-o80c
 ---
 
