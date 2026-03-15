@@ -34,6 +34,7 @@ import {
   assertSignSecretKey,
   assertSignSeed,
   assertSignature,
+  validateKeyVersion,
 } from "../validation.js";
 
 describe("assertBufferLength", () => {
@@ -110,6 +111,30 @@ describe("assertKdfContext", () => {
     expect(() => {
       assertKdfContext("x");
     }).toThrow(new RegExp(String(KDF_CONTEXT_BYTES)));
+  });
+});
+
+describe("validateKeyVersion", () => {
+  it("accepts positive integers", () => {
+    expect(validateKeyVersion(1)).toBe(1);
+    expect(validateKeyVersion(42)).toBe(42);
+  });
+
+  it("throws InvalidInputError for 0", () => {
+    expect(() => validateKeyVersion(0)).toThrow(InvalidInputError);
+    expect(() => validateKeyVersion(0)).toThrow(/keyVersion must be a positive safe integer/);
+  });
+
+  it("throws InvalidInputError for negative values", () => {
+    expect(() => validateKeyVersion(-1)).toThrow(InvalidInputError);
+  });
+
+  it("throws InvalidInputError for fractional values", () => {
+    expect(() => validateKeyVersion(1.5)).toThrow(InvalidInputError);
+  });
+
+  it("throws InvalidInputError for non-safe integers", () => {
+    expect(() => validateKeyVersion(Number.MAX_SAFE_INTEGER + 1)).toThrow(InvalidInputError);
   });
 });
 

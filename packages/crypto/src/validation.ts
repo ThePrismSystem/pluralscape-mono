@@ -102,9 +102,9 @@ export function assertGenericHashLength(len: number): void {
 }
 
 export function validateKeyVersion(keyVersion: number): number {
-  if (!Number.isSafeInteger(keyVersion) || keyVersion < 0) {
+  if (!Number.isSafeInteger(keyVersion) || keyVersion < 1) {
     throw new InvalidInputError(
-      `keyVersion must be a non-negative safe integer, got ${String(keyVersion)}`,
+      `keyVersion must be a positive safe integer (>= 1), got ${String(keyVersion)}`,
     );
   }
   return keyVersion;
