@@ -1,5 +1,13 @@
 import type { JobType, RetryPolicy } from "@pluralscape/types";
 
+/** Fallback retry policy used when no per-type policy is configured. */
+export const DEFAULT_RETRY_POLICY: RetryPolicy = {
+  maxRetries: 3,
+  backoffMs: 1_000,
+  backoffMultiplier: 2,
+  maxBackoffMs: 30_000,
+};
+
 /**
  * Default retry policies for all 15 job types.
  *

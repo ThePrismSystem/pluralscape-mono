@@ -15,11 +15,12 @@ export class ObservableJobWorker implements JobWorker {
     this.logger = logger;
   }
 
-  registerHandler(type: JobType, handler: JobHandler): void {
+  registerHandler<T extends JobType>(type: T, handler: JobHandler<T>): void {
     const wrapped: JobHandler = async (job: JobDefinition, ctx) => {
       this.logger.info("job.processing", { jobId: job.id, type: job.type });
       try {
-        await handler(job, ctx);
+        // Safe: jobs dispatched to this handler are already filtered by type
+        await handler(job as JobDefinition<T>, ctx);
         this.logger.info("job.handler-succeeded", { jobId: job.id, type: job.type });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

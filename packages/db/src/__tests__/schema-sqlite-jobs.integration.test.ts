@@ -311,7 +311,7 @@ describe("SQLite jobs schema", () => {
       expect(completed?.completedAt).toBe(now + 5000);
     });
 
-    it("transitions through pending -> running -> failed with error", () => {
+    it("transitions through pending -> running -> dead-letter with error", () => {
       const now = Date.now();
 
       const inserted = db
@@ -327,7 +327,16 @@ describe("SQLite jobs schema", () => {
 
       db.update(jobs)
         .set({
-          status: "failed",
+          status: "running",
+          startedAt: now + 1000,
+          attempts: 1,
+        })
+        .where(eq(jobs.id, inserted.id))
+        .run();
+
+      db.update(jobs)
+        .set({
+          status: "dead-letter",
           attempts: 5,
           error: "Connection timeout after 5 attempts",
           completedAt: now + 30000,
@@ -335,10 +344,10 @@ describe("SQLite jobs schema", () => {
         .where(eq(jobs.id, inserted.id))
         .run();
 
-      const failed = db.select().from(jobs).where(eq(jobs.id, inserted.id)).get();
-      expect(failed?.status).toBe("failed");
-      expect(failed?.error).toBe("Connection timeout after 5 attempts");
-      expect(failed?.attempts).toBe(5);
+      const deadLettered = db.select().from(jobs).where(eq(jobs.id, inserted.id)).get();
+      expect(deadLettered?.status).toBe("dead-letter");
+      expect(deadLettered?.error).toBe("Connection timeout after 5 attempts");
+      expect(deadLettered?.attempts).toBe(5);
     });
   });
 
@@ -397,30 +406,6 @@ describe("SQLite jobs schema", () => {
   });
 
   describe("dead-letter status", () => {
-    it("transitions failed -> dead-letter", () => {
-      const now = Date.now();
-
-      const inserted = db
-        .insert(jobs)
-        .values({
-          id: newJobId(),
-          type: "webhook-deliver",
-          payload: {},
-          status: "failed",
-          attempts: 5,
-          error: "Max retries exceeded",
-          createdAt: now,
-        })
-        .returning()
-        .get();
-
-      db.update(jobs).set({ status: "dead-letter" }).where(eq(jobs.id, inserted.id)).run();
-
-      const dlq = db.select().from(jobs).where(eq(jobs.id, inserted.id)).get();
-      expect(dlq?.status).toBe("dead-letter");
-      expect(dlq?.error).toBe("Max retries exceeded");
-    });
-
     it("accepts attempts equal to maxAttempts for terminal states", () => {
       const now = Date.now();
 

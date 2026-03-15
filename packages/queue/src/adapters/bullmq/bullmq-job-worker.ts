@@ -11,7 +11,9 @@ import { fromStoredData } from "./job-mapper.js";
 
 import type { StoredJobData } from "./job-mapper.js";
 import type { HeartbeatHandle } from "../../heartbeat.js";
+import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
+import type { JobLogger } from "../../observability/job-logger.js";
 import type { JobDefinition, JobType } from "@pluralscape/types";
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
@@ -31,8 +33,10 @@ export class BullMQJobWorker implements JobWorker {
   private readonly handlerMap = new Map<JobType, JobHandler>();
   private readonly queueName: string;
   private readonly connection: IORedis;
+  private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
+  private readonly logger: JobLogger | undefined;
 
   private worker: Worker | null = null;
   private running = false;
@@ -43,19 +47,23 @@ export class BullMQJobWorker implements JobWorker {
   constructor(
     queueName: string,
     connection: IORedis,
-    options?: { pollIntervalMs?: number; shutdownTimeoutMs?: number },
+    queue: JobQueue,
+    options?: { pollIntervalMs?: number; shutdownTimeoutMs?: number; logger?: JobLogger },
   ) {
     this.queueName = queueName;
     this.connection = connection;
+    this.queue = queue;
     this.pollIntervalMs = options?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     this.shutdownTimeoutMs = options?.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
+    this.logger = options?.logger;
     this.token = `worker-${String(now())}-${Math.random().toString(BASE_36).slice(2)}`;
   }
 
-  registerHandler(type: JobType, handler: JobHandler): void {
+  registerHandler<T extends JobType>(type: T, handler: JobHandler<T>): void {
     if (this.running) throw new WorkerAlreadyRunningError();
     if (this.handlerMap.has(type)) throw new DuplicateHandlerError(type);
-    this.handlerMap.set(type, handler);
+    // Safe: the map stores wide JobHandler, but callers get type safety at the call site
+    this.handlerMap.set(type, handler as JobHandler);
   }
 
   start(): Promise<void> {
@@ -119,7 +127,9 @@ export class BullMQJobWorker implements JobWorker {
     let bullmqJob: BullMQJob | undefined;
     try {
       bullmqJob = (await this.worker.getNextJob(this.token)) as BullMQJob | undefined;
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger?.error("worker.poll-failed", { error: message });
       return;
     }
 
@@ -155,18 +165,12 @@ export class BullMQJobWorker implements JobWorker {
     try {
       const handler = this.handlerMap.get(job.type);
       if (handler === undefined) {
-        const failData: StoredJobData = {
-          ...runningData,
-          status: "dead-letter",
-          attempts: runningData.attempts + 1,
-          error: `No handler registered for job type "${job.type}"`,
-        };
-        await bullmqJob.updateData(failData);
-        await bullmqJob.moveToFailed(
-          new Error(`No handler registered for job type "${job.type}"`),
-          this.token,
-          false,
-        );
+        try {
+          await this.queue.fail(job.id, `No handler registered for job type "${job.type}"`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger?.error("worker.fail-delegation-error", { jobId: job.id, error: msg });
+        }
         return;
       }
 
@@ -174,43 +178,21 @@ export class BullMQJobWorker implements JobWorker {
         await handler(job, { heartbeat: heartbeatHandle, signal: controller.signal });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        // Handle failure with our retry logic
-        const newAttempts = runningData.attempts + 1;
-        if (newAttempts >= runningData.maxAttempts) {
-          const dlData: StoredJobData = {
-            ...runningData,
-            status: "dead-letter",
-            attempts: newAttempts,
-            error: message,
-            result: { success: false, message, completedAt: now() },
-          };
-          await bullmqJob.updateData(dlData);
-          await bullmqJob.moveToFailed(new Error(message), this.token, false);
-        } else {
-          const retryData: StoredJobData = {
-            ...runningData,
-            status: "pending",
-            attempts: newAttempts,
-            error: message,
-          };
-          await bullmqJob.updateData(retryData);
-          await bullmqJob.moveToDelayed(now(), this.token);
+        try {
+          await this.queue.fail(job.id, message);
+        } catch (failErr) {
+          const msg = failErr instanceof Error ? failErr.message : String(failErr);
+          this.logger?.error("worker.fail-delegation-error", { jobId: job.id, error: msg });
         }
         return;
       }
 
-      // Handler succeeded — complete the job
-      const completedData: StoredJobData = {
-        ...runningData,
-        status: "completed",
-        completedAt: now(),
-        result: { success: true, message: null, completedAt: now() },
-      };
-      await bullmqJob.updateData(completedData);
+      // Handler succeeded — delegate to queue for completion hooks
       try {
-        await bullmqJob.moveToCompleted("done", this.token, false);
-      } catch {
-        // Job may have already been completed
+        await this.queue.acknowledge(job.id, {});
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger?.error("worker.acknowledge-delegation-error", { jobId: job.id, error: msg });
       }
     } finally {
       this.inFlight.delete(jobId);

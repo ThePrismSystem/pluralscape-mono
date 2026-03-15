@@ -205,14 +205,7 @@ describe("enum arrays", () => {
   });
 
   it("JOB_STATUSES matches JobStatus union", () => {
-    expect(JOB_STATUSES).toEqual([
-      "pending",
-      "running",
-      "completed",
-      "failed",
-      "cancelled",
-      "dead-letter",
-    ]);
+    expect(JOB_STATUSES).toEqual(["pending", "running", "completed", "cancelled", "dead-letter"]);
   });
 
   it("ENTITY_TYPES matches EntityType union", () => {
@@ -303,7 +296,7 @@ describe("enum arrays", () => {
     expect(ACCOUNT_PURGE_STATUSES).toHaveLength(5);
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
     expect(JOB_TYPES).toHaveLength(15);
-    expect(JOB_STATUSES).toHaveLength(6);
+    expect(JOB_STATUSES).toHaveLength(5);
     expect(ENTITY_TYPES).toHaveLength(60);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);
     expect(DISCOVERY_STATUSES).toHaveLength(3);

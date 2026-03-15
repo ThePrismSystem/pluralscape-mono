@@ -533,7 +533,64 @@ export function runJobQueueContract(factory: () => JobQueue): void {
       });
     });
 
-    // ── 19. Cross-system isolation ──────────────────────────────────
+    // ── 19. countJobs ─────────────────────────────────────────────────
+
+    describe("countJobs", () => {
+      it("returns 0 for an empty queue", async () => {
+        const queue = factory();
+        expect(await queue.countJobs({})).toBe(0);
+      });
+
+      it("counts by status filter", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams({ idempotencyKey: "c1" }));
+        await queue.enqueue(makeJobParams({ idempotencyKey: "c2" }));
+        await queue.dequeue(); // moves one to running
+        expect(await queue.countJobs({ status: "pending" })).toBe(1);
+        expect(await queue.countJobs({ status: "running" })).toBe(1);
+      });
+
+      it("counts by type filter", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams({ type: "sync-push", idempotencyKey: "ct1" }));
+        await queue.enqueue(makeJobParams({ type: "blob-upload", idempotencyKey: "ct2" }));
+        expect(await queue.countJobs({ type: "sync-push" })).toBe(1);
+      });
+    });
+
+    // ── 20. maxRetries wiring ───────────────────────────────────────
+
+    describe("maxRetries wiring", () => {
+      it("uses retry policy maxRetries + 1 as maxAttempts when not explicitly set", async () => {
+        const queue = factory();
+        queue.setRetryPolicy("sync-push", {
+          maxRetries: 5,
+          backoffMs: 100,
+          backoffMultiplier: 2,
+          maxBackoffMs: 10_000,
+        });
+        const job = await queue.enqueue(
+          makeJobParams({ type: "sync-push", idempotencyKey: "mr1" }),
+        );
+        expect(job.maxAttempts).toBe(6); // maxRetries (5) + 1
+      });
+
+      it("explicit maxAttempts overrides retry policy", async () => {
+        const queue = factory();
+        queue.setRetryPolicy("sync-push", {
+          maxRetries: 5,
+          backoffMs: 100,
+          backoffMultiplier: 2,
+          maxBackoffMs: 10_000,
+        });
+        const job = await queue.enqueue(
+          makeJobParams({ type: "sync-push", maxAttempts: 3, idempotencyKey: "mr2" }),
+        );
+        expect(job.maxAttempts).toBe(3);
+      });
+    });
+
+    // ── 21. Cross-system isolation ──────────────────────────────────
 
     describe("cross-system isolation", () => {
       it("listJobs with systemId only returns jobs for that system", async () => {

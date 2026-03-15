@@ -48,18 +48,23 @@ export class StalledJobSweeper {
   }
 
   async sweep(): Promise<void> {
-    const stalled = await this.queue.findStalledJobs();
-    if (stalled.length > 0) {
-      this.logger?.warn("stalled-sweeper.found", { count: stalled.length });
-      for (const job of stalled) {
-        try {
-          await this.queue.fail(job.id, STALL_ERROR_MESSAGE);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          this.logger?.error("stalled-sweeper.fail-error", { jobId: job.id, error: message });
+    try {
+      const stalled = await this.queue.findStalledJobs();
+      if (stalled.length > 0) {
+        this.logger?.warn("stalled-sweeper.found", { count: stalled.length });
+        for (const job of stalled) {
+          try {
+            await this.queue.fail(job.id, STALL_ERROR_MESSAGE);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            this.logger?.error("stalled-sweeper.fail-error", { jobId: job.id, error: message });
+          }
         }
       }
+      this.onSweep?.(stalled.length);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger?.error("stalled-sweeper.sweep-error", { error: message });
     }
-    this.onSweep?.(stalled.length);
   }
 }

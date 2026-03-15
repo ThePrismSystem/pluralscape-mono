@@ -41,18 +41,18 @@ export class QueueHealthService {
   }
 
   async getSummary(): Promise<QueueHealthSummary> {
-    const [pending, running, deadLettered, stalled] = await Promise.all([
-      this.queue.listJobs({ status: "pending" }),
-      this.queue.listJobs({ status: "running" }),
-      this.queue.listDeadLettered(),
+    const [pendingCount, runningCount, dlqDepth, stalled] = await Promise.all([
+      this.queue.countJobs({ status: "pending" }),
+      this.queue.countJobs({ status: "running" }),
+      this.queue.countJobs({ status: "dead-letter" }),
       this.queue.findStalledJobs(),
     ]);
 
     return {
       timestamp: this.clock(),
-      pendingCount: pending.length,
-      runningCount: running.length,
-      dlqDepth: deadLettered.length,
+      pendingCount,
+      runningCount,
+      dlqDepth,
       stalledCount: stalled.length,
       isWorkerRunning: this.worker?.isRunning() ?? false,
       metrics: this.metrics.getAggregateMetrics(),

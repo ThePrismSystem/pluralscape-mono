@@ -7,7 +7,6 @@ import type {
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
-import type { Job as BullMQJob } from "bullmq";
 
 /**
  * The shape of data stored inside each BullMQ job.
@@ -31,31 +30,6 @@ export interface StoredJobData {
   timeoutMs: number;
   scheduledFor: number | null;
   priority: number;
-}
-
-/** Converts a BullMQ Job (with our StoredJobData) into a JobDefinition. */
-export function fromBullMQJob(job: BullMQJob<StoredJobData>): JobDefinition {
-  const d = job.data;
-  return {
-    id: job.id as JobId,
-    systemId: (d.systemId ?? null) as SystemId | null,
-    type: d.type,
-    status: d.status,
-    payload: d.payload as Readonly<Record<string, unknown>>,
-    attempts: d.attempts,
-    maxAttempts: d.maxAttempts,
-    nextRetryAt: (d.nextRetryAt ?? null) as UnixMillis | null,
-    error: d.error ?? null,
-    result: d.result ?? null,
-    createdAt: d.createdAt as UnixMillis,
-    startedAt: (d.startedAt ?? null) as UnixMillis | null,
-    completedAt: (d.completedAt ?? null) as UnixMillis | null,
-    idempotencyKey: d.idempotencyKey ?? null,
-    lastHeartbeatAt: (d.lastHeartbeatAt ?? null) as UnixMillis | null,
-    timeoutMs: d.timeoutMs,
-    scheduledFor: (d.scheduledFor ?? null) as UnixMillis | null,
-    priority: d.priority,
-  };
 }
 
 /** Builds StoredJobData from a JobDefinition (strips the `id` field). */

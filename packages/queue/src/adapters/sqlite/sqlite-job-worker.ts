@@ -7,6 +7,7 @@ import {
 import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
+import type { JobLogger } from "../../observability/job-logger.js";
 import type { JobDefinition, JobType } from "@pluralscape/types";
 
 const DEFAULT_POLL_INTERVAL_MS = 100;
@@ -24,6 +25,7 @@ export class SqliteJobWorker implements JobWorker {
   private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
+  private readonly logger: JobLogger | undefined;
 
   private running = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -34,17 +36,19 @@ export class SqliteJobWorker implements JobWorker {
     {
       pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
       shutdownTimeoutMs = DEFAULT_SHUTDOWN_TIMEOUT_MS,
-    }: { pollIntervalMs?: number; shutdownTimeoutMs?: number } = {},
+      logger,
+    }: { pollIntervalMs?: number; shutdownTimeoutMs?: number; logger?: JobLogger } = {},
   ) {
     this.queue = queue;
     this.pollIntervalMs = pollIntervalMs;
     this.shutdownTimeoutMs = shutdownTimeoutMs;
+    this.logger = logger;
   }
 
-  registerHandler(type: JobType, handler: JobHandler): void {
+  registerHandler<T extends JobType>(type: T, handler: JobHandler<T>): void {
     if (this.running) throw new WorkerAlreadyRunningError();
     if (this.handlers.has(type)) throw new DuplicateHandlerError(type);
-    this.handlers.set(type, handler);
+    this.handlers.set(type, handler as JobHandler);
   }
 
   start(): Promise<void> {
@@ -95,7 +99,9 @@ export class SqliteJobWorker implements JobWorker {
     let job: JobDefinition | null;
     try {
       job = await this.queue.dequeue(types);
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger?.error("worker.poll-failed", { error: message });
       return;
     }
 
@@ -126,16 +132,18 @@ export class SqliteJobWorker implements JobWorker {
         const message = err instanceof Error ? err.message : String(err);
         try {
           await this.queue.fail(job.id, message);
-        } catch {
-          // Swallow fail errors
+        } catch (failErr) {
+          const failMsg = failErr instanceof Error ? failErr.message : String(failErr);
+          this.logger?.error("worker.fail-failed", { jobId: job.id, error: failMsg });
         }
         return;
       }
 
       try {
         await this.queue.acknowledge(job.id, {});
-      } catch {
-        // Swallow acknowledge errors
+      } catch (ackErr) {
+        const ackMsg = ackErr instanceof Error ? ackErr.message : String(ackErr);
+        this.logger?.error("worker.acknowledge-failed", { jobId: job.id, error: ackMsg });
       }
     } finally {
       this.inFlight.delete(job.id);

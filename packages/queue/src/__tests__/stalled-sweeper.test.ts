@@ -78,6 +78,22 @@ describe("StalledJobSweeper", () => {
     );
   });
 
+  it("sweep() does not throw when findStalledJobs() rejects (logs error instead)", async () => {
+    const queue = new InMemoryJobQueue();
+    const error = vi.fn();
+    const sweeper = new StalledJobSweeper(queue, {
+      logger: { info: vi.fn(), warn: vi.fn(), error },
+    });
+
+    vi.spyOn(queue, "findStalledJobs").mockRejectedValue(new Error("db connection lost"));
+
+    await expect(sweeper.sweep()).resolves.toBeUndefined();
+    expect(error).toHaveBeenCalledWith(
+      "stalled-sweeper.sweep-error",
+      expect.objectContaining({ error: "db connection lost" }),
+    );
+  });
+
   it("sweep() does not throw when fail() rejects (logs error instead)", async () => {
     const queue = new InMemoryJobQueue();
     const error = vi.fn();

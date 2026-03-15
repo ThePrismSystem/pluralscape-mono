@@ -67,7 +67,7 @@ describe.skipIf(!ctx.available)("BullMQJobWorker", () => {
     (queue) => {
       const q = queue as BullMQJobQueue;
       if (redis === null) throw new Error("Valkey not available");
-      return new BullMQJobWorker(q.name, redis, { pollIntervalMs: 50 });
+      return new BullMQJobWorker(q.name, redis, queue, { pollIntervalMs: 50 });
     },
   );
 });

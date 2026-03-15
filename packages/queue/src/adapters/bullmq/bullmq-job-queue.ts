@@ -6,6 +6,8 @@ import {
   InvalidJobTransitionError,
   JobNotFoundError,
 } from "../../errors.js";
+import { fireHook } from "../../fire-hook.js";
+import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../../policies/index.js";
 
 import { fromStoredData } from "./job-mapper.js";
 
@@ -25,15 +27,8 @@ import type {
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 
-const DEFAULT_RETRY_POLICY: RetryPolicy = {
-  maxRetries: 3,
-  backoffMs: 1_000,
-  backoffMultiplier: 2,
-  maxBackoffMs: 30_000,
-};
-
 const DEFAULT_TIMEOUT_MS = 30_000;
-const DEFAULT_MAX_ATTEMPTS = 4;
+const SCAN_COUNT = 100;
 
 /**
  * BullMQ-backed implementation of JobQueue.
@@ -102,20 +97,34 @@ export class BullMQJobQueue implements JobQueue {
     await this.queue.obliterate({ force: true });
   }
 
-  async enqueue(params: JobEnqueueParams): Promise<JobDefinition> {
-    // Idempotency check
+  async enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition> {
+    // Atomic idempotency check using SET NX to prevent TOCTOU race
     const idemKey = `${this.prefix}:idem:${params.idempotencyKey}`;
-    const existingId = await this.redis.get(idemKey);
+    const nxResult = await this.redis.set(idemKey, "reserving", "NX");
 
-    if (existingId !== null) {
-      const existing = await this.getJob(existingId as JobId);
-      if (existing !== null && existing.status !== "completed" && existing.status !== "cancelled") {
+    if (nxResult === null) {
+      // Key already exists — check whether the existing job allows re-enqueue
+      const existingId = await this.redis.get(idemKey);
+      if (existingId !== null && existingId !== "reserving") {
+        const existing = await this.getJob(existingId as JobId);
+        if (
+          existing !== null &&
+          existing.status !== "completed" &&
+          existing.status !== "cancelled"
+        ) {
+          throw new IdempotencyConflictError(params.idempotencyKey);
+        }
+      } else if (existingId === "reserving") {
+        // Another concurrent enqueue is in progress
         throw new IdempotencyConflictError(params.idempotencyKey);
       }
+      // Completed/cancelled — allow re-enqueue by overwriting
     }
 
     const id = createId("job_") as JobId;
     const currentTime = this.clock();
+    const policy = this.getRetryPolicy(params.type);
+    const maxAttempts = params.maxAttempts ?? policy.maxRetries + 1;
 
     const data: StoredJobData = {
       systemId: params.systemId ?? null,
@@ -123,7 +132,7 @@ export class BullMQJobQueue implements JobQueue {
       payload: params.payload as Record<string, unknown>,
       status: "pending",
       attempts: 0,
-      maxAttempts: params.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+      maxAttempts,
       nextRetryAt: null,
       error: null,
       result: null,
@@ -140,13 +149,21 @@ export class BullMQJobQueue implements JobQueue {
     const delay =
       params.scheduledFor !== undefined ? Math.max(0, params.scheduledFor - currentTime) : 0;
 
-    await this.queue.add(params.type, data, {
-      jobId: id,
-      priority: params.priority ?? 0,
-      delay,
-    });
+    try {
+      await this.queue.add(params.type, data, {
+        jobId: id,
+        priority: params.priority ?? 0,
+        delay,
+      });
+    } catch (err) {
+      // Clean up the NX key on enqueue failure
+      if (nxResult !== null) {
+        await this.redis.del(idemKey);
+      }
+      throw err;
+    }
 
-    // Track idempotency
+    // Update idempotency key to actual job ID
     await this.redis.set(idemKey, id);
 
     return fromStoredData(id, data);
@@ -210,7 +227,7 @@ export class BullMQJobQueue implements JobQueue {
       // Put back non-matching jobs
       for (const job of putBack) {
         try {
-          await job.moveToDelayed(Date.now(), this.token);
+          await job.moveToDelayed(this.clock(), this.token);
         } catch {
           // Best effort — job may have been removed
         }
@@ -246,7 +263,7 @@ export class BullMQJobQueue implements JobQueue {
     await job.moveToCompleted("done", this.token, false);
 
     const definition = fromStoredData(jobId, updated);
-    void this.fireHook("onComplete", definition);
+    void fireHook(this.hooks, "onComplete", definition);
     return definition;
   }
 
@@ -273,22 +290,13 @@ export class BullMQJobQueue implements JobQueue {
       await job.moveToFailed(new Error(error), this.token, false);
 
       const definition = fromStoredData(jobId, updated);
-      void this.fireHook("onFail", definition, new Error(error));
-      void this.fireHook("onDeadLetter", definition);
+      void fireHook(this.hooks, "onFail", definition, new Error(error));
+      void fireHook(this.hooks, "onDeadLetter", definition);
       return definition;
     }
 
     const policy = this.getRetryPolicy(def.type);
-    const strategy = policy.strategy ?? "exponential";
-    let backoff: number;
-    if (strategy === "linear") {
-      backoff = Math.min(policy.backoffMs * newAttempts, policy.maxBackoffMs);
-    } else {
-      backoff = Math.min(
-        policy.backoffMs * Math.pow(policy.backoffMultiplier, newAttempts - 1),
-        policy.maxBackoffMs,
-      );
-    }
+    const backoff = calculateBackoff(policy, newAttempts);
 
     const updated: StoredJobData = {
       ...def,
@@ -299,10 +307,10 @@ export class BullMQJobQueue implements JobQueue {
     };
 
     await job.updateData(updated);
-    await job.moveToDelayed(Date.now() + backoff, this.token);
+    await job.moveToDelayed(this.clock() + backoff, this.token);
 
     const definition = fromStoredData(jobId, updated);
-    void this.fireHook("onFail", definition, new Error(error));
+    void fireHook(this.hooks, "onFail", definition, new Error(error));
     return definition;
   }
 
@@ -330,7 +338,7 @@ export class BullMQJobQueue implements JobQueue {
     if (job === undefined) throw new JobNotFoundError(jobId);
 
     const def = job.data as StoredJobData;
-    if (def.status !== "failed" && def.status !== "dead-letter") {
+    if (def.status !== "dead-letter") {
       throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "retry");
     }
 
@@ -398,7 +406,7 @@ export class BullMQJobQueue implements JobQueue {
 
     // Include cancelled jobs if status filter allows
     if (filter.status === undefined || filter.status === "cancelled") {
-      const cancelledKeys = await this.redis.keys(`${this.prefix}:cancelled:*`);
+      const cancelledKeys = await this.scanKeys(`${this.prefix}:cancelled:*`);
       for (const key of cancelledKeys) {
         const raw = await this.redis.get(key);
         if (raw !== null) {
@@ -477,6 +485,11 @@ export class BullMQJobQueue implements JobQueue {
     this.hooks = hooks;
   }
 
+  async countJobs(filter: JobFilter): Promise<number> {
+    const jobs = await this.listJobs(filter);
+    return jobs.length;
+  }
+
   // ── Private helpers ──────────────────────────────────────────────
 
   private async requireBullMQJob(jobId: JobId): Promise<BullMQJob> {
@@ -500,30 +513,29 @@ export class BullMQJobQueue implements JobQueue {
         return ["completed"];
       case "dead-letter":
         return ["failed"];
-      case "failed":
-        return ["failed"];
       case "cancelled":
         return []; // Handled separately via Redis
-      default:
-        return [];
+      default: {
+        const _exhaustive: never = status;
+        return _exhaustive;
+      }
     }
   }
 
-  private async fireHook(
-    event: keyof JobEventHooks,
-    job: JobDefinition,
-    error?: Error,
-  ): Promise<void> {
-    try {
-      if (event === "onComplete") {
-        await this.hooks.onComplete?.(job);
-      } else if (event === "onFail" && error !== undefined) {
-        await this.hooks.onFail?.(job, error);
-      } else if (event === "onDeadLetter") {
-        await this.hooks.onDeadLetter?.(job);
-      }
-    } catch {
-      // Hook errors must not propagate
-    }
+  private async scanKeys(pattern: string): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = "0";
+    do {
+      const [nextCursor, batch] = await this.redis.scan(
+        cursor,
+        "MATCH",
+        pattern,
+        "COUNT",
+        SCAN_COUNT,
+      );
+      cursor = nextCursor;
+      keys.push(...batch);
+    } while (cursor !== "0");
+    return keys;
   }
 }

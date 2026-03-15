@@ -78,17 +78,44 @@ describe("DLQManager", () => {
       await createDLQJob(queue);
       await failToDLQ(queue);
 
-      const replayed = await dlq.replayAll();
-      expect(replayed).toHaveLength(2);
-      for (const job of replayed) {
-        expect(job.status).toBe("pending");
-      }
+      const result = await dlq.replayAll();
+      expect(result.succeeded).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.errors).toHaveLength(0);
     });
 
-    it("returns empty array when no dead-lettered jobs", async () => {
+    it("returns zero counts when no dead-lettered jobs", async () => {
       const queue = new InMemoryJobQueue();
       const dlq = new DLQManager(queue);
-      expect(await dlq.replayAll()).toHaveLength(0);
+      const result = await dlq.replayAll();
+      expect(result.succeeded).toBe(0);
+      expect(result.failed).toBe(0);
+    });
+
+    it("collects errors for jobs that fail to replay", async () => {
+      const queue = new InMemoryJobQueue();
+      const dlq = new DLQManager(queue);
+
+      await createDLQJob(queue);
+      await failToDLQ(queue);
+      await createDLQJob(queue);
+      await failToDLQ(queue);
+
+      // Make retry fail for the first job
+      const jobs = await dlq.list();
+      const originalRetry = queue.retry.bind(queue);
+      let callCount = 0;
+      vi.spyOn(queue, "retry").mockImplementation(async (id) => {
+        callCount++;
+        if (callCount === 1) throw new Error("retry failed");
+        return originalRetry(id);
+      });
+
+      const result = await dlq.replayAll();
+      expect(result.succeeded).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.jobId).toBe(jobs[0]?.id);
     });
   });
 
@@ -102,8 +129,9 @@ describe("DLQManager", () => {
       await createDLQJob(queue);
       await failToDLQ(queue);
 
-      const count = await dlq.purge();
-      expect(count).toBe(2);
+      const result = await dlq.purge();
+      expect(result.succeeded).toBe(2);
+      expect(result.failed).toBe(0);
 
       // Verify they are now cancelled
       const remaining = await dlq.list();
@@ -111,6 +139,21 @@ describe("DLQManager", () => {
 
       const cancelled = await queue.listJobs({ status: "cancelled" });
       expect(cancelled).toHaveLength(2);
+    });
+
+    it("collects errors for jobs that fail to cancel", async () => {
+      const queue = new InMemoryJobQueue();
+      const dlq = new DLQManager(queue);
+
+      await createDLQJob(queue);
+      await failToDLQ(queue);
+
+      vi.spyOn(queue, "cancel").mockRejectedValue(new Error("cancel failed"));
+
+      const result = await dlq.purge();
+      expect(result.succeeded).toBe(0);
+      expect(result.failed).toBe(1);
+      expect(result.errors[0]?.error).toBe("cancel failed");
     });
   });
 

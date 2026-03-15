@@ -7,6 +7,8 @@ import {
   InvalidJobTransitionError,
   JobNotFoundError,
 } from "../../errors.js";
+import { fireHook } from "../../fire-hook.js";
+import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../../policies/index.js";
 
 import { rowToJob } from "./row-mapper.js";
 
@@ -24,15 +26,7 @@ import type {
 } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-const DEFAULT_RETRY_POLICY: RetryPolicy = {
-  maxRetries: 3,
-  backoffMs: 1_000,
-  backoffMultiplier: 2,
-  maxBackoffMs: 30_000,
-};
-
 const DEFAULT_TIMEOUT_MS = 30_000;
-const DEFAULT_MAX_ATTEMPTS = 4;
 
 /**
  * Wraps a synchronous function in a Promise, ensuring thrown errors
@@ -63,7 +57,7 @@ export class SqliteJobQueue implements JobQueue {
     this.clock = clock ?? now;
   }
 
-  enqueue(params: JobEnqueueParams): Promise<JobDefinition> {
+  enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition> {
     return asPromise(() =>
       this.db.transaction((tx) => {
         const existing = tx
@@ -81,6 +75,8 @@ export class SqliteJobQueue implements JobQueue {
 
         const id = createId("job_") as JobId;
         const currentTime = this.clock();
+        const policy = this.getRetryPolicy(params.type);
+        const maxAttempts = params.maxAttempts ?? policy.maxRetries + 1;
 
         tx.insert(jobs)
           .values({
@@ -90,7 +86,7 @@ export class SqliteJobQueue implements JobQueue {
             payload: params.payload,
             status: "pending" as JobStatus,
             attempts: 0,
-            maxAttempts: params.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+            maxAttempts,
             nextRetryAt: null,
             error: null,
             createdAt: currentTime,
@@ -187,7 +183,7 @@ export class SqliteJobQueue implements JobQueue {
       .run();
 
     const updated = this.requireJob(jobId);
-    await this.fireHook("onComplete", updated);
+    await fireHook(this.hooks, "onComplete", updated);
     return updated;
   }
 
@@ -213,22 +209,13 @@ export class SqliteJobQueue implements JobQueue {
         .run();
 
       const updated = this.requireJob(jobId);
-      await this.fireHook("onFail", updated, new Error(error));
-      await this.fireHook("onDeadLetter", updated);
+      await fireHook(this.hooks, "onFail", updated, new Error(error));
+      await fireHook(this.hooks, "onDeadLetter", updated);
       return updated;
     }
 
     const policy = this.getRetryPolicy(job.type);
-    const strategy = policy.strategy ?? "exponential";
-    let backoff: number;
-    if (strategy === "linear") {
-      backoff = Math.min(policy.backoffMs * newAttempts, policy.maxBackoffMs);
-    } else {
-      backoff = Math.min(
-        policy.backoffMs * Math.pow(policy.backoffMultiplier, newAttempts - 1),
-        policy.maxBackoffMs,
-      );
-    }
+    const backoff = calculateBackoff(policy, newAttempts);
 
     this.db
       .update(jobs)
@@ -242,7 +229,7 @@ export class SqliteJobQueue implements JobQueue {
       .run();
 
     const updated = this.requireJob(jobId);
-    await this.fireHook("onFail", updated, new Error(error));
+    await fireHook(this.hooks, "onFail", updated, new Error(error));
     return updated;
   }
 
@@ -252,7 +239,7 @@ export class SqliteJobQueue implements JobQueue {
       if (row === undefined) throw new JobNotFoundError(jobId);
       const job = rowToJob(row);
 
-      if (job.status !== "failed" && job.status !== "dead-letter") {
+      if (job.status !== "dead-letter") {
         throw new InvalidJobTransitionError(jobId, job.status, "retry");
       }
 
@@ -367,29 +354,29 @@ export class SqliteJobQueue implements JobQueue {
     this.hooks = hooks;
   }
 
+  countJobs(filter: JobFilter): Promise<number> {
+    return asPromise(() => {
+      const conditions = [];
+
+      if (filter.type !== undefined) conditions.push(eq(jobs.type, filter.type));
+      if (filter.status !== undefined) conditions.push(eq(jobs.status, filter.status));
+      if (filter.systemId !== undefined) conditions.push(eq(jobs.systemId, filter.systemId));
+
+      const row = this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(jobs)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .get();
+
+      return row?.count ?? 0;
+    });
+  }
+
   // ── Private helpers ──────────────────────────────────────────────
 
   private requireJob(jobId: JobId): JobDefinition {
     const row = this.db.select().from(jobs).where(eq(jobs.id, jobId)).get();
     if (row === undefined) throw new JobNotFoundError(jobId);
     return rowToJob(row);
-  }
-
-  private async fireHook(
-    event: keyof JobEventHooks,
-    job: JobDefinition,
-    error?: Error,
-  ): Promise<void> {
-    try {
-      if (event === "onComplete") {
-        await this.hooks.onComplete?.(job);
-      } else if (event === "onFail" && error !== undefined) {
-        await this.hooks.onFail?.(job, error);
-      } else if (event === "onDeadLetter") {
-        await this.hooks.onDeadLetter?.(job);
-      }
-    } catch {
-      // Hook errors must not propagate
-    }
   }
 }

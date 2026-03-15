@@ -9,6 +9,13 @@ export interface DLQFilter {
   readonly offset?: number;
 }
 
+/** Result of a batch operation on the DLQ. */
+export interface BatchResult {
+  readonly succeeded: number;
+  readonly failed: number;
+  readonly errors: ReadonlyArray<{ readonly jobId: JobId; readonly error: string }>;
+}
+
 /**
  * Thin wrapper over a JobQueue providing dead-letter queue management.
  *
@@ -29,15 +36,22 @@ export class DLQManager {
   }
 
   /** Replays all dead-lettered jobs matching the optional filter. */
-  async replayAll(
-    filter?: Pick<DLQFilter, "type" | "systemId">,
-  ): Promise<readonly JobDefinition[]> {
+  async replayAll(filter?: Pick<DLQFilter, "type" | "systemId">): Promise<BatchResult> {
     const deadLettered = await this.queue.listDeadLettered(filter);
-    const results: JobDefinition[] = [];
+    let succeeded = 0;
+    const errors: Array<{ readonly jobId: JobId; readonly error: string }> = [];
+
     for (const job of deadLettered) {
-      results.push(await this.queue.retry(job.id));
+      try {
+        await this.queue.retry(job.id);
+        succeeded++;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        errors.push({ jobId: job.id, error: message });
+      }
     }
-    return results;
+
+    return { succeeded, failed: errors.length, errors };
   }
 
   /**
@@ -46,19 +60,30 @@ export class DLQManager {
    * Uses the `cancel()` transition (`dead-letter -> cancelled`) to
    * follow the non-destructive data principle — jobs are archived, not deleted.
    */
-  async purge(filter?: Pick<DLQFilter, "type" | "systemId">): Promise<number> {
+  async purge(filter?: Pick<DLQFilter, "type" | "systemId">): Promise<BatchResult> {
     const deadLettered = await this.queue.listDeadLettered(filter);
-    let count = 0;
+    let succeeded = 0;
+    const errors: Array<{ readonly jobId: JobId; readonly error: string }> = [];
+
     for (const job of deadLettered) {
-      await this.queue.cancel(job.id);
-      count++;
+      try {
+        await this.queue.cancel(job.id);
+        succeeded++;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        errors.push({ jobId: job.id, error: message });
+      }
     }
-    return count;
+
+    return { succeeded, failed: errors.length, errors };
   }
 
   /** Returns the count of dead-lettered jobs matching the optional filter. */
   async depth(filter?: Pick<DLQFilter, "type" | "systemId">): Promise<number> {
-    const deadLettered = await this.queue.listDeadLettered(filter);
-    return deadLettered.length;
+    return this.queue.countJobs({
+      status: "dead-letter",
+      type: filter?.type,
+      systemId: filter?.systemId,
+    });
   }
 }

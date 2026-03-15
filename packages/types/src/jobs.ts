@@ -20,13 +20,7 @@ export type JobType =
   | "partition-maintenance";
 
 /** Current status of a background job. */
-export type JobStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "dead-letter";
+export type JobStatus = "pending" | "running" | "completed" | "cancelled" | "dead-letter";
 
 /** Backoff strategy for retry timing. */
 export type BackoffStrategy = "exponential" | "linear";
@@ -41,6 +35,25 @@ export interface RetryPolicy {
   readonly strategy?: BackoffStrategy;
 }
 
+/** Maps each job type to its expected payload shape. Augment with specific types as handlers are implemented. */
+export interface JobPayloadMap {
+  "sync-push": Record<string, unknown>;
+  "sync-pull": Record<string, unknown>;
+  "blob-upload": Record<string, unknown>;
+  "blob-cleanup": Record<string, unknown>;
+  "export-generate": Record<string, unknown>;
+  "import-process": Record<string, unknown>;
+  "webhook-deliver": Record<string, unknown>;
+  "notification-send": Record<string, unknown>;
+  "analytics-compute": Record<string, unknown>;
+  "account-purge": Record<string, unknown>;
+  "bucket-key-rotation": Record<string, unknown>;
+  "report-generate": Record<string, unknown>;
+  "sync-queue-cleanup": Record<string, unknown>;
+  "audit-log-cleanup": Record<string, unknown>;
+  "partition-maintenance": Record<string, unknown>;
+}
+
 /** Result of a completed or failed job. */
 export interface JobResult {
   readonly success: boolean;
@@ -49,12 +62,12 @@ export interface JobResult {
 }
 
 /** A background job definition. */
-export interface JobDefinition {
+export interface JobDefinition<T extends JobType = JobType> {
   readonly id: JobId;
   readonly systemId: SystemId | null;
-  readonly type: JobType;
+  readonly type: T;
   readonly status: JobStatus;
-  readonly payload: Readonly<Record<string, unknown>>;
+  readonly payload: Readonly<JobPayloadMap[T]>;
   readonly attempts: number;
   readonly maxAttempts: number;
   readonly nextRetryAt: UnixMillis | null;

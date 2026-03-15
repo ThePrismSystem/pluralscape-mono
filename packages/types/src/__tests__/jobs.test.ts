@@ -1,7 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { JobId, SystemId } from "../ids.js";
-import type { JobDefinition, JobResult, JobStatus, JobType } from "../jobs.js";
+import type { JobDefinition, JobPayloadMap, JobResult, JobStatus, JobType } from "../jobs.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("JobId", () => {
@@ -62,7 +62,6 @@ describe("JobStatus", () => {
     assertType<JobStatus>("pending");
     assertType<JobStatus>("running");
     assertType<JobStatus>("completed");
-    assertType<JobStatus>("failed");
     assertType<JobStatus>("cancelled");
     assertType<JobStatus>("dead-letter");
   });
@@ -78,7 +77,6 @@ describe("JobStatus", () => {
         case "pending":
         case "running":
         case "completed":
-        case "failed":
         case "cancelled":
         case "dead-letter":
           return status;
@@ -89,6 +87,17 @@ describe("JobStatus", () => {
       }
     }
     expectTypeOf(handleStatus).toBeFunction();
+  });
+});
+
+describe("JobPayloadMap", () => {
+  it("has entries for all JobType values", () => {
+    expectTypeOf<keyof JobPayloadMap>().toEqualTypeOf<JobType>();
+  });
+
+  it("each entry extends Record<string, unknown>", () => {
+    expectTypeOf<JobPayloadMap["sync-push"]>().toExtend<Record<string, unknown>>();
+    expectTypeOf<JobPayloadMap["webhook-deliver"]>().toExtend<Record<string, unknown>>();
   });
 });
 

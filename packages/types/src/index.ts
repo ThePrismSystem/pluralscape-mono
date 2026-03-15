@@ -345,6 +345,7 @@ export type {
   BackoffStrategy,
   JobType,
   JobStatus,
+  JobPayloadMap,
   RetryPolicy,
   JobResult,
   JobDefinition,

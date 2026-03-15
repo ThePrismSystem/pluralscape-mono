@@ -1,0 +1,88 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { fireHook } from "../fire-hook.js";
+
+import type { JobEventHooks } from "../event-hooks.js";
+import type { JobLogger } from "../observability/job-logger.js";
+import type { JobDefinition, JobId } from "@pluralscape/types";
+
+const fakeJob = { id: "job_test" as JobId, type: "sync-push" } as JobDefinition;
+
+function makeLogger(): { logger: JobLogger; errorFn: ReturnType<typeof vi.fn> } {
+  const errorFn = vi.fn();
+  const logger: JobLogger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
+  return { logger, errorFn };
+}
+
+describe("fireHook", () => {
+  it("dispatches onComplete when event is 'onComplete'", async () => {
+    const onComplete = vi.fn();
+    const hooks: JobEventHooks = { onComplete };
+    await fireHook(hooks, "onComplete", fakeJob);
+    expect(onComplete).toHaveBeenCalledWith(fakeJob);
+  });
+
+  it("dispatches onFail with error when event is 'onFail'", async () => {
+    const onFail = vi.fn();
+    const hooks: JobEventHooks = { onFail };
+    const error = new Error("boom");
+    await fireHook(hooks, "onFail", fakeJob, error);
+    expect(onFail).toHaveBeenCalledWith(fakeJob, error);
+  });
+
+  it("does not dispatch onFail when error is undefined", async () => {
+    const onFail = vi.fn();
+    const hooks: JobEventHooks = { onFail };
+    await fireHook(hooks, "onFail", fakeJob);
+    expect(onFail).not.toHaveBeenCalled();
+  });
+
+  it("dispatches onDeadLetter when event is 'onDeadLetter'", async () => {
+    const onDeadLetter = vi.fn();
+    const hooks: JobEventHooks = { onDeadLetter };
+    await fireHook(hooks, "onDeadLetter", fakeJob);
+    expect(onDeadLetter).toHaveBeenCalledWith(fakeJob);
+  });
+
+  it("does nothing when hook is not defined", async () => {
+    const hooks: JobEventHooks = {};
+    await expect(fireHook(hooks, "onComplete", fakeJob)).resolves.toBeUndefined();
+  });
+
+  it("swallows hook errors without throwing", async () => {
+    const hooks: JobEventHooks = {
+      onComplete: () => {
+        throw new Error("hook exploded");
+      },
+    };
+    await expect(fireHook(hooks, "onComplete", fakeJob)).resolves.toBeUndefined();
+  });
+
+  it("logs hook errors when logger is provided", async () => {
+    const hooks: JobEventHooks = {
+      onComplete: () => {
+        throw new Error("hook exploded");
+      },
+    };
+    const { logger, errorFn } = makeLogger();
+    await fireHook(hooks, "onComplete", fakeJob, undefined, logger);
+    expect(errorFn).toHaveBeenCalledWith(
+      "hook.error",
+      expect.objectContaining({
+        event: "onComplete",
+        jobId: "job_test",
+        error: "hook exploded",
+      }),
+    );
+  });
+
+  it("does not log when no logger is provided and hook throws", async () => {
+    const hooks: JobEventHooks = {
+      onDeadLetter: () => {
+        throw new Error("oops");
+      },
+    };
+    // Should not throw
+    await expect(fireHook(hooks, "onDeadLetter", fakeJob)).resolves.toBeUndefined();
+  });
+});

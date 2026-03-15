@@ -29,7 +29,7 @@ export class ObservableJobQueue implements JobQueue {
     this.clock = clock;
   }
 
-  async enqueue(params: JobEnqueueParams): Promise<JobDefinition> {
+  async enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition> {
     const job = await this.inner.enqueue(params);
     this.metrics.recordEnqueue(job.type);
     this.logger.info("job.enqueued", { jobId: job.id, type: job.type });
@@ -97,6 +97,10 @@ export class ObservableJobQueue implements JobQueue {
 
   findStalledJobs(): Promise<readonly JobDefinition[]> {
     return this.inner.findStalledJobs();
+  }
+
+  countJobs(filter: JobFilter): Promise<number> {
+    return this.inner.countJobs(filter);
   }
 
   getRetryPolicy(type: JobType): RetryPolicy {

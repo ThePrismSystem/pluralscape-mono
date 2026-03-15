@@ -1,10 +1,17 @@
-import type { JobDefinition, JobStatus, JobType, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  JobDefinition,
+  JobPayloadMap,
+  JobStatus,
+  JobType,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 /** Parameters for enqueuing a new job. */
-export interface JobEnqueueParams {
-  readonly type: JobType;
+export interface JobEnqueueParams<T extends JobType = JobType> {
+  readonly type: T;
   readonly systemId: SystemId | null;
-  readonly payload: Readonly<Record<string, unknown>>;
+  readonly payload: Readonly<JobPayloadMap[T]>;
   /** Unique key to prevent duplicate jobs. */
   readonly idempotencyKey: string;
   /** Lower value = higher priority (0 is highest). Defaults to 0. */

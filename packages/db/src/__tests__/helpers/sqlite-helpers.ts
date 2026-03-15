@@ -1343,9 +1343,9 @@ export const SQLITE_DDL = {
     CREATE TABLE jobs (
       id TEXT PRIMARY KEY,
       system_id TEXT REFERENCES systems(id) ON DELETE CASCADE,
-      type TEXT NOT NULL CHECK (type IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate', 'sync-queue-cleanup', 'audit-log-cleanup')),
+      type TEXT NOT NULL CHECK (type IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate', 'sync-queue-cleanup', 'audit-log-cleanup', 'partition-maintenance')),
       payload TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled', 'dead-letter')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'cancelled', 'dead-letter')),
       attempts INTEGER NOT NULL DEFAULT 0,
       max_attempts INTEGER NOT NULL DEFAULT 5,
       next_retry_at INTEGER,

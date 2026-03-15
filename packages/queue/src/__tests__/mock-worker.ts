@@ -45,10 +45,10 @@ export class InMemoryJobWorker implements JobWorker {
     return this.consecutivePollFailures;
   }
 
-  registerHandler(type: JobType, handler: JobHandler): void {
+  registerHandler<T extends JobType>(type: T, handler: JobHandler<T>): void {
     if (this.running) throw new WorkerAlreadyRunningError();
     if (this.handlers.has(type)) throw new DuplicateHandlerError(type);
-    this.handlers.set(type, handler);
+    this.handlers.set(type, handler as JobHandler);
   }
 
   start(): Promise<void> {

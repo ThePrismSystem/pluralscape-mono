@@ -15,7 +15,10 @@ export interface JobHandlerContext {
 }
 
 /** A function that processes a single job. Throw to signal failure. */
-export type JobHandler = (job: JobDefinition, ctx: JobHandlerContext) => Promise<void>;
+export type JobHandler<T extends JobType = JobType> = (
+  job: JobDefinition<T>,
+  ctx: JobHandlerContext,
+) => Promise<void>;
 
 /**
  * Processing lifecycle adapter for the background job worker.
@@ -33,7 +36,7 @@ export interface JobWorker {
    * is already running. Throws DuplicateHandlerError if a handler for this type
    * is already registered.
    */
-  registerHandler(type: JobType, handler: JobHandler): void;
+  registerHandler<T extends JobType>(type: T, handler: JobHandler<T>): void;
 
   /**
    * Starts the worker, beginning job polling and processing.
