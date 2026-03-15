@@ -2,7 +2,7 @@ import { decryptBucketKey } from "./bucket-keys.js";
 import { AEAD_NONCE_BYTES } from "./constants.js";
 import { InvalidStateTransitionError, KeysLockedError } from "./errors.js";
 import { deriveMasterKey } from "./master-key.js";
-import { assertKdfMasterKey } from "./validation.js";
+import { assertKdfMasterKey, validateKeyVersion } from "./validation.js";
 
 import type { WrappedBucketKey } from "./bucket-keys.js";
 import type { IdentityKeypair } from "./identity.js";
@@ -224,7 +224,11 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
     const nonce = encryptedKey.slice(0, AEAD_NONCE_BYTES) as AeadNonce;
     const ciphertext = encryptedKey.slice(AEAD_NONCE_BYTES);
 
-    const wrapped: WrappedBucketKey = { ciphertext, nonce, keyVersion };
+    const wrapped: WrappedBucketKey = {
+      ciphertext,
+      nonce,
+      keyVersion: validateKeyVersion(keyVersion),
+    };
     const decrypted = decryptBucketKey(wrapped, this.masterKey);
 
     this.deps.bucketKeyCache.set(bucketId, decrypted);

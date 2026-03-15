@@ -19,7 +19,7 @@ import {
 } from "./constants.js";
 import { InvalidInputError } from "./errors.js";
 
-import type { AeadKey, KdfMasterKey, PwhashSalt } from "./types.js";
+import type { AeadKey, KdfMasterKey, KeyVersion, PwhashSalt } from "./types.js";
 
 export function assertBufferLength(buffer: Uint8Array, expected: number, name: string): void {
   if (buffer.length !== expected) {
@@ -101,11 +101,11 @@ export function assertGenericHashLength(len: number): void {
   }
 }
 
-export function validateKeyVersion(keyVersion: number): number {
+export function validateKeyVersion(keyVersion: number): KeyVersion {
   if (!Number.isSafeInteger(keyVersion) || keyVersion < 1) {
     throw new InvalidInputError(
       `keyVersion must be a positive safe integer (>= 1), got ${String(keyVersion)}`,
     );
   }
-  return keyVersion;
+  return keyVersion as KeyVersion;
 }
