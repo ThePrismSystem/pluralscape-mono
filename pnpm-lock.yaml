@@ -270,6 +270,50 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  packages/queue:
+    dependencies:
+      '@pluralscape/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@pluralscape/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint-config
+      '@pluralscape/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/tsconfig
+      '@types/bun':
+        specifier: ^1.2.4
+        version: 1.3.10
+      eslint:
+        specifier: ^10.0.3
+        version: 10.0.3
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
+  packages/storage:
+    dependencies:
+      '@pluralscape/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      '@pluralscape/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint-config
+      '@pluralscape/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/tsconfig
+      '@types/bun':
+        specifier: ^1.2.4
+        version: 1.3.10
+      eslint:
+        specifier: ^10.0.3
+        version: 10.0.3
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/sync:
     dependencies:
       '@automerge/automerge':

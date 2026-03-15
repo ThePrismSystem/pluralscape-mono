@@ -1,11 +1,11 @@
 ---
 # infra-18r3
 title: Job queue adapter interface
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:24Z
-updated_at: 2026-03-08T19:57:24Z
+updated_at: 2026-03-15T03:09:06Z
 parent: infra-m2t5
 ---
 
@@ -39,3 +39,17 @@ Shared interface/adapter pattern for the dual-backend job queue system (BullMQ +
 
 - ADR 010 (Background Jobs — job design principles)
 - types-omwn (Background job types)
+
+## Summary of Changes
+
+Implemented the full `@pluralscape/queue` package:
+
+- `JobQueue` and `JobWorker` interfaces with all methods from the spec
+- 5 error classes (IdempotencyConflictError, JobNotFoundError, WorkerAlreadyRunningError, NoHandlersRegisteredError, DuplicateHandlerError)
+- `InMemoryJobQueue` mock with injectable clock for time-dependent tests
+- `InMemoryJobWorker` mock using setInterval polling and per-job AbortController
+- `runJobQueueContract()` — 29 contract test cases
+- `runJobWorkerContract()` — 10 contract test cases
+- All 55 tests pass; typecheck and lint clean
+
+PR: https://github.com/ThePrismSystem/pluralscape-mono/pull/113
