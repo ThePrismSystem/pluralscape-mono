@@ -5,6 +5,7 @@ import {
   NoHandlersRegisteredError,
   WorkerAlreadyRunningError,
 } from "../../errors.js";
+import { pollBackoffMs } from "../../queue.constants.js";
 
 import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
@@ -33,6 +34,8 @@ export class SqliteJobWorker implements JobWorker {
   private running = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly inFlight = new Map<string, AbortController>();
+  private consecutivePollFailures = 0;
+  private nextPollAt = 0 as UnixMillis;
 
   constructor(
     queue: JobQueue,
@@ -104,12 +107,16 @@ export class SqliteJobWorker implements JobWorker {
 
   private async poll(): Promise<void> {
     if (!this.running) return;
+    if (this.clock() < this.nextPollAt) return;
 
     const types = Array.from(this.handlers.keys());
     let job: JobDefinition | null;
     try {
       job = await this.queue.dequeue(types);
+      this.consecutivePollFailures = 0;
     } catch (err) {
+      this.consecutivePollFailures++;
+      this.nextPollAt = (this.clock() + pollBackoffMs(this.consecutivePollFailures)) as UnixMillis;
       const message = err instanceof Error ? err.message : String(err);
       this.logger?.error("worker.poll-failed", { error: message });
       return;

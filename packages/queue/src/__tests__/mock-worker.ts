@@ -5,6 +5,7 @@ import {
   NoHandlersRegisteredError,
   WorkerAlreadyRunningError,
 } from "../errors.js";
+import { pollBackoffMs } from "../queue.constants.js";
 
 import { delay } from "./helpers.js";
 
@@ -33,6 +34,7 @@ export class InMemoryJobWorker implements JobWorker {
   /** Controllers for in-flight jobs — aborted on stop() */
   private readonly inFlight = new Map<string, AbortController>();
   private consecutivePollFailures = 0;
+  private nextPollAt = 0 as UnixMillis;
 
   constructor(
     queue: JobQueue,
@@ -108,6 +110,7 @@ export class InMemoryJobWorker implements JobWorker {
 
   private async poll(): Promise<void> {
     if (!this.running) return;
+    if (this.clock() < this.nextPollAt) return;
 
     const types = Array.from(this.handlers.keys());
     let job: JobDefinition | null;
@@ -116,6 +119,7 @@ export class InMemoryJobWorker implements JobWorker {
       this.consecutivePollFailures = 0;
     } catch (err) {
       this.consecutivePollFailures++;
+      this.nextPollAt = (this.clock() + pollBackoffMs(this.consecutivePollFailures)) as UnixMillis;
       const msg = err instanceof Error ? err.message : String(err);
       this.logger?.error("worker.poll-failed", { error: msg });
       return;

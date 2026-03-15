@@ -6,6 +6,7 @@ import {
   NoHandlersRegisteredError,
   WorkerAlreadyRunningError,
 } from "../../errors.js";
+import { pollBackoffMs } from "../../queue.constants.js";
 
 import { fromStoredData } from "./job-mapper.js";
 
@@ -44,6 +45,8 @@ export class BullMQJobWorker implements JobWorker {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly inFlight = new Map<string, AbortController>();
   private readonly token: string;
+  private consecutivePollFailures = 0;
+  private nextPollAt = 0 as UnixMillis;
 
   constructor(
     queueName: string,
@@ -130,11 +133,15 @@ export class BullMQJobWorker implements JobWorker {
 
   private async poll(): Promise<void> {
     if (!this.running || this.worker === null) return;
+    if (this.clock() < this.nextPollAt) return;
 
     let bullmqJob: BullMQJob | undefined;
     try {
       bullmqJob = (await this.worker.getNextJob(this.token)) as BullMQJob | undefined;
+      this.consecutivePollFailures = 0;
     } catch (err) {
+      this.consecutivePollFailures++;
+      this.nextPollAt = (this.clock() + pollBackoffMs(this.consecutivePollFailures)) as UnixMillis;
       const message = err instanceof Error ? err.message : String(err);
       this.logger?.error("worker.poll-failed", { error: message });
       return;
