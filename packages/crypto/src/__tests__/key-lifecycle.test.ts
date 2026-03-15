@@ -142,6 +142,19 @@ describe("unlockWithPassword", () => {
       InvalidStateTransitionError,
     );
   });
+
+  it("memzeros derived keys if storage.store fails", async () => {
+    const storageError = new Error("SecureStore write failed");
+    const failingDeps = makeDeps();
+    vi.spyOn(failingDeps.storage, "store").mockRejectedValue(storageError);
+    const memzeroSpy = vi.spyOn(failingDeps.sodium, "memzero");
+    const m = new MobileKeyLifecycleManager(failingDeps);
+
+    await expect(m.unlockWithPassword(TEST_PASSWORD, salt)).rejects.toThrow(storageError);
+    // Should have memzeroed the derived keys (at least 3 calls: signSK, boxSK, masterKey)
+    expect(memzeroSpy.mock.calls.length).toBeGreaterThanOrEqual(3);
+    expect(m.state).toBe("terminated");
+  });
 });
 
 // ── 3. Biometric unlock ─────────────────────────────────────────────
@@ -235,13 +248,25 @@ describe("lock", () => {
     expect(onBeforeLock).toHaveBeenCalledTimes(1);
   });
 
-  it("clears keys even if onBeforeLock throws", async () => {
-    const onBeforeLock = vi.fn().mockRejectedValue(new Error("SQLCipher close failed"));
+  it("re-throws onBeforeLock error after clearing keys on lock", async () => {
+    const lockError = new Error("SQLCipher close failed");
+    const onBeforeLock = vi.fn().mockRejectedValue(lockError);
     const depsWithCallback = makeDeps({ onBeforeLock });
     const m = new MobileKeyLifecycleManager(depsWithCallback);
     await m.unlockWithPassword(TEST_PASSWORD, salt);
-    await m.lock();
+    await expect(m.lock()).rejects.toThrow(lockError);
     expect(m.state).toBe("locked");
+    expect(() => m.getMasterKey()).toThrow(KeysLockedError);
+  });
+
+  it("re-throws onBeforeLock error after clearing keys on logout", async () => {
+    const lockError = new Error("SQLCipher close failed");
+    const onBeforeLock = vi.fn().mockRejectedValue(lockError);
+    const depsWithCallback = makeDeps({ onBeforeLock });
+    const m = new MobileKeyLifecycleManager(depsWithCallback);
+    await m.unlockWithPassword(TEST_PASSWORD, salt);
+    await expect(m.logout()).rejects.toThrow(lockError);
+    expect(m.state).toBe("terminated");
     expect(() => m.getMasterKey()).toThrow(KeysLockedError);
   });
 
@@ -260,37 +285,34 @@ describe("clearing order", () => {
   it("clears in correct order: bucketKeyCache → identity keys → masterKey", async () => {
     await manager.unlockWithPassword(TEST_PASSWORD, salt);
 
+    // Capture buffer references before lock for identity-based matching
+    const masterKeyRef = manager.getMasterKey();
+    const identityKeys = manager.getIdentityKeys();
+    const signSKRef = identityKeys.sign.secretKey;
+    const boxSKRef = identityKeys.box.secretKey;
+
     const callOrder: string[] = [];
     vi.spyOn(deps.bucketKeyCache, "clearAll").mockImplementation(() => {
       callOrder.push("bucketKeyCache.clearAll");
     });
     const memzeroSpy = vi.spyOn(deps.sodium, "memzero").mockImplementation((buf: Uint8Array) => {
-      // MasterKey is 32 bytes, sign SK is 64, box SK is 32
-      if (buf.length === 64) {
+      if (buf === signSKRef) {
         callOrder.push("memzero:signSK");
-      } else if (
-        callOrder.includes("memzero:signSK") &&
-        buf.length === 32 &&
-        !callOrder.includes("memzero:boxSK")
-      ) {
+      } else if (buf === boxSKRef) {
         callOrder.push("memzero:boxSK");
-      } else if (buf.length === 32) {
+      } else if (buf === masterKeyRef) {
         callOrder.push("memzero:masterKey");
       }
     });
 
     await manager.lock();
 
-    expect(callOrder[0]).toBe("bucketKeyCache.clearAll");
-    // Identity keys should be zeroed before masterKey
-    const signIdx = callOrder.indexOf("memzero:signSK");
-    const boxIdx = callOrder.indexOf("memzero:boxSK");
-    const masterIdx = callOrder.indexOf("memzero:masterKey");
-    expect(signIdx).toBeGreaterThan(-1);
-    expect(boxIdx).toBeGreaterThan(-1);
-    expect(masterIdx).toBeGreaterThan(-1);
-    expect(signIdx).toBeLessThan(masterIdx);
-    expect(boxIdx).toBeLessThan(masterIdx);
+    expect(callOrder).toEqual([
+      "bucketKeyCache.clearAll",
+      "memzero:signSK",
+      "memzero:boxSK",
+      "memzero:masterKey",
+    ]);
 
     memzeroSpy.mockRestore();
   });
@@ -347,6 +369,39 @@ describe("grace period", () => {
     expect(m.state).toBe("locked");
   });
 
+  it("getMasterKey returns key during grace", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    manager.onBackground();
+    expect(manager.state).toBe("grace");
+    const key = manager.getMasterKey();
+    expect(key).toBeInstanceOf(Uint8Array);
+    expect(key).toHaveLength(32);
+  });
+
+  it("getIdentityKeys returns keys during grace", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    manager.onBackground();
+    expect(manager.state).toBe("grace");
+    const keys = manager.getIdentityKeys();
+    expect(keys.sign.publicKey).toBeInstanceOf(Uint8Array);
+    expect(keys.box.publicKey).toBeInstanceOf(Uint8Array);
+  });
+
+  it("getBucketKey works during grace", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    const masterKey = manager.getMasterKey();
+    const bucketKey = generateBucketKey();
+    const wrapped = encryptBucketKey(bucketKey, masterKey, 1);
+    const encryptedKey = new Uint8Array(wrapped.nonce.length + wrapped.ciphertext.length);
+    encryptedKey.set(wrapped.nonce, 0);
+    encryptedKey.set(wrapped.ciphertext, wrapped.nonce.length);
+
+    manager.onBackground();
+    expect(manager.state).toBe("grace");
+    const result = manager.getBucketKey("bucket-grace" as BucketId, encryptedKey, 1);
+    expect(result).toEqual(bucketKey);
+  });
+
   it("onBackground is a no-op from locked", async () => {
     await manager.unlockWithPassword(TEST_PASSWORD, salt);
     await manager.lock();
@@ -399,6 +454,17 @@ describe("inactivity timer", () => {
     expect(manager.state).toBe("unlocked");
 
     // Advance the full timeout — now it should lock
+    await vi.advanceTimersByTimeAsync(STANDARD_CONFIG.inactivityTimeoutMs);
+    expect(manager.state).toBe("locked");
+  });
+
+  it("restarts inactivity timer after foreground return", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    manager.onBackground();
+    expect(manager.state).toBe("grace");
+    manager.onForeground();
+    expect(manager.state).toBe("unlocked");
+
     await vi.advanceTimersByTimeAsync(STANDARD_CONFIG.inactivityTimeoutMs);
     expect(manager.state).toBe("locked");
   });
@@ -508,6 +574,28 @@ describe("logout", () => {
     await manager.logout();
     await manager.unlockWithPassword(TEST_PASSWORD, salt);
     expect(manager.state).toBe("unlocked");
+  });
+
+  it("logout from locked transitions to terminated", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    await manager.lock();
+    expect(manager.state).toBe("locked");
+    await manager.logout();
+    expect(manager.state).toBe("terminated");
+  });
+
+  it("logout from terminated stays terminated", async () => {
+    expect(manager.state).toBe("terminated");
+    await manager.logout();
+    expect(manager.state).toBe("terminated");
+  });
+
+  it("logout from grace transitions to terminated", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    manager.onBackground();
+    expect(manager.state).toBe("grace");
+    await manager.logout();
+    expect(manager.state).toBe("terminated");
   });
 });
 
