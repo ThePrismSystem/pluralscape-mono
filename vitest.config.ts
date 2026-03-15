@@ -9,6 +9,7 @@ function projectConfig(name: string, root: string) {
       root,
       environment: "node",
       include: ["src/**/*.{test,spec}.ts"],
+      exclude: ["**/*.integration.{test,spec}.ts"],
       globals: false,
       restoreMocks: true,
       testTimeout: 5000,
@@ -73,6 +74,8 @@ export default defineConfig({
         "packages/queue/src/heartbeat.ts",
         "packages/queue/src/job-queue.ts",
         "packages/queue/src/job-worker.ts",
+        // queue: BullMQ adapter requires live Valkey — tested via integration tests
+        "packages/queue/src/adapters/bullmq/**/*.ts",
         // storage: interface-only files (no executable code)
         "packages/storage/src/interface.ts",
       ],

@@ -5,6 +5,9 @@ import {
   InvalidJobTransitionError,
   JobNotFoundError,
 } from "../errors.js";
+import { fireHook } from "../fire-hook.js";
+import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../policies/index.js";
+import { DEFAULT_TIMEOUT_MS } from "../queue.constants.js";
 
 import type { JobEventHooks } from "../event-hooks.js";
 import type { JobQueue } from "../job-queue.js";
@@ -17,16 +20,6 @@ import type {
   RetryPolicy,
   UnixMillis,
 } from "@pluralscape/types";
-
-const DEFAULT_RETRY_POLICY: RetryPolicy = {
-  maxRetries: 3,
-  backoffMs: 1_000,
-  backoffMultiplier: 2,
-  maxBackoffMs: 30_000,
-};
-
-const DEFAULT_TIMEOUT_MS = 30_000;
-const DEFAULT_MAX_ATTEMPTS = 4;
 
 function priorityThenCreatedAt(a: JobDefinition, b: JobDefinition): number {
   if (a.priority !== b.priority) return a.priority - b.priority;
@@ -50,7 +43,7 @@ export class InMemoryJobQueue implements JobQueue {
     this.clock = clock ?? now;
   }
 
-  enqueue(params: JobEnqueueParams): Promise<JobDefinition> {
+  enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition> {
     const existingId = this.idempotencyIndex.get(params.idempotencyKey);
     if (existingId !== undefined) {
       const existing = this.jobs.get(existingId);
@@ -64,6 +57,8 @@ export class InMemoryJobQueue implements JobQueue {
     }
 
     const id = createId("job_") as JobId;
+    const policy = this.getRetryPolicy(params.type);
+    const maxAttempts = params.maxAttempts ?? policy.maxRetries + 1;
     const job: JobDefinition = {
       id,
       systemId: params.systemId ?? null,
@@ -71,7 +66,7 @@ export class InMemoryJobQueue implements JobQueue {
       status: "pending",
       payload: params.payload,
       attempts: 0,
-      maxAttempts: params.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+      maxAttempts,
       nextRetryAt: null,
       error: null,
       result: null,
@@ -145,7 +140,7 @@ export class InMemoryJobQueue implements JobQueue {
       result: jobResult,
     };
     this.jobs.set(jobId, completed);
-    await this.fireHook("onComplete", completed);
+    await fireHook(this.hooks, "onComplete", completed);
     return completed;
   }
 
@@ -168,14 +163,11 @@ export class InMemoryJobQueue implements JobQueue {
         result: { success: false, message: error, completedAt: currentTime },
       };
       this.jobs.set(jobId, updated);
-      await this.fireHook("onFail", updated, new Error(error));
-      await this.fireHook("onDeadLetter", updated);
+      await fireHook(this.hooks, "onFail", updated, new Error(error));
+      await fireHook(this.hooks, "onDeadLetter", updated);
     } else {
       const policy = this.getRetryPolicy(job.type);
-      const backoff = Math.min(
-        policy.backoffMs * Math.pow(policy.backoffMultiplier, newAttempts - 1),
-        policy.maxBackoffMs,
-      );
+      const backoff = calculateBackoff(policy, newAttempts);
       updated = {
         ...job,
         status: "pending",
@@ -184,7 +176,7 @@ export class InMemoryJobQueue implements JobQueue {
         nextRetryAt: (currentTime + backoff) as UnixMillis,
       };
       this.jobs.set(jobId, updated);
-      await this.fireHook("onFail", updated, new Error(error));
+      await fireHook(this.hooks, "onFail", updated, new Error(error));
     }
 
     return updated;
@@ -193,12 +185,13 @@ export class InMemoryJobQueue implements JobQueue {
   retry(jobId: JobId): Promise<JobDefinition> {
     const job = this.jobs.get(jobId);
     if (job === undefined) return Promise.reject(new JobNotFoundError(jobId));
-    if (job.status !== "failed" && job.status !== "dead-letter") {
+    if (job.status !== "dead-letter") {
       return Promise.reject(new InvalidJobTransitionError(jobId, job.status, "retry"));
     }
     const retried: JobDefinition = {
       ...job,
       status: "pending",
+      attempts: 0,
       error: null,
       nextRetryAt: null,
     };
@@ -209,7 +202,7 @@ export class InMemoryJobQueue implements JobQueue {
   cancel(jobId: JobId): Promise<JobDefinition> {
     const job = this.jobs.get(jobId);
     if (job === undefined) return Promise.reject(new JobNotFoundError(jobId));
-    if (job.status === "completed" || job.status === "dead-letter") {
+    if (job.status === "completed") {
       return Promise.reject(new InvalidJobTransitionError(jobId, job.status, "cancel"));
     }
     const cancelled: JobDefinition = { ...job, status: "cancelled" };
@@ -281,29 +274,27 @@ export class InMemoryJobQueue implements JobQueue {
     this.hooks = hooks;
   }
 
+  countJobs(filter: JobFilter): Promise<number> {
+    let results = Array.from(this.jobs.values());
+
+    if (filter.type !== undefined) {
+      results = results.filter((j) => j.type === filter.type);
+    }
+    if (filter.status !== undefined) {
+      results = results.filter((j) => j.status === filter.status);
+    }
+    if (filter.systemId !== undefined) {
+      results = results.filter((j) => j.systemId === filter.systemId);
+    }
+
+    return Promise.resolve(results.length);
+  }
+
   // ── Private helpers ──────────────────────────────────────────────
 
   private requireJob(jobId: JobId): JobDefinition {
     const job = this.jobs.get(jobId);
     if (job === undefined) throw new JobNotFoundError(jobId);
     return job;
-  }
-
-  private async fireHook(
-    event: keyof JobEventHooks,
-    job: JobDefinition,
-    error?: Error,
-  ): Promise<void> {
-    try {
-      if (event === "onComplete") {
-        await this.hooks.onComplete?.(job);
-      } else if (event === "onFail" && error !== undefined) {
-        await this.hooks.onFail?.(job, error);
-      } else if (event === "onDeadLetter") {
-        await this.hooks.onDeadLetter?.(job);
-      }
-    } catch {
-      // Hook errors must not propagate
-    }
   }
 }

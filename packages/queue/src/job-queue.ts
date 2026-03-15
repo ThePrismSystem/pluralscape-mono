@@ -20,7 +20,7 @@ export interface JobQueue {
    * exists with the key, enqueues a new job (allows re-runs after completion
    * or cancellation).
    */
-  enqueue(params: JobEnqueueParams): Promise<JobDefinition>;
+  enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition>;
 
   /**
    * Checks whether a job with the given idempotency key exists.
@@ -56,13 +56,13 @@ export interface JobQueue {
   fail(jobId: JobId, error: string): Promise<JobDefinition>;
 
   /**
-   * Resets a failed or dead-letter job to pending, clearing its error and
+   * Resets a dead-lettered job to pending, clearing its error and
    * resetting nextRetryAt. Allows manual retry after inspection.
    */
   retry(jobId: JobId): Promise<JobDefinition>;
 
   /**
-   * Cancels a pending or running job. Completed or dead-letter jobs cannot be cancelled.
+   * Cancels a pending, running, or dead-letter job. Completed jobs cannot be cancelled.
    */
   cancel(jobId: JobId): Promise<JobDefinition>;
 
@@ -94,6 +94,12 @@ export interface JobQueue {
    * Used by the worker or a background sweep to detect and requeue stalled jobs.
    */
   findStalledJobs(): Promise<readonly JobDefinition[]>;
+
+  /**
+   * Returns the count of jobs matching the given filter.
+   * More efficient than listJobs() when only the count is needed.
+   */
+  countJobs(filter: JobFilter): Promise<number>;
 
   /**
    * Returns the retry policy for a job type.

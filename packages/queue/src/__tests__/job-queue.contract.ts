@@ -77,9 +77,13 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const queue = factory();
         const key = "idem-key-pending";
         await queue.enqueue(makeJobParams({ idempotencyKey: key }));
-        await expect(queue.enqueue(makeJobParams({ idempotencyKey: key }))).rejects.toThrow(
-          IdempotencyConflictError,
-        );
+        try {
+          await queue.enqueue(makeJobParams({ idempotencyKey: key }));
+          expect.unreachable("Expected IdempotencyConflictError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(IdempotencyConflictError);
+          expect((err as IdempotencyConflictError).idempotencyKey).toBe(key);
+        }
       });
 
       it("throws IdempotencyConflictError for running job with same key", async () => {
@@ -208,15 +212,30 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         expect(onComplete.mock.calls[0]?.[0].status).toBe("completed");
       });
 
-      it("throws JobNotFoundError for unknown job", async () => {
+      it("throws JobNotFoundError with jobId for unknown job", async () => {
         const queue = factory();
-        await expect(queue.acknowledge(GHOST_JOB_ID, {})).rejects.toThrow(JobNotFoundError);
+        try {
+          await queue.acknowledge(GHOST_JOB_ID, {});
+          expect.unreachable("Expected JobNotFoundError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(JobNotFoundError);
+          expect((err as JobNotFoundError).jobId).toBe(GHOST_JOB_ID);
+        }
       });
 
-      it("rejects acknowledge on a pending job", async () => {
+      it("rejects acknowledge on a pending job with transition details", async () => {
         const queue = factory();
         const job = await queue.enqueue(makeJobParams());
-        await expect(queue.acknowledge(job.id, {})).rejects.toThrow(InvalidJobTransitionError);
+        try {
+          await queue.acknowledge(job.id, {});
+          expect.unreachable("Expected InvalidJobTransitionError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(InvalidJobTransitionError);
+          const ite = err as InvalidJobTransitionError;
+          expect(ite.jobId).toBe(job.id);
+          expect(ite.currentStatus).toBe("pending");
+          expect(ite.attemptedAction).toBe("acknowledge");
+        }
       });
 
       it("rejects double acknowledge on a completed job", async () => {
@@ -258,10 +277,19 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         expect(onFail).toHaveBeenCalledOnce();
       });
 
-      it("rejects fail on a pending job", async () => {
+      it("rejects fail on a pending job with transition details", async () => {
         const queue = factory();
         const job = await queue.enqueue(makeJobParams());
-        await expect(queue.fail(job.id, "nope")).rejects.toThrow(InvalidJobTransitionError);
+        try {
+          await queue.fail(job.id, "nope");
+          expect.unreachable("Expected InvalidJobTransitionError");
+        } catch (err) {
+          expect(err).toBeInstanceOf(InvalidJobTransitionError);
+          const ite = err as InvalidJobTransitionError;
+          expect(ite.jobId).toBe(job.id);
+          expect(ite.currentStatus).toBe("pending");
+          expect(ite.attemptedAction).toBe("fail");
+        }
       });
     });
 
@@ -310,6 +338,29 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         expect(retried.status).toBe("pending");
       });
 
+      it("resets attempts to 0 on retry so the job gets a full retry budget", async () => {
+        const queue = factory();
+        // Use maxAttempts=1 so the first failure immediately dead-letters
+        await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
+
+        const run1 = await dequeueOrFail(queue);
+        const deadLettered = await queue.fail(run1.id, "fatal");
+        expect(deadLettered.status).toBe("dead-letter");
+        expect(deadLettered.attempts).toBe(1);
+
+        // Retry the dead-lettered job — attempts should reset
+        const retried = await queue.retry(run1.id);
+        expect(retried.status).toBe("pending");
+        expect(retried.attempts).toBe(0);
+
+        // Dequeue and fail again — since attempts was reset to 0 and maxAttempts is 1,
+        // this failure should dead-letter (not error from an invalid state)
+        const run2 = await dequeueOrFail(queue);
+        const deadLetteredAgain = await queue.fail(run2.id, "fatal again");
+        expect(deadLetteredAgain.status).toBe("dead-letter");
+        expect(deadLetteredAgain.attempts).toBe(1);
+      });
+
       it("throws JobNotFoundError for unknown job", async () => {
         const queue = factory();
         await expect(queue.retry(GHOST_JOB_ID)).rejects.toThrow(JobNotFoundError);
@@ -352,12 +403,13 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         await expect(queue.cancel(running.id)).rejects.toThrow(InvalidJobTransitionError);
       });
 
-      it("rejects cancel on a dead-letter job", async () => {
+      it("cancels a dead-letter job (non-destructive purge)", async () => {
         const queue = factory();
         await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
         const running = await dequeueOrFail(queue);
         await queue.fail(running.id, "fatal");
-        await expect(queue.cancel(running.id)).rejects.toThrow(InvalidJobTransitionError);
+        const cancelled = await queue.cancel(running.id);
+        expect(cancelled.status).toBe("cancelled");
       });
     });
 
@@ -532,7 +584,64 @@ export function runJobQueueContract(factory: () => JobQueue): void {
       });
     });
 
-    // ── 19. Cross-system isolation ──────────────────────────────────
+    // ── 19. countJobs ─────────────────────────────────────────────────
+
+    describe("countJobs", () => {
+      it("returns 0 for an empty queue", async () => {
+        const queue = factory();
+        expect(await queue.countJobs({})).toBe(0);
+      });
+
+      it("counts by status filter", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams({ idempotencyKey: "c1" }));
+        await queue.enqueue(makeJobParams({ idempotencyKey: "c2" }));
+        await queue.dequeue(); // moves one to running
+        expect(await queue.countJobs({ status: "pending" })).toBe(1);
+        expect(await queue.countJobs({ status: "running" })).toBe(1);
+      });
+
+      it("counts by type filter", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams({ type: "sync-push", idempotencyKey: "ct1" }));
+        await queue.enqueue(makeJobParams({ type: "blob-upload", idempotencyKey: "ct2" }));
+        expect(await queue.countJobs({ type: "sync-push" })).toBe(1);
+      });
+    });
+
+    // ── 20. maxRetries wiring ───────────────────────────────────────
+
+    describe("maxRetries wiring", () => {
+      it("uses retry policy maxRetries + 1 as maxAttempts when not explicitly set", async () => {
+        const queue = factory();
+        queue.setRetryPolicy("sync-push", {
+          maxRetries: 5,
+          backoffMs: 100,
+          backoffMultiplier: 2,
+          maxBackoffMs: 10_000,
+        });
+        const job = await queue.enqueue(
+          makeJobParams({ type: "sync-push", idempotencyKey: "mr1" }),
+        );
+        expect(job.maxAttempts).toBe(6); // maxRetries (5) + 1
+      });
+
+      it("explicit maxAttempts overrides retry policy", async () => {
+        const queue = factory();
+        queue.setRetryPolicy("sync-push", {
+          maxRetries: 5,
+          backoffMs: 100,
+          backoffMultiplier: 2,
+          maxBackoffMs: 10_000,
+        });
+        const job = await queue.enqueue(
+          makeJobParams({ type: "sync-push", maxAttempts: 3, idempotencyKey: "mr2" }),
+        );
+        expect(job.maxAttempts).toBe(3);
+      });
+    });
+
+    // ── 21. Cross-system isolation ──────────────────────────────────
 
     describe("cross-system isolation", () => {
       it("listJobs with systemId only returns jobs for that system", async () => {

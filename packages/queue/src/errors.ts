@@ -1,5 +1,7 @@
 import type { JobId, JobStatus, JobType } from "@pluralscape/types";
 
+export type JobAction = "acknowledge" | "fail" | "retry" | "cancel" | "dequeue" | "heartbeat";
+
 /**
  * Thrown when enqueue is called with an idempotency key that matches an existing
  * non-completed job (pending or running). Callers should use checkIdempotency() first
@@ -74,12 +76,12 @@ export class InvalidJobTransitionError extends Error {
   override readonly name = "InvalidJobTransitionError" as const;
   readonly jobId: JobId;
   readonly currentStatus: JobStatus;
-  readonly attemptedAction: string;
+  readonly attemptedAction: JobAction;
 
   constructor(
     jobId: JobId,
     currentStatus: JobStatus,
-    attemptedAction: string,
+    attemptedAction: JobAction,
     options?: ErrorOptions,
   ) {
     super(`Cannot ${attemptedAction} job "${jobId}": job is "${currentStatus}".`, options);

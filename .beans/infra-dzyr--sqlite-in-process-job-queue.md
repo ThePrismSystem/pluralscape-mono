@@ -1,11 +1,11 @@
 ---
 # infra-dzyr
 title: SQLite in-process job queue
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:49Z
-updated_at: 2026-03-08T19:57:49Z
+updated_at: 2026-03-15T08:41:11Z
 parent: infra-m2t5
 blocked_by:
   - infra-18r3

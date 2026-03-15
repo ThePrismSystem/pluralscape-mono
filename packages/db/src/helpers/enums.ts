@@ -316,7 +316,6 @@ export const JOB_STATUSES = [
   "pending",
   "running",
   "completed",
-  "failed",
   "cancelled",
   "dead-letter",
 ] as const satisfies readonly JobStatus[];

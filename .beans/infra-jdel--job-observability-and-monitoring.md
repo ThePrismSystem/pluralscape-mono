@@ -1,11 +1,11 @@
 ---
 # infra-jdel
 title: Job observability and monitoring
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:58:04Z
-updated_at: 2026-03-08T19:58:04Z
+updated_at: 2026-03-15T09:38:57Z
 parent: infra-m2t5
 blocked_by:
   - infra-18r3
@@ -37,3 +37,17 @@ Monitoring, status querying, and alerting for the job queue system.
 ## References
 
 - ADR 010 (Background Jobs — observability)
+
+## Summary of Changes
+
+Added full observability decorator layer for the job queue system:
+
+- **InMemoryJobMetrics**: tracks enqueue/complete/failure/dead-letter counts and duration per job type; returns snapshots to prevent mutation leakage
+- **ConsoleJobLogger**: structured JSON log lines (info/warn/error) implementing a swappable JobLogger interface
+- **ObservableJobQueue**: decorator wrapping any JobQueue; records metrics and logs on enqueue, acknowledge, and fail; pass-through for all other methods
+- **ObservableJobWorker**: decorator wrapping any JobWorker; wraps handlers to log processing start/success/failure; re-throws to preserve retry behavior
+- **QueueHealthService**: aggregates pending/running/DLQ/stalled counts, worker status, and metrics into a single QueueHealthSummary
+- **StalledJobSweeper**: periodic timer calling findStalledJobs() and failing stalled jobs; configurable interval, injectable logger, onSweep callback; idempotent start/stop
+- **checkAlerts**: pure function checking health summary against configurable thresholds (DLQ depth, stalled count); fires onAlert callback on violation
+
+Package export added: ./observability. 189 unit tests pass (9 test files).
