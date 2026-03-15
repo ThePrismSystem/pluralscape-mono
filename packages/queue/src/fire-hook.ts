@@ -37,6 +37,10 @@ export async function fireHook(
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    logger?.error("hook.error", { event, jobId: job.id, error: message });
+    if (logger !== undefined) {
+      logger.error("hook.error", { event, jobId: job.id, error: message });
+    } else {
+      console.warn(`[queue] hook error: event=${event} jobId=${job.id} error=${message}`);
+    }
   }
 }

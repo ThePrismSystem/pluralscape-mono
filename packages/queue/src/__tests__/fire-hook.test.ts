@@ -77,14 +77,26 @@ describe("fireHook", () => {
     );
   });
 
-  it("does not log when no logger is provided and hook throws", async () => {
+  it("calls console.warn when hook throws and no logger is provided", async () => {
     const hooks: JobEventHooks = {
       onDeadLetter: () => {
         throw new Error("oops");
       },
     };
-    // Should not throw
-    await expect(fireHook(hooks, "onDeadLetter", fakeJob)).resolves.toBeUndefined();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await fireHook(hooks, "onDeadLetter", fakeJob);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("event=onDeadLetter"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("jobId=job_test"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("error=oops"));
+  });
+
+  it("calls console.warn when async hook rejects and no logger is provided", async () => {
+    const hooks: JobEventHooks = {
+      onComplete: () => Promise.reject(new Error("async boom")),
+    };
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(fireHook(hooks, "onComplete", fakeJob)).resolves.toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("error=async boom"));
   });
 
   it("requires error argument for onFail event (type-level check)", () => {
