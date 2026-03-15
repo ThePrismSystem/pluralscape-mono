@@ -37,21 +37,7 @@ export class DLQManager {
 
   /** Replays all dead-lettered jobs matching the optional filter. */
   async replayAll(filter?: Pick<DLQFilter, "type" | "systemId">): Promise<BatchResult> {
-    const deadLettered = await this.queue.listDeadLettered(filter);
-    let succeeded = 0;
-    const errors: Array<{ readonly jobId: JobId; readonly error: string }> = [];
-
-    for (const job of deadLettered) {
-      try {
-        await this.queue.retry(job.id);
-        succeeded++;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        errors.push({ jobId: job.id, error: message });
-      }
-    }
-
-    return { succeeded, failed: errors.length, errors };
+    return this.batchOp((jobId) => this.queue.retry(jobId), filter);
   }
 
   /**
@@ -61,13 +47,22 @@ export class DLQManager {
    * follow the non-destructive data principle — jobs are archived, not deleted.
    */
   async purge(filter?: Pick<DLQFilter, "type" | "systemId">): Promise<BatchResult> {
+    return this.batchOp((jobId) => this.queue.cancel(jobId), filter);
+  }
+
+  // ── Private ─────────────────────────────────────────────────────
+
+  private async batchOp(
+    op: (jobId: JobId) => Promise<unknown>,
+    filter?: Pick<DLQFilter, "type" | "systemId">,
+  ): Promise<BatchResult> {
     const deadLettered = await this.queue.listDeadLettered(filter);
     let succeeded = 0;
     const errors: Array<{ readonly jobId: JobId; readonly error: string }> = [];
 
     for (const job of deadLettered) {
       try {
-        await this.queue.cancel(job.id);
+        await op(job.id);
         succeeded++;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

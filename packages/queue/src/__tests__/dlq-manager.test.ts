@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { DLQManager } from "../dlq/dlq-manager.js";
 
-import { dequeueOrFail, makeJobParams } from "./helpers.js";
+import { dequeueOrFail, makeJobParams, testSystemId } from "./helpers.js";
 import { InMemoryJobQueue } from "./mock-queue.js";
 
 function createDLQJob(queue: InMemoryJobQueue): ReturnType<typeof queue.enqueue> {
@@ -83,6 +83,50 @@ describe("DLQManager", () => {
       expect(result.errors).toHaveLength(0);
     });
 
+    it("with systemId filter only replays matching jobs", async () => {
+      const queue = new InMemoryJobQueue();
+      const dlq = new DLQManager(queue);
+      const sysA = testSystemId("sys_aaaaaaaa-0000-0000-0000-000000000001");
+      const sysB = testSystemId("sys_aaaaaaaa-0000-0000-0000-000000000002");
+
+      await queue.enqueue(makeJobParams({ systemId: sysA, maxAttempts: 1 }));
+      await queue.enqueue(makeJobParams({ systemId: sysB, maxAttempts: 1 }));
+
+      const j1 = await dequeueOrFail(queue);
+      await queue.fail(j1.id, "err");
+      const j2 = await dequeueOrFail(queue);
+      await queue.fail(j2.id, "err");
+
+      const result = await dlq.replayAll({ systemId: sysA });
+      expect(result.succeeded).toBe(1);
+      expect(result.failed).toBe(0);
+
+      const remaining = await dlq.list();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]?.systemId).toBe(sysB);
+    });
+
+    it("with type filter only replays matching jobs", async () => {
+      const queue = new InMemoryJobQueue();
+      const dlq = new DLQManager(queue);
+
+      await queue.enqueue(makeJobParams({ type: "sync-push", maxAttempts: 1 }));
+      await queue.enqueue(makeJobParams({ type: "blob-upload", maxAttempts: 1 }));
+
+      const j1 = await dequeueOrFail(queue, ["sync-push"]);
+      await queue.fail(j1.id, "err");
+      const j2 = await dequeueOrFail(queue, ["blob-upload"]);
+      await queue.fail(j2.id, "err");
+
+      const result = await dlq.replayAll({ type: "sync-push" });
+      expect(result.succeeded).toBe(1);
+      expect(result.failed).toBe(0);
+
+      // blob-upload should still be dead-lettered
+      const remaining = await dlq.list({ type: "blob-upload" });
+      expect(remaining).toHaveLength(1);
+    });
+
     it("returns zero counts when no dead-lettered jobs", async () => {
       const queue = new InMemoryJobQueue();
       const dlq = new DLQManager(queue);
@@ -138,6 +182,27 @@ describe("DLQManager", () => {
 
       const cancelled = await queue.listJobs({ status: "cancelled" });
       expect(cancelled).toHaveLength(2);
+    });
+
+    it("with type filter only purges matching jobs", async () => {
+      const queue = new InMemoryJobQueue();
+      const dlq = new DLQManager(queue);
+
+      await queue.enqueue(makeJobParams({ type: "sync-push", maxAttempts: 1 }));
+      await queue.enqueue(makeJobParams({ type: "blob-upload", maxAttempts: 1 }));
+
+      const j1 = await dequeueOrFail(queue, ["sync-push"]);
+      await queue.fail(j1.id, "err");
+      const j2 = await dequeueOrFail(queue, ["blob-upload"]);
+      await queue.fail(j2.id, "err");
+
+      const result = await dlq.purge({ type: "sync-push" });
+      expect(result.succeeded).toBe(1);
+      expect(result.failed).toBe(0);
+
+      // blob-upload should still be dead-lettered
+      const remaining = await dlq.list({ type: "blob-upload" });
+      expect(remaining).toHaveLength(1);
     });
 
     it("collects errors for jobs that fail to cancel", async () => {
