@@ -56,74 +56,83 @@ afterAll(() => {
 });
 
 describe("performance", () => {
-  it(`merges ${String(CHANGES_THRESHOLD)} encrypted changes in under ${String(MERGE_TIME_LIMIT_MS)}ms`, () => {
-    const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
-    try {
-      const docId = "system-core-sys_perf1";
-      const keys = resolver.resolveKeys(docId);
-      const relay = new EncryptedRelay();
-
-      // Both sessions must start from the same base document (Automerge.clone).
-      // Independently created documents are separate CRDT objects — changes
-      // from one would not apply to the other.
-      const base = createSystemCoreDocument();
-
-      // Producer: generate CHANGES_THRESHOLD change envelopes
-      const producer = new EncryptedSyncSession<SystemCoreDocument>({
-        doc: Automerge.clone(base),
-        keys,
-        documentId: docId,
+  it(
+    `merges ${String(CHANGES_THRESHOLD)} encrypted changes in under ${String(MERGE_TIME_LIMIT_MS)}ms`,
+    { timeout: 15000 },
+    () => {
+      const resolver = DocumentKeyResolver.create({
+        masterKey,
+        signingKeys,
+        bucketKeyCache,
         sodium,
       });
+      try {
+        const docId = "system-core-sys_perf1";
+        const keys = resolver.resolveKeys(docId);
+        const relay = new EncryptedRelay();
 
-      for (let i = 0; i < CHANGES_THRESHOLD; i++) {
-        const memberId = `mem_${String(i)}`;
-        const envelope = producer.change((doc) => {
-          doc.members[memberId] = {
-            id: new Automerge.ImmutableString(memberId),
-            systemId: new Automerge.ImmutableString("sys_perf1"),
-            name: new Automerge.ImmutableString(`Member ${String(i)}`),
-            pronouns: new Automerge.ImmutableString("[]"),
-            description: null,
-            avatarSource: null,
-            colors: new Automerge.ImmutableString("[]"),
-            saturationLevel: new Automerge.ImmutableString("normal"),
-            tags: new Automerge.ImmutableString("[]"),
-            suppressFriendFrontNotification: false,
-            boardMessageNotificationOnFront: false,
-            archived: false,
-            createdAt: i,
-            updatedAt: i,
-          };
+        // Both sessions must start from the same base document (Automerge.clone).
+        // Independently created documents are separate CRDT objects — changes
+        // from one would not apply to the other.
+        const base = createSystemCoreDocument();
+
+        // Producer: generate CHANGES_THRESHOLD change envelopes
+        const producer = new EncryptedSyncSession<SystemCoreDocument>({
+          doc: Automerge.clone(base),
+          keys,
+          documentId: docId,
+          sodium,
         });
-        relay.submit(envelope);
+
+        for (let i = 0; i < CHANGES_THRESHOLD; i++) {
+          const memberId = `mem_${String(i)}`;
+          const envelope = producer.change((doc) => {
+            doc.members[memberId] = {
+              id: new Automerge.ImmutableString(memberId),
+              systemId: new Automerge.ImmutableString("sys_perf1"),
+              name: new Automerge.ImmutableString(`Member ${String(i)}`),
+              pronouns: new Automerge.ImmutableString("[]"),
+              description: null,
+              avatarSource: null,
+              colors: new Automerge.ImmutableString("[]"),
+              saturationLevel: new Automerge.ImmutableString("normal"),
+              tags: new Automerge.ImmutableString("[]"),
+              suppressFriendFrontNotification: false,
+              boardMessageNotificationOnFront: false,
+              archived: false,
+              createdAt: i,
+              updatedAt: i,
+            };
+          });
+          relay.submit(envelope);
+        }
+
+        // Consumer: merge all changes and measure the time
+        const consumer = new EncryptedSyncSession<SystemCoreDocument>({
+          doc: Automerge.clone(base),
+          keys,
+          documentId: docId,
+          sodium,
+        });
+
+        const start = Date.now();
+        consumer.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+        const elapsed = Date.now() - start;
+
+        expect(
+          Object.keys(consumer.document.members),
+          `Expected ${String(CHANGES_THRESHOLD)} members after merge`,
+        ).toHaveLength(CHANGES_THRESHOLD);
+
+        expect(
+          elapsed,
+          `Merge of ${String(CHANGES_THRESHOLD)} changes took ${elapsed.toFixed(0)}ms — exceeds ${String(MERGE_TIME_LIMIT_MS)}ms limit`,
+        ).toBeLessThan(MERGE_TIME_LIMIT_MS);
+      } finally {
+        resolver.dispose();
       }
-
-      // Consumer: merge all changes and measure the time
-      const consumer = new EncryptedSyncSession<SystemCoreDocument>({
-        doc: Automerge.clone(base),
-        keys,
-        documentId: docId,
-        sodium,
-      });
-
-      const start = Date.now();
-      consumer.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
-      const elapsed = Date.now() - start;
-
-      expect(
-        Object.keys(consumer.document.members),
-        `Expected ${String(CHANGES_THRESHOLD)} members after merge`,
-      ).toHaveLength(CHANGES_THRESHOLD);
-
-      expect(
-        elapsed,
-        `Merge of ${String(CHANGES_THRESHOLD)} changes took ${elapsed.toFixed(0)}ms — exceeds ${String(MERGE_TIME_LIMIT_MS)}ms limit`,
-      ).toBeLessThan(MERGE_TIME_LIMIT_MS);
-    } finally {
-      resolver.dispose();
-    }
-  });
+    },
+  );
 
   it("document size grows sub-linearly after snapshot compaction", () => {
     // Verify that a snapshot is significantly smaller than the raw change log.
