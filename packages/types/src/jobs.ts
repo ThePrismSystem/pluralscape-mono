@@ -28,12 +28,17 @@ export type JobStatus =
   | "cancelled"
   | "dead-letter";
 
+/** Backoff strategy for retry timing. */
+export type BackoffStrategy = "exponential" | "linear";
+
 /** Retry policy for failed jobs. */
 export interface RetryPolicy {
   readonly maxRetries: number;
   readonly backoffMs: number;
   readonly backoffMultiplier: number;
   readonly maxBackoffMs: number;
+  /** Defaults to `"exponential"` when omitted. */
+  readonly strategy?: BackoffStrategy;
 }
 
 /** Result of a completed or failed job. */

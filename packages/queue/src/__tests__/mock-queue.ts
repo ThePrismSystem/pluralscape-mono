@@ -209,7 +209,7 @@ export class InMemoryJobQueue implements JobQueue {
   cancel(jobId: JobId): Promise<JobDefinition> {
     const job = this.jobs.get(jobId);
     if (job === undefined) return Promise.reject(new JobNotFoundError(jobId));
-    if (job.status === "completed" || job.status === "dead-letter") {
+    if (job.status === "completed") {
       return Promise.reject(new InvalidJobTransitionError(jobId, job.status, "cancel"));
     }
     const cancelled: JobDefinition = { ...job, status: "cancelled" };

@@ -341,7 +341,14 @@ export type {
 } from "./api-keys.js";
 
 // ── Jobs ──────────────────────────────────────────────────────
-export type { JobType, JobStatus, RetryPolicy, JobResult, JobDefinition } from "./jobs.js";
+export type {
+  BackoffStrategy,
+  JobType,
+  JobStatus,
+  RetryPolicy,
+  JobResult,
+  JobDefinition,
+} from "./jobs.js";
 
 // ── Blob ──────────────────────────────────────────────────────
 export type {

@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./policies": "./src/policies/index.ts",
+    "./dlq": "./src/dlq/index.ts",
+    "./testing": "./src/__tests__/testing-exports.ts"
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*"

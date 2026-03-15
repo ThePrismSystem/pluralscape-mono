@@ -1,11 +1,11 @@
 ---
 # infra-egog
 title: Job retry and dead-letter policies
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:57Z
-updated_at: 2026-03-08T19:57:57Z
+updated_at: 2026-03-15T08:35:34Z
 parent: infra-m2t5
 blocked_by:
   - infra-18r3

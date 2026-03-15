@@ -62,7 +62,7 @@ export interface JobQueue {
   retry(jobId: JobId): Promise<JobDefinition>;
 
   /**
-   * Cancels a pending or running job. Completed or dead-letter jobs cannot be cancelled.
+   * Cancels a pending, running, or dead-letter job. Completed jobs cannot be cancelled.
    */
   cancel(jobId: JobId): Promise<JobDefinition>;
 
