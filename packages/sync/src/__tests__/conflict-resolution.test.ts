@@ -3,6 +3,7 @@ import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  createChatDocument,
   createFrontingDocument,
   createPrivacyConfigDocument,
   createSystemCoreDocument,
@@ -10,6 +11,7 @@ import {
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
+import type { CrdtGroup } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 
@@ -40,6 +42,27 @@ function makeSessions<T>(
     new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
     new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
   ];
+}
+
+function makeGroup(
+  id: string,
+  sortOrder: number,
+  overrides?: Partial<{ parentGroupId: string }>,
+): CrdtGroup {
+  return {
+    id: s(id),
+    systemId: s("sys_1"),
+    name: s(id),
+    description: null,
+    parentGroupId: overrides?.parentGroupId ? s(overrides.parentGroupId) : null,
+    imageSource: null,
+    color: null,
+    emoji: null,
+    sortOrder,
+    archived: false,
+    createdAt: 1000,
+    updatedAt: 1000,
+  };
 }
 
 // ── Category 1: Concurrent edits to LWW map entities ─────────────────
@@ -304,9 +327,13 @@ describe("Category 3: concurrent FrontingSession end time", () => {
   });
 });
 
-// ── Category 4: Junction add-wins semantics ───────────────────────────
+// ── Category 4: Concurrent re-parenting creating cycles ───────────────
+//
+// After merge, both parentGroupId fields are set, creating a cycle in the
+// group hierarchy. Post-merge DFS cycle detection is application-layer
+// (specified in sync-80bn — not yet implemented).
 
-describe("Category 4: junction add-wins semantics", () => {
+describe("Category 4: concurrent re-parenting creating cycles", () => {
   let relay: EncryptedRelay;
   let keys: DocumentKeys;
 
@@ -315,40 +342,46 @@ describe("Category 4: junction add-wins semantics", () => {
     keys = makeKeys();
   });
 
-  it("4a — concurrent add on A and no-op on B: junction is present after merge", () => {
+  it("4a — concurrent cross-parent writes both apply, producing a detectable cycle", () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-004");
 
-    const envA = sessionA.change((d) => {
-      d.groupMemberships["g1_m1"] = true;
+    // Seed two root groups (no parent)
+    const seedEnv = sessionA.change((d) => {
+      d.groups["groupA"] = makeGroup("groupA", 1);
+      d.groups["groupB"] = makeGroup("groupB", 2);
     });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cr-004", 0));
 
-    // B does not add anything — just receives A's change
-    relay.submit(envA);
-    syncThroughRelay([sessionA, sessionB], relay);
-
-    expect(sessionB.document.groupMemberships["g1_m1"]).toBe(true);
-    expect(sessionA.document).toEqual(sessionB.document);
-  });
-
-  it("4b — two concurrent adds to different keys: both junctions present", () => {
-    const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
-
+    // A: groupA.parentGroupId = groupB
     const envA = sessionA.change((d) => {
-      d.groupMemberships["g1_m1"] = true;
+      const g = d.groups["groupA"];
+      if (g) {
+        g.parentGroupId = s("groupB");
+        g.updatedAt = 2000;
+      }
     });
+    // B: groupB.parentGroupId = groupA (concurrent — cycle-forming)
     const envB = sessionB.change((d) => {
-      d.groupMemberships["g1_m2"] = true;
+      const g = d.groups["groupB"];
+      if (g) {
+        g.parentGroupId = s("groupA");
+        g.updatedAt = 2001;
+      }
     });
 
     relay.submit(envA);
     relay.submit(envB);
     syncThroughRelay([sessionA, sessionB], relay);
 
-    expect(sessionA.document.groupMemberships["g1_m1"]).toBe(true);
-    expect(sessionA.document.groupMemberships["g1_m2"]).toBe(true);
+    // Both sessions converge
     expect(sessionA.document).toEqual(sessionB.document);
+
+    // Both parentGroupId values are set — cycle is present in merged state.
+    // Post-merge cycle detection (DFS traversal) is application-layer (sync-80bn — todo).
+    expect(sessionA.document.groups["groupA"]?.parentGroupId?.val).toBe("groupB");
+    expect(sessionA.document.groups["groupB"]?.parentGroupId?.val).toBe("groupA");
   });
 });
 
@@ -403,9 +436,9 @@ describe("Category 5: concurrent KeyGrant revocation", () => {
   });
 });
 
-// ── Category 6: CheckInRecord concurrent respond + dismiss ────────────
+// ── Category 6: Junction add-wins semantics ───────────────────────────
 
-describe("Category 6: CheckInRecord concurrent respond + dismiss", () => {
+describe("Category 6: junction add-wins semantics", () => {
   let relay: EncryptedRelay;
   let keys: DocumentKeys;
 
@@ -414,7 +447,55 @@ describe("Category 6: CheckInRecord concurrent respond + dismiss", () => {
     keys = makeKeys();
   });
 
-  it("6a — concurrent respond and dismiss converge to a single state", () => {
+  it("6a — concurrent add on A and no-op on B: junction is present after merge", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
+
+    const envA = sessionA.change((d) => {
+      d.groupMemberships["g1_m1"] = true;
+    });
+
+    // B does not add anything — just receives A's change
+    relay.submit(envA);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionB.document.groupMemberships["g1_m1"]).toBe(true);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+
+  it("6b — two concurrent adds to different keys: both junctions present", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
+
+    const envA = sessionA.change((d) => {
+      d.groupMemberships["g1_m1"] = true;
+    });
+    const envB = sessionB.change((d) => {
+      d.groupMemberships["g1_m2"] = true;
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document.groupMemberships["g1_m1"]).toBe(true);
+    expect(sessionA.document.groupMemberships["g1_m2"]).toBe(true);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+});
+
+// ── Category 7: CheckInRecord concurrent respond + dismiss ────────────
+
+describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
+  let relay: EncryptedRelay;
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    relay = new EncryptedRelay();
+    keys = makeKeys();
+  });
+
+  it("7a — concurrent respond and dismiss converge to a single state", () => {
     const base = createFrontingDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-fronting-001");
 
@@ -472,9 +553,13 @@ describe("Category 6: CheckInRecord concurrent respond + dismiss", () => {
   });
 });
 
-// ── Category 7: FriendConnection nested assignedBuckets ──────────────
+// ── Category 8: Sort order conflicts ─────────────────────────────────
+//
+// After merge, LWW picks a winner for each sortOrder independently.
+// Ties or inversions in the merged set are normal — post-merge normalization
+// (re-numbering to eliminate ties and fill gaps) is application-layer.
 
-describe("Category 7: FriendConnection nested assignedBuckets", () => {
+describe("Category 8: sort order conflicts", () => {
   let relay: EncryptedRelay;
   let keys: DocumentKeys;
 
@@ -483,7 +568,161 @@ describe("Category 7: FriendConnection nested assignedBuckets", () => {
     keys = makeKeys();
   });
 
-  it("7a — concurrent bucket adds to different keys: both present after merge", () => {
+  it("8a — concurrent sort order reorders converge to a consistent (possibly inverted) state", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-008");
+
+    // Seed 3 groups with sortOrder 1, 2, 3
+    const seedEnv = sessionA.change((d) => {
+      for (const [id, order] of [
+        ["grp_1", 1],
+        ["grp_2", 2],
+        ["grp_3", 3],
+      ] as const) {
+        d.groups[id] = makeGroup(id, order);
+      }
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cr-008", 0));
+
+    // Session A: swap grp_1 and grp_3 (3→1, 1→3)
+    const envA = sessionA.change((d) => {
+      const g1 = d.groups["grp_1"];
+      const g3 = d.groups["grp_3"];
+      if (g1) g1.sortOrder = 3;
+      if (g3) g3.sortOrder = 1;
+    });
+    // Session B: swap grp_2 and grp_1 (2→1, 1→2) — concurrent
+    const envB = sessionB.change((d) => {
+      const g1 = d.groups["grp_1"];
+      const g2 = d.groups["grp_2"];
+      if (g1) g1.sortOrder = 2;
+      if (g2) g2.sortOrder = 1;
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    // Both sessions converge to the same state
+    expect(sessionA.document).toEqual(sessionB.document);
+
+    // Each group has some sortOrder — LWW picked a winner per field.
+    // Ties or inversions may exist; post-merge normalization (re-numbering)
+    // is application-layer (sync-80bn — todo).
+    const orders = ["grp_1", "grp_2", "grp_3"].map((id) => sessionA.document.groups[id]?.sortOrder);
+    expect(orders).toEqual([expect.any(Number), expect.any(Number), expect.any(Number)]);
+  });
+});
+
+// ── Category 9: ChatMessage edit chain ────────────────────────────────
+//
+// Messages are append-only and immutable. Edits produce new entries with
+// `editOf` referencing the original message ID. The edit chain is resolved
+// at the application layer by following editOf links.
+
+describe("Category 9: ChatMessage edit chain", () => {
+  let relay: EncryptedRelay;
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    relay = new EncryptedRelay();
+    keys = makeKeys();
+  });
+
+  it("9a — concurrent edit message and unrelated append both present; edit chain intact", () => {
+    const base = createChatDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-chat-009");
+
+    // Session A appends msg_1, then syncs to B
+    const seedEnv = sessionA.change((d) => {
+      d.messages.push({
+        id: s("msg_1"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_1"),
+        content: s("Original content"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1000,
+        editOf: null,
+        archived: false,
+      });
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-chat-009", 0));
+
+    // Session A posts an edit (msg_2 with editOf = msg_1)
+    const envA = sessionA.change((d) => {
+      d.messages.push({
+        id: s("msg_2"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_1"),
+        content: s("Edited content"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1100,
+        editOf: s("msg_1"),
+        archived: false,
+      });
+    });
+    // Session B concurrently appends an unrelated message (msg_3)
+    const envB = sessionB.change((d) => {
+      d.messages.push({
+        id: s("msg_3"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_2"),
+        content: s("Unrelated message"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1050,
+        editOf: null,
+        archived: false,
+      });
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    // Both sessions converge
+    expect(sessionA.document).toEqual(sessionB.document);
+
+    // All 3 messages are present
+    const ids = sessionA.document.messages.map((m) => m.id.val);
+    expect(ids).toContain("msg_1");
+    expect(ids).toContain("msg_2");
+    expect(ids).toContain("msg_3");
+    expect(sessionA.document.messages).toHaveLength(3);
+
+    // Edit chain is intact: msg_2.editOf references msg_1
+    const msg2 = sessionA.document.messages.find((m) => m.id.val === "msg_2");
+    expect(msg2).toBeDefined();
+    expect(msg2?.editOf?.val).toBe("msg_1");
+  });
+});
+
+// NOTE: Edge cases deferred to sync-80bn: subsystem/innerworld-region cycles,
+// multi-level edit chains, concurrent edits to same message, sort order
+// normalization after ties.
+
+// ── Category 10: FriendConnection nested assignedBuckets ──────────────
+
+describe("Category 10: FriendConnection nested assignedBuckets", () => {
+  let relay: EncryptedRelay;
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    relay = new EncryptedRelay();
+    keys = makeKeys();
+  });
+
+  it("10a — concurrent bucket adds to different keys: both present after merge", () => {
     const base = createPrivacyConfigDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-privacy-001");
 
