@@ -79,6 +79,19 @@ export class SignatureVerificationError extends Error {
   }
 }
 
+/** Thrown when an invalid key lifecycle state transition is attempted. */
+export class InvalidStateTransitionError extends Error {
+  override readonly name = "InvalidStateTransitionError" as const;
+  readonly from: string;
+  readonly to: string;
+
+  constructor(from: string, to: string, options?: ErrorOptions) {
+    super(`Invalid state transition from "${from}" to "${to}".`, options);
+    this.from = from;
+    this.to = to;
+  }
+}
+
 /** Thrown when biometric authentication fails after max retries. */
 export class BiometricFailedError extends Error {
   override readonly name = "BiometricFailedError" as const;

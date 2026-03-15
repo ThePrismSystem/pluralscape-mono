@@ -20,10 +20,15 @@ export type {
 } from "./types.js";
 export type { SodiumAdapter, SodiumConstants } from "./adapter/interface.js";
 export type {
+  Clock,
+  KeyLifecycleConfig,
+  KeyLifecycleDeps,
   KeyLifecycleManager,
   KeyLifecycleState,
   NativeMemzero,
+  SecurityPresetConfig,
   SecurityPresetLevel,
+  TimerHandle,
 } from "./lifecycle-types.js";
 
 // ── Errors ──────────────────────────────────────────────────────────
@@ -33,6 +38,7 @@ export {
   CryptoNotReadyError,
   DecryptionFailedError,
   InvalidInputError,
+  InvalidStateTransitionError,
   KeysLockedError,
   KeyStorageFailedError,
   SignatureVerificationError,
@@ -144,6 +150,12 @@ export { computeSafetyNumber } from "./safety-number.js";
 
 // ── Sync key derivation ──────────────────────────────────────────────
 export { deriveSyncEncryptionKey } from "./sync-keys.js";
+
+// ── Native memzero wrapper ──────────────────────────────────────────
+export { wrapNativeMemzero } from "./adapter/native-memzero.js";
+
+// ── Key lifecycle manager ───────────────────────────────────────────
+export { MobileKeyLifecycleManager, SECURITY_PRESETS } from "./key-lifecycle.js";
 
 // ── Key grants (Privacy Bucket sharing) ──────────────────────────────
 export type {

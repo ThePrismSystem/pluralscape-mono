@@ -48,3 +48,42 @@ export interface NativeMemzero {
   /** Securely zero a buffer, resistant to dead-store elimination. */
   memzero(buffer: Uint8Array): void;
 }
+
+/** Abstraction over setTimeout/clearTimeout for testability. */
+export interface Clock {
+  setTimeout(callback: () => void, ms: number): TimerHandle;
+  clearTimeout(handle: TimerHandle): void;
+}
+
+/**
+ * Opaque timer handle returned by Clock.setTimeout, passed to Clock.clearTimeout.
+ * Compatible with both browser (number) and Node (NodeJS.Timeout) environments.
+ */
+export type TimerHandle = number | object;
+
+/** Configuration for key lifecycle timeouts. */
+export interface KeyLifecycleConfig {
+  /** Milliseconds of inactivity before auto-lock. */
+  readonly inactivityTimeoutMs: number;
+  /** Milliseconds of background grace before auto-lock. */
+  readonly graceTimeoutMs: number;
+  /** Whether biometric unlock is required. */
+  readonly requireBiometric: boolean;
+}
+
+/** Security preset configuration values. */
+export interface SecurityPresetConfig {
+  readonly level: SecurityPresetLevel;
+  readonly config: KeyLifecycleConfig;
+}
+
+/** Dependencies injected into MobileKeyLifecycleManager. */
+export interface KeyLifecycleDeps {
+  readonly storage: import("./key-storage.js").SecureKeyStorage;
+  readonly bucketKeyCache: import("./bucket-key-cache.js").BucketKeyCache;
+  readonly sodium: import("./adapter/interface.js").SodiumAdapter;
+  readonly config: KeyLifecycleConfig;
+  readonly clock: Clock;
+  readonly deriveIdentityKeys: (masterKey: KdfMasterKey) => import("./identity.js").IdentityKeypair;
+  readonly onBeforeLock?: () => Promise<void>;
+}
