@@ -47,6 +47,10 @@ describe("AuditEventType", () => {
         case "bucket.key_rotation.completed":
         case "bucket.key_rotation.failed":
         case "device.security.jailbreak_warning_shown":
+        case "auth.password-reset-via-recovery":
+        case "auth.recovery-key-regenerated":
+        case "auth.device-transfer-initiated":
+        case "auth.device-transfer-completed":
           return type;
         default: {
           const _exhaustive: never = type;

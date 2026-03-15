@@ -23,7 +23,11 @@ export type AuditEventType =
   | "bucket.key_rotation.chunk_completed"
   | "bucket.key_rotation.completed"
   | "bucket.key_rotation.failed"
-  | "device.security.jailbreak_warning_shown";
+  | "device.security.jailbreak_warning_shown"
+  | "auth.password-reset-via-recovery"
+  | "auth.recovery-key-regenerated"
+  | "auth.device-transfer-initiated"
+  | "auth.device-transfer-completed";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

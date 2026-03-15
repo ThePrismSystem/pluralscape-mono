@@ -1,11 +1,11 @@
 ---
 # crypto-qiwh
 title: Multi-device key transfer protocol
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:56:58Z
-updated_at: 2026-03-08T19:56:58Z
+updated_at: 2026-03-15T07:53:48Z
 parent: crypto-89v7
 blocked_by:
   - crypto-l3hj
@@ -41,3 +41,5 @@ Design and implement the multi-device key transfer protocol for transferring Mas
 
 - ADR 011 (Key Recovery — Path 2: Multi-device transfer)
 - ADR 006 (Encryption)
+
+## Summary of Changes\n\nImplemented device transfer protocol crypto primitives:\n- New `device-transfer.ts`: code generation, Argon2id key derivation, encrypt/decrypt, QR encoding\n- Added auth.device-transfer-initiated and auth.device-transfer-completed audit event types\n- 22 tests covering code generation, key derivation, encrypt/decrypt, QR round-trip, validation

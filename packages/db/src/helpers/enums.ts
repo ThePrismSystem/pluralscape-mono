@@ -186,6 +186,10 @@ export const AUDIT_EVENT_TYPES = [
   "bucket.key_rotation.completed",
   "bucket.key_rotation.failed",
   "device.security.jailbreak_warning_shown",
+  "auth.password-reset-via-recovery",
+  "auth.recovery-key-regenerated",
+  "auth.device-transfer-initiated",
+  "auth.device-transfer-completed",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",

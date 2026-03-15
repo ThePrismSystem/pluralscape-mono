@@ -22,6 +22,9 @@ export const accounts = pgTable(
     emailSalt: varchar("email_salt", { length: 255 }).notNull(),
     passwordHash: varchar("password_hash", { length: 255 }).notNull(),
     kdfSalt: varchar("kdf_salt", { length: 255 }).notNull(),
+    // Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key.
+    // Null for legacy accounts that have not yet migrated to the two-layer architecture.
+    encryptedMasterKey: pgBinary("encrypted_master_key"),
     ...timestamps(),
     ...versioned(),
   },

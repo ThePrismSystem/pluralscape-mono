@@ -84,6 +84,14 @@ export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
 export type { PwhashProfile } from "./master-key.js";
 export { deriveMasterKey, generateSalt } from "./master-key.js";
 
+// ── Master key wrap (KEK/DEK two-layer architecture) ─────────────────
+export {
+  derivePasswordKey,
+  generateMasterKey,
+  unwrapMasterKey,
+  wrapMasterKey,
+} from "./master-key-wrap.js";
+
 // ── Blob codec ──────────────────────────────────────────────────────
 export { deserializeEncryptedBlob, serializeEncryptedBlob } from "./blob-codec.js";
 
@@ -135,6 +143,30 @@ export {
 // ── Recovery key ────────────────────────────────────────────────────
 export type { RecoveryKeyResult } from "./recovery.js";
 export { generateRecoveryKey, isValidRecoveryKeyFormat, recoverMasterKey } from "./recovery.js";
+
+// ── Recovery backup serialization ────────────────────────────────────
+export { deserializeRecoveryBackup, serializeRecoveryBackup } from "./recovery-backup.js";
+
+// ── Password reset via recovery key ──────────────────────────────────
+export type { PasswordResetParams, PasswordResetResult } from "./password-reset.js";
+export { resetPasswordViaRecoveryKey } from "./password-reset.js";
+
+// ── Recovery key regeneration ─────────────────────────────────────────
+export type { RegenerateResult } from "./recovery-regeneration.js";
+export { regenerateRecoveryKey } from "./recovery-regeneration.js";
+
+// ── Device transfer protocol ──────────────────────────────────────────
+export type { DecodedQRPayload, TransferInitiation } from "./device-transfer.js";
+export {
+  TRANSFER_TIMEOUT_MS,
+  decodeQRPayload,
+  decryptFromTransfer,
+  deriveTransferKey,
+  encodeQRPayload,
+  encryptForTransfer,
+  generateTransferCode,
+  isValidTransferCode,
+} from "./device-transfer.js";
 
 // ── Signature operations ─────────────────────────────────────────────
 export { decryptThenVerify, sign, signThenEncrypt, verify } from "./sign.js";

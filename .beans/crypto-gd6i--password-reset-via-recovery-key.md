@@ -1,11 +1,11 @@
 ---
 # crypto-gd6i
 title: Password reset via recovery key
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:10Z
-updated_at: 2026-03-08T19:57:10Z
+updated_at: 2026-03-15T07:53:48Z
 parent: crypto-89v7
 blocked_by:
   - crypto-sa91
@@ -40,3 +40,5 @@ Full password reset flow using recovery key to regain access to encrypted data.
 
 - ADR 011 (Key Recovery — password reset)
 - ADR 006 (Encryption — Argon2id key derivation)
+
+## Summary of Changes\n\nImplemented password reset via recovery key:\n- New `password-reset.ts`: resetPasswordViaRecoveryKey orchestration function\n- Added auth.password-reset-via-recovery audit event type\n- Full test coverage including round-trip, memzero, and error cases

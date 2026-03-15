@@ -1,11 +1,11 @@
 ---
 # crypto-j381
 title: Recovery key encrypted backup
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:56:50Z
-updated_at: 2026-03-08T19:56:50Z
+updated_at: 2026-03-15T07:53:48Z
 parent: crypto-89v7
 blocked_by:
   - crypto-sa91
@@ -36,3 +36,5 @@ Encrypt MasterKey with recovery key and manage the encrypted backup blob on the 
 
 - ADR 011 (Key Recovery — Path 1: Recovery key)
 - ADR 006 (Encryption)
+
+## Summary of Changes\n\nImplemented recovery key backup storage:\n- New `recovery-backup.ts`: serializeRecoveryBackup, deserializeRecoveryBackup\n- New `queries/recovery-key.ts`: CRUD operations for recovery_keys table (PG + SQLite)\n- Integration tests for SQLite query functions
