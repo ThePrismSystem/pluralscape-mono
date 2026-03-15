@@ -15,7 +15,7 @@ import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
 import type { JobLogger } from "../../observability/job-logger.js";
-import type { JobDefinition, JobType, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobId, JobType, UnixMillis } from "@pluralscape/types";
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 
@@ -153,7 +153,7 @@ export class BullMQJobWorker implements JobWorker {
 
   private async processJob(bullmqJob: BullMQJob): Promise<void> {
     const controller = new AbortController();
-    const jobId = bullmqJob.id as string;
+    const jobId = bullmqJob.id as JobId;
     this.inFlight.set(jobId, controller);
 
     // Update status to running

@@ -33,9 +33,9 @@ export interface StoredJobData {
 }
 
 /** Reconstructs a JobDefinition from serialized StoredJobData + a job ID. */
-export function fromStoredData(id: string, data: StoredJobData): JobDefinition {
+export function fromStoredData(id: JobId, data: StoredJobData): JobDefinition {
   return {
-    id: id as JobId,
+    id,
     systemId: (data.systemId ?? null) as SystemId | null,
     type: data.type,
     status: data.status,

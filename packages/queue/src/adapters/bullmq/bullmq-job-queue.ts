@@ -262,7 +262,7 @@ export class BullMQJobQueue implements JobQueue {
           lastHeartbeatAt: currentTime,
         };
         await job.updateData(updated);
-        result = fromStoredData(job.id as string, updated);
+        result = fromStoredData(job.id as JobId, updated);
         break;
       }
     } finally {
@@ -433,7 +433,7 @@ export class BullMQJobQueue implements JobQueue {
     // Check BullMQ first
     const job = await this.queue.getJob(jobId);
     if (job !== undefined) {
-      return fromStoredData(job.id as string, job.data as StoredJobData);
+      return fromStoredData(job.id as JobId, job.data as StoredJobData);
     }
 
     // Check cancelled store
@@ -451,7 +451,7 @@ export class BullMQJobQueue implements JobQueue {
     const bullmqJobs = bullmqStates.length > 0 ? await this.queue.getJobs(bullmqStates) : [];
 
     let results: JobDefinition[] = bullmqJobs.map((j) =>
-      fromStoredData(j.id as string, j.data as StoredJobData),
+      fromStoredData(j.id as JobId, j.data as StoredJobData),
     );
 
     // Include cancelled jobs if status filter allows
@@ -460,7 +460,7 @@ export class BullMQJobQueue implements JobQueue {
       for (const key of cancelledKeys) {
         const raw = await this.redis.get(key);
         if (raw !== null) {
-          const id = key.replace(`${this.prefix}:cancelled:`, "");
+          const id = key.replace(`${this.prefix}:cancelled:`, "") as JobId;
           results.push(fromStoredData(id, JSON.parse(raw) as StoredJobData));
         }
       }
@@ -520,7 +520,7 @@ export class BullMQJobQueue implements JobQueue {
         if (lastBeat === null) return false;
         return lastBeat + d.timeoutMs < currentTime;
       })
-      .map((j) => fromStoredData(j.id as string, j.data as StoredJobData));
+      .map((j) => fromStoredData(j.id as JobId, j.data as StoredJobData));
   }
 
   getRetryPolicy(type: JobType): RetryPolicy {
