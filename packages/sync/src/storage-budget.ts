@@ -1,6 +1,7 @@
 import { parseDocumentId } from "./document-types.js";
 import { SYNC_PRIORITY_ORDER } from "./types.js";
 
+import type { SyncDocumentType } from "./document-types.js";
 import type { StorageBudget, SyncPriorityCategory } from "./types.js";
 
 /** Result of checking a set of documents against a storage budget. */
@@ -25,19 +26,17 @@ export function checkStorageBudget(
   return { withinBudget: usedBytes <= maxBytes, usedBytes, maxBytes, excessBytes };
 }
 
+const HISTORICAL_CATEGORY: Partial<Record<SyncDocumentType, SyncPriorityCategory>> = {
+  fronting: "fronting-historical",
+  chat: "chat-historical",
+  journal: "journal-historical",
+};
+
 function getEvictionCategory(docId: string): SyncPriorityCategory {
   const parsed = parseDocumentId(docId);
   if (parsed.timePeriod !== null) {
-    switch (parsed.documentType) {
-      case "fronting":
-        return "fronting-historical";
-      case "chat":
-        return "chat-historical";
-      case "journal":
-        return "journal-historical";
-      default:
-        break;
-    }
+    const historical = HISTORICAL_CATEGORY[parsed.documentType];
+    if (historical) return historical;
   }
   return parsed.documentType;
 }
@@ -55,8 +54,12 @@ export function selectEvictionCandidates(
   if (status.withinBudget) return [];
 
   const evictable = [...documents.entries()].filter(([docId]) => {
-    const parsed = parseDocumentId(docId);
-    return parsed.documentType !== "system-core" && parsed.documentType !== "privacy-config";
+    try {
+      const parsed = parseDocumentId(docId);
+      return parsed.documentType !== "system-core" && parsed.documentType !== "privacy-config";
+    } catch {
+      return false;
+    }
   });
 
   // Sort by priority index descending (lowest priority = highest index = evict first)

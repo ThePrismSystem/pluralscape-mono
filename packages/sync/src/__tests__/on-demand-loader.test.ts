@@ -191,4 +191,76 @@ describe("requestOnDemandDocument", () => {
     expect(result.syncState.lastSyncedSeq).toBe(2);
     expect(result.syncState.lastSnapshotVersion).toBe(3);
   });
+
+  it("snapshot + overlapping changes produce correct state (idempotent)", async () => {
+    const base = Automerge.from<SimpleDoc>({ items: [] });
+    const session = new EncryptedSyncSession<SimpleDoc>({
+      doc: base,
+      keys,
+      documentId: DOC_ID,
+      sodium,
+    });
+
+    // Make a change, then snapshot (snapshot includes the change)
+    const env1 = session.change((doc) => {
+      doc.items.push("item-1");
+    });
+    const snapshot = session.createSnapshot(1);
+    adapter.setSnapshot(DOC_ID, snapshot);
+
+    // Also provide the same change via fetchChangesSince (overlap)
+    adapter.addChange(DOC_ID, { ...env1, seq: 1 });
+
+    const result = await requestOnDemandDocument<SimpleDoc>(
+      { docId: DOC_ID, persist: true },
+      adapter,
+      keys,
+      sodium,
+    );
+
+    // "item-1" should appear exactly once — Automerge dedupes by hash
+    expect(result.session.document.items).toEqual(["item-1"]);
+  });
+
+  it("propagates fetchLatestSnapshot errors", async () => {
+    const failAdapter = new MockNetworkAdapter();
+    failAdapter.fetchLatestSnapshot = () => Promise.reject(new Error("snapshot fetch failed"));
+
+    await expect(
+      requestOnDemandDocument<SimpleDoc>(
+        { docId: DOC_ID, persist: true },
+        failAdapter,
+        keys,
+        sodium,
+      ),
+    ).rejects.toThrow("snapshot fetch failed");
+  });
+
+  it("propagates fetchChangesSince errors", async () => {
+    const failAdapter = new MockNetworkAdapter();
+    failAdapter.fetchChangesSince = () => Promise.reject(new Error("changes fetch failed"));
+
+    await expect(
+      requestOnDemandDocument<SimpleDoc>(
+        { docId: DOC_ID, persist: true },
+        failAdapter,
+        keys,
+        sodium,
+      ),
+    ).rejects.toThrow("changes fetch failed");
+  });
+
+  it("creates fresh session for non-fronting document type", async () => {
+    const chatDocId = "chat-ch_test";
+    const result = await requestOnDemandDocument<SimpleDoc>(
+      { docId: chatDocId, persist: false },
+      adapter,
+      keys,
+      sodium,
+    );
+
+    expect(result.session.documentId).toBe(chatDocId);
+    expect(result.syncState.lastSnapshotVersion).toBe(0);
+    expect(result.syncState.onDemand).toBe(true);
+  });
 });

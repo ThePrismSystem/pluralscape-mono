@@ -8,20 +8,29 @@ import {
 } from "./factories/document-factory.js";
 import { TIME_SPLIT_CONFIGS } from "./types.js";
 
-import type { ParsedDocumentId, SyncDocumentType } from "./document-types.js";
+import type { ParsedDocumentId } from "./document-types.js";
 import type { ChatDocument } from "./schemas/chat.js";
 import type { FrontingDocument } from "./schemas/fronting.js";
 import type { JournalDocument } from "./schemas/journal.js";
-import type { TimeSplitUnit } from "./types.js";
+import type { TimeSplitConfig, TimeSplitUnit } from "./types.js";
 
 /** Result of splitting a time-based document into a new period. */
-export interface TimeSplitResult {
-  readonly newDocId: string;
-  readonly newDoc:
-    | Automerge.Doc<FrontingDocument>
-    | Automerge.Doc<ChatDocument>
-    | Automerge.Doc<JournalDocument>;
-}
+export type TimeSplitResult =
+  | {
+      readonly documentType: "fronting";
+      readonly newDocId: string;
+      readonly newDoc: Automerge.Doc<FrontingDocument>;
+    }
+  | {
+      readonly documentType: "chat";
+      readonly newDocId: string;
+      readonly newDoc: Automerge.Doc<ChatDocument>;
+    }
+  | {
+      readonly documentType: "journal";
+      readonly newDocId: string;
+      readonly newDoc: Automerge.Doc<JournalDocument>;
+    };
 
 /** Computes the current time period string for a given split unit. */
 export function computeNextTimePeriod(splitUnit: TimeSplitUnit, nowMs?: number): string {
@@ -67,20 +76,32 @@ export function computeNewDocumentId(parsed: ParsedDocumentId, timePeriod: strin
   }
 }
 
-/** Checks whether a document has exceeded its time-split size threshold. */
-export function checkTimeSplitEligibility(docId: string, currentSizeBytes: number): boolean {
+/** Resolves a docId to its parsed form and time-split config, or null if not splittable. */
+function resolveTimeSplitConfig(
+  docId: string,
+): { parsed: ParsedDocumentId; config: TimeSplitConfig } | null {
   const parsed = parseDocumentId(docId);
   const config = TIME_SPLIT_CONFIGS.find((c) => c.documentType === parsed.documentType);
-  if (!config) return false;
-  return currentSizeBytes >= config.splitThresholdBytes;
+  if (!config) return null;
+  return { parsed, config };
 }
 
-const SPLITTABLE_TYPES: ReadonlySet<SyncDocumentType> = new Set(
-  TIME_SPLIT_CONFIGS.map((c) => c.documentType),
-);
+/** Checks whether a document has exceeded its time-split size threshold. */
+export function checkTimeSplitEligibility(docId: string, currentSizeBytes: number): boolean {
+  const resolved = resolveTimeSplitConfig(docId);
+  if (!resolved) return false;
+  return currentSizeBytes >= resolved.config.splitThresholdBytes;
+}
 
 function isFrontingDocument(doc: unknown): doc is FrontingDocument {
-  return doc !== null && typeof doc === "object" && "sessions" in doc && "switches" in doc;
+  return (
+    doc !== null &&
+    typeof doc === "object" &&
+    "sessions" in doc &&
+    "switches" in doc &&
+    "comments" in doc &&
+    "checkInRecords" in doc
+  );
 }
 
 /**
@@ -93,43 +114,41 @@ export function splitDocument<T>(
   session: { readonly document: Automerge.Doc<T> },
   nowMs?: number,
 ): TimeSplitResult {
-  const parsed = parseDocumentId(docId);
-  if (!SPLITTABLE_TYPES.has(parsed.documentType)) {
+  const resolved = resolveTimeSplitConfig(docId);
+  if (!resolved) {
+    const parsed = parseDocumentId(docId);
     throw new Error(`Document type "${parsed.documentType}" does not support time-splitting`);
   }
 
-  const config = TIME_SPLIT_CONFIGS.find((c) => c.documentType === parsed.documentType);
-  if (!config) {
-    throw new Error(`No time-split config for "${parsed.documentType}"`);
-  }
-
+  const { parsed, config } = resolved;
   const timePeriod = computeNextTimePeriod(config.splitUnit, nowMs);
   const newDocId = computeNewDocumentId(parsed, timePeriod);
 
   if (parsed.documentType === "fronting") {
     const currentDoc = session.document;
-    const newDoc = createFrontingDocument();
-
-    if (isFrontingDocument(currentDoc)) {
-      const activeEntries = Object.entries(currentDoc.sessions).filter(
-        ([, fs]) => fs.endTime === null,
-      );
-
-      if (activeEntries.length > 0) {
-        const migrated = Automerge.change(newDoc, (d) => {
-          for (const [id, fs] of activeEntries) {
-            d.sessions[id] = fs;
-          }
-        });
-        return { newDocId, newDoc: migrated };
-      }
+    if (!isFrontingDocument(currentDoc)) {
+      throw new Error(`Document "${docId}" does not match expected FrontingDocument shape`);
     }
-    return { newDocId, newDoc };
+
+    const newDoc = createFrontingDocument();
+    const activeEntries = Object.entries(currentDoc.sessions).filter(
+      ([, fs]) => fs.endTime === null,
+    );
+
+    if (activeEntries.length > 0) {
+      const migrated = Automerge.change(newDoc, (d) => {
+        for (const [id, fs] of activeEntries) {
+          d.sessions[id] = fs;
+        }
+      });
+      return { documentType: "fronting", newDocId, newDoc: migrated };
+    }
+    return { documentType: "fronting", newDocId, newDoc };
   }
 
   if (parsed.documentType === "chat") {
-    return { newDocId, newDoc: createChatDocument() };
+    return { documentType: "chat", newDocId, newDoc: createChatDocument() };
   }
 
-  return { newDocId, newDoc: createJournalDocument() };
+  return { documentType: "journal", newDocId, newDoc: createJournalDocument() };
 }

@@ -2,8 +2,7 @@ import * as Automerge from "@automerge/automerge";
 
 import { DEFAULT_COMPACTION_CONFIG } from "./types.js";
 
-import type { EncryptedSyncSession } from "./sync-session.js";
-import type { CompactionCheck, CompactionConfig, EncryptedSnapshotEnvelope } from "./types.js";
+import type { CompactionCheck, CompactionConfig } from "./types.js";
 
 /**
  * Checks whether a document is eligible for compaction (snapshotting).
@@ -25,17 +24,6 @@ export function checkCompactionEligibility(
     return { eligible: true, reason: "size-threshold", changesSinceSnapshot, currentSizeBytes };
   }
   return { eligible: false, reason: "not-eligible", changesSinceSnapshot, currentSizeBytes };
-}
-
-/**
- * Creates an encrypted snapshot envelope from the current session state.
- * The caller is responsible for submitting the envelope to the relay/server.
- */
-export function compactDocument<T>(
-  session: EncryptedSyncSession<T>,
-  nextSnapshotVersion: number,
-): EncryptedSnapshotEnvelope {
-  return session.createSnapshot(nextSnapshotVersion);
 }
 
 /**

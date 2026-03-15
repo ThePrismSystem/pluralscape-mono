@@ -128,11 +128,7 @@ export type {
 } from "./adapters/network-adapter.js";
 
 // ── Compaction & document lifecycle ───────────────────────────────────
-export {
-  checkCompactionEligibility,
-  compactDocument,
-  LazyDocumentSizeTracker,
-} from "./compaction.js";
+export { checkCompactionEligibility, LazyDocumentSizeTracker } from "./compaction.js";
 
 // ── Time-splitting ───────────────────────────────────────────────────
 export type { TimeSplitResult } from "./time-split.js";

@@ -1,3 +1,5 @@
+import * as Automerge from "@automerge/automerge";
+
 import { parseDocumentId } from "./document-types.js";
 import { createDocument } from "./factories/document-factory.js";
 import { EncryptedSyncSession } from "./sync-session.js";
@@ -16,7 +18,10 @@ export interface OnDemandLoadResult<T> {
 /**
  * Creates an EncryptedSyncSession for a fresh (empty) document.
  * The generic parameter T is determined by the caller based on the docId prefix.
- * Runtime safety: createDocument returns a typed Doc matching the docId's document type.
+ *
+ * The cast from createDocument's union return type to Automerge.Doc<T> is safe
+ * because createDocument dispatches on the same documentType parsed from docId,
+ * and the caller is responsible for ensuring T matches that type.
  */
 function createFreshSession<T>(
   docId: string,
@@ -24,9 +29,9 @@ function createFreshSession<T>(
   sodium: SodiumAdapter,
 ): EncryptedSyncSession<T> {
   const parsed = parseDocumentId(docId);
-  const doc: unknown = createDocument(parsed.documentType);
+  const doc = createDocument(parsed.documentType) as Automerge.Doc<T>;
   return new EncryptedSyncSession<T>({
-    doc: doc as T,
+    doc,
     keys,
     documentId: docId,
     sodium,
@@ -53,6 +58,12 @@ export async function requestOnDemandDocument<T>(
   let lastSnapshotVersion: number;
 
   if (snapshot) {
+    // fromSnapshot does not accept a lastSyncedSeq because EncryptedSnapshotEnvelope
+    // has no seq field (only snapshotVersion). The session starts with lastSyncedSeq=0,
+    // so fetchChangesSince below will request all changes. This is safe because
+    // applyEncryptedChanges skips envelopes with seq <= lastSyncedSeq_ and Automerge's
+    // applyChanges is idempotent (duplicate changes are deduped by hash). The trade-off
+    // is fetching some already-applied changes, which is acceptable for on-demand loads.
     session = EncryptedSyncSession.fromSnapshot<T>(snapshot, keys, sodium);
     lastSnapshotVersion = snapshot.snapshotVersion;
   } else {

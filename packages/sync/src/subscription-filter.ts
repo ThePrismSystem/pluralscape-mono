@@ -71,7 +71,12 @@ function filterOwnerLite(
       continue;
     }
 
-    const parsed = parseDocumentId(entry.docId);
+    let parsed;
+    try {
+      parsed = parseDocumentId(entry.docId);
+    } catch {
+      continue;
+    }
 
     switch (parsed.documentType) {
       case "system-core":
@@ -146,10 +151,20 @@ function latestTimePeriodByType(documents: readonly SyncManifestEntry[]): Map<st
   for (const entry of documents) {
     if (entry.timePeriod === null) continue;
 
-    const parsed = parseDocumentId(entry.docId);
+    let parsed;
+    try {
+      parsed = parseDocumentId(entry.docId);
+    } catch {
+      continue;
+    }
+
     const key = `${parsed.documentType}-${parsed.entityId}`;
     const current = latest.get(key);
 
+    // Lexicographic comparison is correct: YYYY-QN, YYYY-MM, and YYYY formats
+    // are each scoped to a single documentType-entityId key, so cross-format
+    // comparison never occurs. Within each format, lexicographic order matches
+    // chronological order (e.g. "2026-Q1" < "2026-Q2", "2026-03" < "2026-12").
     if (current === undefined || entry.timePeriod > current) {
       latest.set(key, entry.timePeriod);
     }

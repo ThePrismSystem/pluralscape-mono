@@ -2,11 +2,7 @@ import * as Automerge from "@automerge/automerge";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  checkCompactionEligibility,
-  compactDocument,
-  LazyDocumentSizeTracker,
-} from "../compaction.js";
+import { checkCompactionEligibility, LazyDocumentSizeTracker } from "../compaction.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 import { DEFAULT_COMPACTION_CONFIG } from "../types.js";
 
@@ -77,7 +73,7 @@ describe("checkCompactionEligibility", () => {
   });
 });
 
-describe("compactDocument", () => {
+describe("createSnapshot (formerly compactDocument)", () => {
   let keys: DocumentKeys;
   let session: EncryptedSyncSession<SimpleDoc>;
 
@@ -97,20 +93,20 @@ describe("compactDocument", () => {
       doc.items.push(1, 2, 3);
     });
 
-    const envelope = compactDocument(session, 1);
+    const envelope = session.createSnapshot(1);
     const restored = EncryptedSyncSession.fromSnapshot<SimpleDoc>(envelope, keys, sodium);
 
     expect(restored.document.items).toEqual([1, 2, 3]);
   });
 
   it("uses the provided snapshot version", () => {
-    const envelope = compactDocument(session, 7);
+    const envelope = session.createSnapshot(7);
     expect(envelope.snapshotVersion).toBe(7);
   });
 
   it("version is monotonically increasing across compactions", () => {
-    const env1 = compactDocument(session, 1);
-    const env2 = compactDocument(session, 2);
+    const env1 = session.createSnapshot(1);
+    const env2 = session.createSnapshot(2);
     expect(env2.snapshotVersion).toBeGreaterThan(env1.snapshotVersion);
   });
 });

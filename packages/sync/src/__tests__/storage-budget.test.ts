@@ -119,4 +119,41 @@ describe("selectEvictionCandidates", () => {
     const candidates = selectEvictionCandidates(docs, TEST_BUDGET);
     expect(candidates).toHaveLength(2);
   });
+
+  it("skips malformed docIds without throwing", () => {
+    const docs = docsMap([
+      ["system-core-sys_a", 100],
+      ["not-a-valid-doc-id", 500],
+      ["fronting-sys_a", 600],
+    ]);
+    // Total: 1200, excess: 200. Malformed entry is excluded from eviction.
+    const candidates = selectEvictionCandidates(docs, TEST_BUDGET);
+    expect(candidates).not.toContain("not-a-valid-doc-id");
+    expect(candidates).toContain("fronting-sys_a");
+  });
+
+  it("returns empty when only protected docs are over budget", () => {
+    const docs = docsMap([
+      ["system-core-sys_a", 600],
+      ["privacy-config-sys_a", 500],
+    ]);
+    // Total: 1100, excess: 100. But both are protected → nothing to evict
+    const candidates = selectEvictionCandidates(docs, TEST_BUDGET);
+    expect(candidates).toEqual([]);
+  });
+
+  it("evicts everything evictable even if budget still exceeded", () => {
+    const docs = docsMap([
+      ["system-core-sys_a", 800],
+      ["fronting-sys_a", 100],
+      ["chat-ch_a", 200],
+    ]);
+    // Total: 1100, excess: 100. Evict fronting + chat (300 > 100), stops at fronting
+    // Actually excess is 100 and fronting-historical has lower priority than chat
+    // Let's just verify both can be returned if needed
+    const candidates = selectEvictionCandidates(docs, { maxTotalBytes: 700 });
+    // Excess: 400. Evict chat (200) then fronting (100) — still need more, both evicted
+    expect(candidates).toContain("fronting-sys_a");
+    expect(candidates).toContain("chat-ch_a");
+  });
 });

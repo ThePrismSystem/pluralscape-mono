@@ -244,6 +244,98 @@ describe("filterManifest — friend", () => {
   });
 });
 
+describe("filterManifest — malformed docIds", () => {
+  it("owner-lite skips entries with unparseable docIds", () => {
+    const profile: OwnerLiteProfile = { profileType: "owner-lite", activeChannelWindowDays: 30 };
+    const manifest = {
+      documents: [
+        entry({ docId: "system-core-sys_a", docType: "system-core" }),
+        entry({ docId: "not-a-valid-id", docType: "fronting" }),
+        entry({ docId: "fronting-sys_a", docType: "fronting" }),
+      ],
+    };
+    const result = filterManifest(manifest, profile, [], NOW);
+    // Malformed entry is silently skipped, other entries classified normally
+    expect(result.active.map((e) => e.docId)).toContain("system-core-sys_a");
+    expect(result.active.map((e) => e.docId)).toContain("fronting-sys_a");
+    expect(result.active.map((e) => e.docId)).not.toContain("not-a-valid-id");
+    expect(result.available.map((e) => e.docId)).not.toContain("not-a-valid-id");
+  });
+});
+
+describe("filterManifest — empty manifests", () => {
+  it("owner-full with empty manifest returns empty sets", () => {
+    const profile: ReplicationProfile = { profileType: "owner-full" };
+    const result = filterManifest({ documents: [] }, profile, []);
+    expect(result.active).toHaveLength(0);
+    expect(result.available).toHaveLength(0);
+    expect(result.evict).toHaveLength(0);
+  });
+
+  it("owner-lite with empty manifest returns empty sets", () => {
+    const profile: OwnerLiteProfile = { profileType: "owner-lite", activeChannelWindowDays: 30 };
+    const result = filterManifest({ documents: [] }, profile, [], NOW);
+    expect(result.active).toHaveLength(0);
+    expect(result.available).toHaveLength(0);
+  });
+
+  it("friend with empty manifest returns empty sets", () => {
+    const profile: FriendProfile = {
+      profileType: "friend",
+      friendSystemId: "sys_friend",
+      grantedBucketIds: ["bkt_a"],
+    };
+    const result = filterManifest({ documents: [] }, profile, []);
+    expect(result.active).toHaveLength(0);
+    expect(result.available).toHaveLength(0);
+  });
+});
+
+describe("filterManifest — friend edge cases", () => {
+  it("empty grantedBucketIds results in no active docs and eviction of locals", () => {
+    const profile: FriendProfile = {
+      profileType: "friend",
+      friendSystemId: "sys_friend",
+      grantedBucketIds: [],
+    };
+    const manifest = {
+      documents: [
+        entry({
+          docId: "bucket-bkt_a",
+          docType: "bucket",
+          keyType: "bucket",
+          bucketId: "bkt_a",
+        }),
+      ],
+    };
+    const result = filterManifest(manifest, profile, ["bucket-bkt_old"]);
+    expect(result.active).toHaveLength(0);
+    expect(result.evict).toContain("bucket-bkt_old");
+  });
+});
+
+describe("filterManifest — chat time-split edge cases", () => {
+  it("chat current period but outside activity window goes to available", () => {
+    const profile: OwnerLiteProfile = { profileType: "owner-lite", activeChannelWindowDays: 30 };
+    const oldUpdate = NOW - 60 * 24 * 60 * 60 * 1000; // 60 days ago
+    const manifest = {
+      documents: [
+        entry({
+          docId: "chat-ch_a-2026-03",
+          docType: "chat",
+          channelId: "ch_a",
+          timePeriod: "2026-03",
+          updatedAt: oldUpdate,
+        }),
+      ],
+    };
+    const result = filterManifest(manifest, profile, [], NOW);
+    // Current period but outside window → available, not active
+    expect(result.available).toHaveLength(1);
+    expect(result.active).toHaveLength(0);
+  });
+});
+
 describe("filterManifest — lifecycle integration", () => {
   it("re-filter after manifest change updates subscription set", () => {
     const profile: ReplicationProfile = { profileType: "owner-full" };

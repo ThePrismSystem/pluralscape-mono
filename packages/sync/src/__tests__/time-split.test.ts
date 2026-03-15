@@ -197,11 +197,27 @@ describe("splitDocument", () => {
     });
 
     const result = splitDocument("fronting-sys_test", session, Date.UTC(2026, 3, 1));
-    const newDoc = result.newDoc as Automerge.Doc<FrontingDocument>;
-
+    expect(result.documentType).toBe("fronting");
     expect(result.newDocId).toBe("fronting-sys_test-2026-Q2");
-    expect(Object.keys(newDoc.sessions)).toContain("active_1");
-    expect(Object.keys(newDoc.sessions)).not.toContain("closed_1");
+
+    if (result.documentType === "fronting") {
+      expect(Object.keys(result.newDoc.sessions)).toContain("active_1");
+      expect(Object.keys(result.newDoc.sessions)).not.toContain("closed_1");
+    }
+  });
+
+  it("throws if fronting docId is paired with a non-fronting document shape", () => {
+    const keys = makeKeys(sodium);
+    const wrongDoc = Automerge.from({ sessions: {}, switches: [] });
+    const session = new EncryptedSyncSession({
+      doc: wrongDoc,
+      keys,
+      documentId: "fronting-sys_test",
+      sodium,
+    });
+    expect(() => splitDocument("fronting-sys_test", session)).toThrow(
+      /does not match expected FrontingDocument/,
+    );
   });
 
   it("fronting: old document is unchanged", () => {
