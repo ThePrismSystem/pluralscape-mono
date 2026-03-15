@@ -3,7 +3,7 @@ import { now } from "@pluralscape/types/runtime";
 import type { JobQueue } from "../job-queue.js";
 import type { JobWorker } from "../job-worker.js";
 import type { AggregateMetrics, JobMetrics } from "./job-metrics.js";
-import type { UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, UnixMillis } from "@pluralscape/types";
 
 export interface QueueHealthSummary {
   /** When the snapshot was taken. */
@@ -26,6 +26,12 @@ export interface QueueHealthSummary {
 
 function extractMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : String(reason);
+}
+
+function unwrapOr<T>(result: PromiseSettledResult<T>, fallback: T, errors: string[]): T {
+  if (result.status === "fulfilled") return result.value;
+  errors.push(extractMessage(result.reason));
+  return fallback;
 }
 
 export class QueueHealthService {
@@ -56,22 +62,10 @@ export class QueueHealthService {
 
     const errors: string[] = [];
 
-    const pendingCount =
-      pendingResult.status === "fulfilled"
-        ? pendingResult.value
-        : (errors.push(extractMessage(pendingResult.reason)), 0);
-    const runningCount =
-      runningResult.status === "fulfilled"
-        ? runningResult.value
-        : (errors.push(extractMessage(runningResult.reason)), 0);
-    const dlqDepth =
-      dlqResult.status === "fulfilled"
-        ? dlqResult.value
-        : (errors.push(extractMessage(dlqResult.reason)), 0);
-    const stalledCount =
-      stalledResult.status === "fulfilled"
-        ? stalledResult.value.length
-        : (errors.push(extractMessage(stalledResult.reason)), 0);
+    const pendingCount = unwrapOr(pendingResult, 0, errors);
+    const runningCount = unwrapOr(runningResult, 0, errors);
+    const dlqDepth = unwrapOr(dlqResult, 0, errors);
+    const stalledCount = unwrapOr(stalledResult, [] as readonly JobDefinition[], errors).length;
 
     return {
       timestamp: this.clock(),
