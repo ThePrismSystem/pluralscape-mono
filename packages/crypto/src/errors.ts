@@ -1,3 +1,5 @@
+import type { KeyLifecycleState } from "./lifecycle-types.js";
+
 /** Thrown when `getSodium()` is called before `initSodium()`. */
 export class CryptoNotReadyError extends Error {
   override readonly name = "CryptoNotReadyError" as const;
@@ -76,6 +78,19 @@ export class SignatureVerificationError extends Error {
   override readonly name = "SignatureVerificationError" as const;
   constructor(message = "Signature verification failed.", options?: ErrorOptions) {
     super(message, options);
+  }
+}
+
+/** Thrown when an invalid key lifecycle state transition is attempted. */
+export class InvalidStateTransitionError extends Error {
+  override readonly name = "InvalidStateTransitionError" as const;
+  readonly from: KeyLifecycleState;
+  readonly to: KeyLifecycleState;
+
+  constructor(from: KeyLifecycleState, to: KeyLifecycleState, options?: ErrorOptions) {
+    super(`Invalid state transition from "${from}" to "${to}".`, options);
+    this.from = from;
+    this.to = to;
   }
 }
 

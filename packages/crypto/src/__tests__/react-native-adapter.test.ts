@@ -261,14 +261,50 @@ describe("ReactNativeSodiumAdapter", () => {
       expect(buf).toHaveLength(64);
     });
 
-    it("memzero() fills buffer with zeros", () => {
+    it("memzero() fills buffer with zeros (polyfill)", () => {
       const buf = new Uint8Array([1, 2, 3, 4, 5]);
       adapter.memzero(buf);
       expect(buf).toEqual(new Uint8Array(5));
     });
 
-    it("supportsSecureMemzero is false", () => {
+    it("supportsSecureMemzero is false without NativeMemzero", () => {
       expect(adapter.supportsSecureMemzero).toBe(false);
+    });
+  });
+
+  // ── NativeMemzero injection ───────────────────────────────────────
+
+  describe("NativeMemzero injection", () => {
+    it("supportsSecureMemzero is true when NativeMemzero is provided", () => {
+      const nativeMemzero = { memzero: vi.fn() };
+      const adapterWithNative = new ReactNativeSodiumAdapter(nativeMemzero);
+      expect(adapterWithNative.supportsSecureMemzero).toBe(true);
+    });
+
+    it("delegates memzero to NativeMemzero when provided", async () => {
+      const nativeMemzero = { memzero: vi.fn() };
+      const adapterWithNative = new ReactNativeSodiumAdapter(nativeMemzero);
+      await adapterWithNative.init();
+      const buf = new Uint8Array([1, 2, 3]);
+      adapterWithNative.memzero(buf);
+      expect(nativeMemzero.memzero).toHaveBeenCalledWith(buf);
+    });
+
+    it("does not call buffer.fill when NativeMemzero is provided", async () => {
+      const nativeMemzero = { memzero: vi.fn() };
+      const adapterWithNative = new ReactNativeSodiumAdapter(nativeMemzero);
+      await adapterWithNative.init();
+      const buf = new Uint8Array([1, 2, 3]);
+      const fillSpy = vi.spyOn(buf, "fill");
+      adapterWithNative.memzero(buf);
+      expect(fillSpy).not.toHaveBeenCalled();
+    });
+
+    it("uses polyfill when no NativeMemzero is provided", () => {
+      const adapterWithoutNative = new ReactNativeSodiumAdapter();
+      const buf = new Uint8Array([1, 2, 3, 4]);
+      adapterWithoutNative.memzero(buf);
+      expect(buf).toEqual(new Uint8Array(4));
     });
   });
 });

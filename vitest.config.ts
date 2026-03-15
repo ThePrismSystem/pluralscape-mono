@@ -61,6 +61,7 @@ export default defineConfig({
         "packages/types/src/key-rotation.ts",
         "packages/crypto/src/types.ts",
         "packages/crypto/src/adapter/interface.ts",
+        "packages/crypto/src/lifecycle-types.ts",
         "packages/db/src/client/types.ts",
         // Drizzle schema files are declarative — callbacks only run during migration generation
         "packages/db/src/schema/**/*.ts",

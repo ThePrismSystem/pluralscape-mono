@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./wasm": "./src/adapter/wasm-adapter.ts",
-    "./react-native": "./src/adapter/react-native-adapter.ts"
+    "./react-native": "./src/adapter/react-native-adapter.ts",
+    "./native-memzero": "./src/adapter/native-memzero.ts"
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",
