@@ -102,12 +102,19 @@ export const SYNC_PRIORITY_ORDER: readonly SyncPriorityCategory[] = [
 ] as const;
 
 /** Result of checking whether a document is eligible for compaction. */
-export interface CompactionCheck {
-  readonly eligible: boolean;
-  readonly reason: "change-threshold" | "size-threshold" | "explicit" | "not-eligible";
-  readonly changesSinceSnapshot: number;
-  readonly currentSizeBytes: number;
-}
+export type CompactionCheck =
+  | {
+      readonly eligible: true;
+      readonly reason: "change-threshold" | "size-threshold" | "explicit";
+      readonly changesSinceSnapshot: number;
+      readonly currentSizeBytes: number;
+    }
+  | {
+      readonly eligible: false;
+      readonly reason: "not-eligible";
+      readonly changesSinceSnapshot: number;
+      readonly currentSizeBytes: number;
+    };
 
 /** Thrown when a write would exceed the system's storage budget. */
 export class StorageBudgetExceededError extends Error {

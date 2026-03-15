@@ -127,6 +127,29 @@ export type {
   SyncSubscription,
 } from "./adapters/network-adapter.js";
 
+// ── Compaction & document lifecycle ───────────────────────────────────
+export { checkCompactionEligibility, LazyDocumentSizeTracker } from "./compaction.js";
+
+// ── Time-splitting ───────────────────────────────────────────────────
+export type { TimeSplitResult } from "./time-split.js";
+export {
+  checkTimeSplitEligibility,
+  computeNewDocumentId,
+  computeNextTimePeriod,
+  splitDocument,
+} from "./time-split.js";
+
+// ── Storage budget ───────────────────────────────────────────────────
+export type { StorageBudgetStatus } from "./storage-budget.js";
+export { checkStorageBudget, selectEvictionCandidates } from "./storage-budget.js";
+
+// ── Subscription filtering ───────────────────────────────────────────
+export { filterManifest } from "./subscription-filter.js";
+
+// ── On-demand document loading ───────────────────────────────────────
+export type { OnDemandLoadResult } from "./on-demand-loader.js";
+export { requestOnDemandDocument } from "./on-demand-loader.js";
+
 // ── Replication profiles ──────────────────────────────────────────────
 export type {
   ReplicationProfileType,
