@@ -1,5 +1,14 @@
 // @pluralscape/sync — Encrypted CRDT sync over relay
-export type { DocumentKeys, EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
+export type {
+  DocumentKeys,
+  EncryptedChangeEnvelope,
+  EncryptedSnapshotEnvelope,
+  ConflictNotification,
+  ConflictResolutionStrategy,
+  CycleBreak,
+  SortOrderPatch,
+  PostMergeValidationResult,
+} from "./types.js";
 
 export {
   encryptChange,

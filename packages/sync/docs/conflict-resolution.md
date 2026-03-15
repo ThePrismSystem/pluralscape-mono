@@ -372,6 +372,40 @@ A similar scenario applies to `subsystem.parentSubsystemId` and `innerWorldRegio
 
 `system-core` grows to ~2.5 MB for 500+ members. This is within Automerge's efficient range. All conflict resolution strategies above apply without change at this scale.
 
+### Tombstone Lifecycle
+
+Pluralscape uses soft-delete (archival) exclusively. There is no hard delete of individual entities.
+
+**Archival semantics:**
+
+- Setting `archived: true` retains all fields on the entity — it is hidden from the UI but fully present in the CRDT document.
+- Archived entities participate in merge normally — concurrent edits to an archived entity still apply via LWW per field.
+
+**Sync behavior:**
+
+- Archived entities ARE synced in V1. Automerge does not support selective exclusion of map keys within a document — all keys in a document are part of its CRDT state.
+- Selective sync of non-archived entities is deferred to a future version where document splitting or lazy loading could enable it.
+
+**Bucket projection:**
+
+- Archived entities MUST be excluded from fan-out to bucket documents. The owner client's fan-out logic checks `archived === true` before projecting to `bucket-{bucketId}`.
+- If an entity is archived after fan-out, the projection is removed from the bucket document on the next fan-out pass.
+
+**No hard delete:**
+
+- Individual entity deletion does not exist. The only hard delete is GDPR account deletion, which is a server-side wipe of all ciphertext (every encrypted document and manifest entry for the account).
+- This aligns with the non-destructive data principle (document-topology.md section 7.5).
+
+**Compaction:**
+
+- Snapshots include archived entities in their current state. The snapshot is a full materialization of the Automerge document, which includes all map keys regardless of `archived` flag.
+- Lossy removal of archived entities from snapshots (tombstone compaction) is deferred to a future version. It would require careful coordination to ensure all devices have observed the archival before the entity can be safely pruned.
+
+**Cross-document references:**
+
+- Fronting sessions, chat messages, and other entities that reference archived members are tolerated via a last-known-data fallback. The client reads the archived entity's fields (name, avatar, etc.) and displays them with an "archived" indicator.
+- Junction maps referencing archived entities (e.g., `groupMemberships["g1_archivedMember"]`) remain valid — the junction is not automatically cleaned up when a member is archived.
+
 ### Tombstone Compaction
 
 Archived entities (`archived: true`) remain in the Automerge document as LWW map entries. Snapshots include the current state (including archived flag), effectively compressing the history of the archival operation without losing the entity's last known state.
@@ -379,6 +413,28 @@ Archived entities (`archived: true`) remain in the Automerge document as LWW map
 ### Cross-Document Reference Consistency
 
 CRDT documents don't enforce referential integrity — `FrontingSession.memberId` referencing a `Member` that was concurrently archived is possible. Clients must tolerate dangling references by falling back to the entity's last known data.
+
+---
+
+## Conflict Notifications
+
+Conflict notifications are informational messages generated client-side when concurrent edits are merged. They allow the UI to surface "a conflict was auto-resolved" indicators without blocking the user.
+
+**Design:**
+
+- Generated during `applyEncryptedChanges` when the client detects that a merge produced a non-trivial resolution (e.g., LWW picked one of two concurrent edits to the same field).
+- Surfaced via a callback on the sync session — not stored in the CRDT document.
+- Ephemeral — notifications exist only in client memory for the current session. They are not persisted, synced, or replayed.
+- No user override in V1 — all conflicts are auto-resolved. The notification is purely informational ("Member 'Alex' name was updated on two devices; the latest edit was kept").
+
+**Notification contents:**
+
+- `entityType` — which entity type was affected
+- `entityId` — which entity instance
+- `fieldName` — which field had a concurrent edit (if applicable)
+- `resolution` — which strategy was applied (e.g., "lww-field", "append-both", "add-wins")
+- `detectedAt` — timestamp when the conflict was detected
+- `summary` — human-readable description
 
 ---
 
@@ -394,6 +450,19 @@ The following validations must run client-side after merging any CRDT changes:
 | Sort order normalization             | Any `sortOrder` change on groups, board messages              | Re-number ascending to eliminate ties                                     |
 | CheckInRecord normalization          | Any `checkInRecord.respondedByMemberId` or `dismissed` change | If respondedByMemberId non-null → dismissed = false                       |
 | FriendConnection status coherence    | Any `friendConnection.status` change                          | If status = "removed" or "blocked" → clear assignedBuckets                |
+
+### Validation Function Signatures
+
+The following functions define the contract for post-merge validation. Each accepts the relevant entity collection from the merged document and returns a description of corrections applied. Implementation is M3 scope (sync-p1uq).
+
+| Function                                                 | Input                                     | Output                        | Notes                                                                           |
+| -------------------------------------------------------- | ----------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------- |
+| `detectHierarchyCycles(entities) => CycleBreak[]`        | `Record<string, { parentId, updatedAt }>` | Array of cycle breaks         | Shared for groups, subsystems, and innerworld regions — same DFS algorithm      |
+| `normalizeSortOrder(entities) => SortOrderPatch[]`       | `Record<string, { sortOrder }>`           | Array of re-numbering patches | Eliminates ties by re-numbering ascending; stable sort preserves non-tied order |
+| `normalizeCheckInRecord(record) => patch \| null`        | Single `CrdtCheckInRecord`                | Correction patch or null      | If `respondedByMemberId` is non-null, sets `dismissed = false`                  |
+| `normalizeFriendConnection(connection) => patch \| null` | Single `CrdtFriendConnection`             | Correction patch or null      | If `status` is "removed" or "blocked", clears `assignedBuckets`                 |
+
+Each validation function is pure — it reads merged state and returns a description of the correction. The caller applies the corrections as a new Automerge change, producing a clean post-merge state.
 
 ---
 
