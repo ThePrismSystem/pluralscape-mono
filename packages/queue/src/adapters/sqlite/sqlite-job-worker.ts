@@ -1,3 +1,5 @@
+import { now } from "@pluralscape/types/runtime";
+
 import {
   DuplicateHandlerError,
   NoHandlersRegisteredError,
@@ -8,7 +10,7 @@ import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
 import type { JobLogger } from "../../observability/job-logger.js";
-import type { JobDefinition, JobType } from "@pluralscape/types";
+import type { JobDefinition, JobType, UnixMillis } from "@pluralscape/types";
 
 const DEFAULT_POLL_INTERVAL_MS = 100;
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000;
@@ -26,6 +28,7 @@ export class SqliteJobWorker implements JobWorker {
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
   private readonly logger: JobLogger | undefined;
+  private readonly clock: () => UnixMillis;
 
   private running = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -37,12 +40,19 @@ export class SqliteJobWorker implements JobWorker {
       pollIntervalMs = DEFAULT_POLL_INTERVAL_MS,
       shutdownTimeoutMs = DEFAULT_SHUTDOWN_TIMEOUT_MS,
       logger,
-    }: { pollIntervalMs?: number; shutdownTimeoutMs?: number; logger?: JobLogger } = {},
+      clock,
+    }: {
+      pollIntervalMs?: number;
+      shutdownTimeoutMs?: number;
+      logger?: JobLogger;
+      clock?: () => UnixMillis;
+    } = {},
   ) {
     this.queue = queue;
     this.pollIntervalMs = pollIntervalMs;
     this.shutdownTimeoutMs = shutdownTimeoutMs;
     this.logger = logger;
+    this.clock = clock ?? now;
   }
 
   registerHandler<T extends JobType>(type: T, handler: JobHandler<T>): void {
@@ -74,8 +84,8 @@ export class SqliteJobWorker implements JobWorker {
       controller.abort();
     }
 
-    const deadline = Date.now() + this.shutdownTimeoutMs;
-    while (this.inFlight.size > 0 && Date.now() < deadline) {
+    const deadline = this.clock() + this.shutdownTimeoutMs;
+    while (this.inFlight.size > 0 && this.clock() < deadline) {
       await new Promise<void>((resolve) => {
         setTimeout(resolve, SHUTDOWN_POLL_MS);
       });

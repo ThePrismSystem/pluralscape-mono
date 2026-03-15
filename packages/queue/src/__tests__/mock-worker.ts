@@ -1,3 +1,5 @@
+import { now } from "@pluralscape/types/runtime";
+
 import {
   DuplicateHandlerError,
   NoHandlersRegisteredError,
@@ -10,7 +12,7 @@ import type { HeartbeatHandle } from "../heartbeat.js";
 import type { JobQueue } from "../job-queue.js";
 import type { JobHandler, JobWorker } from "../job-worker.js";
 import type { JobLogger } from "../observability/job-logger.js";
-import type { JobDefinition, JobType } from "@pluralscape/types";
+import type { JobDefinition, JobType, UnixMillis } from "@pluralscape/types";
 
 /**
  * In-memory implementation of JobWorker for use in contract tests.
@@ -24,6 +26,7 @@ export class InMemoryJobWorker implements JobWorker {
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
   private readonly logger: JobLogger | undefined;
+  private readonly clock: () => UnixMillis;
 
   private running = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -37,12 +40,19 @@ export class InMemoryJobWorker implements JobWorker {
       pollIntervalMs = 50,
       shutdownTimeoutMs = 2000,
       logger,
-    }: { pollIntervalMs?: number; shutdownTimeoutMs?: number; logger?: JobLogger } = {},
+      clock,
+    }: {
+      pollIntervalMs?: number;
+      shutdownTimeoutMs?: number;
+      logger?: JobLogger;
+      clock?: () => UnixMillis;
+    } = {},
   ) {
     this.queue = queue;
     this.pollIntervalMs = pollIntervalMs;
     this.shutdownTimeoutMs = shutdownTimeoutMs;
     this.logger = logger;
+    this.clock = clock ?? now;
   }
 
   get pollFailureCount(): number {
@@ -80,8 +90,8 @@ export class InMemoryJobWorker implements JobWorker {
     }
 
     // Wait for in-flight jobs to finish, up to shutdownTimeoutMs
-    const deadline = Date.now() + this.shutdownTimeoutMs;
-    while (this.inFlight.size > 0 && Date.now() < deadline) {
+    const deadline = this.clock() + this.shutdownTimeoutMs;
+    while (this.inFlight.size > 0 && this.clock() < deadline) {
       await delay(10);
     }
   }
