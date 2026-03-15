@@ -2,34 +2,35 @@ package com.pluralscape.nativememzero
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.typedarray.TypedArray
 
 class NativeMemzeroModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("NativeMemzero")
 
-        Function("memzero") { buffer: ByteArray ->
+        Function("memzero") { buffer: TypedArray ->
             secureZero(buffer)
         }
     }
 
     companion object {
         /**
-         * Secure memory zeroing using a volatile-qualified approach.
+         * Secure memory zeroing through Expo's TypedArray interface.
          *
-         * The @Volatile annotation on the companion flag prevents the JIT/AOT
-         * compiler from optimizing away the zeroing loop as a dead store.
-         * This is the standard pattern for secure zeroing on Android/JVM
-         * when Arrays.fill() might be elided.
+         * Writes zeros directly to the JS ArrayBuffer's backing memory via JSI.
+         * The volatile read of [zeroFlag] after the zeroing loop creates a
+         * data dependency that prevents the JIT/AOT compiler from eliding
+         * the writes as dead stores.
          */
         @Volatile
         private var zeroFlag: Boolean = false
 
-        private fun secureZero(buffer: ByteArray) {
-            for (i in buffer.indices) {
-                buffer[i] = 0
+        private fun secureZero(buffer: TypedArray) {
+            for (i in 0 until buffer.byteLength) {
+                buffer.writeByte(i, 0)
             }
-            // Read from volatile to create a data dependency that prevents
-            // the compiler from eliding the zeroing loop above.
+            // Data dependency: volatile read prevents dead-store elimination
+            // of the zeroing loop above.
             if (zeroFlag) {
                 @Suppress("UNREACHABLE_CODE")
                 return
