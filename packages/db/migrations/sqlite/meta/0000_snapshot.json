@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "dc5a81c5-a33c-472b-8c50-4832b4634bc5",
+  "id": "18119810-3048-43bb-a21a-eacb483a77c1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -151,6 +151,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "encrypted_master_key": {
+          "name": "encrypted_master_key",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -261,6 +268,11 @@
         "acknowledgements_system_id_confirmed_idx": {
           "name": "acknowledgements_system_id_confirmed_idx",
           "columns": ["system_id", "confirmed"],
+          "isUnique": false
+        },
+        "acknowledgements_system_archived_idx": {
+          "name": "acknowledgements_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -572,7 +584,7 @@
       "checkConstraints": {
         "audit_log_event_type_check": {
           "name": "audit_log_event_type_check",
-          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         },
         "audit_log_detail_length_check": {
           "name": "audit_log_detail_length_check",
@@ -755,6 +767,11 @@
           "columns": ["system_id", "purpose"],
           "isUnique": false
         },
+        "blob_metadata_system_archived_idx": {
+          "name": "blob_metadata_system_archived_idx",
+          "columns": ["system_id", "archived"],
+          "isUnique": false
+        },
         "blob_metadata_storage_key_idx": {
           "name": "blob_metadata_storage_key_idx",
           "columns": ["storage_key"],
@@ -902,11 +919,6 @@
         }
       },
       "indexes": {
-        "board_messages_system_id_idx": {
-          "name": "board_messages_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "board_messages_system_archived_idx": {
           "name": "board_messages_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -1337,11 +1349,6 @@
         }
       },
       "indexes": {
-        "buckets_system_id_idx": {
-          "name": "buckets_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "buckets_system_archived_idx": {
           "name": "buckets_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -1461,9 +1468,9 @@
         }
       },
       "indexes": {
-        "channels_system_id_idx": {
-          "name": "channels_system_id_idx",
-          "columns": ["system_id"],
+        "channels_system_archived_idx": {
+          "name": "channels_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "channels_id_system_id_unique": {
@@ -1609,7 +1616,7 @@
           "name": "check_in_records_system_pending_idx",
           "columns": ["system_id", "scheduled_at"],
           "isUnique": false,
-          "where": "\"check_in_records\".\"responded_at\" IS NULL AND \"check_in_records\".\"dismissed\" = 0"
+          "where": "\"check_in_records\".\"responded_at\" IS NULL AND \"check_in_records\".\"dismissed\" = 0 AND \"check_in_records\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
@@ -1713,9 +1720,9 @@
         }
       },
       "indexes": {
-        "custom_fronts_system_id_idx": {
-          "name": "custom_fronts_system_id_idx",
-          "columns": ["system_id"],
+        "custom_fronts_system_archived_idx": {
+          "name": "custom_fronts_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -2256,9 +2263,9 @@
         }
       },
       "indexes": {
-        "field_definitions_system_id_idx": {
-          "name": "field_definitions_system_id_idx",
-          "columns": ["system_id"],
+        "field_definitions_system_archived_idx": {
+          "name": "field_definitions_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "field_definitions_id_system_id_unique": {
@@ -2543,15 +2550,16 @@
         }
       },
       "indexes": {
-        "friend_codes_code_unique": {
-          "name": "friend_codes_code_unique",
-          "columns": ["code"],
-          "isUnique": true
-        },
-        "friend_codes_account_id_idx": {
-          "name": "friend_codes_account_id_idx",
-          "columns": ["account_id"],
+        "friend_codes_account_archived_idx": {
+          "name": "friend_codes_account_archived_idx",
+          "columns": ["account_id", "archived"],
           "isUnique": false
+        },
+        "friend_codes_code_uniq": {
+          "name": "friend_codes_code_uniq",
+          "columns": ["code"],
+          "isUnique": true,
+          "where": "\"friend_codes\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
@@ -2678,7 +2686,8 @@
         "friend_connections_account_friend_uniq": {
           "name": "friend_connections_account_friend_uniq",
           "columns": ["account_id", "friend_account_id"],
-          "isUnique": true
+          "isUnique": true,
+          "where": "\"friend_connections\".\"archived\" = 0"
         },
         "friend_connections_id_account_id_unique": {
           "name": "friend_connections_id_account_id_unique",
@@ -2792,7 +2801,8 @@
         "friend_notification_prefs_account_id_friend_connection_id_idx": {
           "name": "friend_notification_prefs_account_id_friend_connection_id_idx",
           "columns": ["account_id", "friend_connection_id"],
-          "isUnique": true
+          "isUnique": true,
+          "where": "\"friend_notification_preferences\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
@@ -2904,6 +2914,11 @@
         "fronting_comments_session_created_idx": {
           "name": "fronting_comments_session_created_idx",
           "columns": ["fronting_session_id", "created_at"],
+          "isUnique": false
+        },
+        "fronting_comments_system_archived_idx": {
+          "name": "fronting_comments_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -3371,9 +3386,9 @@
         }
       },
       "indexes": {
-        "groups_system_id_idx": {
-          "name": "groups_system_id_idx",
-          "columns": ["system_id"],
+        "groups_system_archived_idx": {
+          "name": "groups_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "groups_id_system_id_unique": {
@@ -3706,11 +3721,6 @@
         }
       },
       "indexes": {
-        "innerworld_entities_system_id_idx": {
-          "name": "innerworld_entities_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "innerworld_entities_region_id_idx": {
           "name": "innerworld_entities_region_id_idx",
           "columns": ["region_id"],
@@ -3825,11 +3835,6 @@
         }
       },
       "indexes": {
-        "innerworld_regions_system_id_idx": {
-          "name": "innerworld_regions_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "innerworld_regions_system_archived_idx": {
           "name": "innerworld_regions_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -4052,7 +4057,7 @@
       "checkConstraints": {
         "jobs_status_check": {
           "name": "jobs_status_check",
-          "value": "\"jobs\".\"status\" IS NULL OR \"jobs\".\"status\" IN (?, ?, ?, ?, ?, ?)"
+          "value": "\"jobs\".\"status\" IS NULL OR \"jobs\".\"status\" IN (?, ?, ?, ?, ?)"
         },
         "jobs_type_check": {
           "name": "jobs_type_check",
@@ -4141,6 +4146,11 @@
         "journal_entries_system_id_created_at_idx": {
           "name": "journal_entries_system_id_created_at_idx",
           "columns": ["system_id", "created_at"],
+          "isUnique": false
+        },
+        "journal_entries_system_archived_idx": {
+          "name": "journal_entries_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "journal_entries_fronting_session_id_idx": {
@@ -4452,11 +4462,6 @@
         }
       },
       "indexes": {
-        "layers_system_id_idx": {
-          "name": "layers_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "layers_system_archived_idx": {
           "name": "layers_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -4648,9 +4653,9 @@
         }
       },
       "indexes": {
-        "member_photos_system_id_idx": {
-          "name": "member_photos_system_id_idx",
-          "columns": ["system_id"],
+        "member_photos_system_archived_idx": {
+          "name": "member_photos_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "member_photos_member_sort_idx": {
@@ -4891,9 +4896,9 @@
           "columns": ["channel_id", "timestamp"],
           "isUnique": false
         },
-        "messages_system_id_idx": {
-          "name": "messages_system_id_idx",
-          "columns": ["system_id"],
+        "messages_system_archived_idx": {
+          "name": "messages_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "messages_reply_to_id_idx": {
@@ -5081,9 +5086,9 @@
         }
       },
       "indexes": {
-        "notes_system_id_idx": {
-          "name": "notes_system_id_idx",
-          "columns": ["system_id"],
+        "notes_system_archived_idx": {
+          "name": "notes_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         },
         "notes_member_id_idx": {
@@ -5199,7 +5204,8 @@
         "notification_configs_system_id_event_type_idx": {
           "name": "notification_configs_system_id_event_type_idx",
           "columns": ["system_id", "event_type"],
-          "isUnique": true
+          "isUnique": true,
+          "where": "\"notification_configs\".\"archived\" = 0"
         }
       },
       "foreignKeys": {
@@ -5429,9 +5435,9 @@
           "columns": ["poll_id"],
           "isUnique": false
         },
-        "poll_votes_system_id_idx": {
-          "name": "poll_votes_system_id_idx",
-          "columns": ["system_id"],
+        "poll_votes_system_archived_idx": {
+          "name": "poll_votes_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -5591,11 +5597,6 @@
         }
       },
       "indexes": {
-        "polls_system_id_idx": {
-          "name": "polls_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "polls_system_archived_idx": {
           "name": "polls_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -5811,11 +5812,6 @@
         }
       },
       "indexes": {
-        "relationships_system_id_idx": {
-          "name": "relationships_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "relationships_system_archived_idx": {
           "name": "relationships_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -6276,11 +6272,6 @@
         }
       },
       "indexes": {
-        "side_systems_system_id_idx": {
-          "name": "side_systems_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "side_systems_system_archived_idx": {
           "name": "side_systems_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -6675,11 +6666,6 @@
         }
       },
       "indexes": {
-        "subsystems_system_id_idx": {
-          "name": "subsystems_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "subsystems_system_archived_idx": {
           "name": "subsystems_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -6794,6 +6780,11 @@
         "switches_system_timestamp_idx": {
           "name": "switches_system_timestamp_idx",
           "columns": ["system_id", "timestamp"],
+          "isUnique": false
+        },
+        "switches_system_archived_idx": {
+          "name": "switches_system_archived_idx",
+          "columns": ["system_id", "archived"],
           "isUnique": false
         }
       },
@@ -7477,13 +7468,8 @@
         }
       },
       "indexes": {
-        "timer_configs_system_id_idx": {
-          "name": "timer_configs_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
-        "timer_configs_system_id_archived_idx": {
-          "name": "timer_configs_system_id_archived_idx",
+        "timer_configs_system_archived_idx": {
+          "name": "timer_configs_system_archived_idx",
           "columns": ["system_id", "archived"],
           "isUnique": false
         },
@@ -7609,13 +7595,8 @@
         }
       },
       "indexes": {
-        "webhook_configs_system_id_idx": {
-          "name": "webhook_configs_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
-        "webhook_configs_system_id_archived_idx": {
-          "name": "webhook_configs_system_id_archived_idx",
+        "webhook_configs_system_archived_idx": {
+          "name": "webhook_configs_system_archived_idx",
           "columns": ["system_id", "archived"],
           "isUnique": false
         },
@@ -7896,11 +7877,6 @@
         }
       },
       "indexes": {
-        "wiki_pages_system_id_idx": {
-          "name": "wiki_pages_system_id_idx",
-          "columns": ["system_id"],
-          "isUnique": false
-        },
         "wiki_pages_system_archived_idx": {
           "name": "wiki_pages_system_archived_idx",
           "columns": ["system_id", "archived"],
@@ -7909,7 +7885,8 @@
         "wiki_pages_system_id_slug_hash_idx": {
           "name": "wiki_pages_system_id_slug_hash_idx",
           "columns": ["system_id", "slug_hash"],
-          "isUnique": true
+          "isUnique": true,
+          "where": "\"wiki_pages\".\"archived\" = 0"
         }
       },
       "foreignKeys": {

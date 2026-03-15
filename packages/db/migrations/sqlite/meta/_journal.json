@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1773454804149,
-      "tag": "0000_eminent_master_mold",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1773457322709,
-      "tag": "0001_absent_magneto",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1773459912502,
-      "tag": "0002_flashy_riptide",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1773462393553,
-      "tag": "0003_cynical_warbird",
+      "when": 1773614786409,
+      "tag": "0000_yummy_dark_phoenix",
       "breakpoints": true
     }
   ]
