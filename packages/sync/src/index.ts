@@ -1,5 +1,28 @@
 // @pluralscape/sync — Encrypted CRDT sync over relay
-export type { DocumentKeys, EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
+export type {
+  DocumentKeys,
+  EncryptedChangeEnvelope,
+  EncryptedSnapshotEnvelope,
+  CompactionConfig,
+  TimeSplitConfig,
+  TimeSplitUnit,
+  StorageBudget,
+  CompactionCheck,
+  SyncPriorityCategory,
+  ConflictNotification,
+  ConflictResolutionStrategy,
+  CycleBreak,
+  SortOrderPatch,
+  PostMergeValidationResult,
+} from "./types.js";
+export {
+  DEFAULT_COMPACTION_CONFIG,
+  TIME_SPLIT_CONFIGS,
+  DOCUMENT_SIZE_LIMITS,
+  DEFAULT_STORAGE_BUDGET,
+  SYNC_PRIORITY_ORDER,
+  StorageBudgetExceededError,
+} from "./types.js";
 
 export {
   encryptChange,
@@ -103,3 +126,49 @@ export type {
   SyncNetworkAdapter,
   SyncSubscription,
 } from "./adapters/network-adapter.js";
+
+// ── Replication profiles ──────────────────────────────────────────────
+export type {
+  ReplicationProfileType,
+  ReplicationProfile,
+  OwnerFullProfile,
+  OwnerLiteProfile,
+  FriendProfile,
+  DocumentSyncState,
+  SubscriptionSet,
+  OnDemandLoadRequest,
+} from "./replication-profiles.js";
+export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_PROFILE } from "./replication-profiles.js";
+
+// ── Protocol messages ──────────────────────────────────────────────────
+export type {
+  TransportState,
+  SyncTransport,
+  SyncMessageBase,
+  DocumentVersionEntry,
+  DocumentCatchup,
+  SyncErrorCode,
+  AuthenticateRequest,
+  ManifestRequest,
+  SubscribeRequest,
+  UnsubscribeRequest,
+  FetchSnapshotRequest,
+  FetchChangesRequest,
+  SubmitChangeRequest,
+  SubmitSnapshotRequest,
+  DocumentLoadRequest,
+  AuthenticateResponse,
+  ManifestResponse,
+  SubscribeResponse,
+  DocumentUpdate,
+  SnapshotResponse,
+  ChangesResponse,
+  ChangeAccepted,
+  SnapshotAccepted,
+  ManifestChanged,
+  SyncError,
+  ClientMessage,
+  ServerMessage,
+  SyncMessage,
+} from "./protocol.js";
+export { SYNC_PROTOCOL_VERSION } from "./protocol.js";

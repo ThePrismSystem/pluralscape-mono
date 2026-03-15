@@ -11,7 +11,7 @@ import {
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
-import type { CrdtGroup } from "../schemas/system-core.js";
+import type { CrdtGroup, CrdtSubsystem, CrdtInnerWorldRegion } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 
@@ -707,9 +707,605 @@ describe("Category 9: ChatMessage edit chain", () => {
   });
 });
 
-// NOTE: Edge cases deferred to sync-80bn: subsystem/innerworld-region cycles,
-// multi-level edit chains, concurrent edits to same message, sort order
-// normalization after ties.
+// ── Edge cases from sync-80bn ─────────────────────────────────────────
+
+// ── Tombstone / Archive edge cases ────────────────────────────────────
+
+describe("Tombstone lifecycle: archived entities in CRDT", () => {
+  let relay: EncryptedRelay;
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    relay = new EncryptedRelay();
+    keys = makeKeys();
+  });
+
+  it("archived entity retains all fields in snapshot roundtrip", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: "doc-tomb-001",
+      sodium,
+    });
+
+    session.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Archived Member"),
+        pronouns: s("[]"),
+        description: s("Still here"),
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    // Snapshot and restore
+    const snapshot = session.createSnapshot(1);
+    const restored = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium);
+
+    expect(restored.document.members["mem_1"]?.archived).toBe(true);
+    expect(restored.document.members["mem_1"]?.name.val).toBe("Archived Member");
+    expect(restored.document.members["mem_1"]?.description?.val).toBe("Still here");
+  });
+
+  it("concurrent archive on both devices converges to archived", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-002");
+
+    const seedEnv = sessionA.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Active"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-002", 0));
+
+    const envA = sessionA.change((d) => {
+      const m = d.members["mem_1"];
+      if (m) {
+        m.archived = true;
+        m.updatedAt = 2000;
+      }
+    });
+    const envB = sessionB.change((d) => {
+      const m = d.members["mem_1"];
+      if (m) {
+        m.archived = true;
+        m.updatedAt = 2001;
+      }
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+
+  it("un-archive (archived false after true) applies via LWW", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-003");
+
+    const seedEnv = sessionA.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Was Archived"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-003", 0));
+
+    // A un-archives
+    const envA = sessionA.change((d) => {
+      const m = d.members["mem_1"];
+      if (m) {
+        m.archived = false;
+        m.updatedAt = 2000;
+      }
+    });
+    relay.submit(envA);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionB.document.members["mem_1"]?.archived).toBe(false);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+
+  it("fronting session referencing archived member converges with dangling reference", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: "doc-tomb-004",
+      sodium,
+    });
+
+    // Seed a member and archive it
+    session.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Archived Member"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 2000,
+      };
+    });
+
+    // The archived member's data is still accessible for last-known-data fallback
+    expect(session.document.members["mem_1"]?.archived).toBe(true);
+    expect(session.document.members["mem_1"]?.name.val).toBe("Archived Member");
+  });
+
+  it("junction referencing archived member remains valid after archive", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-005");
+
+    const seedEnv = sessionA.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Member"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.groupMemberships["g1_mem_1"] = true;
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-005", 0));
+
+    // A archives the member; B does nothing
+    const envA = sessionA.change((d) => {
+      const m = d.members["mem_1"];
+      if (m) m.archived = true;
+    });
+    relay.submit(envA);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    // Junction still present even though member is archived
+    expect(sessionB.document.members["mem_1"]?.archived).toBe(true);
+    expect(sessionB.document.groupMemberships["g1_mem_1"]).toBe(true);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+
+  it("concurrent archive + junction add: junction preserved (add-wins), entity archived", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-006");
+
+    const seedEnv = sessionA.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Member"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-006", 0));
+
+    // A archives member, B adds a group junction for member concurrently
+    const envA = sessionA.change((d) => {
+      const m = d.members["mem_1"];
+      if (m) m.archived = true;
+    });
+    const envB = sessionB.change((d) => {
+      d.groupMemberships["g2_mem_1"] = true;
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
+    expect(sessionA.document.groupMemberships["g2_mem_1"]).toBe(true);
+    expect(sessionA.document).toEqual(sessionB.document);
+  });
+});
+
+// ── Subsystem/region hierarchy cycle detection ────────────────────────
+
+describe("Hierarchy cycles: subsystems and innerworld regions", () => {
+  let relay: EncryptedRelay;
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    relay = new EncryptedRelay();
+    keys = makeKeys();
+  });
+
+  function makeSubsystem(id: string, parentId?: string): CrdtSubsystem {
+    return {
+      id: s(id),
+      systemId: s("sys_1"),
+      name: s(id),
+      description: null,
+      parentSubsystemId: parentId ? s(parentId) : null,
+      architectureType: null,
+      hasCore: false,
+      discoveryStatus: s("known"),
+      color: null,
+      imageSource: null,
+      emoji: null,
+      archived: false,
+      createdAt: 1000,
+      updatedAt: 1000,
+    };
+  }
+
+  function makeRegion(id: string, parentId?: string): CrdtInnerWorldRegion {
+    return {
+      id: s(id),
+      systemId: s("sys_1"),
+      name: s(id),
+      description: null,
+      parentRegionId: parentId ? s(parentId) : null,
+      visual: s("{}"),
+      boundaryData: s("[]"),
+      accessType: s("open"),
+      gatekeeperMemberIds: s("[]"),
+      archived: false,
+      createdAt: 1000,
+      updatedAt: 1000,
+    };
+  }
+
+  it("concurrent cross-reparenting of subsystems produces a detectable cycle", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cycle-ss");
+
+    const seedEnv = sessionA.change((d) => {
+      d.subsystems["ss_a"] = makeSubsystem("ss_a");
+      d.subsystems["ss_b"] = makeSubsystem("ss_b");
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cycle-ss", 0));
+
+    const envA = sessionA.change((d) => {
+      const ss = d.subsystems["ss_a"];
+      if (ss) {
+        ss.parentSubsystemId = s("ss_b");
+        ss.updatedAt = 2000;
+      }
+    });
+    const envB = sessionB.change((d) => {
+      const ss = d.subsystems["ss_b"];
+      if (ss) {
+        ss.parentSubsystemId = s("ss_a");
+        ss.updatedAt = 2001;
+      }
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document).toEqual(sessionB.document);
+    expect(sessionA.document.subsystems["ss_a"]?.parentSubsystemId?.val).toBe("ss_b");
+    expect(sessionA.document.subsystems["ss_b"]?.parentSubsystemId?.val).toBe("ss_a");
+  });
+
+  it("concurrent cross-reparenting of innerworld regions produces a detectable cycle", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cycle-iw");
+
+    const seedEnv = sessionA.change((d) => {
+      d.innerWorldRegions["rg_a"] = makeRegion("rg_a");
+      d.innerWorldRegions["rg_b"] = makeRegion("rg_b");
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cycle-iw", 0));
+
+    const envA = sessionA.change((d) => {
+      const rg = d.innerWorldRegions["rg_a"];
+      if (rg) {
+        rg.parentRegionId = s("rg_b");
+        rg.updatedAt = 2000;
+      }
+    });
+    const envB = sessionB.change((d) => {
+      const rg = d.innerWorldRegions["rg_b"];
+      if (rg) {
+        rg.parentRegionId = s("rg_a");
+        rg.updatedAt = 2001;
+      }
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document).toEqual(sessionB.document);
+    expect(sessionA.document.innerWorldRegions["rg_a"]?.parentRegionId?.val).toBe("rg_b");
+    expect(sessionA.document.innerWorldRegions["rg_b"]?.parentRegionId?.val).toBe("rg_a");
+  });
+});
+
+// ── Multi-level chat edit chains ──────────────────────────────────────
+
+describe("Multi-level chat edit chains", () => {
+  let relay: EncryptedRelay;
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    relay = new EncryptedRelay();
+    keys = makeKeys();
+  });
+
+  it("multi-level edit chain (msg_1 → msg_2 → msg_3) is preserved after sync", () => {
+    const base = createChatDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-edit-chain");
+
+    // Build a 3-level edit chain on A
+    const env1 = sessionA.change((d) => {
+      d.messages.push({
+        id: s("msg_1"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_1"),
+        content: s("Version 1"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1000,
+        editOf: null,
+        archived: false,
+      });
+    });
+    const env2 = sessionA.change((d) => {
+      d.messages.push({
+        id: s("msg_2"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_1"),
+        content: s("Version 2"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1100,
+        editOf: s("msg_1"),
+        archived: false,
+      });
+    });
+    const env3 = sessionA.change((d) => {
+      d.messages.push({
+        id: s("msg_3"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_1"),
+        content: s("Version 3"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1200,
+        editOf: s("msg_2"),
+        archived: false,
+      });
+    });
+
+    relay.submit(env1);
+    relay.submit(env2);
+    relay.submit(env3);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    const msgs = sessionB.document.messages;
+    expect(msgs).toHaveLength(3);
+    const msg3 = msgs.find((m) => m.id.val === "msg_3");
+    expect(msg3?.editOf?.val).toBe("msg_2");
+    const msg2 = msgs.find((m) => m.id.val === "msg_2");
+    expect(msg2?.editOf?.val).toBe("msg_1");
+  });
+
+  it("concurrent edits to same original message produce parallel edit chains", () => {
+    const base = createChatDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-edit-parallel");
+
+    const seedEnv = sessionA.change((d) => {
+      d.messages.push({
+        id: s("msg_1"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_1"),
+        content: s("Original"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1000,
+        editOf: null,
+        archived: false,
+      });
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-edit-parallel", 0));
+
+    // Both devices edit the same message concurrently
+    const envA = sessionA.change((d) => {
+      d.messages.push({
+        id: s("edit_a"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_1"),
+        content: s("Edit from A"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1100,
+        editOf: s("msg_1"),
+        archived: false,
+      });
+    });
+    const envB = sessionB.change((d) => {
+      d.messages.push({
+        id: s("edit_b"),
+        channelId: s("ch_1"),
+        systemId: s("sys_1"),
+        senderId: s("mem_1"),
+        content: s("Edit from B"),
+        attachments: s("[]"),
+        mentions: s("[]"),
+        replyToId: null,
+        timestamp: 1100,
+        editOf: s("msg_1"),
+        archived: false,
+      });
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document).toEqual(sessionB.document);
+    const msgs = sessionA.document.messages;
+    expect(msgs).toHaveLength(3);
+    const editsOfMsg1 = msgs.filter((m) => m.editOf?.val === "msg_1");
+    expect(editsOfMsg1).toHaveLength(2);
+  });
+});
+
+// ── Sort order tie detection ──────────────────────────────────────────
+
+describe("Sort order tie detection", () => {
+  let relay: EncryptedRelay;
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    relay = new EncryptedRelay();
+    keys = makeKeys();
+  });
+
+  it("concurrent reorders producing identical sortOrder values create detectable ties", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-sort-tie");
+
+    const seedEnv = sessionA.change((d) => {
+      d.groups["grp_1"] = makeGroup("grp_1", 1);
+      d.groups["grp_2"] = makeGroup("grp_2", 2);
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-sort-tie", 0));
+
+    // Both set the same sortOrder value
+    const envA = sessionA.change((d) => {
+      const g = d.groups["grp_1"];
+      if (g) g.sortOrder = 5;
+    });
+    const envB = sessionB.change((d) => {
+      const g = d.groups["grp_2"];
+      if (g) g.sortOrder = 5;
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document).toEqual(sessionB.document);
+    // Both groups have sortOrder 5 — a tie requiring post-merge normalization
+    expect(sessionA.document.groups["grp_1"]?.sortOrder).toBe(5);
+    expect(sessionA.document.groups["grp_2"]?.sortOrder).toBe(5);
+  });
+
+  it("three groups with concurrent reorders all converge", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-sort-three");
+
+    const seedEnv = sessionA.change((d) => {
+      d.groups["grp_1"] = makeGroup("grp_1", 1);
+      d.groups["grp_2"] = makeGroup("grp_2", 2);
+      d.groups["grp_3"] = makeGroup("grp_3", 3);
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-sort-three", 0));
+
+    // A: reverse order
+    const envA = sessionA.change((d) => {
+      const g1 = d.groups["grp_1"];
+      const g2 = d.groups["grp_2"];
+      const g3 = d.groups["grp_3"];
+      if (g1) g1.sortOrder = 3;
+      if (g2) g2.sortOrder = 2;
+      if (g3) g3.sortOrder = 1;
+    });
+    // B: all to same value
+    const envB = sessionB.change((d) => {
+      const g1 = d.groups["grp_1"];
+      const g2 = d.groups["grp_2"];
+      const g3 = d.groups["grp_3"];
+      if (g1) g1.sortOrder = 10;
+      if (g2) g2.sortOrder = 10;
+      if (g3) g3.sortOrder = 10;
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    expect(sessionA.document).toEqual(sessionB.document);
+    // Each group has a sortOrder value — LWW picked winners
+    for (const id of ["grp_1", "grp_2", "grp_3"]) {
+      expect(typeof sessionA.document.groups[id]?.sortOrder).toBe("number");
+    }
+  });
+});
 
 // ── Category 10: FriendConnection nested assignedBuckets ──────────────
 

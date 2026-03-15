@@ -1,11 +1,11 @@
 ---
 # sync-tf2p
 title: Document lifecycle management
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:36:08Z
-updated_at: 2026-03-08T13:36:17Z
+updated_at: 2026-03-15T01:01:45Z
 parent: sync-xlhb
 ---
 
@@ -37,3 +37,9 @@ Document garbage collection, compaction, and size management
 ## References
 
 - ADR 005
+
+## Summary of Changes
+
+- Created packages/sync/docs/document-lifecycle.md: 8 sections covering compaction strategy, document size management, time-split implementation, purging, storage budget, archive/cold storage, and decision log
+- Added types to packages/sync/src/types.ts: CompactionConfig, DEFAULT_COMPACTION_CONFIG, TimeSplitUnit, TimeSplitConfig, TIME_SPLIT_CONFIGS, DOCUMENT_SIZE_LIMITS, StorageBudget, DEFAULT_STORAGE_BUDGET, SYNC_PRIORITY_ORDER, CompactionCheck, StorageBudgetExceededError
+- Created packages/sync/src/**tests**/document-lifecycle.test.ts: 25 tests covering compaction (8), time-split (6), purging (4), storage budget (3), archive (4)

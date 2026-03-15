@@ -1,11 +1,11 @@
 ---
 # sync-mgcd
 title: Partial replication strategy
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:35:33Z
-updated_at: 2026-03-08T13:35:41Z
+updated_at: 2026-03-15T01:04:55Z
 parent: sync-xlhb
 ---
 
@@ -35,3 +35,9 @@ Design document: which CRDT documents each client subscribes to. Output is a spe
 ## References
 
 - ADR 005
+
+## Summary of Changes
+
+- Created packages/sync/docs/partial-replication.md: 10 sections covering client profiles (owner-full/lite/friend), subscription filtering algorithm (pure function, server-side for friends), document discovery/manifest lifecycle, initial sync, incremental sync, priority ordering, friend subscription lifecycle (grant/revoke/new-grant), on-demand loading, and edge cases
+- Created packages/sync/src/replication-profiles.ts: ReplicationProfileType, OwnerFullProfile, OwnerLiteConfig, FriendProfileConfig, ReplicationProfile, DocumentSyncState, SubscriptionSet, DocumentLoadRequest, DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_CONFIG
+- Updated packages/sync/src/index.ts: re-exports all replication-profiles types
