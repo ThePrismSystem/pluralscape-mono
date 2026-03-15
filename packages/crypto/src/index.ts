@@ -26,7 +26,6 @@ export type {
   KeyLifecycleManager,
   KeyLifecycleState,
   NativeMemzero,
-  SecurityPresetConfig,
   SecurityPresetLevel,
   TimerHandle,
 } from "./lifecycle-types.js";

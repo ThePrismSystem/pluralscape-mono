@@ -36,10 +36,10 @@ export interface KeyLifecycleManager {
   /** Get MasterKey. Throws KeysLockedError if state is not unlocked/grace. */
   getMasterKey(): KdfMasterKey;
 
-  /** Get derived identity keypairs. Throws KeysLockedError if locked. */
+  /** Get derived identity keypairs. Throws KeysLockedError if state is not unlocked/grace. */
   getIdentityKeys(): { readonly sign: SignKeypair; readonly box: BoxKeypair };
 
-  /** Get or derive a bucket key. Throws KeysLockedError if locked. */
+  /** Get or derive a bucket key. Throws KeysLockedError if state is not unlocked/grace. */
   getBucketKey(bucketId: BucketId, encryptedKey: Uint8Array, keyVersion: number): AeadKey;
 }
 
@@ -57,7 +57,10 @@ export interface Clock {
 
 /**
  * Opaque timer handle returned by Clock.setTimeout, passed to Clock.clearTimeout.
- * Compatible with both browser (number) and Node (NodeJS.Timeout) environments.
+ *
+ * `number | object` is intentional: browser returns a number, Node returns an
+ * opaque Timeout object. The handle is never inspected — it is only stored and
+ * forwarded to clearTimeout, so a union of both shapes is correct.
  */
 export type TimerHandle = number | object;
 
@@ -69,12 +72,6 @@ export interface KeyLifecycleConfig {
   readonly graceTimeoutMs: number;
   /** Whether biometric unlock is required. */
   readonly requireBiometric: boolean;
-}
-
-/** Security preset configuration values. */
-export interface SecurityPresetConfig {
-  readonly level: SecurityPresetLevel;
-  readonly config: KeyLifecycleConfig;
 }
 
 /** Dependencies injected into MobileKeyLifecycleManager. */
