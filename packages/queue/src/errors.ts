@@ -1,4 +1,4 @@
-import type { JobId, JobType } from "@pluralscape/types";
+import type { JobId, JobStatus, JobType } from "@pluralscape/types";
 
 /**
  * Thrown when enqueue is called with an idempotency key that matches an existing
@@ -63,5 +63,28 @@ export class DuplicateHandlerError extends Error {
   constructor(jobType: JobType, options?: ErrorOptions) {
     super(`A handler for job type "${jobType}" is already registered.`, options);
     this.jobType = jobType;
+  }
+}
+
+/**
+ * Thrown when a state transition is attempted on a job whose current status
+ * does not permit it (e.g. acknowledging a pending job).
+ */
+export class InvalidJobTransitionError extends Error {
+  override readonly name = "InvalidJobTransitionError" as const;
+  readonly jobId: JobId;
+  readonly currentStatus: JobStatus;
+  readonly attemptedAction: string;
+
+  constructor(
+    jobId: JobId,
+    currentStatus: JobStatus,
+    attemptedAction: string,
+    options?: ErrorOptions,
+  ) {
+    super(`Cannot ${attemptedAction} job "${jobId}": job is "${currentStatus}".`, options);
+    this.jobId = jobId;
+    this.currentStatus = currentStatus;
+    this.attemptedAction = attemptedAction;
   }
 }

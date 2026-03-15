@@ -1,6 +1,6 @@
 import { now } from "@pluralscape/types/runtime";
 
-import { BlobAlreadyExistsError, BlobNotFoundError } from "../errors.js";
+import { BlobAlreadyExistsError, BlobNotFoundError, BlobTooLargeError } from "../errors.js";
 
 import type {
   BlobStorageAdapter,
@@ -23,10 +23,18 @@ export class MemoryBlobStorageAdapter implements BlobStorageAdapter {
   readonly supportsPresignedUrls = false as const;
 
   private readonly store = new Map<string, StoredEntry>();
+  private readonly maxSizeBytes: number | null;
+
+  constructor({ maxSizeBytes }: { maxSizeBytes?: number } = {}) {
+    this.maxSizeBytes = maxSizeBytes ?? null;
+  }
 
   upload(params: BlobUploadParams): Promise<StoredBlobMetadata> {
     if (this.store.has(params.storageKey)) {
       return Promise.reject(new BlobAlreadyExistsError(params.storageKey));
+    }
+    if (this.maxSizeBytes !== null && params.data.byteLength > this.maxSizeBytes) {
+      return Promise.reject(new BlobTooLargeError(params.data.byteLength, this.maxSizeBytes));
     }
     const metadata: StoredBlobMetadata = {
       storageKey: params.storageKey,

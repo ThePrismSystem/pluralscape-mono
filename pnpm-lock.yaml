@@ -304,6 +304,9 @@ importers:
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@types/bun':
+        specifier: ^1.2.4
+        version: 1.3.10
       eslint:
         specifier: ^10.0.3
         version: 10.0.3

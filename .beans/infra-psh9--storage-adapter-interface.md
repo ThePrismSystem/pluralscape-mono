@@ -1,11 +1,11 @@
 ---
 # infra-psh9
 title: Storage adapter interface
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:31Z
-updated_at: 2026-03-15T02:42:54Z
+updated_at: 2026-03-15T03:09:16Z
 parent: infra-o80c
 ---
 
@@ -37,3 +37,17 @@ Shared interface for the triple-backend blob storage system (S3, MinIO, local fi
 - ADR 009 (Blob/Media Storage)
 - types-41na (Blob metadata types)
 - db-1dza (Blob metadata table)
+
+## Summary of Changes
+
+Implemented the full `@pluralscape/storage` package:
+
+- `BlobStorageAdapter` interface with upload, download, delete, exists, getMetadata, presigned URL generation
+- Presigned URLs as a capability discriminated union (supported: true/false) — no adapter type-checking needed
+- `generateStorageKey` / `parseStorageKey` utilities for account-isolated storage keys
+- 4 error classes (BlobNotFoundError, BlobAlreadyExistsError, BlobTooLargeError, StorageBackendError)
+- `MemoryBlobStorageAdapter` mock (supportsPresignedUrls = false)
+- `runBlobStorageContract()` — 8 contract test categories, 26 tests pass
+- Typecheck and lint clean
+
+PR: https://github.com/ThePrismSystem/pluralscape-mono/pull/113

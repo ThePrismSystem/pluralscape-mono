@@ -15,9 +15,10 @@ export interface JobQueue {
   /**
    * Enqueues a new job.
    *
-   * If a non-completed job with the same idempotency key already exists,
-   * throws IdempotencyConflictError. If a completed job exists with the key,
-   * enqueues a new job (allows re-runs after completion).
+   * If a non-completed, non-cancelled job with the same idempotency key already
+   * exists, throws IdempotencyConflictError. If a completed or cancelled job
+   * exists with the key, enqueues a new job (allows re-runs after completion
+   * or cancellation).
    */
   enqueue(params: JobEnqueueParams): Promise<JobDefinition>;
 

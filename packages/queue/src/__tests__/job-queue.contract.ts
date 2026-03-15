@@ -9,12 +9,18 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { IdempotencyConflictError, JobNotFoundError } from "../errors.js";
+import {
+  IdempotencyConflictError,
+  InvalidJobTransitionError,
+  JobNotFoundError,
+} from "../errors.js";
 
-import { makeJobParams, testSystemId } from "./helpers.js";
+import { dequeueOrFail, makeJobParams, testSystemId } from "./helpers.js";
 
 import type { JobQueue } from "../job-queue.js";
-import type { JobType, RetryPolicy } from "@pluralscape/types";
+import type { JobId, JobType, RetryPolicy, UnixMillis } from "@pluralscape/types";
+
+const GHOST_JOB_ID = "job_ghost" as JobId;
 
 export function runJobQueueContract(factory: () => JobQueue): void {
   describe("JobQueue contract", () => {
@@ -39,7 +45,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
 
       it("getJob returns null for unknown ID", async () => {
         const queue = factory();
-        const result = await queue.getJob("job_nonexistent" as Parameters<typeof queue.getJob>[0]);
+        const result = await queue.getJob(GHOST_JOB_ID);
         expect(result).toBeNull();
       });
     });
@@ -49,9 +55,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
     describe("scheduled jobs", () => {
       it("does not dequeue a job before its scheduledFor time", async () => {
         const queue = factory();
-        const futureTime = (Date.now() + 60_000) as Parameters<
-          typeof queue.enqueue
-        >[0]["scheduledFor"];
+        const futureTime = (Date.now() + 60_000) as UnixMillis;
         await queue.enqueue(makeJobParams({ scheduledFor: futureTime }));
         const dequeued = await queue.dequeue();
         expect(dequeued).toBeNull();
@@ -59,7 +63,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
 
       it("dequeues a job once its scheduledFor time has passed", async () => {
         const queue = factory();
-        const pastTime = (Date.now() - 1000) as Parameters<typeof queue.enqueue>[0]["scheduledFor"];
+        const pastTime = (Date.now() - 1000) as UnixMillis;
         const job = await queue.enqueue(makeJobParams({ scheduledFor: pastTime }));
         const dequeued = await queue.dequeue();
         expect(dequeued?.id).toBe(job.id);
@@ -92,8 +96,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const queue = factory();
         const key = "idem-key-completed";
         await queue.enqueue(makeJobParams({ idempotencyKey: key }));
-        const job = await queue.dequeue();
-        if (job === null) throw new Error("Expected a job to be dequeued");
+        const job = await dequeueOrFail(queue);
         await queue.acknowledge(job.id, {});
         const second = await queue.enqueue(makeJobParams({ idempotencyKey: key }));
         expect(second.status).toBe("pending");
@@ -107,7 +110,6 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const queue = factory();
         const result = await queue.checkIdempotency("unknown-key");
         expect(result.exists).toBe(false);
-        expect(result.existingJob).toBeNull();
       });
 
       it("returns { exists: true, existingJob } for known key", async () => {
@@ -116,7 +118,9 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const enqueued = await queue.enqueue(makeJobParams({ idempotencyKey: key }));
         const result = await queue.checkIdempotency(key);
         expect(result.exists).toBe(true);
-        expect(result.existingJob?.id).toBe(enqueued.id);
+        if (result.exists) {
+          expect(result.existingJob.id).toBe(enqueued.id);
+        }
       });
     });
 
@@ -186,8 +190,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
       it("transitions a running job to completed", async () => {
         const queue = factory();
         await queue.enqueue(makeJobParams());
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         const completed = await queue.acknowledge(running.id, { message: "done" });
         expect(completed.status).toBe("completed");
         expect(completed.completedAt).not.toBeNull();
@@ -199,8 +202,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const onComplete = vi.fn();
         queue.setEventHooks({ onComplete });
         await queue.enqueue(makeJobParams());
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         await queue.acknowledge(running.id, {});
         expect(onComplete).toHaveBeenCalledOnce();
         expect(onComplete.mock.calls[0]?.[0].status).toBe("completed");
@@ -208,9 +210,21 @@ export function runJobQueueContract(factory: () => JobQueue): void {
 
       it("throws JobNotFoundError for unknown job", async () => {
         const queue = factory();
-        await expect(
-          queue.acknowledge("job_ghost" as Parameters<typeof queue.acknowledge>[0], {}),
-        ).rejects.toThrow(JobNotFoundError);
+        await expect(queue.acknowledge(GHOST_JOB_ID, {})).rejects.toThrow(JobNotFoundError);
+      });
+
+      it("rejects acknowledge on a pending job", async () => {
+        const queue = factory();
+        const job = await queue.enqueue(makeJobParams());
+        await expect(queue.acknowledge(job.id, {})).rejects.toThrow(InvalidJobTransitionError);
+      });
+
+      it("rejects double acknowledge on a completed job", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams());
+        const running = await dequeueOrFail(queue);
+        await queue.acknowledge(running.id, {});
+        await expect(queue.acknowledge(running.id, {})).rejects.toThrow(InvalidJobTransitionError);
       });
     });
 
@@ -226,8 +240,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
           maxBackoffMs: 30_000,
         });
         await queue.enqueue(makeJobParams({ type: "sync-push", maxAttempts: 4 }));
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         const failed = await queue.fail(running.id, "network error");
         expect(failed.status).toBe("pending");
         expect(failed.attempts).toBe(1);
@@ -240,10 +253,15 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const onFail = vi.fn();
         queue.setEventHooks({ onFail });
         await queue.enqueue(makeJobParams({ maxAttempts: 3 }));
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         await queue.fail(running.id, "oops");
         expect(onFail).toHaveBeenCalledOnce();
+      });
+
+      it("rejects fail on a pending job", async () => {
+        const queue = factory();
+        const job = await queue.enqueue(makeJobParams());
+        await expect(queue.fail(job.id, "nope")).rejects.toThrow(InvalidJobTransitionError);
       });
     });
 
@@ -253,8 +271,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
       it("moves job to dead-letter when attempts >= maxAttempts", async () => {
         const queue = factory();
         await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         const deadLettered = await queue.fail(running.id, "permanent error");
         expect(deadLettered.status).toBe("dead-letter");
       });
@@ -264,8 +281,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const onDeadLetter = vi.fn();
         queue.setEventHooks({ onDeadLetter });
         await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         await queue.fail(running.id, "fatal");
         expect(onDeadLetter).toHaveBeenCalledOnce();
       });
@@ -277,8 +293,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
       it("resets a failed job to pending", async () => {
         const queue = factory();
         await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         await queue.fail(running.id, "err");
         const retried = await queue.retry(running.id);
         expect(retried.status).toBe("pending");
@@ -289,8 +304,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
       it("resets a dead-letter job to pending", async () => {
         const queue = factory();
         await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         await queue.fail(running.id, "fatal");
         const retried = await queue.retry(running.id);
         expect(retried.status).toBe("pending");
@@ -298,9 +312,20 @@ export function runJobQueueContract(factory: () => JobQueue): void {
 
       it("throws JobNotFoundError for unknown job", async () => {
         const queue = factory();
-        await expect(queue.retry("job_ghost" as Parameters<typeof queue.retry>[0])).rejects.toThrow(
-          JobNotFoundError,
-        );
+        await expect(queue.retry(GHOST_JOB_ID)).rejects.toThrow(JobNotFoundError);
+      });
+
+      it("rejects retry on a pending job", async () => {
+        const queue = factory();
+        const job = await queue.enqueue(makeJobParams());
+        await expect(queue.retry(job.id)).rejects.toThrow(InvalidJobTransitionError);
+      });
+
+      it("rejects retry on a running job", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams());
+        const running = await dequeueOrFail(queue);
+        await expect(queue.retry(running.id)).rejects.toThrow(InvalidJobTransitionError);
       });
     });
 
@@ -316,9 +341,23 @@ export function runJobQueueContract(factory: () => JobQueue): void {
 
       it("throws JobNotFoundError for unknown job", async () => {
         const queue = factory();
-        await expect(
-          queue.cancel("job_ghost" as Parameters<typeof queue.cancel>[0]),
-        ).rejects.toThrow(JobNotFoundError);
+        await expect(queue.cancel(GHOST_JOB_ID)).rejects.toThrow(JobNotFoundError);
+      });
+
+      it("rejects cancel on a completed job", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams());
+        const running = await dequeueOrFail(queue);
+        await queue.acknowledge(running.id, {});
+        await expect(queue.cancel(running.id)).rejects.toThrow(InvalidJobTransitionError);
+      });
+
+      it("rejects cancel on a dead-letter job", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
+        const running = await dequeueOrFail(queue);
+        await queue.fail(running.id, "fatal");
+        await expect(queue.cancel(running.id)).rejects.toThrow(InvalidJobTransitionError);
       });
     });
 
@@ -333,11 +372,11 @@ export function runJobQueueContract(factory: () => JobQueue): void {
       it("filters by status", async () => {
         const queue = factory();
         await queue.enqueue(makeJobParams({ idempotencyKey: "j1" }));
-        const runningJob = await queue.enqueue(makeJobParams({ idempotencyKey: "j2" }));
+        const secondJob = await queue.enqueue(makeJobParams({ idempotencyKey: "j2" }));
         await queue.dequeue();
         const pending = await queue.listJobs({ status: "pending" });
         expect(pending).toHaveLength(1);
-        expect(pending[0]?.id).toBe(runningJob.id);
+        expect(pending[0]?.id).toBe(secondJob.id);
       });
 
       it("filters by type", async () => {
@@ -366,8 +405,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         const queue = factory();
         await queue.enqueue(makeJobParams({ idempotencyKey: "dl1", maxAttempts: 1 }));
         await queue.enqueue(makeJobParams({ idempotencyKey: "normal" }));
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         await queue.fail(running.id, "err");
         const deadLettered = await queue.listDeadLettered();
         expect(deadLettered).toHaveLength(1);
@@ -386,8 +424,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
       it("updates lastHeartbeatAt for a running job", async () => {
         const queue = factory();
         await queue.enqueue(makeJobParams());
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         const before = running.lastHeartbeatAt;
         await queue.heartbeat(running.id);
         const updated = await queue.getJob(running.id);
@@ -399,9 +436,21 @@ export function runJobQueueContract(factory: () => JobQueue): void {
 
       it("throws JobNotFoundError for non-existent job", async () => {
         const queue = factory();
-        await expect(
-          queue.heartbeat("job_ghost" as Parameters<typeof queue.heartbeat>[0]),
-        ).rejects.toThrow(JobNotFoundError);
+        await expect(queue.heartbeat(GHOST_JOB_ID)).rejects.toThrow(JobNotFoundError);
+      });
+
+      it("rejects heartbeat on a pending job", async () => {
+        const queue = factory();
+        const job = await queue.enqueue(makeJobParams());
+        await expect(queue.heartbeat(job.id)).rejects.toThrow(InvalidJobTransitionError);
+      });
+
+      it("rejects heartbeat on a completed job", async () => {
+        const queue = factory();
+        await queue.enqueue(makeJobParams());
+        const running = await dequeueOrFail(queue);
+        await queue.acknowledge(running.id, {});
+        await expect(queue.heartbeat(running.id)).rejects.toThrow(InvalidJobTransitionError);
       });
     });
 
@@ -455,8 +504,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         queue.setEventHooks({ onComplete: firstHook });
         queue.setEventHooks({ onComplete: secondHook });
         await queue.enqueue(makeJobParams());
-        const running = await queue.dequeue();
-        if (running === null) throw new Error("Expected a running job");
+        const running = await dequeueOrFail(queue);
         await queue.acknowledge(running.id, {});
         expect(firstHook).not.toHaveBeenCalled();
         expect(secondHook).toHaveBeenCalledOnce();

@@ -15,7 +15,7 @@ import {
   WorkerAlreadyRunningError,
 } from "../errors.js";
 
-import { makeJobParams } from "./helpers.js";
+import { delay, makeJobParams } from "./helpers.js";
 
 import type { JobQueue } from "../job-queue.js";
 import type { JobHandlerContext } from "../job-worker.js";
@@ -225,12 +225,12 @@ export function runJobWorkerContract(
         const job = await queue.enqueue(makeJobParams({ type: "sync-push", maxAttempts: 1 }));
         await waitFor(async () => {
           const j = await queue.getJob(job.id);
-          return j?.status === "dead-letter" || j?.status === "failed";
+          return j?.status === "dead-letter";
         });
         await worker.stop();
 
         const finalJob = await queue.getJob(job.id);
-        expect(["failed", "dead-letter"]).toContain(finalJob?.status);
+        expect(finalJob?.status).toBe("dead-letter");
         expect(finalJob?.error).toContain("handler exploded");
       });
     });
@@ -262,10 +262,4 @@ async function waitFor(
     await delay(intervalMs);
   }
   throw new Error(`waitFor timed out after ${String(timeoutMs)}ms`);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }

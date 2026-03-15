@@ -1,6 +1,10 @@
 import { createId, now } from "@pluralscape/types/runtime";
 
-import { IdempotencyConflictError, JobNotFoundError } from "../errors.js";
+import {
+  IdempotencyConflictError,
+  InvalidJobTransitionError,
+  JobNotFoundError,
+} from "../errors.js";
 
 import type { JobEventHooks } from "../event-hooks.js";
 import type { JobQueue } from "../job-queue.js";
@@ -23,6 +27,11 @@ const DEFAULT_RETRY_POLICY: RetryPolicy = {
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_ATTEMPTS = 4;
+
+function priorityThenCreatedAt(a: JobDefinition, b: JobDefinition): number {
+  if (a.priority !== b.priority) return a.priority - b.priority;
+  return a.createdAt - b.createdAt;
+}
 
 /**
  * In-memory implementation of JobQueue for use in contract tests.
@@ -84,10 +93,13 @@ export class InMemoryJobQueue implements JobQueue {
   checkIdempotency(key: string): Promise<IdempotencyCheckResult> {
     const jobId = this.idempotencyIndex.get(key);
     if (jobId === undefined) {
-      return Promise.resolve({ exists: false, existingJob: null });
+      return Promise.resolve({ exists: false });
     }
-    const job = this.jobs.get(jobId) ?? null;
-    return Promise.resolve({ exists: job !== null, existingJob: job });
+    const job = this.jobs.get(jobId);
+    if (job === undefined) {
+      return Promise.resolve({ exists: false });
+    }
+    return Promise.resolve({ exists: true, existingJob: job });
   }
 
   dequeue(types?: readonly JobType[]): Promise<JobDefinition | null> {
@@ -100,10 +112,7 @@ export class InMemoryJobQueue implements JobQueue {
         if (types !== undefined && !types.includes(j.type)) return false;
         return true;
       })
-      .sort((a, b) => {
-        if (a.priority !== b.priority) return a.priority - b.priority;
-        return a.createdAt - b.createdAt;
-      });
+      .sort(priorityThenCreatedAt);
 
     const next = candidates[0];
     if (next === undefined) return Promise.resolve(null);
@@ -120,6 +129,9 @@ export class InMemoryJobQueue implements JobQueue {
 
   async acknowledge(jobId: JobId, result: { message?: string }): Promise<JobDefinition> {
     const job = this.requireJob(jobId);
+    if (job.status !== "running") {
+      throw new InvalidJobTransitionError(jobId, job.status, "acknowledge");
+    }
     const currentTime = this.clock();
     const jobResult: JobResult = {
       success: true,
@@ -139,6 +151,9 @@ export class InMemoryJobQueue implements JobQueue {
 
   async fail(jobId: JobId, error: string): Promise<JobDefinition> {
     const job = this.requireJob(jobId);
+    if (job.status !== "running") {
+      throw new InvalidJobTransitionError(jobId, job.status, "fail");
+    }
     const newAttempts = job.attempts + 1;
     const currentTime = this.clock();
 
@@ -178,6 +193,9 @@ export class InMemoryJobQueue implements JobQueue {
   retry(jobId: JobId): Promise<JobDefinition> {
     const job = this.jobs.get(jobId);
     if (job === undefined) return Promise.reject(new JobNotFoundError(jobId));
+    if (job.status !== "failed" && job.status !== "dead-letter") {
+      return Promise.reject(new InvalidJobTransitionError(jobId, job.status, "retry"));
+    }
     const retried: JobDefinition = {
       ...job,
       status: "pending",
@@ -191,6 +209,9 @@ export class InMemoryJobQueue implements JobQueue {
   cancel(jobId: JobId): Promise<JobDefinition> {
     const job = this.jobs.get(jobId);
     if (job === undefined) return Promise.reject(new JobNotFoundError(jobId));
+    if (job.status === "completed" || job.status === "dead-letter") {
+      return Promise.reject(new InvalidJobTransitionError(jobId, job.status, "cancel"));
+    }
     const cancelled: JobDefinition = { ...job, status: "cancelled" };
     this.jobs.set(jobId, cancelled);
     return Promise.resolve(cancelled);
@@ -213,10 +234,7 @@ export class InMemoryJobQueue implements JobQueue {
       results = results.filter((j) => j.systemId === filter.systemId);
     }
 
-    results.sort((a, b) => {
-      if (a.priority !== b.priority) return a.priority - b.priority;
-      return a.createdAt - b.createdAt;
-    });
+    results.sort(priorityThenCreatedAt);
 
     const offset = filter.offset ?? 0;
     const limit = filter.limit;
@@ -233,6 +251,9 @@ export class InMemoryJobQueue implements JobQueue {
   heartbeat(jobId: JobId): Promise<void> {
     const job = this.jobs.get(jobId);
     if (job === undefined) return Promise.reject(new JobNotFoundError(jobId));
+    if (job.status !== "running") {
+      return Promise.reject(new InvalidJobTransitionError(jobId, job.status, "heartbeat"));
+    }
     this.jobs.set(jobId, { ...job, lastHeartbeatAt: this.clock() });
     return Promise.resolve();
   }
@@ -268,8 +289,6 @@ export class InMemoryJobQueue implements JobQueue {
     return job;
   }
 
-  private async fireHook(event: "onComplete" | "onDeadLetter", job: JobDefinition): Promise<void>;
-  private async fireHook(event: "onFail", job: JobDefinition, error: Error): Promise<void>;
   private async fireHook(
     event: keyof JobEventHooks,
     job: JobDefinition,

@@ -4,6 +4,8 @@ import {
   WorkerAlreadyRunningError,
 } from "../errors.js";
 
+import { delay } from "./helpers.js";
+
 import type { HeartbeatHandle } from "../heartbeat.js";
 import type { JobQueue } from "../job-queue.js";
 import type { JobHandler, JobWorker } from "../job-worker.js";
@@ -25,6 +27,7 @@ export class InMemoryJobWorker implements JobWorker {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   /** Controllers for in-flight jobs — aborted on stop() */
   private readonly inFlight = new Map<string, AbortController>();
+  private consecutivePollFailures = 0;
 
   constructor(
     queue: JobQueue,
@@ -36,6 +39,10 @@ export class InMemoryJobWorker implements JobWorker {
     this.queue = queue;
     this.pollIntervalMs = pollIntervalMs;
     this.shutdownTimeoutMs = shutdownTimeoutMs;
+  }
+
+  get pollFailureCount(): number {
+    return this.consecutivePollFailures;
   }
 
   registerHandler(type: JobType, handler: JobHandler): void {
@@ -92,8 +99,10 @@ export class InMemoryJobWorker implements JobWorker {
     let job: JobDefinition | null;
     try {
       job = await this.queue.dequeue(types);
+      this.consecutivePollFailures = 0;
     } catch {
-      return; // Swallow transient errors during polling
+      this.consecutivePollFailures++;
+      return;
     }
 
     if (job === null) return;
@@ -118,23 +127,28 @@ export class InMemoryJobWorker implements JobWorker {
         await this.queue.fail(job.id, `No handler registered for job type "${job.type}"`);
         return;
       }
-      await handler(job, { heartbeat: heartbeatHandle, signal: controller.signal });
-      await this.queue.acknowledge(job.id, {});
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+
+      // Run handler — if it throws, fail the job
       try {
-        await this.queue.fail(job.id, message);
+        await handler(job, { heartbeat: heartbeatHandle, signal: controller.signal });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        try {
+          await this.queue.fail(job.id, message);
+        } catch {
+          // Swallow fail errors — job may have already been cancelled
+        }
+        return;
+      }
+
+      // Handler succeeded — acknowledge (separate try/catch so ack failure doesn't call fail)
+      try {
+        await this.queue.acknowledge(job.id, {});
       } catch {
-        // Swallow fail errors — job may have already been cancelled
+        // Swallow acknowledge errors — handler already succeeded
       }
     } finally {
       this.inFlight.delete(job.id);
     }
   }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
 }

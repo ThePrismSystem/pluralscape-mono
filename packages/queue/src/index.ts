@@ -13,6 +13,7 @@ export type { JobHandler, JobHandlerContext, JobWorker } from "./job-worker.js";
 export {
   DuplicateHandlerError,
   IdempotencyConflictError,
+  InvalidJobTransitionError,
   JobNotFoundError,
   NoHandlersRegisteredError,
   WorkerAlreadyRunningError,

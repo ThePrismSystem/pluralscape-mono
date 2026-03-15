@@ -71,6 +71,7 @@ export type FrontingCommentId = Brand<string, "FrontingCommentId">;
 export type BucketKeyRotationId = Brand<string, "BucketKeyRotationId">;
 export type BucketRotationItemId = Brand<string, "BucketRotationItemId">;
 export type SystemSnapshotId = Brand<string, "SystemSnapshotId">;
+export type StorageKey = Brand<string, "StorageKey">;
 export type HexColor = Brand<string, "HexColor">;
 export type SlugHash = Brand<string, "SlugHash">;
 
