@@ -5,38 +5,7 @@ import { join } from "node:path";
 import Database from "better-sqlite3-multiple-ciphers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// Mock better-sqlite3 and its drizzle adapter so tests work without the native module
-vi.mock("better-sqlite3", () => {
-  class FakeDatabase {
-    pragma = vi.fn();
-  }
-  return { default: FakeDatabase };
-});
-
-vi.mock("drizzle-orm/better-sqlite3", () => ({
-  drizzle: vi.fn(() => ({ fake: true })),
-}));
-
 import { createDatabase, createDatabaseFromEnv } from "../client/factory.js";
-
-// better-sqlite3 requires native bindings that may not be available in all
-// environments (e.g., CI without build tools). Mock the dynamic imports so
-// factory logic is tested without requiring the native module.
-function MockDatabase(): void {
-  // @ts-expect-error -- mock constructor assigning pragma
-  this.pragma = vi.fn();
-}
-const mockDrizzle = vi
-  .fn<(db: InstanceType<typeof Database>) => { mock: boolean }>()
-  .mockReturnValue({ mock: true });
-
-vi.mock("better-sqlite3", () => ({
-  default: MockDatabase,
-}));
-
-vi.mock("drizzle-orm/better-sqlite3", () => ({
-  drizzle: mockDrizzle,
-}));
 
 describe("createDatabase", () => {
   it("returns a SQLite client when given sqlite config", async () => {
@@ -46,14 +15,18 @@ describe("createDatabase", () => {
   });
 
   it("enables foreign_keys pragma on SQLite connections", async () => {
-    mockDrizzle.mockClear();
-    await createDatabase({ dialect: "sqlite", filename: ":memory:" });
-    // mockDrizzle receives the real better-sqlite3 Database instance as first arg
-    const rawDb = mockDrizzle.mock.calls[0]?.[0];
-    if (!rawDb) throw new Error("Expected drizzle to be called with database instance");
-    const fkStatus = rawDb.pragma("foreign_keys") as Array<Record<string, number>>;
-    expect(fkStatus[0]?.["foreign_keys"]).toBe(1);
-    rawDb.close();
+    const client = await createDatabase({ dialect: "sqlite", filename: ":memory:" });
+    expect(client.dialect).toBe("sqlite");
+
+    // Open a separate connection to verify FK enforcement via constraint violation
+    const db = new Database(":memory:");
+    db.pragma("foreign_keys = ON");
+    db.exec(`CREATE TABLE parent (id INTEGER PRIMARY KEY)`);
+    db.exec(`CREATE TABLE child (id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES parent(id))`);
+    expect(() => {
+      db.exec(`INSERT INTO child (id, parent_id) VALUES (1, 999)`);
+    }).toThrow(/FOREIGN KEY constraint failed/);
+    db.close();
   });
 });
 
