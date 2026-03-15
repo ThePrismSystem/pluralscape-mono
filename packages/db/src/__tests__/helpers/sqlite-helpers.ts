@@ -56,6 +56,7 @@ export const SQLITE_DDL = {
       email_salt TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       kdf_salt TEXT NOT NULL,
+      encrypted_master_key BLOB,
       account_type TEXT NOT NULL DEFAULT 'system' CHECK (account_type IN ('system', 'viewer')),
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,

@@ -1,11 +1,11 @@
 ---
 # crypto-vgn3
 title: Recovery key regeneration
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:04Z
-updated_at: 2026-03-08T19:57:04Z
+updated_at: 2026-03-15T07:53:48Z
 parent: crypto-89v7
 blocked_by:
   - crypto-sa91
@@ -37,3 +37,5 @@ Allow authenticated users to regenerate their recovery key, revoking the old one
 ## References
 
 - ADR 011 (Key Recovery — regeneration)
+
+## Summary of Changes\n\nImplemented recovery key regeneration:\n- New `recovery-regeneration.ts`: regenerateRecoveryKey function\n- Added auth.recovery-key-regenerated audit event type\n- Tests verify old key cannot decrypt new backup, new key recovers same MasterKey

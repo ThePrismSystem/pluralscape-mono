@@ -57,6 +57,7 @@ export const PG_DDL = {
       email_salt VARCHAR(255) NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
       kdf_salt VARCHAR(255) NOT NULL,
+      encrypted_master_key BYTEA,
       account_type VARCHAR(50) NOT NULL DEFAULT 'system' CHECK (account_type IN ('system', 'viewer')),
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL,

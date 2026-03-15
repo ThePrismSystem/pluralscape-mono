@@ -18,12 +18,12 @@ import type { KdfMasterKey, PwhashSalt } from "./types.js";
  */
 export type PwhashProfile = "server" | "mobile";
 
-interface ProfileParams {
+export interface ProfileParams {
   readonly opsLimit: number;
   readonly memLimit: number;
 }
 
-const PROFILE_PARAMS: Readonly<Record<PwhashProfile, ProfileParams>> = {
+export const PROFILE_PARAMS: Readonly<Record<PwhashProfile, ProfileParams>> = {
   // Server: 3 iterations + 64 MiB (not 256 MiB) to avoid OOM on constrained deployments.
   // Higher iteration count compensates for the reduced memory parameter.
   server: { opsLimit: PWHASH_OPSLIMIT_MODERATE, memLimit: PWHASH_MEMLIMIT_INTERACTIVE },
@@ -34,6 +34,11 @@ const PROFILE_PARAMS: Readonly<Record<PwhashProfile, ProfileParams>> = {
  * Derive a master key from a password and salt using Argon2id.
  * Returns a Promise for API compatibility — pwhash may be offloaded
  * to a WebWorker in the future to avoid blocking the main thread.
+ *
+ * NOTE: New accounts should use the two-layer KEK/DEK pattern instead
+ * (generateMasterKey + derivePasswordKey + wrapMasterKey). This function
+ * remains for key-lifecycle.ts until it is refactored to accept an
+ * encrypted master key blob.
  */
 export function deriveMasterKey(
   password: string,

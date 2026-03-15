@@ -1,3 +1,14 @@
+export type { StoreRecoveryKeyInput, ReplaceRecoveryKeyInput } from "./recovery-key.js";
+export {
+  pgGetActiveRecoveryKey,
+  pgReplaceRecoveryKeyBackup,
+  pgRevokeRecoveryKey,
+  pgStoreRecoveryKeyBackup,
+  sqliteGetActiveRecoveryKey,
+  sqliteReplaceRecoveryKeyBackup,
+  sqliteRevokeRecoveryKey,
+  sqliteStoreRecoveryKeyBackup,
+} from "./recovery-key.js";
 export type { CleanupResult } from "./types.js";
 export { validateOlderThanDays, validateMonthsAhead, validateOlderThanMonths } from "./types.js";
 export { pgCleanupSyncedEntries, sqliteCleanupSyncedEntries } from "./sync-queue-cleanup.js";

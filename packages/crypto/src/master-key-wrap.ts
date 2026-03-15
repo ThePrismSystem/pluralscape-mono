@@ -1,0 +1,71 @@
+import { KDF_KEY_BYTES } from "./constants.js";
+import { InvalidInputError } from "./errors.js";
+import { PROFILE_PARAMS, type PwhashProfile } from "./master-key.js";
+import { getSodium } from "./sodium.js";
+import { decrypt, encrypt } from "./symmetric.js";
+import { assertAeadKey, assertKdfMasterKey } from "./validation.js";
+
+import type { EncryptedPayload } from "./symmetric.js";
+import type { AeadKey, KdfMasterKey, PwhashSalt } from "./types.js";
+
+/**
+ * Generate a random persistent MasterKey (32 bytes).
+ *
+ * Unlike the legacy deriveMasterKey(), this key is NOT derived from the password —
+ * it is stored encrypted (wrapped) in the database and survives password resets.
+ * The KEK/DEK pattern: MasterKey is the DEK, password-derived key is the KEK.
+ */
+export function generateMasterKey(): KdfMasterKey {
+  const adapter = getSodium();
+  const raw = adapter.randomBytes(KDF_KEY_BYTES);
+  assertKdfMasterKey(raw);
+  return raw;
+}
+
+/**
+ * Derive a password key (KEK) from a password + salt using Argon2id.
+ *
+ * Returns an AeadKey (not a KdfMasterKey) to make the distinction explicit:
+ * this key is used only as a wrapper key for the MasterKey, never for data derivation.
+ * Returns a Promise for API compatibility — pwhash may be offloaded to a WebWorker.
+ */
+export function derivePasswordKey(
+  password: string,
+  salt: PwhashSalt,
+  profile: PwhashProfile,
+): Promise<AeadKey> {
+  if (password.length === 0) {
+    throw new InvalidInputError("Password must not be empty.");
+  }
+  const adapter = getSodium();
+  const passwordBytes = new TextEncoder().encode(password);
+  try {
+    const { opsLimit, memLimit } = PROFILE_PARAMS[profile];
+    const derived = adapter.pwhash(KDF_KEY_BYTES, passwordBytes, salt, opsLimit, memLimit);
+    assertAeadKey(derived);
+    return Promise.resolve(derived);
+  } finally {
+    adapter.memzero(passwordBytes);
+  }
+}
+
+/**
+ * Wrap (encrypt) a MasterKey under a password-derived key (KEK).
+ *
+ * The resulting EncryptedPayload is stored in the `accounts.encrypted_master_key`
+ * column and re-encrypted on password change without invalidating any derived keys.
+ */
+export function wrapMasterKey(masterKey: KdfMasterKey, passwordKey: AeadKey): EncryptedPayload {
+  return encrypt(masterKey, passwordKey);
+}
+
+/**
+ * Unwrap (decrypt) a MasterKey using a password-derived key (KEK).
+ *
+ * Throws DecryptionFailedError if the key is wrong or the blob is tampered.
+ */
+export function unwrapMasterKey(wrapped: EncryptedPayload, passwordKey: AeadKey): KdfMasterKey {
+  const raw = decrypt(wrapped, passwordKey);
+  assertKdfMasterKey(raw);
+  return raw;
+}

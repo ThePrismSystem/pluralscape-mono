@@ -25,6 +25,11 @@ export interface Account extends AuditMetadata {
   readonly emailSalt: string;
   readonly passwordHash: string;
   readonly kdfSalt: string;
+  /**
+   * Persistent random MasterKey wrapped by the password-derived key (KEK/DEK pattern).
+   * Null for legacy accounts that have not yet migrated to the two-layer architecture.
+   */
+  readonly encryptedMasterKey: Uint8Array | null;
 }
 
 /** A cryptographic keypair associated with an account. Immutable after creation. */

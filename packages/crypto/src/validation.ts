@@ -19,7 +19,7 @@ import {
 } from "./constants.js";
 import { InvalidInputError } from "./errors.js";
 
-import type { KdfMasterKey } from "./types.js";
+import type { AeadKey, KdfMasterKey, PwhashSalt } from "./types.js";
 
 export function assertBufferLength(buffer: Uint8Array, expected: number, name: string): void {
   if (buffer.length !== expected) {
@@ -29,7 +29,7 @@ export function assertBufferLength(buffer: Uint8Array, expected: number, name: s
   }
 }
 
-export function assertAeadKey(key: Uint8Array): void {
+export function assertAeadKey(key: Uint8Array): asserts key is AeadKey {
   assertBufferLength(key, AEAD_KEY_BYTES, "AEAD key");
 }
 
@@ -69,7 +69,7 @@ export function assertSignSeed(seed: Uint8Array): void {
   assertBufferLength(seed, SIGN_SEED_BYTES, "Sign seed");
 }
 
-export function assertPwhashSalt(salt: Uint8Array): void {
+export function assertPwhashSalt(salt: Uint8Array): asserts salt is PwhashSalt {
   assertBufferLength(salt, PWHASH_SALT_BYTES, "Pwhash salt");
 }
 

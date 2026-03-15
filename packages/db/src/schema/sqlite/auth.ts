@@ -18,6 +18,9 @@ export const accounts = sqliteTable(
     emailSalt: text("email_salt").notNull(),
     passwordHash: text("password_hash").notNull(),
     kdfSalt: text("kdf_salt").notNull(),
+    // Two-layer KEK/DEK: persistent random MasterKey wrapped by password-derived key.
+    // Null for legacy accounts that have not yet migrated to the two-layer architecture.
+    encryptedMasterKey: sqliteBinary("encrypted_master_key"),
     ...timestamps(),
     ...versioned(),
   },
