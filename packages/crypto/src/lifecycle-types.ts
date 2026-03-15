@@ -1,4 +1,4 @@
-import type { AeadKey, BoxKeypair, KdfMasterKey, SignKeypair } from "./types.js";
+import type { AeadKey, BoxKeypair, KdfMasterKey, PwhashSalt, SignKeypair } from "./types.js";
 import type { BucketId } from "@pluralscape/types";
 
 /** Lifecycle states for the mobile key manager. */
@@ -13,7 +13,7 @@ export interface KeyLifecycleManager {
   readonly state: KeyLifecycleState;
 
   /** Derive MasterKey from password + salt, store in secure storage, transition to unlocked. */
-  unlockWithPassword(password: string, salt: Uint8Array): Promise<void>;
+  unlockWithPassword(password: string, salt: PwhashSalt): Promise<void>;
 
   /** Retrieve MasterKey from secure storage via biometric, transition to unlocked. */
   unlockWithBiometric(): Promise<void>;
@@ -24,10 +24,10 @@ export interface KeyLifecycleManager {
   /** Clear all keys from memory AND delete secure storage entries. */
   logout(): Promise<void>;
 
-  /** Called when app moves to background. Starts grace timer. */
+  /** Called when app moves to background. Cancels inactivity timer and starts grace timer. */
   onBackground(): void;
 
-  /** Called when app returns to foreground. Cancels grace timer if running. */
+  /** Called when app returns to foreground. Cancels grace timer and restarts inactivity timer. */
   onForeground(): void;
 
   /** Called on user interaction. Resets inactivity timeout. */
@@ -83,4 +83,9 @@ export interface KeyLifecycleDeps {
   readonly clock: Clock;
   readonly deriveIdentityKeys: (masterKey: KdfMasterKey) => import("./identity.js").IdentityKeypair;
   readonly onBeforeLock?: () => Promise<void>;
+  /**
+   * Called when timer-triggered lock fails (e.g., onBeforeLock threw).
+   * Key material has already been cleared by teardownKeys() at this point.
+   */
+  readonly onLockError?: (err: Error) => void;
 }

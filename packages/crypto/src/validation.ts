@@ -19,6 +19,8 @@ import {
 } from "./constants.js";
 import { InvalidInputError } from "./errors.js";
 
+import type { KdfMasterKey } from "./types.js";
+
 export function assertBufferLength(buffer: Uint8Array, expected: number, name: string): void {
   if (buffer.length !== expected) {
     throw new InvalidInputError(
@@ -71,7 +73,7 @@ export function assertPwhashSalt(salt: Uint8Array): void {
   assertBufferLength(salt, PWHASH_SALT_BYTES, "Pwhash salt");
 }
 
-export function assertKdfMasterKey(key: Uint8Array): void {
+export function assertKdfMasterKey(key: Uint8Array): asserts key is KdfMasterKey {
   assertBufferLength(key, KDF_KEY_BYTES, "KDF master key");
 }
 

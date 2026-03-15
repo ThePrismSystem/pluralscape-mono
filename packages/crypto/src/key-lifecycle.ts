@@ -71,10 +71,10 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
 
   // ── Unlock ──────────────────────────────────────────────────────────
 
-  async unlockWithPassword(password: string, salt: Uint8Array): Promise<void> {
+  async unlockWithPassword(password: string, salt: PwhashSalt): Promise<void> {
     this.assertUnlockable();
 
-    const masterKey = await deriveMasterKey(password, salt as PwhashSalt, "mobile");
+    const masterKey = await deriveMasterKey(password, salt, "mobile");
     const identityKeys = this.deps.deriveIdentityKeys(masterKey);
 
     try {
@@ -106,9 +106,17 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
     }
 
     assertKdfMasterKey(stored);
-    this.masterKey = stored as KdfMasterKey;
-    this.identityKeys = this.deps.deriveIdentityKeys(this.masterKey);
 
+    let identityKeys: IdentityKeypair;
+    try {
+      identityKeys = this.deps.deriveIdentityKeys(stored);
+    } catch (error: unknown) {
+      this.deps.sodium.memzero(stored);
+      throw error;
+    }
+
+    this.masterKey = stored;
+    this.identityKeys = identityKeys;
     this.currentState = "unlocked";
     this.startInactivityTimer();
   }
@@ -129,8 +137,24 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
 
   async logout(): Promise<void> {
     const onBeforeLockError = await this.teardownKeys();
-    await this.deps.storage.clearAll();
+
+    let storageError: Error | undefined;
+    try {
+      await this.deps.storage.clearAll();
+    } catch (error: unknown) {
+      storageError = error instanceof Error ? error : new Error(String(error));
+    }
+
     this.currentState = "terminated";
+
+    if (storageError !== undefined) {
+      if (onBeforeLockError !== undefined) {
+        throw new Error("logout failed: storage.clearAll() and onBeforeLock both threw", {
+          cause: onBeforeLockError,
+        });
+      }
+      throw storageError;
+    }
     if (onBeforeLockError !== undefined) {
       throw onBeforeLockError;
     }
@@ -146,8 +170,8 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
     this.cancelInactivityTimer();
     this.currentState = "grace";
     this.graceTimer = this.deps.clock.setTimeout(() => {
-      this.lock().catch(() => {
-        // onBeforeLock error; keys already cleared by teardownKeys()
+      this.lock().catch((error: unknown) => {
+        this.deps.onLockError?.(error instanceof Error ? error : new Error(String(error)));
       });
     }, this.deps.config.graceTimeoutMs);
   }
@@ -167,7 +191,6 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
       return;
     }
 
-    this.cancelInactivityTimer();
     this.startInactivityTimer();
   }
 
@@ -262,8 +285,8 @@ export class MobileKeyLifecycleManager implements KeyLifecycleManager {
   private startInactivityTimer(): void {
     this.cancelInactivityTimer();
     this.inactivityTimer = this.deps.clock.setTimeout(() => {
-      this.lock().catch(() => {
-        // onBeforeLock error; keys already cleared by teardownKeys()
+      this.lock().catch((error: unknown) => {
+        this.deps.onLockError?.(error instanceof Error ? error : new Error(String(error)));
       });
     }, this.deps.config.inactivityTimeoutMs);
   }

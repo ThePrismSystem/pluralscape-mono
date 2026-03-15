@@ -151,7 +151,7 @@ export function recoverMasterKey(
     assertAeadKey(recoveryKeyBytes);
     const raw = decrypt(encryptedMasterKey, recoveryKeyBytes as AeadKey);
     assertKdfMasterKey(raw);
-    return raw as KdfMasterKey;
+    return raw;
   } finally {
     if (recoveryKeyBytes !== undefined) {
       adapter.memzero(recoveryKeyBytes);

@@ -3,7 +3,8 @@
  *
  * Known gaps (react-native-libsodium does not support):
  * - crypto_sign_seed_keypair — signSeedKeypair() throws UnsupportedOperationError
- * - memzero — polyfilled with Uint8Array.fill(0) (not cryptographically secure)
+ * - memzero — polyfilled with Uint8Array.fill(0) unless NativeMemzero is provided
+ *   via constructor for cryptographically secure zeroing (iOS memset_s, Android volatile loop)
  *
  * The missing ed25519-to-curve25519 conversion functions are not needed:
  * ADR 006 addendum specifies independent key derivation via KDF instead.

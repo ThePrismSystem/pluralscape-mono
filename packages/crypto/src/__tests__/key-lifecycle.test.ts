@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 
 import { createBucketKeyCache } from "../bucket-key-cache.js";
 import { encryptBucketKey, generateBucketKey } from "../bucket-keys.js";
-import { InvalidStateTransitionError, KeysLockedError } from "../errors.js";
+import { DecryptionFailedError, InvalidStateTransitionError, KeysLockedError } from "../errors.js";
 import { generateIdentityKeypair } from "../identity.js";
 import { MobileKeyLifecycleManager, SECURITY_PRESETS } from "../key-lifecycle.js";
 import { generateSalt } from "../master-key.js";
@@ -12,6 +12,7 @@ import { createWebKeyStorage } from "../web-key-storage.js";
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
 import type { KeyLifecycleConfig, KeyLifecycleDeps } from "../lifecycle-types.js";
+import type { PwhashSalt } from "../types.js";
 import type { BucketId } from "@pluralscape/types";
 
 // Timer type declarations for test environment (lib: ES2022 excludes DOM/Node timer globals)
@@ -50,7 +51,7 @@ function makeDeps(overrides?: Partial<KeyLifecycleDeps>): KeyLifecycleDeps {
 
 let manager: MobileKeyLifecycleManager;
 let deps: KeyLifecycleDeps;
-let salt: Uint8Array;
+let salt: PwhashSalt;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -143,6 +144,30 @@ describe("unlockWithPassword", () => {
     );
   });
 
+  it("passes requireBiometric: true to storage.store", async () => {
+    const storageSpy = vi.spyOn(deps.storage, "store");
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    expect(storageSpy).toHaveBeenCalledWith(
+      "master-key",
+      expect.any(Uint8Array),
+      expect.objectContaining({ requireBiometric: true }),
+    );
+  });
+
+  it("passes requireBiometric: false to storage.store when configured", async () => {
+    const convenienceDeps = makeDeps({
+      config: { ...STANDARD_CONFIG, requireBiometric: false },
+    });
+    const m = new MobileKeyLifecycleManager(convenienceDeps);
+    const storageSpy = vi.spyOn(convenienceDeps.storage, "store");
+    await m.unlockWithPassword(TEST_PASSWORD, salt);
+    expect(storageSpy).toHaveBeenCalledWith(
+      "master-key",
+      expect.any(Uint8Array),
+      expect.objectContaining({ requireBiometric: false }),
+    );
+  });
+
   it("memzeros derived keys if storage.store fails", async () => {
     const storageError = new Error("SecureStore write failed");
     const failingDeps = makeDeps();
@@ -188,6 +213,38 @@ describe("unlockWithBiometric", () => {
   it("throws InvalidStateTransitionError from unlocked", async () => {
     await manager.unlockWithPassword(TEST_PASSWORD, salt);
     await expect(manager.unlockWithBiometric()).rejects.toThrow(InvalidStateTransitionError);
+  });
+
+  it("throws InvalidStateTransitionError from grace", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    manager.onBackground();
+    expect(manager.state).toBe("grace");
+    await expect(manager.unlockWithBiometric()).rejects.toThrow(InvalidStateTransitionError);
+  });
+
+  it("memzeros stored key and stays locked if deriveIdentityKeys throws", async () => {
+    const deriveError = new Error("derivation failed");
+    const failOnSecondCall = vi
+      .fn()
+      .mockImplementationOnce(generateIdentityKeypair)
+      .mockImplementationOnce(() => {
+        throw deriveError;
+      });
+    const customDeps = makeDeps({ deriveIdentityKeys: failOnSecondCall });
+    const m = new MobileKeyLifecycleManager(customDeps);
+    const memzeroSpy = vi.spyOn(customDeps.sodium, "memzero");
+
+    // First unlock succeeds, then lock
+    await m.unlockWithPassword(TEST_PASSWORD, salt);
+    await m.lock();
+    expect(m.state).toBe("locked");
+
+    // Second unlock (biometric) should fail and stay locked
+    await expect(m.unlockWithBiometric()).rejects.toThrow(deriveError);
+    expect(m.state).toBe("locked");
+    expect(() => m.getMasterKey()).toThrow(KeysLockedError);
+    // memzero should have been called on the stored key
+    expect(memzeroSpy).toHaveBeenCalled();
   });
 });
 
@@ -426,6 +483,22 @@ describe("grace period", () => {
     manager.onForeground();
     expect(manager.state).toBe("locked");
   });
+
+  it("reaches locked state and calls onLockError when grace timer fires with failing onBeforeLock", async () => {
+    const lockError = new Error("onBeforeLock failed in grace");
+    const onBeforeLock = vi.fn().mockRejectedValue(lockError);
+    const onLockError = vi.fn();
+    const customDeps = makeDeps({ onBeforeLock, onLockError });
+    const m = new MobileKeyLifecycleManager(customDeps);
+    await m.unlockWithPassword(TEST_PASSWORD, salt);
+
+    m.onBackground();
+    expect(m.state).toBe("grace");
+
+    await vi.advanceTimersByTimeAsync(STANDARD_CONFIG.graceTimeoutMs);
+    expect(m.state).toBe("locked");
+    expect(onLockError).toHaveBeenCalledWith(lockError);
+  });
 });
 
 // ── 7. Inactivity timer ─────────────────────────────────────────────
@@ -480,6 +553,19 @@ describe("inactivity timer", () => {
   it("onUserActivity is a no-op from terminated", () => {
     manager.onUserActivity();
     expect(manager.state).toBe("terminated");
+  });
+
+  it("reaches locked state and calls onLockError when onBeforeLock throws", async () => {
+    const lockError = new Error("onBeforeLock failed");
+    const onBeforeLock = vi.fn().mockRejectedValue(lockError);
+    const onLockError = vi.fn();
+    const customDeps = makeDeps({ onBeforeLock, onLockError });
+    const m = new MobileKeyLifecycleManager(customDeps);
+    await m.unlockWithPassword(TEST_PASSWORD, salt);
+
+    await vi.advanceTimersByTimeAsync(STANDARD_CONFIG.inactivityTimeoutMs);
+    expect(m.state).toBe("locked");
+    expect(onLockError).toHaveBeenCalledWith(lockError);
   });
 });
 
@@ -544,6 +630,30 @@ describe("getBucketKey", () => {
     await manager.lock();
     expect(() => manager.getBucketKey(bucketId, new Uint8Array(64), 1)).toThrow(KeysLockedError);
   });
+
+  it("throws on truncated encrypted key data", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    // Too short to contain nonce (24 bytes) + any ciphertext
+    const truncated = new Uint8Array(10);
+    expect(() => manager.getBucketKey(bucketId, truncated, 1)).toThrow();
+  });
+
+  it("throws DecryptionFailedError on corrupted ciphertext", async () => {
+    await manager.unlockWithPassword(TEST_PASSWORD, salt);
+    const masterKey = manager.getMasterKey();
+    const bucketKey = generateBucketKey();
+    const wrapped = encryptBucketKey(bucketKey, masterKey, 1);
+    const encryptedKey = new Uint8Array(wrapped.nonce.length + wrapped.ciphertext.length);
+    encryptedKey.set(wrapped.nonce, 0);
+    encryptedKey.set(wrapped.ciphertext, wrapped.nonce.length);
+
+    // Corrupt the ciphertext portion by filling it with zeros
+    encryptedKey.fill(0, wrapped.nonce.length);
+
+    expect(() => manager.getBucketKey("bucket-corrupt" as BucketId, encryptedKey, 1)).toThrow(
+      DecryptionFailedError,
+    );
+  });
 });
 
 // ── 9. Logout ───────────────────────────────────────────────────────
@@ -596,6 +706,23 @@ describe("logout", () => {
     expect(manager.state).toBe("grace");
     await manager.logout();
     expect(manager.state).toBe("terminated");
+  });
+
+  it("preserves both errors when onBeforeLock and storage.clearAll both throw", async () => {
+    const beforeLockError = new Error("onBeforeLock failed");
+    const storageError = new Error("storage.clearAll failed");
+    const onBeforeLock = vi.fn().mockRejectedValue(beforeLockError);
+    const customDeps = makeDeps({ onBeforeLock });
+    vi.spyOn(customDeps.storage, "clearAll").mockRejectedValue(storageError);
+    const m = new MobileKeyLifecycleManager(customDeps);
+    await m.unlockWithPassword(TEST_PASSWORD, salt);
+
+    await expect(m.logout()).rejects.toSatisfy((error: Error) => {
+      expect(error.message).toContain("storage.clearAll() and onBeforeLock both threw");
+      expect(error.cause).toBe(beforeLockError);
+      return true;
+    });
+    expect(m.state).toBe("terminated");
   });
 });
 
