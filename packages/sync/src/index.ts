@@ -3,11 +3,24 @@ export type {
   DocumentKeys,
   EncryptedChangeEnvelope,
   EncryptedSnapshotEnvelope,
+  CompactionConfig,
+  TimeSplitConfig,
+  TimeSplitUnit,
+  StorageBudget,
+  CompactionCheck,
   ConflictNotification,
   ConflictResolutionStrategy,
   CycleBreak,
   SortOrderPatch,
   PostMergeValidationResult,
+} from "./types.js";
+export {
+  DEFAULT_COMPACTION_CONFIG,
+  TIME_SPLIT_CONFIGS,
+  DOCUMENT_SIZE_LIMITS,
+  DEFAULT_STORAGE_BUDGET,
+  SYNC_PRIORITY_ORDER,
+  StorageBudgetExceededError,
 } from "./types.js";
 
 export {
