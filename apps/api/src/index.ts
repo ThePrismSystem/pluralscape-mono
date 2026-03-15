@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import { corsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
+import { createRateLimiter } from "./middleware/rate-limit.js";
 import { secureHeaders } from "./middleware/secure-headers.js";
 
 const DEFAULT_PORT = 10045;
@@ -11,6 +12,8 @@ const app = new Hono();
 
 app.use("*", secureHeaders);
 app.use("*", corsMiddleware);
+// Global rate limit: 100 req/60s. Auth routes need stricter limits.
+app.use("*", createRateLimiter({ limit: 100, windowMs: 60_000 }));
 app.onError(errorHandler);
 
 app.get("/", (c) => {
