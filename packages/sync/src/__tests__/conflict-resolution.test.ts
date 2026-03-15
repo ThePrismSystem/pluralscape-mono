@@ -11,6 +11,7 @@ import {
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
+import type { CrdtGroup } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 
@@ -41,6 +42,27 @@ function makeSessions<T>(
     new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
     new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
   ];
+}
+
+function makeGroup(
+  id: string,
+  sortOrder: number,
+  overrides?: Partial<{ parentGroupId: string }>,
+): CrdtGroup {
+  return {
+    id: s(id),
+    systemId: s("sys_1"),
+    name: s(id),
+    description: null,
+    parentGroupId: overrides?.parentGroupId ? s(overrides.parentGroupId) : null,
+    imageSource: null,
+    color: null,
+    emoji: null,
+    sortOrder,
+    archived: false,
+    createdAt: 1000,
+    updatedAt: 1000,
+  };
 }
 
 // ── Category 1: Concurrent edits to LWW map entities ─────────────────
@@ -309,7 +331,7 @@ describe("Category 3: concurrent FrontingSession end time", () => {
 //
 // After merge, both parentGroupId fields are set, creating a cycle in the
 // group hierarchy. Post-merge DFS cycle detection is application-layer
-// (tested and implemented in sync-80bn — conflict resolution rules).
+// (specified in sync-80bn — not yet implemented).
 
 describe("Category 4: concurrent re-parenting creating cycles", () => {
   let relay: EncryptedRelay;
@@ -326,34 +348,8 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
 
     // Seed two root groups (no parent)
     const seedEnv = sessionA.change((d) => {
-      d.groups["groupA"] = {
-        id: s("groupA"),
-        systemId: s("sys_1"),
-        name: s("Group A"),
-        description: null,
-        parentGroupId: null,
-        imageSource: null,
-        color: null,
-        emoji: null,
-        sortOrder: 1,
-        archived: false,
-        createdAt: 1000,
-        updatedAt: 1000,
-      };
-      d.groups["groupB"] = {
-        id: s("groupB"),
-        systemId: s("sys_1"),
-        name: s("Group B"),
-        description: null,
-        parentGroupId: null,
-        imageSource: null,
-        color: null,
-        emoji: null,
-        sortOrder: 2,
-        archived: false,
-        createdAt: 1000,
-        updatedAt: 1000,
-      };
+      d.groups["groupA"] = makeGroup("groupA", 1);
+      d.groups["groupB"] = makeGroup("groupB", 2);
     });
     relay.submit(seedEnv);
     sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cr-004", 0));
@@ -383,7 +379,7 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
     expect(sessionA.document).toEqual(sessionB.document);
 
     // Both parentGroupId values are set — cycle is present in merged state.
-    // Post-merge cycle detection (DFS traversal) is application-layer (sync-80bn).
+    // Post-merge cycle detection (DFS traversal) is application-layer (sync-80bn — todo).
     expect(sessionA.document.groups["groupA"]?.parentGroupId?.val).toBe("groupB");
     expect(sessionA.document.groups["groupB"]?.parentGroupId?.val).toBe("groupA");
   });
@@ -583,20 +579,7 @@ describe("Category 8: sort order conflicts", () => {
         ["grp_2", 2],
         ["grp_3", 3],
       ] as const) {
-        d.groups[id] = {
-          id: s(id),
-          systemId: s("sys_1"),
-          name: s(`Group ${String(order)}`),
-          description: null,
-          parentGroupId: null,
-          imageSource: null,
-          color: null,
-          emoji: null,
-          sortOrder: order,
-          archived: false,
-          createdAt: 1000,
-          updatedAt: 1000,
-        };
+        d.groups[id] = makeGroup(id, order);
       }
     });
     relay.submit(seedEnv);
@@ -626,9 +609,9 @@ describe("Category 8: sort order conflicts", () => {
 
     // Each group has some sortOrder — LWW picked a winner per field.
     // Ties or inversions may exist; post-merge normalization (re-numbering)
-    // is application-layer (sync-80bn).
+    // is application-layer (sync-80bn — todo).
     const orders = ["grp_1", "grp_2", "grp_3"].map((id) => sessionA.document.groups[id]?.sortOrder);
-    expect(orders.every((o) => o !== undefined)).toBe(true);
+    expect(orders).toEqual([expect.any(Number), expect.any(Number), expect.any(Number)]);
   });
 });
 
@@ -719,9 +702,14 @@ describe("Category 9: ChatMessage edit chain", () => {
 
     // Edit chain is intact: msg_2.editOf references msg_1
     const msg2 = sessionA.document.messages.find((m) => m.id.val === "msg_2");
+    expect(msg2).toBeDefined();
     expect(msg2?.editOf?.val).toBe("msg_1");
   });
 });
+
+// NOTE: Edge cases deferred to sync-80bn: subsystem/innerworld-region cycles,
+// multi-level edit chains, concurrent edits to same message, sort order
+// normalization after ties.
 
 // ── Category 10: FriendConnection nested assignedBuckets ──────────────
 

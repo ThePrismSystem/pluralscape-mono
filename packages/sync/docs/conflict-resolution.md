@@ -394,3 +394,11 @@ The following validations must run client-side after merging any CRDT changes:
 | Sort order normalization             | Any `sortOrder` change on groups, board messages              | Re-number ascending to eliminate ties                                     |
 | CheckInRecord normalization          | Any `checkInRecord.respondedByMemberId` or `dismissed` change | If respondedByMemberId non-null → dismissed = false                       |
 | FriendConnection status coherence    | Any `friendConnection.status` change                          | If status = "removed" or "blocked" → clear assignedBuckets                |
+
+---
+
+## Future Work
+
+- **Automerge.Text (V2+):** Switch journal content, wiki pages, and shared notes from `ImmutableString` to plain `string` for character-level collaborative editing, after designing app-layer merge semantics and UI.
+- **Automerge.Counter:** Evaluate if any future features (e.g., reaction counts, poll tallies) warrant CRDT counters vs. the current derived-view approach.
+- **Post-merge validation rules:** Implementation tracked in sync-80bn — cycle detection, sort order normalization, CheckInRecord normalization, FriendConnection status coherence.
