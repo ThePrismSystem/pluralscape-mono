@@ -125,3 +125,16 @@ export type {
   SyncNetworkAdapter,
   SyncSubscription,
 } from "./adapters/network-adapter.js";
+
+// ── Replication profiles ──────────────────────────────────────────────
+export type {
+  ReplicationProfileType,
+  ReplicationProfile,
+  OwnerFullProfile,
+  OwnerLiteConfig,
+  FriendProfileConfig,
+  DocumentSyncState,
+  SubscriptionSet,
+  DocumentLoadRequest,
+} from "./replication-profiles.js";
+export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_CONFIG } from "./replication-profiles.js";
