@@ -30,9 +30,10 @@ describe("fireHook", () => {
     expect(onFail).toHaveBeenCalledWith(fakeJob, error);
   });
 
-  it("does not dispatch onFail when error is undefined", async () => {
+  it("does not dispatch onFail when error is undefined (runtime guard)", async () => {
     const onFail = vi.fn();
     const hooks: JobEventHooks = { onFail };
+    // @ts-expect-error Overload prevents this at compile time, testing runtime guard
     await fireHook(hooks, "onFail", fakeJob);
     expect(onFail).not.toHaveBeenCalled();
   });
@@ -84,5 +85,11 @@ describe("fireHook", () => {
     };
     // Should not throw
     await expect(fireHook(hooks, "onDeadLetter", fakeJob)).resolves.toBeUndefined();
+  });
+
+  it("requires error argument for onFail event (type-level check)", () => {
+    const hooks: JobEventHooks = { onFail: vi.fn() };
+    // @ts-expect-error onFail requires an Error argument
+    void fireHook(hooks, "onFail", fakeJob);
   });
 });

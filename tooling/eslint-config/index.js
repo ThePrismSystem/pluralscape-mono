@@ -148,6 +148,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ["**/*.constants.ts"],
+    rules: {
+      "@typescript-eslint/no-magic-numbers": "off",
+    },
+  },
+  {
     files: ["**/*.js", "**/*.cjs"],
     ...tseslint.configs.disableTypeChecked,
     rules: {

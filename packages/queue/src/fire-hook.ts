@@ -8,6 +8,20 @@ import type { JobDefinition } from "@pluralscape/types";
  */
 export async function fireHook(
   hooks: JobEventHooks,
+  event: "onFail",
+  job: JobDefinition,
+  error: Error,
+  logger?: JobLogger,
+): Promise<void>;
+export async function fireHook(
+  hooks: JobEventHooks,
+  event: "onComplete" | "onDeadLetter",
+  job: JobDefinition,
+  error?: undefined,
+  logger?: JobLogger,
+): Promise<void>;
+export async function fireHook(
+  hooks: JobEventHooks,
   event: keyof JobEventHooks,
   job: JobDefinition,
   error?: Error,

@@ -32,29 +32,6 @@ export interface StoredJobData {
   priority: number;
 }
 
-/** Builds StoredJobData from a JobDefinition (strips the `id` field). */
-export function toStoredData(def: JobDefinition): StoredJobData {
-  return {
-    systemId: def.systemId,
-    type: def.type,
-    payload: def.payload as Record<string, unknown>,
-    status: def.status,
-    attempts: def.attempts,
-    maxAttempts: def.maxAttempts,
-    nextRetryAt: def.nextRetryAt,
-    error: def.error,
-    result: def.result,
-    createdAt: def.createdAt,
-    startedAt: def.startedAt,
-    completedAt: def.completedAt,
-    idempotencyKey: def.idempotencyKey,
-    lastHeartbeatAt: def.lastHeartbeatAt,
-    timeoutMs: def.timeoutMs,
-    scheduledFor: def.scheduledFor,
-    priority: def.priority,
-  };
-}
-
 /** Reconstructs a JobDefinition from serialized StoredJobData + a job ID. */
 export function fromStoredData(id: string, data: StoredJobData): JobDefinition {
   return {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { QueueHealthService } from "../observability/health.js";
 import { InMemoryJobMetrics } from "../observability/job-metrics.js";
@@ -25,6 +25,7 @@ describe("QueueHealthService", () => {
     expect(summary.dlqDepth).toBe(0);
     expect(summary.stalledCount).toBe(0);
     expect(summary.isWorkerRunning).toBe(false);
+    expect(summary.errors).toHaveLength(0);
   });
 
   it("counts pending and running jobs correctly", async () => {
@@ -93,5 +94,23 @@ describe("QueueHealthService", () => {
     const { service } = makeHealth(undefined, () => fixedTime);
     const summary = await service.getSummary();
     expect(summary.timestamp).toBe(fixedTime);
+  });
+
+  it("returns partial results when one query throws", async () => {
+    const { queue, service } = makeHealth();
+    await queue.enqueue(makeJobParams({ type: "sync-push" }));
+
+    // Make the running count query throw
+    vi.spyOn(queue, "countJobs").mockImplementation((filter) => {
+      if (filter.status === "running") return Promise.reject(new Error("redis timeout"));
+      if (filter.status === "pending") return Promise.resolve(1);
+      return Promise.resolve(0);
+    });
+
+    const summary = await service.getSummary();
+    expect(summary.pendingCount).toBe(1);
+    expect(summary.runningCount).toBe(0); // Defaulted to 0
+    expect(summary.errors).toHaveLength(1);
+    expect(summary.errors[0]).toBe("redis timeout");
   });
 });

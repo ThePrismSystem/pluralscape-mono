@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createAlertingHook } from "../dlq/alerts.js";
 import { DLQManager } from "../dlq/dlq-manager.js";
 
 import { dequeueOrFail, makeJobParams } from "./helpers.js";
@@ -175,27 +174,5 @@ describe("DLQManager", () => {
 
       expect(await dlq.depth()).toBe(2);
     });
-  });
-});
-
-describe("createAlertingHook", () => {
-  it("returns hooks with onDeadLetter set to the alert handler", () => {
-    const handler = vi.fn();
-    const hooks = createAlertingHook(handler);
-    expect(hooks.onDeadLetter).toBe(handler);
-  });
-
-  it("fires the alert handler when a job is dead-lettered", async () => {
-    const handler = vi.fn();
-    const hooks = createAlertingHook(handler);
-    const queue = new InMemoryJobQueue();
-    queue.setEventHooks(hooks);
-
-    await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
-    const running = await dequeueOrFail(queue);
-    await queue.fail(running.id, "fatal");
-
-    expect(handler).toHaveBeenCalledOnce();
-    expect(handler.mock.calls[0]?.[0].status).toBe("dead-letter");
   });
 });

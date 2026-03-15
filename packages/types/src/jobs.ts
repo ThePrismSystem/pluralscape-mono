@@ -33,6 +33,8 @@ export interface RetryPolicy {
   readonly maxBackoffMs: number;
   /** Defaults to `"exponential"` when omitted. */
   readonly strategy?: BackoffStrategy;
+  /** Fraction of jitter to apply (e.g. 0.2 = +/- 20%). Defaults to 0 (no jitter). */
+  readonly jitterFraction?: number;
 }
 
 /** Maps each job type to its expected payload shape. Augment with specific types as handlers are implemented. */

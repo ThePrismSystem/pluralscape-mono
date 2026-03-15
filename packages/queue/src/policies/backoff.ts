@@ -10,12 +10,18 @@ import type { RetryPolicy } from "@pluralscape/types";
 export function calculateBackoff(policy: RetryPolicy, attempt: number): number {
   const strategy = policy.strategy ?? "exponential";
 
+  let delay: number;
   if (strategy === "linear") {
-    return Math.min(policy.backoffMs * attempt, policy.maxBackoffMs);
+    delay = policy.backoffMs * attempt;
+  } else {
+    delay = policy.backoffMs * Math.pow(policy.backoffMultiplier, attempt - 1);
   }
 
-  return Math.min(
-    policy.backoffMs * Math.pow(policy.backoffMultiplier, attempt - 1),
-    policy.maxBackoffMs,
-  );
+  const jf = policy.jitterFraction ?? 0;
+  if (jf > 0) {
+    const range = delay * jf;
+    delay = delay - range + Math.random() * 2 * range;
+  }
+
+  return Math.min(Math.max(0, Math.round(delay)), policy.maxBackoffMs);
 }

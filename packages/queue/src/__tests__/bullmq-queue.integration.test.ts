@@ -23,9 +23,12 @@ function nextQueueName(): string {
   return `test-${String(Date.now())}-${String(testId)}`;
 }
 
-function createQueue(clock?: () => UnixMillis): BullMQJobQueue {
+function createQueue(
+  clock?: () => UnixMillis,
+  options?: { logger?: import("../observability/job-logger.js").JobLogger },
+): BullMQJobQueue {
   if (redis === null) throw new Error("Valkey not available");
-  return new BullMQJobQueue(nextQueueName(), redis, clock);
+  return new BullMQJobQueue(nextQueueName(), redis, clock, options);
 }
 
 afterAll(async () => {

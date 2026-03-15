@@ -40,8 +40,12 @@ export class ObservableJobQueue implements JobQueue {
     return this.inner.checkIdempotency(key);
   }
 
-  dequeue(types?: readonly JobType[]): Promise<JobDefinition | null> {
-    return this.inner.dequeue(types);
+  async dequeue(types?: readonly JobType[]): Promise<JobDefinition | null> {
+    const job = await this.inner.dequeue(types);
+    if (job !== null) {
+      this.logger.info("job.dequeued", { jobId: job.id, type: job.type });
+    }
+    return job;
   }
 
   async acknowledge(jobId: JobId, result: { message?: string }): Promise<JobDefinition> {
@@ -69,12 +73,16 @@ export class ObservableJobQueue implements JobQueue {
     return job;
   }
 
-  retry(jobId: JobId): Promise<JobDefinition> {
-    return this.inner.retry(jobId);
+  async retry(jobId: JobId): Promise<JobDefinition> {
+    const job = await this.inner.retry(jobId);
+    this.logger.info("job.retried", { jobId: job.id, type: job.type });
+    return job;
   }
 
-  cancel(jobId: JobId): Promise<JobDefinition> {
-    return this.inner.cancel(jobId);
+  async cancel(jobId: JobId): Promise<JobDefinition> {
+    const job = await this.inner.cancel(jobId);
+    this.logger.info("job.cancelled", { jobId: job.id, type: job.type });
+    return job;
   }
 
   getJob(jobId: JobId): Promise<JobDefinition | null> {

@@ -9,6 +9,7 @@ import { delay } from "./helpers.js";
 import type { HeartbeatHandle } from "../heartbeat.js";
 import type { JobQueue } from "../job-queue.js";
 import type { JobHandler, JobWorker } from "../job-worker.js";
+import type { JobLogger } from "../observability/job-logger.js";
 import type { JobDefinition, JobType } from "@pluralscape/types";
 
 /**
@@ -22,6 +23,7 @@ export class InMemoryJobWorker implements JobWorker {
   private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
+  private readonly logger: JobLogger | undefined;
 
   private running = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -34,11 +36,13 @@ export class InMemoryJobWorker implements JobWorker {
     {
       pollIntervalMs = 50,
       shutdownTimeoutMs = 2000,
-    }: { pollIntervalMs?: number; shutdownTimeoutMs?: number } = {},
+      logger,
+    }: { pollIntervalMs?: number; shutdownTimeoutMs?: number; logger?: JobLogger } = {},
   ) {
     this.queue = queue;
     this.pollIntervalMs = pollIntervalMs;
     this.shutdownTimeoutMs = shutdownTimeoutMs;
+    this.logger = logger;
   }
 
   get pollFailureCount(): number {
@@ -100,8 +104,10 @@ export class InMemoryJobWorker implements JobWorker {
     try {
       job = await this.queue.dequeue(types);
       this.consecutivePollFailures = 0;
-    } catch {
+    } catch (err) {
       this.consecutivePollFailures++;
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger?.error("worker.poll-failed", { error: msg });
       return;
     }
 
@@ -135,8 +141,9 @@ export class InMemoryJobWorker implements JobWorker {
         const message = err instanceof Error ? err.message : String(err);
         try {
           await this.queue.fail(job.id, message);
-        } catch {
-          // Swallow fail errors — job may have already been cancelled
+        } catch (failErr) {
+          const failMsg = failErr instanceof Error ? failErr.message : String(failErr);
+          this.logger?.error("worker.fail-failed", { jobId: job.id, error: failMsg });
         }
         return;
       }
@@ -144,8 +151,9 @@ export class InMemoryJobWorker implements JobWorker {
       // Handler succeeded — acknowledge (separate try/catch so ack failure doesn't call fail)
       try {
         await this.queue.acknowledge(job.id, {});
-      } catch {
-        // Swallow acknowledge errors — handler already succeeded
+      } catch (ackErr) {
+        const ackMsg = ackErr instanceof Error ? ackErr.message : String(ackErr);
+        this.logger?.error("worker.acknowledge-failed", { jobId: job.id, error: ackMsg });
       }
     } finally {
       this.inFlight.delete(job.id);

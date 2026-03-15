@@ -8,12 +8,19 @@ import {
 } from "../../errors.js";
 import { fireHook } from "../../fire-hook.js";
 import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../../policies/index.js";
+import {
+  DEFAULT_TIMEOUT_MS,
+  IDEM_RESERVATION_TTL_SEC,
+  PUT_BACK_DELAY_MS,
+  SCAN_COUNT,
+} from "../../queue.constants.js";
 
 import { fromStoredData } from "./job-mapper.js";
 
 import type { StoredJobData } from "./job-mapper.js";
 import type { JobEventHooks } from "../../event-hooks.js";
 import type { JobQueue } from "../../job-queue.js";
+import type { JobLogger } from "../../observability/job-logger.js";
 import type { IdempotencyCheckResult, JobEnqueueParams, JobFilter } from "../../types.js";
 import type {
   JobDefinition,
@@ -27,9 +34,6 @@ import type {
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 
-const DEFAULT_TIMEOUT_MS = 30_000;
-const SCAN_COUNT = 100;
-
 /**
  * BullMQ-backed implementation of JobQueue.
  *
@@ -41,6 +45,7 @@ export class BullMQJobQueue implements JobQueue {
   private readonly retryPolicies = new Map<JobType, RetryPolicy>();
   private hooks: JobEventHooks = {};
   private readonly clock: () => UnixMillis;
+  private readonly logger: JobLogger | undefined;
   private readonly queue: Queue;
   private readonly fetchWorker: Worker;
   private readonly redis: IORedis;
@@ -48,8 +53,14 @@ export class BullMQJobQueue implements JobQueue {
   private readonly token: string;
   readonly name: string = "";
 
-  constructor(queueName: string, connection: IORedis, clock?: () => UnixMillis) {
+  constructor(
+    queueName: string,
+    connection: IORedis,
+    clock?: () => UnixMillis,
+    options?: { logger?: JobLogger },
+  ) {
     this.clock = clock ?? now;
+    this.logger = options?.logger;
     this.redis = connection;
     this.name = queueName;
     this.prefix = `psq:${queueName}`;
@@ -75,21 +86,23 @@ export class BullMQJobQueue implements JobQueue {
   async close(): Promise<void> {
     try {
       await this.fetchWorker.close();
-    } catch {
-      // Worker may already be closed
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger?.warn("queue.close-worker-error", { error: msg });
     }
     try {
       await this.queue.close();
-    } catch {
-      // Queue may already be closed
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger?.warn("queue.close-queue-error", { error: msg });
     }
   }
 
   /** Removes all data for this queue from Redis. For test cleanup only. */
   async obliterate(): Promise<void> {
-    // Clean our custom keys
-    const cancelledKeys = await this.redis.keys(`${this.prefix}:cancelled:*`);
-    const idemKeys = await this.redis.keys(`${this.prefix}:idem:*`);
+    // Clean our custom keys (use SCAN to avoid blocking Redis)
+    const cancelledKeys = await this.scanKeys(`${this.prefix}:cancelled:*`);
+    const idemKeys = await this.scanKeys(`${this.prefix}:idem:*`);
     const allKeys = [...cancelledKeys, ...idemKeys];
     if (allKeys.length > 0) {
       await this.redis.del(...allKeys);
@@ -100,7 +113,13 @@ export class BullMQJobQueue implements JobQueue {
   async enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition> {
     // Atomic idempotency check using SET NX to prevent TOCTOU race
     const idemKey = `${this.prefix}:idem:${params.idempotencyKey}`;
-    const nxResult = await this.redis.set(idemKey, "reserving", "NX");
+    const nxResult = await this.redis.set(
+      idemKey,
+      "reserving",
+      "EX",
+      IDEM_RESERVATION_TTL_SEC,
+      "NX",
+    );
 
     if (nxResult === null) {
       // Key already exists — check whether the existing job allows re-enqueue
@@ -164,7 +183,23 @@ export class BullMQJobQueue implements JobQueue {
     }
 
     // Update idempotency key to actual job ID
-    await this.redis.set(idemKey, id);
+    try {
+      await this.redis.set(idemKey, id);
+    } catch (err) {
+      this.logger?.error("queue.idem-key-update-failed", {
+        jobId: id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      try {
+        await this.redis.del(idemKey);
+      } catch (delErr) {
+        this.logger?.warn("queue.idem-key-cleanup-failed", {
+          idemKey,
+          error: delErr instanceof Error ? delErr.message : String(delErr),
+        });
+      }
+      throw err;
+    }
 
     return fromStoredData(id, data);
   }
@@ -178,6 +213,14 @@ export class BullMQJobQueue implements JobQueue {
     return { exists: true, existingJob: job };
   }
 
+  /**
+   * Dequeues the next eligible job.
+   *
+   * **Known limitation:** When a `types` filter is provided, non-matching jobs
+   * are fetched and then put back via `moveToDelayed`. This means type-filtered
+   * dequeue does not guarantee strict priority ordering across all job types —
+   * only among the jobs inspected in a single call (up to 20).
+   */
   async dequeue(types?: readonly JobType[]): Promise<JobDefinition | null> {
     const currentTime = this.clock();
 
@@ -227,9 +270,10 @@ export class BullMQJobQueue implements JobQueue {
       // Put back non-matching jobs
       for (const job of putBack) {
         try {
-          await job.moveToDelayed(this.clock(), this.token);
-        } catch {
-          // Best effort — job may have been removed
+          await job.moveToDelayed(this.clock() + PUT_BACK_DELAY_MS, this.token);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          this.logger?.warn("queue.dequeue-putback-error", { jobId: job.id, error: msg });
         }
       }
     }
@@ -263,7 +307,7 @@ export class BullMQJobQueue implements JobQueue {
     await job.moveToCompleted("done", this.token, false);
 
     const definition = fromStoredData(jobId, updated);
-    void fireHook(this.hooks, "onComplete", definition);
+    await fireHook(this.hooks, "onComplete", definition, undefined, this.logger);
     return definition;
   }
 
@@ -290,8 +334,8 @@ export class BullMQJobQueue implements JobQueue {
       await job.moveToFailed(new Error(error), this.token, false);
 
       const definition = fromStoredData(jobId, updated);
-      void fireHook(this.hooks, "onFail", definition, new Error(error));
-      void fireHook(this.hooks, "onDeadLetter", definition);
+      await fireHook(this.hooks, "onFail", definition, new Error(error), this.logger);
+      await fireHook(this.hooks, "onDeadLetter", definition, undefined, this.logger);
       return definition;
     }
 
@@ -310,7 +354,7 @@ export class BullMQJobQueue implements JobQueue {
     await job.moveToDelayed(this.clock() + backoff, this.token);
 
     const definition = fromStoredData(jobId, updated);
-    void fireHook(this.hooks, "onFail", definition, new Error(error));
+    await fireHook(this.hooks, "onFail", definition, new Error(error), this.logger);
     return definition;
   }
 
@@ -326,6 +370,7 @@ export class BullMQJobQueue implements JobQueue {
       const updated: StoredJobData = {
         ...parsed,
         status: "pending",
+        attempts: 0,
         error: null,
         nextRetryAt: null,
       };
@@ -342,7 +387,13 @@ export class BullMQJobQueue implements JobQueue {
       throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "retry");
     }
 
-    const updated: StoredJobData = { ...def, status: "pending", error: null, nextRetryAt: null };
+    const updated: StoredJobData = {
+      ...def,
+      status: "pending",
+      attempts: 0,
+      error: null,
+      nextRetryAt: null,
+    };
     await job.updateData(updated);
     await job.retry("failed");
 
@@ -486,8 +537,35 @@ export class BullMQJobQueue implements JobQueue {
   }
 
   async countJobs(filter: JobFilter): Promise<number> {
-    const jobs = await this.listJobs(filter);
-    return jobs.length;
+    // Fall back to listJobs when filtering by type or systemId (BullMQ can't filter natively)
+    if (filter.type !== undefined || filter.systemId !== undefined) {
+      const jobs = await this.listJobs(filter);
+      return jobs.length;
+    }
+
+    if (filter.status === "cancelled") {
+      const keys = await this.scanKeys(`${this.prefix}:cancelled:*`);
+      return keys.length;
+    }
+
+    if (filter.status !== undefined) {
+      const states = this.mapStatusToBullMQStates(filter.status);
+      const counts = await this.queue.getJobCounts(...states);
+      return Object.values(counts).reduce((sum, n) => sum + n, 0);
+    }
+
+    // No filter: sum all BullMQ states + cancelled
+    const counts = await this.queue.getJobCounts(
+      "waiting",
+      "active",
+      "completed",
+      "failed",
+      "delayed",
+      "prioritized",
+    );
+    const bullmqTotal = Object.values(counts).reduce((sum, n) => sum + n, 0);
+    const cancelledKeys = await this.scanKeys(`${this.prefix}:cancelled:*`);
+    return bullmqTotal + cancelledKeys.length;
   }
 
   // ── Private helpers ──────────────────────────────────────────────

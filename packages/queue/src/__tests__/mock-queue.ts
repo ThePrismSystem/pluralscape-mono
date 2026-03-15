@@ -7,6 +7,7 @@ import {
 } from "../errors.js";
 import { fireHook } from "../fire-hook.js";
 import { calculateBackoff, DEFAULT_RETRY_POLICY } from "../policies/index.js";
+import { DEFAULT_TIMEOUT_MS } from "../queue.constants.js";
 
 import type { JobEventHooks } from "../event-hooks.js";
 import type { JobQueue } from "../job-queue.js";
@@ -19,8 +20,6 @@ import type {
   RetryPolicy,
   UnixMillis,
 } from "@pluralscape/types";
-
-const DEFAULT_TIMEOUT_MS = 30_000;
 
 function priorityThenCreatedAt(a: JobDefinition, b: JobDefinition): number {
   if (a.priority !== b.priority) return a.priority - b.priority;
@@ -192,6 +191,7 @@ export class InMemoryJobQueue implements JobQueue {
     const retried: JobDefinition = {
       ...job,
       status: "pending",
+      attempts: 0,
       error: null,
       nextRetryAt: null,
     };

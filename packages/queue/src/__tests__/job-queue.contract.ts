@@ -310,6 +310,29 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         expect(retried.status).toBe("pending");
       });
 
+      it("resets attempts to 0 on retry so the job gets a full retry budget", async () => {
+        const queue = factory();
+        // Use maxAttempts=1 so the first failure immediately dead-letters
+        await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
+
+        const run1 = await dequeueOrFail(queue);
+        const deadLettered = await queue.fail(run1.id, "fatal");
+        expect(deadLettered.status).toBe("dead-letter");
+        expect(deadLettered.attempts).toBe(1);
+
+        // Retry the dead-lettered job — attempts should reset
+        const retried = await queue.retry(run1.id);
+        expect(retried.status).toBe("pending");
+        expect(retried.attempts).toBe(0);
+
+        // Dequeue and fail again — since attempts was reset to 0 and maxAttempts is 1,
+        // this failure should dead-letter (not error from an invalid state)
+        const run2 = await dequeueOrFail(queue);
+        const deadLetteredAgain = await queue.fail(run2.id, "fatal again");
+        expect(deadLetteredAgain.status).toBe("dead-letter");
+        expect(deadLetteredAgain.attempts).toBe(1);
+      });
+
       it("throws JobNotFoundError for unknown job", async () => {
         const queue = factory();
         await expect(queue.retry(GHOST_JOB_ID)).rejects.toThrow(JobNotFoundError);

@@ -110,6 +110,47 @@ describe("ObservableJobQueue", () => {
     expect(metrics.getTypeMetrics("sync-push").completed).toBe(0);
   });
 
+  it("logs on dequeue when a job is found", async () => {
+    const { info, queue } = makeObservable();
+    const job = await queue.enqueue(makeJobParams({ type: "sync-push" }));
+    // Dequeue via observable — should log
+    const dequeued = await queue.dequeue();
+    expect(dequeued).not.toBeNull();
+    expect(info).toHaveBeenCalledWith(
+      "job.dequeued",
+      expect.objectContaining({ jobId: job.id, type: "sync-push" }),
+    );
+  });
+
+  it("does not log on dequeue when queue is empty", async () => {
+    const { info, queue } = makeObservable();
+    const result = await queue.dequeue();
+    expect(result).toBeNull();
+    expect(info).not.toHaveBeenCalledWith("job.dequeued", expect.anything());
+  });
+
+  it("logs on retry", async () => {
+    const { inner, info, queue } = makeObservable();
+    await queue.enqueue(makeJobParams({ type: "sync-push", maxAttempts: 1 }));
+    const running = await dequeueOrFail(inner);
+    await inner.fail(running.id, "err");
+    await queue.retry(running.id);
+    expect(info).toHaveBeenCalledWith(
+      "job.retried",
+      expect.objectContaining({ jobId: running.id, type: "sync-push" }),
+    );
+  });
+
+  it("logs on cancel", async () => {
+    const { info, queue } = makeObservable();
+    const job = await queue.enqueue(makeJobParams({ type: "sync-push" }));
+    await queue.cancel(job.id);
+    expect(info).toHaveBeenCalledWith(
+      "job.cancelled",
+      expect.objectContaining({ jobId: job.id, type: "sync-push" }),
+    );
+  });
+
   it("implements the full JobQueue interface (delegates policy methods)", () => {
     const { queue } = makeObservable();
     const policy = queue.getRetryPolicy("sync-push");

@@ -14,7 +14,7 @@ import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
 import type { JobLogger } from "../../observability/job-logger.js";
-import type { JobDefinition, JobType } from "@pluralscape/types";
+import type { JobDefinition, JobType, UnixMillis } from "@pluralscape/types";
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 
@@ -37,6 +37,7 @@ export class BullMQJobWorker implements JobWorker {
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
   private readonly logger: JobLogger | undefined;
+  private readonly clock: () => UnixMillis;
 
   private worker: Worker | null = null;
   private running = false;
@@ -48,7 +49,12 @@ export class BullMQJobWorker implements JobWorker {
     queueName: string,
     connection: IORedis,
     queue: JobQueue,
-    options?: { pollIntervalMs?: number; shutdownTimeoutMs?: number; logger?: JobLogger },
+    options?: {
+      pollIntervalMs?: number;
+      shutdownTimeoutMs?: number;
+      logger?: JobLogger;
+      clock?: () => UnixMillis;
+    },
   ) {
     this.queueName = queueName;
     this.connection = connection;
@@ -56,6 +62,7 @@ export class BullMQJobWorker implements JobWorker {
     this.pollIntervalMs = options?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     this.shutdownTimeoutMs = options?.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
     this.logger = options?.logger;
+    this.clock = options?.clock ?? now;
     this.token = `worker-${String(now())}-${Math.random().toString(BASE_36).slice(2)}`;
   }
 
@@ -98,8 +105,8 @@ export class BullMQJobWorker implements JobWorker {
       controller.abort();
     }
 
-    const deadline = now() + this.shutdownTimeoutMs;
-    while (this.inFlight.size > 0 && now() < deadline) {
+    const deadline = this.clock() + this.shutdownTimeoutMs;
+    while (this.inFlight.size > 0 && this.clock() < deadline) {
       await new Promise<void>((resolve) => {
         setTimeout(resolve, SHUTDOWN_POLL_MS);
       });
@@ -147,8 +154,8 @@ export class BullMQJobWorker implements JobWorker {
     const runningData: StoredJobData = {
       ...currentData,
       status: "running",
-      startedAt: now(),
-      lastHeartbeatAt: now(),
+      startedAt: this.clock(),
+      lastHeartbeatAt: this.clock(),
     };
     await bullmqJob.updateData(runningData);
 
@@ -158,7 +165,7 @@ export class BullMQJobWorker implements JobWorker {
       heartbeat: async () => {
         // Update heartbeat directly on the BullMQ job data
         const data = bullmqJob.data as StoredJobData;
-        await bullmqJob.updateData({ ...data, lastHeartbeatAt: now() });
+        await bullmqJob.updateData({ ...data, lastHeartbeatAt: this.clock() });
       },
     };
 

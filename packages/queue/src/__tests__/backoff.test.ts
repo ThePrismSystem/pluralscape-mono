@@ -75,6 +75,68 @@ describe("calculateBackoff", () => {
     });
   });
 
+  describe("jitter", () => {
+    it("applies jitter within expected range", () => {
+      const policy: RetryPolicy = {
+        maxRetries: 3,
+        backoffMs: 1_000,
+        backoffMultiplier: 2,
+        maxBackoffMs: 30_000,
+        jitterFraction: 0.2,
+      };
+      const base = 1_000; // attempt 1 base delay
+      for (let i = 0; i < 100; i++) {
+        const result = calculateBackoff(policy, 1);
+        expect(result).toBeGreaterThanOrEqual(Math.round(base * 0.8));
+        expect(result).toBeLessThanOrEqual(Math.round(base * 1.2));
+      }
+    });
+
+    it("does not apply jitter when fraction is 0", () => {
+      const policy: RetryPolicy = {
+        maxRetries: 3,
+        backoffMs: 1_000,
+        backoffMultiplier: 2,
+        maxBackoffMs: 30_000,
+        jitterFraction: 0,
+      };
+      expect(calculateBackoff(policy, 1)).toBe(1_000);
+      expect(calculateBackoff(policy, 2)).toBe(2_000);
+    });
+
+    it("does not apply jitter when fraction is omitted", () => {
+      expect(calculateBackoff(exponentialPolicy, 1)).toBe(1_000);
+    });
+
+    it("caps jittered value at maxBackoffMs", () => {
+      const policy: RetryPolicy = {
+        maxRetries: 3,
+        backoffMs: 25_000,
+        backoffMultiplier: 2,
+        maxBackoffMs: 30_000,
+        jitterFraction: 0.5,
+      };
+      for (let i = 0; i < 50; i++) {
+        expect(calculateBackoff(policy, 1)).toBeLessThanOrEqual(30_000);
+      }
+    });
+
+    it("produces variation across calls (not all identical)", () => {
+      const policy: RetryPolicy = {
+        maxRetries: 3,
+        backoffMs: 1_000,
+        backoffMultiplier: 2,
+        maxBackoffMs: 30_000,
+        jitterFraction: 0.2,
+      };
+      const values = new Set<number>();
+      for (let i = 0; i < 50; i++) {
+        values.add(calculateBackoff(policy, 1));
+      }
+      expect(values.size).toBeGreaterThan(1);
+    });
+  });
+
   describe("edge cases", () => {
     it("handles attempt 0 gracefully for exponential", () => {
       // attempt 0: 1000 * 2^(-1) = 500

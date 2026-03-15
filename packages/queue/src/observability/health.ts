@@ -20,6 +20,12 @@ export interface QueueHealthSummary {
   readonly isWorkerRunning: boolean;
   /** Aggregate metrics snapshot. */
   readonly metrics: AggregateMetrics;
+  /** Errors encountered while gathering the summary. */
+  readonly errors: readonly string[];
+}
+
+function extractMessage(reason: unknown): string {
+  return reason instanceof Error ? reason.message : String(reason);
 }
 
 export class QueueHealthService {
@@ -41,21 +47,41 @@ export class QueueHealthService {
   }
 
   async getSummary(): Promise<QueueHealthSummary> {
-    const [pendingCount, runningCount, dlqDepth, stalled] = await Promise.all([
+    const [pendingResult, runningResult, dlqResult, stalledResult] = await Promise.allSettled([
       this.queue.countJobs({ status: "pending" }),
       this.queue.countJobs({ status: "running" }),
       this.queue.countJobs({ status: "dead-letter" }),
       this.queue.findStalledJobs(),
     ]);
 
+    const errors: string[] = [];
+
+    const pendingCount =
+      pendingResult.status === "fulfilled"
+        ? pendingResult.value
+        : (errors.push(extractMessage(pendingResult.reason)), 0);
+    const runningCount =
+      runningResult.status === "fulfilled"
+        ? runningResult.value
+        : (errors.push(extractMessage(runningResult.reason)), 0);
+    const dlqDepth =
+      dlqResult.status === "fulfilled"
+        ? dlqResult.value
+        : (errors.push(extractMessage(dlqResult.reason)), 0);
+    const stalledCount =
+      stalledResult.status === "fulfilled"
+        ? stalledResult.value.length
+        : (errors.push(extractMessage(stalledResult.reason)), 0);
+
     return {
       timestamp: this.clock(),
       pendingCount,
       runningCount,
       dlqDepth,
-      stalledCount: stalled.length,
+      stalledCount,
       isWorkerRunning: this.worker?.isRunning() ?? false,
       metrics: this.metrics.getAggregateMetrics(),
+      errors,
     };
   }
 }
