@@ -1,12 +1,22 @@
 import { Hono } from "hono";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { secureHeaders } from "../middleware/secure-headers.js";
+import { createSecureHeaders } from "../middleware/secure-headers.js";
 
 describe("secureHeaders middleware", () => {
+  const originalEnv = process.env["NODE_ENV"];
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env["NODE_ENV"];
+    } else {
+      process.env["NODE_ENV"] = originalEnv;
+    }
+  });
+
   function createApp(): Hono {
     const app = new Hono();
-    app.use("*", secureHeaders);
+    app.use("*", createSecureHeaders());
     app.get("/test", (c) => c.json({ ok: true }));
     return app;
   }
@@ -37,10 +47,20 @@ describe("secureHeaders middleware", () => {
     expect(csp).toContain("frame-ancestors 'none'");
   });
 
-  it("sets Strict-Transport-Security", async () => {
+  it("sets Strict-Transport-Security in production", async () => {
+    process.env["NODE_ENV"] = "production";
     const app = createApp();
     const res = await app.request("/test");
-    expect(res.headers.get("strict-transport-security")).toBeTruthy();
+    expect(res.headers.get("strict-transport-security")).toBe(
+      "max-age=63072000; includeSubDomains",
+    );
+  });
+
+  it("does not set HSTS in development", async () => {
+    process.env["NODE_ENV"] = "development";
+    const app = createApp();
+    const res = await app.request("/test");
+    expect(res.headers.get("strict-transport-security")).toBeNull();
   });
 
   it("does not interfere with response body", async () => {
