@@ -9,6 +9,7 @@
     "./bullmq": "./src/adapters/bullmq/index.ts",
     "./policies": "./src/policies/index.ts",
     "./dlq": "./src/dlq/index.ts",
+    "./observability": "./src/observability/index.ts",
     "./testing": "./src/__tests__/testing-exports.ts"
   },
   "dependencies": {

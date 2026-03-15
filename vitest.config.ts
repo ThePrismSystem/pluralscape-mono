@@ -9,6 +9,7 @@ function projectConfig(name: string, root: string) {
       root,
       environment: "node",
       include: ["src/**/*.{test,spec}.ts"],
+      exclude: ["**/*.integration.{test,spec}.ts"],
       globals: false,
       restoreMocks: true,
       testTimeout: 5000,
