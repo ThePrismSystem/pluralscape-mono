@@ -57,6 +57,9 @@ docs/local-audits/
 # Agent config (per-contributor)
 CLAUDE.md
 
+# Security audit working files
+security-audit-results.tsv
+
 # Temporary files
 .tmp/
 *.log
