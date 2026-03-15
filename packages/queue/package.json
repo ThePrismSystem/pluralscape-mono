@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./sqlite": "./src/adapters/sqlite/index.ts",
+    "./bullmq": "./src/adapters/bullmq/index.ts",
     "./policies": "./src/policies/index.ts",
     "./dlq": "./src/dlq/index.ts",
     "./testing": "./src/__tests__/testing-exports.ts"
@@ -13,7 +14,9 @@
   "dependencies": {
     "@pluralscape/db": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "drizzle-orm": "^0.45.1"
+    "bullmq": "^5.52.1",
+    "drizzle-orm": "^0.45.1",
+    "ioredis": "5.9.3"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",

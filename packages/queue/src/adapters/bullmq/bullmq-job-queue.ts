@@ -1,0 +1,529 @@
+import { createId, now } from "@pluralscape/types/runtime";
+import { Queue, Worker } from "bullmq";
+
+import {
+  IdempotencyConflictError,
+  InvalidJobTransitionError,
+  JobNotFoundError,
+} from "../../errors.js";
+
+import { fromStoredData } from "./job-mapper.js";
+
+import type { StoredJobData } from "./job-mapper.js";
+import type { JobEventHooks } from "../../event-hooks.js";
+import type { JobQueue } from "../../job-queue.js";
+import type { IdempotencyCheckResult, JobEnqueueParams, JobFilter } from "../../types.js";
+import type {
+  JobDefinition,
+  JobId,
+  JobResult,
+  JobStatus,
+  JobType,
+  RetryPolicy,
+  UnixMillis,
+} from "@pluralscape/types";
+import type { Job as BullMQJob } from "bullmq";
+import type IORedis from "ioredis";
+
+const DEFAULT_RETRY_POLICY: RetryPolicy = {
+  maxRetries: 3,
+  backoffMs: 1_000,
+  backoffMultiplier: 2,
+  maxBackoffMs: 30_000,
+};
+
+const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_MAX_ATTEMPTS = 4;
+
+/**
+ * BullMQ-backed implementation of JobQueue.
+ *
+ * Uses a single BullMQ queue with our JobDefinition embedded in job data.
+ * Cancelled jobs are stored in a Redis hash since BullMQ has no native cancel state.
+ * Idempotency is tracked via Redis keys.
+ */
+export class BullMQJobQueue implements JobQueue {
+  private readonly retryPolicies = new Map<JobType, RetryPolicy>();
+  private hooks: JobEventHooks = {};
+  private readonly clock: () => UnixMillis;
+  private readonly queue: Queue;
+  private readonly fetchWorker: Worker;
+  private readonly redis: IORedis;
+  private readonly prefix: string;
+  private readonly token: string;
+  readonly name: string = "";
+
+  constructor(queueName: string, connection: IORedis, clock?: () => UnixMillis) {
+    this.clock = clock ?? now;
+    this.redis = connection;
+    this.name = queueName;
+    this.prefix = `psq:${queueName}`;
+    this.token = `token-${createId("tk_")}`;
+
+    this.queue = new Queue(queueName, {
+      connection,
+      defaultJobOptions: {
+        removeOnComplete: false,
+        removeOnFail: false,
+        attempts: 1, // We handle retries ourselves
+      },
+    });
+
+    // Worker without processor — used only for getNextJob() in dequeue()
+    this.fetchWorker = new Worker(queueName, undefined, {
+      connection,
+      autorun: false,
+    });
+  }
+
+  /** Closes BullMQ queue and worker connections. Call during cleanup. */
+  async close(): Promise<void> {
+    try {
+      await this.fetchWorker.close();
+    } catch {
+      // Worker may already be closed
+    }
+    try {
+      await this.queue.close();
+    } catch {
+      // Queue may already be closed
+    }
+  }
+
+  /** Removes all data for this queue from Redis. For test cleanup only. */
+  async obliterate(): Promise<void> {
+    // Clean our custom keys
+    const cancelledKeys = await this.redis.keys(`${this.prefix}:cancelled:*`);
+    const idemKeys = await this.redis.keys(`${this.prefix}:idem:*`);
+    const allKeys = [...cancelledKeys, ...idemKeys];
+    if (allKeys.length > 0) {
+      await this.redis.del(...allKeys);
+    }
+    await this.queue.obliterate({ force: true });
+  }
+
+  async enqueue(params: JobEnqueueParams): Promise<JobDefinition> {
+    // Idempotency check
+    const idemKey = `${this.prefix}:idem:${params.idempotencyKey}`;
+    const existingId = await this.redis.get(idemKey);
+
+    if (existingId !== null) {
+      const existing = await this.getJob(existingId as JobId);
+      if (existing !== null && existing.status !== "completed" && existing.status !== "cancelled") {
+        throw new IdempotencyConflictError(params.idempotencyKey);
+      }
+    }
+
+    const id = createId("job_") as JobId;
+    const currentTime = this.clock();
+
+    const data: StoredJobData = {
+      systemId: params.systemId ?? null,
+      type: params.type,
+      payload: params.payload as Record<string, unknown>,
+      status: "pending",
+      attempts: 0,
+      maxAttempts: params.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+      nextRetryAt: null,
+      error: null,
+      result: null,
+      createdAt: currentTime,
+      startedAt: null,
+      completedAt: null,
+      idempotencyKey: params.idempotencyKey,
+      lastHeartbeatAt: null,
+      timeoutMs: params.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      scheduledFor: params.scheduledFor ?? null,
+      priority: params.priority ?? 0,
+    };
+
+    const delay =
+      params.scheduledFor !== undefined ? Math.max(0, params.scheduledFor - currentTime) : 0;
+
+    await this.queue.add(params.type, data, {
+      jobId: id,
+      priority: params.priority ?? 0,
+      delay,
+    });
+
+    // Track idempotency
+    await this.redis.set(idemKey, id);
+
+    return fromStoredData(id, data);
+  }
+
+  async checkIdempotency(key: string): Promise<IdempotencyCheckResult> {
+    const idemKey = `${this.prefix}:idem:${key}`;
+    const jobId = await this.redis.get(idemKey);
+    if (jobId === null) return { exists: false };
+    const job = await this.getJob(jobId as JobId);
+    if (job === null) return { exists: false };
+    return { exists: true, existingJob: job };
+  }
+
+  async dequeue(types?: readonly JobType[]): Promise<JobDefinition | null> {
+    const currentTime = this.clock();
+
+    // Fetch jobs from BullMQ, putting back non-matching ones
+    const putBack: BullMQJob[] = [];
+    let result: JobDefinition | null = null;
+
+    try {
+      // Try to get up to 20 jobs to find a matching one
+      const MAX_FETCH = 20;
+      for (let i = 0; i < MAX_FETCH; i++) {
+        // getNextJob may return undefined when no jobs available
+        const job = (await this.fetchWorker.getNextJob(this.token)) as BullMQJob | undefined;
+        if (job === undefined) break;
+
+        const def = job.data as StoredJobData;
+        // Check type filter
+        if (types !== undefined && !types.includes(def.type)) {
+          putBack.push(job);
+          continue;
+        }
+
+        // Check scheduled time
+        if (def.scheduledFor !== null && def.scheduledFor > currentTime) {
+          putBack.push(job);
+          continue;
+        }
+
+        // Check retry time
+        if (def.nextRetryAt !== null && def.nextRetryAt > currentTime) {
+          putBack.push(job);
+          continue;
+        }
+
+        // Match found — update to running
+        const updated: StoredJobData = {
+          ...def,
+          status: "running",
+          startedAt: currentTime,
+          lastHeartbeatAt: currentTime,
+        };
+        await job.updateData(updated);
+        result = fromStoredData(job.id as string, updated);
+        break;
+      }
+    } finally {
+      // Put back non-matching jobs
+      for (const job of putBack) {
+        try {
+          await job.moveToDelayed(Date.now(), this.token);
+        } catch {
+          // Best effort — job may have been removed
+        }
+      }
+    }
+
+    return result;
+  }
+
+  async acknowledge(jobId: JobId, result: { message?: string }): Promise<JobDefinition> {
+    const job = await this.requireBullMQJob(jobId);
+    const def = job.data as StoredJobData;
+
+    if (def.status !== "running") {
+      throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "acknowledge");
+    }
+
+    const currentTime = this.clock();
+    const jobResult: JobResult = {
+      success: true,
+      message: result.message ?? null,
+      completedAt: currentTime,
+    };
+
+    const updated: StoredJobData = {
+      ...def,
+      status: "completed",
+      completedAt: currentTime,
+      result: jobResult,
+    };
+
+    await job.updateData(updated);
+    await job.moveToCompleted("done", this.token, false);
+
+    const definition = fromStoredData(jobId, updated);
+    void this.fireHook("onComplete", definition);
+    return definition;
+  }
+
+  async fail(jobId: JobId, error: string): Promise<JobDefinition> {
+    const job = await this.requireBullMQJob(jobId);
+    const def = job.data as StoredJobData;
+
+    if (def.status !== "running") {
+      throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "fail");
+    }
+
+    const newAttempts = def.attempts + 1;
+    const currentTime = this.clock();
+
+    if (newAttempts >= def.maxAttempts) {
+      const updated: StoredJobData = {
+        ...def,
+        status: "dead-letter",
+        attempts: newAttempts,
+        error,
+        result: { success: false, message: error, completedAt: currentTime },
+      };
+      await job.updateData(updated);
+      await job.moveToFailed(new Error(error), this.token, false);
+
+      const definition = fromStoredData(jobId, updated);
+      void this.fireHook("onFail", definition, new Error(error));
+      void this.fireHook("onDeadLetter", definition);
+      return definition;
+    }
+
+    const policy = this.getRetryPolicy(def.type);
+    const strategy = policy.strategy ?? "exponential";
+    let backoff: number;
+    if (strategy === "linear") {
+      backoff = Math.min(policy.backoffMs * newAttempts, policy.maxBackoffMs);
+    } else {
+      backoff = Math.min(
+        policy.backoffMs * Math.pow(policy.backoffMultiplier, newAttempts - 1),
+        policy.maxBackoffMs,
+      );
+    }
+
+    const updated: StoredJobData = {
+      ...def,
+      status: "pending",
+      attempts: newAttempts,
+      error,
+      nextRetryAt: (currentTime + backoff) as UnixMillis,
+    };
+
+    await job.updateData(updated);
+    await job.moveToDelayed(Date.now() + backoff, this.token);
+
+    const definition = fromStoredData(jobId, updated);
+    void this.fireHook("onFail", definition, new Error(error));
+    return definition;
+  }
+
+  async retry(jobId: JobId): Promise<JobDefinition> {
+    // Check cancelled store first
+    const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
+    if (cancelledRaw !== null) {
+      const parsed = JSON.parse(cancelledRaw) as StoredJobData;
+      if (parsed.status !== "dead-letter") {
+        throw new InvalidJobTransitionError(jobId, parsed.status as JobStatus, "retry");
+      }
+      // Re-enqueue from cancelled store
+      const updated: StoredJobData = {
+        ...parsed,
+        status: "pending",
+        error: null,
+        nextRetryAt: null,
+      };
+      await this.queue.add(parsed.type, updated, { jobId });
+      await this.redis.del(`${this.prefix}:cancelled:${jobId}`);
+      return fromStoredData(jobId, updated);
+    }
+
+    const job = await this.queue.getJob(jobId);
+    if (job === undefined) throw new JobNotFoundError(jobId);
+
+    const def = job.data as StoredJobData;
+    if (def.status !== "failed" && def.status !== "dead-letter") {
+      throw new InvalidJobTransitionError(jobId, def.status as JobStatus, "retry");
+    }
+
+    const updated: StoredJobData = { ...def, status: "pending", error: null, nextRetryAt: null };
+    await job.updateData(updated);
+    await job.retry("failed");
+
+    return fromStoredData(jobId, updated);
+  }
+
+  async cancel(jobId: JobId): Promise<JobDefinition> {
+    // Check cancelled store — already cancelled
+    const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
+    if (cancelledRaw !== null) {
+      const parsed = JSON.parse(cancelledRaw) as StoredJobData;
+      if (parsed.status === "completed") {
+        throw new InvalidJobTransitionError(jobId, "completed", "cancel");
+      }
+      const updated: StoredJobData = { ...parsed, status: "cancelled" };
+      await this.redis.set(`${this.prefix}:cancelled:${jobId}`, JSON.stringify(updated));
+      return fromStoredData(jobId, updated);
+    }
+
+    const job = await this.queue.getJob(jobId);
+    if (job === undefined) throw new JobNotFoundError(jobId);
+
+    const def = job.data as StoredJobData;
+    if (def.status === "completed") {
+      throw new InvalidJobTransitionError(jobId, "completed", "cancel");
+    }
+
+    const updated: StoredJobData = { ...def, status: "cancelled" };
+
+    // Store in cancelled hash and remove from BullMQ
+    await this.redis.set(`${this.prefix}:cancelled:${jobId}`, JSON.stringify(updated));
+    await job.remove();
+
+    return fromStoredData(jobId, updated);
+  }
+
+  async getJob(jobId: JobId): Promise<JobDefinition | null> {
+    // Check BullMQ first
+    const job = await this.queue.getJob(jobId);
+    if (job !== undefined) {
+      return fromStoredData(job.id as string, job.data as StoredJobData);
+    }
+
+    // Check cancelled store
+    const cancelledRaw = await this.redis.get(`${this.prefix}:cancelled:${jobId}`);
+    if (cancelledRaw !== null) {
+      return fromStoredData(jobId, JSON.parse(cancelledRaw) as StoredJobData);
+    }
+
+    return null;
+  }
+
+  async listJobs(filter: JobFilter): Promise<readonly JobDefinition[]> {
+    // Get jobs from BullMQ across relevant states
+    const bullmqStates = this.mapStatusToBullMQStates(filter.status);
+    const bullmqJobs = bullmqStates.length > 0 ? await this.queue.getJobs(bullmqStates) : [];
+
+    let results: JobDefinition[] = bullmqJobs.map((j) =>
+      fromStoredData(j.id as string, j.data as StoredJobData),
+    );
+
+    // Include cancelled jobs if status filter allows
+    if (filter.status === undefined || filter.status === "cancelled") {
+      const cancelledKeys = await this.redis.keys(`${this.prefix}:cancelled:*`);
+      for (const key of cancelledKeys) {
+        const raw = await this.redis.get(key);
+        if (raw !== null) {
+          const id = key.replace(`${this.prefix}:cancelled:`, "");
+          results.push(fromStoredData(id, JSON.parse(raw) as StoredJobData));
+        }
+      }
+    }
+
+    // Apply filters
+    if (filter.type !== undefined) {
+      results = results.filter((j) => j.type === filter.type);
+    }
+    if (filter.status !== undefined) {
+      results = results.filter((j) => j.status === filter.status);
+    }
+    if (filter.systemId !== undefined) {
+      results = results.filter((j) => j.systemId === filter.systemId);
+    }
+
+    // Sort by priority then createdAt
+    results.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.createdAt - b.createdAt;
+    });
+
+    // Pagination
+    const offset = filter.offset ?? 0;
+    const limit = filter.limit;
+    return results.slice(offset, limit !== undefined ? offset + limit : undefined);
+  }
+
+  async listDeadLettered(
+    filter?: Pick<JobFilter, "type" | "systemId" | "limit" | "offset">,
+  ): Promise<readonly JobDefinition[]> {
+    return this.listJobs({ ...filter, status: "dead-letter" });
+  }
+
+  async heartbeat(jobId: JobId): Promise<void> {
+    const job = await this.queue.getJob(jobId);
+    if (job === undefined) throw new JobNotFoundError(jobId);
+
+    const hbData = job.data as StoredJobData;
+    if (hbData.status !== "running") {
+      throw new InvalidJobTransitionError(jobId, hbData.status as JobStatus, "heartbeat");
+    }
+
+    const updated: StoredJobData = { ...hbData, lastHeartbeatAt: this.clock() };
+    await job.updateData(updated);
+  }
+
+  async findStalledJobs(): Promise<readonly JobDefinition[]> {
+    const currentTime = this.clock();
+    const activeJobs = await this.queue.getJobs(["active"]);
+
+    return activeJobs
+      .filter((job) => {
+        const d = job.data as StoredJobData;
+        if (d.status !== "running") return false;
+        const lastBeat = d.lastHeartbeatAt ?? d.startedAt;
+        if (lastBeat === null) return false;
+        return lastBeat + d.timeoutMs < currentTime;
+      })
+      .map((j) => fromStoredData(j.id as string, j.data as StoredJobData));
+  }
+
+  getRetryPolicy(type: JobType): RetryPolicy {
+    return this.retryPolicies.get(type) ?? DEFAULT_RETRY_POLICY;
+  }
+
+  setRetryPolicy(type: JobType, policy: RetryPolicy): void {
+    this.retryPolicies.set(type, policy);
+  }
+
+  setEventHooks(hooks: JobEventHooks): void {
+    this.hooks = hooks;
+  }
+
+  // ── Private helpers ──────────────────────────────────────────────
+
+  private async requireBullMQJob(jobId: JobId): Promise<BullMQJob> {
+    const job = await this.queue.getJob(jobId);
+    if (job === undefined) throw new JobNotFoundError(jobId);
+    return job;
+  }
+
+  private mapStatusToBullMQStates(
+    status?: JobStatus,
+  ): ("waiting" | "active" | "completed" | "failed" | "delayed" | "prioritized")[] {
+    if (status === undefined) {
+      return ["waiting", "active", "completed", "failed", "delayed", "prioritized"];
+    }
+    switch (status) {
+      case "pending":
+        return ["waiting", "delayed", "prioritized"];
+      case "running":
+        return ["active"];
+      case "completed":
+        return ["completed"];
+      case "dead-letter":
+        return ["failed"];
+      case "failed":
+        return ["failed"];
+      case "cancelled":
+        return []; // Handled separately via Redis
+      default:
+        return [];
+    }
+  }
+
+  private async fireHook(
+    event: keyof JobEventHooks,
+    job: JobDefinition,
+    error?: Error,
+  ): Promise<void> {
+    try {
+      if (event === "onComplete") {
+        await this.hooks.onComplete?.(job);
+      } else if (event === "onFail" && error !== undefined) {
+        await this.hooks.onFail?.(job, error);
+      } else if (event === "onDeadLetter") {
+        await this.hooks.onDeadLetter?.(job);
+      }
+    } catch {
+      // Hook errors must not propagate
+    }
+  }
+}
