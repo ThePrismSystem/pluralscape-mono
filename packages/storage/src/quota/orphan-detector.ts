@@ -1,3 +1,5 @@
+import type { StorageKey, SystemId } from "@pluralscape/types";
+
 /**
  * Injectable interface for querying orphaned blobs from the database.
  *
@@ -10,7 +12,7 @@ export interface OrphanBlobQuery {
    * Finds blob storage keys that are unreferenced by any entity table
    * and whose uploadedAt is older than `olderThanMs` milliseconds ago.
    */
-  findOrphanedKeys(systemId: string, olderThanMs: number): Promise<readonly string[]>;
+  findOrphanedKeys(systemId: SystemId, olderThanMs: number): Promise<readonly StorageKey[]>;
 }
 
 /** Configuration for orphan detection. */
@@ -42,7 +44,7 @@ export class OrphanBlobDetector {
   }
 
   /** Finds orphaned blob storage keys for a system. */
-  async findOrphans(systemId: string): Promise<readonly string[]> {
+  async findOrphans(systemId: SystemId): Promise<readonly StorageKey[]> {
     return this.orphanQuery.findOrphanedKeys(systemId, this.gracePeriodMs);
   }
 }

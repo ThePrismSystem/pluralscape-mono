@@ -1,18 +1,24 @@
 import type { BlobStorageAdapter } from "../interface.js";
 import type { OrphanBlobDetector } from "./orphan-detector.js";
+import type { StorageKey, SystemId } from "@pluralscape/types";
 
 /**
  * Injectable interface for archiving blob metadata records in the database.
+ *
+ * Implementations MUST be idempotent — archiving an already-archived record
+ * should succeed without error.
  */
 export interface BlobArchiver {
   /** Marks a blob metadata record as archived by storage key. */
-  archiveByStorageKey(storageKey: string): Promise<void>;
+  archiveByStorageKey(storageKey: StorageKey): Promise<void>;
 }
 
 /** Result of a cleanup run. */
 export interface CleanupResult {
   readonly deletedCount: number;
-  readonly storageKeys: readonly string[];
+  readonly storageKeys: readonly StorageKey[];
+  readonly failedCount: number;
+  readonly failedKeys: readonly StorageKey[];
 }
 
 /**
@@ -38,23 +44,31 @@ export class BlobCleanupHandler {
   /**
    * Runs cleanup for a system: finds orphans, deletes from storage, archives metadata.
    * Idempotent — re-running on already-cleaned blobs is safe.
+   *
+   * Per-key errors are isolated: a failure on one key does not abort remaining keys.
+   * Detector failures (e.g., DB unavailable) propagate immediately.
    */
-  async cleanup(systemId: string): Promise<CleanupResult> {
+  async cleanup(systemId: SystemId): Promise<CleanupResult> {
     const orphanKeys = await this.detector.findOrphans(systemId);
 
-    const deletedKeys: string[] = [];
+    const deletedKeys: StorageKey[] = [];
+    const failedKeys: StorageKey[] = [];
 
     for (const storageKey of orphanKeys) {
-      // Delete from storage (idempotent)
-      await this.adapter.delete(storageKey);
-      // Archive the metadata record
-      await this.archiver.archiveByStorageKey(storageKey);
-      deletedKeys.push(storageKey);
+      try {
+        await this.adapter.delete(storageKey);
+        await this.archiver.archiveByStorageKey(storageKey);
+        deletedKeys.push(storageKey);
+      } catch {
+        failedKeys.push(storageKey);
+      }
     }
 
     return {
       deletedCount: deletedKeys.length,
       storageKeys: deletedKeys,
+      failedCount: failedKeys.length,
+      failedKeys,
     };
   }
 }

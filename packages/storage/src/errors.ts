@@ -1,11 +1,13 @@
+import type { StorageKey, SystemId } from "@pluralscape/types";
+
 /**
  * Thrown when download() or getMetadata() is called for a storage key that does not exist.
  */
 export class BlobNotFoundError extends Error {
   override readonly name = "BlobNotFoundError" as const;
-  readonly storageKey: string;
+  readonly storageKey: StorageKey;
 
-  constructor(storageKey: string, options?: ErrorOptions) {
+  constructor(storageKey: StorageKey, options?: ErrorOptions) {
     super(`Blob not found at storage key "${storageKey}".`, options);
     this.storageKey = storageKey;
   }
@@ -17,9 +19,9 @@ export class BlobNotFoundError extends Error {
  */
 export class BlobAlreadyExistsError extends Error {
   override readonly name = "BlobAlreadyExistsError" as const;
-  readonly storageKey: string;
+  readonly storageKey: StorageKey;
 
-  constructor(storageKey: string, options?: ErrorOptions) {
+  constructor(storageKey: StorageKey, options?: ErrorOptions) {
     super(`A blob already exists at storage key "${storageKey}".`, options);
     this.storageKey = storageKey;
   }
@@ -48,13 +50,13 @@ export class BlobTooLargeError extends Error {
  */
 export class QuotaExceededError extends Error {
   override readonly name = "QuotaExceededError" as const;
-  readonly systemId: string;
+  readonly systemId: SystemId;
   readonly usedBytes: number;
   readonly quotaBytes: number;
   readonly requestedBytes: number;
 
   constructor(
-    systemId: string,
+    systemId: SystemId,
     usedBytes: number,
     quotaBytes: number,
     requestedBytes: number,

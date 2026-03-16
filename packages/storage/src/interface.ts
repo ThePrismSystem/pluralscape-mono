@@ -1,4 +1,4 @@
-import type { UnixMillis } from "@pluralscape/types";
+import type { StorageKey, UnixMillis } from "@pluralscape/types";
 
 /**
  * Parameters for uploading a blob to storage.
@@ -7,7 +7,7 @@ import type { UnixMillis } from "@pluralscape/types";
  * is zero-knowledge and never sees plaintext.
  */
 export interface BlobUploadParams {
-  readonly storageKey: string;
+  readonly storageKey: StorageKey;
   /** Encrypted blob bytes. */
   readonly data: Uint8Array;
   readonly mimeType: string | null;
@@ -22,7 +22,7 @@ export interface BlobUploadParams {
  * that belong to the DB layer's blob_metadata table.
  */
 export interface StoredBlobMetadata {
-  readonly storageKey: string;
+  readonly storageKey: StorageKey;
   readonly sizeBytes: number;
   readonly mimeType: string | null;
   /** SHA-256 hex digest of the stored bytes (64 chars). */
@@ -32,7 +32,7 @@ export interface StoredBlobMetadata {
 
 /** Parameters for generating a presigned upload URL. */
 export interface PresignedUploadParams {
-  readonly storageKey: string;
+  readonly storageKey: StorageKey;
   readonly mimeType: string | null;
   readonly sizeBytes: number;
   /** Validity window in milliseconds. Defaults to backend-specific value if omitted. */
@@ -41,7 +41,7 @@ export interface PresignedUploadParams {
 
 /** Parameters for generating a presigned download URL. */
 export interface PresignedDownloadParams {
-  readonly storageKey: string;
+  readonly storageKey: StorageKey;
   /** Validity window in milliseconds. Defaults to backend-specific value if omitted. */
   readonly expiresInMs?: number;
 }
@@ -77,23 +77,23 @@ export interface BlobStorageAdapter {
    * Downloads encrypted blob bytes by storage key.
    * Throws BlobNotFoundError if no blob exists at this key.
    */
-  download(storageKey: string): Promise<Uint8Array>;
+  download(storageKey: StorageKey): Promise<Uint8Array>;
 
   /**
    * Deletes a blob by storage key.
    * Idempotent — does not throw if the key does not exist.
    */
-  delete(storageKey: string): Promise<void>;
+  delete(storageKey: StorageKey): Promise<void>;
 
   /**
    * Returns true if a blob exists at the given key, false otherwise.
    */
-  exists(storageKey: string): Promise<boolean>;
+  exists(storageKey: StorageKey): Promise<boolean>;
 
   /**
    * Returns metadata for a blob, or null if no blob exists at this key.
    */
-  getMetadata(storageKey: string): Promise<StoredBlobMetadata | null>;
+  getMetadata(storageKey: StorageKey): Promise<StoredBlobMetadata | null>;
 
   /**
    * Generates a presigned URL for a direct client-to-storage upload.

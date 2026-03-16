@@ -8,6 +8,7 @@ import type {
   PresignedUrlResult,
   StoredBlobMetadata,
 } from "../interface.js";
+import type { StorageKey } from "@pluralscape/types";
 
 interface StoredEntry {
   data: Uint8Array;
@@ -22,7 +23,7 @@ interface StoredEntry {
 export class MemoryBlobStorageAdapter implements BlobStorageAdapter {
   readonly supportsPresignedUrls = false as const;
 
-  private readonly store = new Map<string, StoredEntry>();
+  private readonly store = new Map<StorageKey, StoredEntry>();
   private readonly maxSizeBytes: number | null;
 
   constructor({ maxSizeBytes }: { maxSizeBytes?: number } = {}) {
@@ -47,22 +48,22 @@ export class MemoryBlobStorageAdapter implements BlobStorageAdapter {
     return Promise.resolve(metadata);
   }
 
-  download(storageKey: string): Promise<Uint8Array> {
+  download(storageKey: StorageKey): Promise<Uint8Array> {
     const entry = this.store.get(storageKey);
     if (entry === undefined) return Promise.reject(new BlobNotFoundError(storageKey));
     return Promise.resolve(new Uint8Array(entry.data));
   }
 
-  delete(storageKey: string): Promise<void> {
+  delete(storageKey: StorageKey): Promise<void> {
     this.store.delete(storageKey);
     return Promise.resolve();
   }
 
-  exists(storageKey: string): Promise<boolean> {
+  exists(storageKey: StorageKey): Promise<boolean> {
     return Promise.resolve(this.store.has(storageKey));
   }
 
-  getMetadata(storageKey: string): Promise<StoredBlobMetadata | null> {
+  getMetadata(storageKey: StorageKey): Promise<StoredBlobMetadata | null> {
     return Promise.resolve(this.store.get(storageKey)?.metadata ?? null);
   }
 
