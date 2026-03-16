@@ -14,18 +14,16 @@ export function mapS3Error(err: unknown, storageKey: string): never {
     throw new StorageBackendError("Unknown S3 error", { cause: err });
   }
 
-  const name = (err as Error & { name: string }).name;
-
-  switch (name) {
+  switch (err.name) {
     case "NoSuchKey":
     case "NotFound":
       throw new BlobNotFoundError(storageKey, { cause: err });
 
     case "EntityTooLarge":
-      throw new BlobTooLargeError(0, 0, { cause: err });
+      // S3 does not provide actual/max sizes in the error — use -1 as sentinel
+      throw new BlobTooLargeError(-1, -1, { cause: err });
 
-    case "BucketAlreadyOwnedByYou":
-    case "ConditionalCheckFailedException":
+    case "PreconditionFailed":
       throw new BlobAlreadyExistsError(storageKey, { cause: err });
 
     default:

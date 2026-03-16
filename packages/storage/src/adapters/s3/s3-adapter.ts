@@ -25,9 +25,10 @@ import type {
   PresignedUrlResult,
   StoredBlobMetadata,
 } from "../../interface.js";
+import type { UnixMillis } from "@pluralscape/types";
 
-const CHECKSUM_META_KEY = "x-amz-meta-checksum";
-const UPLOADED_AT_META_KEY = "x-amz-meta-uploadedat";
+const CHECKSUM_META_KEY = "checksum";
+const UPLOADED_AT_META_KEY = "uploadedat";
 const MS_PER_SECOND = 1_000;
 
 /**
@@ -57,18 +58,14 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
       region: config.region,
       endpoint: config.endpoint,
       credentials: config.credentials,
-      forcePathStyle: config.endpoint !== undefined,
+      // Path-style required for MinIO and most S3-compatible services; overridable for R2/B2
+      forcePathStyle: config.forcePathStyle ?? config.endpoint !== undefined,
     });
   }
 
   async upload(params: BlobUploadParams): Promise<StoredBlobMetadata> {
     if (this.maxSizeBytes !== null && params.data.byteLength > this.maxSizeBytes) {
       throw new BlobTooLargeError(params.data.byteLength, this.maxSizeBytes);
-    }
-
-    // Check if blob already exists
-    if (await this.exists(params.storageKey)) {
-      throw new BlobAlreadyExistsError(params.storageKey);
     }
 
     const uploadedAt = now();
@@ -81,13 +78,19 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
           Body: params.data,
           ContentType: params.mimeType ?? "application/octet-stream",
           ContentLength: params.data.byteLength,
+          IfNoneMatch: "*",
           Metadata: {
-            checksum: params.checksum,
-            uploadedat: String(uploadedAt),
+            [CHECKSUM_META_KEY]: params.checksum,
+            [UPLOADED_AT_META_KEY]: String(uploadedAt),
           },
         }),
       );
     } catch (err) {
+      if (err instanceof BlobAlreadyExistsError) throw err;
+      const name = err instanceof Error ? err.name : "";
+      if (name === "PreconditionFailed") {
+        throw new BlobAlreadyExistsError(params.storageKey);
+      }
       mapS3Error(err, params.storageKey);
     }
 
@@ -129,10 +132,10 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
         }),
       );
     } catch (err) {
-      // S3 DeleteObject is already idempotent — it doesn't error on missing keys.
-      // Only re-throw unexpected errors.
+      // AWS S3 DeleteObject is idempotent (silently succeeds on missing keys).
+      // Some S3-compatible backends may emit NoSuchKey/NotFound/404; swallow those.
       const name = err instanceof Error ? err.name : "";
-      if (name !== "NoSuchKey" && name !== "NotFound") {
+      if (name !== "NoSuchKey" && name !== "NotFound" && name !== "404") {
         mapS3Error(err, storageKey);
       }
     }
@@ -165,9 +168,8 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
         }),
       );
 
-      const checksum = response.Metadata?.[CHECKSUM_META_KEY.replace("x-amz-meta-", "")] ?? "";
-      const uploadedAtStr =
-        response.Metadata?.[UPLOADED_AT_META_KEY.replace("x-amz-meta-", "")] ?? "0";
+      const checksum = response.Metadata?.[CHECKSUM_META_KEY] ?? "";
+      const uploadedAtStr = response.Metadata?.[UPLOADED_AT_META_KEY] ?? "0";
       const mimeType = response.ContentType ?? null;
 
       return {
@@ -175,7 +177,7 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
         sizeBytes: response.ContentLength ?? 0,
         mimeType: mimeType === "application/octet-stream" ? null : mimeType,
         checksum,
-        uploadedAt: Number(uploadedAtStr) as ReturnType<typeof now>,
+        uploadedAt: Number(uploadedAtStr) as UnixMillis,
       };
     } catch (err) {
       const name = err instanceof Error ? err.name : "";
@@ -197,13 +199,18 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
       ContentLength: params.sizeBytes,
     });
 
-    const url = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+    try {
+      const url = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+      const expiresAt = (now() + expiryMs) as UnixMillis;
 
-    return {
-      supported: true,
-      url,
-      expiresAt: (now() + expiryMs) as ReturnType<typeof now>,
-    };
+      return {
+        supported: true,
+        url,
+        expiresAt,
+      };
+    } catch (err) {
+      mapS3Error(err, params.storageKey);
+    }
   }
 
   async generatePresignedDownloadUrl(params: PresignedDownloadParams): Promise<PresignedUrlResult> {
@@ -215,12 +222,17 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
       Key: params.storageKey,
     });
 
-    const url = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+    try {
+      const url = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+      const expiresAt = (now() + expiryMs) as UnixMillis;
 
-    return {
-      supported: true,
-      url,
-      expiresAt: (now() + expiryMs) as ReturnType<typeof now>,
-    };
+      return {
+        supported: true,
+        url,
+        expiresAt,
+      };
+    } catch (err) {
+      mapS3Error(err, params.storageKey);
+    }
   }
 }

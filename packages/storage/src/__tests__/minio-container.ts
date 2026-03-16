@@ -69,32 +69,17 @@ async function waitForReady(): Promise<boolean> {
   return false;
 }
 
-async function ensureBucket(): Promise<void> {
-  // Use the S3 API to create the test bucket via MinIO's S3-compatible endpoint
-  const endpoint = `http://localhost:${String(MINIO_PORT)}`;
-  try {
-    // Try a lightweight HEAD first
-    const headResponse = await fetch(`${endpoint}/${TEST_BUCKET}`, { method: "HEAD" });
-    if (headResponse.ok) return;
-  } catch {
-    // Bucket doesn't exist, create it
-  }
-
-  // Use mc CLI from docker exec to create bucket
+function ensureBucket(): void {
+  // mc mb is idempotent — safe to call even if bucket exists
   exec(
     `docker exec ${CONTAINER_NAME} mc alias set local http://localhost:9000 ${ACCESS_KEY} ${SECRET_KEY} 2>/dev/null`,
   );
   exec(`docker exec ${CONTAINER_NAME} mc mb local/${TEST_BUCKET} 2>/dev/null`);
 }
 
-export interface MinioTestContext {
-  /** Whether MinIO is available for testing. */
-  available: boolean;
-  /** S3 adapter config for MinIO. Null if unavailable. */
-  config: S3AdapterConfig | null;
-  /** Call in afterAll to clean up. Does NOT stop the container. */
-  cleanup: () => Promise<void>;
-}
+export type MinioTestContext =
+  | { readonly available: true; readonly config: S3AdapterConfig; cleanup: () => Promise<void> }
+  | { readonly available: false; readonly config: null; cleanup: () => Promise<void> };
 
 /**
  * Ensures a MinIO instance is available for testing.
@@ -115,7 +100,7 @@ export async function ensureMinio(): Promise<MinioTestContext> {
   try {
     const response = await fetch(`http://localhost:${String(MINIO_PORT)}/minio/health/live`);
     if (response.ok) {
-      await ensureBucket();
+      ensureBucket();
       return makeContext();
     }
   } catch {
@@ -134,7 +119,7 @@ export async function ensureMinio(): Promise<MinioTestContext> {
   const ready = await waitForReady();
   if (!ready) return unavailable;
 
-  await ensureBucket();
+  ensureBucket();
   return makeContext();
 }
 
@@ -150,8 +135,8 @@ function makeContext(): MinioTestContext {
         secretAccessKey: SECRET_KEY,
       },
     },
+    /** Removes all objects from the test bucket. Does not stop or remove the container. */
     cleanup: () => {
-      // Clean bucket contents between test suites
       exec(
         `docker exec ${CONTAINER_NAME} mc rm --recursive --force local/${TEST_BUCKET}/ 2>/dev/null`,
       );

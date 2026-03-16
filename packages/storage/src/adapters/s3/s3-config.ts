@@ -17,6 +17,8 @@ export interface S3AdapterConfig {
   readonly presignedDownloadExpiryMs?: number;
   /** Maximum allowed upload size in bytes. */
   readonly maxSizeBytes?: number;
+  /** Use path-style addressing. Defaults to true when endpoint is set (MinIO, etc). */
+  readonly forcePathStyle?: boolean;
 }
 
 const MINUTES_15 = 15;

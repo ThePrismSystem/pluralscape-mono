@@ -27,8 +27,8 @@ describe("mapS3Error", () => {
     expect(() => mapS3Error(makeAwsError("EntityTooLarge"), "sys/blob")).toThrow(BlobTooLargeError);
   });
 
-  it("maps ConditionalCheckFailedException to BlobAlreadyExistsError", () => {
-    expect(() => mapS3Error(makeAwsError("ConditionalCheckFailedException"), "sys/blob")).toThrow(
+  it("maps PreconditionFailed to BlobAlreadyExistsError", () => {
+    expect(() => mapS3Error(makeAwsError("PreconditionFailed"), "sys/blob")).toThrow(
       BlobAlreadyExistsError,
     );
   });

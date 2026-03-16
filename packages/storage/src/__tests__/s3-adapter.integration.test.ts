@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { S3BlobStorageAdapter } from "../adapters/s3/s3-adapter.js";
+import { BlobTooLargeError } from "../errors.js";
 
 import { runBlobStorageContract } from "./blob-storage.contract.js";
 import { ensureMinio } from "./minio-container.js";
@@ -19,9 +20,9 @@ afterAll(async () => {
 });
 
 describe("S3BlobStorageAdapter (MinIO integration)", () => {
-  describe.runIf(true)("contract tests", () => {
+  describe("contract tests", () => {
     runBlobStorageContract(() => {
-      if (!ctx.available || !ctx.config) {
+      if (!ctx.available) {
         throw new Error("MinIO is not available — skipping S3 integration tests");
       }
       return new S3BlobStorageAdapter(ctx.config);
@@ -29,8 +30,11 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
   });
 
   describe("presigned URLs", () => {
-    it("generates a presigned upload URL with expiry", async () => {
-      if (!ctx.available || !ctx.config) return;
+    it("generates a presigned upload URL with expiry", async (context) => {
+      if (!ctx.available) {
+        context.skip();
+        return;
+      }
       const adapter = new S3BlobStorageAdapter(ctx.config);
       const result = await adapter.generatePresignedUploadUrl({
         storageKey: "sys_test/blob_presign_up",
@@ -44,8 +48,11 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
       }
     });
 
-    it("generates a presigned download URL with expiry", async () => {
-      if (!ctx.available || !ctx.config) return;
+    it("generates a presigned download URL with expiry", async (context) => {
+      if (!ctx.available) {
+        context.skip();
+        return;
+      }
       const adapter = new S3BlobStorageAdapter(ctx.config);
 
       // Upload first so the key exists
@@ -63,8 +70,11 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
       }
     });
 
-    it("respects custom expiry durations", async () => {
-      if (!ctx.available || !ctx.config) return;
+    it("respects custom expiry durations", async (context) => {
+      if (!ctx.available) {
+        context.skip();
+        return;
+      }
       const adapter = new S3BlobStorageAdapter({
         ...ctx.config,
         presignedUploadExpiryMs: 5 * 60 * 1_000, // 5 minutes
@@ -85,8 +95,11 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
   });
 
   describe("mimeType handling", () => {
-    it("stores and retrieves null mimeType", async () => {
-      if (!ctx.available || !ctx.config) return;
+    it("stores and retrieves null mimeType", async (context) => {
+      if (!ctx.available) {
+        context.skip();
+        return;
+      }
       const adapter = new S3BlobStorageAdapter(ctx.config);
       const data = makeBytes(0xcc, 16);
       const params = makeBlobData(data, {
@@ -99,6 +112,30 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
       expect(meta).not.toBeNull();
       // S3 stores null mimeType as "application/octet-stream", adapter normalizes back to null
       expect(meta?.mimeType).toBeNull();
+    });
+  });
+
+  describe("maxSizeBytes enforcement", () => {
+    it("throws BlobTooLargeError when upload exceeds limit", async (context) => {
+      if (!ctx.available) {
+        context.skip();
+        return;
+      }
+      const adapter = new S3BlobStorageAdapter({ ...ctx.config, maxSizeBytes: 10 });
+      const data = makeBytes(0xff, 20);
+      const params = makeBlobData(data);
+      await expect(adapter.upload(params)).rejects.toThrow(BlobTooLargeError);
+    });
+
+    it("allows uploads within the limit", async (context) => {
+      if (!ctx.available) {
+        context.skip();
+        return;
+      }
+      const adapter = new S3BlobStorageAdapter({ ...ctx.config, maxSizeBytes: 100 });
+      const data = makeBytes(0xee, 50);
+      const params = makeBlobData(data);
+      await expect(adapter.upload(params)).resolves.toBeDefined();
     });
   });
 });
