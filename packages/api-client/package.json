@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.66.9",
-    "@trpc/client": "^11.0.0-rc.730",
+    "@trpc/client": "^11.13.4",
     "@trpc/react-query": "^11.0.0-rc.730"
   },
   "devDependencies": {
