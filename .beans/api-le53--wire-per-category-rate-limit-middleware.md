@@ -3,8 +3,10 @@
 title: Wire per-category rate limit middleware
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-16T09:05:26Z
-updated_at: 2026-03-16T09:05:26Z
+updated_at: 2026-03-16T11:32:44Z
+parent: ps-rdqo
 blocked_by:
   - api-g954
 ---
