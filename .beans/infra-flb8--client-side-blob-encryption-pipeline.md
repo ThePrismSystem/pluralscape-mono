@@ -1,11 +1,11 @@
 ---
 # infra-flb8
 title: Client-side blob encryption pipeline
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:58:26Z
-updated_at: 2026-03-08T19:58:26Z
+updated_at: 2026-03-16T01:56:47Z
 parent: infra-o80c
 blocked_by:
   - infra-psh9
@@ -43,3 +43,15 @@ Client-side encryption and thumbnail generation pipeline for blob uploads.
 - ADR 009 (Blob Storage — client-side encryption)
 - ADR 006 (Encryption — per-bucket keys)
 - crypto-mp96 (Per-bucket key management)
+
+## Summary of Changes
+
+- Implemented `encryptBlob()` / `decryptBlob()` for T1 (master key) and T2 (bucket key) encryption
+- Automatic streaming encryption for blobs > 64 KiB using chunked AEAD
+- Binary serialization format for stream payloads (chunkCount + totalLength + nonce/ciphertext pairs)
+- `prepareUpload()` orchestrator: validate content type, encrypt, compute checksum
+- `processDownload()` for decrypting downloaded blobs
+- Content validation with `ALLOWED_MIME_TYPES` per `BlobPurpose` and `ContentTypeNotAllowedError`
+- Type-level `ThumbnailGenerator` / `ThumbnailConfig` interfaces (platform-specific implementation deferred)
+- Tests: encrypt/decrypt round-trips (small + large), wrong-key failures, content validation, full pipeline round-trip
+- Added `./blob-pipeline` export path to package.json
