@@ -19,7 +19,7 @@ import {
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { DISCOVERY_STATUSES, RELATIONSHIP_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";

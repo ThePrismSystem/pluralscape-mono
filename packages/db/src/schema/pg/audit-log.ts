@@ -12,7 +12,11 @@ import {
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
+import {
+  AUDIT_LOG_DETAIL_MAX_LENGTH,
+  ENUM_MAX_LENGTH,
+  ID_MAX_LENGTH,
+} from "../../helpers/db.constants.js";
 import { AUDIT_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { accounts } from "./auth.js";
@@ -56,7 +60,10 @@ export const auditLog = pgTable(
     index("audit_log_system_event_type_timestamp_idx").on(t.systemId, t.eventType, t.timestamp),
     index("audit_log_timestamp_idx").on(t.timestamp),
     check("audit_log_event_type_check", enumCheck(t.eventType, AUDIT_EVENT_TYPES)),
-    check("audit_log_detail_length_check", sql`${t.detail} IS NULL OR length(${t.detail}) <= 2048`),
+    check(
+      "audit_log_detail_length_check",
+      sql`${t.detail} IS NULL OR length(${t.detail}) <= ${AUDIT_LOG_DETAIL_MAX_LENGTH}`,
+    ),
   ],
 );
 

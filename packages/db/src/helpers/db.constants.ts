@@ -6,3 +6,7 @@ export const ID_MAX_LENGTH = 50;
 // Longest current enum value is 39 chars (e.g. "device.security.jailbreak_warning_shown").
 // 50 provides reasonable headroom while still catching unbounded strings.
 export const ENUM_MAX_LENGTH = 50;
+/** Maximum length for audit log detail text. */
+export const AUDIT_LOG_DETAIL_MAX_LENGTH = 2_048;
+/** Maximum length for webhook/callback URLs. */
+export const URL_MAX_LENGTH = 2_048;

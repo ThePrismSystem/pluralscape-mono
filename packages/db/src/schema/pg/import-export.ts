@@ -12,7 +12,11 @@ import {
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH, MAX_ERROR_LOG_ENTRIES } from "../../helpers/constants.js";
+import {
+  ENUM_MAX_LENGTH,
+  ID_MAX_LENGTH,
+  MAX_ERROR_LOG_ENTRIES,
+} from "../../helpers/db.constants.js";
 import {
   ACCOUNT_PURGE_STATUSES,
   EXPORT_FORMATS,

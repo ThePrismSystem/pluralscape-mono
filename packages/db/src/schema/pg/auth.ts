@@ -4,7 +4,7 @@ import { boolean, check, index, pgTable, uniqueIndex, varchar } from "drizzle-or
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { ACCOUNT_TYPES, AUTH_KEY_TYPES, DEVICE_TRANSFER_STATUSES } from "../../helpers/enums.js";
 
 import type { AccountType, AuthKeyType, DeviceTransferStatus } from "@pluralscape/types";

@@ -13,7 +13,7 @@ import {
 import { sqliteTimestamp } from "../../columns/sqlite.js";
 import { archivable, archivableConsistencyCheckFor } from "../../helpers/audit.sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
-import { MAX_BLOB_SIZE_BYTES } from "../../helpers/constants.js";
+import { MAX_BLOB_SIZE_BYTES } from "../../helpers/db.constants.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";
