@@ -1,11 +1,11 @@
 ---
 # ps-jkpn
 title: i18n framework setup
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:36:07Z
-updated_at: 2026-03-08T13:36:15Z
+updated_at: 2026-03-16T05:12:46Z
 parent: ps-7z0s
 ---
 
@@ -24,14 +24,27 @@ i18n framework selection and initial setup
 
 ## Acceptance Criteria
 
-- [ ] i18n framework installed and configured
-- [ ] Translation file structure established (locales/en/\*.json)
-- [ ] Namespace organization documented
-- [ ] Example component using i18n (proof of concept)
-- [ ] Missing key detection in dev mode
-- [ ] Crowdin project setup documented (not necessarily created yet)
-- [ ] All existing UI strings (if any) externalized
+- [x] i18n framework installed and configured
+- [x] Translation file structure established (locales/en/\*.json)
+- [x] Namespace organization documented
+- [x] Example component using i18n (proof of concept)
+- [x] Missing key detection in dev mode
+- [x] Crowdin project setup documented (not necessarily created yet)
+- [x] All existing UI strings (if any) externalized
 
 ## References
 
 - features.md section 11 (Internationalization)
+
+## Summary of Changes
+
+Created @pluralscape/i18n package with react-i18next integration:
+
+- createI18nInstance() factory with configurable missing key handling (warn/throw)
+- RTL text direction detection via isRtl()/getTextDirection()
+- I18nProvider React component wrapping I18nextProvider
+- Namespace organization: common, auth, members, fronting, settings, communication, groups, privacy, structure
+- Translation JSON files in apps/mobile/locales/en/
+- Mobile app \_layout.tsx wrapped with I18nProvider
+- Home screen "Pluralscape" text uses t("appName") from common namespace
+- 31 tests covering constants, instance creation, missing key handler, and text direction

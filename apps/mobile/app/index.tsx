@@ -1,3 +1,4 @@
+import { useTranslation } from "@pluralscape/i18n/react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -14,9 +15,11 @@ const styles = StyleSheet.create({
 });
 
 export default function HomeScreen(): React.JSX.Element {
+  const { t } = useTranslation("common");
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Pluralscape</Text>
+      <Text style={styles.title}>{t("appName")}</Text>
       <StatusBar style="auto" />
     </View>
   );
