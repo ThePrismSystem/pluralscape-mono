@@ -1,11 +1,11 @@
 ---
 # infra-xotv
 title: S3 presigned URL adapter
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:58:11Z
-updated_at: 2026-03-08T19:58:11Z
+updated_at: 2026-03-16T01:25:53Z
 parent: infra-o80c
 blocked_by:
   - infra-psh9
@@ -40,3 +40,14 @@ S3-compatible storage adapter for hosted deployments using presigned URLs.
 ## References
 
 - ADR 009 (Blob Storage — S3 presigned URLs)
+
+## Summary of Changes
+
+- Implemented `S3BlobStorageAdapter` in `packages/storage/src/adapters/s3/`
+- Supports AWS S3, MinIO, Cloudflare R2, and Backblaze B2 via `forcePathStyle` for custom endpoints
+- `supportsPresignedUrls = true` with configurable expiry durations
+- S3 user metadata for checksum and uploadedAt; ContentType for mimeType
+- Error mapper translates AWS SDK errors to storage-layer typed errors
+- MinIO Docker container helper for integration tests (reuses container across runs)
+- 7 unit tests for error mapper, contract + presigned URL integration tests
+- Added `./s3` export path and `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` deps
