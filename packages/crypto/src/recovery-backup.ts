@@ -1,4 +1,4 @@
-import { AEAD_NONCE_BYTES, AEAD_TAG_BYTES } from "./constants.js";
+import { AEAD_NONCE_BYTES, AEAD_TAG_BYTES } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 
 import type { EncryptedPayload } from "./symmetric.js";

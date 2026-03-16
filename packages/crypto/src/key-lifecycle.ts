@@ -1,5 +1,5 @@
 import { decryptBucketKey } from "./bucket-keys.js";
-import { AEAD_NONCE_BYTES } from "./constants.js";
+import { AEAD_NONCE_BYTES } from "./crypto.constants.js";
 import { InvalidStateTransitionError, KeysLockedError } from "./errors.js";
 import { deriveMasterKey } from "./master-key.js";
 import { assertKdfMasterKey, validateKeyVersion } from "./validation.js";

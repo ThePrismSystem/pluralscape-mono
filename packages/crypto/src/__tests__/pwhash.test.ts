@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
-import { PWHASH_OPSLIMIT_INTERACTIVE, PWHASH_MEMLIMIT_INTERACTIVE } from "../constants.js";
+import { PWHASH_OPSLIMIT_INTERACTIVE, PWHASH_MEMLIMIT_INTERACTIVE } from "../crypto.constants.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";
 

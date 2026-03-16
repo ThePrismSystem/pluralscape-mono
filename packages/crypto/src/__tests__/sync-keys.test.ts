@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
-import { AEAD_KEY_BYTES, KDF_KEY_BYTES } from "../constants.js";
+import { AEAD_KEY_BYTES, KDF_KEY_BYTES } from "../crypto.constants.js";
 import { _resetForTesting, configureSodium, getSodium, initSodium } from "../sodium.js";
 import { deriveSyncEncryptionKey } from "../sync-keys.js";
 

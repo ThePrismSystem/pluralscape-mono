@@ -2,11 +2,11 @@ import { HTTPException } from "hono/http-exception";
 
 import { ApiHttpError } from "../lib/api-error.js";
 
+import { HTTP_INTERNAL_SERVER_ERROR } from "./middleware.constants.js";
+
 import type { ApiErrorCode, ApiErrorResponse } from "@pluralscape/types";
 import type { Context, ErrorHandler } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-
-const HTTP_INTERNAL_SERVER_ERROR = 500;
 
 /** Maps HTTP status codes to the best-match ApiErrorCode for plain HTTPExceptions. */
 const STATUS_TO_CODE: Readonly<Record<number, ApiErrorCode>> = {

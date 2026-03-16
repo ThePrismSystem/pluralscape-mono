@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
-import { KDF_BYTES_MAX, KDF_BYTES_MIN, KDF_KEY_BYTES } from "../constants.js";
+import { KDF_BYTES_MAX, KDF_BYTES_MIN, KDF_KEY_BYTES } from "../crypto.constants.js";
 import { InvalidInputError } from "../errors.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";

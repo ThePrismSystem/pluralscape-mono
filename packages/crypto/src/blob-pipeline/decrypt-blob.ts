@@ -1,4 +1,4 @@
-import { AEAD_TAG_BYTES, KDF_KEY_BYTES } from "../constants.js";
+import { AEAD_TAG_BYTES, KDF_KEY_BYTES } from "../crypto.constants.js";
 import { InvalidInputError } from "../errors.js";
 import { getSodium } from "../sodium.js";
 import { decrypt, decryptStream } from "../symmetric.js";

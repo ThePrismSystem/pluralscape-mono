@@ -2,7 +2,7 @@ import { check, index, pgTable, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { FRONTING_REPORT_FORMATS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";

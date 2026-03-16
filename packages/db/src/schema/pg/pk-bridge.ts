@@ -3,7 +3,7 @@ import { boolean, check, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-co
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { PK_SYNC_DIRECTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";

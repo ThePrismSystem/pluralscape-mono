@@ -3,7 +3,7 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-o
 
 import { sqliteJson, sqliteTimestamp } from "../../columns/sqlite.js";
 import { enumCheck } from "../../helpers/check.js";
-import { MAX_ERROR_LOG_ENTRIES } from "../../helpers/constants.js";
+import { MAX_ERROR_LOG_ENTRIES } from "../../helpers/db.constants.js";
 import {
   ACCOUNT_PURGE_STATUSES,
   EXPORT_FORMATS,

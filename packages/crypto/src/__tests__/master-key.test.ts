@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
-import { KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "../constants.js";
+import { KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "../crypto.constants.js";
 import { InvalidInputError } from "../errors.js";
 import { deriveMasterKey, generateSalt } from "../master-key.js";
 import { _resetForTesting, configureSodium, initSodium } from "../sodium.js";

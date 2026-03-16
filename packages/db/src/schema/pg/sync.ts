@@ -17,7 +17,7 @@ import {
   ENUM_MAX_LENGTH,
   ID_MAX_LENGTH,
   MAX_AUTOMERGE_HEADS_BYTES,
-} from "../../helpers/constants.js";
+} from "../../helpers/db.constants.js";
 import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AEAD_NONCE_BYTES, AEAD_TAG_BYTES } from "../constants.js";
+import { AEAD_NONCE_BYTES, AEAD_TAG_BYTES } from "../crypto.constants.js";
 import { InvalidInputError } from "../errors.js";
 import { generateMasterKey } from "../master-key-wrap.js";
 import { deserializeRecoveryBackup, serializeRecoveryBackup } from "../recovery-backup.js";

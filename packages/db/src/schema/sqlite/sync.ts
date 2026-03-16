@@ -4,7 +4,7 @@ import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-o
 import { sqliteBinary, sqliteTimestamp } from "../../columns/sqlite.js";
 import { versionCheckFor } from "../../helpers/audit.sqlite.js";
 import { enumCheck, nullPairCheck } from "../../helpers/check.js";
-import { MAX_AUTOMERGE_HEADS_BYTES } from "../../helpers/constants.js";
+import { MAX_AUTOMERGE_HEADS_BYTES } from "../../helpers/db.constants.js";
 import { SYNC_OPERATIONS, SYNC_RESOLUTIONS } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";

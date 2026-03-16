@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { deserializeEncryptedBlob, serializeEncryptedBlob } from "../blob-codec.js";
-import { AEAD_NONCE_BYTES } from "../constants.js";
+import { AEAD_NONCE_BYTES } from "../crypto.constants.js";
 
 import type { BucketId, EncryptedBlob, T1EncryptedBlob } from "@pluralscape/types";
 

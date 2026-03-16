@@ -1,8 +1,8 @@
 import { getDeploymentMode } from "@pluralscape/db";
 
-import type { MiddlewareHandler } from "hono";
+import { HTTP_FORBIDDEN } from "./middleware.constants.js";
 
-const HTTP_FORBIDDEN = 403;
+import type { MiddlewareHandler } from "hono";
 
 /**
  * Hono middleware that blocks requests in hosted mode.

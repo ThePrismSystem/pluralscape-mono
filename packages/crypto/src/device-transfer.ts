@@ -1,4 +1,4 @@
-import { KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "./constants.js";
+import { KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { PROFILE_PARAMS, type PwhashProfile } from "./master-key.js";
 import { getSodium } from "./sodium.js";

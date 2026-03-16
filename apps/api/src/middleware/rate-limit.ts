@@ -1,13 +1,13 @@
 import { RATE_LIMITS } from "@pluralscape/types";
 
+import {
+  HTTP_TOO_MANY_REQUESTS,
+  MAX_RATE_LIMIT_ENTRIES,
+  MS_PER_SECOND,
+} from "./middleware.constants.js";
+
 import type { ApiErrorResponse, RateLimitCategory } from "@pluralscape/types";
 import type { Context, MiddlewareHandler } from "hono";
-
-const HTTP_TOO_MANY_REQUESTS = 429;
-const MS_PER_SECOND = 1000;
-
-/** Evict expired entries when the store exceeds this size. */
-const MAX_ENTRIES = 10_000;
 
 /** Global fallback key when proxy is untrusted or header is missing. */
 const GLOBAL_KEY = "__global__";
@@ -55,7 +55,7 @@ export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandle
     const now = Date.now();
 
     // Evict expired entries when the store grows too large
-    if (store.size > MAX_ENTRIES) {
+    if (store.size > MAX_RATE_LIMIT_ENTRIES) {
       for (const [key, entry] of store) {
         if (now >= entry.resetAt) {
           store.delete(key);

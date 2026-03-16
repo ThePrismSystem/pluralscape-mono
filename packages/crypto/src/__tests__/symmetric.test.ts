@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
-import { AEAD_NONCE_BYTES } from "../constants.js";
+import { AEAD_NONCE_BYTES } from "../crypto.constants.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 import { _resetForTesting, configureSodium, initSodium, getSodium } from "../sodium.js";
 import {

@@ -1,4 +1,4 @@
-import type { SODIUM_CONSTANTS } from "../constants.js";
+import type { SODIUM_CONSTANTS } from "../crypto.constants.js";
 import type {
   AeadKey,
   AeadNonce,

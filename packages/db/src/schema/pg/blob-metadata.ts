@@ -14,7 +14,7 @@ import {
 import { pgTimestamp } from "../../columns/pg.js";
 import { archivable, archivableConsistencyCheckFor } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH, MAX_BLOB_SIZE_BYTES } from "../../helpers/constants.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH, MAX_BLOB_SIZE_BYTES } from "../../helpers/db.constants.js";
 import { BLOB_PURPOSES } from "../../helpers/enums.js";
 
 import { buckets } from "./privacy.js";

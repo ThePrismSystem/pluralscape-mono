@@ -14,7 +14,7 @@ import {
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { archivable, archivableConsistencyCheckFor, timestamps } from "../../helpers/audit.pg.js";
 import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/constants.js";
+import { ENUM_MAX_LENGTH, ID_MAX_LENGTH, URL_MAX_LENGTH } from "../../helpers/db.constants.js";
 import { WEBHOOK_DELIVERY_STATUSES, WEBHOOK_EVENT_TYPES } from "../../helpers/enums.js";
 
 import { apiKeys } from "./api-keys.js";
@@ -30,7 +30,7 @@ export const webhookConfigs = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    url: varchar("url", { length: 2048 }).notNull(),
+    url: varchar("url", { length: URL_MAX_LENGTH }).notNull(),
     /** T3 (server-readable): raw HMAC signing key the server uses to sign outbound webhook payloads. Intentionally not E2E encrypted — server must read it to produce signatures at delivery time. */
     secret: pgBinary("secret").notNull(),
     eventTypes: jsonb("event_types").notNull().$type<readonly WebhookEventType[]>(),

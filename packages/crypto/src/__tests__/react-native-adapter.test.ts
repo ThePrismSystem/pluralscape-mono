@@ -13,7 +13,7 @@ import {
   SIGN_BYTES,
   SIGN_PUBLIC_KEY_BYTES,
   SIGN_SECRET_KEY_BYTES,
-} from "../constants.js";
+} from "../crypto.constants.js";
 import {
   CryptoNotReadyError,
   DecryptionFailedError,

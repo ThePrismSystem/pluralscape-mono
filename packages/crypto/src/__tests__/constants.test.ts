@@ -23,7 +23,7 @@ import {
   SIGN_SECRET_KEY_BYTES,
   SIGN_SEED_BYTES,
   SODIUM_CONSTANTS,
-} from "../constants.js";
+} from "../crypto.constants.js";
 
 describe("AEAD constants", () => {
   it("key is 32 bytes (256-bit)", () => {

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { WasmSodiumAdapter } from "../adapter/wasm-adapter.js";
-import { SIGN_BYTES, SIGN_PUBLIC_KEY_BYTES, SIGN_SECRET_KEY_BYTES } from "../constants.js";
+import { SIGN_BYTES, SIGN_PUBLIC_KEY_BYTES, SIGN_SECRET_KEY_BYTES } from "../crypto.constants.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";
 

@@ -11,7 +11,7 @@
  *
  * @see https://github.com/nicolo-ribaudo/react-native-libsodium
  */
-import { AEAD_NONCE_BYTES, SODIUM_CONSTANTS } from "../constants.js";
+import { AEAD_NONCE_BYTES, SODIUM_CONSTANTS } from "../crypto.constants.js";
 import {
   CryptoNotReadyError,
   DecryptionFailedError,

@@ -8,6 +8,12 @@
  * This module defines the contract only.
  */
 
+import {
+  THUMBNAIL_MAX_HEIGHT,
+  THUMBNAIL_MAX_WIDTH,
+  THUMBNAIL_WEBP_QUALITY,
+} from "./blob-constants.js";
+
 /** Result of generating a thumbnail. */
 export interface ThumbnailResult {
   /** Thumbnail bytes (resized image). */
@@ -40,8 +46,8 @@ export interface ThumbnailGenerator {
 
 /** Default thumbnail configuration. */
 export const DEFAULT_THUMBNAIL_CONFIG: ThumbnailConfig = {
-  maxWidth: 256,
-  maxHeight: 256,
+  maxWidth: THUMBNAIL_MAX_WIDTH,
+  maxHeight: THUMBNAIL_MAX_HEIGHT,
   format: "image/webp",
-  quality: 0.8,
+  quality: THUMBNAIL_WEBP_QUALITY,
 };

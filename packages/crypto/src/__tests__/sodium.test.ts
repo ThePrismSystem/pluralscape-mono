@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { SODIUM_CONSTANTS } from "../constants.js";
+import { SODIUM_CONSTANTS } from "../crypto.constants.js";
 import { AlreadyInitializedError, CryptoNotReadyError } from "../errors.js";
 import { _resetForTesting, configureSodium, getSodium, initSodium, isReady } from "../sodium.js";
 
