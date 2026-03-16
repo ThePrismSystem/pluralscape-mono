@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-const PACKAGES = ["types", "db", "crypto", "sync", "api-client", "queue", "storage"];
+const PACKAGES = ["types", "db", "crypto", "sync", "api-client", "queue", "storage", "validation"];
 
 function projectConfig(name: string, root: string) {
   return {
