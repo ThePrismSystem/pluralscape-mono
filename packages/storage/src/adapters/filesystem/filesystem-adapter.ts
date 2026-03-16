@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { link, mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 
 import { now } from "@pluralscape/types/runtime";
 
@@ -17,11 +17,12 @@ import type {
   PresignedUrlResult,
   StoredBlobMetadata,
 } from "../../interface.js";
+import type { UnixMillis } from "@pluralscape/types";
 
 interface SidecarMetadata {
   mimeType: string | null;
   checksum: string;
-  uploadedAt: number;
+  uploadedAt: UnixMillis;
 }
 
 const FILE_MODE = 0o600;
@@ -55,15 +56,10 @@ export class FilesystemBlobStorageAdapter implements BlobStorageAdapter {
 
     const blobPath = this.resolvePath(params.storageKey);
     const metaPath = blobPath + ".meta.json";
-    const dir = join(blobPath, "..");
+    const dir = dirname(blobPath);
 
     // Ensure system directory exists
     await mkdir(dir, { recursive: true });
-
-    // Check for existing blob (before writing temp files)
-    if (await this.fileExists(blobPath)) {
-      throw new BlobAlreadyExistsError(params.storageKey);
-    }
 
     const uploadedAt = now();
     const sidecar: SidecarMetadata = {
@@ -72,20 +68,27 @@ export class FilesystemBlobStorageAdapter implements BlobStorageAdapter {
       uploadedAt,
     };
 
-    // Atomic write: temp file + rename
-    const tmpBlob = join(dir, `.tmp-${randomUUID()}`);
-    const tmpMeta = join(dir, `.tmp-${randomUUID()}.meta`);
+    // Atomic exclusive write: temp file + link (fails with EEXIST if blob already exists)
+    const tmpBlob = `${blobPath}.tmp-${randomUUID()}`;
+    const tmpMeta = `${metaPath}.tmp-${randomUUID()}`;
 
     try {
       await writeFile(tmpBlob, params.data, { mode: FILE_MODE });
       await writeFile(tmpMeta, JSON.stringify(sidecar), { mode: FILE_MODE });
-      await rename(tmpBlob, blobPath);
-      await rename(tmpMeta, metaPath);
+      await link(tmpBlob, blobPath);
+      await link(tmpMeta, metaPath);
     } catch (err) {
-      // Clean up temp files on failure
+      if (isNodeError(err) && err.code === "EEXIST") {
+        throw new BlobAlreadyExistsError(params.storageKey);
+      }
+      // Non-EEXIST error: clean up any partially-linked final files
+      await this.silentUnlink(blobPath);
+      await this.silentUnlink(metaPath);
+      throw err;
+    } finally {
+      // Always clean up temp files
       await this.silentUnlink(tmpBlob);
       await this.silentUnlink(tmpMeta);
-      throw err;
     }
 
     return {
@@ -145,7 +148,7 @@ export class FilesystemBlobStorageAdapter implements BlobStorageAdapter {
       sizeBytes: blobStat.size,
       mimeType: sidecar.mimeType,
       checksum: sidecar.checksum,
-      uploadedAt: sidecar.uploadedAt as ReturnType<typeof now>,
+      uploadedAt: sidecar.uploadedAt,
     };
   }
 

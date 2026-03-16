@@ -10,8 +10,6 @@ import { BlobTooLargeError, StorageBackendError } from "../errors.js";
 import { runBlobStorageContract } from "./blob-storage.contract.js";
 import { makeBlobData, makeBytes } from "./test-helpers.js";
 
-import type { StoredBlobMetadata } from "../interface.js";
-
 let storageRoot: string;
 
 beforeEach(async () => {
@@ -113,12 +111,10 @@ describe("FilesystemBlobStorageAdapter-specific", () => {
       await expect(adapter.upload(params)).rejects.toThrow(StorageBackendError);
     });
 
-    it("rejects keys that resolve outside storageRoot", async () => {
+    it("rejects absolute path keys that resolve outside storageRoot", async () => {
       const adapter = new FilesystemBlobStorageAdapter({ storageRoot });
-      // Even without literal "..", an absolute path or specially-crafted key should be rejected
-      const params = makeBlobData(makeBytes(1), { storageKey: "sys_test/blob_ok" });
-      // This should succeed — normal key within root
-      await expect(adapter.upload(params)).resolves.toBeDefined();
+      const params = makeBlobData(makeBytes(1), { storageKey: "/etc/passwd" });
+      await expect(adapter.upload(params)).rejects.toThrow(StorageBackendError);
     });
 
     it("rejects download with path traversal key", async () => {
@@ -139,10 +135,11 @@ describe("FilesystemBlobStorageAdapter-specific", () => {
   describe("concurrent uploads", () => {
     it("handles concurrent uploads to different keys", async () => {
       const adapter = new FilesystemBlobStorageAdapter({ storageRoot });
-      const uploads = Array.from({ length: 10 }, (_, i) => {
+      const uploads = Array.from({ length: 10 }, async (_, i) => {
         const data = makeBytes(i, 64);
         const params = makeBlobData(data);
-        return adapter.upload(params).then((meta: StoredBlobMetadata) => ({ meta, params, data }));
+        const meta = await adapter.upload(params);
+        return { meta, params, data };
       });
 
       const results = await Promise.all(uploads);
