@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./quota": "./src/quota/index.ts",
     "./s3": "./src/adapters/s3/index.ts",
     "./filesystem": "./src/adapters/filesystem/index.ts"
   },

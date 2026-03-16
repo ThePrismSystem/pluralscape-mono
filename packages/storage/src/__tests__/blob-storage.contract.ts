@@ -14,11 +14,11 @@ import { BlobAlreadyExistsError, BlobNotFoundError } from "../errors.js";
 import { makeBytes, makeBlobData } from "./test-helpers.js";
 
 import type { BlobStorageAdapter } from "../interface.js";
+import type { StorageKey } from "@pluralscape/types";
 
 export function runBlobStorageContract(factory: () => BlobStorageAdapter): void {
   describe("BlobStorageAdapter contract", () => {
     // ── 1. upload / download round-trip ────────────────────────────
-
     describe("upload / download round-trip", () => {
       it("stores and retrieves exact bytes", async () => {
         const adapter = factory();
@@ -40,7 +40,6 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
     });
 
     // ── 2. upload duplicate key → BlobAlreadyExistsError ───────────
-
     describe("upload duplicate key", () => {
       it("throws BlobAlreadyExistsError when key already exists", async () => {
         const adapter = factory();
@@ -66,16 +65,17 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
     });
 
     // ── 3. download non-existent → BlobNotFoundError ───────────────
-
     describe("download non-existent key", () => {
       it("throws BlobNotFoundError", async () => {
         const adapter = factory();
-        await expect(adapter.download("sys_none/blob_ghost")).rejects.toThrow(BlobNotFoundError);
+        await expect(adapter.download("sys_none/blob_ghost" as StorageKey)).rejects.toThrow(
+          BlobNotFoundError,
+        );
       });
 
       it("error carries the storage key", async () => {
         const adapter = factory();
-        const key = "sys_test/blob_missing";
+        const key = "sys_test/blob_missing" as StorageKey;
         let caught: BlobNotFoundError | null = null;
         try {
           await adapter.download(key);
@@ -88,7 +88,6 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
     });
 
     // ── 4. delete ──────────────────────────────────────────────────
-
     describe("delete", () => {
       it("removes an existing blob", async () => {
         const adapter = factory();
@@ -100,7 +99,7 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
 
       it("is idempotent for non-existent keys", async () => {
         const adapter = factory();
-        await expect(adapter.delete("sys_test/blob_ghost")).resolves.not.toThrow();
+        await expect(adapter.delete("sys_test/blob_ghost" as StorageKey)).resolves.not.toThrow();
       });
 
       it("throws BlobNotFoundError on download after delete", async () => {
@@ -113,11 +112,10 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
     });
 
     // ── 5. exists ──────────────────────────────────────────────────
-
     describe("exists", () => {
       it("returns false before upload", async () => {
         const adapter = factory();
-        expect(await adapter.exists("sys_test/blob_missing")).toBe(false);
+        expect(await adapter.exists("sys_test/blob_missing" as StorageKey)).toBe(false);
       });
 
       it("returns true after upload", async () => {
@@ -137,11 +135,10 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
     });
 
     // ── 6. getMetadata ─────────────────────────────────────────────
-
     describe("getMetadata", () => {
       it("returns null for non-existent key", async () => {
         const adapter = factory();
-        expect(await adapter.getMetadata("sys_test/blob_none")).toBeNull();
+        expect(await adapter.getMetadata("sys_test/blob_none" as StorageKey)).toBeNull();
       });
 
       it("returns correct metadata after upload", async () => {
@@ -168,12 +165,11 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
     });
 
     // ── 7. presigned URLs ──────────────────────────────────────────
-
     describe("presigned URLs", () => {
       it("generatePresignedUploadUrl returns a result (supported or not)", async () => {
         const adapter = factory();
         const result = await adapter.generatePresignedUploadUrl({
-          storageKey: "sys_test/blob_presign",
+          storageKey: "sys_test/blob_presign" as StorageKey,
           mimeType: null,
           sizeBytes: 1024,
         });
@@ -187,7 +183,7 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
       it("generatePresignedDownloadUrl returns a result (supported or not)", async () => {
         const adapter = factory();
         const result = await adapter.generatePresignedDownloadUrl({
-          storageKey: "sys_test/blob_presign_dl",
+          storageKey: "sys_test/blob_presign_dl" as StorageKey,
         });
         expect(typeof result.supported).toBe("boolean");
         if (result.supported) {
@@ -199,7 +195,7 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
       it("supportsPresignedUrls matches generatePresignedUploadUrl result", async () => {
         const adapter = factory();
         const result = await adapter.generatePresignedUploadUrl({
-          storageKey: "sys_test/blob_cap_check",
+          storageKey: "sys_test/blob_cap_check" as StorageKey,
           mimeType: null,
           sizeBytes: 1,
         });
@@ -208,14 +204,13 @@ export function runBlobStorageContract(factory: () => BlobStorageAdapter): void 
     });
 
     // ── 8. Isolation ───────────────────────────────────────────────
-
     describe("key isolation", () => {
       it("operations on different keys are independent", async () => {
         const adapter = factory();
         const bytesA = makeBytes(0xa1, 8);
         const bytesB = makeBytes(0xb2, 8);
-        const paramsA = makeBlobData(bytesA, { storageKey: "sys_a/blob_x" });
-        const paramsB = makeBlobData(bytesB, { storageKey: "sys_b/blob_y" });
+        const paramsA = makeBlobData(bytesA, { storageKey: "sys_a/blob_x" as StorageKey });
+        const paramsB = makeBlobData(bytesB, { storageKey: "sys_b/blob_y" as StorageKey });
         await adapter.upload(paramsA);
         await adapter.upload(paramsB);
 

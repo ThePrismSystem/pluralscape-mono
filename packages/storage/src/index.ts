@@ -15,6 +15,7 @@ export {
   BlobAlreadyExistsError,
   BlobNotFoundError,
   BlobTooLargeError,
+  QuotaExceededError,
   StorageBackendError,
 } from "./errors.js";
 

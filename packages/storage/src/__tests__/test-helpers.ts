@@ -1,4 +1,5 @@
 import type { BlobUploadParams } from "../interface.js";
+import type { StorageKey } from "@pluralscape/types";
 
 /**
  * Builds a BlobUploadParams with the given data bytes.
@@ -6,10 +7,10 @@ import type { BlobUploadParams } from "../interface.js";
  */
 export function makeBlobData(
   bytes: Uint8Array,
-  overrides: Partial<BlobUploadParams> & { storageKey?: string } = {},
+  overrides: Partial<BlobUploadParams> = {},
 ): BlobUploadParams {
   return {
-    storageKey: overrides.storageKey ?? `sys_test/blob_${crypto.randomUUID()}`,
+    storageKey: overrides.storageKey ?? (`sys_test/blob_${crypto.randomUUID()}` as StorageKey),
     data: bytes,
     mimeType: overrides.mimeType ?? "application/octet-stream",
     checksum: overrides.checksum ?? fakeChecksum(),

@@ -5,11 +5,13 @@ import {
   StorageBackendError,
 } from "../../errors.js";
 
+import type { StorageKey } from "@pluralscape/types";
+
 /**
  * Maps AWS SDK error names to storage-layer errors.
  * Throws the appropriate typed error or wraps unknown errors in StorageBackendError.
  */
-export function mapS3Error(err: unknown, storageKey: string): never {
+export function mapS3Error(err: unknown, storageKey: StorageKey): never {
   if (!(err instanceof Error)) {
     throw new StorageBackendError("Unknown S3 error", { cause: err });
   }

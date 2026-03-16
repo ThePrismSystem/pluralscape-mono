@@ -17,7 +17,7 @@ import type {
   PresignedUrlResult,
   StoredBlobMetadata,
 } from "../../interface.js";
-import type { UnixMillis } from "@pluralscape/types";
+import type { StorageKey, UnixMillis } from "@pluralscape/types";
 
 interface SidecarMetadata {
   mimeType: string | null;
@@ -100,7 +100,7 @@ export class FilesystemBlobStorageAdapter implements BlobStorageAdapter {
     };
   }
 
-  async download(storageKey: string): Promise<Uint8Array> {
+  async download(storageKey: StorageKey): Promise<Uint8Array> {
     const blobPath = this.resolvePath(storageKey);
     try {
       return new Uint8Array(await readFile(blobPath));
@@ -112,19 +112,19 @@ export class FilesystemBlobStorageAdapter implements BlobStorageAdapter {
     }
   }
 
-  async delete(storageKey: string): Promise<void> {
+  async delete(storageKey: StorageKey): Promise<void> {
     const blobPath = this.resolvePath(storageKey);
     const metaPath = blobPath + ".meta.json";
     await this.silentUnlink(blobPath);
     await this.silentUnlink(metaPath);
   }
 
-  async exists(storageKey: string): Promise<boolean> {
+  async exists(storageKey: StorageKey): Promise<boolean> {
     const blobPath = this.resolvePath(storageKey);
     return this.fileExists(blobPath);
   }
 
-  async getMetadata(storageKey: string): Promise<StoredBlobMetadata | null> {
+  async getMetadata(storageKey: StorageKey): Promise<StoredBlobMetadata | null> {
     const blobPath = this.resolvePath(storageKey);
     const metaPath = blobPath + ".meta.json";
 

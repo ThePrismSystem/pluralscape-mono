@@ -1,11 +1,11 @@
 ---
 # infra-x9hz
 title: Blob quota and lifecycle management
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:58:33Z
-updated_at: 2026-03-08T19:58:33Z
+updated_at: 2026-03-16T01:33:13Z
 parent: infra-o80c
 blocked_by:
   - infra-psh9
@@ -42,3 +42,14 @@ Per-account storage quotas, retention policies, and blob lifecycle management.
 
 - ADR 009 (Blob Storage — quotas and retention)
 - infra-m2t5 (Background job infrastructure)
+
+## Summary of Changes
+
+- Added `QuotaExceededError` to `errors.ts` with systemId, usedBytes, quotaBytes, requestedBytes
+- Implemented `BlobQuotaService` with injectable `BlobUsageQuery` interface (no Drizzle dependency)
+- `checkQuota()` returns allowed/used/quota; `assertQuota()` throws on breach
+- Per-system quota overrides with default 1 GiB quota
+- Implemented `OrphanBlobDetector` with injectable `OrphanBlobQuery` and configurable grace period (default 24h)
+- Implemented `BlobCleanupHandler` composing adapter + detector + archiver for idempotent cleanup
+- 20 unit tests covering quota checks, orphan detection, cleanup lifecycle
+- Added `./quota` export path to package.json
