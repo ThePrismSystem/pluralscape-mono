@@ -428,6 +428,28 @@ importers:
         specifier: ^5.7.3
         version: 5.9.3
 
+  packages/validation:
+    dependencies:
+      '@pluralscape/types':
+        specifier: workspace:*
+        version: link:../types
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@pluralscape/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint-config
+      '@pluralscape/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/tsconfig
+      eslint:
+        specifier: ^10.0.3
+        version: 10.0.3
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   tooling/eslint-config:
     dependencies:
       '@eslint-community/eslint-plugin-eslint-comments':
