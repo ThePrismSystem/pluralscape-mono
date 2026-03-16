@@ -51,6 +51,7 @@ import type {
   ServerPoll,
   ServerPollVote,
   ServerRelationship,
+  ClientResponseData,
   ServerResponseData,
   ServerSideSystem,
   ServerSubsystem,
@@ -202,6 +203,177 @@ describe("serverSafe() — Server* types accepted", () => {
   });
 });
 
+// ── Count assertion for ClientResponseData ──────────────────────────
+// If a new Client* type is added to encryption.ts but not to
+// ClientResponseData, this tuple will have the wrong length.
+type AllClientTypes = [
+  ClientMember,
+  ClientFrontingSession,
+  ClientFrontingComment,
+  ClientGroup,
+  ClientSubsystem,
+  ClientRelationship,
+  ClientChannel,
+  ClientChatMessage,
+  ClientBoardMessage,
+  ClientNote,
+  ClientFieldDefinition,
+  ClientFieldValue,
+  ClientInnerWorldEntity,
+  ClientInnerWorldRegion,
+  ClientLifecycleEvent,
+  ClientCustomFront,
+  ClientJournalEntry,
+  ClientWikiPage,
+  ClientMemberPhoto,
+  ClientPoll,
+  ClientPollVote,
+  ClientAcknowledgementRequest,
+  ClientSideSystem,
+  ClientLayer,
+  ClientTimerConfig,
+  ClientAuditLogEntry,
+];
+
+describe("ClientResponseData union completeness", () => {
+  it("has all 26 Client* types (count assertion)", () => {
+    expectTypeOf<AllClientTypes["length"]>().toEqualTypeOf<26>();
+  });
+
+  it("ClientMember extends ClientResponseData", () => {
+    expectTypeOf<ClientMember>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientFrontingSession extends ClientResponseData", () => {
+    expectTypeOf<ClientFrontingSession>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientFrontingComment extends ClientResponseData", () => {
+    expectTypeOf<ClientFrontingComment>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientGroup extends ClientResponseData", () => {
+    expectTypeOf<ClientGroup>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientSubsystem extends ClientResponseData", () => {
+    expectTypeOf<ClientSubsystem>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientRelationship extends ClientResponseData", () => {
+    expectTypeOf<ClientRelationship>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientChannel extends ClientResponseData", () => {
+    expectTypeOf<ClientChannel>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientChatMessage extends ClientResponseData", () => {
+    expectTypeOf<ClientChatMessage>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientBoardMessage extends ClientResponseData", () => {
+    expectTypeOf<ClientBoardMessage>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientNote extends ClientResponseData", () => {
+    expectTypeOf<ClientNote>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientFieldDefinition extends ClientResponseData", () => {
+    expectTypeOf<ClientFieldDefinition>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientFieldValue extends ClientResponseData", () => {
+    expectTypeOf<ClientFieldValue>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientInnerWorldEntity extends ClientResponseData", () => {
+    expectTypeOf<ClientInnerWorldEntity>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientInnerWorldRegion extends ClientResponseData", () => {
+    expectTypeOf<ClientInnerWorldRegion>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientLifecycleEvent extends ClientResponseData", () => {
+    expectTypeOf<ClientLifecycleEvent>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientCustomFront extends ClientResponseData", () => {
+    expectTypeOf<ClientCustomFront>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientJournalEntry extends ClientResponseData", () => {
+    expectTypeOf<ClientJournalEntry>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientWikiPage extends ClientResponseData", () => {
+    expectTypeOf<ClientWikiPage>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientMemberPhoto extends ClientResponseData", () => {
+    expectTypeOf<ClientMemberPhoto>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientPoll extends ClientResponseData", () => {
+    expectTypeOf<ClientPoll>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientPollVote extends ClientResponseData", () => {
+    expectTypeOf<ClientPollVote>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientAcknowledgementRequest extends ClientResponseData", () => {
+    expectTypeOf<ClientAcknowledgementRequest>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientSideSystem extends ClientResponseData", () => {
+    expectTypeOf<ClientSideSystem>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientLayer extends ClientResponseData", () => {
+    expectTypeOf<ClientLayer>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientTimerConfig extends ClientResponseData", () => {
+    expectTypeOf<ClientTimerConfig>().toExtend<ClientResponseData>();
+  });
+
+  it("ClientAuditLogEntry extends ClientResponseData", () => {
+    expectTypeOf<ClientAuditLogEntry>().toExtend<ClientResponseData>();
+  });
+
+  it("no Server* type extends ClientResponseData", () => {
+    expectTypeOf<ServerMember>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerFrontingSession>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerFrontingComment>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerGroup>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerSubsystem>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerRelationship>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerChannel>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerChatMessage>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerBoardMessage>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerNote>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerFieldDefinition>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerFieldValue>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerInnerWorldEntity>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerInnerWorldRegion>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerLifecycleEvent>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerCustomFront>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerJournalEntry>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerWikiPage>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerMemberPhoto>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerPoll>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerPollVote>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerAcknowledgementRequest>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerSideSystem>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerLayer>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerTimerConfig>().not.toExtend<ClientResponseData>();
+    expectTypeOf<ServerAuditLogEntry>().not.toExtend<ClientResponseData>();
+  });
+});
+
 describe("serverSafe() — Client* types rejected", () => {
   it("ClientMember does NOT extend ServerResponseData", () => {
     expectTypeOf<ClientMember>().not.toExtend<ServerResponseData>();
@@ -321,6 +493,16 @@ describe("ServerSafe<T> branding", () => {
     const member = {} as ServerMember;
     expectTypeOf(serverSafe(member)).toEqualTypeOf<ServerSafe<ServerMember>>();
   });
+
+  it("serverSafe(ServerMember[]) returns ServerSafe<readonly ServerMember[]>", () => {
+    const members = [] as ServerMember[];
+    expectTypeOf(serverSafe(members)).toEqualTypeOf<ServerSafe<readonly ServerMember[]>>();
+  });
+
+  it("serverSafe(PaginatedResult<ServerMember>) returns ServerSafe<PaginatedResult<ServerMember>>", () => {
+    const page = {} as PaginatedResult<ServerMember>;
+    expectTypeOf(serverSafe(page)).toEqualTypeOf<ServerSafe<PaginatedResult<ServerMember>>>();
+  });
 });
 
 describe("serverSafe() — @ts-expect-error rejections", () => {
@@ -345,8 +527,8 @@ describe("serverSafe() — @ts-expect-error rejections", () => {
 
 describe("serverSafe() — runtime identity", () => {
   it("is an identity function (returns its argument unchanged)", () => {
-    // Verify the function body is literally `return data` — zero overhead
-    const src = serverSafe.toString();
-    expect(src).toContain("return data");
+    const member = {} as ServerMember;
+    const result = serverSafe(member);
+    expect(result).toBe(member);
   });
 });

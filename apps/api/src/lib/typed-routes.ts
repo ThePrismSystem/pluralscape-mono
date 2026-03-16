@@ -8,5 +8,5 @@ export function safeJson<T>(
   data: ServerSafe<T>,
   status?: ContentfulStatusCode,
 ): Response {
-  return c.json(data as T, status);
+  return c.json(data, status);
 }
