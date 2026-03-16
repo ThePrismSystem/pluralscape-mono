@@ -25,9 +25,9 @@ const MS_PER_DAY = HOURS_PER_DAY * MS_PER_HOUR;
 const FIVE_MINUTES_MS = 300_000;
 /** 7 days in milliseconds. */
 const SEVEN_DAYS_MS = 604_800_000;
-/** 30 days in milliseconds. */
+/** 30 days in milliseconds. Exceeds 2^31-1 — do NOT pass to `setTimeout`/`setInterval`. */
 const THIRTY_DAYS_MS = 2_592_000_000;
-/** 90 days in milliseconds. */
+/** 90 days in milliseconds. Exceeds 2^31-1 — do NOT pass to `setTimeout`/`setInterval`. */
 const NINETY_DAYS_MS = 7_776_000_000;
 
 /** 5 MiB in bytes. */
@@ -39,14 +39,11 @@ const TWENTY_FIVE_MiB = 26_214_400;
 /** 500 MiB in bytes. */
 const FIVE_HUNDRED_MiB = 524_288_000;
 
-const SECONDS_PER_HOUR = 3_600;
-const SECONDS_PER_DAY = 86_400;
-
 // ── Rate Limits ──────────────────────────────────────────────────────
 
 export interface RateLimitConfig {
   readonly limit: number;
-  readonly windowSeconds: number;
+  readonly windowMs: number;
 }
 
 const RATE_LIMIT_GLOBAL = 100;
@@ -62,19 +59,21 @@ const RATE_LIMIT_FRIEND_CODE = 10;
 const RATE_LIMIT_PUBLIC_API = 60;
 
 export const RATE_LIMITS = {
-  global: { limit: RATE_LIMIT_GLOBAL, windowSeconds: SECONDS_PER_MINUTE },
-  authHeavy: { limit: RATE_LIMIT_AUTH_HEAVY, windowSeconds: SECONDS_PER_MINUTE },
-  authLight: { limit: RATE_LIMIT_AUTH_LIGHT, windowSeconds: SECONDS_PER_MINUTE },
-  deviceTransfer: { limit: RATE_LIMIT_DEVICE_TRANSFER, windowSeconds: SECONDS_PER_MINUTE },
-  write: { limit: RATE_LIMIT_WRITE, windowSeconds: SECONDS_PER_MINUTE },
-  blobUpload: { limit: RATE_LIMIT_BLOB_UPLOAD, windowSeconds: SECONDS_PER_MINUTE },
-  webhookManagement: { limit: RATE_LIMIT_WEBHOOK, windowSeconds: SECONDS_PER_MINUTE },
-  dataExport: { limit: RATE_LIMIT_EXPORT_IMPORT, windowSeconds: SECONDS_PER_HOUR },
-  dataImport: { limit: RATE_LIMIT_EXPORT_IMPORT, windowSeconds: SECONDS_PER_HOUR },
-  accountPurge: { limit: RATE_LIMIT_PURGE, windowSeconds: SECONDS_PER_DAY },
-  friendCodeGeneration: { limit: RATE_LIMIT_FRIEND_CODE, windowSeconds: SECONDS_PER_MINUTE },
-  publicApi: { limit: RATE_LIMIT_PUBLIC_API, windowSeconds: SECONDS_PER_MINUTE },
+  global: { limit: RATE_LIMIT_GLOBAL, windowMs: MS_PER_MINUTE },
+  authHeavy: { limit: RATE_LIMIT_AUTH_HEAVY, windowMs: MS_PER_MINUTE },
+  authLight: { limit: RATE_LIMIT_AUTH_LIGHT, windowMs: MS_PER_MINUTE },
+  deviceTransfer: { limit: RATE_LIMIT_DEVICE_TRANSFER, windowMs: MS_PER_MINUTE },
+  write: { limit: RATE_LIMIT_WRITE, windowMs: MS_PER_MINUTE },
+  blobUpload: { limit: RATE_LIMIT_BLOB_UPLOAD, windowMs: MS_PER_MINUTE },
+  webhookManagement: { limit: RATE_LIMIT_WEBHOOK, windowMs: MS_PER_MINUTE },
+  dataExport: { limit: RATE_LIMIT_EXPORT_IMPORT, windowMs: MS_PER_HOUR },
+  dataImport: { limit: RATE_LIMIT_EXPORT_IMPORT, windowMs: MS_PER_HOUR },
+  accountPurge: { limit: RATE_LIMIT_PURGE, windowMs: MS_PER_DAY },
+  friendCodeGeneration: { limit: RATE_LIMIT_FRIEND_CODE, windowMs: MS_PER_MINUTE },
+  publicApi: { limit: RATE_LIMIT_PUBLIC_API, windowMs: MS_PER_MINUTE },
 } as const satisfies Record<string, RateLimitConfig>;
+
+export type RateLimitCategory = keyof typeof RATE_LIMITS;
 
 // ── Error Codes ──────────────────────────────────────────────────────
 
@@ -112,6 +111,7 @@ export const PAGINATION = {
   maxLimit: PAGINATION_MAX_LIMIT,
   maxOffset: PAGINATION_MAX_OFFSET,
   cursorTtlMs: MS_PER_DAY,
+  totalCountMaxRows: 100_000,
 } as const;
 
 // ── Session Timeouts ─────────────────────────────────────────────────
@@ -137,14 +137,14 @@ export const LAST_ACTIVE_THROTTLE_MS = MS_PER_MINUTE;
 // ── Media Upload Quotas ──────────────────────────────────────────────
 
 /** Per-purpose maximum file size in bytes, keyed by BlobPurpose. */
-export const BLOB_SIZE_LIMITS: Readonly<Record<BlobPurpose, number>> = {
+export const BLOB_SIZE_LIMITS = {
   avatar: FIVE_MiB,
   "member-photo": TEN_MiB,
   "journal-image": TEN_MiB,
   attachment: TWENTY_FIVE_MiB,
   export: FIVE_HUNDRED_MiB,
   "littles-safe-mode": FIVE_MiB,
-};
+} as const satisfies Readonly<Record<BlobPurpose, number>>;
 
 // ── Friend Codes ─────────────────────────────────────────────────────
 
@@ -155,6 +155,7 @@ export const FRIEND_CODE = {
   standardMaxTtlMs: SEVEN_DAYS_MS,
   extendedTtlMs: SEVEN_DAYS_MS,
   extendedMaxTtlMs: THIRTY_DAYS_MS,
+  permanentTtlMs: null,
   maxActivePerSystem: FRIEND_CODE_MAX_ACTIVE,
 } as const;
 

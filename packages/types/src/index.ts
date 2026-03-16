@@ -595,7 +595,7 @@ export type {
 } from "./snapshot.js";
 
 // ── API constants ─────────────────────────────────────────────────────
-export type { RateLimitConfig, ApiErrorCode } from "./api-constants.js";
+export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants.js";
 export {
   RATE_LIMITS,
   API_ERROR_CODES,

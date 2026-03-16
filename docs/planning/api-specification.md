@@ -37,7 +37,7 @@ When the limit is exceeded, the response is `429 Too Many Requests` with a `Retr
 
 ### Self-hosted overrides
 
-Each category can be overridden via environment variables prefixed with `RATE_LIMIT_`. For example, `RATE_LIMIT_AUTH_LIMIT=10` and `RATE_LIMIT_AUTH_WINDOW_SECONDS=120` override the auth login/register/password-reset category.
+Each category can be overridden via environment variables prefixed with `RATE_LIMIT_`. For example, `RATE_LIMIT_AUTH_LIMIT=10` and `RATE_LIMIT_AUTH_WINDOW_MS=60000` override the auth login/register/password-reset category. Note: the constants in `@pluralscape/types` use milliseconds (`windowMs`), while the spec tables above show human-readable seconds for clarity.
 
 ---
 
@@ -81,7 +81,7 @@ interface ApiErrorResponse {
 
 ### Privacy rule
 
-To prevent resource enumeration, `401 Forbidden` and `404 Not Found` responses for entity lookups all return `NOT_FOUND` with HTTP 404. The server never reveals whether a resource exists to an unauthorized caller (fail-closed).
+To prevent resource enumeration, `401 Unauthorized`, `403 Forbidden`, and `404 Not Found` responses for entity lookups all return `NOT_FOUND` with HTTP 404. The server never reveals whether a resource exists to an unauthorized caller (fail-closed).
 
 ---
 
@@ -123,7 +123,7 @@ The canonical retry policies are defined in `packages/queue/src/policies/default
 | Job Type                                                                                                                                           | Max Retries | Backoff                   | Strategy    | Cap    |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------- | ----------- | ------ |
 | `webhook-deliver`                                                                                                                                  | 5           | 30 s base, 4x multiplier  | exponential | 2 h    |
-| `notification-send`                                                                                                                                | 3           | 5 s base, 1x multiplier   | linear      | 30 s   |
+| `notification-send`                                                                                                                                | 3           | 5 s base (linear)         | linear      | 30 s   |
 | `sync-push` / `sync-pull`                                                                                                                          | 3           | 1 s base, 2x multiplier   | exponential | 30 s   |
 | `blob-upload`                                                                                                                                      | 3           | 2 s base, 4x multiplier   | exponential | 60 s   |
 | `export-generate` / `import-process`                                                                                                               | 3           | 1 s base, 4x multiplier   | exponential | 60 s   |
