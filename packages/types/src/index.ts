@@ -253,7 +253,13 @@ export type {
   ClientAuditLogEntry,
   DecryptFn,
   EncryptFn,
+  ServerResponseData,
+  ClientResponseData,
 } from "./encryption.js";
+
+// ── Server-safe enforcement ────────────────────────────────────────
+export type { ServerSafe } from "./server-safe.js";
+export { serverSafe } from "./server-safe.js";
 
 // ── Sync ──────────────────────────────────────────────────────
 export type {
