@@ -594,5 +594,19 @@ export type {
   SnapshotContent,
 } from "./snapshot.js";
 
+// ── API constants ─────────────────────────────────────────────────────
+export type { RateLimitConfig, ApiErrorCode } from "./api-constants.js";
+export {
+  RATE_LIMITS,
+  API_ERROR_CODES,
+  PAGINATION,
+  SESSION_TIMEOUTS,
+  LAST_ACTIVE_THROTTLE_MS,
+  BLOB_SIZE_LIMITS,
+  FRIEND_CODE,
+  AUDIT_RETENTION,
+  CLIENT_RETRY,
+} from "./api-constants.js";
+
 // ── Runtime utilities ──────────────────────────────────────────────
 export { createId, now, toISO } from "./runtime.js";
