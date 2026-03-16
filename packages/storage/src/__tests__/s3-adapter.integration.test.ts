@@ -8,6 +8,7 @@ import { ensureMinio } from "./minio-container.js";
 import { makeBlobData, makeBytes } from "./test-helpers.js";
 
 import type { MinioTestContext } from "./minio-container.js";
+import type { StorageKey } from "@pluralscape/types";
 
 let ctx: MinioTestContext;
 
@@ -37,7 +38,7 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
       }
       const adapter = new S3BlobStorageAdapter(ctx.config);
       const result = await adapter.generatePresignedUploadUrl({
-        storageKey: "sys_test/blob_presign_up",
+        storageKey: "sys_test/blob_presign_up" as StorageKey,
         mimeType: "image/png",
         sizeBytes: 1024,
       });
@@ -57,7 +58,7 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
 
       // Upload first so the key exists
       const data = makeBytes(0xab, 32);
-      const params = makeBlobData(data, { storageKey: "sys_test/blob_presign_dl" });
+      const params = makeBlobData(data, { storageKey: "sys_test/blob_presign_dl" as StorageKey });
       await adapter.upload(params);
 
       const result = await adapter.generatePresignedDownloadUrl({
@@ -80,7 +81,7 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
         presignedUploadExpiryMs: 5 * 60 * 1_000, // 5 minutes
       });
       const result = await adapter.generatePresignedUploadUrl({
-        storageKey: "sys_test/blob_custom_exp",
+        storageKey: "sys_test/blob_custom_exp" as StorageKey,
         mimeType: null,
         sizeBytes: 512,
       });
@@ -103,7 +104,7 @@ describe("S3BlobStorageAdapter (MinIO integration)", () => {
       const adapter = new S3BlobStorageAdapter(ctx.config);
       const data = makeBytes(0xcc, 16);
       const params = makeBlobData(data, {
-        storageKey: "sys_test/blob_null_mime",
+        storageKey: "sys_test/blob_null_mime" as StorageKey,
         mimeType: null,
       });
       await adapter.upload(params);

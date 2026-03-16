@@ -25,7 +25,7 @@ import type {
   PresignedUrlResult,
   StoredBlobMetadata,
 } from "../../interface.js";
-import type { UnixMillis } from "@pluralscape/types";
+import type { StorageKey, UnixMillis } from "@pluralscape/types";
 
 const CHECKSUM_META_KEY = "checksum";
 const UPLOADED_AT_META_KEY = "uploadedat";
@@ -103,7 +103,7 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
     };
   }
 
-  async download(storageKey: string): Promise<Uint8Array> {
+  async download(storageKey: StorageKey): Promise<Uint8Array> {
     try {
       const response = await this.client.send(
         new GetObjectCommand({
@@ -123,7 +123,7 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
     }
   }
 
-  async delete(storageKey: string): Promise<void> {
+  async delete(storageKey: StorageKey): Promise<void> {
     try {
       await this.client.send(
         new DeleteObjectCommand({
@@ -141,7 +141,7 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
     }
   }
 
-  async exists(storageKey: string): Promise<boolean> {
+  async exists(storageKey: StorageKey): Promise<boolean> {
     try {
       await this.client.send(
         new HeadObjectCommand({
@@ -159,7 +159,7 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
     }
   }
 
-  async getMetadata(storageKey: string): Promise<StoredBlobMetadata | null> {
+  async getMetadata(storageKey: StorageKey): Promise<StoredBlobMetadata | null> {
     try {
       const response = await this.client.send(
         new HeadObjectCommand({

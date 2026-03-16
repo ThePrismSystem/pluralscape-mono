@@ -10,6 +10,8 @@ import { BlobTooLargeError, StorageBackendError } from "../errors.js";
 import { runBlobStorageContract } from "./blob-storage.contract.js";
 import { makeBlobData, makeBytes } from "./test-helpers.js";
 
+import type { StorageKey } from "@pluralscape/types";
+
 let storageRoot: string;
 
 beforeEach(async () => {
@@ -107,24 +109,28 @@ describe("FilesystemBlobStorageAdapter-specific", () => {
   describe("path traversal guard", () => {
     it("rejects keys containing '..'", async () => {
       const adapter = new FilesystemBlobStorageAdapter({ storageRoot });
-      const params = makeBlobData(makeBytes(1), { storageKey: "sys_test/../etc/passwd" });
+      const params = makeBlobData(makeBytes(1), {
+        storageKey: "sys_test/../etc/passwd" as StorageKey,
+      });
       await expect(adapter.upload(params)).rejects.toThrow(StorageBackendError);
     });
 
     it("rejects absolute path keys that resolve outside storageRoot", async () => {
       const adapter = new FilesystemBlobStorageAdapter({ storageRoot });
-      const params = makeBlobData(makeBytes(1), { storageKey: "/etc/passwd" });
+      const params = makeBlobData(makeBytes(1), { storageKey: "/etc/passwd" as StorageKey });
       await expect(adapter.upload(params)).rejects.toThrow(StorageBackendError);
     });
 
     it("rejects download with path traversal key", async () => {
       const adapter = new FilesystemBlobStorageAdapter({ storageRoot });
-      await expect(adapter.download("../../../etc/passwd")).rejects.toThrow(StorageBackendError);
+      await expect(adapter.download("../../../etc/passwd" as StorageKey)).rejects.toThrow(
+        StorageBackendError,
+      );
     });
 
     it("rejects delete with path traversal key", async () => {
       const adapter = new FilesystemBlobStorageAdapter({ storageRoot });
-      await expect(adapter.delete("sys_test/../../../etc/passwd")).rejects.toThrow(
+      await expect(adapter.delete("sys_test/../../../etc/passwd" as StorageKey)).rejects.toThrow(
         StorageBackendError,
       );
     });
@@ -160,7 +166,9 @@ describe("FilesystemBlobStorageAdapter-specific", () => {
       const blockingFile = join(storageRoot, "sys_blocked");
       await writeFile(blockingFile, "block", { mode: 0o600 });
 
-      const params = makeBlobData(makeBytes(1), { storageKey: "sys_blocked/blob_test" });
+      const params = makeBlobData(makeBytes(1), {
+        storageKey: "sys_blocked/blob_test" as StorageKey,
+      });
       await expect(adapter.upload(params)).rejects.toThrow();
 
       // The storageRoot should not have any temp files left behind
@@ -174,7 +182,7 @@ describe("FilesystemBlobStorageAdapter-specific", () => {
   describe("system directory creation", () => {
     it("creates system subdirectory on first upload", async () => {
       const adapter = new FilesystemBlobStorageAdapter({ storageRoot });
-      const params = makeBlobData(makeBytes(1), { storageKey: "sys_new/blob_first" });
+      const params = makeBlobData(makeBytes(1), { storageKey: "sys_new/blob_first" as StorageKey });
       await adapter.upload(params);
 
       const dirStat = await stat(join(storageRoot, "sys_new"));
@@ -183,8 +191,8 @@ describe("FilesystemBlobStorageAdapter-specific", () => {
 
     it("reuses existing system directory for subsequent uploads", async () => {
       const adapter = new FilesystemBlobStorageAdapter({ storageRoot });
-      const params1 = makeBlobData(makeBytes(1), { storageKey: "sys_reuse/blob_1" });
-      const params2 = makeBlobData(makeBytes(2), { storageKey: "sys_reuse/blob_2" });
+      const params1 = makeBlobData(makeBytes(1), { storageKey: "sys_reuse/blob_1" as StorageKey });
+      const params2 = makeBlobData(makeBytes(2), { storageKey: "sys_reuse/blob_2" as StorageKey });
       await adapter.upload(params1);
       await adapter.upload(params2);
 
