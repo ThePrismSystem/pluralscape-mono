@@ -5,8 +5,8 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-09T12:42:40Z
-updated_at: 2026-03-15T07:13:05Z
-parent: crypto-gd8f
+updated_at: 2026-03-16T07:14:50Z
+parent: ps-rdqo
 blocked_by:
   - crypto-gkaa
   - api-g954

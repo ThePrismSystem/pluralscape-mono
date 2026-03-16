@@ -14,6 +14,7 @@ export { formatRelativeTime } from "./format-relative-time.js";
 export { createMissingKeyHandler } from "./missing-key-handler.js";
 export {
   CANONICAL_TERMS,
+  PRESET_PLURAL_RULES,
   resolveTerm,
   resolveTermLower,
   resolveTermPlural,
