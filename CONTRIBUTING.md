@@ -113,7 +113,7 @@ switch (status) {
 - **No `console.log` in production code** — use structured logging. `console.log` is acceptable in scripts and tests only
 - **Prefer early returns** over deeply nested conditionals
 - **Exhaustive pattern matching** — all `switch` statements on union types must handle every case (use `as never` default)
-- **No magic numbers/strings** — extract to named constants
+- **No magic numbers/strings** — extract to `*.constants.ts` files. Each package/domain has its own (e.g., `crypto.constants.ts`, `middleware.constants.ts`). The ESLint config disables `no-magic-numbers` for this glob. Every constant needs a JSDoc comment and should use numeric underscores for readability (`86_400` not `86400`). When adding a constant, extend the nearest existing `*.constants.ts`; only create a new file when entering a new domain.
 
 ### Linting
 
