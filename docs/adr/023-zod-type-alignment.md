@@ -21,7 +21,7 @@ Create `packages/validation` with hand-written Zod v4 schemas for boundary types
 - **TypeScript remains the source of truth.** Types are defined in `packages/types` and never generated from Zod schemas.
 - **Schemas live in `packages/validation`**, which depends on both `zod` and `@pluralscape/types`.
 - **Contract tests** use `expectTypeOf` (compile-time) and `safeParse` (runtime) to verify that each schema's inferred type matches the canonical TypeScript interface.
-- **Branded type helpers** (`brandedString`, `brandedNumber`) centralize the one warranted type assertion (`as ZodType<Brand<T, B>>`) so individual schemas stay assertion-free.
+- **Branded type helpers** (`brandedString`, `brandedNumber`) centralize the one warranted `z.custom<Brand<T, B>>()` call so individual schemas stay assertion-free.
 - **Scope is boundary types only** — API request/response shapes, job payloads, webhook bodies, notification data. Internal domain types that never cross a trust boundary do not need schemas.
 
 ## Consequences

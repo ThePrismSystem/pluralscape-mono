@@ -16,5 +16,5 @@ export function brandedString<B extends string>(): z.ZodType<Brand<string, B>> {
  * Zod schema for a branded number type.
  */
 export function brandedNumber<B extends string>(): z.ZodType<Brand<number, B>> {
-  return z.custom<Brand<number, B>>((val) => typeof val === "number");
+  return z.custom<Brand<number, B>>((val) => typeof val === "number" && Number.isFinite(val));
 }

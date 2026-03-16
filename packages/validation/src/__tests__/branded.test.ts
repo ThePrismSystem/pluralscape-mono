@@ -20,6 +20,12 @@ describe("brandedString", () => {
     const result = schema.safeParse(42);
     expect(result.success).toBe(false);
   });
+
+  it("accepts a whitespace-only string", () => {
+    const schema = brandedString<"SystemId">();
+    const result = schema.safeParse("   ");
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("brandedNumber", () => {
@@ -29,9 +35,33 @@ describe("brandedNumber", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts zero", () => {
+    const schema = brandedNumber<"Score">();
+    const result = schema.safeParse(0);
+    expect(result.success).toBe(true);
+  });
+
   it("rejects a non-number value", () => {
     const schema = brandedNumber<"Score">();
     const result = schema.safeParse("not-a-number");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects NaN", () => {
+    const schema = brandedNumber<"Score">();
+    const result = schema.safeParse(NaN);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects Infinity", () => {
+    const schema = brandedNumber<"Score">();
+    const result = schema.safeParse(Infinity);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects -Infinity", () => {
+    const schema = brandedNumber<"Score">();
+    const result = schema.safeParse(-Infinity);
     expect(result.success).toBe(false);
   });
 });
