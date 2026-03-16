@@ -1,5 +1,7 @@
 import { cors } from "hono/cors";
 
+import { CORS_MAX_AGE_SECONDS } from "./middleware.constants.js";
+
 import type { MiddlewareHandler } from "hono";
 
 /**
@@ -26,6 +28,6 @@ export function createCorsMiddleware(): MiddlewareHandler {
     origin: origins,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
-    maxAge: 86400,
+    maxAge: CORS_MAX_AGE_SECONDS,
   });
 }

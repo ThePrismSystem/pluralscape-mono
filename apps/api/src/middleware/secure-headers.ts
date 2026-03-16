@@ -1,5 +1,7 @@
 import { secureHeaders as honoSecureHeaders } from "hono/secure-headers";
 
+import { HSTS_MAX_AGE_SECONDS } from "./middleware.constants.js";
+
 import type { MiddlewareHandler } from "hono";
 
 /**
@@ -17,6 +19,8 @@ export function createSecureHeaders(): MiddlewareHandler {
       frameAncestors: ["'none'"],
     },
     xFrameOptions: "DENY",
-    strictTransportSecurity: isProduction ? "max-age=63072000; includeSubDomains" : false,
+    strictTransportSecurity: isProduction
+      ? `max-age=${String(HSTS_MAX_AGE_SECONDS)}; includeSubDomains`
+      : false,
   });
 }
