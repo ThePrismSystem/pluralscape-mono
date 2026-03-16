@@ -1,11 +1,11 @@
 ---
 # ps-duny
 title: Locale formatting utilities
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T13:36:19Z
-updated_at: 2026-03-08T13:36:28Z
+updated_at: 2026-03-16T05:32:19Z
 parent: ps-7z0s
 blocked_by:
   - ps-jkpn
@@ -24,14 +24,25 @@ Date, time, number, and locale-aware formatting utilities
 
 ## Acceptance Criteria
 
-- [ ] Date formatting with locale support
-- [ ] Time formatting with locale support
-- [ ] Number formatting with locale support
-- [ ] Relative time formatting
-- [ ] Duration formatting for fronting sessions
-- [ ] RTL direction detection utility
-- [ ] Unit tests with multiple locales
+- [x] Date formatting with locale support
+- [x] Time formatting with locale support
+- [x] Number formatting with locale support
+- [x] Relative time formatting
+- [x] Duration formatting for fronting sessions
+- [x] RTL direction detection utility
+- [x] Unit tests with multiple locales
 
 ## References
 
 - features.md section 11
+
+## Summary of Changes
+
+Added locale formatting utilities to @pluralscape/i18n:
+
+- formatDate/formatTime/formatDateTime with iso/us/eu/relative preferences
+- formatNumber/formatCompactNumber/formatPercentage with locale-aware separators
+- formatRelativeTime picking best unit (seconds through years)
+- formatDuration/formatFrontingDuration for fronting session lengths
+- Shared time-constants.ts eliminating all magic numbers
+- 52 new tests across 4 test files, covering en/de/ar locales

@@ -23,6 +23,19 @@ export default defineConfig({
     projects: [
       ...PACKAGES.map((name) => projectConfig(name, `packages/${name}`)),
       projectConfig("api", "apps/api"),
+      {
+        test: {
+          name: "i18n",
+          root: "packages/i18n",
+          environment: "node",
+          include: ["src/**/*.{test,spec}.{ts,tsx}"],
+          exclude: ["**/*.integration.{test,spec}.ts"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 5000,
+          hookTimeout: 10000,
+        },
+      },
     ],
     coverage: {
       provider: "v8",

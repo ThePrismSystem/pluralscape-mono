@@ -1,11 +1,11 @@
 ---
 # infra-tt0m
 title: BullMQ Valkey queue adapter
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-08T19:57:42Z
-updated_at: 2026-03-15T08:53:59Z
+updated_at: 2026-03-15T22:58:04Z
 parent: infra-m2t5
 blocked_by:
   - infra-18r3

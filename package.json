@@ -45,6 +45,7 @@
   },
   "pnpm": {
     "overrides": {
+      "@trpc/server": "11.13.4",
       "esbuild": ">=0.25.0",
       "flatted": ">=3.4.0"
     }
