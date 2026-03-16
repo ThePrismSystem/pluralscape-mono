@@ -64,6 +64,9 @@ importers:
       '@pluralscape/types':
         specifier: workspace:*
         version: link:../../packages/types
+      '@pluralscape/validation':
+        specifier: workspace:*
+        version: link:../../packages/validation
       '@trpc/server':
         specifier: 11.13.4
         version: 11.13.4(typescript@5.9.3)

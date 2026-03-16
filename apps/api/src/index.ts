@@ -5,6 +5,7 @@ import { errorHandler } from "./middleware/error-handler.js";
 import { createCategoryRateLimiter } from "./middleware/rate-limit.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createSecureHeaders } from "./middleware/secure-headers.js";
+import { authRoutes } from "./routes/auth/index.js";
 
 const DEFAULT_PORT = 10045;
 const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
@@ -24,6 +25,8 @@ app.get("/", (c) => {
 app.get("/health", (c) => {
   return c.json({ status: "healthy" });
 });
+
+app.route("/auth", authRoutes);
 
 if (typeof Bun !== "undefined") {
   Bun.serve({
