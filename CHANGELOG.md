@@ -41,11 +41,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - License compatibility audit (`docs/audits/001-license-compatibility.md`)
   - Hosting cost estimate (`docs/audits/002-hosting-cost-estimate.md`)
   - Database schema audit (`docs/audits/003-database-schema-audit.md`)
-- `@pluralscape/types` package — 30+ domain type modules with Zod validators, branded IDs, and runtime helpers covering identity, fronting, communication, privacy, encryption tiers, sync, jobs, webhooks, search, i18n, and more
+- `@pluralscape/types` package — 30+ domain type modules with Zod validators, branded IDs, runtime helpers, API operational constants (rate limits, pagination, session timeouts, error codes), and `ServerSafe<T>` compile-time enforcement
 - `@pluralscape/db` package — Drizzle ORM schema for PostgreSQL and SQLite dual-dialect with 40+ tables, row-level security, common views, query helpers, and encryption contract hardening
-- `@pluralscape/crypto` package — libsodium cross-platform bindings (WASM + React Native), master key derivation, symmetric encryption/decryption, identity keypair generation, and signature operations
+- `@pluralscape/crypto` package — libsodium cross-platform bindings (WASM + React Native), master key derivation, symmetric encryption/decryption, identity keypair generation, signature operations, bucket key management, and client-side blob encryption pipeline
 - `@pluralscape/sync` package — encrypted CRDT relay proof-of-concept with Automerge, sync session management, and document topology design
-- Test framework — Vitest workspace configuration with coverage enforcement, test factories, and shared utilities (2,889 tests across 144 files)
+- `@pluralscape/storage` package — S3-compatible blob storage adapter, filesystem adapter for self-hosted deployments, quota management with orphan detection, and lifecycle cleanup jobs
+- `@pluralscape/queue` package — SQLite-backed background job queue with retry policies (exponential/linear backoff), dead letter queue (DLQ), job observability (metrics, health checks, alerts), and stalled job sweeper
+- `@pluralscape/i18n` package — internationalization framework with locale-aware date/number/duration/relative-time formatting, nomenclature term resolution for community terminology, and React provider integration
+- `@pluralscape/validation` package — shared Zod validation schemas with branded type predicates (NaN/Infinity rejection) and contract tests ensuring type-schema alignment
+- API foundation (`apps/api`) — Hono server on Bun with CORS configuration, security headers (HSTS, CSP, etc.), in-memory rate limiting middleware, structured error handling with `ApiErrorResponse` format, and middleware composition tests
+- API specification (`docs/planning/api-specification.md`) — concrete operational constants for rate limits (12 categories), pagination (cursor + offset), session timeouts, retry policies, error codes, friend code tiers, audit retention, and blob size limits
+- Test framework — Vitest workspace configuration with coverage enforcement, test factories, and shared utilities (2,603 tests across 152 files)
 - Database schema hardening — 29 optimization tasks: performance indexes (composites, partials, covering), non-critical encryption (API keys, sessions, webhooks, wiki slugs), sync queue fixes, full-text search, and varchar right-sizing
 - RLS policy bootstrapping — row-level security policies for all tenant-scoped tables with session-based isolation
 - SQLCipher encryption-at-rest — encrypted SQLite for self-hosted deployments
@@ -53,6 +59,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Entity archival support — archived/archived_at columns across all non-audit entity types with consistency checks and partial indexes
 - Entity archival FK audit (`docs/audits/011-entity-archival-fk-audit.md`) — complete FK dependency map for 26+ archivable entities
 - 12 future feature specifications (`docs/future-features/`) — widgets, cosmetics, client SDKs, onboarding, linked fronting, outtrigger analytics, traumaversary tracking, therapist reports, journal custom fields, journal fronting context, member templates, custom lifecycle events
+- ADR 023: Zod-type alignment — strategy for keeping Zod schemas synchronized with TypeScript types
 - Blob metadata, notification, and webhook integration tests (PG + SQLite)
 - Work tracking with beans (CLI-based issue tracker committed alongside code)
 - Roadmap generation from beans (`pnpm roadmap`)
@@ -64,3 +71,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Schema audit 005 critical and high findings (C3, H1, H2)
 - Schema audit 008 findings across schema, queries, and RLS
 - Composite FK constraints and view join correctness
+- Rate limiter hardening: TRUST_PROXY support, eviction, fixed-window semantics
+- CORS: cache config at startup, filter empty origins, gate HSTS on HTTPS
+- Storage: branded type enforcement in filesystem and S3 adapters
+- Crypto: minimum password length enforcement in key derivation
+- Crypto: blob encryption pipeline hardened per PR review
+- Validation: reject NaN and Infinity in branded number predicates
+- API specification: correct HTTP status code labels, windowMs alignment with middleware

@@ -14,30 +14,33 @@ Goal: Monorepo infrastructure, tooling, governance
 - Public repo setup (branch protection, issue templates, dependabot)
 - License audit
 
-## Milestone 1: Data Layer [IN PROGRESS]
+## Milestone 1: Data Layer [COMPLETED]
 
-Goal: Domain types, database schema, encryption primitives, sync protocol design, i18n foundation
+Goal: Domain types, database schema, encryption primitives, sync protocol design, i18n foundation, API specification
 
 Epics:
 
 - ~~Domain types (`packages/types`)~~ [COMPLETED] — 30+ domain type modules with Zod validators and branded IDs
 - ~~Database schema (`packages/db`)~~ [COMPLETED] — 40+ tables, dual-dialect (PG + SQLite), RLS, constraint closure, encryption contracts
 - ~~Database schema hardening~~ [COMPLETED] — 29 tasks: indexes, encryption, sync queue fixes, full-text search, varchar right-sizing
-- ~~Test framework setup~~ [COMPLETED] — Vitest workspace, coverage enforcement, test factories (2,338 tests)
+- ~~Test framework setup~~ [COMPLETED] — Vitest workspace, coverage enforcement, test factories (2,603 tests across 152 files)
 - ~~Launch feature types (L2-L10)~~ [COMPLETED] — non-system accounts, fronting snapshots, member duplication, outtrigger, multi-system verification, system duplication, lifecycle events, innerworld-move, system snapshots
 - ~~Entity archival~~ [COMPLETED] — archived/archived_at columns across all non-audit entity types with consistency checks and partial indexes
 - ~~RLS policy bootstrapping~~ [COMPLETED] — row-level security policies for all tenant-scoped tables
 - ~~SQLCipher encryption-at-rest~~ [COMPLETED] — encrypted SQLite for self-hosted deployments
 - ~~Database schema documentation~~ [COMPLETED] — full ER diagrams for all 40+ tables
-- Encryption layer (`packages/crypto`) — ADR 006 (foundation complete: key derivation, symmetric crypto, identity keypairs; remaining: per-bucket keys, key rotation, recovery)
-- Sync protocol design (`packages/sync`) — ADR 005 (encrypted CRDT relay PoC complete; remaining: document topology, conflict resolution, partial replication)
-- Blob storage strategy — ADR 009
-- Background job infrastructure — ADR 010
-- Key recovery protocol — ADR 011
-- i18n infrastructure (features.md section 11)
-- Nomenclature system (features.md section 12)
+- ~~Encryption layer (`packages/crypto`)~~ [COMPLETED] — ADR 006: key derivation, symmetric crypto, identity keypairs, bucket key management, blob encryption pipeline, key rotation API types
+- ~~Sync protocol design (`packages/sync`)~~ [COMPLETED] — ADR 005: encrypted CRDT relay, document topology, sync session management, subscription profiles
+- ~~Blob storage (`packages/storage`)~~ [COMPLETED] — ADR 009: S3-compatible adapter, filesystem adapter, quota management, lifecycle cleanup
+- ~~Background job infrastructure (`packages/queue`)~~ [COMPLETED] — ADR 010: SQLite-backed job queue, retry policies, DLQ, observability
+- ~~Key recovery protocol~~ [COMPLETED] — ADR 011: recovery key types, device transfer protocol
+- ~~i18n infrastructure (`packages/i18n`)~~ [COMPLETED] — locale formatting, nomenclature term resolution, React provider
+- ~~Nomenclature system~~ [COMPLETED] — community terminology system with configurable presets
+- ~~Validation (`packages/validation`)~~ [COMPLETED] — shared Zod schemas with branded type predicates and contract tests (ADR 023)
+- ~~API specification~~ [COMPLETED] — concrete operational constants for rate limits, pagination, sessions, errors, and retry policies
+- ~~API foundation (`apps/api`)~~ [COMPLETED] — Hono server with CORS, security headers, rate limiting, error handling middleware
 
-## Milestone 2: API Core
+## Milestone 2: API Core [IN PROGRESS]
 
 Goal: Authentication, identity management, core CRUD
 
@@ -51,6 +54,8 @@ Epics:
 - Initial setup wizard
 - System structure data model (features.md section 6)
 - Media upload pipeline (features.md section 16)
+- Per-category rate limit middleware wiring
+- Key rotation API endpoints
 
 ## Milestone 3: Sync and Real-Time
 
@@ -186,7 +191,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 ## Architecture Decision Records
 
-22 accepted ADRs cover the full stack:
+23 accepted ADRs cover the full stack:
 
 - [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
 - [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
@@ -204,6 +209,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 - [ADR 020: RLS Denormalization](../adr/020-rls-denormalization.md) — cached system_id/account_id on all tables for RLS policy efficiency
 - [ADR 021: Non-System Account Model](../adr/021-non-system-accounts.md) — viewer accounts, account-level friend connections
 - [ADR 022: System Structure Snapshots](../adr/022-system-snapshots.md) — point-in-time structure captures, manual and scheduled triggers
+- [ADR 023: Zod-Type Alignment](../adr/023-zod-type-alignment.md) — strategy for keeping Zod validation schemas synchronized with TypeScript types
 
 ## Development Sequence Rationale
 

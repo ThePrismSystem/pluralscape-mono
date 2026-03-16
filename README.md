@@ -6,45 +6,53 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestone 1 (Data Layer) nearing completion.**
+**Active development — Milestone 1 (Data Layer) complete. Milestone 2 (API Core) starting.**
 
-Milestone 0 (infrastructure and governance) is complete. Within Milestone 1, the following epics are done:
+Milestones 0 (infrastructure and governance) and 1 (data layer) are complete. Completed M1 epics:
 
-- Domain types (`@pluralscape/types`) — 30+ domain type modules with Zod validators and branded IDs
+- Domain types (`@pluralscape/types`) — 30+ domain type modules with Zod validators, branded IDs, and API operational constants
 - Database schema (`@pluralscape/db`) — 40+ tables across PostgreSQL and SQLite dual-dialect, with RLS, constraint closure, and encryption contract hardening
 - Database schema hardening — 29 optimization tasks covering indexes, encryption, sync queue fixes, and full-text search
 - Test framework setup — Vitest workspace with coverage enforcement
-- Encryption primitives (`@pluralscape/crypto`) — master key derivation, symmetric encryption, identity keypairs, libsodium cross-platform bindings
-- Sync proof-of-concept (`@pluralscape/sync`) — encrypted CRDT relay with Automerge
-- Launch feature types — fronting snapshots, outtrigger, member duplication, lifecycle events, system snapshots (L2-L10)
+- Encryption primitives (`@pluralscape/crypto`) — master key derivation, symmetric encryption, identity keypairs, libsodium cross-platform bindings, blob encryption pipeline
+- Sync proof-of-concept (`@pluralscape/sync`) — encrypted CRDT relay with Automerge, document topology design
+- Blob storage (`@pluralscape/storage`) — S3-compatible adapter, filesystem adapter, quota management, lifecycle cleanup
+- Background jobs (`@pluralscape/queue`) — SQLite-backed job queue with retry policies, DLQ, and observability
+- i18n infrastructure (`@pluralscape/i18n`) — locale formatting, nomenclature term resolution, React provider
+- Validation (`@pluralscape/validation`) — shared Zod schemas with branded type predicates and contract tests
+- Launch feature types (L2-L10) — fronting snapshots, outtrigger, member duplication, lifecycle events, system snapshots
 - Entity archival — archived/archived_at columns across all non-audit entity types with consistency checks and partial indexes
 - RLS policy bootstrapping — row-level security policies for all tenant-scoped tables
 - SQLCipher encryption-at-rest — encrypted SQLite for self-hosted deployments
-- Database schema documentation — full ER diagrams for all 40+ tables
-
-Remaining M1 work: encryption layer completion (key recovery, per-bucket keys, rotation), sync protocol design, blob storage, background jobs, i18n, and nomenclature system.
+- API foundation (`apps/api`) — Hono server with CORS, security headers, rate limiting, error handling middleware
+- API specification — concrete operational constants (rate limits, pagination, session timeouts, error codes) with importable TypeScript values
+- ServerSafe type boundary — compile-time enforcement preventing plaintext leaks in API responses
 
 See the full [milestone roadmap](docs/planning/milestones.md) and [feature specification](docs/planning/features.md).
 
 ## Test Suite
 
-2,889 tests across 144 test files — all passing.
+2,603 tests across 152 test files — all passing.
 
 | Metric     | Coverage |
 | ---------- | -------- |
-| Statements | 96.46%   |
-| Branches   | 86.29%   |
-| Functions  | 99.03%   |
-| Lines      | 96.43%   |
+| Statements | 91.79%   |
+| Branches   | 81.67%   |
+| Functions  | 89.16%   |
+| Lines      | 91.91%   |
 
 Coverage by package:
 
-| Package               | Statements | Notes                                       |
-| --------------------- | ---------- | ------------------------------------------- |
-| `@pluralscape/types`  | 100%       | Runtime validators fully covered            |
-| `@pluralscape/db`     | 100%       | Schema, helpers, RLS, and views             |
-| `@pluralscape/crypto` | 97.91%     | Full coverage across all crypto operations  |
-| `@pluralscape/sync`   | 96.73%     | Encrypted CRDT relay and session management |
+| Package                | Statements | Notes                                                  |
+| ---------------------- | ---------- | ------------------------------------------------------ |
+| `@pluralscape/types`   | 100%       | Runtime validators and API constants fully covered     |
+| `@pluralscape/db`      | 100%       | Schema, helpers, RLS, and views                        |
+| `@pluralscape/crypto`  | 98.63%     | Full coverage across all crypto operations             |
+| `@pluralscape/sync`    | 95.98%     | Encrypted CRDT relay and session management            |
+| `@pluralscape/i18n`    | 95.20%     | Locale formatting, nomenclature, and React integration |
+| `@pluralscape/queue`   | ~95%       | Job queue, retry policies, DLQ, observability          |
+| `@pluralscape/storage` | ~93%       | Filesystem adapter, quota management, lifecycle        |
+| `@pluralscape/api`     | 94.82%     | Middleware stack (CORS, rate limiting, error handling) |
 
 ```bash
 pnpm test              # Run all tests
@@ -69,17 +77,27 @@ apps/
   mobile/          Expo (React Native) — web, iOS, Android
 
 packages/
-  types/           Shared domain types, Zod validators, branded IDs
+  types/           Shared domain types, Zod validators, branded IDs, API constants
   crypto/          E2E encryption — libsodium (WASM + React Native adapters)
   db/              Drizzle ORM schemas — PostgreSQL + SQLite dual-dialect
   sync/            CRDT sync protocol — Automerge
   api-client/      tRPC + TanStack Query client bindings
+  i18n/            Internationalization — locale formatting, nomenclature
+  queue/           Background job queue — SQLite-backed with retry/DLQ
+  storage/         Blob storage — S3 + filesystem adapters, quota management
+  validation/      Shared Zod validation schemas with contract tests
 
 tooling/
   eslint-config/   Shared ESLint configuration
   prettier-config/ Shared Prettier configuration
-  test-utils/      Shared test utilities
+  test-utils/      Shared test utilities and factories
   tsconfig/        Shared TypeScript configs (base.json, node.json)
+
+docs/
+  adr/             Architecture Decision Records (23 accepted)
+  audits/          Codebase audit reports
+  planning/        Specifications, milestones, feature planning
+  future-features/ Unscheduled feature design documents
 ```
 
 ## Tech Stack
@@ -190,7 +208,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 22 accepted ADRs cover the full stack from licensing through system snapshots. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 23 accepted ADRs cover the full stack from licensing through Zod-type alignment. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 
