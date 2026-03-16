@@ -35,6 +35,34 @@ describe("validateBlobContentType", () => {
     });
   });
 
+  describe("member-photo", () => {
+    it("allows image/webp", () => {
+      expect(() => {
+        validateBlobContentType("image/webp", "member-photo");
+      }).not.toThrow();
+    });
+
+    it("rejects text/plain", () => {
+      expect(() => {
+        validateBlobContentType("text/plain", "member-photo");
+      }).toThrow(ContentTypeNotAllowedError);
+    });
+  });
+
+  describe("journal-image", () => {
+    it("allows image/svg+xml", () => {
+      expect(() => {
+        validateBlobContentType("image/svg+xml", "journal-image");
+      }).not.toThrow();
+    });
+
+    it("rejects audio/mpeg", () => {
+      expect(() => {
+        validateBlobContentType("audio/mpeg", "journal-image");
+      }).toThrow(ContentTypeNotAllowedError);
+    });
+  });
+
   describe("attachment", () => {
     it("allows image/png", () => {
       expect(() => {
@@ -79,6 +107,40 @@ describe("validateBlobContentType", () => {
         validateBlobContentType("image/png", "export");
       }).toThrow(ContentTypeNotAllowedError);
     });
+  });
+
+  describe("littles-safe-mode", () => {
+    it("allows image/gif", () => {
+      expect(() => {
+        validateBlobContentType("image/gif", "littles-safe-mode");
+      }).not.toThrow();
+    });
+
+    it("rejects application/zip", () => {
+      expect(() => {
+        validateBlobContentType("application/zip", "littles-safe-mode");
+      }).toThrow(ContentTypeNotAllowedError);
+    });
+  });
+
+  describe("case-insensitive matching", () => {
+    it("accepts Image/JPEG for avatar", () => {
+      expect(() => {
+        validateBlobContentType("Image/JPEG", "avatar");
+      }).not.toThrow();
+    });
+
+    it("accepts IMAGE/PNG for member-photo", () => {
+      expect(() => {
+        validateBlobContentType("IMAGE/PNG", "member-photo");
+      }).not.toThrow();
+    });
+  });
+
+  it("rejects empty string MIME type", () => {
+    expect(() => {
+      validateBlobContentType("", "avatar");
+    }).toThrow(ContentTypeNotAllowedError);
   });
 
   it("error includes mimeType and purpose", () => {

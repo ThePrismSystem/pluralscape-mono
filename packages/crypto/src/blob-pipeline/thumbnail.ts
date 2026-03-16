@@ -13,7 +13,7 @@ export interface ThumbnailResult {
   /** Thumbnail bytes (resized image). */
   readonly data: Uint8Array;
   /** MIME type of the thumbnail. */
-  readonly mimeType: string;
+  readonly mimeType: ThumbnailConfig["format"];
   /** Width of the thumbnail in pixels. */
   readonly width: number;
   /** Height of the thumbnail in pixels. */

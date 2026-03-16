@@ -1,28 +1,34 @@
-import { KDF_KEY_BYTES } from "../constants.js";
+import { AEAD_TAG_BYTES, KDF_KEY_BYTES } from "../constants.js";
+import { InvalidInputError } from "../errors.js";
 import { getSodium } from "../sodium.js";
 import { decrypt, decryptStream } from "../symmetric.js";
+import { assertAeadKey, assertAeadNonce } from "../validation.js";
+
+import {
+  KDF_CONTEXT_BLOB,
+  MAX_STREAM_CHUNKS,
+  SUBKEY_BLOB_ENCRYPTION,
+  U32_SIZE,
+} from "./blob-constants.js";
 
 import type { EncryptedPayload, StreamEncryptedPayload } from "../symmetric.js";
 import type { AeadKey, AeadNonce, KdfMasterKey } from "../types.js";
 import type { BlobEncryptionMetadata } from "./blob-encryption-metadata.js";
 
 /** Parameters for decrypting a blob. */
-export interface DecryptBlobParams {
-  /** Encrypted blob bytes from storage. */
-  readonly encryptedData: Uint8Array;
-  /** Encryption metadata from the DB record. */
-  readonly metadata: BlobEncryptionMetadata;
-  /** Master key for T1 decryption. Required when tier=1. */
-  readonly masterKey?: KdfMasterKey;
-  /** Bucket key for T2 decryption. Required when tier=2. */
-  readonly bucketKey?: AeadKey;
-}
-
-/** KDF context for blob data keys (must be exactly 8 bytes). */
-const KDF_CONTEXT_BLOB = "blobdata";
-
-/** KDF sub-key ID for blob encryption. */
-const SUBKEY_BLOB_ENCRYPTION = 2;
+export type DecryptBlobParams =
+  | {
+      readonly encryptedData: Uint8Array;
+      readonly metadata: BlobEncryptionMetadata;
+      readonly tier: 1;
+      readonly masterKey: KdfMasterKey;
+    }
+  | {
+      readonly encryptedData: Uint8Array;
+      readonly metadata: BlobEncryptionMetadata;
+      readonly tier: 2;
+      readonly bucketKey: AeadKey;
+    };
 
 /**
  * Decrypts encrypted blob bytes using the specified tier.
@@ -37,11 +43,10 @@ export function decryptBlob(params: DecryptBlobParams): Uint8Array {
       return decryptStream(payload, key);
     }
 
-    // Non-streamed: encryptedData is raw ciphertext, nonce is prepended
     const payload = deserializePayload(params.encryptedData);
     return decrypt(payload, key);
   } finally {
-    if (params.metadata.tier === 1) {
+    if (params.tier === 1) {
       getSodium().memzero(key);
     }
   }
@@ -49,70 +54,91 @@ export function decryptBlob(params: DecryptBlobParams): Uint8Array {
 
 /** Resolve the decryption key based on tier. */
 function resolveDecryptKey(params: DecryptBlobParams): AeadKey {
-  if (params.metadata.tier === 1) {
-    if (!params.masterKey) {
-      throw new Error("masterKey is required for T1 decryption.");
-    }
+  if (params.tier === 1) {
     const adapter = getSodium();
-    return adapter.kdfDeriveFromKey(
+    const derivedKey = adapter.kdfDeriveFromKey(
       KDF_KEY_BYTES,
       SUBKEY_BLOB_ENCRYPTION,
       KDF_CONTEXT_BLOB,
       params.masterKey,
-    ) as AeadKey;
+    );
+    assertAeadKey(derivedKey);
+    return derivedKey;
   }
 
-  if (!params.bucketKey) {
-    throw new Error("bucketKey is required for T2 decryption.");
-  }
   return params.bucketKey;
 }
-
-const HEADER_SIZE = 4;
 
 /** Deserialize a non-streamed encrypted payload. */
 function deserializePayload(data: Uint8Array): EncryptedPayload {
   const adapter = getSodium();
   const nonceBytes = adapter.constants.AEAD_NONCE_BYTES;
 
-  if (data.byteLength < nonceBytes) {
-    throw new Error("Encrypted data too short to contain nonce.");
+  if (data.byteLength < nonceBytes + AEAD_TAG_BYTES) {
+    throw new InvalidInputError("Encrypted data too short to contain nonce and tag.");
   }
 
-  // For non-streamed, the data is just the ciphertext (nonce is in the payload)
-  // But our encrypt() function returns separate ciphertext and nonce.
-  // The encryptBlob non-streamed path stores only ciphertext.
-  // We need to store nonce separately — which we do in the payload.
-  // For storage, we prepend the nonce to the ciphertext.
-  const nonce = data.subarray(0, nonceBytes) as AeadNonce;
+  const nonce = data.subarray(0, nonceBytes);
+  assertAeadNonce(nonce);
   const ciphertext = data.subarray(nonceBytes);
-  return { ciphertext, nonce };
+  return { ciphertext, nonce: nonce as AeadNonce };
 }
 
 /** Deserialize a stream-encrypted payload from a single Uint8Array. */
 function deserializeStreamPayload(data: Uint8Array): StreamEncryptedPayload {
+  const HEADER_BYTES = 2 * U32_SIZE;
+
+  if (data.byteLength < HEADER_BYTES) {
+    throw new InvalidInputError("Stream payload too short to contain header.");
+  }
+
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
   let offset = 0;
   const chunkCount = view.getUint32(offset, true);
-  offset += HEADER_SIZE;
+  offset += U32_SIZE;
   const totalLength = view.getUint32(offset, true);
-  offset += HEADER_SIZE;
+  offset += U32_SIZE;
+
+  if (chunkCount > MAX_STREAM_CHUNKS) {
+    throw new InvalidInputError(
+      `Stream chunk count ${String(chunkCount)} exceeds maximum ${String(MAX_STREAM_CHUNKS)}.`,
+    );
+  }
 
   const chunks: EncryptedPayload[] = [];
 
   for (let i = 0; i < chunkCount; i++) {
+    if (offset + U32_SIZE > data.byteLength) {
+      throw new InvalidInputError(`Truncated stream payload at chunk ${String(i)} nonce length.`);
+    }
     const nonceLen = view.getUint32(offset, true);
-    offset += HEADER_SIZE;
-    const nonce = data.subarray(offset, offset + nonceLen) as AeadNonce;
+    offset += U32_SIZE;
+
+    if (offset + nonceLen > data.byteLength) {
+      throw new InvalidInputError(`Truncated stream payload at chunk ${String(i)} nonce data.`);
+    }
+    const nonce = data.subarray(offset, offset + nonceLen);
+    assertAeadNonce(nonce);
     offset += nonceLen;
 
+    if (offset + U32_SIZE > data.byteLength) {
+      throw new InvalidInputError(
+        `Truncated stream payload at chunk ${String(i)} ciphertext length.`,
+      );
+    }
     const ctLen = view.getUint32(offset, true);
-    offset += HEADER_SIZE;
+    offset += U32_SIZE;
+
+    if (offset + ctLen > data.byteLength) {
+      throw new InvalidInputError(
+        `Truncated stream payload at chunk ${String(i)} ciphertext data.`,
+      );
+    }
     const ciphertext = data.subarray(offset, offset + ctLen);
     offset += ctLen;
 
-    chunks.push({ ciphertext, nonce });
+    chunks.push({ ciphertext, nonce: nonce as AeadNonce });
   }
 
   return { chunks, totalLength };

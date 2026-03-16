@@ -46,8 +46,9 @@ export function getAllowedMimeTypes(purpose: BlobPurpose): readonly string[] {
  * Throws ContentTypeNotAllowedError if not allowed.
  */
 export function validateBlobContentType(mimeType: string, purpose: BlobPurpose): void {
+  const normalized = mimeType.toLowerCase();
   const allowed = ALLOWED_MIME_TYPES[purpose];
-  if (!allowed.includes(mimeType)) {
+  if (!allowed.includes(normalized)) {
     throw new ContentTypeNotAllowedError(mimeType, purpose);
   }
 }

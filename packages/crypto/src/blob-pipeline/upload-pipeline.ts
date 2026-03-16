@@ -7,32 +7,32 @@ import type { AeadKey, KdfMasterKey } from "../types.js";
 import type { BlobEncryptionMetadata } from "./blob-encryption-metadata.js";
 import type { BlobPurpose, BucketId } from "@pluralscape/types";
 
-/** SHA-256 hash output length. */
-const SHA256_HEX_LENGTH = 64;
+/** BLAKE2b-256 hash output as hex is 64 characters. */
+const BLAKE2B_32_HEX_LENGTH = 64;
 
 /** Parameters for preparing a blob upload. */
-export interface PrepareUploadParams {
-  /** Raw blob bytes. */
-  readonly data: Uint8Array;
-  /** The intended purpose of this blob. */
-  readonly purpose: BlobPurpose;
-  /** MIME type of the blob. */
-  readonly mimeType: string;
-  /** Encryption tier: 1 = master key, 2 = bucket key. */
-  readonly tier: 1 | 2;
-  /** Master key for T1 encryption. Required when tier=1. */
-  readonly masterKey?: KdfMasterKey;
-  /** Bucket key for T2 encryption. Required when tier=2. */
-  readonly bucketKey?: AeadKey;
-  /** Bucket ID for T2 encryption. Required when tier=2. */
-  readonly bucketId?: BucketId;
-}
+export type PrepareUploadParams =
+  | {
+      readonly data: Uint8Array;
+      readonly purpose: BlobPurpose;
+      readonly mimeType: string;
+      readonly tier: 1;
+      readonly masterKey: KdfMasterKey;
+    }
+  | {
+      readonly data: Uint8Array;
+      readonly purpose: BlobPurpose;
+      readonly mimeType: string;
+      readonly tier: 2;
+      readonly bucketKey: AeadKey;
+      readonly bucketId: BucketId;
+    };
 
 /** Result of preparing a blob for upload. */
 export interface PreparedBlobUpload {
   /** Encrypted bytes ready for storage. */
   readonly encryptedData: Uint8Array;
-  /** SHA-256 hex checksum of the encrypted bytes. */
+  /** BLAKE2b-256 hex checksum of the encrypted bytes. */
   readonly checksum: string;
   /** Encryption metadata for the DB record. */
   readonly encryptionMetadata: BlobEncryptionMetadata;
@@ -44,24 +44,25 @@ export interface PreparedBlobUpload {
  * Orchestrates the client-side blob upload pipeline:
  * 1. Validates content type against purpose
  * 2. Encrypts the blob
- * 3. Computes SHA-256 checksum of encrypted bytes
+ * 3. Computes BLAKE2b-256 checksum of encrypted bytes
  * 4. Returns prepared upload ready for storage
  */
 export function prepareUpload(params: PrepareUploadParams): PreparedBlobUpload {
-  // Step 1: Validate content type
   validateBlobContentType(params.mimeType, params.purpose);
 
-  // Step 2: Encrypt
-  const { encryptedData, metadata } = encryptBlob({
-    data: params.data,
-    tier: params.tier,
-    masterKey: params.masterKey,
-    bucketKey: params.bucketKey,
-    bucketId: params.bucketId,
-  });
+  const encryptParams =
+    params.tier === 1
+      ? ({ data: params.data, tier: 1, masterKey: params.masterKey } as const)
+      : ({
+          data: params.data,
+          tier: 2,
+          bucketKey: params.bucketKey,
+          bucketId: params.bucketId,
+        } as const);
 
-  // Step 3: Checksum of encrypted bytes
-  const checksum = computeSha256Hex(encryptedData);
+  const { encryptedData, metadata } = encryptBlob(encryptParams);
+
+  const checksum = computeBlake2bHex(encryptedData);
 
   return {
     encryptedData,
@@ -71,26 +72,23 @@ export function prepareUpload(params: PrepareUploadParams): PreparedBlobUpload {
   };
 }
 
-/** Compute SHA-256 hex digest of data using libsodium's genericHash. */
-function computeSha256Hex(data: Uint8Array): string {
+/** Compute BLAKE2b-256 hex digest of data using libsodium's genericHash. */
+function computeBlake2bHex(data: Uint8Array): string {
   const adapter = getSodium();
-  // genericHash with 32 bytes output = SHA-256 equivalent strength
   const HASH_BYTES = 32;
   const hash = adapter.genericHash(HASH_BYTES, data);
-  return bytesToHex(hash);
+  const hex = bytesToHex(hash);
+  if (hex.length !== BLAKE2B_32_HEX_LENGTH) {
+    throw new Error(
+      `Expected ${String(BLAKE2B_32_HEX_LENGTH)} hex chars, got ${String(hex.length)}.`,
+    );
+  }
+  return hex;
 }
 
 /** Convert bytes to hex string. */
 function bytesToHex(bytes: Uint8Array): string {
   const HEX_BASE = 16;
   const PAD_LENGTH = 2;
-  const parts: string[] = [];
-  for (const byte of bytes) {
-    parts.push(byte.toString(HEX_BASE).padStart(PAD_LENGTH, "0"));
-  }
-  const hex = parts.join("");
-  if (hex.length !== SHA256_HEX_LENGTH) {
-    throw new Error(`Expected ${String(SHA256_HEX_LENGTH)} hex chars, got ${String(hex.length)}.`);
-  }
-  return hex;
+  return Array.from(bytes, (b) => b.toString(HEX_BASE).padStart(PAD_LENGTH, "0")).join("");
 }

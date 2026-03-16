@@ -8,6 +8,7 @@ import { _resetForTesting, configureSodium, initSodium } from "../../sodium.js";
 
 import type { SodiumAdapter } from "../../adapter/interface.js";
 import type { AeadKey, KdfMasterKey } from "../../types.js";
+import type { BucketId } from "@pluralscape/types";
 
 let adapter: SodiumAdapter;
 let masterKey: KdfMasterKey;
@@ -40,6 +41,7 @@ describe("encryptBlob / decryptBlob", () => {
       const decrypted = decryptBlob({
         encryptedData: result.encryptedData,
         metadata: result.metadata,
+        tier: 1,
         masterKey,
       });
       expect(decrypted).toEqual(data);
@@ -55,6 +57,7 @@ describe("encryptBlob / decryptBlob", () => {
       const decrypted = decryptBlob({
         encryptedData: result.encryptedData,
         metadata: result.metadata,
+        tier: 1,
         masterKey,
       });
       expect(decrypted).toEqual(data);
@@ -65,7 +68,7 @@ describe("encryptBlob / decryptBlob", () => {
       const r1 = encryptBlob({ data, tier: 1, masterKey });
       const r2 = encryptBlob({ data, tier: 1, masterKey });
 
-      // Different nonces → different ciphertext
+      // Different nonces -> different ciphertext
       expect(r1.encryptedData).not.toEqual(r2.encryptedData);
     });
   });
@@ -77,7 +80,7 @@ describe("encryptBlob / decryptBlob", () => {
         data,
         tier: 2,
         bucketKey,
-        bucketId: "bucket_test" as Parameters<typeof encryptBlob>[0]["bucketId"],
+        bucketId: "bucket_test" as BucketId,
       });
 
       expect(result.metadata.tier).toBe(2);
@@ -87,6 +90,7 @@ describe("encryptBlob / decryptBlob", () => {
       const decrypted = decryptBlob({
         encryptedData: result.encryptedData,
         metadata: result.metadata,
+        tier: 2,
         bucketKey,
       });
       expect(decrypted).toEqual(data);
@@ -103,6 +107,7 @@ describe("encryptBlob / decryptBlob", () => {
         decryptBlob({
           encryptedData: result.encryptedData,
           metadata: result.metadata,
+          tier: 1,
           masterKey: wrongKey,
         }),
       ).toThrow(DecryptionFailedError);
@@ -114,7 +119,7 @@ describe("encryptBlob / decryptBlob", () => {
         data,
         tier: 2,
         bucketKey,
-        bucketId: "bucket_x" as Parameters<typeof encryptBlob>[0]["bucketId"],
+        bucketId: "bucket_x" as BucketId,
       });
 
       const wrongKey = adapter.aeadKeygen();
@@ -122,21 +127,10 @@ describe("encryptBlob / decryptBlob", () => {
         decryptBlob({
           encryptedData: result.encryptedData,
           metadata: result.metadata,
+          tier: 2,
           bucketKey: wrongKey,
         }),
       ).toThrow(DecryptionFailedError);
-    });
-  });
-
-  describe("validation", () => {
-    it("throws when masterKey is missing for T1", () => {
-      const data = new Uint8Array([1]);
-      expect(() => encryptBlob({ data, tier: 1 })).toThrow("masterKey is required");
-    });
-
-    it("throws when bucketKey is missing for T2", () => {
-      const data = new Uint8Array([1]);
-      expect(() => encryptBlob({ data, tier: 2 })).toThrow("bucketKey is required");
     });
   });
 });
