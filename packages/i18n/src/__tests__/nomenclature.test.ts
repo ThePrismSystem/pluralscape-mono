@@ -2,11 +2,13 @@ import {
   type CanonicalTerm,
   DEFAULT_TERM_PRESETS,
   type NomenclatureSettings,
+  type TermCategory,
 } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
 import {
   CANONICAL_TERMS,
+  PRESET_PLURAL_RULES,
   resolveTerm,
   resolveTermLower,
   resolveTermPlural,
@@ -16,7 +18,7 @@ import {
 
 const EXPECTED_CATEGORY_COUNT = 12;
 
-function makeSettings(overrides: Partial<Record<string, string>> = {}): NomenclatureSettings {
+function makeSettings(overrides: Partial<Record<TermCategory, string>> = {}): NomenclatureSettings {
   const base: Record<string, string> = {};
   for (const preset of DEFAULT_TERM_PRESETS) {
     base[preset.category] = preset.default;
@@ -203,5 +205,39 @@ describe("resolveTermPlural", () => {
   it("with null settings falls back to default then pluralizes", () => {
     const result = resolveTermPlural(CANONICAL_TERMS.INDIVIDUAL, null);
     expect(result).toBe("Members");
+  });
+
+  it("handles custom term with sh ending via heuristic", () => {
+    const settings = makeSettings({ collective: "Wish" });
+    expect(resolveTermPlural(CANONICAL_TERMS.COLLECTIVE, settings)).toBe("Wishes");
+  });
+
+  it("handles custom term with s ending via heuristic", () => {
+    const settings = makeSettings({ collective: "Focus" });
+    expect(resolveTermPlural(CANONICAL_TERMS.COLLECTIVE, settings)).toBe("Focuses");
+  });
+
+  it("handles custom term with x ending via heuristic", () => {
+    const settings = makeSettings({ collective: "Box" });
+    expect(resolveTermPlural(CANONICAL_TERMS.COLLECTIVE, settings)).toBe("Boxes");
+  });
+
+  it("handles custom term with z ending via heuristic", () => {
+    const settings = makeSettings({ collective: "Buzz" });
+    expect(resolveTermPlural(CANONICAL_TERMS.COLLECTIVE, settings)).toBe("Buzzes");
+  });
+
+  it("handles multi-word custom term via heuristic", () => {
+    const settings = makeSettings({ collective: "Inner team" });
+    expect(resolveTermPlural(CANONICAL_TERMS.COLLECTIVE, settings)).toBe("Inner teams");
+  });
+
+  it("PRESET_PLURAL_RULES covers every preset value in DEFAULT_TERM_PRESETS", () => {
+    for (const preset of DEFAULT_TERM_PRESETS) {
+      for (const value of preset.presets) {
+        expect(PRESET_PLURAL_RULES[value]).toBeDefined();
+        expect(PRESET_PLURAL_RULES[value]?.length).toBeGreaterThan(0);
+      }
+    }
   });
 });
