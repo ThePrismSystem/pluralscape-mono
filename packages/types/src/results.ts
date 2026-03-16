@@ -10,6 +10,12 @@ export interface ApiError {
   readonly details: unknown;
 }
 
+/** Full error response envelope per api-specification.md Section 2. */
+export interface ApiErrorResponse {
+  readonly error: ApiError;
+  readonly requestId: string;
+}
+
 /** Discriminated API response — exactly one of `data` or `error` is non-null. */
 export type ApiResponse<T> =
   | { readonly data: T; readonly error: null }

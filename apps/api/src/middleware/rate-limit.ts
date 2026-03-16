@@ -1,3 +1,8 @@
+import { RATE_LIMITS } from "@pluralscape/types";
+
+import { ApiHttpError } from "../lib/api-error.js";
+
+import type { RateLimitCategory } from "@pluralscape/types";
 import type { Context, MiddlewareHandler } from "hono";
 
 const HTTP_TOO_MANY_REQUESTS = 429;
@@ -39,12 +44,10 @@ function getClientKey(c: Context): string {
 /**
  * In-memory fixed-window rate limiter keyed by client IP.
  * Returns 429 + Retry-After header when limit is exceeded.
+ * Emits standard X-RateLimit-* headers on every response.
  *
  * When TRUST_PROXY is unset, all requests share a single global bucket
  * to avoid X-Forwarded-For spoofing. Set TRUST_PROXY=1 behind a reverse proxy.
- *
- * NOTE: Auth routes with expensive Argon2id derivation should use
- * stricter limits than the global defaults.
  */
 export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandler {
   const store = new Map<string, RateLimitEntry>();
@@ -71,12 +74,22 @@ export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandle
 
     entry.count++;
 
+    // Set rate limit headers on all responses
+    c.header("X-RateLimit-Limit", String(limit));
+    c.header("X-RateLimit-Remaining", String(Math.max(0, limit - entry.count)));
+    c.header("X-RateLimit-Reset", String(Math.ceil(entry.resetAt / MS_PER_SECOND)));
+
     if (entry.count > limit) {
       const retryAfter = Math.ceil((entry.resetAt - now) / MS_PER_SECOND);
       c.header("Retry-After", String(retryAfter));
-      return c.json({ error: "Too many requests" }, HTTP_TOO_MANY_REQUESTS);
+      throw new ApiHttpError(HTTP_TOO_MANY_REQUESTS, "RATE_LIMITED", "Too many requests");
     }
 
-    return next();
+    await next();
   };
+}
+
+/** Creates a rate limiter using the predefined limits for a given category. */
+export function createCategoryRateLimiter(category: RateLimitCategory): MiddlewareHandler {
+  return createRateLimiter(RATE_LIMITS[category]);
 }

@@ -77,7 +77,13 @@ export type { UnixMillis, ISOTimestamp } from "./timestamps.js";
 export type { PaginationCursor, PaginatedResult, OffsetPaginationParams } from "./pagination.js";
 
 // ── Results ─────────────────────────────────────────────────────────
-export type { Result, ApiError, ApiResponse, ValidationError } from "./results.js";
+export type {
+  Result,
+  ApiError,
+  ApiErrorResponse,
+  ApiResponse,
+  ValidationError,
+} from "./results.js";
 
 // ── Utility types ───────────────────────────────────────────────────
 export type {
