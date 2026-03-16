@@ -1,11 +1,11 @@
 ---
 # infra-38x0
 title: Pin tRPC to specific RC version
-status: todo
+status: in-progress
 type: task
 priority: low
 created_at: 2026-03-09T12:13:47Z
-updated_at: 2026-03-09T12:13:47Z
+updated_at: 2026-03-16T05:02:22Z
 parent: ps-vtws
 ---
 

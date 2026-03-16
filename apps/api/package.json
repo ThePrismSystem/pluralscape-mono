@@ -19,7 +19,7 @@
     "@pluralscape/db": "workspace:*",
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "@trpc/server": "^11.13.4",
+    "@trpc/server": "11.13.4",
     "drizzle-orm": "^0.45.1",
     "hono": "^4.12.7",
     "postgres": "^3.4.5",

@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@trpc/server': 11.13.4
   esbuild: '>=0.25.0'
   flatted: '>=3.4.0'
 
@@ -64,7 +65,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/types
       '@trpc/server':
-        specifier: ^11.13.4
+        specifier: 11.13.4
         version: 11.13.4(typescript@5.9.3)
       drizzle-orm:
         specifier: ^0.45.1
@@ -177,11 +178,11 @@ importers:
         specifier: ^5.66.9
         version: 5.90.21(react@19.2.4)
       '@trpc/client':
-        specifier: ^11.13.4
-        version: 11.13.4(@trpc/server@11.12.0(typescript@5.9.3))(typescript@5.9.3)
+        specifier: 11.13.4
+        version: 11.13.4(@trpc/server@11.13.4(typescript@5.9.3))(typescript@5.9.3)
       '@trpc/react-query':
-        specifier: ^11.13.4
-        version: 11.13.4(@tanstack/react-query@5.90.21(react@19.2.4))(@trpc/client@11.13.4(@trpc/server@11.12.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.12.0(typescript@5.9.3))(react@19.2.4)(typescript@5.9.3)
+        specifier: 11.13.4
+        version: 11.13.4(@tanstack/react-query@5.90.21(react@19.2.4))(@trpc/client@11.13.4(@trpc/server@11.13.4(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.13.4(typescript@5.9.3))(react@19.2.4)(typescript@5.9.3)
     devDependencies:
       '@pluralscape/eslint-config':
         specifier: workspace:*
@@ -8445,16 +8446,16 @@ snapshots:
       '@tanstack/query-core': 5.90.20
       react: 19.2.4
 
-  '@trpc/client@11.13.4(@trpc/server@11.12.0(typescript@5.9.3))(typescript@5.9.3)':
+  '@trpc/client@11.13.4(@trpc/server@11.13.4(typescript@5.9.3))(typescript@5.9.3)':
     dependencies:
-      '@trpc/server': 11.12.0(typescript@5.9.3)
+      '@trpc/server': 11.13.4(typescript@5.9.3)
       typescript: 5.9.3
 
-  '@trpc/react-query@11.13.4(@tanstack/react-query@5.90.21(react@19.2.4))(@trpc/client@11.13.4(@trpc/server@11.12.0(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.12.0(typescript@5.9.3))(react@19.2.4)(typescript@5.9.3)':
+  '@trpc/react-query@11.13.4(@tanstack/react-query@5.90.21(react@19.2.4))(@trpc/client@11.13.4(@trpc/server@11.13.4(typescript@5.9.3))(typescript@5.9.3))(@trpc/server@11.13.4(typescript@5.9.3))(react@19.2.4)(typescript@5.9.3)':
     dependencies:
       '@tanstack/react-query': 5.90.21(react@19.2.4)
-      '@trpc/client': 11.13.4(@trpc/server@11.12.0(typescript@5.9.3))(typescript@5.9.3)
-      '@trpc/server': 11.12.0(typescript@5.9.3)
+      '@trpc/client': 11.13.4(@trpc/server@11.13.4(typescript@5.9.3))(typescript@5.9.3)
+      '@trpc/server': 11.13.4(typescript@5.9.3)
       react: 19.2.4
       typescript: 5.9.3
 
