@@ -1,7 +1,12 @@
+import { RATE_LIMITS } from "@pluralscape/types";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createRateLimiter } from "../middleware/rate-limit.js";
+import { errorHandler } from "../middleware/error-handler.js";
+import { createCategoryRateLimiter, createRateLimiter } from "../middleware/rate-limit.js";
+import { requestIdMiddleware } from "../middleware/request-id.js";
+
+import type { ApiErrorResponse } from "@pluralscape/types";
 
 describe("rate limiter middleware", () => {
   const originalTrustProxy = process.env["TRUST_PROXY"];
@@ -21,7 +26,9 @@ describe("rate limiter middleware", () => {
 
   function createApp(limit = 3, windowMs = 60_000): Hono {
     const app = new Hono();
+    app.use("*", requestIdMiddleware());
     app.use("*", createRateLimiter({ limit, windowMs }));
+    app.onError(errorHandler);
     app.get("/test", (c) => c.json({ ok: true }));
     return app;
   }
@@ -100,32 +107,107 @@ describe("rate limiter middleware", () => {
     expect(res1Again.status).toBe(429);
   });
 
-  it("returns JSON error body on 429", async () => {
-    const app = createApp(1);
-    await app.request("/test");
-    const res = await app.request("/test");
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toContain("Too many requests");
-  });
-
   it("evicts expired entries when store exceeds threshold", async () => {
     process.env["TRUST_PROXY"] = "1";
     const app = createApp(1, 1_000);
 
-    // Fill with requests from different IPs
     for (let i = 0; i < 5; i++) {
       await app.request("/test", {
         headers: { "x-forwarded-for": `10.0.0.${String(i)}` },
       });
     }
 
-    // Advance past window so all entries expire
     vi.advanceTimersByTime(1_001);
 
-    // Next request should succeed (window reset + eviction on threshold)
     const res = await app.request("/test", {
       headers: { "x-forwarded-for": "10.0.0.0" },
     });
     expect(res.status).toBe(200);
+  });
+
+  // ── X-RateLimit-* header tests ────────────────────────────────────
+
+  it("includes X-RateLimit-Limit header on successful response", async () => {
+    const app = createApp(5, 60_000);
+    const res = await app.request("/test");
+    expect(res.headers.get("x-ratelimit-limit")).toBe("5");
+  });
+
+  it("X-RateLimit-Remaining decrements with each request", async () => {
+    const app = createApp(5, 60_000);
+
+    const res1 = await app.request("/test");
+    expect(res1.headers.get("x-ratelimit-remaining")).toBe("4");
+
+    const res2 = await app.request("/test");
+    expect(res2.headers.get("x-ratelimit-remaining")).toBe("3");
+
+    const res3 = await app.request("/test");
+    expect(res3.headers.get("x-ratelimit-remaining")).toBe("2");
+  });
+
+  it("X-RateLimit-Reset is a Unix timestamp in seconds", async () => {
+    const app = createApp(5, 60_000);
+    const res = await app.request("/test");
+    const reset = Number(res.headers.get("x-ratelimit-reset"));
+    expect(reset).toBeGreaterThan(0);
+    // Should be in seconds, not milliseconds (less than year-2100 in seconds)
+    const MAX_REASONABLE_SECONDS = 5_000_000_000;
+    expect(reset).toBeLessThan(MAX_REASONABLE_SECONDS);
+  });
+
+  it("429 response has structured error format with RATE_LIMITED code", async () => {
+    const app = createApp(1);
+    await app.request("/test");
+    const res = await app.request("/test");
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("RATE_LIMITED");
+    expect(body.error.message).toBe("Too many requests");
+    expect(body.requestId).toBeTruthy();
+  });
+
+  it("429 response still includes X-RateLimit-* headers", async () => {
+    const app = createApp(1);
+    await app.request("/test");
+    const res = await app.request("/test");
+    expect(res.status).toBe(429);
+    expect(res.headers.get("x-ratelimit-limit")).toBe("1");
+    expect(res.headers.get("x-ratelimit-remaining")).toBe("0");
+    expect(res.headers.get("x-ratelimit-reset")).toBeTruthy();
+  });
+
+  // ── Category rate limiter ─────────────────────────────────────────
+
+  it("createCategoryRateLimiter uses RATE_LIMITS limit constant", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.use("*", createCategoryRateLimiter("authHeavy"));
+    app.onError(errorHandler);
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    const res = await app.request("/test");
+    expect(res.headers.get("x-ratelimit-limit")).toBe(String(RATE_LIMITS.authHeavy.limit));
+  });
+
+  it("createCategoryRateLimiter uses RATE_LIMITS windowMs constant", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.use("*", createCategoryRateLimiter("authHeavy"));
+    app.onError(errorHandler);
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    // Exhaust the limit
+    for (let i = 0; i < RATE_LIMITS.authHeavy.limit; i++) {
+      await app.request("/test");
+    }
+    const blocked = await app.request("/test");
+    expect(blocked.status).toBe(429);
+
+    // Advance past the authHeavy window (60s)
+    vi.advanceTimersByTime(RATE_LIMITS.authHeavy.windowMs + 1);
+
+    const afterReset = await app.request("/test");
+    expect(afterReset.status).toBe(200);
   });
 });

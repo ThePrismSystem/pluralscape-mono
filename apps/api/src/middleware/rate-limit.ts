@@ -1,3 +1,6 @@
+import { RATE_LIMITS } from "@pluralscape/types";
+
+import type { ApiErrorResponse, RateLimitCategory } from "@pluralscape/types";
 import type { Context, MiddlewareHandler } from "hono";
 
 const HTTP_TOO_MANY_REQUESTS = 429;
@@ -38,13 +41,11 @@ function getClientKey(c: Context): string {
 
 /**
  * In-memory fixed-window rate limiter keyed by client IP.
- * Returns 429 + Retry-After header when limit is exceeded.
+ * Emits standard X-RateLimit-* headers on every response.
+ * Returns 429 with structured error body when limit is exceeded.
  *
  * When TRUST_PROXY is unset, all requests share a single global bucket
  * to avoid X-Forwarded-For spoofing. Set TRUST_PROXY=1 behind a reverse proxy.
- *
- * NOTE: Auth routes with expensive Argon2id derivation should use
- * stricter limits than the global defaults.
  */
 export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandler {
   const store = new Map<string, RateLimitEntry>();
@@ -71,12 +72,32 @@ export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandle
 
     entry.count++;
 
+    // Set rate limit headers on all responses
+    c.header("X-RateLimit-Limit", String(limit));
+    c.header("X-RateLimit-Remaining", String(Math.max(0, limit - entry.count)));
+    c.header("X-RateLimit-Reset", String(Math.ceil(entry.resetAt / MS_PER_SECOND)));
+
     if (entry.count > limit) {
+      // Return structured error directly to guarantee headers and body are
+      // on the same response object (no reliance on pre-throw header propagation).
       const retryAfter = Math.ceil((entry.resetAt - now) / MS_PER_SECOND);
       c.header("Retry-After", String(retryAfter));
-      return c.json({ error: "Too many requests" }, HTTP_TOO_MANY_REQUESTS);
+      const rawId: unknown = c.get("requestId");
+      const requestId = typeof rawId === "string" ? rawId : crypto.randomUUID();
+      return c.json(
+        {
+          error: { code: "RATE_LIMITED", message: "Too many requests" },
+          requestId,
+        } satisfies ApiErrorResponse,
+        HTTP_TOO_MANY_REQUESTS,
+      );
     }
 
     return next();
   };
+}
+
+/** Creates a rate limiter using the predefined limits for a given category. */
+export function createCategoryRateLimiter(category: RateLimitCategory): MiddlewareHandler {
+  return createRateLimiter(RATE_LIMITS[category]);
 }

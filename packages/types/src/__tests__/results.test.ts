@@ -1,5 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import type { ApiErrorCode } from "../api-constants.js";
 import type { ApiError, ApiResponse, Result, ValidationError } from "../results.js";
 
 describe("Result", () => {
@@ -46,22 +47,23 @@ describe("ApiResponse", () => {
   });
 
   it("rejects both data and error non-null", () => {
-    // @ts-expect-error cannot have both data and error non-null
-    assertType<ApiResponse<string>>({
-      data: "ok",
-      error: { code: "ERR", message: "fail", details: null },
-    });
+    assertType<ApiResponse<string>>(
+      // @ts-expect-error cannot have both data and error non-null
+      { data: "ok", error: { code: "INTERNAL_ERROR", message: "fail" } },
+    );
   });
 });
 
 describe("ApiError", () => {
-  it("has code and message fields", () => {
-    expectTypeOf<ApiError["code"]>().toBeString();
+  it("has typed code and message fields", () => {
+    expectTypeOf<ApiError["code"]>().toEqualTypeOf<ApiErrorCode>();
     expectTypeOf<ApiError["message"]>().toBeString();
   });
 
-  it("has details field", () => {
-    expectTypeOf<ApiError["details"]>().toBeUnknown();
+  it("has optional details field", () => {
+    // details is optional — when present, it is unknown
+    assertType<ApiError>({ code: "INTERNAL_ERROR", message: "fail" });
+    assertType<ApiError>({ code: "NOT_FOUND", message: "missing", details: { id: "123" } });
   });
 });
 
