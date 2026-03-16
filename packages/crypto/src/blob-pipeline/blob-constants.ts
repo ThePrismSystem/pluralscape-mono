@@ -12,3 +12,14 @@ export const STREAM_THRESHOLD = 65_536;
 
 /** Maximum number of stream chunks allowed during deserialization. */
 export const MAX_STREAM_CHUNKS = 65_536;
+
+// ── Thumbnail defaults ───────────────────────────────────────────────
+
+/** Default thumbnail maximum width in pixels. */
+export const THUMBNAIL_MAX_WIDTH = 256;
+
+/** Default thumbnail maximum height in pixels. */
+export const THUMBNAIL_MAX_HEIGHT = 256;
+
+/** Default WebP compression quality (0-1). */
+export const THUMBNAIL_WEBP_QUALITY = 0.8;
