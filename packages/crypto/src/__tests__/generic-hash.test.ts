@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { GENERIC_HASH_BYTES_MAX, GENERIC_HASH_BYTES_MIN } from "../constants.js";
+import { GENERIC_HASH_BYTES_MAX, GENERIC_HASH_BYTES_MIN } from "../crypto.constants.js";
 import { InvalidInputError } from "../errors.js";
 import { getSodium } from "../sodium.js";
 

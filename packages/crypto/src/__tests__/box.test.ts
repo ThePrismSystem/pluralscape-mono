@@ -6,7 +6,7 @@ import {
   BOX_NONCE_BYTES,
   BOX_PUBLIC_KEY_BYTES,
   BOX_SECRET_KEY_BYTES,
-} from "../constants.js";
+} from "../crypto.constants.js";
 import { DecryptionFailedError } from "../errors.js";
 
 import type { SodiumAdapter } from "../adapter/interface.js";

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { PWHASH_SALT_BYTES } from "../constants.js";
+import { PWHASH_SALT_BYTES } from "../crypto.constants.js";
 import {
   decodeQRPayload,
   decryptFromTransfer,

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { SIGN_BYTES } from "../constants.js";
+import { SIGN_BYTES } from "../crypto.constants.js";
 import { DecryptionFailedError, InvalidInputError, SignatureVerificationError } from "../errors.js";
 import { decryptThenVerify, sign, signThenEncrypt, verify } from "../sign.js";
 import { getSodium } from "../sodium.js";

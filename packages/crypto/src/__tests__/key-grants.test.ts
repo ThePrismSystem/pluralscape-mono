@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { generateBucketKey } from "../bucket-keys.js";
-import { AEAD_KEY_BYTES, BOX_MAC_BYTES, BOX_NONCE_BYTES } from "../constants.js";
+import { AEAD_KEY_BYTES, BOX_MAC_BYTES, BOX_NONCE_BYTES } from "../crypto.constants.js";
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 import { createKeyGrant, createKeyGrants, decryptKeyGrant } from "../key-grants.js";
 import { getSodium } from "../sodium.js";

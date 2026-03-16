@@ -2,7 +2,7 @@ import {
   SAFETY_NUMBER_HASH_BYTES,
   SAFETY_NUMBER_ITERATIONS,
   SAFETY_NUMBER_VERSION,
-} from "./constants.js";
+} from "./crypto.constants.js";
 import { getSodium } from "./sodium.js";
 
 import type { SignPublicKey } from "./types.js";

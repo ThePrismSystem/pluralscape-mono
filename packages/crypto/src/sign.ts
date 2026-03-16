@@ -1,4 +1,4 @@
-import { SIGN_BYTES } from "./constants.js";
+import { SIGN_BYTES } from "./crypto.constants.js";
 import { InvalidInputError, SignatureVerificationError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 import { decrypt, encrypt } from "./symmetric.js";

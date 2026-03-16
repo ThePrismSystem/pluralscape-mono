@@ -6,7 +6,7 @@ import {
   PWHASH_OPSLIMIT_MOBILE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_SALT_BYTES,
-} from "./constants.js";
+} from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 

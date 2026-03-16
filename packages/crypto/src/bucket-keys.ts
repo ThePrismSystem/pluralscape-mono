@@ -1,4 +1,4 @@
-import { KDF_KEY_BYTES } from "./constants.js";
+import { KDF_KEY_BYTES } from "./crypto.constants.js";
 import { getSodium } from "./sodium.js";
 import { decrypt, encrypt } from "./symmetric.js";
 import { assertAeadKey, validateKeyVersion } from "./validation.js";

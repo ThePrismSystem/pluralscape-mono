@@ -16,7 +16,7 @@ import {
   SIGN_PUBLIC_KEY_BYTES,
   SIGN_SECRET_KEY_BYTES,
   SIGN_SEED_BYTES,
-} from "./constants.js";
+} from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 
 import type { AeadKey, KdfMasterKey, KeyVersion, PwhashSalt } from "./types.js";

@@ -1,4 +1,4 @@
-import { AEAD_KEY_BYTES, BOX_MAC_BYTES, BOX_NONCE_BYTES } from "./constants.js";
+import { AEAD_KEY_BYTES, BOX_MAC_BYTES, BOX_NONCE_BYTES } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { getSodium } from "./sodium.js";
 import {

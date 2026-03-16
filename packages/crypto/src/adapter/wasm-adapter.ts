@@ -1,4 +1,4 @@
-import { AEAD_NONCE_BYTES, SODIUM_CONSTANTS } from "../constants.js";
+import { AEAD_NONCE_BYTES, SODIUM_CONSTANTS } from "../crypto.constants.js";
 import { CryptoNotReadyError, DecryptionFailedError } from "../errors.js";
 import {
   assertAeadKey,
