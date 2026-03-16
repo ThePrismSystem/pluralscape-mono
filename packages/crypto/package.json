@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./wasm": "./src/adapter/wasm-adapter.ts",
     "./react-native": "./src/adapter/react-native-adapter.ts",
-    "./native-memzero": "./src/adapter/native-memzero.ts"
+    "./native-memzero": "./src/adapter/native-memzero.ts",
+    "./blob-pipeline": "./src/blob-pipeline/index.ts"
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*",
