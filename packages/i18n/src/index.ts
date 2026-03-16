@@ -4,7 +4,7 @@ export {
   NAMESPACES,
   RTL_LOCALES,
   SUPPORTED_LOCALES,
-} from "./constants.js";
+} from "./i18n.constants.js";
 export { createI18nInstance } from "./create-i18n.js";
 export type { CreateI18nOptions } from "./create-i18n.js";
 export { formatDate, formatDateTime, formatTime } from "./format-date.js";

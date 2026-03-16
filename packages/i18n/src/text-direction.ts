@@ -1,4 +1,4 @@
-import { RTL_LOCALES } from "./constants.js";
+import { RTL_LOCALES } from "./i18n.constants.js";
 
 import type { Locale, TextDirection } from "@pluralscape/types";
 

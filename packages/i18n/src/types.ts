@@ -1,4 +1,4 @@
-import type { NAMESPACES } from "./constants.js";
+import type { NAMESPACES } from "./i18n.constants.js";
 import type { Locale } from "@pluralscape/types";
 
 /** A translation namespace name. */

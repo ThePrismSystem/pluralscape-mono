@@ -6,7 +6,7 @@ import {
   NAMESPACES,
   RTL_LOCALES,
   SUPPORTED_LOCALES,
-} from "../constants.js";
+} from "../i18n.constants.js";
 
 describe("i18n constants", () => {
   it("has a valid default locale", () => {

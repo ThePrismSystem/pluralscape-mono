@@ -1,8 +1,8 @@
 import { type ReactNode, useMemo } from "react";
 import { I18nextProvider, initReactI18next } from "react-i18next";
 
-import { DEFAULT_NAMESPACE, NAMESPACES } from "../constants.js";
 import { createI18nInstance } from "../create-i18n.js";
+import { DEFAULT_NAMESPACE, NAMESPACES } from "../i18n.constants.js";
 
 import type { I18nConfig } from "../types.js";
 

@@ -1,8 +1,8 @@
 import { initReactI18next } from "react-i18next";
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_LOCALE, DEFAULT_NAMESPACE, NAMESPACES } from "../constants.js";
 import { createI18nInstance } from "../create-i18n.js";
+import { DEFAULT_LOCALE, DEFAULT_NAMESPACE, NAMESPACES } from "../i18n.constants.js";
 
 describe("createI18nInstance", () => {
   it("creates a new i18next instance", () => {
