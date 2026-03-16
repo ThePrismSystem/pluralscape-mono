@@ -5,8 +5,10 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-15T21:55:58Z
-updated_at: 2026-03-16T11:32:45Z
+updated_at: 2026-03-16T11:59:14Z
 parent: api-o89k
+blocked_by:
+  - api-dcg4
 ---
 
-Finding 1 from STRIDE/OWASP audit (HIGH). Deferred because no authenticated routes exist yet. When the first route requiring auth is added, implement middleware for session/token validation.
+Session token extraction (Bearer header), session lookup, expiry checks (absolute + idle TTL), lastActive throttle update, attach auth context (accountId, systemId, sessionId) to Hono context. Return UNAUTHENTICATED/SESSION_EXPIRED.
