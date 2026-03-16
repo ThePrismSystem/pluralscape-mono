@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./quota": "./src/quota/index.ts"
   },
   "dependencies": {
     "@pluralscape/types": "workspace:*"

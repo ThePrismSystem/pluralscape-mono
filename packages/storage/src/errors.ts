@@ -44,6 +44,35 @@ export class BlobTooLargeError extends Error {
 }
 
 /**
+ * Thrown when uploading would exceed a system's storage quota.
+ */
+export class QuotaExceededError extends Error {
+  override readonly name = "QuotaExceededError" as const;
+  readonly systemId: string;
+  readonly usedBytes: number;
+  readonly quotaBytes: number;
+  readonly requestedBytes: number;
+
+  constructor(
+    systemId: string,
+    usedBytes: number,
+    quotaBytes: number,
+    requestedBytes: number,
+    options?: ErrorOptions,
+  ) {
+    super(
+      `System "${systemId}" quota exceeded: ${String(usedBytes)} / ${String(quotaBytes)} bytes used, ` +
+        `requested ${String(requestedBytes)} bytes.`,
+      options,
+    );
+    this.systemId = systemId;
+    this.usedBytes = usedBytes;
+    this.quotaBytes = quotaBytes;
+    this.requestedBytes = requestedBytes;
+  }
+}
+
+/**
  * Thrown when the storage backend encounters an unexpected error.
  */
 export class StorageBackendError extends Error {
