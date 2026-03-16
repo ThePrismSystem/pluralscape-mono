@@ -42,7 +42,7 @@ export const auditLog = sqliteTable(
     check("audit_log_event_type_check", enumCheck(t.eventType, AUDIT_EVENT_TYPES)),
     check(
       "audit_log_detail_length_check",
-      sql`${t.detail} IS NULL OR length(${t.detail}) <= ${AUDIT_LOG_DETAIL_MAX_LENGTH}`,
+      sql`${t.detail} IS NULL OR length(${t.detail}) <= ${sql.raw(String(AUDIT_LOG_DETAIL_MAX_LENGTH))}`,
     ),
   ],
 );
