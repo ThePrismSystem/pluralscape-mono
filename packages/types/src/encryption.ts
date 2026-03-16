@@ -628,6 +628,66 @@ export interface ServerAuditLogEntry {
 /** Client-side audit log entry — flat decrypted fields. */
 export type ClientAuditLogEntry = AuditLogEntry;
 
+// ── Server-safe response unions ────────────────────────────────
+
+/** Union of all server-side types safe to return from API routes. */
+export type ServerResponseData =
+  | ServerMember
+  | ServerFrontingSession
+  | ServerFrontingComment
+  | ServerGroup
+  | ServerSubsystem
+  | ServerRelationship
+  | ServerChannel
+  | ServerChatMessage
+  | ServerBoardMessage
+  | ServerNote
+  | ServerFieldDefinition
+  | ServerFieldValue
+  | ServerInnerWorldEntity
+  | ServerInnerWorldRegion
+  | ServerLifecycleEvent
+  | ServerCustomFront
+  | ServerJournalEntry
+  | ServerWikiPage
+  | ServerMemberPhoto
+  | ServerPoll
+  | ServerPollVote
+  | ServerAcknowledgementRequest
+  | ServerSideSystem
+  | ServerLayer
+  | ServerTimerConfig
+  | ServerAuditLogEntry;
+
+/** Union of all client-side types that must NEVER appear in API responses. */
+export type ClientResponseData =
+  | ClientMember
+  | ClientFrontingSession
+  | ClientFrontingComment
+  | ClientGroup
+  | ClientSubsystem
+  | ClientRelationship
+  | ClientChannel
+  | ClientChatMessage
+  | ClientBoardMessage
+  | ClientNote
+  | ClientFieldDefinition
+  | ClientFieldValue
+  | ClientInnerWorldEntity
+  | ClientInnerWorldRegion
+  | ClientLifecycleEvent
+  | ClientCustomFront
+  | ClientJournalEntry
+  | ClientWikiPage
+  | ClientMemberPhoto
+  | ClientPoll
+  | ClientPollVote
+  | ClientAcknowledgementRequest
+  | ClientSideSystem
+  | ClientLayer
+  | ClientTimerConfig
+  | ClientAuditLogEntry;
+
 // ── Mapping utility types ──────────────────────────────────────
 
 /** Maps a server type to its client-side equivalent via decryption. */
