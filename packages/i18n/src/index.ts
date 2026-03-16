@@ -12,5 +12,14 @@ export { formatDuration, formatFrontingDuration } from "./format-duration.js";
 export { formatCompactNumber, formatNumber, formatPercentage } from "./format-number.js";
 export { formatRelativeTime } from "./format-relative-time.js";
 export { createMissingKeyHandler } from "./missing-key-handler.js";
+export {
+  CANONICAL_TERMS,
+  resolveTerm,
+  resolveTermLower,
+  resolveTermPlural,
+  resolveTermTitle,
+  resolveTermUpper,
+} from "./nomenclature.js";
+export type { UseNomenclatureResult } from "./nomenclature.js";
 export { getTextDirection, isRtl } from "./text-direction.js";
 export type { I18nConfig, I18nNamespace, TranslationResources } from "./types.js";
