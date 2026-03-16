@@ -1,6 +1,6 @@
 import { defineConfig } from "vitest/config";
 
-const PACKAGES = ["types", "db", "crypto", "sync", "api-client", "queue", "storage", "i18n"];
+const PACKAGES = ["types", "db", "crypto", "sync", "api-client", "queue", "storage"];
 
 function projectConfig(name: string, root: string) {
   return {
@@ -23,6 +23,19 @@ export default defineConfig({
     projects: [
       ...PACKAGES.map((name) => projectConfig(name, `packages/${name}`)),
       projectConfig("api", "apps/api"),
+      {
+        test: {
+          name: "i18n",
+          root: "packages/i18n",
+          environment: "node",
+          include: ["src/**/*.{test,spec}.{ts,tsx}"],
+          exclude: ["**/*.integration.{test,spec}.ts"],
+          globals: false,
+          restoreMocks: true,
+          testTimeout: 5000,
+          hookTimeout: 10000,
+        },
+      },
     ],
     coverage: {
       provider: "v8",

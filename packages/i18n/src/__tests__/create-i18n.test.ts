@@ -1,7 +1,7 @@
 import { initReactI18next } from "react-i18next";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { DEFAULT_LOCALE } from "../constants.js";
+import { DEFAULT_LOCALE, DEFAULT_NAMESPACE, NAMESPACES } from "../constants.js";
 import { createI18nInstance } from "../create-i18n.js";
 
 describe("createI18nInstance", () => {
@@ -11,37 +11,49 @@ describe("createI18nInstance", () => {
     expect(instance.isInitialized).toBeFalsy();
   });
 
-  it("sets the fallback locale to the default locale after init", async () => {
+  it("sets saveMissing via the 3rdParty plugin", async () => {
     const instance = createI18nInstance();
     instance.use(initReactI18next);
 
     await instance.init({
       lng: "en",
+      fallbackLng: DEFAULT_LOCALE,
+      defaultNS: DEFAULT_NAMESPACE,
+      ns: [...NAMESPACES],
       resources: { en: { common: { hello: "Hello" } } },
     });
 
-    expect(instance.options.fallbackLng).toContain(DEFAULT_LOCALE);
+    expect(instance.options.saveMissing).toBe(true);
+  });
+
+  it("caller sets fallbackLng via init (not the factory)", async () => {
+    const instance = createI18nInstance();
+    instance.use(initReactI18next);
+
+    await instance.init({
+      lng: "en",
+      fallbackLng: "de",
+      defaultNS: DEFAULT_NAMESPACE,
+      ns: [...NAMESPACES],
+      resources: { en: { common: {} } },
+    });
+
+    expect(instance.options.fallbackLng).toContain("de");
   });
 
   it("fires the missing key handler when a key is missing", async () => {
-    const onMissing = vi.fn();
     const instance = createI18nInstance({ missingKeyMode: "warn" });
     instance.use(initReactI18next);
 
     await instance.init({
       lng: "en",
+      fallbackLng: DEFAULT_LOCALE,
+      defaultNS: DEFAULT_NAMESPACE,
+      ns: [...NAMESPACES],
       resources: { en: { common: {} } },
-      saveMissing: true,
     });
 
-    // Override the handler with our spy after init
-    instance.options.missingKeyHandler = (_lngs: readonly string[], ns: string, key: string) => {
-      onMissing(key, ns);
-    };
-
-    instance.t("common:nonexistent");
-
-    // Trigger missing key reporting
+    expect(instance.options.saveMissing).toBe(true);
     expect(instance.exists("common:nonexistent")).toBe(false);
   });
 

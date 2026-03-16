@@ -68,7 +68,27 @@ export function formatDateTime(
   pref: DateFormatPreference,
   now?: Date,
 ): string {
-  const datePart = formatDate(date, locale, pref, now);
-  const timePart = formatTime(date, locale);
-  return `${datePart}, ${timePart}`;
+  // Fixed-format prefs: concatenate with comma (explicitly non-locale-aware)
+  if (pref === "iso" || pref === "us" || pref === "eu") {
+    const datePart = formatDate(date, locale, pref, now);
+    const timePart = formatTime(date, locale);
+    return `${datePart}, ${timePart}`;
+  }
+
+  // pref === "relative": use relative text for recent dates, Intl for older ones
+  const ref = now ?? new Date();
+  const delta = Math.abs(ref.getTime() - date.getTime());
+  if (delta < RELATIVE_THRESHOLD_MS) {
+    const datePart = formatDate(date, locale, pref, now);
+    const timePart = formatTime(date, locale);
+    return `${datePart}, ${timePart}`;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }

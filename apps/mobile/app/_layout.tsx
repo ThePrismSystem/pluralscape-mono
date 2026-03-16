@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE } from "@pluralscape/i18n";
 import { I18nProvider } from "@pluralscape/i18n/react";
 import { Stack } from "expo-router";
 
@@ -7,8 +8,8 @@ export default function RootLayout(): React.JSX.Element {
   return (
     <I18nProvider
       config={{
-        locale: "en",
-        fallbackLocale: "en",
+        locale: DEFAULT_LOCALE,
+        fallbackLocale: DEFAULT_LOCALE,
         resources,
       }}
     >

@@ -3,6 +3,8 @@ import type { Locale, NumberFormatPreference } from "@pluralscape/types";
 /** Formats a number according to the user's preference and locale. */
 export function formatNumber(value: number, locale: Locale, pref: NumberFormatPreference): string {
   if (pref === "system") {
+    // Intentionally uses the runtime locale (OS/browser setting), ignoring the
+    // explicit `locale` param — this is the "system default" user preference.
     return value.toLocaleString();
   }
   return new Intl.NumberFormat(locale).format(value);
