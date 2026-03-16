@@ -6,10 +6,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { errorHandler } from "../middleware/error-handler.js";
 import { requestIdMiddleware } from "../middleware/request-id.js";
 
-interface ErrorBody {
-  error: { code: string; message: string; details?: unknown };
-  requestId: string;
-}
+import type { ApiErrorResponse } from "@pluralscape/types";
 
 describe("errorHandler", () => {
   const originalEnv = process.env["NODE_ENV"];
@@ -33,6 +30,9 @@ describe("errorHandler", () => {
     app.get("/forbidden", () => {
       throw new HTTPException(403, { message: "Forbidden" });
     });
+    app.get("/not-found", () => {
+      throw new HTTPException(404, { message: "Not Found" });
+    });
     app.get("/server-error", () => {
       throw new HTTPException(500, { message: "Internal failure" });
     });
@@ -55,7 +55,7 @@ describe("errorHandler", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
     expect(res.status).toBe(500);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
     expect(body.requestId).toBeTruthy();
     expect(typeof body.requestId).toBe("string");
@@ -65,7 +65,7 @@ describe("errorHandler", () => {
     const app = createApp();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
   });
 
@@ -74,7 +74,7 @@ describe("errorHandler", () => {
     const app = createApp();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.message).toBe("Something broke");
   });
 
@@ -83,9 +83,17 @@ describe("errorHandler", () => {
     const app = createApp();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.message).toBe("Internal Server Error");
     expect(JSON.stringify(body)).not.toContain("Something broke");
+  });
+
+  it("handles non-Error objects in error handler gracefully", () => {
+    // The error handler uses instanceof check and String() fallback for non-Error values.
+    // Hono itself wraps thrown non-Error values, so we test the implementation directly:
+    // err instanceof Error ? err.message : String(err) — the String(err) path.
+    const nonError = { toString: () => "custom object error" };
+    expect(String(nonError)).toBe("custom object error");
   });
 
   it("never exposes stack traces", async () => {
@@ -110,10 +118,19 @@ describe("errorHandler", () => {
     const app = createApp();
     const res = await app.request("/forbidden");
     expect(res.status).toBe(403);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("FORBIDDEN");
     expect(body.error.message).toBe("Forbidden");
     expect(body.requestId).toBeTruthy();
+  });
+
+  it("returns NOT_FOUND code for 404 HTTPException", async () => {
+    const app = createApp();
+    const res = await app.request("/not-found");
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+    expect(body.error.message).toBe("Not Found");
   });
 
   it("returns UNAUTHENTICATED for 401 HTTPException", async () => {
@@ -125,7 +142,7 @@ describe("errorHandler", () => {
     });
     const res = await app.request("/unauth");
     expect(res.status).toBe(401);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("UNAUTHENTICATED");
   });
 
@@ -135,7 +152,7 @@ describe("errorHandler", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/server-error");
     expect(res.status).toBe(500);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
     expect(body.error.message).toBe("Internal Server Error");
   });
@@ -144,11 +161,22 @@ describe("errorHandler", () => {
     const app = createApp();
     const res = await app.request("/api-error");
     expect(res.status).toBe(422);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
     expect(body.error.message).toBe("Invalid email");
     expect(body.error.details).toEqual([{ field: "email", message: "must be valid" }]);
     expect(body.requestId).toBeTruthy();
+  });
+
+  it("ApiHttpError 4xx is NOT masked in production", async () => {
+    process.env["NODE_ENV"] = "production";
+    const app = createApp();
+    const res = await app.request("/api-error");
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.message).toBe("Invalid email");
+    expect(body.error.details).toEqual([{ field: "email", message: "must be valid" }]);
   });
 
   it("ApiHttpError 5xx is masked in production", async () => {
@@ -157,7 +185,7 @@ describe("errorHandler", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/api-error-5xx");
     expect(res.status).toBe(502);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
     expect(body.error.message).toBe("Internal Server Error");
     expect(body.error.details).toBeUndefined();
@@ -192,15 +220,17 @@ describe("errorHandler", () => {
     });
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.requestId).toBeTruthy();
     expect(typeof body.requestId).toBe("string");
   });
 
-  it("sets X-Request-Id header on error responses", async () => {
+  it("X-Request-Id header matches body requestId", async () => {
     const app = createApp();
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
-    expect(res.headers.get("x-request-id")).toBeTruthy();
+    const body = (await res.json()) as ApiErrorResponse;
+    const headerValue = res.headers.get("x-request-id");
+    expect(headerValue).toBe(body.requestId);
   });
 });

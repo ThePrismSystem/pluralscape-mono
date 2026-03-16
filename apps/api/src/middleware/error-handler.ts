@@ -3,7 +3,8 @@ import { HTTPException } from "hono/http-exception";
 import { ApiHttpError } from "../lib/api-error.js";
 
 import type { ApiErrorCode, ApiErrorResponse } from "@pluralscape/types";
-import type { ErrorHandler } from "hono";
+import type { Context, ErrorHandler } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 const HTTP_INTERNAL_SERVER_ERROR = 500;
 
@@ -13,15 +14,53 @@ const STATUS_TO_CODE: Readonly<Record<number, ApiErrorCode>> = {
   401: "UNAUTHENTICATED",
   403: "FORBIDDEN",
   404: "NOT_FOUND",
+  405: "VALIDATION_ERROR",
   409: "CONFLICT",
   413: "BLOB_TOO_LARGE",
+  415: "VALIDATION_ERROR",
+  422: "VALIDATION_ERROR",
   429: "RATE_LIMITED",
   500: "INTERNAL_ERROR",
+  502: "SERVICE_UNAVAILABLE",
   503: "SERVICE_UNAVAILABLE",
+  504: "SERVICE_UNAVAILABLE",
 };
 
+/** Returns the best-match ApiErrorCode, falling back by range (4xx/5xx). */
 function codeForStatus(status: number): ApiErrorCode {
-  return STATUS_TO_CODE[status] ?? "INTERNAL_ERROR";
+  const mapped = STATUS_TO_CODE[status];
+  if (mapped) return mapped;
+  return status >= HTTP_INTERNAL_SERVER_ERROR ? "INTERNAL_ERROR" : "VALIDATION_ERROR";
+}
+
+/** Safely extracts the requestId from context, falling back to a new UUID. */
+function getRequestId(c: Context): string {
+  const value: unknown = c.get("requestId");
+  return typeof value === "string" ? value : crypto.randomUUID();
+}
+
+/** Builds a structured error response with production masking for 5xx. */
+function formatError(
+  c: Context,
+  status: number,
+  code: ApiErrorCode,
+  message: string,
+  requestId: string,
+  isProduction: boolean,
+  details?: unknown,
+): Response {
+  const mask = isProduction && status >= HTTP_INTERNAL_SERVER_ERROR;
+  const body: ApiErrorResponse = {
+    error: {
+      code: mask ? "INTERNAL_ERROR" : code,
+      message: mask ? "Internal Server Error" : message,
+      ...(mask || details === undefined ? {} : { details }),
+    },
+    requestId,
+  };
+  // Status codes from HTTPException/ApiHttpError are already ContentfulStatusCode;
+  // the number param avoids coupling callers to Hono's internal type.
+  return c.json(body, status as ContentfulStatusCode);
 }
 
 /**
@@ -32,54 +71,42 @@ function codeForStatus(status: number): ApiErrorCode {
  */
 export const errorHandler: ErrorHandler = (err, c) => {
   const isProduction = process.env["NODE_ENV"] === "production";
-  const requestId = (c.get("requestId") as string | undefined) ?? crypto.randomUUID();
+  const requestId = getRequestId(c);
 
   if (err instanceof ApiHttpError) {
-    const status = err.status;
-    if (status >= HTTP_INTERNAL_SERVER_ERROR) {
+    if (err.status >= HTTP_INTERNAL_SERVER_ERROR) {
       console.error("[api] Unhandled error:", err);
     }
-
-    const mask = isProduction && status >= HTTP_INTERNAL_SERVER_ERROR;
-    const body: ApiErrorResponse = {
-      error: {
-        code: mask ? "INTERNAL_ERROR" : err.code,
-        message: mask ? "Internal Server Error" : err.message,
-        details: mask ? undefined : err.details,
-      },
-      requestId,
-    };
-    return c.json(body, status);
+    return formatError(c, err.status, err.code, err.message, requestId, isProduction, err.details);
   }
 
   if (err instanceof HTTPException) {
-    const status = err.status;
-    if (status >= HTTP_INTERNAL_SERVER_ERROR) {
+    if (err.status >= HTTP_INTERNAL_SERVER_ERROR) {
       console.error("[api] Unhandled error:", err);
     }
-
-    const mask = isProduction && status >= HTTP_INTERNAL_SERVER_ERROR;
-    const body: ApiErrorResponse = {
-      error: {
-        code: mask ? "INTERNAL_ERROR" : codeForStatus(status),
-        message: mask ? "Internal Server Error" : err.message,
-        details: undefined,
-      },
+    return formatError(
+      c,
+      err.status,
+      codeForStatus(err.status),
+      err.message,
       requestId,
-    };
-    return c.json(body, status);
+      isProduction,
+    );
   }
 
   // Unknown error — always 500
   console.error("[api] Unhandled error:", err);
-  const message = isProduction ? "Internal Server Error" : (err as Error).message;
-  const body: ApiErrorResponse = {
-    error: {
-      code: "INTERNAL_ERROR",
-      message,
-      details: undefined,
-    },
+  const message = isProduction
+    ? "Internal Server Error"
+    : err instanceof Error
+      ? err.message
+      : String(err);
+  return formatError(
+    c,
+    HTTP_INTERNAL_SERVER_ERROR,
+    "INTERNAL_ERROR",
+    message,
     requestId,
-  };
-  return c.json(body, HTTP_INTERNAL_SERVER_ERROR);
+    isProduction,
+  );
 };

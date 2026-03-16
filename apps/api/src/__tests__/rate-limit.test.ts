@@ -6,10 +6,7 @@ import { errorHandler } from "../middleware/error-handler.js";
 import { createCategoryRateLimiter, createRateLimiter } from "../middleware/rate-limit.js";
 import { requestIdMiddleware } from "../middleware/request-id.js";
 
-interface ErrorBody {
-  error: { code: string; message: string; details?: unknown };
-  requestId: string;
-}
+import type { ApiErrorResponse } from "@pluralscape/types";
 
 describe("rate limiter middleware", () => {
   const originalTrustProxy = process.env["TRUST_PROXY"];
@@ -164,7 +161,7 @@ describe("rate limiter middleware", () => {
     await app.request("/test");
     const res = await app.request("/test");
     expect(res.status).toBe(429);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("RATE_LIMITED");
     expect(body.error.message).toBe("Too many requests");
     expect(body.requestId).toBeTruthy();
@@ -182,7 +179,7 @@ describe("rate limiter middleware", () => {
 
   // ── Category rate limiter ─────────────────────────────────────────
 
-  it("createCategoryRateLimiter uses RATE_LIMITS constants", async () => {
+  it("createCategoryRateLimiter uses RATE_LIMITS limit constant", async () => {
     const app = new Hono();
     app.use("*", requestIdMiddleware());
     app.use("*", createCategoryRateLimiter("authHeavy"));
@@ -191,5 +188,26 @@ describe("rate limiter middleware", () => {
 
     const res = await app.request("/test");
     expect(res.headers.get("x-ratelimit-limit")).toBe(String(RATE_LIMITS.authHeavy.limit));
+  });
+
+  it("createCategoryRateLimiter uses RATE_LIMITS windowMs constant", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.use("*", createCategoryRateLimiter("authHeavy"));
+    app.onError(errorHandler);
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    // Exhaust the limit
+    for (let i = 0; i < RATE_LIMITS.authHeavy.limit; i++) {
+      await app.request("/test");
+    }
+    const blocked = await app.request("/test");
+    expect(blocked.status).toBe(429);
+
+    // Advance past the authHeavy window (60s)
+    vi.advanceTimersByTime(RATE_LIMITS.authHeavy.windowMs + 1);
+
+    const afterReset = await app.request("/test");
+    expect(afterReset.status).toBe(200);
   });
 });

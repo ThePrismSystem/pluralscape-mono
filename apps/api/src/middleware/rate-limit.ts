@@ -1,8 +1,6 @@
 import { RATE_LIMITS } from "@pluralscape/types";
 
-import { ApiHttpError } from "../lib/api-error.js";
-
-import type { RateLimitCategory } from "@pluralscape/types";
+import type { ApiErrorResponse, RateLimitCategory } from "@pluralscape/types";
 import type { Context, MiddlewareHandler } from "hono";
 
 const HTTP_TOO_MANY_REQUESTS = 429;
@@ -43,8 +41,8 @@ function getClientKey(c: Context): string {
 
 /**
  * In-memory fixed-window rate limiter keyed by client IP.
- * Returns 429 + Retry-After header when limit is exceeded.
  * Emits standard X-RateLimit-* headers on every response.
+ * Returns 429 with structured error body when limit is exceeded.
  *
  * When TRUST_PROXY is unset, all requests share a single global bucket
  * to avoid X-Forwarded-For spoofing. Set TRUST_PROXY=1 behind a reverse proxy.
@@ -80,12 +78,22 @@ export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandle
     c.header("X-RateLimit-Reset", String(Math.ceil(entry.resetAt / MS_PER_SECOND)));
 
     if (entry.count > limit) {
+      // Return structured error directly to guarantee headers and body are
+      // on the same response object (no reliance on pre-throw header propagation).
       const retryAfter = Math.ceil((entry.resetAt - now) / MS_PER_SECOND);
       c.header("Retry-After", String(retryAfter));
-      throw new ApiHttpError(HTTP_TOO_MANY_REQUESTS, "RATE_LIMITED", "Too many requests");
+      const rawId: unknown = c.get("requestId");
+      const requestId = typeof rawId === "string" ? rawId : crypto.randomUUID();
+      return c.json(
+        {
+          error: { code: "RATE_LIMITED", message: "Too many requests" },
+          requestId,
+        } satisfies ApiErrorResponse,
+        HTTP_TOO_MANY_REQUESTS,
+      );
     }
 
-    await next();
+    return next();
   };
 }
 

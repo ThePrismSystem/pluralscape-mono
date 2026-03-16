@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-interface ErrorBody {
-  error: { code: string; message: string; details?: unknown };
-  requestId: string;
-}
+import type { ApiErrorResponse } from "@pluralscape/types";
 
 describe("middleware composition", () => {
   const originalEnv = process.env["NODE_ENV"];
@@ -70,7 +67,7 @@ describe("middleware composition", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await testApp.request("/boom");
     expect(res.status).toBe(500);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
     expect(body.error.message).toBe("Internal Server Error");
     expect(JSON.stringify(body)).not.toContain("secret internal details");
@@ -81,20 +78,18 @@ describe("middleware composition", () => {
   it("rate limiter returns 429 with structured error after threshold", async () => {
     const { Hono } = await import("hono");
     const { createRateLimiter } = await import("../middleware/rate-limit.js");
-    const { errorHandler } = await import("../middleware/error-handler.js");
     const { requestIdMiddleware } = await import("../middleware/request-id.js");
 
     const testApp = new Hono();
     testApp.use("*", requestIdMiddleware());
     testApp.use("*", createRateLimiter({ limit: 2, windowMs: 60_000 }));
-    testApp.onError(errorHandler);
     testApp.get("/test", (c) => c.json({ ok: true }));
 
     await testApp.request("/test");
     await testApp.request("/test");
     const res = await testApp.request("/test");
     expect(res.status).toBe(429);
-    const body = (await res.json()) as ErrorBody;
+    const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("RATE_LIMITED");
   });
 
