@@ -11,4 +11,4 @@ blocked_by:
   - api-5mzr
 ---
 
-GET /auth/sessions (list, cursor paginated), DELETE /auth/sessions/:id (revoke), POST /auth/logout (revoke current). Idle timeout check, lastActive throttle (60s debounce). Expired session cleanup. Rate limited at authLight (20/60s).
+GET /auth/sessions (list, cursor paginated), DELETE /auth/sessions/:id (revoke), POST /auth/logout (revoke current), POST /auth/sessions/revoke-all (revoke all except current). Idle timeout check, lastActive throttle (60s debounce). Expired session cleanup. Rate limited at authLight (20/60s).

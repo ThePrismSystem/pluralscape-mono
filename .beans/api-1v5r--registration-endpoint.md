@@ -3,6 +3,7 @@
 title: Registration endpoint
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-16T11:52:27Z
 updated_at: 2026-03-16T11:52:27Z
 parent: api-o89k
