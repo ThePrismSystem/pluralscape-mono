@@ -105,6 +105,19 @@ export interface SodiumAdapter {
     memLimit: number,
   ): Uint8Array;
 
+  /**
+   * Hash a password into a self-contained Argon2id string.
+   * Produces the standard `$argon2id$v=19$m=...,t=...,p=...` encoded string.
+   * The string includes the salt and parameters — no separate salt storage needed.
+   */
+  pwhashStr(password: Uint8Array, opsLimit: number, memLimit: number): string;
+
+  /**
+   * Verify a password against an Argon2id hash string produced by pwhashStr.
+   * Returns true if the password matches, false otherwise.
+   */
+  pwhashStrVerify(hash: string, password: Uint8Array): boolean;
+
   // ── KDF (BLAKE2B) ────────────────────────────────────────────────
 
   /** Derive a sub-key from a master key using BLAKE2B. */

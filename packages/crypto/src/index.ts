@@ -85,6 +85,9 @@ export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
 export type { PwhashProfile } from "./master-key.js";
 export { deriveMasterKey, generateSalt } from "./master-key.js";
 
+// ── Password hashing (string-based) ────────────────────────────────
+export { hashPassword, verifyPassword } from "./password.js";
+
 // ── Master key wrap (KEK/DEK two-layer architecture) ─────────────────
 export {
   derivePasswordKey,

@@ -212,6 +212,24 @@ export class WasmSodiumAdapter implements SodiumAdapter {
     );
   }
 
+  pwhashStr(password: Uint8Array, opsLimit: number, memLimit: number): string {
+    const sodium = this.lib();
+    // Type defs report Uint8Array but runtime returns a null-terminated ASCII string.
+    // Handle both cases: decode Uint8Array or strip null terminator from string.
+    const result: Uint8Array | string = sodium.crypto_pwhash_str(password, opsLimit, memLimit) as
+      | Uint8Array
+      | string;
+    if (typeof result === "string") {
+      return result.replace(/\0+$/, "");
+    }
+    return new TextDecoder().decode(result).replace(/\0+$/, "");
+  }
+
+  pwhashStrVerify(hash: string, password: Uint8Array): boolean {
+    const sodium = this.lib();
+    return sodium.crypto_pwhash_str_verify(hash, password);
+  }
+
   // ── KDF ───────────────────────────────────────────────────────────
 
   kdfDeriveFromKey(

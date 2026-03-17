@@ -239,6 +239,20 @@ export class ReactNativeSodiumAdapter implements SodiumAdapter {
     );
   }
 
+  /**
+   * Not supported on React Native — password hashing is always server-side.
+   */
+  pwhashStr(): string {
+    throw new UnsupportedOperationError("pwhashStr", "react-native");
+  }
+
+  /**
+   * Not supported on React Native — password verification is always server-side.
+   */
+  pwhashStrVerify(): boolean {
+    throw new UnsupportedOperationError("pwhashStrVerify", "react-native");
+  }
+
   // ── KDF ───────────────────────────────────────────────────────────
 
   kdfDeriveFromKey(
