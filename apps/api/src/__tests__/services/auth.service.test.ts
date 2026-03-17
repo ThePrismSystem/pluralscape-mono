@@ -263,11 +263,11 @@ describe("auth service", () => {
       ).rejects.toThrow("Recovery key backup must be confirmed");
     });
 
-    it("throws ValidationError for short passwords", async () => {
+    it("throws ZodError for short passwords (schema-level enforcement)", async () => {
       const { db } = mockDb();
       await expect(
         registerAccount(db, { ...validParams, password: "short" }, "web", mockAudit),
-      ).rejects.toThrow(/Password must be at least/);
+      ).rejects.toThrow();
     });
 
     it("returns registration result on success", async () => {

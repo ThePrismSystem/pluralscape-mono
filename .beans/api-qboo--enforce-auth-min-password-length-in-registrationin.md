@@ -1,11 +1,11 @@
 ---
 # api-qboo
 title: Enforce AUTH_MIN_PASSWORD_LENGTH in RegistrationInputSchema
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-03-17T11:59:41Z
-updated_at: 2026-03-17T11:59:41Z
+updated_at: 2026-03-17T18:37:46Z
 parent: api-tspr
 ---
 
@@ -51,3 +51,5 @@ export const RegistrationInputSchema = z.object({
 ## References
 
 - CWE-521: Weak Password Requirements
+
+## Summary of Changes\n\nChanged `RegistrationInputSchema.password` from `.min(1)` to `.min(AUTH_MIN_PASSWORD_LENGTH)`, enforcing the 8-char minimum at the schema layer. Removed the now-redundant service-level check. Updated contract tests to use valid-length passwords.

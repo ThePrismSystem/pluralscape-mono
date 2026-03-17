@@ -22,7 +22,6 @@ import { toHex } from "../lib/hex.js";
 import { getIdleTimeout } from "../lib/session-auth.js";
 import {
   ANTI_ENUM_TARGET_MS,
-  AUTH_MIN_PASSWORD_LENGTH,
   DEFAULT_SESSION_LIMIT,
   DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
@@ -58,12 +57,6 @@ export async function registerAccount(
 
   if (!parsed.recoveryKeyBackupConfirmed) {
     throw new ValidationError("Recovery key backup must be confirmed");
-  }
-
-  if (parsed.password.length < AUTH_MIN_PASSWORD_LENGTH) {
-    throw new ValidationError(
-      `Password must be at least ${String(AUTH_MIN_PASSWORD_LENGTH)} characters`,
-    );
   }
 
   const accountType = parsed.accountType;

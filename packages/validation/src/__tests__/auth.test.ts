@@ -1,7 +1,39 @@
 import { describe, expect, it } from "vitest";
 
-import { ChangeEmailSchema, ChangePasswordSchema, RegenerateRecoveryKeySchema } from "../auth.js";
+import {
+  ChangeEmailSchema,
+  ChangePasswordSchema,
+  RegenerateRecoveryKeySchema,
+  RegistrationInputSchema,
+} from "../auth.js";
 import { AUTH_MIN_PASSWORD_LENGTH } from "../validation.constants.js";
+
+// ── RegistrationInputSchema ──────────────────────────────────────────
+
+describe("RegistrationInputSchema", () => {
+  it("rejects password shorter than AUTH_MIN_PASSWORD_LENGTH", () => {
+    const result = RegistrationInputSchema.safeParse({
+      email: "user@example.com",
+      password: "1234567", // 7 chars, below the 8-char minimum
+      recoveryKeyBackupConfirmed: true,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["password"]);
+    }
+  });
+
+  it("accepts password at exactly AUTH_MIN_PASSWORD_LENGTH", () => {
+    const result = RegistrationInputSchema.safeParse({
+      email: "user@example.com",
+      password: "12345678", // exactly 8 chars
+      recoveryKeyBackupConfirmed: true,
+    });
+    expect(result.success).toBe(true);
+  });
+});
 
 // ── ChangeEmailSchema ───────────────────────────────────────────────
 
