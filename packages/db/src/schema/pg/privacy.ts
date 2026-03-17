@@ -57,7 +57,7 @@ export const bucketContentTags = pgTable(
     entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -79,7 +79,7 @@ export const keyGrants = pgTable(
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -168,10 +168,10 @@ export const friendBucketAssignments = pgTable(
   {
     friendConnectionId: varchar("friend_connection_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => friendConnections.id, { onDelete: "cascade" }),
+      .references(() => friendConnections.id, { onDelete: "restrict" }),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),

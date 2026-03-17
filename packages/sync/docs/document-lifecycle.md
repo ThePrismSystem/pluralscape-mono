@@ -268,13 +268,13 @@ Archival is performed server-side and reflected in the manifest as `archived: tr
 
 ### 7.2 Archive Behavior
 
-| Behavior              | Rule                                                                                  |
-| --------------------- | ------------------------------------------------------------------------------------- |
-| Not synced by default | Archived documents are not included in initial sync or incremental sync subscriptions |
-| On-demand loadable    | Client can request an archived document via `OnDemandLoadRequest { docId, persist }`  |
-| Un-archival on write  | Writing a change to an archived document automatically un-archives it in the manifest |
-| Retained indefinitely | Server retains archived documents; non-destructive data principle                     |
-| Readable              | Reads from archived documents are always permitted                                    |
+| Behavior               | Rule                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| Not synced by default  | Archived documents are not included in initial sync or incremental sync subscriptions  |
+| On-demand loadable     | Client can request an archived document via `OnDemandLoadRequest { docId, persist }`   |
+| Un-archival on write   | Writing a change to an archived document automatically un-archives it in the manifest  |
+| Retained until deleted | Server retains archived documents until explicitly deleted by user or account deletion |
+| Readable               | Reads from archived documents are always permitted                                     |
 
 ### 7.3 UI Experience
 
@@ -294,9 +294,9 @@ The secsync reference implementation uses 100–200 as a typical range. At 200 c
 
 1 MB represents a significant change accumulation that is worth compacting regardless of change count. This handles the case where changes are large (e.g., journal entries with large block content) and the change count threshold would be reached too slowly.
 
-### Why no hard delete of individual entities?
+### How does entity deletion work with CRDTs?
 
-Pluralscape's non-destructive data principle is a core design decision. Hard delete complicates CRDT semantics (tombstones can resurface if a device brings in old changes after deletion), creates potential for data loss in conflict scenarios, and is incompatible with the "fail-closed privacy" principle (preserving the last-known state of archived entities ensures their references in fronting logs remain resolvable). The only hard delete is GDPR account deletion, which is a clean server-side wipe of all ciphertext.
+Permanent deletion propagates a tombstone through the CRDT sync layer. All devices converge on the deletion. Cascading references (e.g., fronting log entries referencing a deleted member) are handled by resolving to a "deleted entity" placeholder rather than breaking. Account deletion (GDPR) is a clean server-side wipe of all ciphertext.
 
 ### Why 90 days for archive trigger?
 

@@ -101,7 +101,7 @@ export const friendNotificationPreferences = sqliteTable(
     foreignKey({
       columns: [t.friendConnectionId, t.accountId],
       foreignColumns: [friendConnections.id, friendConnections.accountId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     archivableConsistencyCheckFor("friend_notification_preferences", t.archived, t.archivedAt),
   ],
 );

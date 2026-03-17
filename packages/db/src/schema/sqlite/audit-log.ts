@@ -19,6 +19,8 @@ export const auditLog = sqliteTable(
   "audit_log",
   {
     id: text("id").notNull(),
+    // ON DELETE SET NULL: audit logs survive account/system deletion with nullified references.
+    // Intentional exception to the RESTRICT policy — audit history must be preserved.
     /** Denormalized for query performance — avoids joining through systems to get account. */
     accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
     systemId: text("system_id").references(() => systems.id, { onDelete: "set null" }),

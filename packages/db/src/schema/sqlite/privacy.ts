@@ -54,7 +54,7 @@ export const bucketContentTags = sqliteTable(
     entityId: text("entity_id").notNull(),
     bucketId: text("bucket_id")
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -76,7 +76,7 @@ export const keyGrants = sqliteTable(
     id: text("id").primaryKey(),
     bucketId: text("bucket_id")
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -162,10 +162,10 @@ export const friendBucketAssignments = sqliteTable(
   {
     friendConnectionId: text("friend_connection_id")
       .notNull()
-      .references(() => friendConnections.id, { onDelete: "cascade" }),
+      .references(() => friendConnections.id, { onDelete: "restrict" }),
     bucketId: text("bucket_id")
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),

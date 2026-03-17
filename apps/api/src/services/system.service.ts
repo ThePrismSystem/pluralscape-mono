@@ -223,7 +223,7 @@ export async function archiveSystem(
     if ((memberCount?.count ?? 0) > 0) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
-        "CONFLICT",
+        "HAS_DEPENDENTS",
         `System has ${String(memberCount?.count ?? 0)} active member(s). Delete all members before deleting the system.`,
       );
     }

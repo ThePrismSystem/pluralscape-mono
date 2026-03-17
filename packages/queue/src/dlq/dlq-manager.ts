@@ -44,7 +44,7 @@ export class DLQManager {
    * Purges dead-lettered jobs by cancelling them.
    *
    * Uses the `cancel()` transition (`dead-letter -> cancelled`) to
-   * follow the non-destructive data principle — jobs are archived, not deleted.
+   * archive failed jobs via cancellation rather than hard-deleting them.
    */
   async purge(filter?: Pick<DLQFilter, "type" | "systemId">): Promise<BatchResult> {
     return this.batchOp((jobId) => this.queue.cancel(jobId), filter);

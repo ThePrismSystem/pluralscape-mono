@@ -25,7 +25,7 @@ Journal page, block, and wiki tables. Implementation is later milestones but sch
 
 - Blocks stored as serialized JSON inside encrypted blob (simpler encryption model)
 - Wiki slugs are T3 (needed for URL routing). Note: slugs could leak wiki page topics.
-- Both tables support archival: non-destructive, read-only preservation with instant restore
+- Both tables support archival (read-only preservation with instant restore) and permanent deletion
 
 ### Cascade rules
 

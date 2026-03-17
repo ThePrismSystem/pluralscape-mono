@@ -163,7 +163,7 @@ describe("DLQManager", () => {
   });
 
   describe("purge", () => {
-    it("cancels all dead-lettered jobs (non-destructive)", async () => {
+    it("cancels all dead-lettered jobs (archives via cancellation)", async () => {
       const queue = new InMemoryJobQueue();
       const dlq = new DLQManager(queue);
 

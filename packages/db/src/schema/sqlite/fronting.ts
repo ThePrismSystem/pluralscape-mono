@@ -79,18 +79,17 @@ export const frontingSessions = sqliteTable(
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.customFrontId],
       foreignColumns: [customFronts.id],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("fronting_sessions", t.version),
     archivableConsistencyCheckFor("fronting_sessions", t.archived, t.archivedAt),
     // Invariant: every session must have at least one subject (member or custom front).
-    // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
-    // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
-    // behavior: members/custom_fronts should be archived (not deleted) per project
-    // principles. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
+    // Both member_id and custom_front_id use ON DELETE RESTRICT — fronting sessions
+    // referencing a member/custom_front must be removed before that member/custom_front
+    // can be deleted. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
     check(
       "fronting_sessions_subject_check",
       sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,
@@ -147,11 +146,11 @@ export const frontingComments = sqliteTable(
     foreignKey({
       columns: [t.frontingSessionId, t.systemId],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("fronting_comments", t.version),
     archivableConsistencyCheckFor("fronting_comments", t.archived, t.archivedAt),
   ],

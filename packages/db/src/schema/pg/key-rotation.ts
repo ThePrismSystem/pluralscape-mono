@@ -18,7 +18,7 @@ export const bucketKeyRotations = pgTable(
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -52,7 +52,7 @@ export const bucketRotationItems = pgTable(
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
     rotationId: varchar("rotation_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => bucketKeyRotations.id, { onDelete: "cascade" }),
+      .references(() => bucketKeyRotations.id, { onDelete: "restrict" }),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),

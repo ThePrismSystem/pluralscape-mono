@@ -49,11 +49,11 @@ export const blobMetadata = pgTable(
     foreignKey({
       columns: [t.bucketId],
       foreignColumns: [buckets.id],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.thumbnailOfBlobId],
       foreignColumns: [t.id],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     check("blob_metadata_purpose_check", enumCheck(t.purpose, BLOB_PURPOSES)),
     check("blob_metadata_size_bytes_check", sql`${t.sizeBytes} > 0`),
     check(

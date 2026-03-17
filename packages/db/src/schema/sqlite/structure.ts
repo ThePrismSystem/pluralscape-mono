@@ -46,11 +46,11 @@ export const relationships = sqliteTable(
     foreignKey({
       columns: [t.sourceMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.targetMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     check("relationships_type_check", enumCheck(t.type, RELATIONSHIP_TYPES)),
     versionCheckFor("relationships", t.version),
     archivableConsistencyCheckFor("relationships", t.archived, t.archivedAt),
@@ -79,7 +79,7 @@ export const subsystems = sqliteTable(
     foreignKey({
       columns: [t.parentSubsystemId, t.systemId],
       foreignColumns: [t.id, t.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     check("subsystems_discovery_status_check", enumCheck(t.discoveryStatus, DISCOVERY_STATUSES)),
     versionCheckFor("subsystems", t.version),
     archivableConsistencyCheckFor("subsystems", t.archived, t.archivedAt),
@@ -146,7 +146,7 @@ export const subsystemMemberships = sqliteTable(
     foreignKey({
       columns: [t.subsystemId, t.systemId],
       foreignColumns: [subsystems.id, subsystems.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
   ],
 );
 
@@ -168,7 +168,7 @@ export const sideSystemMemberships = sqliteTable(
     foreignKey({
       columns: [t.sideSystemId, t.systemId],
       foreignColumns: [sideSystems.id, sideSystems.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
   ],
 );
 
@@ -190,7 +190,7 @@ export const layerMemberships = sqliteTable(
     foreignKey({
       columns: [t.layerId, t.systemId],
       foreignColumns: [layers.id, layers.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
   ],
 );
 
@@ -213,11 +213,11 @@ export const subsystemLayerLinks = sqliteTable(
     foreignKey({
       columns: [t.subsystemId, t.systemId],
       foreignColumns: [subsystems.id, subsystems.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.layerId, t.systemId],
       foreignColumns: [layers.id, layers.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
   ],
 );
 
@@ -240,11 +240,11 @@ export const subsystemSideSystemLinks = sqliteTable(
     foreignKey({
       columns: [t.subsystemId, t.systemId],
       foreignColumns: [subsystems.id, subsystems.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.sideSystemId, t.systemId],
       foreignColumns: [sideSystems.id, sideSystems.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
   ],
 );
 
@@ -267,11 +267,11 @@ export const sideSystemLayerLinks = sqliteTable(
     foreignKey({
       columns: [t.sideSystemId, t.systemId],
       foreignColumns: [sideSystems.id, sideSystems.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.layerId, t.systemId],
       foreignColumns: [layers.id, layers.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
   ],
 );
 

@@ -17,8 +17,8 @@ export type PartitionedTable = (typeof PARTITIONED_TABLES)[number];
 
 /**
  * Only audit_log partitions may be destructively detached.
- * Messages, fronting_sessions, and switches are retained indefinitely
- * per the non-destructive data principle.
+ * Messages, fronting_sessions, and switches are retained until
+ * explicitly deleted by the user or account deletion.
  */
 export type DetachableTable = "audit_log";
 
@@ -87,7 +87,7 @@ export interface DetachResult {
  * Detach and drop audit_log monthly partitions older than `olderThanMonths`.
  *
  * Restricted to audit_log only — messages, fronting_sessions, and switches
- * partitions are never dropped automatically (non-destructive data principle).
+ * partitions are never dropped automatically.
  *
  * Queries pg_inherits + pg_class to find child partitions, parses their
  * names, and issues DETACH + DROP for those past the retention cutoff.

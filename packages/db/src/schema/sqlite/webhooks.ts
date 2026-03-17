@@ -42,7 +42,7 @@ export const webhookConfigs = sqliteTable(
     eventTypes: sqliteJson("event_types").notNull().$type<readonly WebhookEventType[]>(),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     cryptoKeyId: text("crypto_key_id").references(() => apiKeys.id, {
-      onDelete: "set null",
+      onDelete: "restrict",
     }),
     ...timestamps(),
     ...archivable(),
@@ -85,7 +85,7 @@ export const webhookDeliveries = sqliteTable(
     foreignKey({
       columns: [t.webhookId, t.systemId],
       foreignColumns: [webhookConfigs.id, webhookConfigs.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     check("webhook_deliveries_event_type_check", enumCheck(t.eventType, WEBHOOK_EVENT_TYPES)),
     check("webhook_deliveries_status_check", enumCheck(t.status, WEBHOOK_DELIVERY_STATUSES)),
     check("webhook_deliveries_attempt_count_check", sql`${t.attemptCount} >= 0`),

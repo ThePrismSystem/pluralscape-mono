@@ -51,14 +51,14 @@ The features that help people survive and heal are never locked behind a paywall
 - Cosmetic personalization (themes, avatar frames, supporter badges) may be offered as premium
 - Donations and community funding are the preferred sustainability model
 
-## Non-Destructive by Design
+## Deliberate Data Lifecycle
 
-We build systems that protect user data at every level.
+We build systems that protect user data while respecting user agency.
 
-- Archive instead of delete — historical data is preserved
+- Users can archive or permanently delete their own data
+- Deletions require explicit confirmation — no silent data loss
 - Offline-first architecture — local data is the source of truth
 - Sync only confirms via cryptographic verification
-- No silent data loss, ever
 
 ## Code Quality and Inclusion
 

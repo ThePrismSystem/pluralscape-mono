@@ -391,10 +391,10 @@ Pluralscape uses soft-delete (archival) exclusively. There is no hard delete of 
 - Archived entities MUST be excluded from fan-out to bucket documents. The owner client's fan-out logic checks `archived === true` before projecting to `bucket-{bucketId}`.
 - If an entity is archived after fan-out, the projection is removed from the bucket document on the next fan-out pass.
 
-**No hard delete:**
+**Deletion:**
 
-- Individual entity deletion does not exist. The only hard delete is GDPR account deletion, which is a server-side wipe of all ciphertext (every encrypted document and manifest entry for the account).
-- This aligns with the non-destructive data principle (document-topology.md section 7.5).
+- Individual entities can be permanently deleted when the user explicitly requests it. Deletion propagates a tombstone through the CRDT sync layer.
+- Account deletion (GDPR) is a server-side wipe of all ciphertext (every encrypted document and manifest entry for the account).
 
 **Compaction:**
 

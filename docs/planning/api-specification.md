@@ -58,26 +58,27 @@ interface ApiErrorResponse {
 
 ### Error code catalog
 
-| Code                   | HTTP Status | Description                                                     |
-| ---------------------- | ----------- | --------------------------------------------------------------- |
-| `VALIDATION_ERROR`     | 400         | Request body or query parameter failed schema validation        |
-| `INVALID_CURSOR`       | 400         | Pagination cursor is malformed or expired (>24 h)               |
-| `INVALID_FRIEND_CODE`  | 400         | Friend code format is invalid                                   |
-| `UNAUTHENTICATED`      | 401         | No valid session or API key provided                            |
-| `SESSION_EXPIRED`      | 401         | Session exceeded absolute or idle TTL                           |
-| `KEY_VERSION_STALE`    | 401         | Client is using an outdated encryption key version              |
-| `FORBIDDEN`            | 403         | Authenticated but not authorized for this resource              |
-| `SCOPE_INSUFFICIENT`   | 403         | API key lacks the required scope                                |
-| `BUCKET_ACCESS_DENIED` | 403         | Privacy bucket access check failed                              |
-| `NOT_FOUND`            | 404         | Resource does not exist or caller cannot access it              |
-| `CONFLICT`             | 409         | Concurrent modification detected (ETag mismatch, duplicate key) |
-| `ROTATION_IN_PROGRESS` | 409         | Bucket key rotation is active; write rejected                   |
-| `FRIEND_CODE_EXPIRED`  | 410         | Friend code has passed its TTL                                  |
-| `BLOB_TOO_LARGE`       | 413         | File exceeds the per-purpose size limit                         |
-| `QUOTA_EXCEEDED`       | 413         | System storage quota would be exceeded                          |
-| `RATE_LIMITED`         | 429         | Rate limit exceeded for this category                           |
-| `INTERNAL_ERROR`       | 500         | Unhandled server error (message masked in production)           |
-| `SERVICE_UNAVAILABLE`  | 503         | Temporary overload or maintenance                               |
+| Code                   | HTTP Status | Description                                                                   |
+| ---------------------- | ----------- | ----------------------------------------------------------------------------- |
+| `VALIDATION_ERROR`     | 400         | Request body or query parameter failed schema validation                      |
+| `INVALID_CURSOR`       | 400         | Pagination cursor is malformed or expired (>24 h)                             |
+| `INVALID_FRIEND_CODE`  | 400         | Friend code format is invalid                                                 |
+| `UNAUTHENTICATED`      | 401         | No valid session or API key provided                                          |
+| `SESSION_EXPIRED`      | 401         | Session exceeded absolute or idle TTL                                         |
+| `KEY_VERSION_STALE`    | 401         | Client is using an outdated encryption key version                            |
+| `FORBIDDEN`            | 403         | Authenticated but not authorized for this resource                            |
+| `SCOPE_INSUFFICIENT`   | 403         | API key lacks the required scope                                              |
+| `BUCKET_ACCESS_DENIED` | 403         | Privacy bucket access check failed                                            |
+| `NOT_FOUND`            | 404         | Resource does not exist or caller cannot access it                            |
+| `CONFLICT`             | 409         | Concurrent modification detected (ETag mismatch, duplicate key)               |
+| `HAS_DEPENDENTS`       | 409         | Entity has dependent entities; delete dependents first or use UI force-delete |
+| `ROTATION_IN_PROGRESS` | 409         | Bucket key rotation is active; write rejected                                 |
+| `FRIEND_CODE_EXPIRED`  | 410         | Friend code has passed its TTL                                                |
+| `BLOB_TOO_LARGE`       | 413         | File exceeds the per-purpose size limit                                       |
+| `QUOTA_EXCEEDED`       | 413         | System storage quota would be exceeded                                        |
+| `RATE_LIMITED`         | 429         | Rate limit exceeded for this category                                         |
+| `INTERNAL_ERROR`       | 500         | Unhandled server error (message masked in production)                         |
+| `SERVICE_UNAVAILABLE`  | 503         | Temporary overload or maintenance                                             |
 
 ### Privacy rule
 
@@ -234,3 +235,46 @@ Maximum query range per request: **90 days**. Queries spanning a longer range mu
 ### DLQ retention
 
 Dead-letter job records: **30 days**, then auto-purged.
+
+---
+
+## 9. Entity Deletion Semantics
+
+### API behavior
+
+DELETE endpoints check for dependent entities before proceeding. If any dependents exist, the API returns `409` with error code `HAS_DEPENDENTS` and a `details` object listing the dependent entity types and counts.
+
+```typescript
+// Example 409 response
+{
+  error: {
+    code: "HAS_DEPENDENTS",
+    message: "Cannot delete member: 3 fronting sessions and 2 group memberships reference it",
+    details: {
+      dependents: [
+        { entityType: "fronting_session", count: 3 },
+        { entityType: "group_membership", count: 2 }
+      ]
+    }
+  }
+}
+```
+
+Entities with no dependents are deleted immediately (single confirmation at the API level).
+
+### UI behavior
+
+The UI provides a force-delete flow for entities with dependents:
+
+1. Attempt DELETE → receive `HAS_DEPENDENTS` with dependent counts
+2. Display confirmation dialog listing all dependents
+3. Require the user to type the entity name to confirm
+4. Delete dependents first (leaf-to-root order), then delete the target entity
+
+### Archival
+
+Archival (`PATCH` with `archived: true`) is always allowed regardless of whether dependents exist. Archived entities remain in the database and are restorable. References to archived entities use a tombstone display pattern in the UI.
+
+### DB enforcement
+
+Entity-to-entity foreign keys use `ON DELETE RESTRICT` as a safety net. `system_id` and `account_id` FKs remain `ON DELETE CASCADE` for account/system purge flows (GDPR).

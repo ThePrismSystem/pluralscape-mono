@@ -56,7 +56,7 @@ export const memberPhotos = pgTable(
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     versionCheckFor("member_photos", t.version),
     archivableConsistencyCheckFor("member_photos", t.archived, t.archivedAt),
   ],

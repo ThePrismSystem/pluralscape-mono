@@ -98,9 +98,9 @@ export const exportRequests = pgTable(
       .notNull()
       .default("pending")
       .$type<ExportRequestStatus>(),
-    // ON DELETE SET NULL can orphan completed exports; app logic must handle expired/orphaned state.
+    // ON DELETE RESTRICT: blob must be disassociated or export archived before blob deletion.
     blobId: varchar("blob_id", { length: ID_MAX_LENGTH }).references(() => blobMetadata.id, {
-      onDelete: "set null",
+      onDelete: "restrict",
     }),
     createdAt: pgTimestamp("created_at").notNull(),
     updatedAt: pgTimestamp("updated_at").notNull(),

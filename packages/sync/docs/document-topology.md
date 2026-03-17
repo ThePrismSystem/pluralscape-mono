@@ -334,13 +334,14 @@ Cold documents (no writes for 90+ days) can be marked as archived in the manifes
 - Archived documents are not actively synced on every connection
 - Clients can request archived documents on-demand (e.g., viewing old chat history)
 - Archival is reversible — writing to an archived document un-archives it
-- The server retains archived documents indefinitely (non-destructive data principle)
+- The server retains archived documents until explicitly deleted by the user or account deletion
 
 ### 7.5 Garbage Collection
 
-Pluralscape follows a non-destructive data philosophy. True deletion is rare:
+Pluralscape supports both archival and permanent deletion:
 
-- **Soft delete:** Entities are marked `archived: true` — they remain in the CRDT document but are hidden from the UI
+- **Archival (soft delete):** Entities are marked `archived: true` — they remain in the CRDT document but are hidden from the UI. Archival is reversible.
+- **Permanent deletion:** Entities can be permanently removed when the user explicitly requests it. Cascading references are cleaned up.
 - **CRDT tombstones:** Automerge naturally handles deleted map keys/list entries with tombstones
 - **Tombstone compaction:** Snapshots include the current state without individual tombstone entries, effectively GC'ing old deletions
 - **Account deletion:** GDPR/right-to-erasure: the server deletes all encrypted documents and the manifest. Since the server holds only ciphertext, this is a clean wipe.

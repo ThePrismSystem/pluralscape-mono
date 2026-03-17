@@ -34,7 +34,7 @@ export const innerworldRegions = pgTable(
     foreignKey({
       columns: [t.parentRegionId, t.systemId],
       foreignColumns: [t.id, t.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("innerworld_regions", t.version),
     archivableConsistencyCheckFor("innerworld_regions", t.archived, t.archivedAt),
   ],
@@ -59,7 +59,7 @@ export const innerworldEntities = pgTable(
     foreignKey({
       columns: [t.regionId],
       foreignColumns: [innerworldRegions.id],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("innerworld_entities", t.version),
     archivableConsistencyCheckFor("innerworld_entities", t.archived, t.archivedAt),
   ],

@@ -17,7 +17,7 @@ export const bucketKeyRotations = sqliteTable(
     id: text("id").primaryKey(),
     bucketId: text("bucket_id")
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -48,7 +48,7 @@ export const bucketRotationItems = sqliteTable(
     id: text("id").primaryKey(),
     rotationId: text("rotation_id")
       .notNull()
-      .references(() => bucketKeyRotations.id, { onDelete: "cascade" }),
+      .references(() => bucketKeyRotations.id, { onDelete: "restrict" }),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
