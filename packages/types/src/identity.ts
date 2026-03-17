@@ -102,6 +102,33 @@ export interface SystemListItem {
   readonly avatarSource: ImageSource | null;
 }
 
+// ── Request body types ──────────────────────────────────────────
+
+/** Request body for creating a member. */
+export interface CreateMemberBody {
+  readonly encryptedData: string;
+}
+
+/** Request body for updating a member. */
+export interface UpdateMemberBody {
+  readonly encryptedData: string;
+  readonly version: number;
+}
+
+/** Request body for creating a member photo. */
+export interface CreateMemberPhotoBody {
+  readonly encryptedData: string;
+  readonly sortOrder?: number;
+}
+
+/** Request body for duplicating a member. */
+export interface DuplicateMemberBody {
+  readonly encryptedData: string;
+  readonly copyPhotos: boolean;
+  readonly copyFields: boolean;
+  readonly copyMemberships: boolean;
+}
+
 /** @future System duplication scope controls — not yet implemented. */
 export interface SystemDuplicationScope {
   readonly members: boolean;

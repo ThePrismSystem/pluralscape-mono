@@ -43,6 +43,35 @@ export interface FieldValue extends AuditMetadata {
   readonly value: FieldValueUnion;
 }
 
+// ── Request body types ──────────────────────────────────────────
+
+/** Request body for creating a field definition. */
+export interface CreateFieldDefinitionBody {
+  readonly fieldType: FieldType;
+  readonly required: boolean;
+  readonly sortOrder: number;
+  readonly encryptedData: string;
+}
+
+/** Request body for updating a field definition. */
+export interface UpdateFieldDefinitionBody {
+  readonly required?: boolean;
+  readonly sortOrder?: number;
+  readonly encryptedData: string;
+  readonly version: number;
+}
+
+/** Request body for setting a field value. */
+export interface SetFieldValueBody {
+  readonly encryptedData: string;
+}
+
+/** Request body for updating a field value. */
+export interface UpdateFieldValueBody {
+  readonly encryptedData: string;
+  readonly version: number;
+}
+
 /** Discriminated union of typed field values. */
 export type FieldValueUnion =
   | { readonly fieldType: "text"; readonly value: string }
