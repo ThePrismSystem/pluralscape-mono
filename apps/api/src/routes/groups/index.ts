@@ -5,6 +5,7 @@ import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
+import { memberRoutes } from "./members/index.js";
 import { moveRoute } from "./move.js";
 import { reorderRoute } from "./reorder.js";
 import { restoreRoute } from "./restore.js";
@@ -26,3 +27,6 @@ groupRoutes.route("/", createRoute);
 groupRoutes.route("/", moveRoute);
 groupRoutes.route("/", archiveRoute);
 groupRoutes.route("/", restoreRoute);
+
+// Sub-resource routes
+groupRoutes.route("/:groupId/members", memberRoutes);
