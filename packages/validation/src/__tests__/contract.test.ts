@@ -15,7 +15,7 @@ describe("LoginCredentials contract", () => {
   });
 
   it("parses a valid LoginCredentials value (runtime)", () => {
-    const input: LoginCredentials = { email: "user@example.com", password: "hunter2" };
+    const input: LoginCredentials = { email: "user@example.com", password: "hunter2!" };
     const result = LoginCredentialsSchema.safeParse(input);
     expect(result.success).toBe(true);
   });
@@ -43,12 +43,12 @@ describe("LoginCredentials contract", () => {
   it("strips unknown properties", () => {
     const result = LoginCredentialsSchema.safeParse({
       email: "user@example.com",
-      password: "hunter2",
+      password: "hunter2!",
       admin: true,
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data).toEqual({ email: "user@example.com", password: "hunter2" });
+      expect(result.data).toEqual({ email: "user@example.com", password: "hunter2!" });
       expect("admin" in result.data).toBe(false);
     }
   });
@@ -62,7 +62,7 @@ describe("RegistrationInput contract", () => {
   it("parses a valid RegistrationInput value (runtime)", () => {
     const input: RegistrationInput = {
       email: "user@example.com",
-      password: "hunter2",
+      password: "hunter2!",
       recoveryKeyBackupConfirmed: true,
       accountType: "system",
     };
@@ -73,7 +73,7 @@ describe("RegistrationInput contract", () => {
   it("accepts recoveryKeyBackupConfirmed as false", () => {
     const result = RegistrationInputSchema.safeParse({
       email: "user@example.com",
-      password: "hunter2",
+      password: "hunter2!",
       recoveryKeyBackupConfirmed: false,
     });
     expect(result.success).toBe(true);
@@ -85,7 +85,7 @@ describe("RegistrationInput contract", () => {
   it("rejects missing recoveryKeyBackupConfirmed", () => {
     const result = RegistrationInputSchema.safeParse({
       email: "user@example.com",
-      password: "hunter2",
+      password: "hunter2!",
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -98,7 +98,7 @@ describe("RegistrationInput contract", () => {
   it("strips unknown properties", () => {
     const result = RegistrationInputSchema.safeParse({
       email: "user@example.com",
-      password: "hunter2",
+      password: "hunter2!",
       recoveryKeyBackupConfirmed: true,
       admin: true,
     });
@@ -106,7 +106,7 @@ describe("RegistrationInput contract", () => {
     if (result.success) {
       expect(result.data).toEqual({
         email: "user@example.com",
-        password: "hunter2",
+        password: "hunter2!",
         recoveryKeyBackupConfirmed: true,
         accountType: "system",
       });

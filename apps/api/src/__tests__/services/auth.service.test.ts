@@ -149,6 +149,24 @@ describe("auth service", () => {
       expect(extractIpAddress(c)).toBeNull();
     });
 
+    it("returns null when TRUST_PROXY=1 and x-forwarded-for is not a valid IP", () => {
+      process.env["TRUST_PROXY"] = "1";
+      const c = mockContext({ "x-forwarded-for": "not-an-ip-address" });
+      expect(extractIpAddress(c)).toBeNull();
+    });
+
+    it("returns null when TRUST_PROXY=1 and x-forwarded-for contains script injection", () => {
+      process.env["TRUST_PROXY"] = "1";
+      const c = mockContext({ "x-forwarded-for": "<script>alert(1)</script>" });
+      expect(extractIpAddress(c)).toBeNull();
+    });
+
+    it("accepts valid IPv6 from x-forwarded-for when TRUST_PROXY=1", () => {
+      process.env["TRUST_PROXY"] = "1";
+      const c = mockContext({ "x-forwarded-for": "::1" });
+      expect(extractIpAddress(c)).toBe("::1");
+    });
+
     it("returns null when TRUST_PROXY=1 and x-forwarded-for contains only whitespace", () => {
       process.env["TRUST_PROXY"] = "1";
       const c = mockContext({ "x-forwarded-for": "   " });
@@ -263,11 +281,11 @@ describe("auth service", () => {
       ).rejects.toThrow("Recovery key backup must be confirmed");
     });
 
-    it("throws ValidationError for short passwords", async () => {
+    it("throws ZodError for short passwords (schema-level enforcement)", async () => {
       const { db } = mockDb();
       await expect(
         registerAccount(db, { ...validParams, password: "short" }, "web", mockAudit),
-      ).rejects.toThrow(/Password must be at least/);
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("returns registration result on success", async () => {
@@ -562,7 +580,11 @@ describe("auth service", () => {
 
     it("returns false when session belongs to a different account", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_other" }]);
+      chain.limit.mockResolvedValueOnce([
+        { id: "sess_1", accountId: "acct_other", revoked: false },
+      ]);
+      // UPDATE with accountId in WHERE matches zero rows
+      chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
       expect(result).toBe(false);
@@ -576,6 +598,21 @@ describe("auth service", () => {
       const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
       expect(result).toBe(true);
       expect(chain.transaction).toHaveBeenCalled();
+    });
+
+    it("returns false for cross-account revocation without modifying the session", async () => {
+      const { db, chain } = mockDb();
+      // Session belongs to acct_other, but revocation is attempted by acct_attacker
+      chain.limit.mockResolvedValueOnce([
+        { id: "sess_target", accountId: "acct_other", revoked: false },
+      ]);
+      // The UPDATE should match zero rows (accountId mismatch in WHERE clause)
+      chain.returning.mockResolvedValueOnce([]);
+
+      const result = await revokeSession(db, "sess_target", "acct_attacker", mockAudit);
+      expect(result).toBe(false);
+      // Audit should NOT be called for unauthorized attempts
+      expect(mockAudit).not.toHaveBeenCalled();
     });
 
     it("returns false when session is already revoked", async () => {

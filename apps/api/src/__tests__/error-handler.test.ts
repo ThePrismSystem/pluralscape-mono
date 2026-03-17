@@ -179,6 +179,41 @@ describe("errorHandler", () => {
     expect(body.error.details).toEqual([{ field: "email", message: "must be valid" }]);
   });
 
+  it("strips ZodError details in production", async () => {
+    process.env["NODE_ENV"] = "production";
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.onError(errorHandler);
+    app.get("/zod-fail", () => {
+      const err = new Error("Validation failed");
+      err.name = "ZodError";
+      throw err;
+    });
+    const res = await app.request("/zod-fail");
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.message).toBe("Validation failed");
+    expect(body.error.details).toBeUndefined();
+  });
+
+  it("includes ZodError details in development", async () => {
+    process.env["NODE_ENV"] = "development";
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.onError(errorHandler);
+    app.get("/zod-fail", () => {
+      const err = new Error("Validation failed");
+      err.name = "ZodError";
+      throw err;
+    });
+    const res = await app.request("/zod-fail");
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.details).toBeDefined();
+  });
+
   it("ApiHttpError 5xx is masked in production", async () => {
     process.env["NODE_ENV"] = "production";
     const app = createApp();

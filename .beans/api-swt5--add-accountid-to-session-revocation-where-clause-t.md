@@ -1,11 +1,11 @@
 ---
 # api-swt5
 title: Add accountId to session revocation WHERE clause (TOCTOU fix)
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-03-17T11:59:41Z
-updated_at: 2026-03-17T11:59:41Z
+updated_at: 2026-03-17T18:35:34Z
 parent: api-tspr
 ---
 
@@ -25,14 +25,14 @@ While `accountId` on sessions is immutable today, this violates defense-in-depth
 export async function revokeSession(db, sessionId, actorAccountId, audit) {
   // Ownership check OUTSIDE transaction
   const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
-  if (session?.accountId !== actorAccountId) return false;  // line 351
+  if (session?.accountId !== actorAccountId) return false; // line 351
   if (session.revoked) return false;
 
   return db.transaction(async (tx) => {
     const updated = await tx
       .update(sessions)
       .set({ revoked: true })
-      .where(eq(sessions.id, sessionId))  // line 363: only sessionId, no accountId
+      .where(eq(sessions.id, sessionId)) // line 363: only sessionId, no accountId
       .returning({ id: sessions.id });
     // ...
   });
@@ -59,3 +59,5 @@ Consider collapsing the ownership check + transaction into a single atomic opera
 ## References
 
 - CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition
+
+## Summary of Changes\n\nAdded `eq(sessions.accountId, actorAccountId)` to the UPDATE WHERE clause in `revokeSession`, making the ownership check atomic with the revocation. Removed the pre-transaction ownership check (TOCTOU-vulnerable). Kept the `session.revoked` early-return to avoid unnecessary transactions.

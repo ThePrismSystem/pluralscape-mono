@@ -81,6 +81,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
 
   // Check by name to avoid importing Zod as a dependency of the error handler
   if (err instanceof Error && err.name === "ZodError") {
+    console.warn("[api] ZodError in request:", requestId);
     return formatError(
       c,
       HTTP_BAD_REQUEST,
@@ -88,7 +89,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
       "Validation failed",
       requestId,
       isProduction,
-      err,
+      isProduction ? undefined : err,
     );
   }
 

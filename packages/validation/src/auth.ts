@@ -13,8 +13,7 @@ export const LoginCredentialsSchema = z
 export const RegistrationInputSchema = z
   .object({
     email: z.email(),
-    // Minimum length ensures non-empty; strength rules enforced by auth service
-    password: z.string().min(1),
+    password: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
     recoveryKeyBackupConfirmed: z.boolean(),
     accountType: z.enum(["system", "viewer"]).default("system"),
   })

@@ -80,6 +80,9 @@ export {
 export type { BucketContentEntityType } from "@pluralscape/types";
 export type { DbAuditActor } from "./helpers/index.js";
 
+// ── Constants ────────────────────────────────────────────────
+export { AUDIT_LOG_RETENTION_DAYS } from "./helpers/db.constants.js";
+
 // ── Queries (Job Helpers) ─────────────────────────────────────
 export type { CleanupResult } from "./queries/index.js";
 export {

@@ -22,7 +22,6 @@ import { toHex } from "../lib/hex.js";
 import { getIdleTimeout } from "../lib/session-auth.js";
 import {
   ANTI_ENUM_TARGET_MS,
-  AUTH_MIN_PASSWORD_LENGTH,
   DEFAULT_SESSION_LIMIT,
   DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
@@ -58,12 +57,6 @@ export async function registerAccount(
 
   if (!parsed.recoveryKeyBackupConfirmed) {
     throw new ValidationError("Recovery key backup must be confirmed");
-  }
-
-  if (parsed.password.length < AUTH_MIN_PASSWORD_LENGTH) {
-    throw new ValidationError(
-      `Password must be at least ${String(AUTH_MIN_PASSWORD_LENGTH)} characters`,
-    );
   }
 
   const accountType = parsed.accountType;
@@ -348,11 +341,7 @@ export async function revokeSession(
 ): Promise<boolean> {
   const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
 
-  if (session?.accountId !== actorAccountId) {
-    return false;
-  }
-
-  if (session.revoked) {
+  if (!session || session.revoked) {
     return false;
   }
 
@@ -360,10 +349,16 @@ export async function revokeSession(
     const updated = await tx
       .update(sessions)
       .set({ revoked: true })
-      .where(eq(sessions.id, sessionId))
+      .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, actorAccountId)))
       .returning({ id: sessions.id });
 
-    if (updated.length === 0) return false;
+    if (updated.length === 0) {
+      console.warn("[auth] Cross-account session revocation attempt", {
+        sessionId,
+        actorAccountId,
+      });
+      return false;
+    }
 
     await audit(tx, {
       eventType: "auth.logout",

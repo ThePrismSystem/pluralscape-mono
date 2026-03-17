@@ -4,6 +4,8 @@ import {
   VALID_PLATFORMS,
 } from "../routes/auth/auth.constants.js";
 
+import { isValidIpFormat } from "./ip-validation.js";
+
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { Context } from "hono";
 
@@ -17,7 +19,7 @@ export function extractIpAddress(c: Context): string | null {
   if (process.env["TRUST_PROXY"] === "1") {
     const forwarded = c.req.header("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim();
-    if (ip && ip.length > 0) return ip;
+    if (ip && isValidIpFormat(ip)) return ip;
   }
   return null;
 }

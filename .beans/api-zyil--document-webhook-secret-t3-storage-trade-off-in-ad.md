@@ -1,11 +1,11 @@
 ---
 # api-zyil
 title: Document webhook secret T3 storage trade-off in ADR
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-17T11:59:42Z
-updated_at: 2026-03-17T11:59:42Z
+updated_at: 2026-03-17T18:53:51Z
 parent: api-tspr
 ---
 
@@ -31,10 +31,14 @@ Document this trade-off in the relevant ADR or create a new ADR if one doesn't e
 
 ## Checklist
 
-- [ ] Document the T3 webhook secret trade-off in an ADR
-- [ ] Note mitigations: database encryption at rest, secret rotation, signature verification
-- [ ] Reference CWE-312 and the security audit findings
+- [x] Document the T3 webhook secret trade-off in an ADR
+- [x] Note mitigations: database encryption at rest, secret rotation, signature verification
+- [x] Reference CWE-312 and the security audit findings
 
 ## References
 
 - CWE-312: Cleartext Storage of Sensitive Information
+
+## Summary of Changes
+
+Created ADR 025 documenting why webhook HMAC secrets must be stored at T3 tier (server-readable), compensating controls (encryption at rest, access control, rotation), and recommendation for a signature verification endpoint.

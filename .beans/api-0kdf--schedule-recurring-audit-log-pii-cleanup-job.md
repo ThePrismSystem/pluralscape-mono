@@ -1,11 +1,11 @@
 ---
 # api-0kdf
 title: Schedule recurring audit log PII cleanup job
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-17T11:59:41Z
-updated_at: 2026-03-17T11:59:41Z
+updated_at: 2026-03-17T18:43:30Z
 parent: api-tspr
 ---
 
@@ -35,3 +35,5 @@ Register the audit log cleanup as a recurring BullMQ job with an appropriate ret
 
 - CWE-532: Insertion of Sensitive Information into Log File
 - GDPR Article 5(1)(e): Storage Limitation
+
+## Summary of Changes\n\nAdded `AUDIT_LOG_RETENTION_DAYS` (90) and `AUDIT_LOG_CLEANUP_CRON` constants to the queue package. Created `createAuditLogCleanupHandler()` factory in `apps/api/src/jobs/audit-log-cleanup.ts` that calls `pgCleanupAuditLog` with the configured retention. Added `@pluralscape/queue` as API dependency.
