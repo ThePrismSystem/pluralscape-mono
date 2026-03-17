@@ -562,7 +562,11 @@ describe("auth service", () => {
 
     it("returns false when session belongs to a different account", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_other" }]);
+      chain.limit.mockResolvedValueOnce([
+        { id: "sess_1", accountId: "acct_other", revoked: false },
+      ]);
+      // UPDATE with accountId in WHERE matches zero rows
+      chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
       expect(result).toBe(false);
@@ -576,6 +580,21 @@ describe("auth service", () => {
       const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
       expect(result).toBe(true);
       expect(chain.transaction).toHaveBeenCalled();
+    });
+
+    it("returns false for cross-account revocation without modifying the session", async () => {
+      const { db, chain } = mockDb();
+      // Session belongs to acct_other, but revocation is attempted by acct_attacker
+      chain.limit.mockResolvedValueOnce([
+        { id: "sess_target", accountId: "acct_other", revoked: false },
+      ]);
+      // The UPDATE should match zero rows (accountId mismatch in WHERE clause)
+      chain.returning.mockResolvedValueOnce([]);
+
+      const result = await revokeSession(db, "sess_target", "acct_attacker", mockAudit);
+      expect(result).toBe(false);
+      // Audit should NOT be called for unauthorized attempts
+      expect(mockAudit).not.toHaveBeenCalled();
     });
 
     it("returns false when session is already revoked", async () => {

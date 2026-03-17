@@ -348,11 +348,7 @@ export async function revokeSession(
 ): Promise<boolean> {
   const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
 
-  if (session?.accountId !== actorAccountId) {
-    return false;
-  }
-
-  if (session.revoked) {
+  if (!session || session.revoked) {
     return false;
   }
 
@@ -360,7 +356,7 @@ export async function revokeSession(
     const updated = await tx
       .update(sessions)
       .set({ revoked: true })
-      .where(eq(sessions.id, sessionId))
+      .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, actorAccountId)))
       .returning({ id: sessions.id });
 
     if (updated.length === 0) return false;
