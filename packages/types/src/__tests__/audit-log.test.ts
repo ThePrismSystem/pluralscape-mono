@@ -27,6 +27,7 @@ describe("AuditEventType", () => {
   it("is exhaustive in a switch", () => {
     function handleType(type: AuditEventType): string {
       switch (type) {
+        case "auth.register":
         case "auth.login":
         case "auth.login-failed":
         case "auth.logout":

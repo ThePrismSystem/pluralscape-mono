@@ -1,3 +1,4 @@
+import { initSodium } from "@pluralscape/crypto";
 import { Hono } from "hono";
 
 import { createCorsMiddleware } from "./middleware/cors.js";
@@ -28,11 +29,17 @@ app.get("/health", (c) => {
 
 app.route("/auth", authRoutes);
 
-if (typeof Bun !== "undefined") {
-  Bun.serve({
-    port,
-    fetch: app.fetch,
-  });
+async function start(): Promise<void> {
+  await initSodium();
 
-  console.info(`Pluralscape API listening on port ${String(port)}`);
+  if (typeof Bun !== "undefined") {
+    Bun.serve({
+      port,
+      fetch: app.fetch,
+    });
+
+    console.info(`Pluralscape API listening on port ${String(port)}`);
+  }
 }
+
+void start();
