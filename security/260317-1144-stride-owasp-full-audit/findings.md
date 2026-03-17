@@ -28,7 +28,7 @@ if (err instanceof Error && err.name === "ZodError") {
     "Validation failed",
     requestId,
     isProduction,
-    err,  // ← Full ZodError object passed as details
+    err, // ← Full ZodError object passed as details
   );
 }
 
@@ -51,7 +51,15 @@ Strip ZodError details in production, or return only field paths without constra
 ```typescript
 if (err instanceof Error && err.name === "ZodError") {
   const details = isProduction ? undefined : err;
-  return formatError(c, HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Validation failed", requestId, isProduction, details);
+  return formatError(
+    c,
+    HTTP_BAD_REQUEST,
+    "VALIDATION_ERROR",
+    "Validation failed",
+    requestId,
+    isProduction,
+    details,
+  );
 }
 ```
 
@@ -79,7 +87,7 @@ The `UpdateSystemBodySchema` defines `encryptedData: z.string().min(1)` with no 
 // packages/validation/src/system.ts:3-8
 export const UpdateSystemBodySchema = z
   .object({
-    encryptedData: z.string().min(1),  // ← No .max() constraint
+    encryptedData: z.string().min(1), // ← No .max() constraint
     version: z.int().min(1),
   })
   .readonly();
@@ -127,14 +135,14 @@ While `accountId` on sessions is immutable (set at creation, never updated), thi
 export async function revokeSession(db, sessionId, actorAccountId, audit) {
   // Ownership check OUTSIDE transaction
   const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
-  if (session?.accountId !== actorAccountId) return false;  // ← line 351
+  if (session?.accountId !== actorAccountId) return false; // ← line 351
   if (session.revoked) return false;
 
   return db.transaction(async (tx) => {
     const updated = await tx
       .update(sessions)
       .set({ revoked: true })
-      .where(eq(sessions.id, sessionId))  // ← line 363: only sessionId, no accountId
+      .where(eq(sessions.id, sessionId)) // ← line 363: only sessionId, no accountId
       .returning({ id: sessions.id });
     // ...
   });
@@ -173,7 +181,7 @@ When `TRUST_PROXY=1`, the rate limiter and request-meta extractor accept the fir
 // apps/api/src/middleware/rate-limit.ts:35-37
 const forwarded = c.req.header("x-forwarded-for");
 const ip = forwarded?.split(",")[0]?.trim();
-return ip && ip.length > 0 ? ip : GLOBAL_KEY;  // ← No IP format validation
+return ip && ip.length > 0 ? ip : GLOBAL_KEY; // ← No IP format validation
 ```
 
 ### Attack Scenario
@@ -222,13 +230,13 @@ For login, `min(1)` is intentionally correct — you can't enforce password poli
 // packages/validation/src/auth.ts:5-11
 export const LoginCredentialsSchema = z.object({
   email: z.email(),
-  password: z.string().min(1),  // ← Intentionally min(1) for login
+  password: z.string().min(1), // ← Intentionally min(1) for login
 });
 
 // packages/validation/src/auth.ts:13-21
 export const RegistrationInputSchema = z.object({
   email: z.email(),
-  password: z.string().min(1),  // ← Should be min(AUTH_MIN_PASSWORD_LENGTH)
+  password: z.string().min(1), // ← Should be min(AUTH_MIN_PASSWORD_LENGTH)
   // ...
 });
 ```
@@ -319,30 +327,30 @@ Device transfer uses 8 decimal digits (~26.5 bits entropy). Protected by Argon2i
 
 The following areas were tested and found well-implemented:
 
-| Area | Finding | Location |
-|------|---------|----------|
-| Auth Middleware | Full implementation: Bearer token, session validation, idle/absolute timeout, revocation check | `apps/api/src/middleware/auth.ts` |
-| Security Headers | CSP, X-Frame-Options: DENY, HSTS (production) | `apps/api/src/middleware/secure-headers.ts` |
-| Rate Limiting | Global + per-category (authHeavy, authLight, write); proper 429 responses with headers | `apps/api/src/middleware/rate-limit.ts` |
-| CORS | Configurable via CORS_ORIGIN env var; locked down to specified origins | `apps/api/src/middleware/cors.ts` |
-| Error Handler | Global handler with production masking on 5xx; structured responses | `apps/api/src/middleware/error-handler.ts` |
-| SQLite FK | PRAGMA foreign_keys = ON now enabled in factory | `packages/db/src/client/factory.ts:65` |
-| SQL Injection | Drizzle ORM parameterized queries throughout; RLS uses set_config() | All query code |
-| Command Injection | No exec/spawn calls in production code | All source files |
-| XSS | No dangerouslySetInnerHTML, innerHTML, or eval | All source files |
-| SSRF | No outbound HTTP requests in production code | All source files |
-| Prototype Pollution | No __proto__ or prototype manipulation | All source files |
-| Dependencies | 0 known CVEs across all packages | `pnpm audit` |
-| RLS Fail-Closed | NULLIF(current_setting(..., true), '') prevents leaks | `packages/db/src/rls/policies.ts:17-19` |
-| Key Zeroing | All key derivation memzero in finally blocks | All crypto modules |
-| Encryption | XChaCha20-Poly1305 AEAD, Ed25519, Argon2id — modern, well-chosen | `packages/crypto/` |
-| KEK/DEK Pattern | Master key survives password reset via envelope encryption | `packages/crypto/src/master-key-wrap.ts` |
-| Stream Encryption | Chunk AAD prevents reordering/truncation | `packages/crypto/src/symmetric.ts:64-70` |
-| Key Grants | Authenticated envelope binds bucketId + keyVersion | `packages/crypto/src/key-grants.ts` |
-| Anti-Timing (Login) | Dummy Argon2id hash for non-existent accounts | `apps/api/src/services/auth.service.ts:227` |
-| Anti-Enumeration (Register) | Fake recovery key + timing delay | `apps/api/src/services/auth.service.ts:177-188` |
-| Path Traversal | Multi-layer defense: ".." check + resolve + startsWith guard | `packages/storage/src/adapters/filesystem/filesystem-adapter.ts:169-182` |
-| Password Change | Re-wraps master key, revokes all other sessions | `apps/api/src/services/account.service.ts:222-250` |
-| Concurrency Control | Version field with optimistic locking on account updates | `apps/api/src/services/account.service.ts:232` |
-| IDOR Protection | All system/session queries scoped to auth.accountId | All service files |
-| Pagination | Cursor-based keyset with account scoping and limit caps | System and session list queries |
+| Area                        | Finding                                                                                        | Location                                                                 |
+| --------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Auth Middleware             | Full implementation: Bearer token, session validation, idle/absolute timeout, revocation check | `apps/api/src/middleware/auth.ts`                                        |
+| Security Headers            | CSP, X-Frame-Options: DENY, HSTS (production)                                                  | `apps/api/src/middleware/secure-headers.ts`                              |
+| Rate Limiting               | Global + per-category (authHeavy, authLight, write); proper 429 responses with headers         | `apps/api/src/middleware/rate-limit.ts`                                  |
+| CORS                        | Configurable via CORS_ORIGIN env var; locked down to specified origins                         | `apps/api/src/middleware/cors.ts`                                        |
+| Error Handler               | Global handler with production masking on 5xx; structured responses                            | `apps/api/src/middleware/error-handler.ts`                               |
+| SQLite FK                   | PRAGMA foreign_keys = ON now enabled in factory                                                | `packages/db/src/client/factory.ts:65`                                   |
+| SQL Injection               | Drizzle ORM parameterized queries throughout; RLS uses set_config()                            | All query code                                                           |
+| Command Injection           | No exec/spawn calls in production code                                                         | All source files                                                         |
+| XSS                         | No dangerouslySetInnerHTML, innerHTML, or eval                                                 | All source files                                                         |
+| SSRF                        | No outbound HTTP requests in production code                                                   | All source files                                                         |
+| Prototype Pollution         | No **proto** or prototype manipulation                                                         | All source files                                                         |
+| Dependencies                | 0 known CVEs across all packages                                                               | `pnpm audit`                                                             |
+| RLS Fail-Closed             | NULLIF(current_setting(..., true), '') prevents leaks                                          | `packages/db/src/rls/policies.ts:17-19`                                  |
+| Key Zeroing                 | All key derivation memzero in finally blocks                                                   | All crypto modules                                                       |
+| Encryption                  | XChaCha20-Poly1305 AEAD, Ed25519, Argon2id — modern, well-chosen                               | `packages/crypto/`                                                       |
+| KEK/DEK Pattern             | Master key survives password reset via envelope encryption                                     | `packages/crypto/src/master-key-wrap.ts`                                 |
+| Stream Encryption           | Chunk AAD prevents reordering/truncation                                                       | `packages/crypto/src/symmetric.ts:64-70`                                 |
+| Key Grants                  | Authenticated envelope binds bucketId + keyVersion                                             | `packages/crypto/src/key-grants.ts`                                      |
+| Anti-Timing (Login)         | Dummy Argon2id hash for non-existent accounts                                                  | `apps/api/src/services/auth.service.ts:227`                              |
+| Anti-Enumeration (Register) | Fake recovery key + timing delay                                                               | `apps/api/src/services/auth.service.ts:177-188`                          |
+| Path Traversal              | Multi-layer defense: ".." check + resolve + startsWith guard                                   | `packages/storage/src/adapters/filesystem/filesystem-adapter.ts:169-182` |
+| Password Change             | Re-wraps master key, revokes all other sessions                                                | `apps/api/src/services/account.service.ts:222-250`                       |
+| Concurrency Control         | Version field with optimistic locking on account updates                                       | `apps/api/src/services/account.service.ts:232`                           |
+| IDOR Protection             | All system/session queries scoped to auth.accountId                                            | All service files                                                        |
+| Pagination                  | Cursor-based keyset with account scoping and limit caps                                        | System and session list queries                                          |

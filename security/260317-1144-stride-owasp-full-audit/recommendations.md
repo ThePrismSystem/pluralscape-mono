@@ -15,7 +15,15 @@ Prioritized mitigations for all findings. Effort estimates assume familiarity wi
 ```typescript
 // Before (leaks schema structure)
 if (err instanceof Error && err.name === "ZodError") {
-  return formatError(c, HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Validation failed", requestId, isProduction, err);
+  return formatError(
+    c,
+    HTTP_BAD_REQUEST,
+    "VALIDATION_ERROR",
+    "Validation failed",
+    requestId,
+    isProduction,
+    err,
+  );
 }
 
 // After (details only in development)
@@ -128,8 +136,8 @@ Server must read secrets to sign payloads. Mitigate via database-level encryptio
 
 ## Summary
 
-| Priority | Findings | Effort |
-|----------|----------|--------|
+| Priority         | Findings | Effort            |
+| ---------------- | -------- | ----------------- |
 | P1 (This Sprint) | 3 Medium | ~20 minutes total |
-| P2 (Next Sprint) | 3 Low | ~50 minutes total |
-| P3 (No Action) | 2 Info | — |
+| P2 (Next Sprint) | 3 Low    | ~50 minutes total |
+| P3 (No Action)   | 2 Info   | —                 |
