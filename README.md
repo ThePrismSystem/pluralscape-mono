@@ -1,6 +1,8 @@
-# Pluralscape
+<p align="center">
+  <img src="ui-design/logo/pluralscape-wordmark-dark.svg" alt="Pluralscape" width="480">
+</p>
 
-A community-driven, open-source plurality management platform.
+<p align="center">A community-driven, open-source plurality management platform.</p>
 
 Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity tracking, fronting logs, internal communication, and privacy-controlled external sharing across web, iOS, and Android.
 
@@ -92,6 +94,10 @@ tooling/
   prettier-config/ Shared Prettier configuration
   test-utils/      Shared test utilities and factories
   tsconfig/        Shared TypeScript configs (base.json, node.json)
+
+ui-design/
+  logo/            Brand assets (SVG icon, wordmark)
+  BRANDING.md      Brand guidelines — colors, typography, components
 
 docs/
   adr/             Architecture Decision Records (23 accepted)
