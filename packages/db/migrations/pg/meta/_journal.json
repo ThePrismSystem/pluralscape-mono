@@ -15,6 +15,13 @@
       "when": 1773784513931,
       "tag": "0002_demonic_vapor",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773786195140,
+      "tag": "0003_quick_red_skull",
+      "breakpoints": true
     }
   ]
 }

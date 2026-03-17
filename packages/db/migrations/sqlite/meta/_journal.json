@@ -15,6 +15,13 @@
       "when": 1773784516432,
       "tag": "0002_true_black_panther",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1773786198136,
+      "tag": "0003_flaky_hobgoblin",
+      "breakpoints": true
     }
   ]
 }
