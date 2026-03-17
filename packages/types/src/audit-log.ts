@@ -29,6 +29,7 @@ export type AuditEventType =
   | "auth.recovery-key-regenerated"
   | "auth.device-transfer-initiated"
   | "auth.device-transfer-completed"
+  | "auth.email-changed"
   | "system.created"
   | "system.profile-updated"
   | "system.deleted";
