@@ -18,6 +18,7 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
 import { writeAuditLog } from "../lib/audit-log.js";
 import { hashEmail } from "../lib/email-hash.js";
+import { getIdleTimeout } from "../lib/session-auth.js";
 import {
   ANTI_ENUM_TARGET_MS,
   AUTH_MIN_PASSWORD_LENGTH,
@@ -315,14 +316,11 @@ export async function listSessions(
   const currentTime = now();
   const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
 
-  const baseConditions = cursor
-    ? and(
-        eq(sessions.accountId, accountId),
-        eq(sessions.revoked, false),
-        notExpired,
-        gt(sessions.id, cursor),
-      )
-    : and(eq(sessions.accountId, accountId), eq(sessions.revoked, false), notExpired);
+  const baseConditions = and(
+    eq(sessions.accountId, accountId),
+    eq(sessions.revoked, false),
+    notExpired,
+  );
 
   const rows = await db
     .select({
@@ -333,11 +331,20 @@ export async function listSessions(
     })
     .from(sessions)
     .where(baseConditions)
-    .orderBy(sessions.id)
-    .limit(effectiveLimit + 1);
+    .orderBy(sessions.id);
 
-  const hasMore = rows.length > effectiveLimit;
-  const result = hasMore ? rows.slice(0, effectiveLimit) : rows;
+  // Post-filter: remove idle-timed-out sessions
+  const activeRows = rows.filter((row) => {
+    if (row.lastActive === null) return true;
+    const idleTimeout = getIdleTimeout(row);
+    if (idleTimeout === null) return true;
+    return currentTime - row.lastActive <= idleTimeout;
+  });
+
+  // Apply cursor + pagination in memory
+  const afterCursor = cursor ? activeRows.filter((r) => r.id > cursor) : activeRows;
+  const result = afterCursor.slice(0, effectiveLimit);
+  const hasMore = afterCursor.length > effectiveLimit;
   const nextCursor = hasMore ? (result[result.length - 1]?.id ?? null) : null;
 
   return { sessions: result, nextCursor };

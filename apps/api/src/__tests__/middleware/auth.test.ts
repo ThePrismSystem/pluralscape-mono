@@ -73,7 +73,7 @@ function makeValidResult(
   authOverrides: Partial<AuthContext> = {},
 ): ValidateSessionResult {
   const session: MockSessionData = {
-    id: "sess_abc123",
+    id: "sess_00000000-0000-0000-0000-000000000001",
     accountId: "acct_xyz",
     revoked: false,
     createdAt: 1_000_000,
@@ -87,7 +87,7 @@ function makeValidResult(
     auth: {
       accountId: "acct_xyz" as AuthContext["accountId"],
       systemId: "sys_001" as AuthContext["systemId"],
-      sessionId: "sess_abc123" as AuthContext["sessionId"],
+      sessionId: "sess_00000000-0000-0000-0000-000000000001" as AuthContext["sessionId"],
       accountType: "system",
       ...authOverrides,
     },
@@ -139,6 +139,32 @@ describe("authMiddleware", () => {
     expect(body.error.code).toBe("UNAUTHENTICATED");
   });
 
+  it("returns 401 for token without sess_ prefix", async () => {
+    const app = createApp();
+    const res = await app.request("/protected", {
+      headers: { Authorization: "Bearer xxxx_00000000-0000-0000-0000-000000000001" },
+    });
+
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("UNAUTHENTICATED");
+    expect(body.error.message).toBe("Invalid or revoked session");
+    expect(mockValidateSession).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 for token with wrong length", async () => {
+    const app = createApp();
+    const res = await app.request("/protected", {
+      headers: { Authorization: "Bearer sess_tooshort" },
+    });
+
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("UNAUTHENTICATED");
+    expect(body.error.message).toBe("Invalid or revoked session");
+    expect(mockValidateSession).not.toHaveBeenCalled();
+  });
+
   it("returns 401 with UNAUTHENTICATED when session is invalid", async () => {
     const mockDb = { update: mockDbUpdate };
     mockGetDb.mockResolvedValue(mockDb);
@@ -146,7 +172,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_invalid" },
+      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000002" },
     });
 
     expect(res.status).toBe(401);
@@ -162,7 +188,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_expired" },
+      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000003" },
     });
 
     expect(res.status).toBe(401);
@@ -181,7 +207,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_abc123" },
+      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
     });
 
     expect(res.status).toBe(200);
@@ -189,7 +215,7 @@ describe("authMiddleware", () => {
     expect(body.auth).toEqual({
       accountId: "acct_xyz",
       systemId: "sys_001",
-      sessionId: "sess_abc123",
+      sessionId: "sess_00000000-0000-0000-0000-000000000001",
       accountType: "system",
     });
   });
@@ -203,7 +229,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_abc123" },
+      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
     });
 
     expect(res.status).toBe(200);
@@ -221,7 +247,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_abc123" },
+      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
     });
 
     expect(res.status).toBe(200);
@@ -239,7 +265,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_abc123" },
+      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
     });
 
     expect(res.status).toBe(200);
@@ -262,7 +288,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_abc123" },
+      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
     });
 
     // Request should still succeed — fire-and-forget error is caught
@@ -287,7 +313,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "bearer sess_abc123" },
+      headers: { Authorization: "bearer sess_00000000-0000-0000-0000-000000000001" },
     });
 
     expect(res.status).toBe(200);

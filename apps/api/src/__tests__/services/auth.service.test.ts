@@ -1,12 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
-import {
-  CLIENT_PLATFORM_HEADER,
-  DEFAULT_PLATFORM,
-  DEFAULT_SESSION_LIMIT,
-  MAX_SESSION_LIMIT,
-} from "../../routes/auth/auth.constants.js";
+import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
 import {
   ValidationError,
   listSessions,
@@ -463,7 +458,7 @@ describe("auth service", () => {
   describe("listSessions", () => {
     it("returns empty sessions array when no rows match", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
+      chain.orderBy.mockResolvedValueOnce([]);
 
       const result = await listSessions(db, "acct_123");
       expect(result.sessions).toEqual([]);
@@ -476,7 +471,7 @@ describe("auth service", () => {
         { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
       ];
-      chain.limit.mockResolvedValueOnce(rows);
+      chain.orderBy.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, "acct_123");
       expect(result.sessions).toHaveLength(2);
@@ -485,43 +480,60 @@ describe("auth service", () => {
 
     it("returns nextCursor when there are more rows than the limit", async () => {
       const { db, chain } = mockDb();
-      // Request limit=2 but return 3 rows to signal hasMore
       const rows = [
         { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
         { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200 },
       ];
-      chain.limit.mockResolvedValueOnce(rows);
+      chain.orderBy.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, "acct_123", undefined, 2);
       expect(result.sessions).toHaveLength(2);
       expect(result.nextCursor).toBe("sess_2");
     });
 
-    it("uses DEFAULT_SESSION_LIMIT when no limit is provided", async () => {
+    it("paginates in memory using cursor", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
+      const rows = [
+        { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
+        { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
+        { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200 },
+      ];
+      chain.orderBy.mockResolvedValueOnce(rows);
 
-      await listSessions(db, "acct_123");
-      // limit is called with effectiveLimit + 1
-      expect(chain.limit).toHaveBeenCalledWith(DEFAULT_SESSION_LIMIT + 1);
+      const result = await listSessions(db, "acct_123", "sess_1", 2);
+      expect(result.sessions).toHaveLength(2);
+      expect(result.sessions[0]?.id).toBe("sess_2");
+      expect(result.sessions[1]?.id).toBe("sess_3");
+      expect(result.nextCursor).toBeNull();
     });
 
-    it("caps limit at MAX_SESSION_LIMIT", async () => {
+    it("filters out idle-timed-out sessions", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
+      // Session with very stale lastActive — idle timeout will exclude it
+      const rows = [{ id: "sess_1", createdAt: 0, lastActive: 1, expiresAt: 2_592_000_000 }];
+      chain.orderBy.mockResolvedValueOnce(rows);
 
-      await listSessions(db, "acct_123", undefined, 999);
-      expect(chain.limit).toHaveBeenCalledWith(MAX_SESSION_LIMIT + 1);
+      const result = await listSessions(db, "acct_123");
+      expect(result.sessions).toHaveLength(0);
     });
 
-    it("passes cursor through to where clause when provided", async () => {
+    it("includes sessions within idle window", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
+      // Session with recent lastActive — should not be filtered
+      const currentTime = Date.now();
+      const rows = [
+        {
+          id: "sess_1",
+          createdAt: currentTime - 1000,
+          lastActive: currentTime - 500,
+          expiresAt: currentTime + 2_592_000_000,
+        },
+      ];
+      chain.orderBy.mockResolvedValueOnce(rows);
 
-      await listSessions(db, "acct_123", "sess_cursor");
-      // We verify where() was called (the cursor condition is built by Drizzle)
-      expect(chain.where).toHaveBeenCalled();
+      const result = await listSessions(db, "acct_123");
+      expect(result.sessions).toHaveLength(1);
     });
   });
 
