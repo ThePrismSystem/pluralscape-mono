@@ -140,6 +140,70 @@ export const ID_PREFIXES = {
   systemSnapshot: "snap_",
 } as const;
 
+/** Maps each ID prefix value to its Brand tag string. */
+export interface IdPrefixBrandMap {
+  sys_: "SystemId";
+  mem_: "MemberId";
+  grp_: "GroupId";
+  bkt_: "BucketId";
+  ch_: "ChannelId";
+  msg_: "MessageId";
+  note_: "NoteId";
+  poll_: "PollId";
+  rel_: "RelationshipId";
+  sub_: "SubsystemId";
+  fld_: "FieldDefinitionId";
+  fv_: "FieldValueId";
+  sess_: "SessionId";
+  evt_: "LifecycleEventId";
+  acct_: "AccountId";
+  blob_: "BlobId";
+  ak_: "ApiKeyId";
+  wh_: "WebhookId";
+  tmr_: "TimerId";
+  je_: "JournalEntryId";
+  wp_: "WikiPageId";
+  ss_: "SideSystemId";
+  lyr_: "LayerId";
+  iwe_: "InnerWorldEntityId";
+  iwr_: "InnerWorldRegionId";
+  iwc_: "InnerWorldCanvasId";
+  al_: "AuditLogEntryId";
+  bm_: "BoardMessageId";
+  ack_: "AcknowledgementId";
+  cir_: "CheckInRecordId";
+  fc_: "FriendConnectionId";
+  kg_: "KeyGrantId";
+  fs_: "FrontingSessionId";
+  cf_: "CustomFrontId";
+  frc_: "FriendCodeId";
+  pv_: "PollVoteId";
+  dt_: "DeviceTokenId";
+  nc_: "NotificationConfigId";
+  sset_: "SystemSettingsId";
+  po_: "PollOptionId";
+  mp_: "MemberPhotoId";
+  sw_: "SwitchId";
+  auk_: "AuthKeyId";
+  rk_: "RecoveryKeyId";
+  dtr_: "DeviceTransferRequestId";
+  sdoc_: "SyncDocumentId";
+  sqi_: "SyncQueueItemId";
+  scon_: "SyncConflictId";
+  ij_: "ImportJobId";
+  pkb_: "PKBridgeConfigId";
+  apr_: "AccountPurgeRequestId";
+  er_: "ExportRequestId";
+  job_: "JobId";
+  wd_: "WebhookDeliveryId";
+  fr_: "FrontingReportId";
+  fnp_: "FriendNotificationPreferenceId";
+  fcom_: "FrontingCommentId";
+  bkr_: "BucketKeyRotationId";
+  bri_: "BucketRotationItemId";
+  snap_: "SystemSnapshotId";
+}
+
 // ── EntityType union ────────────────────────────────────────────────
 
 export type EntityType =

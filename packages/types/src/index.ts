@@ -3,6 +3,7 @@
 // ── IDs ─────────────────────────────────────────────────────────────
 export type {
   Brand,
+  IdPrefixBrandMap,
   SystemId,
   MemberId,
   GroupId,
@@ -75,6 +76,7 @@ export type { UnixMillis, ISOTimestamp } from "./timestamps.js";
 
 // ── Pagination ──────────────────────────────────────────────────────
 export type { PaginationCursor, PaginatedResult, OffsetPaginationParams } from "./pagination.js";
+export { toCursor } from "./pagination.js";
 
 // ── Results ─────────────────────────────────────────────────────────
 export type {

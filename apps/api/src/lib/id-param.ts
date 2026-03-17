@@ -3,16 +3,16 @@ import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { ApiHttpError } from "./api-error.js";
 import { UUID_V4_PATTERN } from "./id-param.constants.js";
 
-import type { Brand } from "@pluralscape/types";
+import type { Brand, IdPrefixBrandMap } from "@pluralscape/types";
 
 /**
  * Validates that a route parameter matches the expected branded ID format:
  * `<prefix><uuid-v4>`. Throws 400 VALIDATION_ERROR on mismatch.
  */
-export function parseIdParam<B extends string>(
+export function parseIdParam<P extends keyof IdPrefixBrandMap>(
   raw: string,
-  expectedPrefix: string,
-): Brand<string, B> {
+  expectedPrefix: P,
+): Brand<string, IdPrefixBrandMap[P]> {
   if (!raw.startsWith(expectedPrefix)) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
@@ -30,5 +30,5 @@ export function parseIdParam<B extends string>(
     );
   }
 
-  return raw as Brand<string, B>;
+  return raw as Brand<string, IdPrefixBrandMap[P]>;
 }

@@ -4,7 +4,7 @@ import {
   serializeEncryptedBlob,
 } from "@pluralscape/crypto";
 import { members, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -25,6 +25,7 @@ import {
 import type { AuthContext } from "../lib/auth-context.js";
 import type { RequestMeta } from "../lib/request-meta.js";
 import type {
+  AccountId,
   EncryptedBlob,
   PaginatedResult,
   PaginationCursor,
@@ -70,8 +71,8 @@ function toSystemProfileResult(row: {
 
 export async function listSystems(
   db: PostgresJsDatabase,
-  accountId: string,
-  cursor?: string,
+  accountId: AccountId,
+  cursor?: PaginationCursor,
   limit = DEFAULT_SYSTEM_LIMIT,
 ): Promise<PaginatedResult<SystemProfileResult>> {
   const effectiveLimit = Math.min(limit, MAX_SYSTEM_LIMIT);
@@ -92,7 +93,7 @@ export async function listSystems(
   const hasMore = rows.length > effectiveLimit;
   const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toSystemProfileResult);
   const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? (lastItem.id as string as PaginationCursor) : null;
+  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
 
   return {
     items,

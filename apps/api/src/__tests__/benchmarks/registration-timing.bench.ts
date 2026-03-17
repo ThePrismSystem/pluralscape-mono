@@ -25,6 +25,7 @@ interface BenchmarkResult {
   readonly p99: number;
   readonly mean: number;
   readonly antiEnumTarget: number;
+  readonly failureCount: number;
 }
 
 function percentile(sorted: number[], p: number): number {
@@ -35,6 +36,7 @@ function percentile(sorted: number[], p: number): number {
 async function runBenchmark(): Promise<BenchmarkResult> {
   const db = await getDb();
   const timings: number[] = [];
+  let failureCount = 0;
 
   console.info(`Running ${String(TRIAL_COUNT)} registration trials...\n`);
 
@@ -56,6 +58,7 @@ async function runBenchmark(): Promise<BenchmarkResult> {
       );
     } catch {
       // Account may fail for various reasons — we still measure timing
+      failureCount++;
     }
 
     const elapsed = performance.now() - start;
@@ -73,6 +76,7 @@ async function runBenchmark(): Promise<BenchmarkResult> {
     p99: percentile(sorted, 99),
     mean,
     antiEnumTarget: ANTI_ENUM_TARGET_MS,
+    failureCount,
   };
 }
 
@@ -81,12 +85,17 @@ async function main(): Promise<void> {
 
   console.info("\n--- Results ---");
   console.info(`  Trials:            ${String(result.trialMs.length)}`);
+  console.info(`  Failures:          ${String(result.failureCount)}`);
   console.info(`  Mean:              ${result.mean.toFixed(1)}ms`);
   console.info(`  P50:               ${result.p50.toFixed(1)}ms`);
   console.info(`  P95:               ${result.p95.toFixed(1)}ms`);
   console.info(`  P99:               ${result.p99.toFixed(1)}ms`);
   console.info(`  ANTI_ENUM_TARGET:  ${String(result.antiEnumTarget)}ms`);
   console.info("");
+
+  if (result.failureCount === result.trialMs.length) {
+    console.warn("WARNING: All trials failed — timing data may not reflect real registration.");
+  }
 
   if (result.p95 > result.antiEnumTarget) {
     console.warn(

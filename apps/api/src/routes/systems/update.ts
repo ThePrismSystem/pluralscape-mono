@@ -1,3 +1,4 @@
+import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
@@ -9,7 +10,6 @@ import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { updateSystemProfile } from "../../services/system.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
-import type { SystemId } from "@pluralscape/types";
 
 export const updateRoute = new Hono<AuthEnv>();
 
@@ -24,7 +24,7 @@ updateRoute.put("/:id", async (c) => {
   }
 
   const auth = c.get("auth");
-  const systemId = parseIdParam<"SystemId">(c.req.param("id"), "sys_") as SystemId;
+  const systemId = parseIdParam(c.req.param("id"), ID_PREFIXES.system);
   const requestMeta = extractRequestMeta(c);
 
   const db = await getDb();

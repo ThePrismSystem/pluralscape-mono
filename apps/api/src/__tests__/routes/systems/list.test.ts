@@ -1,3 +1,4 @@
+import { toCursor } from "@pluralscape/types";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -136,12 +137,12 @@ describe("GET /systems", () => {
     expect(vi.mocked(listSystems)).toHaveBeenCalledWith(
       expect.anything(),
       MOCK_AUTH.accountId,
-      "sys_abc",
+      toCursor("sys_abc"),
       10,
     );
   });
 
-  it("passes undefined cursor and limit when not provided", async () => {
+  it("passes undefined cursor and default limit when not provided", async () => {
     vi.mocked(listSystems).mockResolvedValueOnce(EMPTY_PAGE);
 
     const app = createApp();
@@ -151,7 +152,7 @@ describe("GET /systems", () => {
       expect.anything(),
       MOCK_AUTH.accountId,
       undefined,
-      undefined,
+      25,
     );
   });
 
@@ -166,6 +167,48 @@ describe("GET /systems", () => {
       MOCK_AUTH.accountId,
       undefined,
       100,
+    );
+  });
+
+  it("falls back to DEFAULT_SYSTEM_LIMIT for NaN limit", async () => {
+    vi.mocked(listSystems).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const app = createApp();
+    await app.request("/systems?limit=abc");
+
+    expect(vi.mocked(listSystems)).toHaveBeenCalledWith(
+      expect.anything(),
+      MOCK_AUTH.accountId,
+      undefined,
+      25,
+    );
+  });
+
+  it("falls back to DEFAULT_SYSTEM_LIMIT for negative limit", async () => {
+    vi.mocked(listSystems).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const app = createApp();
+    await app.request("/systems?limit=-5");
+
+    expect(vi.mocked(listSystems)).toHaveBeenCalledWith(
+      expect.anything(),
+      MOCK_AUTH.accountId,
+      undefined,
+      25,
+    );
+  });
+
+  it("falls back to DEFAULT_SYSTEM_LIMIT for zero limit", async () => {
+    vi.mocked(listSystems).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const app = createApp();
+    await app.request("/systems?limit=0");
+
+    expect(vi.mocked(listSystems)).toHaveBeenCalledWith(
+      expect.anything(),
+      MOCK_AUTH.accountId,
+      undefined,
+      25,
     );
   });
 

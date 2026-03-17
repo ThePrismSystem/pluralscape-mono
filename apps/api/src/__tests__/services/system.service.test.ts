@@ -1,3 +1,4 @@
+import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -124,6 +125,15 @@ describe("listSystems", () => {
 
     // DEFAULT_SYSTEM_LIMIT + 1 = 26
     expect(chain.limit).toHaveBeenCalledWith(26);
+  });
+
+  it("applies cursor filter when cursor provided", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await listSystems(db, AUTH.accountId, toCursor("sys_cursor-id"));
+
+    expect(chain.where).toHaveBeenCalled();
   });
 
   it("returns totalCount as null", async () => {
