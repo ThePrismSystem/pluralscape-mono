@@ -1,11 +1,9 @@
 import { getSodium } from "@pluralscape/crypto";
 
-import {
-  EMAIL_HASH_LENGTH,
-  HEX_BYTE_WIDTH,
-  HEX_RADIX,
-  PEPPER_HEX_LENGTH,
-} from "../routes/auth/auth.constants.js";
+import { EMAIL_HASH_LENGTH, PEPPER_HEX_LENGTH } from "../routes/auth/auth.constants.js";
+
+import { HEX_RADIX } from "./hex.constants.js";
+import { toHex } from "./hex.js";
 
 /** Number of hex characters per byte. */
 const HEX_CHARS_PER_BYTE = 2;
@@ -55,7 +53,5 @@ export function hashEmail(email: string): string {
   const normalized = email.toLowerCase().trim();
   const emailBytes = new TextEncoder().encode(normalized);
   const hash = adapter.genericHash(EMAIL_HASH_LENGTH, emailBytes, pepper);
-  return Array.from(hash)
-    .map((b) => b.toString(HEX_RADIX).padStart(HEX_BYTE_WIDTH, "0"))
-    .join("");
+  return toHex(hash);
 }

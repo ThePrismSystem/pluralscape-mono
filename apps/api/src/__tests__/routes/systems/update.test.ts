@@ -86,7 +86,7 @@ describe("PUT /systems/:id", () => {
 
   it("returns 200 with updated profile", async () => {
     vi.mocked(updateSystemProfile).mockResolvedValueOnce({
-      id: "sys_abc" as never,
+      id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
       encryptedData: "dGVzdA==",
       version: 2,
       createdAt: 1000 as never,
@@ -94,7 +94,7 @@ describe("PUT /systems/:id", () => {
     });
 
     const app = createApp();
-    const res = await putJSON(app, "/systems/sys_abc", VALID_BODY);
+    const res = await putJSON(app, "/systems/sys_550e8400-e29b-41d4-a716-446655440000", VALID_BODY);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { version: number };
@@ -103,7 +103,7 @@ describe("PUT /systems/:id", () => {
 
   it("forwards systemId, body, auth, and requestMeta to service", async () => {
     vi.mocked(updateSystemProfile).mockResolvedValueOnce({
-      id: "sys_abc" as never,
+      id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
       encryptedData: "dGVzdA==",
       version: 2,
       createdAt: 1000 as never,
@@ -111,11 +111,11 @@ describe("PUT /systems/:id", () => {
     });
 
     const app = createApp();
-    await putJSON(app, "/systems/sys_abc", VALID_BODY);
+    await putJSON(app, "/systems/sys_550e8400-e29b-41d4-a716-446655440000", VALID_BODY);
 
     expect(vi.mocked(updateSystemProfile)).toHaveBeenCalledWith(
       expect.anything(),
-      "sys_abc",
+      "sys_550e8400-e29b-41d4-a716-446655440000",
       VALID_BODY,
       MOCK_AUTH,
       { ipAddress: null, userAgent: null },
@@ -124,7 +124,7 @@ describe("PUT /systems/:id", () => {
 
   it("returns 400 for malformed JSON body", async () => {
     const app = createApp();
-    const res = await app.request("/systems/sys_abc", {
+    const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: "not valid json{{{",
@@ -143,7 +143,7 @@ describe("PUT /systems/:id", () => {
     );
 
     const app = createApp();
-    const res = await putJSON(app, "/systems/sys_abc", VALID_BODY);
+    const res = await putJSON(app, "/systems/sys_550e8400-e29b-41d4-a716-446655440000", VALID_BODY);
 
     expect(res.status).toBe(404);
     const body = (await res.json()) as ApiErrorResponse;
@@ -157,7 +157,7 @@ describe("PUT /systems/:id", () => {
     );
 
     const app = createApp();
-    const res = await putJSON(app, "/systems/sys_abc", VALID_BODY);
+    const res = await putJSON(app, "/systems/sys_550e8400-e29b-41d4-a716-446655440000", VALID_BODY);
 
     expect(res.status).toBe(409);
     const body = (await res.json()) as ApiErrorResponse;
@@ -171,7 +171,16 @@ describe("PUT /systems/:id", () => {
     );
 
     const app = createApp();
-    const res = await putJSON(app, "/systems/sys_abc", VALID_BODY);
+    const res = await putJSON(app, "/systems/sys_550e8400-e29b-41d4-a716-446655440000", VALID_BODY);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for invalid system ID format", async () => {
+    const app = createApp();
+    const res = await putJSON(app, "/systems/not-a-valid-id", VALID_BODY);
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
@@ -183,7 +192,7 @@ describe("PUT /systems/:id", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();
-    const res = await putJSON(app, "/systems/sys_abc", VALID_BODY);
+    const res = await putJSON(app, "/systems/sys_550e8400-e29b-41d4-a716-446655440000", VALID_BODY);
 
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;

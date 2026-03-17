@@ -18,6 +18,7 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
 import { writeAuditLog } from "../lib/audit-log.js";
 import { hashEmail } from "../lib/email-hash.js";
+import { toHex } from "../lib/hex.js";
 import { getIdleTimeout } from "../lib/session-auth.js";
 import {
   ANTI_ENUM_TARGET_MS,
@@ -25,8 +26,6 @@ import {
   DEFAULT_SESSION_LIMIT,
   DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
-  HEX_BYTE_WIDTH,
-  HEX_RADIX,
   MAX_SESSIONS_FETCH_LIMIT,
   MAX_SESSION_LIMIT,
   RECOVERY_KEY_GROUP_COUNT,
@@ -447,12 +446,6 @@ class ValidationError extends Error {
 }
 
 export { ValidationError };
-
-function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(HEX_RADIX).padStart(HEX_BYTE_WIDTH, "0"))
-    .join("");
-}
 
 function serializeEncryptedPayload(payload: {
   ciphertext: Uint8Array;

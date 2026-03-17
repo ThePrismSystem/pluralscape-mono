@@ -6,7 +6,7 @@ import {
 import { members, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import {
   HTTP_BAD_REQUEST,
@@ -16,11 +16,21 @@ import {
 } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { writeAuditLog } from "../lib/audit-log.js";
-import { MAX_ENCRYPTED_DATA_BYTES } from "../routes/systems/systems.constants.js";
+import {
+  DEFAULT_SYSTEM_LIMIT,
+  MAX_ENCRYPTED_DATA_BYTES,
+  MAX_SYSTEM_LIMIT,
+} from "../routes/systems/systems.constants.js";
 
 import type { AuthContext } from "../lib/auth-context.js";
 import type { RequestMeta } from "../lib/request-meta.js";
-import type { EncryptedBlob, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  EncryptedBlob,
+  PaginatedResult,
+  PaginationCursor,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -53,6 +63,42 @@ function toSystemProfileResult(row: {
     version: row.version,
     createdAt: row.createdAt as UnixMillis,
     updatedAt: row.updatedAt as UnixMillis,
+  };
+}
+
+// ── LIST ────────────────────────────────────────────────────────────
+
+export async function listSystems(
+  db: PostgresJsDatabase,
+  accountId: string,
+  cursor?: string,
+  limit = DEFAULT_SYSTEM_LIMIT,
+): Promise<PaginatedResult<SystemProfileResult>> {
+  const effectiveLimit = Math.min(limit, MAX_SYSTEM_LIMIT);
+
+  const conditions = [eq(systems.accountId, accountId), eq(systems.archived, false)];
+
+  if (cursor) {
+    conditions.push(gt(systems.id, cursor));
+  }
+
+  const rows = await db
+    .select()
+    .from(systems)
+    .where(and(...conditions))
+    .orderBy(systems.id)
+    .limit(effectiveLimit + 1);
+
+  const hasMore = rows.length > effectiveLimit;
+  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toSystemProfileResult);
+  const lastItem = items[items.length - 1];
+  const nextCursor = hasMore && lastItem ? (lastItem.id as string as PaginationCursor) : null;
+
+  return {
+    items,
+    nextCursor,
+    hasMore,
+    totalCount: null,
   };
 }
 
