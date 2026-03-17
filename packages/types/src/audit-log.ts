@@ -2,6 +2,9 @@ import type { Plaintext } from "./encryption.js";
 import type { AccountId, ApiKeyId, AuditLogEntryId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
+/** Step names used in setup wizard audit events. */
+export type SetupStepName = "nomenclature" | "profile";
+
 /** The category of audit event. */
 export type AuditEventType =
   | "auth.register"
