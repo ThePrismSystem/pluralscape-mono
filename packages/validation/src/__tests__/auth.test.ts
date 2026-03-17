@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ChangeEmailSchema, ChangePasswordSchema } from "../auth.js";
+import { ChangeEmailSchema, ChangePasswordSchema, RegenerateRecoveryKeySchema } from "../auth.js";
 import { AUTH_MIN_PASSWORD_LENGTH } from "../validation.constants.js";
 
 // ── ChangeEmailSchema ───────────────────────────────────────────────
@@ -135,6 +135,96 @@ describe("ChangePasswordSchema", () => {
       expect(result.data).toEqual({
         currentPassword: "oldpassword",
         newPassword: "newpassword123",
+      });
+      expect("admin" in result.data).toBe(false);
+    }
+  });
+});
+
+// ── RegenerateRecoveryKeySchema ─────────────────────────────────────
+
+describe("RegenerateRecoveryKeySchema", () => {
+  it("parses valid input", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({
+      currentPassword: "password123",
+      confirmed: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({
+        currentPassword: "password123",
+        confirmed: true,
+      });
+    }
+  });
+
+  it("rejects when confirmed is false", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({
+      currentPassword: "password123",
+      confirmed: false,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["confirmed"]);
+    }
+  });
+
+  it("rejects empty currentPassword", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({
+      currentPassword: "",
+      confirmed: true,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["currentPassword"]);
+    }
+  });
+
+  it("rejects missing confirmed", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({
+      currentPassword: "password123",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["confirmed"]);
+    }
+  });
+
+  it("rejects non-boolean confirmed", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({
+      currentPassword: "password123",
+      confirmed: "true",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["confirmed"]);
+    }
+  });
+
+  it("rejects missing fields", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("strips unknown properties", () => {
+    const result = RegenerateRecoveryKeySchema.safeParse({
+      currentPassword: "password123",
+      confirmed: true,
+      admin: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({
+        currentPassword: "password123",
+        confirmed: true,
       });
       expect("admin" in result.data).toBe(false);
     }

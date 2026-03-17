@@ -20,12 +20,10 @@ import {
   serializeEncryptedPayload,
 } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
-import {
-  EMAIL_CHANGE_FAILED_ERROR,
-  INCORRECT_PASSWORD_ERROR,
-} from "../routes/account/account.constants.js";
+import { EMAIL_CHANGE_FAILED_ERROR } from "../routes/account/account.constants.js";
 import { EMAIL_SALT_BYTES } from "../routes/auth/auth.constants.js";
 
+import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
 import { isDuplicateEmailError, ValidationError } from "./auth.service.js";
 
 import type { RequestMeta } from "../lib/request-meta.js";
