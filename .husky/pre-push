@@ -1,1 +1,15 @@
 pnpm typecheck && pnpm lint && pnpm test:unit:coverage
+
+# Migration freshness check (same as CI)
+echo "Checking migration freshness..."
+cd packages/db
+pnpm db:generate:pg
+pnpm db:generate:sqlite
+cd ../..
+
+if [ -n "$(git diff --name-only packages/db/migrations/)" ]; then
+  echo "Migrations are out of date. Regenerating and amending push commit..."
+  git add packages/db/migrations/
+  git commit -m "chore(db): regenerate migrations"
+  echo "Migrations regenerated and committed. Push will continue."
+fi
