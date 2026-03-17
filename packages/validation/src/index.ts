@@ -16,6 +16,17 @@ export {
 } from "./group.js";
 export { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "./custom-front.js";
 export {
+  BiometricEnrollBodySchema,
+  BiometricVerifyBodySchema,
+  SetPinBodySchema,
+  SetupCompleteBodySchema,
+  SetupNomenclatureStepBodySchema,
+  SetupProfileStepBodySchema,
+  UpdateNomenclatureBodySchema,
+  UpdateSystemSettingsBodySchema,
+  VerifyPinBodySchema,
+} from "./settings.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_REORDER_OPERATIONS,

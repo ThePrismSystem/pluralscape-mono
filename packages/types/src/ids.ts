@@ -71,6 +71,7 @@ export type FrontingCommentId = Brand<string, "FrontingCommentId">;
 export type BucketKeyRotationId = Brand<string, "BucketKeyRotationId">;
 export type BucketRotationItemId = Brand<string, "BucketRotationItemId">;
 export type SystemSnapshotId = Brand<string, "SystemSnapshotId">;
+export type BiometricTokenId = Brand<string, "BiometricTokenId">;
 export type StorageKey = Brand<string, "StorageKey">;
 export type HexColor = Brand<string, "HexColor">;
 export type SlugHash = Brand<string, "SlugHash">;
@@ -138,6 +139,7 @@ export const ID_PREFIXES = {
   bucketKeyRotation: "bkr_",
   bucketRotationItem: "bri_",
   systemSnapshot: "snap_",
+  biometricToken: "bt_",
 } as const;
 
 /** Maps each ID prefix value to its Brand tag string. */
@@ -202,6 +204,7 @@ export interface IdPrefixBrandMap {
   bkr_: "BucketKeyRotationId";
   bri_: "BucketRotationItemId";
   snap_: "SystemSnapshotId";
+  bt_: "BiometricTokenId";
 }
 
 // ── EntityType union ────────────────────────────────────────────────
@@ -266,4 +269,5 @@ export type EntityType =
   | "fronting-comment"
   | "bucket-key-rotation"
   | "bucket-rotation-item"
-  | "system-snapshot";
+  | "system-snapshot"
+  | "biometric-token";

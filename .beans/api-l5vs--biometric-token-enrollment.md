@@ -1,11 +1,11 @@
 ---
 # api-l5vs
 title: Biometric token enrollment
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-16T11:52:40Z
-updated_at: 2026-03-16T11:58:01Z
+updated_at: 2026-03-17T20:42:21Z
 parent: api-o89k
 blocked_by:
   - api-dcg4

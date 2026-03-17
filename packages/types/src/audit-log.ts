@@ -45,7 +45,15 @@ export type AuditEventType =
   | "custom-front.archived"
   | "custom-front.restored"
   | "group.deleted"
-  | "custom-front.deleted";
+  | "custom-front.deleted"
+  | "auth.biometric-enrolled"
+  | "auth.biometric-verified"
+  | "settings.pin-set"
+  | "settings.pin-removed"
+  | "settings.pin-verified"
+  | "settings.nomenclature-updated"
+  | "setup.step-completed"
+  | "setup.completed";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

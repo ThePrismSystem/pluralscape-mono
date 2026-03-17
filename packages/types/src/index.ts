@@ -64,6 +64,7 @@ export type {
   BucketKeyRotationId,
   BucketRotationItemId,
   SystemSnapshotId,
+  BiometricTokenId,
   StorageKey,
   HexColor,
   SlugHash,

@@ -15,3 +15,16 @@ export const MAX_ENCRYPTED_DATA_SIZE = 87_382;
 
 /** Maximum number of group reorder operations in a single batch request. */
 export const MAX_REORDER_OPERATIONS = 100;
+
+/**
+ * Maximum byte length for encrypted system data fields.
+ * Set to 128 KiB (half the 256 KiB global body limit) to leave room for
+ * other fields and JSON overhead.
+ */
+export const MAX_ENCRYPTED_SYSTEM_DATA_SIZE = 131_072;
+
+/** Maximum length for locale strings (e.g. "en-US"). */
+export const MAX_LOCALE_LENGTH = 255;
+
+/** Maximum length for biometric token strings. */
+export const MAX_BIOMETRIC_TOKEN_LENGTH = 4096;

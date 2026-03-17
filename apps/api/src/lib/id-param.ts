@@ -6,6 +6,21 @@ import { UUID_V4_PATTERN } from "./id-param.constants.js";
 import type { Brand, IdPrefixBrandMap } from "@pluralscape/types";
 
 /**
+ * Extracts a required route parameter. Throws 400 if missing.
+ * Use for params inherited from a parent router mount (e.g. `/:id/settings`).
+ */
+export function requireParam(raw: string | undefined, name: string): string {
+  if (!raw) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      `Missing required parameter: ${name}`,
+    );
+  }
+  return raw;
+}
+
+/**
  * Validates that a route parameter matches the expected branded ID format:
  * `<prefix><uuid-v4>`. Throws 400 VALIDATION_ERROR on mismatch.
  */
