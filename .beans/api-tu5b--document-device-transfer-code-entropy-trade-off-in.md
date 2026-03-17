@@ -1,11 +1,11 @@
 ---
 # api-tu5b
 title: Document device transfer code entropy trade-off in ADR
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-17T11:59:42Z
-updated_at: 2026-03-17T11:59:42Z
+updated_at: 2026-03-17T18:45:59Z
 parent: api-tspr
 ---
 
@@ -31,11 +31,15 @@ Document this trade-off in the device transfer ADR. Include:
 
 ## Checklist
 
-- [ ] Document the entropy trade-off in the device transfer ADR
-- [ ] Include threat analysis (online vs offline brute-force feasibility)
-- [ ] Note mitigations and future hardening options
-- [ ] Reference CWE-330
+- [x] Document the entropy trade-off in the device transfer ADR
+- [x] Include threat analysis (online vs offline brute-force feasibility)
+- [x] Note mitigations and future hardening options
+- [x] Reference CWE-330
 
 ## References
 
 - CWE-330: Use of Insufficiently Random Values
+
+## Summary of Changes
+
+Created ADR 024 documenting the device transfer code entropy trade-off, including threat analysis, mitigations (Argon2id, 5-min timeout, rate limiting), and future hardening options.
