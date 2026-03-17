@@ -76,7 +76,7 @@ describe("GET /systems/:id", () => {
 
   it("returns 200 with system profile", async () => {
     vi.mocked(getSystemProfile).mockResolvedValueOnce({
-      id: "sys_abc" as never,
+      id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
       encryptedData: "dGVzdA==",
       version: 1,
       createdAt: 1000 as never,
@@ -84,18 +84,18 @@ describe("GET /systems/:id", () => {
     });
 
     const app = createApp();
-    const res = await app.request("/systems/sys_abc");
+    const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000");
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string; encryptedData: string; version: number };
-    expect(body.id).toBe("sys_abc");
+    expect(body.id).toBe("sys_550e8400-e29b-41d4-a716-446655440000");
     expect(body.encryptedData).toBe("dGVzdA==");
     expect(body.version).toBe(1);
   });
 
   it("forwards systemId and auth to service", async () => {
     vi.mocked(getSystemProfile).mockResolvedValueOnce({
-      id: "sys_abc" as never,
+      id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
       encryptedData: null,
       version: 1,
       createdAt: 1000 as never,
@@ -103,11 +103,11 @@ describe("GET /systems/:id", () => {
     });
 
     const app = createApp();
-    await app.request("/systems/sys_abc");
+    await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000");
 
     expect(vi.mocked(getSystemProfile)).toHaveBeenCalledWith(
       expect.anything(),
-      "sys_abc",
+      "sys_550e8400-e29b-41d4-a716-446655440000",
       MOCK_AUTH,
     );
   });
@@ -119,11 +119,20 @@ describe("GET /systems/:id", () => {
     );
 
     const app = createApp();
-    const res = await app.request("/systems/sys_nonexistent");
+    const res = await app.request("/systems/sys_660e8400-e29b-41d4-a716-446655440000");
 
     expect(res.status).toBe(404);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("returns 400 for invalid system ID format", async () => {
+    const app = createApp();
+    const res = await app.request("/systems/not-a-valid-id");
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("re-throws unexpected errors as 500", async () => {
@@ -131,7 +140,7 @@ describe("GET /systems/:id", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();
-    const res = await app.request("/systems/sys_abc");
+    const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000");
 
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;

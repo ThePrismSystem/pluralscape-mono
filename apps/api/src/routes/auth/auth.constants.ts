@@ -47,12 +47,6 @@ export const MAX_SESSION_LIMIT = 100;
 /** Safety ceiling for session fetch queries (10x MAX_SESSION_LIMIT). */
 export const MAX_SESSIONS_FETCH_LIMIT = 1_000;
 
-/** Hex encoding radix. */
-export const HEX_RADIX = 16;
-
-/** Hex byte width for padding. */
-export const HEX_BYTE_WIDTH = 2;
-
 /** Number of groups in a fake recovery key. */
 export const RECOVERY_KEY_GROUP_COUNT = 13;
 

@@ -78,7 +78,9 @@ describe("DELETE /systems/:id", () => {
     vi.mocked(archiveSystem).mockResolvedValueOnce(undefined);
 
     const app = createApp();
-    const res = await app.request("/systems/sys_abc", { method: "DELETE" });
+    const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000", {
+      method: "DELETE",
+    });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { ok: boolean };
@@ -89,12 +91,17 @@ describe("DELETE /systems/:id", () => {
     vi.mocked(archiveSystem).mockResolvedValueOnce(undefined);
 
     const app = createApp();
-    await app.request("/systems/sys_abc", { method: "DELETE" });
+    await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000", { method: "DELETE" });
 
-    expect(vi.mocked(archiveSystem)).toHaveBeenCalledWith(expect.anything(), "sys_abc", MOCK_AUTH, {
-      ipAddress: null,
-      userAgent: null,
-    });
+    expect(vi.mocked(archiveSystem)).toHaveBeenCalledWith(
+      expect.anything(),
+      "sys_550e8400-e29b-41d4-a716-446655440000",
+      MOCK_AUTH,
+      {
+        ipAddress: null,
+        userAgent: null,
+      },
+    );
   });
 
   it("returns 404 when system not found", async () => {
@@ -104,7 +111,9 @@ describe("DELETE /systems/:id", () => {
     );
 
     const app = createApp();
-    const res = await app.request("/systems/sys_abc", { method: "DELETE" });
+    const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000", {
+      method: "DELETE",
+    });
 
     expect(res.status).toBe(404);
     const body = (await res.json()) as ApiErrorResponse;
@@ -122,7 +131,9 @@ describe("DELETE /systems/:id", () => {
     );
 
     const app = createApp();
-    const res = await app.request("/systems/sys_abc", { method: "DELETE" });
+    const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000", {
+      method: "DELETE",
+    });
 
     expect(res.status).toBe(409);
     const body = (await res.json()) as ApiErrorResponse;
@@ -136,11 +147,22 @@ describe("DELETE /systems/:id", () => {
     );
 
     const app = createApp();
-    const res = await app.request("/systems/sys_abc", { method: "DELETE" });
+    const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000", {
+      method: "DELETE",
+    });
 
     expect(res.status).toBe(409);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.message).toBe("Cannot delete the only system on the account");
+  });
+
+  it("returns 400 for invalid system ID format", async () => {
+    const app = createApp();
+    const res = await app.request("/systems/not-a-valid-id", { method: "DELETE" });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("re-throws unexpected errors as 500", async () => {
@@ -148,7 +170,9 @@ describe("DELETE /systems/:id", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const app = createApp();
-    const res = await app.request("/systems/sys_abc", { method: "DELETE" });
+    const res = await app.request("/systems/sys_550e8400-e29b-41d4-a716-446655440000", {
+      method: "DELETE",
+    });
 
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;

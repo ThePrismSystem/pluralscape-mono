@@ -11,6 +11,11 @@ export interface PaginatedResult<T> {
   readonly totalCount: number | null;
 }
 
+/** Cast a branded ID to a PaginationCursor for use as a pagination token. */
+export function toCursor(id: string): PaginationCursor {
+  return id as PaginationCursor;
+}
+
 /** Parameters for offset-based pagination. */
 export interface OffsetPaginationParams {
   readonly offset: number;

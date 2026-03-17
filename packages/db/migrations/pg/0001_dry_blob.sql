@@ -1,2 +1,0 @@
-ALTER TABLE "audit_log" DROP CONSTRAINT "audit_log_event_type_check";--> statement-breakpoint
-ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25));

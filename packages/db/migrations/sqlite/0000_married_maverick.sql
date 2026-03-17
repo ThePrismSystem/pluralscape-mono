@@ -40,7 +40,7 @@ CREATE TABLE `acknowledgements` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`created_by_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`created_by_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "acknowledgements_archived_consistency_check" CHECK(("acknowledgements"."archived" = true) = ("acknowledgements"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -84,7 +84,7 @@ CREATE TABLE `audit_log` (
 	PRIMARY KEY(`id`, `timestamp`),
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "audit_log_event_type_check" CHECK("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
+	CONSTRAINT "audit_log_event_type_check" CHECK("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
 	CONSTRAINT "audit_log_detail_length_check" CHECK("audit_log"."detail" IS NULL OR length("audit_log"."detail") <= 2048)
 );
 --> statement-breakpoint
@@ -120,8 +120,8 @@ CREATE TABLE `blob_metadata` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`thumbnail_of_blob_id`) REFERENCES `blob_metadata`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`thumbnail_of_blob_id`) REFERENCES `blob_metadata`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "blob_metadata_purpose_check" CHECK("blob_metadata"."purpose" IS NULL OR "blob_metadata"."purpose" IN (?, ?, ?, ?, ?, ?)),
 	CONSTRAINT "blob_metadata_size_bytes_check" CHECK("blob_metadata"."size_bytes" > 0),
 	CONSTRAINT "blob_metadata_size_bytes_max_check" CHECK("blob_metadata"."size_bytes" <= 10737418240),
@@ -158,7 +158,7 @@ CREATE TABLE `bucket_content_tags` (
 	`bucket_id` text NOT NULL,
 	`system_id` text NOT NULL,
 	PRIMARY KEY(`entity_type`, `entity_id`, `bucket_id`),
-	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "bucket_content_tags_entity_type_check" CHECK("bucket_content_tags"."entity_type" IS NULL OR "bucket_content_tags"."entity_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?))
 );
@@ -177,7 +177,7 @@ CREATE TABLE `bucket_key_rotations` (
 	`total_items` integer NOT NULL,
 	`completed_items` integer DEFAULT 0 NOT NULL,
 	`failed_items` integer DEFAULT 0 NOT NULL,
-	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "bucket_key_rotations_state_check" CHECK("bucket_key_rotations"."state" IS NULL OR "bucket_key_rotations"."state" IN (?, ?, ?, ?, ?)),
 	CONSTRAINT "bucket_key_rotations_version_check" CHECK("bucket_key_rotations"."to_key_version" > "bucket_key_rotations"."from_key_version"),
@@ -197,7 +197,7 @@ CREATE TABLE `bucket_rotation_items` (
 	`claimed_at` integer,
 	`completed_at` integer,
 	`attempts` integer DEFAULT 0 NOT NULL,
-	FOREIGN KEY (`rotation_id`) REFERENCES `bucket_key_rotations`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`rotation_id`) REFERENCES `bucket_key_rotations`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "bucket_rotation_items_status_check" CHECK("bucket_rotation_items"."status" IS NULL OR "bucket_rotation_items"."status" IN (?, ?, ?, ?))
 );
@@ -234,7 +234,7 @@ CREATE TABLE `channels` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`parent_id`,`system_id`) REFERENCES `channels`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`parent_id`,`system_id`) REFERENCES `channels`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "channels_type_check" CHECK("channels"."type" IS NULL OR "channels"."type" IN (?, ?)),
 	CONSTRAINT "channels_sort_order_check" CHECK("channels"."sort_order" >= 0),
 	CONSTRAINT "channels_version_check" CHECK("channels"."version" >= 1),
@@ -255,8 +255,8 @@ CREATE TABLE `check_in_records` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`timer_config_id`,`system_id`) REFERENCES `timer_configs`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`responded_by_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`timer_config_id`,`system_id`) REFERENCES `timer_configs`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`responded_by_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "check_in_records_archived_consistency_check" CHECK(("check_in_records"."archived" = true) = ("check_in_records"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -328,7 +328,7 @@ CREATE TABLE `export_requests` (
 	`completed_at` integer,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`blob_id`) REFERENCES `blob_metadata`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`blob_id`) REFERENCES `blob_metadata`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "export_requests_format_check" CHECK("export_requests"."format" IS NULL OR "export_requests"."format" IN (?, ?)),
 	CONSTRAINT "export_requests_status_check" CHECK("export_requests"."status" IS NULL OR "export_requests"."status" IN (?, ?, ?, ?))
 );
@@ -340,8 +340,8 @@ CREATE TABLE `field_bucket_visibility` (
 	`bucket_id` text NOT NULL,
 	`system_id` text NOT NULL,
 	PRIMARY KEY(`field_definition_id`, `bucket_id`),
-	FOREIGN KEY (`field_definition_id`) REFERENCES `field_definitions`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`field_definition_id`) REFERENCES `field_definitions`(`id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -377,8 +377,8 @@ CREATE TABLE `field_values` (
 	`updated_at` integer NOT NULL,
 	`version` integer DEFAULT 1 NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`field_definition_id`,`system_id`) REFERENCES `field_definitions`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`field_definition_id`,`system_id`) REFERENCES `field_definitions`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "field_values_version_check" CHECK("field_values"."version" >= 1)
 );
 --> statement-breakpoint
@@ -390,8 +390,8 @@ CREATE TABLE `friend_bucket_assignments` (
 	`bucket_id` text NOT NULL,
 	`system_id` text NOT NULL,
 	PRIMARY KEY(`friend_connection_id`, `bucket_id`),
-	FOREIGN KEY (`friend_connection_id`) REFERENCES `friend_connections`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`friend_connection_id`) REFERENCES `friend_connections`(`id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -447,7 +447,7 @@ CREATE TABLE `friend_notification_preferences` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`friend_connection_id`,`account_id`) REFERENCES `friend_connections`(`id`,`account_id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`friend_connection_id`,`account_id`) REFERENCES `friend_connections`(`id`,`account_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "friend_notification_preferences_archived_consistency_check" CHECK(("friend_notification_preferences"."archived" = true) = ("friend_notification_preferences"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -464,8 +464,8 @@ CREATE TABLE `fronting_comments` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`fronting_session_id`,`system_id`) REFERENCES `fronting_sessions`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`fronting_session_id`,`system_id`) REFERENCES `fronting_sessions`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "fronting_comments_version_check" CHECK("fronting_comments"."version" >= 1),
 	CONSTRAINT "fronting_comments_archived_consistency_check" CHECK(("fronting_comments"."archived" = true) = ("fronting_comments"."archived_at" IS NOT NULL))
 );
@@ -499,8 +499,8 @@ CREATE TABLE `fronting_sessions` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`custom_front_id`) REFERENCES `custom_fronts`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`custom_front_id`) REFERENCES `custom_fronts`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "fronting_sessions_end_time_check" CHECK("fronting_sessions"."end_time" IS NULL OR "fronting_sessions"."end_time" > "fronting_sessions"."start_time"),
 	CONSTRAINT "fronting_sessions_fronting_type_check" CHECK("fronting_sessions"."fronting_type" IS NULL OR "fronting_sessions"."fronting_type" IN (?, ?)),
 	CONSTRAINT "fronting_sessions_version_check" CHECK("fronting_sessions"."version" >= 1),
@@ -522,8 +522,8 @@ CREATE TABLE `group_memberships` (
 	`created_at` integer NOT NULL,
 	PRIMARY KEY(`group_id`, `member_id`),
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`group_id`,`system_id`) REFERENCES `groups`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`group_id`,`system_id`) REFERENCES `groups`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `group_memberships_member_id_idx` ON `group_memberships` (`member_id`);--> statement-breakpoint
@@ -540,7 +540,7 @@ CREATE TABLE `groups` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`parent_group_id`,`system_id`) REFERENCES `groups`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`parent_group_id`,`system_id`) REFERENCES `groups`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "groups_sort_order_check" CHECK("groups"."sort_order" >= 0),
 	CONSTRAINT "groups_version_check" CHECK("groups"."version" >= 1),
 	CONSTRAINT "groups_archived_consistency_check" CHECK(("groups"."archived" = true) = ("groups"."archived_at" IS NOT NULL))
@@ -594,7 +594,7 @@ CREATE TABLE `innerworld_entities` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`region_id`) REFERENCES `innerworld_regions`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`region_id`) REFERENCES `innerworld_regions`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "innerworld_entities_version_check" CHECK("innerworld_entities"."version" >= 1),
 	CONSTRAINT "innerworld_entities_archived_consistency_check" CHECK(("innerworld_entities"."archived" = true) = ("innerworld_entities"."archived_at" IS NOT NULL))
 );
@@ -612,7 +612,7 @@ CREATE TABLE `innerworld_regions` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`parent_region_id`,`system_id`) REFERENCES `innerworld_regions`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`parent_region_id`,`system_id`) REFERENCES `innerworld_regions`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "innerworld_regions_version_check" CHECK("innerworld_regions"."version" >= 1),
 	CONSTRAINT "innerworld_regions_archived_consistency_check" CHECK(("innerworld_regions"."archived" = true) = ("innerworld_regions"."archived_at" IS NOT NULL))
 );
@@ -661,7 +661,7 @@ CREATE TABLE `journal_entries` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`fronting_session_id`) REFERENCES `fronting_sessions`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`fronting_session_id`) REFERENCES `fronting_sessions`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "journal_entries_version_check" CHECK("journal_entries"."version" >= 1),
 	CONSTRAINT "journal_entries_archived_consistency_check" CHECK(("journal_entries"."archived" = true) = ("journal_entries"."archived_at" IS NOT NULL))
 );
@@ -678,7 +678,7 @@ CREATE TABLE `key_grants` (
 	`key_version` integer NOT NULL,
 	`created_at` integer NOT NULL,
 	`revoked_at` integer,
-	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`friend_account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "key_grants_key_version_check" CHECK("key_grants"."key_version" >= 1)
@@ -696,7 +696,7 @@ CREATE TABLE `layer_memberships` (
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `layer_memberships_layer_id_idx` ON `layer_memberships` (`layer_id`);--> statement-breakpoint
@@ -743,7 +743,7 @@ CREATE TABLE `member_photos` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "member_photos_version_check" CHECK("member_photos"."version" >= 1),
 	CONSTRAINT "member_photos_archived_consistency_check" CHECK(("member_photos"."archived" = true) = ("member_photos"."archived_at" IS NOT NULL))
 );
@@ -782,7 +782,7 @@ CREATE TABLE `messages` (
 	`archived_at` integer,
 	PRIMARY KEY(`id`, `timestamp`),
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`channel_id`,`system_id`) REFERENCES `channels`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`channel_id`,`system_id`) REFERENCES `channels`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "messages_version_check" CHECK("messages"."version" >= 1),
 	CONSTRAINT "messages_archived_consistency_check" CHECK(("messages"."archived" = true) = ("messages"."archived_at" IS NOT NULL))
 );
@@ -813,7 +813,7 @@ CREATE TABLE `notes` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "notes_version_check" CHECK("notes"."version" >= 1),
 	CONSTRAINT "notes_archived_consistency_check" CHECK(("notes"."archived" = true) = ("notes"."archived_at" IS NOT NULL))
 );
@@ -867,7 +867,7 @@ CREATE TABLE `poll_votes` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`poll_id`,`system_id`) REFERENCES `polls`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`poll_id`,`system_id`) REFERENCES `polls`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "poll_votes_archived_consistency_check" CHECK(("poll_votes"."archived" = true) = ("poll_votes"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -892,7 +892,7 @@ CREATE TABLE `polls` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`created_by_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`created_by_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "polls_status_check" CHECK("polls"."status" IS NULL OR "polls"."status" IN (?, ?)),
 	CONSTRAINT "polls_kind_check" CHECK("polls"."kind" IS NULL OR "polls"."kind" IN (?, ?)),
 	CONSTRAINT "polls_max_votes_check" CHECK("polls"."max_votes_per_member" >= 1),
@@ -927,8 +927,8 @@ CREATE TABLE `relationships` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`source_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
-	FOREIGN KEY (`target_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`source_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`target_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "relationships_type_check" CHECK("relationships"."type" IS NULL OR "relationships"."type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
 	CONSTRAINT "relationships_version_check" CHECK("relationships"."version" >= 1),
 	CONSTRAINT "relationships_archived_consistency_check" CHECK(("relationships"."archived" = true) = ("relationships"."archived_at" IS NOT NULL))
@@ -971,8 +971,8 @@ CREATE TABLE `side_system_layer_links` (
 	`encrypted_data` blob,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `side_system_layer_links_side_system_id_idx` ON `side_system_layer_links` (`side_system_id`);--> statement-breakpoint
@@ -985,7 +985,7 @@ CREATE TABLE `side_system_memberships` (
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `side_system_memberships_side_system_id_idx` ON `side_system_memberships` (`side_system_id`);--> statement-breakpoint
@@ -1014,8 +1014,8 @@ CREATE TABLE `subsystem_layer_links` (
 	`encrypted_data` blob,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `subsystem_layer_links_subsystem_id_idx` ON `subsystem_layer_links` (`subsystem_id`);--> statement-breakpoint
@@ -1028,7 +1028,7 @@ CREATE TABLE `subsystem_memberships` (
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `subsystem_memberships_subsystem_id_idx` ON `subsystem_memberships` (`subsystem_id`);--> statement-breakpoint
@@ -1041,8 +1041,8 @@ CREATE TABLE `subsystem_side_system_links` (
 	`encrypted_data` blob,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade
+	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `subsystem_side_system_links_subsystem_id_idx` ON `subsystem_side_system_links` (`subsystem_id`);--> statement-breakpoint
@@ -1062,7 +1062,7 @@ CREATE TABLE `subsystems` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`parent_subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`parent_subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "subsystems_discovery_status_check" CHECK("subsystems"."discovery_status" IS NULL OR "subsystems"."discovery_status" IN (?, ?, ?)),
 	CONSTRAINT "subsystems_version_check" CHECK("subsystems"."version" >= 1),
 	CONSTRAINT "subsystems_archived_consistency_check" CHECK(("subsystems"."archived" = true) = ("subsystems"."archived_at" IS NOT NULL))
@@ -1172,8 +1172,11 @@ CREATE TABLE `systems` (
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	`version` integer DEFAULT 1 NOT NULL,
+	`archived` integer DEFAULT false NOT NULL,
+	`archived_at` integer,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "systems_version_check" CHECK("systems"."version" >= 1)
+	CONSTRAINT "systems_version_check" CHECK("systems"."version" >= 1),
+	CONSTRAINT "systems_archived_consistency_check" CHECK(("systems"."archived" = true) = ("systems"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE INDEX `systems_account_id_idx` ON `systems` (`account_id`);--> statement-breakpoint
@@ -1229,7 +1232,7 @@ CREATE TABLE `webhook_configs` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`crypto_key_id`) REFERENCES `api_keys`(`id`) ON UPDATE no action ON DELETE set null,
+	FOREIGN KEY (`crypto_key_id`) REFERENCES `api_keys`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "webhook_configs_archived_consistency_check" CHECK(("webhook_configs"."archived" = true) = ("webhook_configs"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -1250,7 +1253,7 @@ CREATE TABLE `webhook_deliveries` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`webhook_id`,`system_id`) REFERENCES `webhook_configs`(`id`,`system_id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`webhook_id`,`system_id`) REFERENCES `webhook_configs`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "webhook_deliveries_event_type_check" CHECK("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
 	CONSTRAINT "webhook_deliveries_status_check" CHECK("webhook_deliveries"."status" IS NULL OR "webhook_deliveries"."status" IN (?, ?, ?)),
 	CONSTRAINT "webhook_deliveries_attempt_count_check" CHECK("webhook_deliveries"."attempt_count" >= 0),

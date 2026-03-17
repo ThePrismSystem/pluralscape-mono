@@ -1,3 +1,4 @@
+import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -30,7 +31,7 @@ vi.mock("../../lib/audit-log.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const { getSystemProfile, updateSystemProfile, archiveSystem, createSystem } =
+const { listSystems, getSystemProfile, updateSystemProfile, archiveSystem, createSystem } =
   await import("../../services/system.service.js");
 const { writeAuditLog } = await import("../../lib/audit-log.js");
 
@@ -65,6 +66,84 @@ function makeSystemRow(overrides: Record<string, unknown> = {}): Record<string, 
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
+
+describe("listSystems", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns empty page when no systems exist", async () => {
+    const { db } = mockDb();
+
+    const result = await listSystems(db, AUTH.accountId);
+
+    expect(result.items).toEqual([]);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
+    expect(result.totalCount).toBeNull();
+  });
+
+  it("returns systems owned by the account", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([makeSystemRow()]);
+
+    const result = await listSystems(db, AUTH.accountId);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.id).toBe("sys_test-system");
+    expect(result.hasMore).toBe(false);
+  });
+
+  it("detects hasMore when more rows than limit", async () => {
+    const { db, chain } = mockDb();
+    // Request limit=1, so service fetches 2 rows
+    const rows = [makeSystemRow({ id: "sys_a" }), makeSystemRow({ id: "sys_b" })];
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await listSystems(db, AUTH.accountId, undefined, 1);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).toBe("sys_a");
+  });
+
+  it("caps limit to MAX_SYSTEM_LIMIT", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await listSystems(db, AUTH.accountId, undefined, 999);
+
+    // limit mock was called with MAX_SYSTEM_LIMIT + 1 = 101
+    expect(chain.limit).toHaveBeenCalledWith(101);
+  });
+
+  it("uses default limit when not specified", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await listSystems(db, AUTH.accountId);
+
+    // DEFAULT_SYSTEM_LIMIT + 1 = 26
+    expect(chain.limit).toHaveBeenCalledWith(26);
+  });
+
+  it("applies cursor filter when cursor provided", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await listSystems(db, AUTH.accountId, toCursor("sys_cursor-id"));
+
+    expect(chain.where).toHaveBeenCalled();
+  });
+
+  it("returns totalCount as null", async () => {
+    const { db } = mockDb();
+
+    const result = await listSystems(db, AUTH.accountId);
+
+    expect(result.totalCount).toBeNull();
+  });
+});
 
 describe("getSystemProfile", () => {
   afterEach(() => {
