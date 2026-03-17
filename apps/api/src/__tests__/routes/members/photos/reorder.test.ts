@@ -113,7 +113,7 @@ describe("PUT /systems/:systemId/members/:memberId/photos/reorder", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: (typeof PHOTO_RESULT)[] };
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].id).toBe(PHOTO_ID);
+    expect(body.items[0]?.id).toBe(PHOTO_ID);
   });
 
   it("forwards systemId, memberId, body, and auth to service", async () => {

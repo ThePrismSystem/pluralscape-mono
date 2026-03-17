@@ -104,8 +104,8 @@ describe("GET /systems/:systemId/members/:memberId/photos", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: (typeof PHOTO_RESULT)[] };
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].id).toBe(PHOTO_ID);
-    expect(body.items[0].memberId).toBe(MEM_ID);
+    expect(body.items[0]?.id).toBe(PHOTO_ID);
+    expect(body.items[0]?.memberId).toBe(MEM_ID);
   });
 
   it("returns 200 with empty items array when no photos", async () => {

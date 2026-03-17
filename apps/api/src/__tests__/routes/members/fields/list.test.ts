@@ -104,9 +104,9 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
       items: { id: string; memberId: string; version: number }[];
     };
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
-    expect(body.items[0].memberId).toBe(MEM_ID);
-    expect(body.items[0].version).toBe(1);
+    expect(body.items[0]?.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
+    expect(body.items[0]?.memberId).toBe(MEM_ID);
+    expect(body.items[0]?.version).toBe(1);
   });
 
   it("returns 200 with empty items array", async () => {
