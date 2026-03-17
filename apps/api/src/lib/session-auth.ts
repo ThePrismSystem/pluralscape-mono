@@ -22,81 +22,67 @@ export async function validateSession(
   db: PostgresJsDatabase,
   token: string,
 ): Promise<ValidateSessionResult> {
-  // Look up session by ID (token is the session ID)
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, token)).limit(1);
+  // Single JOIN query: session + account + optional system
+  const [row] = await db
+    .select({
+      session: sessions,
+      accountType: accounts.accountType,
+      systemId: systems.id,
+    })
+    .from(sessions)
+    .innerJoin(accounts, eq(accounts.id, sessions.accountId))
+    .leftJoin(systems, eq(systems.accountId, sessions.accountId))
+    .where(eq(sessions.id, token))
+    .limit(1);
 
-  if (!session) {
+  if (!row) {
     return { ok: false, error: "UNAUTHENTICATED" };
   }
 
-  if (session.revoked) {
+  if (row.session.revoked) {
     return { ok: false, error: "UNAUTHENTICATED" };
   }
 
   const currentTime = now();
 
   // Check absolute expiry
-  if (session.expiresAt !== null && currentTime > session.expiresAt) {
+  if (row.session.expiresAt !== null && currentTime > row.session.expiresAt) {
     return { ok: false, error: "SESSION_EXPIRED" };
   }
 
   // Check idle timeout
-  if (session.lastActive !== null) {
-    const idleTimeout = getIdleTimeout(session);
-    if (idleTimeout !== null && currentTime - session.lastActive > idleTimeout) {
+  if (row.session.lastActive !== null) {
+    const idleTimeout = getIdleTimeout(row.session);
+    if (idleTimeout !== null && currentTime - row.session.lastActive > idleTimeout) {
       return { ok: false, error: "SESSION_EXPIRED" };
     }
-  }
-
-  // Look up account type from accounts table
-  const [account] = await db
-    .select({ accountType: accounts.accountType })
-    .from(accounts)
-    .where(eq(accounts.id, session.accountId))
-    .limit(1);
-
-  if (!account) {
-    return { ok: false, error: "UNAUTHENTICATED" };
-  }
-
-  // Look up system ID if system account
-  let systemId: string | null = null;
-  if (account.accountType === "system") {
-    const [system] = await db
-      .select({ id: systems.id })
-      .from(systems)
-      .where(eq(systems.accountId, session.accountId))
-      .limit(1);
-    systemId = system?.id ?? null;
   }
 
   return {
     ok: true,
     auth: {
-      accountId: session.accountId as AccountId,
-      systemId: systemId as SystemId | null,
-      sessionId: session.id as SessionId,
-      accountType: account.accountType,
+      accountId: row.session.accountId as AccountId,
+      systemId: (row.systemId ?? null) as SystemId | null,
+      sessionId: row.session.id as SessionId,
+      accountType: row.accountType,
     },
-    session,
+    session: row.session,
   };
 }
 
 /**
  * Determine idle timeout for a session based on its absolute TTL.
- * Maps absolute TTL to the corresponding idle timeout.
+ * Uses exact match against known timeout configurations.
  */
 function getIdleTimeout(session: SessionRow): number | null {
   if (session.expiresAt === null) return null;
 
   const absoluteTtl = session.expiresAt - session.createdAt;
 
-  // Match against known timeout configurations
-  if (absoluteTtl >= SESSION_TIMEOUTS.mobile.absoluteTtlMs) {
-    return SESSION_TIMEOUTS.mobile.idleTimeoutMs;
-  }
-  if (absoluteTtl >= SESSION_TIMEOUTS.web.absoluteTtlMs) {
-    return SESSION_TIMEOUTS.web.idleTimeoutMs;
+  for (const config of Object.values(SESSION_TIMEOUTS)) {
+    if (absoluteTtl === config.absoluteTtlMs) {
+      return config.idleTimeoutMs;
+    }
   }
 
   // Device transfer or unknown — no idle timeout

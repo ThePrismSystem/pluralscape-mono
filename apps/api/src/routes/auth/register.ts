@@ -19,7 +19,13 @@ export const registerRoute = new Hono();
 registerRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 registerRoute.post("/", async (c) => {
-  const body = await c.req.json<RegisterParams>();
+  let body: RegisterParams;
+  try {
+    body = await c.req.json<RegisterParams>();
+  } catch {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
+  }
+
   const platform = extractPlatform(c);
   const requestMeta = {
     ipAddress: extractIpAddress(c),

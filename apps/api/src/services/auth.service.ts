@@ -12,13 +12,14 @@ import {
   wrapMasterKey,
 } from "@pluralscape/crypto";
 import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
-import { SESSION_TIMEOUTS, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types";
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
-import { and, eq, gt, ne } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
 import { writeAuditLog } from "../lib/audit-log.js";
 import { hashEmail } from "../lib/email-hash.js";
 import {
+  ANTI_ENUM_TARGET_MS,
   AUTH_MIN_PASSWORD_LENGTH,
   CLIENT_PLATFORM_HEADER,
   DEFAULT_PLATFORM,
@@ -37,13 +38,10 @@ import type { AccountType } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Context } from "hono";
 
-const ID = {
-  account: "acct_",
-  system: "sys_",
-  session: "sess_",
-  authKey: "auk_",
-  recoveryKey: "rk_",
-} as const;
+export interface RequestMeta {
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+}
 
 // ── Request metadata extraction ────────────────────────────────────
 
@@ -91,8 +89,10 @@ export async function registerAccount(
   db: PostgresJsDatabase,
   params: RegisterParams,
   platform: "web" | "mobile",
-  requestMeta: { ipAddress: string | null; userAgent: string | null },
+  requestMeta: RequestMeta,
 ): Promise<RegistrationResult> {
+  const startTime = performance.now();
+
   const parsed = RegistrationInputSchema.parse({
     email: params.email,
     password: params.password,
@@ -119,12 +119,9 @@ export async function registerAccount(
   const passwordHash = hashPassword(parsed.password, "server");
   const masterKey = generateMasterKey();
 
-  let passwordKey,
-    encryptedMasterKey,
-    keypair,
-    encryptedEncPrivateKey,
-    encryptedSignPrivateKey,
-    recovery;
+  let passwordKey: Awaited<ReturnType<typeof derivePasswordKey>> | undefined;
+  let keypair: ReturnType<typeof generateIdentityKeypair> | undefined;
+  let encryptedMasterKey, encryptedEncPrivateKey, encryptedSignPrivateKey, recovery;
   try {
     passwordKey = await derivePasswordKey(parsed.password, kdfSalt, "server");
     encryptedMasterKey = wrapMasterKey(masterKey, passwordKey);
@@ -135,6 +132,10 @@ export async function registerAccount(
   } finally {
     adapter.memzero(masterKey);
     if (passwordKey) adapter.memzero(passwordKey);
+    if (keypair) {
+      adapter.memzero(keypair.encryption.secretKey);
+      adapter.memzero(keypair.signing.secretKey);
+    }
   }
 
   // Serialize keys for DB storage
@@ -144,8 +145,8 @@ export async function registerAccount(
   const encSignPrivKeyBytes = serializeEncryptedPayload(encryptedSignPrivateKey);
   const recoveryEncMasterKeyBytes = serializeEncryptedPayload(recovery.encryptedMasterKey);
 
-  const accountId = createId(ID.account);
-  const sessionId = createId(ID.session);
+  const accountId = createId(ID_PREFIXES.account);
+  const sessionId = createId(ID_PREFIXES.session);
   const timestamp = now();
   const timeouts = SESSION_TIMEOUTS[platform];
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
@@ -166,7 +167,7 @@ export async function registerAccount(
 
       if (accountType === "system") {
         await tx.insert(systems).values({
-          id: createId(ID.system),
+          id: createId(ID_PREFIXES.system),
           accountId,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -175,7 +176,7 @@ export async function registerAccount(
 
       await tx.insert(authKeys).values([
         {
-          id: createId(ID.authKey),
+          id: createId(ID_PREFIXES.authKey),
           accountId,
           encryptedPrivateKey: encEncPrivKeyBytes,
           publicKey: new TextEncoder().encode(serializePublicKey(keypair.encryption.publicKey)),
@@ -183,7 +184,7 @@ export async function registerAccount(
           createdAt: timestamp,
         },
         {
-          id: createId(ID.authKey),
+          id: createId(ID_PREFIXES.authKey),
           accountId,
           encryptedPrivateKey: encSignPrivKeyBytes,
           publicKey: new TextEncoder().encode(serializePublicKey(keypair.signing.publicKey)),
@@ -193,7 +194,7 @@ export async function registerAccount(
       ]);
 
       await tx.insert(recoveryKeys).values({
-        id: createId(ID.recoveryKey),
+        id: createId(ID_PREFIXES.recoveryKey),
         accountId,
         encryptedMasterKey: recoveryEncMasterKeyBytes,
         createdAt: timestamp,
@@ -211,7 +212,7 @@ export async function registerAccount(
       await writeAuditLog(tx as PostgresJsDatabase, {
         accountId,
         systemId: null,
-        eventType: "auth.login",
+        eventType: "auth.register",
         actor: { kind: "account", id: accountId },
         detail: "Account registered",
         ipAddress: requestMeta.ipAddress,
@@ -221,10 +222,15 @@ export async function registerAccount(
   } catch (error: unknown) {
     // Anti-enumeration: if email already exists (unique constraint), return a fake success
     if (isDuplicateEmailError(error)) {
+      const elapsed = performance.now() - startTime;
+      const remaining = ANTI_ENUM_TARGET_MS - elapsed;
+      if (remaining > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, remaining));
+      }
       return {
-        sessionToken: createId(ID.session),
+        sessionToken: createId(ID_PREFIXES.session),
         recoveryKey: generateFakeRecoveryKey(),
-        accountId: createId(ID.account),
+        accountId: createId(ID_PREFIXES.account),
         accountType,
       };
     }
@@ -252,7 +258,7 @@ export async function loginAccount(
   db: PostgresJsDatabase,
   credentials: { email: string; password: string },
   platform: "web" | "mobile",
-  requestMeta: { ipAddress: string | null; userAgent: string | null },
+  requestMeta: RequestMeta,
 ): Promise<LoginResult | null> {
   const parsed = LoginCredentialsSchema.parse(credentials);
   const emailHash = hashEmail(parsed.email);
@@ -293,27 +299,29 @@ export async function loginAccount(
     systemId = system?.id ?? null;
   }
 
-  const sessionId = createId(ID.session);
+  const sessionId = createId(ID_PREFIXES.session);
   const timestamp = now();
   const timeouts = SESSION_TIMEOUTS[platform];
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
 
-  await db.insert(sessions).values({
-    id: sessionId,
-    accountId: account.id,
-    createdAt: timestamp,
-    lastActive: timestamp,
-    expiresAt,
-  });
+  await db.transaction(async (tx) => {
+    await tx.insert(sessions).values({
+      id: sessionId,
+      accountId: account.id,
+      createdAt: timestamp,
+      lastActive: timestamp,
+      expiresAt,
+    });
 
-  await writeAuditLog(db, {
-    accountId: account.id,
-    systemId,
-    eventType: "auth.login",
-    actor: { kind: "account", id: account.id },
-    detail: `Login via ${platform}`,
-    ipAddress: requestMeta.ipAddress,
-    userAgent: requestMeta.userAgent,
+    await writeAuditLog(tx as PostgresJsDatabase, {
+      accountId: account.id,
+      systemId,
+      eventType: "auth.login",
+      actor: { kind: "account", id: account.id },
+      detail: `Login via ${platform}`,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+    });
   });
 
   return {
@@ -341,9 +349,17 @@ export async function listSessions(
 ): Promise<{ sessions: SessionInfo[]; nextCursor: string | null }> {
   const effectiveLimit = Math.min(limit, MAX_SESSION_LIMIT);
 
+  const currentTime = now();
+  const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
+
   const baseConditions = cursor
-    ? and(eq(sessions.accountId, accountId), eq(sessions.revoked, false), gt(sessions.id, cursor))
-    : and(eq(sessions.accountId, accountId), eq(sessions.revoked, false));
+    ? and(
+        eq(sessions.accountId, accountId),
+        eq(sessions.revoked, false),
+        notExpired,
+        gt(sessions.id, cursor),
+      )
+    : and(eq(sessions.accountId, accountId), eq(sessions.revoked, false), notExpired);
 
   const rows = await db
     .select({
@@ -368,7 +384,7 @@ export async function revokeSession(
   db: PostgresJsDatabase,
   sessionId: string,
   actorAccountId: string,
-  requestMeta: { ipAddress: string | null; userAgent: string | null },
+  requestMeta: RequestMeta,
 ): Promise<boolean> {
   const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
 
@@ -376,68 +392,87 @@ export async function revokeSession(
     return false;
   }
 
-  await db.update(sessions).set({ revoked: true }).where(eq(sessions.id, sessionId));
+  if (session.revoked) {
+    return false;
+  }
 
-  await writeAuditLog(db, {
-    accountId: actorAccountId,
-    systemId: null,
-    eventType: "auth.logout",
-    actor: { kind: "account", id: actorAccountId },
-    detail: `Session ${sessionId} revoked`,
-    ipAddress: requestMeta.ipAddress,
-    userAgent: requestMeta.userAgent,
+  return db.transaction(async (tx) => {
+    const updated = await tx
+      .update(sessions)
+      .set({ revoked: true })
+      .where(eq(sessions.id, sessionId))
+      .returning({ id: sessions.id });
+
+    if (updated.length === 0) return false;
+
+    await writeAuditLog(tx as PostgresJsDatabase, {
+      accountId: actorAccountId,
+      systemId: null,
+      eventType: "auth.logout",
+      actor: { kind: "account", id: actorAccountId },
+      detail: `Session ${sessionId} revoked`,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+    });
+
+    return true;
   });
-
-  return true;
 }
 
 export async function revokeAllSessions(
   db: PostgresJsDatabase,
   accountId: string,
   exceptSessionId: string,
-  requestMeta: { ipAddress: string | null; userAgent: string | null },
+  requestMeta: RequestMeta,
 ): Promise<number> {
-  const result = await db
-    .update(sessions)
-    .set({ revoked: true })
-    .where(
-      and(
-        eq(sessions.accountId, accountId),
-        ne(sessions.id, exceptSessionId),
-        eq(sessions.revoked, false),
-      ),
-    )
-    .returning({ id: sessions.id });
+  return db.transaction(async (tx) => {
+    const result = await tx
+      .update(sessions)
+      .set({ revoked: true })
+      .where(
+        and(
+          eq(sessions.accountId, accountId),
+          ne(sessions.id, exceptSessionId),
+          eq(sessions.revoked, false),
+        ),
+      )
+      .returning({ id: sessions.id });
 
-  await writeAuditLog(db, {
-    accountId,
-    systemId: null,
-    eventType: "auth.logout",
-    actor: { kind: "account", id: accountId },
-    detail: `All sessions revoked except ${exceptSessionId} (${String(result.length)} sessions)`,
-    ipAddress: requestMeta.ipAddress,
-    userAgent: requestMeta.userAgent,
+    await writeAuditLog(tx as PostgresJsDatabase, {
+      accountId,
+      systemId: null,
+      eventType: "auth.logout",
+      actor: { kind: "account", id: accountId },
+      detail: `All sessions revoked except ${exceptSessionId} (${String(result.length)} sessions)`,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+    });
+
+    return result.length;
   });
-
-  return result.length;
 }
 
 export async function logoutCurrentSession(
   db: PostgresJsDatabase,
   sessionId: string,
   accountId: string,
-  requestMeta: { ipAddress: string | null; userAgent: string | null },
+  requestMeta: RequestMeta,
 ): Promise<void> {
-  await db.update(sessions).set({ revoked: true }).where(eq(sessions.id, sessionId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(sessions)
+      .set({ revoked: true })
+      .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, accountId)));
 
-  await writeAuditLog(db, {
-    accountId,
-    systemId: null,
-    eventType: "auth.logout",
-    actor: { kind: "account", id: accountId },
-    detail: "Logged out",
-    ipAddress: requestMeta.ipAddress,
-    userAgent: requestMeta.userAgent,
+    await writeAuditLog(tx as PostgresJsDatabase, {
+      accountId,
+      systemId: null,
+      eventType: "auth.logout",
+      actor: { kind: "account", id: accountId },
+      detail: "Logged out",
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+    });
   });
 }
 
@@ -466,21 +501,26 @@ function serializeEncryptedPayload(payload: {
 }
 
 function isDuplicateEmailError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const msg = error.message.toLowerCase();
-    return msg.includes("unique") && msg.includes("email_hash");
+  if (error instanceof Error && "code" in error && "constraint_name" in error) {
+    const pgErr = error as { code: string; constraint_name: string };
+    return pgErr.code === "23505" && pgErr.constraint_name === "accounts_email_hash_idx";
   }
   return false;
 }
 
 /** Generate a fake recovery key that looks like a real one for anti-enumeration. */
 function generateFakeRecoveryKey(): string {
+  const adapter = getSodium();
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const totalChars = RECOVERY_KEY_GROUP_COUNT * RECOVERY_KEY_GROUP_SIZE;
+  const randomBytes = adapter.randomBytes(totalChars);
   const groups: string[] = [];
+  let byteIdx = 0;
   for (let g = 0; g < RECOVERY_KEY_GROUP_COUNT; g++) {
     let group = "";
     for (let c = 0; c < RECOVERY_KEY_GROUP_SIZE; c++) {
-      group += chars[Math.floor(Math.random() * chars.length)] ?? "A";
+      const byte = randomBytes[byteIdx++] ?? 0;
+      group += chars[byte % chars.length] ?? "A";
     }
     groups.push(group);
   }
