@@ -6,3 +6,4 @@ export {
   RegistrationInputSchema,
 } from "./auth.js";
 export { UpdateSystemBodySchema } from "./system.js";
+export { AUTH_MIN_PASSWORD_LENGTH } from "./validation.constants.js";

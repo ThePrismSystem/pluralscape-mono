@@ -1,5 +1,7 @@
 import { z } from "zod/v4";
 
+import { AUTH_MIN_PASSWORD_LENGTH } from "./validation.constants.js";
+
 export const LoginCredentialsSchema = z
   .object({
     email: z.email(),
@@ -28,6 +30,6 @@ export const ChangeEmailSchema = z
 export const ChangePasswordSchema = z
   .object({
     currentPassword: z.string().min(1),
-    newPassword: z.string().min(1),
+    newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
   })
   .readonly();

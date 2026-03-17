@@ -11,6 +11,9 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 vi.mock("../../../services/account.service.js", () => ({
   getAccountInfo: vi.fn(),
   changeEmail: vi.fn(),
+  ConcurrencyError: class ConcurrencyError extends Error {
+    override readonly name = "ConcurrencyError" as const;
+  },
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
@@ -54,7 +57,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { changeEmail } = await import("../../../services/account.service.js");
+const { changeEmail, ConcurrencyError } = await import("../../../services/account.service.js");
 const { ValidationError } = await import("../../../services/auth.service.js");
 const { accountRoutes } = await import("../../../routes/account/index.js");
 
@@ -117,6 +120,23 @@ describe("PUT /account/email", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: "taken@example.com", currentPassword: "password123" }),
+    });
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("CONFLICT");
+  });
+
+  it("returns 409 on ConcurrencyError", async () => {
+    vi.mocked(changeEmail).mockRejectedValueOnce(
+      new ConcurrencyError("Account was modified concurrently"),
+    );
+
+    const app = createApp();
+    const res = await app.request("/account/email", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "new@example.com", currentPassword: "password123" }),
     });
 
     expect(res.status).toBe(409);

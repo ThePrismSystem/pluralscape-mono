@@ -4,7 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../../middleware/error-handler.js";
 import { requestIdMiddleware } from "../../../middleware/request-id.js";
 
-import type { AccountType, ApiErrorResponse } from "@pluralscape/types";
+import type {
+  AccountId,
+  AccountType,
+  ApiErrorResponse,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -69,11 +75,11 @@ describe("GET /account", () => {
 
   it("returns account info for authenticated user", async () => {
     const mockInfo = {
-      accountId: "acct_test",
+      accountId: "acct_test" as AccountId,
       accountType: "system" as AccountType,
-      systemId: "sys_test",
-      createdAt: 1000,
-      updatedAt: 2000,
+      systemId: "sys_test" as SystemId,
+      createdAt: 1000 as UnixMillis,
+      updatedAt: 2000 as UnixMillis,
     };
     vi.mocked(getAccountInfo).mockResolvedValueOnce(mockInfo);
 

@@ -11,6 +11,9 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 vi.mock("../../../services/account.service.js", () => ({
   getAccountInfo: vi.fn(),
   changePassword: vi.fn(),
+  ConcurrencyError: class ConcurrencyError extends Error {
+    override readonly name = "ConcurrencyError" as const;
+  },
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
@@ -54,7 +57,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { changePassword } = await import("../../../services/account.service.js");
+const { changePassword, ConcurrencyError } = await import("../../../services/account.service.js");
 const { ValidationError } = await import("../../../services/auth.service.js");
 const { accountRoutes } = await import("../../../routes/account/index.js");
 
@@ -127,6 +130,23 @@ describe("PUT /account/password", () => {
       { currentPassword: "oldpass123", newPassword: "newpass123" },
       { ipAddress: null, userAgent: null },
     );
+  });
+
+  it("returns 409 on ConcurrencyError", async () => {
+    vi.mocked(changePassword).mockRejectedValueOnce(
+      new ConcurrencyError("Account was modified concurrently"),
+    );
+
+    const app = createApp();
+    const res = await app.request("/account/password", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: "oldpass123", newPassword: "newpass123" }),
+    });
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("CONFLICT");
   });
 
   it("returns 400 on short new password", async () => {

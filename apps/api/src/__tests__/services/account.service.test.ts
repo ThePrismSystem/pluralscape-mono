@@ -2,14 +2,19 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
 
+import type { AccountId, SessionId } from "@pluralscape/types";
+
 // ── Mock external dependencies ───────────────────────────────────────
+
+const mockMemzero = vi.fn();
 
 vi.mock("@pluralscape/crypto", () => ({
   PWHASH_SALT_BYTES: 16,
   AEAD_NONCE_BYTES: 24,
+  AEAD_TAG_BYTES: 16,
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),
-    memzero: vi.fn(),
+    memzero: mockMemzero,
     genericHash: () => new Uint8Array(32),
   }),
   hashPassword: () => "$argon2id$fake$newhash",
@@ -42,6 +47,7 @@ const { getAccountInfo, changeEmail, changePassword, ConcurrencyError } =
 describe("account service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    mockMemzero.mockClear();
   });
 
   const requestMeta = { ipAddress: "1.2.3.4", userAgent: "TestAgent/1.0" };
@@ -53,7 +59,7 @@ describe("account service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([]);
 
-      const result = await getAccountInfo(db, "acct_notfound");
+      const result = await getAccountInfo(db, "acct_notfound" as AccountId);
       expect(result).toBeNull();
     });
 
@@ -70,7 +76,7 @@ describe("account service", () => {
         ])
         .mockResolvedValueOnce([{ id: "sys_456" }]);
 
-      const result = await getAccountInfo(db, "acct_123");
+      const result = await getAccountInfo(db, "acct_123" as AccountId);
       expect(result).toEqual({
         accountId: "acct_123",
         accountType: "system",
@@ -91,7 +97,7 @@ describe("account service", () => {
         },
       ]);
 
-      const result = await getAccountInfo(db, "acct_789");
+      const result = await getAccountInfo(db, "acct_789" as AccountId);
       expect(result).not.toBeNull();
       expect(result?.systemId).toBeNull();
     });
@@ -109,7 +115,7 @@ describe("account service", () => {
         ])
         .mockResolvedValueOnce([]);
 
-      const result = await getAccountInfo(db, "acct_123");
+      const result = await getAccountInfo(db, "acct_123" as AccountId);
       expect(result?.systemId).toBeNull();
     });
   });
@@ -130,7 +136,7 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_123",
+          "acct_123" as AccountId,
           { email: "new@example.com", currentPassword: "wrong" },
           requestMeta,
         ),
@@ -144,14 +150,14 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_missing",
+          "acct_missing" as AccountId,
           { email: "new@example.com", currentPassword: "pass" },
           requestMeta,
         ),
       ).rejects.toThrow("Incorrect password");
     });
 
-    it("throws when email is unchanged", async () => {
+    it("returns ok silently when email is unchanged", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
@@ -161,14 +167,14 @@ describe("account service", () => {
         },
       ]);
 
-      await expect(
-        changeEmail(
-          db,
-          "acct_123",
-          { email: "same@example.com", currentPassword: "pass" },
-          requestMeta,
-        ),
-      ).rejects.toThrow("New email must be different");
+      const result = await changeEmail(
+        db,
+        "acct_123" as AccountId,
+        { email: "same@example.com", currentPassword: "pass" },
+        requestMeta,
+      );
+      expect(result).toEqual({ ok: true });
+      expect(chain.transaction).not.toHaveBeenCalled();
     });
 
     it("returns ok on successful email change", async () => {
@@ -184,7 +190,7 @@ describe("account service", () => {
 
       const result = await changeEmail(
         db,
-        "acct_123",
+        "acct_123" as AccountId,
         { email: "new@example.com", currentPassword: "pass" },
         requestMeta,
       );
@@ -208,23 +214,23 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_123",
+          "acct_123" as AccountId,
           { email: "taken@example.com", currentPassword: "pass" },
           requestMeta,
         ),
       ).rejects.toThrow("Email change failed");
     });
 
-    it("throws on invalid email format", async () => {
+    it("throws ZodError on invalid email format", async () => {
       const { db } = mockDb();
       await expect(
         changeEmail(
           db,
-          "acct_123",
+          "acct_123" as AccountId,
           { email: "not-an-email", currentPassword: "pass" },
           requestMeta,
         ),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("uses optimistic locking via version", async () => {
@@ -242,7 +248,7 @@ describe("account service", () => {
       await expect(
         changeEmail(
           db,
-          "acct_123",
+          "acct_123" as AccountId,
           { email: "new@example.com", currentPassword: "pass" },
           requestMeta,
         ),
@@ -270,7 +276,13 @@ describe("account service", () => {
       ]);
 
       await expect(
-        changePassword(db, "acct_123", "sess_1", validParams, requestMeta),
+        changePassword(
+          db,
+          "acct_123" as AccountId,
+          "sess_1" as SessionId,
+          validParams,
+          requestMeta,
+        ),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -279,22 +291,28 @@ describe("account service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_missing", "sess_1", validParams, requestMeta),
+        changePassword(
+          db,
+          "acct_missing" as AccountId,
+          "sess_1" as SessionId,
+          validParams,
+          requestMeta,
+        ),
       ).rejects.toThrow("Incorrect password");
     });
 
-    it("throws on too-short new password", async () => {
+    it("throws ZodError on too-short new password", async () => {
       const { db } = mockDb();
 
       await expect(
         changePassword(
           db,
-          "acct_123",
-          "sess_1",
+          "acct_123" as AccountId,
+          "sess_1" as SessionId,
           { currentPassword: "current", newPassword: "short" },
           requestMeta,
         ),
-      ).rejects.toThrow(/Password must be at least/);
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("returns ok and revokedSessionCount on success", async () => {
@@ -313,8 +331,15 @@ describe("account service", () => {
         // Second returning: session revocation
         .mockResolvedValueOnce([{ id: "sess_2" }, { id: "sess_3" }]);
 
-      const result = await changePassword(db, "acct_123", "sess_1", validParams, requestMeta);
+      const result = await changePassword(
+        db,
+        "acct_123" as AccountId,
+        "sess_1" as SessionId,
+        validParams,
+        requestMeta,
+      );
       expect(result).toEqual({ ok: true, revokedSessionCount: 2 });
+      expect(mockMemzero).toHaveBeenCalledTimes(3);
     });
 
     it("calls transaction during password change", async () => {
@@ -329,7 +354,13 @@ describe("account service", () => {
       ]);
       chain.returning.mockResolvedValueOnce([{ id: "acct_123" }]).mockResolvedValueOnce([]);
 
-      await changePassword(db, "acct_123", "sess_1", validParams, requestMeta);
+      await changePassword(
+        db,
+        "acct_123" as AccountId,
+        "sess_1" as SessionId,
+        validParams,
+        requestMeta,
+      );
       expect(chain.transaction).toHaveBeenCalledOnce();
     });
 
@@ -346,11 +377,42 @@ describe("account service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(db, "acct_123", "sess_1", validParams, requestMeta),
+        changePassword(
+          db,
+          "acct_123" as AccountId,
+          "sess_1" as SessionId,
+          validParams,
+          requestMeta,
+        ),
       ).rejects.toThrow("Account was modified concurrently");
     });
 
-    it("throws on missing encrypted master key", async () => {
+    it("cleans up keys via memzero even when transaction throws", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: new Uint8Array(72),
+          version: 1,
+        },
+      ]);
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        changePassword(
+          db,
+          "acct_123" as AccountId,
+          "sess_1" as SessionId,
+          validParams,
+          requestMeta,
+        ),
+      ).rejects.toThrow();
+
+      expect(mockMemzero).toHaveBeenCalledTimes(3);
+    });
+
+    it("does not call memzero when encryptedMasterKey is null", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValueOnce([
         {
@@ -362,21 +424,29 @@ describe("account service", () => {
       ]);
 
       await expect(
-        changePassword(db, "acct_123", "sess_1", validParams, requestMeta),
+        changePassword(
+          db,
+          "acct_123" as AccountId,
+          "sess_1" as SessionId,
+          validParams,
+          requestMeta,
+        ),
       ).rejects.toThrow("Account missing encrypted master key");
+
+      expect(mockMemzero).toHaveBeenCalledTimes(0);
     });
 
-    it("throws on invalid Zod input", async () => {
+    it("throws ZodError on invalid Zod input", async () => {
       const { db } = mockDb();
       await expect(
         changePassword(
           db,
-          "acct_123",
-          "sess_1",
+          "acct_123" as AccountId,
+          "sess_1" as SessionId,
           { currentPassword: "", newPassword: "newpass123" },
           requestMeta,
         ),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
   });
 

@@ -8,7 +8,7 @@ import {
   verifyPassword,
   wrapMasterKey,
 } from "@pluralscape/crypto";
-import { accounts, sessions } from "@pluralscape/db/pg";
+import { accounts, sessions, systems } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { ChangeEmailSchema, ChangePasswordSchema } from "@pluralscape/validation";
 import { and, eq, ne } from "drizzle-orm";
@@ -22,34 +22,31 @@ import {
 import { fromHex, toHex } from "../lib/hex.js";
 import {
   EMAIL_CHANGE_FAILED_ERROR,
-  EMAIL_UNCHANGED_ERROR,
   INCORRECT_PASSWORD_ERROR,
 } from "../routes/account/account.constants.js";
-import { AUTH_MIN_PASSWORD_LENGTH, EMAIL_SALT_BYTES } from "../routes/auth/auth.constants.js";
+import { EMAIL_SALT_BYTES } from "../routes/auth/auth.constants.js";
 
 import { isDuplicateEmailError, ValidationError } from "./auth.service.js";
 
 import type { RequestMeta } from "../lib/request-meta.js";
 import type { AeadKey, KdfMasterKey, PwhashSalt } from "@pluralscape/crypto";
-import type { AccountType } from "@pluralscape/types";
+import type { AccountId, AccountType, SessionId, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Get Account Info ──────────────────────────────────────────────
 
 export interface AccountInfo {
-  readonly accountId: string;
+  readonly accountId: AccountId;
   readonly accountType: AccountType;
-  readonly systemId: string | null;
-  readonly createdAt: number;
-  readonly updatedAt: number;
+  readonly systemId: SystemId | null;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
 }
 
 export async function getAccountInfo(
   db: PostgresJsDatabase,
-  accountId: string,
+  accountId: AccountId,
 ): Promise<AccountInfo | null> {
-  const { systems } = await import("@pluralscape/db/pg");
-
   const [row] = await db
     .select({
       accountId: accounts.id,
@@ -63,22 +60,22 @@ export async function getAccountInfo(
 
   if (!row) return null;
 
-  let systemId: string | null = null;
+  let systemId: SystemId | null = null;
   if (row.accountType === "system") {
     const [system] = await db
       .select({ id: systems.id })
       .from(systems)
       .where(eq(systems.accountId, accountId))
       .limit(1);
-    systemId = system?.id ?? null;
+    systemId = system ? (system.id as SystemId) : null;
   }
 
   return {
-    accountId: row.accountId,
+    accountId: row.accountId as AccountId,
     accountType: row.accountType,
     systemId,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: row.createdAt as UnixMillis,
+    updatedAt: row.updatedAt as UnixMillis,
   };
 }
 
@@ -86,7 +83,7 @@ export async function getAccountInfo(
 
 export async function changeEmail(
   db: PostgresJsDatabase,
-  accountId: string,
+  accountId: AccountId,
   params: unknown,
   requestMeta: RequestMeta,
 ): Promise<{ ok: true }> {
@@ -113,10 +110,11 @@ export async function changeEmail(
 
   const newEmailHash = hashEmail(parsed.email);
   if (newEmailHash === account.emailHash) {
-    throw new ValidationError(EMAIL_UNCHANGED_ERROR);
+    return { ok: true };
   }
 
   const adapter = getSodium();
+  /** Stored for potential future per-account salting; current hashEmail() uses global pepper. */
   const newEmailSalt = toHex(adapter.randomBytes(EMAIL_SALT_BYTES));
   const timestamp = now();
 
@@ -166,18 +164,12 @@ export interface ChangePasswordResult {
 
 export async function changePassword(
   db: PostgresJsDatabase,
-  accountId: string,
-  sessionId: string,
+  accountId: AccountId,
+  sessionId: SessionId,
   params: unknown,
   requestMeta: RequestMeta,
 ): Promise<ChangePasswordResult> {
   const parsed = ChangePasswordSchema.parse(params);
-
-  if (parsed.newPassword.length < AUTH_MIN_PASSWORD_LENGTH) {
-    throw new ValidationError(
-      `Password must be at least ${String(AUTH_MIN_PASSWORD_LENGTH)} characters`,
-    );
-  }
 
   const [account] = await db
     .select({

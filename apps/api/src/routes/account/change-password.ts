@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST } from "../../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
 import { extractRequestMeta } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { changePassword } from "../../services/account.service.js";
+import { ConcurrencyError, changePassword } from "../../services/account.service.js";
 import { ValidationError } from "../../services/auth.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -23,6 +23,9 @@ changePasswordRoute.put("/", async (c) => {
     const result = await changePassword(db, auth.accountId, auth.sessionId, body, requestMeta);
     return c.json(result);
   } catch (error: unknown) {
+    if (error instanceof ConcurrencyError) {
+      throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", error.message);
+    }
     if (error instanceof ValidationError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
     }
