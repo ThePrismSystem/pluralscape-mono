@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { RequestMeta } from "../../services/auth.service.js";
+import type { SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Mock helpers ─────────────────────────────────────────────────────
@@ -84,15 +85,17 @@ vi.mock("../../lib/audit-log.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const { getSystemProfile, updateSystemProfile, deleteSystem, createSystem } =
+const { getSystemProfile, updateSystemProfile, archiveSystem, createSystem } =
   await import("../../services/system.service.js");
 const { writeAuditLog } = await import("../../lib/audit-log.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
+const SYSTEM_ID = "sys_test-system" as SystemId;
+
 const AUTH: AuthContext = {
   accountId: "acct_test-account" as AuthContext["accountId"],
-  systemId: "sys_test-system" as AuthContext["systemId"],
+  systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
 };
@@ -110,6 +113,8 @@ function makeSystemRow(overrides: Record<string, unknown> = {}): Record<string, 
     version: 1,
     createdAt: 1000,
     updatedAt: 1000,
+    archived: false,
+    archivedAt: null,
     ...overrides,
   };
 }
@@ -125,7 +130,7 @@ describe("getSystemProfile", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([makeSystemRow()]);
 
-    const result = await getSystemProfile(db, "sys_test-system", AUTH);
+    const result = await getSystemProfile(db, SYSTEM_ID, AUTH);
 
     expect(result.id).toBe("sys_test-system");
     expect(result.encryptedData).toBeNull();
@@ -138,7 +143,7 @@ describe("getSystemProfile", () => {
       makeSystemRow({ encryptedData: new Uint8Array([1, 2, 3, 4]) }),
     ]);
 
-    const result = await getSystemProfile(db, "sys_test-system", AUTH);
+    const result = await getSystemProfile(db, SYSTEM_ID, AUTH);
 
     expect(result.encryptedData).toBeTypeOf("string");
     expect(result.encryptedData).not.toBeNull();
@@ -147,16 +152,24 @@ describe("getSystemProfile", () => {
   it("throws 404 when system not found", async () => {
     const { db } = mockDb();
 
-    await expect(getSystemProfile(db, "sys_nonexistent", AUTH)).rejects.toThrow(
+    await expect(getSystemProfile(db, "sys_nonexistent" as SystemId, AUTH)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
 
   it("throws 404 for system owned by different account", async () => {
     const { db } = mockDb();
-    // Ownership checked in WHERE clause — no rows returned
 
-    await expect(getSystemProfile(db, "sys_other", AUTH)).rejects.toThrow(
+    await expect(getSystemProfile(db, "sys_other" as SystemId, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("does not return archived systems", async () => {
+    const { db } = mockDb();
+    // WHERE includes archived = false, so archived systems return empty
+
+    await expect(getSystemProfile(db, SYSTEM_ID, AUTH)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
@@ -170,14 +183,14 @@ describe("updateSystemProfile", () => {
   // Valid base64-encoded blob data (at least 32 bytes to have header + nonce room)
   const VALID_BLOB_BASE64 = Buffer.from(new Uint8Array(40)).toString("base64");
 
-  it("updates system profile successfully", async () => {
+  it("updates system profile successfully with version increment", async () => {
     const { db, chain } = mockDb();
     const updatedRow = makeSystemRow({ version: 2, encryptedData: new Uint8Array([1, 2, 3]) });
     chain.returning.mockResolvedValueOnce([updatedRow]);
 
     const result = await updateSystemProfile(
       db,
-      "sys_test-system",
+      SYSTEM_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1 },
       AUTH,
       REQUEST_META,
@@ -185,8 +198,9 @@ describe("updateSystemProfile", () => {
 
     expect(result.id).toBe("sys_test-system");
     expect(result.version).toBe(2);
+    expect(chain.transaction).toHaveBeenCalled();
     expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
-      db,
+      expect.anything(),
       expect.objectContaining({ eventType: "system.profile-updated" }),
     );
   });
@@ -200,7 +214,7 @@ describe("updateSystemProfile", () => {
     await expect(
       updateSystemProfile(
         db,
-        "sys_test-system",
+        SYSTEM_ID,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
         REQUEST_META,
@@ -216,7 +230,7 @@ describe("updateSystemProfile", () => {
     await expect(
       updateSystemProfile(
         db,
-        "sys_nonexistent",
+        "sys_nonexistent" as SystemId,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
         REQUEST_META,
@@ -234,7 +248,7 @@ describe("updateSystemProfile", () => {
     await expect(
       updateSystemProfile(
         db,
-        "sys_test-system",
+        SYSTEM_ID,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
         REQUEST_META,
@@ -249,7 +263,7 @@ describe("updateSystemProfile", () => {
     await expect(
       updateSystemProfile(
         db,
-        "sys_test-system",
+        SYSTEM_ID,
         { encryptedData: oversized, version: 1 },
         AUTH,
         REQUEST_META,
@@ -261,39 +275,34 @@ describe("updateSystemProfile", () => {
     const { db } = mockDb();
 
     await expect(
-      updateSystemProfile(
-        db,
-        "sys_test-system",
-        { encryptedData: VALID_BLOB_BASE64 } as { encryptedData: string; version: number },
-        AUTH,
-        REQUEST_META,
-      ),
-    ).rejects.toThrow();
+      updateSystemProfile(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, REQUEST_META),
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 });
 
-describe("deleteSystem", () => {
+describe("archiveSystem", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("deletes an empty system when multiple systems exist", async () => {
+  it("archives an empty system when multiple systems exist", async () => {
     const { db, chain } = mockDb();
     // 1. ownership check: select().from().where().limit() → found
     chain.limit.mockResolvedValueOnce([{ id: "sys_test-system" }]);
     // 2. system count: select().from().where() → resolves directly (no .limit())
     // 3. member count: select().from().where() → resolves directly
-    // 4. delete: delete().where() → resolves
+    // 4. archive: update().set().where().returning() → returns archived row
     chain.where
       .mockReturnValueOnce(chain) // ownership query → chains to .limit()
       .mockResolvedValueOnce([{ count: 2 }]) // system count
-      .mockResolvedValueOnce([{ count: 0 }]) // member count
-      .mockResolvedValueOnce(undefined); // delete
+      .mockResolvedValueOnce([{ count: 0 }]); // member count
+    chain.returning.mockResolvedValueOnce([{ id: "sys_test-system" }]);
 
-    await deleteSystem(db, "sys_test-system", AUTH, REQUEST_META);
+    await archiveSystem(db, SYSTEM_ID, AUTH, REQUEST_META);
 
+    expect(chain.transaction).toHaveBeenCalled();
     expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
-      db,
+      expect.anything(),
       expect.objectContaining({ eventType: "system.deleted" }),
     );
   });
@@ -301,9 +310,9 @@ describe("deleteSystem", () => {
   it("throws 404 when system not found", async () => {
     const { db } = mockDb();
 
-    await expect(deleteSystem(db, "sys_nonexistent", AUTH, REQUEST_META)).rejects.toThrow(
-      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
-    );
+    await expect(
+      archiveSystem(db, "sys_nonexistent" as SystemId, AUTH, REQUEST_META),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("throws 409 when it is the last system", async () => {
@@ -315,12 +324,12 @@ describe("deleteSystem", () => {
       .mockReturnValueOnce(chain) // ownership → chains to .limit()
       .mockResolvedValueOnce([{ count: 1 }]); // system count
 
-    await expect(deleteSystem(db, "sys_test-system", AUTH, REQUEST_META)).rejects.toThrow(
+    await expect(archiveSystem(db, SYSTEM_ID, AUTH, REQUEST_META)).rejects.toThrow(
       expect.objectContaining({ status: 409, code: "CONFLICT" }),
     );
   });
 
-  it("throws 409 when system has members", async () => {
+  it("throws 409 when system has active members", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: "sys_test-system" }]);
     chain.where
@@ -328,11 +337,11 @@ describe("deleteSystem", () => {
       .mockResolvedValueOnce([{ count: 2 }]) // system count
       .mockResolvedValueOnce([{ count: 3 }]); // member count
 
-    await expect(deleteSystem(db, "sys_test-system", AUTH, REQUEST_META)).rejects.toThrow(
+    await expect(archiveSystem(db, SYSTEM_ID, AUTH, REQUEST_META)).rejects.toThrow(
       expect.objectContaining({
         status: 409,
         code: "CONFLICT",
-        message: expect.stringContaining("3 member(s)"),
+        message: expect.stringContaining("3 active member(s)"),
       }),
     );
   });

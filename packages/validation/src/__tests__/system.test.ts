@@ -41,6 +41,14 @@ describe("UpdateSystemBodySchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects negative version", () => {
+    const result = UpdateSystemBodySchema.safeParse({
+      encryptedData: "dGVzdA==",
+      version: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects non-integer version", () => {
     const result = UpdateSystemBodySchema.safeParse({
       encryptedData: "dGVzdA==",

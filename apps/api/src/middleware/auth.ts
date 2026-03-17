@@ -2,10 +2,10 @@ import { sessions } from "@pluralscape/db/pg";
 import { LAST_ACTIVE_THROTTLE_MS, now } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 
+import { HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { getDb } from "../lib/db.js";
 import { validateSession } from "../lib/session-auth.js";
-import { HTTP_UNAUTHORIZED } from "../routes/auth/auth.constants.js";
 
 import type { AuthEnv } from "../lib/auth-context.js";
 import type { MiddlewareHandler } from "hono";

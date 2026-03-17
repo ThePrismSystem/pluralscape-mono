@@ -15,6 +15,7 @@ vi.mock("../../../services/system.service.js", () => ({
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
+  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
   extractIpAddress: vi.fn().mockReturnValue(null),
   extractUserAgent: vi.fn().mockReturnValue(null),
 }));
@@ -75,11 +76,11 @@ describe("GET /systems/:id", () => {
 
   it("returns 200 with system profile", async () => {
     vi.mocked(getSystemProfile).mockResolvedValueOnce({
-      id: "sys_abc",
+      id: "sys_abc" as never,
       encryptedData: "dGVzdA==",
       version: 1,
-      createdAt: 1000,
-      updatedAt: 1000,
+      createdAt: 1000 as never,
+      updatedAt: 1000 as never,
     });
 
     const app = createApp();
@@ -90,6 +91,25 @@ describe("GET /systems/:id", () => {
     expect(body.id).toBe("sys_abc");
     expect(body.encryptedData).toBe("dGVzdA==");
     expect(body.version).toBe(1);
+  });
+
+  it("forwards systemId and auth to service", async () => {
+    vi.mocked(getSystemProfile).mockResolvedValueOnce({
+      id: "sys_abc" as never,
+      encryptedData: null,
+      version: 1,
+      createdAt: 1000 as never,
+      updatedAt: 1000 as never,
+    });
+
+    const app = createApp();
+    await app.request("/systems/sys_abc");
+
+    expect(vi.mocked(getSystemProfile)).toHaveBeenCalledWith(
+      expect.anything(),
+      "sys_abc",
+      MOCK_AUTH,
+    );
   });
 
   it("returns 404 when system not found", async () => {
@@ -104,5 +124,17 @@ describe("GET /systems/:id", () => {
     expect(res.status).toBe(404);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("re-throws unexpected errors as 500", async () => {
+    vi.mocked(getSystemProfile).mockRejectedValueOnce(new Error("DB timeout"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const app = createApp();
+    const res = await app.request("/systems/sys_abc");
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("INTERNAL_ERROR");
   });
 });

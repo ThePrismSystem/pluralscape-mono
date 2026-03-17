@@ -15,6 +15,7 @@ vi.mock("../../../services/system.service.js", () => ({
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
+  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
   extractIpAddress: vi.fn().mockReturnValue(null),
   extractUserAgent: vi.fn().mockReturnValue(null),
 }));
@@ -75,11 +76,11 @@ describe("POST /systems", () => {
 
   it("returns 201 with new system on success", async () => {
     vi.mocked(createSystem).mockResolvedValueOnce({
-      id: "sys_new",
+      id: "sys_new" as never,
       encryptedData: null,
       version: 1,
-      createdAt: 1000,
-      updatedAt: 1000,
+      createdAt: 1000 as never,
+      updatedAt: 1000 as never,
     });
 
     const app = createApp();
@@ -90,6 +91,24 @@ describe("POST /systems", () => {
     expect(body.id).toBe("sys_new");
     expect(body.encryptedData).toBeNull();
     expect(body.version).toBe(1);
+  });
+
+  it("forwards auth context and requestMeta to service", async () => {
+    vi.mocked(createSystem).mockResolvedValueOnce({
+      id: "sys_new" as never,
+      encryptedData: null,
+      version: 1,
+      createdAt: 1000 as never,
+      updatedAt: 1000 as never,
+    });
+
+    const app = createApp();
+    await app.request("/systems", { method: "POST" });
+
+    expect(vi.mocked(createSystem)).toHaveBeenCalledWith(expect.anything(), MOCK_AUTH, {
+      ipAddress: null,
+      userAgent: null,
+    });
   });
 
   it("returns 403 when account type is not system", async () => {
@@ -104,5 +123,17 @@ describe("POST /systems", () => {
     expect(res.status).toBe(403);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("FORBIDDEN");
+  });
+
+  it("re-throws unexpected errors as 500", async () => {
+    vi.mocked(createSystem).mockRejectedValueOnce(new Error("DB timeout"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const app = createApp();
+    const res = await app.request("/systems", { method: "POST" });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("INTERNAL_ERROR");
   });
 });

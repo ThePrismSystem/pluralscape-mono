@@ -11,10 +11,11 @@ import type { Context } from "hono";
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../services/system.service.js", () => ({
-  deleteSystem: vi.fn(),
+  archiveSystem: vi.fn(),
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
+  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
   extractIpAddress: vi.fn().mockReturnValue(null),
   extractUserAgent: vi.fn().mockReturnValue(null),
 }));
@@ -49,7 +50,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { deleteSystem } = await import("../../../services/system.service.js");
+const { archiveSystem } = await import("../../../services/system.service.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ function createApp(): Hono {
 
 describe("DELETE /systems/:id", () => {
   beforeEach(() => {
-    vi.mocked(deleteSystem).mockReset();
+    vi.mocked(archiveSystem).mockReset();
   });
 
   afterEach(() => {
@@ -74,7 +75,7 @@ describe("DELETE /systems/:id", () => {
   });
 
   it("returns 200 with ok: true on success", async () => {
-    vi.mocked(deleteSystem).mockResolvedValueOnce(undefined);
+    vi.mocked(archiveSystem).mockResolvedValueOnce(undefined);
 
     const app = createApp();
     const res = await app.request("/systems/sys_abc", { method: "DELETE" });
@@ -84,9 +85,21 @@ describe("DELETE /systems/:id", () => {
     expect(body.ok).toBe(true);
   });
 
+  it("forwards systemId, auth, and requestMeta to service", async () => {
+    vi.mocked(archiveSystem).mockResolvedValueOnce(undefined);
+
+    const app = createApp();
+    await app.request("/systems/sys_abc", { method: "DELETE" });
+
+    expect(vi.mocked(archiveSystem)).toHaveBeenCalledWith(expect.anything(), "sys_abc", MOCK_AUTH, {
+      ipAddress: null,
+      userAgent: null,
+    });
+  });
+
   it("returns 404 when system not found", async () => {
     const { ApiHttpError } = await import("../../../lib/api-error.js");
-    vi.mocked(deleteSystem).mockRejectedValueOnce(
+    vi.mocked(archiveSystem).mockRejectedValueOnce(
       new ApiHttpError(404, "NOT_FOUND", "System not found"),
     );
 
@@ -100,11 +113,11 @@ describe("DELETE /systems/:id", () => {
 
   it("returns 409 when system has dependents", async () => {
     const { ApiHttpError } = await import("../../../lib/api-error.js");
-    vi.mocked(deleteSystem).mockRejectedValueOnce(
+    vi.mocked(archiveSystem).mockRejectedValueOnce(
       new ApiHttpError(
         409,
         "CONFLICT",
-        "System has 3 member(s). Delete all members before deleting the system.",
+        "System has 3 active member(s). Delete all members before deleting the system.",
       ),
     );
 
@@ -118,7 +131,7 @@ describe("DELETE /systems/:id", () => {
 
   it("returns 409 when it is the last system", async () => {
     const { ApiHttpError } = await import("../../../lib/api-error.js");
-    vi.mocked(deleteSystem).mockRejectedValueOnce(
+    vi.mocked(archiveSystem).mockRejectedValueOnce(
       new ApiHttpError(409, "CONFLICT", "Cannot delete the only system on the account"),
     );
 
@@ -128,5 +141,17 @@ describe("DELETE /systems/:id", () => {
     expect(res.status).toBe(409);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.message).toBe("Cannot delete the only system on the account");
+  });
+
+  it("re-throws unexpected errors as 500", async () => {
+    vi.mocked(archiveSystem).mockRejectedValueOnce(new Error("DB timeout"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const app = createApp();
+    const res = await app.request("/systems/sys_abc", { method: "DELETE" });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("INTERNAL_ERROR");
   });
 });

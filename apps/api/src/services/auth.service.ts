@@ -60,6 +60,14 @@ export function extractUserAgent(c: Context): string | null {
   return c.req.header("user-agent") ?? null;
 }
 
+/** Extract both IP address and user agent as a RequestMeta object. */
+export function extractRequestMeta(c: Context): RequestMeta {
+  return {
+    ipAddress: extractIpAddress(c),
+    userAgent: extractUserAgent(c),
+  };
+}
+
 /** Determine the client platform for session TTL selection. */
 export function extractPlatform(c: Context): "web" | "mobile" {
   const header = c.req.header(CLIENT_PLATFORM_HEADER);

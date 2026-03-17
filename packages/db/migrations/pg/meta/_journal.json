@@ -15,6 +15,13 @@
       "when": 1773708847147,
       "tag": "0001_dry_blob",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773714378507,
+      "tag": "0002_clumsy_centennial",
+      "breakpoints": true
     }
   ]
 }

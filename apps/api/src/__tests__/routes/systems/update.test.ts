@@ -15,6 +15,7 @@ vi.mock("../../../services/system.service.js", () => ({
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
+  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
   extractIpAddress: vi.fn().mockReturnValue(null),
   extractUserAgent: vi.fn().mockReturnValue(null),
 }));
@@ -85,11 +86,11 @@ describe("PUT /systems/:id", () => {
 
   it("returns 200 with updated profile", async () => {
     vi.mocked(updateSystemProfile).mockResolvedValueOnce({
-      id: "sys_abc",
+      id: "sys_abc" as never,
       encryptedData: "dGVzdA==",
       version: 2,
-      createdAt: 1000,
-      updatedAt: 2000,
+      createdAt: 1000 as never,
+      updatedAt: 2000 as never,
     });
 
     const app = createApp();
@@ -98,6 +99,27 @@ describe("PUT /systems/:id", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { version: number };
     expect(body.version).toBe(2);
+  });
+
+  it("forwards systemId, body, auth, and requestMeta to service", async () => {
+    vi.mocked(updateSystemProfile).mockResolvedValueOnce({
+      id: "sys_abc" as never,
+      encryptedData: "dGVzdA==",
+      version: 2,
+      createdAt: 1000 as never,
+      updatedAt: 2000 as never,
+    });
+
+    const app = createApp();
+    await putJSON(app, "/systems/sys_abc", VALID_BODY);
+
+    expect(vi.mocked(updateSystemProfile)).toHaveBeenCalledWith(
+      expect.anything(),
+      "sys_abc",
+      VALID_BODY,
+      MOCK_AUTH,
+      { ipAddress: null, userAgent: null },
+    );
   });
 
   it("returns 400 for malformed JSON body", async () => {
@@ -154,5 +176,17 @@ describe("PUT /systems/:id", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("re-throws unexpected errors as 500", async () => {
+    vi.mocked(updateSystemProfile).mockRejectedValueOnce(new Error("DB timeout"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const app = createApp();
+    const res = await putJSON(app, "/systems/sys_abc", VALID_BODY);
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("INTERNAL_ERROR");
   });
 });

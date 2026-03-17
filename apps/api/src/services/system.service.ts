@@ -6,31 +6,31 @@ import {
 import { members, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 
-import { ApiHttpError } from "../lib/api-error.js";
-import { writeAuditLog } from "../lib/audit-log.js";
 import {
   HTTP_BAD_REQUEST,
   HTTP_CONFLICT,
   HTTP_FORBIDDEN,
   HTTP_NOT_FOUND,
-  MAX_ENCRYPTED_DATA_BYTES,
-} from "../routes/systems/systems.constants.js";
+} from "../http.constants.js";
+import { ApiHttpError } from "../lib/api-error.js";
+import { writeAuditLog } from "../lib/audit-log.js";
+import { MAX_ENCRYPTED_DATA_BYTES } from "../routes/systems/systems.constants.js";
 
 import type { RequestMeta } from "./auth.service.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { EncryptedBlob } from "@pluralscape/types";
+import type { EncryptedBlob, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
 export interface SystemProfileResult {
-  readonly id: string;
+  readonly id: SystemId;
   readonly encryptedData: string | null;
   readonly version: number;
-  readonly createdAt: number;
-  readonly updatedAt: number;
+  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -48,11 +48,11 @@ function toSystemProfileResult(row: {
   updatedAt: number;
 }): SystemProfileResult {
   return {
-    id: row.id,
+    id: row.id as SystemId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: row.createdAt as UnixMillis,
+    updatedAt: row.updatedAt as UnixMillis,
   };
 }
 
@@ -60,13 +60,19 @@ function toSystemProfileResult(row: {
 
 export async function getSystemProfile(
   db: PostgresJsDatabase,
-  systemId: string,
+  systemId: SystemId,
   auth: AuthContext,
 ): Promise<SystemProfileResult> {
   const [row] = await db
     .select()
     .from(systems)
-    .where(and(eq(systems.id, systemId), eq(systems.accountId, auth.accountId)))
+    .where(
+      and(
+        eq(systems.id, systemId),
+        eq(systems.accountId, auth.accountId),
+        eq(systems.archived, false),
+      ),
+    )
     .limit(1);
 
   if (!row) {
@@ -78,22 +84,20 @@ export async function getSystemProfile(
 
 // ── PUT ─────────────────────────────────────────────────────────────
 
-export interface UpdateSystemParams {
-  readonly encryptedData: string;
-  readonly version: number;
-}
-
 export async function updateSystemProfile(
   db: PostgresJsDatabase,
-  systemId: string,
-  params: UpdateSystemParams,
+  systemId: SystemId,
+  params: unknown,
   auth: AuthContext,
   requestMeta: RequestMeta,
 ): Promise<SystemProfileResult> {
-  const parsed = UpdateSystemBodySchema.parse(params);
+  const parsed = UpdateSystemBodySchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
+  }
 
   // Decode base64 → Uint8Array
-  const rawBytes = Buffer.from(parsed.encryptedData, "base64");
+  const rawBytes = Buffer.from(parsed.data.encryptedData, "base64");
 
   if (rawBytes.length > MAX_ENCRYPTED_DATA_BYTES) {
     throw new ApiHttpError(
@@ -115,114 +119,137 @@ export async function updateSystemProfile(
   }
 
   const timestamp = now();
-  const updated = await db
-    .update(systems)
-    .set({
-      encryptedData: blob,
-      updatedAt: timestamp,
-    })
-    .where(
-      and(
-        eq(systems.id, systemId),
-        eq(systems.accountId, auth.accountId),
-        eq(systems.version, parsed.version),
-      ),
-    )
-    .returning();
 
-  if (updated.length === 0) {
-    // Distinguish 404 vs 409
-    const [existing] = await db
-      .select({ id: systems.id })
-      .from(systems)
-      .where(and(eq(systems.id, systemId), eq(systems.accountId, auth.accountId)))
-      .limit(1);
+  return db.transaction(async (tx) => {
+    const updated = await tx
+      .update(systems)
+      .set({
+        encryptedData: blob,
+        updatedAt: timestamp,
+        version: sql`${systems.version} + 1`,
+      })
+      .where(
+        and(
+          eq(systems.id, systemId),
+          eq(systems.accountId, auth.accountId),
+          eq(systems.version, parsed.data.version),
+          eq(systems.archived, false),
+        ),
+      )
+      .returning();
 
-    if (existing) {
-      throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
+    if (updated.length === 0) {
+      const [existing] = await tx
+        .select({ id: systems.id })
+        .from(systems)
+        .where(
+          and(
+            eq(systems.id, systemId),
+            eq(systems.accountId, auth.accountId),
+            eq(systems.archived, false),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
+      }
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
     }
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-  }
 
-  const row = updated[0];
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-  }
+    // Safe: we've verified updated.length > 0 above
+    const [row] = updated as [(typeof updated)[number], ...typeof updated];
 
-  await writeAuditLog(db, {
-    accountId: auth.accountId,
-    systemId,
-    eventType: "system.profile-updated",
-    actor: { kind: "account", id: auth.accountId },
-    detail: "System profile updated",
-    ipAddress: requestMeta.ipAddress,
-    userAgent: requestMeta.userAgent,
+    await writeAuditLog(tx as PostgresJsDatabase, {
+      accountId: auth.accountId,
+      systemId,
+      eventType: "system.profile-updated",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "System profile updated",
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+    });
+
+    return toSystemProfileResult(row);
   });
-
-  return toSystemProfileResult(row);
 }
 
-// ── DELETE ───────────────────────────────────────────────────────────
+// ── DELETE (soft-delete) ────────────────────────────────────────────
 
-export async function deleteSystem(
+export async function archiveSystem(
   db: PostgresJsDatabase,
-  systemId: string,
+  systemId: SystemId,
   auth: AuthContext,
   requestMeta: RequestMeta,
 ): Promise<void> {
-  // Verify ownership
-  const [existing] = await db
-    .select({ id: systems.id })
-    .from(systems)
-    .where(and(eq(systems.id, systemId), eq(systems.accountId, auth.accountId)))
-    .limit(1);
+  await db.transaction(async (tx) => {
+    // 1. Verify ownership of non-archived system
+    const [existing] = await tx
+      .select({ id: systems.id })
+      .from(systems)
+      .where(
+        and(
+          eq(systems.id, systemId),
+          eq(systems.accountId, auth.accountId),
+          eq(systems.archived, false),
+        ),
+      )
+      .limit(1);
 
-  if (!existing) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-  }
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
+    }
 
-  // Prevent deleting the last system
-  const [systemCount] = await db
-    .select({ count: count() })
-    .from(systems)
-    .where(eq(systems.accountId, auth.accountId));
+    // 2. Prevent archiving the last active system
+    const [systemCount] = await tx
+      .select({ count: count() })
+      .from(systems)
+      .where(and(eq(systems.accountId, auth.accountId), eq(systems.archived, false)));
 
-  const systemTotal = systemCount?.count ?? 0;
-  if (systemTotal <= 1) {
-    throw new ApiHttpError(
-      HTTP_CONFLICT,
-      "CONFLICT",
-      "Cannot delete the only system on the account",
-    );
-  }
+    if ((systemCount?.count ?? 0) <= 1) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "CONFLICT",
+        "Cannot delete the only system on the account",
+      );
+    }
 
-  // Check for dependent members
-  const [memberCount] = await db
-    .select({ count: count() })
-    .from(members)
-    .where(eq(members.systemId, systemId));
+    // 3. Check for non-archived members
+    const [memberCount] = await tx
+      .select({ count: count() })
+      .from(members)
+      .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
 
-  const memberTotal = memberCount?.count ?? 0;
-  if (memberTotal > 0) {
-    throw new ApiHttpError(
-      HTTP_CONFLICT,
-      "CONFLICT",
-      `System has ${String(memberTotal)} member(s). Delete all members before deleting the system.`,
-    );
-  }
+    if ((memberCount?.count ?? 0) > 0) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "CONFLICT",
+        `System has ${String(memberCount?.count ?? 0)} active member(s). Delete all members before deleting the system.`,
+      );
+    }
 
-  await db
-    .delete(systems)
-    .where(and(eq(systems.id, systemId), eq(systems.accountId, auth.accountId)));
+    // 4. Audit log BEFORE archive (FK satisfied since system still exists)
+    await writeAuditLog(tx as PostgresJsDatabase, {
+      accountId: auth.accountId,
+      systemId,
+      eventType: "system.deleted",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "System archived (soft-delete)",
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+    });
 
-  await writeAuditLog(db, {
-    accountId: auth.accountId,
-    systemId,
-    eventType: "system.deleted",
-    actor: { kind: "account", id: auth.accountId },
-    detail: "System deleted",
-    ipAddress: requestMeta.ipAddress,
-    userAgent: requestMeta.userAgent,
+    // 5. Archive instead of hard delete
+    const timestamp = now();
+    const [archived] = await tx
+      .update(systems)
+      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
+      .where(and(eq(systems.id, systemId), eq(systems.accountId, auth.accountId)))
+      .returning({ id: systems.id });
+
+    if (!archived) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
+    }
   });
 }
 

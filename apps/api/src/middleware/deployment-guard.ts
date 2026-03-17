@@ -1,6 +1,6 @@
 import { getDeploymentMode } from "@pluralscape/db";
 
-import { HTTP_FORBIDDEN } from "./middleware.constants.js";
+import { HTTP_FORBIDDEN } from "../http.constants.js";
 
 import type { MiddlewareHandler } from "hono";
 
