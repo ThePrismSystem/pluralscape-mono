@@ -1,7 +1,7 @@
 import { auditLog } from "@pluralscape/db/pg";
 import { createId, now } from "@pluralscape/types";
 
-import { AUDIT_LOG_IP_MAX_LENGTH, AUDIT_LOG_UA_MAX_LENGTH } from "../routes/auth/auth.constants.js";
+import { AUDIT_LOG_IP_MAX_LENGTH, AUDIT_LOG_UA_MAX_LENGTH } from "./audit-log.constants.js";
 
 import type { DbAuditActor } from "@pluralscape/db";
 import type { AuditEventType } from "@pluralscape/types";

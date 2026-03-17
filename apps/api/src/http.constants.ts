@@ -24,6 +24,9 @@ export const HTTP_NOT_FOUND = 404;
 /** HTTP 409 Conflict. */
 export const HTTP_CONFLICT = 409;
 
+/** HTTP 413 Content Too Large — request body exceeds size limit. */
+export const HTTP_CONTENT_TOO_LARGE = 413;
+
 /** HTTP 429 Too Many Requests — rate limit exceeded. */
 export const HTTP_TOO_MANY_REQUESTS = 429;
 

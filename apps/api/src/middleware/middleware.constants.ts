@@ -10,3 +10,8 @@ export const HSTS_MAX_AGE_SECONDS = CORS_MAX_AGE_SECONDS * 730;
 export const MS_PER_SECOND = 1_000;
 /** Evict expired entries when the in-memory store exceeds this size. */
 export const MAX_RATE_LIMIT_ENTRIES = 10_000;
+
+// ── Body limit ──────────────────────────────────────────────────────
+
+/** Maximum request body size in bytes (256 KiB). */
+export const BODY_SIZE_LIMIT_BYTES = 262_144;
