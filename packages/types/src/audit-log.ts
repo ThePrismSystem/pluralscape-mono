@@ -56,7 +56,21 @@ export type AuditEventType =
   | "settings.pin-verified"
   | "settings.nomenclature-updated"
   | "setup.step-completed"
-  | "setup.completed";
+  | "setup.completed"
+  | "member.updated"
+  | "member.duplicated"
+  | "member.restored"
+  | "member-photo.created"
+  | "member-photo.archived"
+  | "member-photo.restored"
+  | "member-photo.reordered"
+  | "field-definition.created"
+  | "field-definition.updated"
+  | "field-definition.archived"
+  | "field-definition.restored"
+  | "field-value.set"
+  | "field-value.updated"
+  | "field-value.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

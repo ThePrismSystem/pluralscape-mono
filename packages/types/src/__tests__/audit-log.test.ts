@@ -77,6 +77,20 @@ describe("AuditEventType", () => {
         case "settings.nomenclature-updated":
         case "setup.step-completed":
         case "setup.completed":
+        case "member.updated":
+        case "member.duplicated":
+        case "member.restored":
+        case "member-photo.created":
+        case "member-photo.archived":
+        case "member-photo.restored":
+        case "member-photo.reordered":
+        case "field-definition.created":
+        case "field-definition.updated":
+        case "field-definition.archived":
+        case "field-definition.restored":
+        case "field-value.set":
+        case "field-value.updated":
+        case "field-value.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

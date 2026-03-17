@@ -1,16 +1,19 @@
 import type { BucketId, FieldDefinitionId, FieldValueId, MemberId, SystemId } from "./ids.js";
 import type { Archived, AuditMetadata } from "./utility.js";
 
-/** The supported field types for custom fields. */
-export type FieldType =
-  | "text"
-  | "number"
-  | "boolean"
-  | "date"
-  | "color"
-  | "select"
-  | "multi-select"
-  | "url";
+/** The supported field types for custom fields (single source of truth). */
+export const FIELD_TYPES = [
+  "text",
+  "number",
+  "boolean",
+  "date",
+  "color",
+  "select",
+  "multi-select",
+  "url",
+] as const;
+
+export type FieldType = (typeof FIELD_TYPES)[number];
 
 /** Per-definition visibility within a privacy bucket. */
 export interface FieldBucketVisibility {
@@ -41,6 +44,35 @@ export interface FieldValue extends AuditMetadata {
   readonly fieldDefinitionId: FieldDefinitionId;
   readonly memberId: MemberId;
   readonly value: FieldValueUnion;
+}
+
+// ── Request body types ──────────────────────────────────────────
+
+/** Request body for creating a field definition. */
+export interface CreateFieldDefinitionBody {
+  readonly fieldType: FieldType;
+  readonly required: boolean;
+  readonly sortOrder: number;
+  readonly encryptedData: string;
+}
+
+/** Request body for updating a field definition. */
+export interface UpdateFieldDefinitionBody {
+  readonly required?: boolean;
+  readonly sortOrder?: number;
+  readonly encryptedData: string;
+  readonly version: number;
+}
+
+/** Request body for setting a field value. */
+export interface SetFieldValueBody {
+  readonly encryptedData: string;
+}
+
+/** Request body for updating a field value. */
+export interface UpdateFieldValueBody {
+  readonly encryptedData: string;
+  readonly version: number;
 }
 
 /** Discriminated union of typed field values. */

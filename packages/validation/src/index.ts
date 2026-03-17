@@ -28,7 +28,23 @@ export {
   VerifyPinBodySchema,
 } from "./settings.js";
 export {
+  CreateMemberBodySchema,
+  UpdateMemberBodySchema,
+  DuplicateMemberBodySchema,
+} from "./member.js";
+export {
+  CreateFieldDefinitionBodySchema,
+  UpdateFieldDefinitionBodySchema,
+  SetFieldValueBodySchema,
+  UpdateFieldValueBodySchema,
+} from "./custom-fields.js";
+export { CreateMemberPhotoBodySchema, ReorderPhotosBodySchema } from "./member-photo.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_REORDER_OPERATIONS,
+  MAX_ENCRYPTED_MEMBER_DATA_SIZE,
+  MAX_ENCRYPTED_PHOTO_DATA_SIZE,
+  MAX_ENCRYPTED_FIELD_DATA_SIZE,
+  MAX_ENCRYPTED_FIELD_VALUE_SIZE,
 } from "./validation.constants.js";

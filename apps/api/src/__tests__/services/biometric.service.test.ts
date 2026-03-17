@@ -29,11 +29,15 @@ vi.mock("@pluralscape/db/pg", () => ({
   },
 }));
 
-vi.mock("@pluralscape/types", () => ({
-  ID_PREFIXES: { biometricToken: "bt_" },
-  createId: vi.fn().mockReturnValue("bt_test123"),
-  now: vi.fn().mockReturnValue(1700000000000),
-}));
+vi.mock("@pluralscape/types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/types")>();
+  return {
+    ...actual,
+    ID_PREFIXES: { biometricToken: "bt_" },
+    createId: vi.fn().mockReturnValue("bt_test123"),
+    now: vi.fn().mockReturnValue(1700000000000),
+  };
+});
 
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col, val) => ({ col, val, op: "eq" })),

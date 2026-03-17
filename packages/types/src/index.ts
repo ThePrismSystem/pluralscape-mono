@@ -117,6 +117,10 @@ export type {
   MemberListItem,
   SystemListItem,
   SystemDuplicationScope,
+  CreateMemberBody,
+  UpdateMemberBody,
+  CreateMemberPhotoBody,
+  DuplicateMemberBody,
 } from "./identity.js";
 
 // ── Fronting ────────────────────────────────────────────────────────
@@ -469,6 +473,7 @@ export type {
 } from "./lifecycle.js";
 
 // ── Custom fields ─────────────────────────────────────────────────
+export { FIELD_TYPES } from "./custom-fields.js";
 export type {
   FieldType,
   FieldBucketVisibility,
@@ -476,6 +481,10 @@ export type {
   ArchivedFieldDefinition,
   FieldValue,
   FieldValueUnion,
+  CreateFieldDefinitionBody,
+  UpdateFieldDefinitionBody,
+  SetFieldValueBody,
+  UpdateFieldValueBody,
 } from "./custom-fields.js";
 
 // ── Journal ───────────────────────────────────────────────────────
