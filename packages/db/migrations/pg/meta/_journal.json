@@ -15,6 +15,13 @@
       "when": 1773729877820,
       "tag": "0001_silky_the_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773779923764,
+      "tag": "0002_thick_wallow",
+      "breakpoints": true
     }
   ]
 }
