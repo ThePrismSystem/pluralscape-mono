@@ -61,6 +61,9 @@ CLAUDE.md
 # Security audit working files
 security-audit-results.tsv
 
+# UI design explorations (local/scratch work)
+ui-design-local/
+
 # Temporary files
 .tmp/
 *.log
