@@ -143,7 +143,7 @@ describe("createGroup", () => {
     );
   });
 
-  it("throws 400 for oversized blob", async () => {
+  it("throws 400 for oversized encryptedData", async () => {
     const { db } = mockDb();
     const oversized = Buffer.from(new Uint8Array(70_000)).toString("base64");
 
@@ -155,7 +155,7 @@ describe("createGroup", () => {
         AUTH,
         mockAudit,
       ),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "BLOB_TOO_LARGE" }));
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws 400 for malformed blob", async () => {
@@ -345,7 +345,7 @@ describe("deleteGroup", () => {
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ eventType: "group.archived" }),
+      expect.objectContaining({ eventType: "group.deleted" }),
     );
   });
 
@@ -524,9 +524,13 @@ describe("reorderGroups", () => {
     );
 
     expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledTimes(1);
     expect(mockAudit).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ eventType: "group.updated" }),
+      expect.objectContaining({
+        eventType: "group.updated",
+        detail: "Reordered 1 group(s)",
+      }),
     );
   });
 

@@ -7,7 +7,7 @@ import {
   ReorderGroupsBodySchema,
   UpdateGroupBodySchema,
 } from "../group.js";
-import { MAX_ENCRYPTED_GROUP_DATA_SIZE } from "../validation.constants.js";
+import { MAX_ENCRYPTED_DATA_SIZE } from "../validation.constants.js";
 
 describe("CreateGroupBodySchema", () => {
   it("accepts a valid body", () => {
@@ -64,7 +64,7 @@ describe("CreateGroupBodySchema", () => {
   });
 
   it("rejects encryptedData exceeding max size", () => {
-    const oversized = "x".repeat(MAX_ENCRYPTED_GROUP_DATA_SIZE + 1);
+    const oversized = "x".repeat(MAX_ENCRYPTED_DATA_SIZE + 1);
     const result = CreateGroupBodySchema.safeParse({
       encryptedData: oversized,
       parentGroupId: null,
@@ -74,7 +74,7 @@ describe("CreateGroupBodySchema", () => {
   });
 
   it("accepts encryptedData at exactly max size", () => {
-    const atLimit = "x".repeat(MAX_ENCRYPTED_GROUP_DATA_SIZE);
+    const atLimit = "x".repeat(MAX_ENCRYPTED_DATA_SIZE);
     const result = CreateGroupBodySchema.safeParse({
       encryptedData: atLimit,
       parentGroupId: null,

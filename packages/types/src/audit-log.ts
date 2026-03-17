@@ -43,7 +43,9 @@ export type AuditEventType =
   | "custom-front.created"
   | "custom-front.updated"
   | "custom-front.archived"
-  | "custom-front.restored";
+  | "custom-front.restored"
+  | "group.deleted"
+  | "custom-front.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

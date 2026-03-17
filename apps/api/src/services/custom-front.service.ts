@@ -1,25 +1,18 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
 import { customFronts, frontingSessions } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
-import {
-  HTTP_BAD_REQUEST,
-  HTTP_CONFLICT,
-  HTTP_FORBIDDEN,
-  HTTP_NOT_FOUND,
-} from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { assertOccUpdated } from "../lib/occ-update.js";
 import {
-  DEFAULT_CUSTOM_FRONT_LIMIT,
-  MAX_CUSTOM_FRONT_LIMIT,
+  DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
-} from "../routes/custom-fronts/custom-fronts.constants.js";
+  MAX_PAGE_LIMIT,
+} from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -48,10 +41,6 @@ export interface CustomFrontResult {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function encryptedBlobToBase64(blob: EncryptedBlob): string {
-  return Buffer.from(serializeEncryptedBlob(blob)).toString("base64");
-}
-
 function toCustomFrontResult(row: {
   id: string;
   systemId: string;
@@ -74,44 +63,6 @@ function toCustomFrontResult(row: {
   };
 }
 
-function assertSystemOwnership(auth: AuthContext, systemId: SystemId): void {
-  if (auth.systemId !== systemId) {
-    throw new ApiHttpError(HTTP_FORBIDDEN, "FORBIDDEN", "System access denied");
-  }
-}
-
-function parseAndValidateBlob(
-  params: unknown,
-  schema: typeof CreateCustomFrontBodySchema | typeof UpdateCustomFrontBodySchema,
-): { parsed: { encryptedData: string; version?: number }; blob: EncryptedBlob } {
-  const result = schema.safeParse(params);
-  if (!result.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid payload");
-  }
-
-  const rawBytes = Buffer.from(result.data.encryptedData, "base64");
-
-  if (rawBytes.length > MAX_ENCRYPTED_DATA_BYTES) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "BLOB_TOO_LARGE",
-      `encryptedData exceeds maximum size of ${String(MAX_ENCRYPTED_DATA_BYTES)} bytes`,
-    );
-  }
-
-  let blob: EncryptedBlob;
-  try {
-    blob = deserializeEncryptedBlob(new Uint8Array(rawBytes));
-  } catch (error) {
-    if (error instanceof InvalidInputError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
-    }
-    throw error;
-  }
-
-  return { parsed: result.data, blob };
-}
-
 // ── CREATE ──────────────────────────────────────────────────────────
 
 export async function createCustomFront(
@@ -123,7 +74,11 @@ export async function createCustomFront(
 ): Promise<CustomFrontResult> {
   assertSystemOwnership(auth, systemId);
 
-  const { blob } = parseAndValidateBlob(params, CreateCustomFrontBodySchema);
+  const { blob } = parseAndValidateBlob(
+    params,
+    CreateCustomFrontBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
 
   const cfId = createId(ID_PREFIXES.customFront);
   const timestamp = now();
@@ -162,11 +117,11 @@ export async function listCustomFronts(
   systemId: SystemId,
   auth: AuthContext,
   cursor?: PaginationCursor,
-  limit = DEFAULT_CUSTOM_FRONT_LIMIT,
+  limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<CustomFrontResult>> {
   assertSystemOwnership(auth, systemId);
 
-  const effectiveLimit = Math.min(limit, MAX_CUSTOM_FRONT_LIMIT);
+  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
   const conditions = [eq(customFronts.systemId, systemId), eq(customFronts.archived, false)];
 
@@ -235,8 +190,12 @@ export async function updateCustomFront(
 ): Promise<CustomFrontResult> {
   assertSystemOwnership(auth, systemId);
 
-  const { parsed, blob } = parseAndValidateBlob(params, UpdateCustomFrontBodySchema);
-  const version = parsed.version as number;
+  const { parsed, blob } = parseAndValidateBlob(
+    params,
+    UpdateCustomFrontBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
+  const version = parsed.version;
   const timestamp = now();
 
   return db.transaction(async (tx) => {
@@ -257,26 +216,24 @@ export async function updateCustomFront(
       )
       .returning();
 
-    if (updated.length === 0) {
-      const [existing] = await tx
-        .select({ id: customFronts.id })
-        .from(customFronts)
-        .where(
-          and(
-            eq(customFronts.id, customFrontId),
-            eq(customFronts.systemId, systemId),
-            eq(customFronts.archived, false),
-          ),
-        )
-        .limit(1);
-
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Custom front not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
+    const row = await assertOccUpdated(
+      updated,
+      async () => {
+        const [existing] = await tx
+          .select({ id: customFronts.id })
+          .from(customFronts)
+          .where(
+            and(
+              eq(customFronts.id, customFrontId),
+              eq(customFronts.systemId, systemId),
+              eq(customFronts.archived, false),
+            ),
+          )
+          .limit(1);
+        return existing;
+      },
+      "Custom front",
+    );
 
     await audit(tx, {
       eventType: "custom-front.updated",
@@ -323,16 +280,20 @@ export async function deleteCustomFront(
       .from(frontingSessions)
       .where(eq(frontingSessions.customFrontId, customFrontId));
 
-    if ((sessionCount?.count ?? 0) > 0) {
+    if (!sessionCount) {
+      throw new Error("Unexpected: count query returned no rows");
+    }
+
+    if (sessionCount.count > 0) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `Custom front has ${String(sessionCount?.count ?? 0)} fronting session(s). Archive instead of deleting.`,
+        `Custom front has ${String(sessionCount.count)} fronting session(s). Archive instead of deleting.`,
       );
     }
 
     await audit(tx, {
-      eventType: "custom-front.archived",
+      eventType: "custom-front.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Custom front deleted",
       systemId,
@@ -428,6 +389,10 @@ export async function restoreCustomFront(
       })
       .where(and(eq(customFronts.id, customFrontId), eq(customFronts.systemId, systemId)))
       .returning();
+
+    if (updated.length === 0) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived custom front not found");
+    }
 
     const [row] = updated as [(typeof updated)[number], ...typeof updated];
 

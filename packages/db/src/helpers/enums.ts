@@ -206,6 +206,8 @@ export const AUDIT_EVENT_TYPES = [
   "custom-front.updated",
   "custom-front.archived",
   "custom-front.restored",
+  "group.deleted",
+  "custom-front.deleted",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",

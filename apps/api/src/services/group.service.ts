@@ -1,8 +1,3 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
 import { groupMemberships, groups } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import {
@@ -13,19 +8,17 @@ import {
 } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
-import {
-  HTTP_BAD_REQUEST,
-  HTTP_CONFLICT,
-  HTTP_FORBIDDEN,
-  HTTP_NOT_FOUND,
-} from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { assertOccUpdated } from "../lib/occ-update.js";
+import { MAX_ANCESTOR_DEPTH } from "../routes/groups/groups.constants.js";
 import {
-  DEFAULT_GROUP_LIMIT,
-  MAX_ANCESTOR_DEPTH,
+  DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
-  MAX_GROUP_LIMIT,
-} from "../routes/groups/groups.constants.js";
+  MAX_PAGE_LIMIT,
+} from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -56,10 +49,6 @@ export interface GroupResult {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function encryptedBlobToBase64(blob: EncryptedBlob): string {
-  return Buffer.from(serializeEncryptedBlob(blob)).toString("base64");
-}
-
 function toGroupResult(row: {
   id: string;
   systemId: string;
@@ -86,12 +75,6 @@ function toGroupResult(row: {
   };
 }
 
-function assertSystemOwnership(auth: AuthContext, systemId: SystemId): void {
-  if (auth.systemId !== systemId) {
-    throw new ApiHttpError(HTTP_FORBIDDEN, "FORBIDDEN", "System access denied");
-  }
-}
-
 // ── CREATE ──────────────────────────────────────────────────────────
 
 export async function createGroup(
@@ -103,43 +86,24 @@ export async function createGroup(
 ): Promise<GroupResult> {
   assertSystemOwnership(auth, systemId);
 
-  const parsed = CreateGroupBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
-  }
-
-  const rawBytes = Buffer.from(parsed.data.encryptedData, "base64");
-
-  if (rawBytes.length > MAX_ENCRYPTED_DATA_BYTES) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "BLOB_TOO_LARGE",
-      `encryptedData exceeds maximum size of ${String(MAX_ENCRYPTED_DATA_BYTES)} bytes`,
-    );
-  }
-
-  let blob: EncryptedBlob;
-  try {
-    blob = deserializeEncryptedBlob(new Uint8Array(rawBytes));
-  } catch (error) {
-    if (error instanceof InvalidInputError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
-    }
-    throw error;
-  }
+  const { parsed, blob } = parseAndValidateBlob(
+    params,
+    CreateGroupBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
 
   const groupId = createId(ID_PREFIXES.group);
   const timestamp = now();
 
   return db.transaction(async (tx) => {
     // Validate parentGroupId exists in same system if non-null
-    if (parsed.data.parentGroupId !== null) {
+    if (parsed.parentGroupId !== null) {
       const [parent] = await tx
         .select({ id: groups.id })
         .from(groups)
         .where(
           and(
-            eq(groups.id, parsed.data.parentGroupId),
+            eq(groups.id, parsed.parentGroupId),
             eq(groups.systemId, systemId),
             eq(groups.archived, false),
           ),
@@ -156,8 +120,8 @@ export async function createGroup(
       .values({
         id: groupId,
         systemId,
-        parentGroupId: parsed.data.parentGroupId,
-        sortOrder: parsed.data.sortOrder,
+        parentGroupId: parsed.parentGroupId,
+        sortOrder: parsed.sortOrder,
         encryptedData: blob,
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -186,11 +150,11 @@ export async function listGroups(
   systemId: SystemId,
   auth: AuthContext,
   cursor?: PaginationCursor,
-  limit = DEFAULT_GROUP_LIMIT,
+  limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupResult>> {
   assertSystemOwnership(auth, systemId);
 
-  const effectiveLimit = Math.min(limit, MAX_GROUP_LIMIT);
+  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
   const conditions = [eq(groups.systemId, systemId), eq(groups.archived, false)];
 
@@ -202,7 +166,7 @@ export async function listGroups(
     .select()
     .from(groups)
     .where(and(...conditions))
-    .orderBy(groups.sortOrder, groups.id)
+    .orderBy(groups.id)
     .limit(effectiveLimit + 1);
 
   const hasMore = rows.length > effectiveLimit;
@@ -253,30 +217,11 @@ export async function updateGroup(
 ): Promise<GroupResult> {
   assertSystemOwnership(auth, systemId);
 
-  const parsed = UpdateGroupBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
-  }
-
-  const rawBytes = Buffer.from(parsed.data.encryptedData, "base64");
-
-  if (rawBytes.length > MAX_ENCRYPTED_DATA_BYTES) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "BLOB_TOO_LARGE",
-      `encryptedData exceeds maximum size of ${String(MAX_ENCRYPTED_DATA_BYTES)} bytes`,
-    );
-  }
-
-  let blob: EncryptedBlob;
-  try {
-    blob = deserializeEncryptedBlob(new Uint8Array(rawBytes));
-  } catch (error) {
-    if (error instanceof InvalidInputError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
-    }
-    throw error;
-  }
+  const { parsed, blob } = parseAndValidateBlob(
+    params,
+    UpdateGroupBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
 
   const timestamp = now();
 
@@ -292,28 +237,26 @@ export async function updateGroup(
         and(
           eq(groups.id, groupId),
           eq(groups.systemId, systemId),
-          eq(groups.version, parsed.data.version),
+          eq(groups.version, parsed.version),
           eq(groups.archived, false),
         ),
       )
       .returning();
 
-    if (updated.length === 0) {
-      const [existing] = await tx
-        .select({ id: groups.id })
-        .from(groups)
-        .where(
-          and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)),
-        )
-        .limit(1);
-
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
+    const row = await assertOccUpdated(
+      updated,
+      async () => {
+        const [existing] = await tx
+          .select({ id: groups.id })
+          .from(groups)
+          .where(
+            and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)),
+          )
+          .limit(1);
+        return existing;
+      },
+      "Group",
+    );
 
     await audit(tx, {
       eventType: "group.updated",
@@ -367,8 +310,12 @@ export async function deleteGroup(
       .from(groupMemberships)
       .where(and(eq(groupMemberships.groupId, groupId), eq(groupMemberships.systemId, systemId)));
 
-    const children = childCount?.count ?? 0;
-    const memberships = membershipCount?.count ?? 0;
+    if (!childCount || !membershipCount) {
+      throw new Error("Unexpected: count query returned no rows");
+    }
+
+    const children = childCount.count;
+    const memberships = membershipCount.count;
 
     if (children > 0 || memberships > 0) {
       throw new ApiHttpError(
@@ -380,7 +327,7 @@ export async function deleteGroup(
 
     // Audit before delete (FK satisfied since group still exists)
     await audit(tx, {
-      eventType: "group.archived",
+      eventType: "group.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "Group deleted",
       systemId,
@@ -451,7 +398,19 @@ export async function moveGroup(
           .from(groups)
           .where(and(eq(groups.id, currentId), eq(groups.systemId, systemId)))
           .limit(1);
-        currentId = ancestor?.parentGroupId ?? null;
+        if (!ancestor) {
+          throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Group hierarchy integrity violation");
+        }
+        currentId = ancestor.parentGroupId;
+      }
+
+      // If we exhausted the depth limit without reaching root, reject
+      if (currentId !== null) {
+        throw new ApiHttpError(
+          HTTP_CONFLICT,
+          "CONFLICT",
+          "Group hierarchy too deep or contains a cycle",
+        );
       }
     }
 
@@ -473,22 +432,20 @@ export async function moveGroup(
       )
       .returning();
 
-    if (updated.length === 0) {
-      const [existing] = await tx
-        .select({ id: groups.id })
-        .from(groups)
-        .where(
-          and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)),
-        )
-        .limit(1);
-
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
+    const row = await assertOccUpdated(
+      updated,
+      async () => {
+        const [existing] = await tx
+          .select({ id: groups.id })
+          .from(groups)
+          .where(
+            and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)),
+          )
+          .limit(1);
+        return existing;
+      },
+      "Group",
+    );
 
     await audit(tx, {
       eventType: "group.moved",
@@ -575,14 +532,14 @@ export async function reorderGroups(
       if (updated.length === 0) {
         throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `Group ${op.groupId} not found`);
       }
-
-      await audit(tx, {
-        eventType: "group.updated",
-        actor: { kind: "account", id: auth.accountId },
-        detail: `Group ${op.groupId} reordered to ${String(op.sortOrder)}`,
-        systemId,
-      });
     }
+
+    await audit(tx, {
+      eventType: "group.updated",
+      actor: { kind: "account", id: auth.accountId },
+      detail: `Reordered ${String(parsed.data.operations.length)} group(s)`,
+      systemId,
+    });
   });
 }
 
@@ -673,6 +630,10 @@ export async function restoreGroup(
       })
       .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId)))
       .returning();
+
+    if (updated.length === 0) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived group not found");
+    }
 
     const [row] = updated as [(typeof updated)[number], ...typeof updated];
 

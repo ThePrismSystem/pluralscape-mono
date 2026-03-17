@@ -17,7 +17,6 @@ export {
 export { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "./custom-front.js";
 export {
   AUTH_MIN_PASSWORD_LENGTH,
-  MAX_ENCRYPTED_GROUP_DATA_SIZE,
-  MAX_ENCRYPTED_CUSTOM_FRONT_DATA_SIZE,
+  MAX_ENCRYPTED_DATA_SIZE,
   MAX_REORDER_OPERATIONS,
 } from "./validation.constants.js";

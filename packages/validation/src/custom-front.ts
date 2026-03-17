@@ -1,16 +1,16 @@
 import { z } from "zod/v4";
 
-import { MAX_ENCRYPTED_CUSTOM_FRONT_DATA_SIZE } from "./validation.constants.js";
+import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
 
 export const CreateCustomFrontBodySchema = z
   .object({
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_CUSTOM_FRONT_DATA_SIZE),
+    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
   })
   .readonly();
 
 export const UpdateCustomFrontBodySchema = z
   .object({
-    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_CUSTOM_FRONT_DATA_SIZE),
+    encryptedData: z.string().min(1).max(MAX_ENCRYPTED_DATA_SIZE),
     version: z.int().min(1),
   })
   .readonly();

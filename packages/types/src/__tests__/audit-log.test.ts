@@ -67,6 +67,8 @@ describe("AuditEventType", () => {
         case "custom-front.updated":
         case "custom-front.archived":
         case "custom-front.restored":
+        case "group.deleted":
+        case "custom-front.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

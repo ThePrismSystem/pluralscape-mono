@@ -107,7 +107,7 @@ describe("enum arrays", () => {
   });
 
   it("AUDIT_EVENT_TYPES matches AuditEventType union", () => {
-    expect(AUDIT_EVENT_TYPES).toHaveLength(40);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(42);
     expect(AUDIT_EVENT_TYPES).toContain("auth.login");
     expect(AUDIT_EVENT_TYPES).toContain("device.security.jailbreak_warning_shown");
     expect(AUDIT_EVENT_TYPES).toContain("auth.password-reset-via-recovery");
@@ -279,7 +279,7 @@ describe("enum arrays", () => {
     expect(SYNC_RESOLUTIONS).toHaveLength(3);
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_SCOPES).toHaveLength(16);
-    expect(AUDIT_EVENT_TYPES).toHaveLength(40);
+    expect(AUDIT_EVENT_TYPES).toHaveLength(42);
     expect(CHANNEL_TYPES).toHaveLength(2);
     expect(POLL_STATUSES).toHaveLength(2);
     expect(POLL_KINDS).toHaveLength(2);

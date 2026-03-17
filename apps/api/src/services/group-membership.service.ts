@@ -3,14 +3,10 @@ import { now, toCursor } from "@pluralscape/types";
 import { AddGroupMemberBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
-import {
-  HTTP_BAD_REQUEST,
-  HTTP_CONFLICT,
-  HTTP_FORBIDDEN,
-  HTTP_NOT_FOUND,
-} from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { DEFAULT_GROUP_LIMIT, MAX_GROUP_LIMIT } from "../routes/groups/groups.constants.js";
+import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -47,12 +43,6 @@ function toMembershipResult(row: {
     systemId: row.systemId as SystemId,
     createdAt: row.createdAt as UnixMillis,
   };
-}
-
-function assertSystemOwnership(auth: AuthContext, systemId: SystemId): void {
-  if (auth.systemId !== systemId) {
-    throw new ApiHttpError(HTTP_FORBIDDEN, "FORBIDDEN", "System access denied");
-  }
 }
 
 // ── ADD MEMBER ──────────────────────────────────────────────────────
@@ -179,7 +169,7 @@ export async function listGroupMembers(
   groupId: GroupId,
   auth: AuthContext,
   cursor?: PaginationCursor,
-  limit = DEFAULT_GROUP_LIMIT,
+  limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(auth, systemId);
 
@@ -194,7 +184,7 @@ export async function listGroupMembers(
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
   }
 
-  const effectiveLimit = Math.min(limit, MAX_GROUP_LIMIT);
+  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
   const conditions = [
     eq(groupMemberships.groupId, groupId),

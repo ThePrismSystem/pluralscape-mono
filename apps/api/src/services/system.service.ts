@@ -1,25 +1,17 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
 import { members, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
-import {
-  HTTP_BAD_REQUEST,
-  HTTP_CONFLICT,
-  HTTP_FORBIDDEN,
-  HTTP_NOT_FOUND,
-} from "../http.constants.js";
+import { HTTP_CONFLICT, HTTP_FORBIDDEN, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { encryptedBlobToBase64OrNull, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { assertOccUpdated } from "../lib/occ-update.js";
 import {
-  DEFAULT_SYSTEM_LIMIT,
+  DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
-  MAX_SYSTEM_LIMIT,
-} from "../routes/systems/systems.constants.js";
+  MAX_PAGE_LIMIT,
+} from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -45,11 +37,6 @@ export interface SystemProfileResult {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function encryptedBlobToBase64(blob: EncryptedBlob | null): string | null {
-  if (blob === null) return null;
-  return Buffer.from(serializeEncryptedBlob(blob)).toString("base64");
-}
-
 function toSystemProfileResult(row: {
   id: string;
   encryptedData: EncryptedBlob | null;
@@ -59,7 +46,7 @@ function toSystemProfileResult(row: {
 }): SystemProfileResult {
   return {
     id: row.id as SystemId,
-    encryptedData: encryptedBlobToBase64(row.encryptedData),
+    encryptedData: encryptedBlobToBase64OrNull(row.encryptedData),
     version: row.version,
     createdAt: row.createdAt as UnixMillis,
     updatedAt: row.updatedAt as UnixMillis,
@@ -72,9 +59,9 @@ export async function listSystems(
   db: PostgresJsDatabase,
   accountId: AccountId,
   cursor?: PaginationCursor,
-  limit = DEFAULT_SYSTEM_LIMIT,
+  limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<SystemProfileResult>> {
-  const effectiveLimit = Math.min(limit, MAX_SYSTEM_LIMIT);
+  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
   const conditions = [eq(systems.accountId, accountId), eq(systems.archived, false)];
 
@@ -137,32 +124,11 @@ export async function updateSystemProfile(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SystemProfileResult> {
-  const parsed = UpdateSystemBodySchema.safeParse(params);
-  if (!parsed.success) {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
-  }
-
-  // Decode base64 → Uint8Array
-  const rawBytes = Buffer.from(parsed.data.encryptedData, "base64");
-
-  if (rawBytes.length > MAX_ENCRYPTED_DATA_BYTES) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "BLOB_TOO_LARGE",
-      `encryptedData exceeds maximum size of ${String(MAX_ENCRYPTED_DATA_BYTES)} bytes`,
-    );
-  }
-
-  // Validate blob structure — deserialize round-trips to verify integrity
-  let blob: EncryptedBlob;
-  try {
-    blob = deserializeEncryptedBlob(new Uint8Array(rawBytes));
-  } catch (error) {
-    if (error instanceof InvalidInputError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
-    }
-    throw error;
-  }
+  const { parsed, blob } = parseAndValidateBlob(
+    params,
+    UpdateSystemBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
 
   const timestamp = now();
 
@@ -178,33 +144,30 @@ export async function updateSystemProfile(
         and(
           eq(systems.id, systemId),
           eq(systems.accountId, auth.accountId),
-          eq(systems.version, parsed.data.version),
+          eq(systems.version, parsed.version),
           eq(systems.archived, false),
         ),
       )
       .returning();
 
-    if (updated.length === 0) {
-      const [existing] = await tx
-        .select({ id: systems.id })
-        .from(systems)
-        .where(
-          and(
-            eq(systems.id, systemId),
-            eq(systems.accountId, auth.accountId),
-            eq(systems.archived, false),
-          ),
-        )
-        .limit(1);
-
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-    }
-
-    // Safe: we've verified updated.length > 0 above
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
+    const row = await assertOccUpdated(
+      updated,
+      async () => {
+        const [existing] = await tx
+          .select({ id: systems.id })
+          .from(systems)
+          .where(
+            and(
+              eq(systems.id, systemId),
+              eq(systems.accountId, auth.accountId),
+              eq(systems.archived, false),
+            ),
+          )
+          .limit(1);
+        return existing;
+      },
+      "System",
+    );
 
     await audit(tx, {
       eventType: "system.profile-updated",
@@ -249,7 +212,11 @@ export async function archiveSystem(
       .from(systems)
       .where(and(eq(systems.accountId, auth.accountId), eq(systems.archived, false)));
 
-    if ((systemCount?.count ?? 0) <= 1) {
+    if (!systemCount) {
+      throw new Error("Unexpected: count query returned no rows");
+    }
+
+    if (systemCount.count <= 1) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "CONFLICT",
@@ -263,11 +230,15 @@ export async function archiveSystem(
       .from(members)
       .where(and(eq(members.systemId, systemId), eq(members.archived, false)));
 
-    if ((memberCount?.count ?? 0) > 0) {
+    if (!memberCount) {
+      throw new Error("Unexpected: count query returned no rows");
+    }
+
+    if (memberCount.count > 0) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `System has ${String(memberCount?.count ?? 0)} active member(s). Delete all members before deleting the system.`,
+        `System has ${String(memberCount.count)} active member(s). Delete all members before deleting the system.`,
       );
     }
 
