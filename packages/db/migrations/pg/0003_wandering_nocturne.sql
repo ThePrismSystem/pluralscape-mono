@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "biometric_tokens_token_hash_idx" ON "biometric_tokens" USING btree ("token_hash");

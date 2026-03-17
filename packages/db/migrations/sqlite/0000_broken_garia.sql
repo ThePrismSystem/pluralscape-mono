@@ -84,7 +84,7 @@ CREATE TABLE `audit_log` (
 	PRIMARY KEY(`id`, `timestamp`),
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "audit_log_event_type_check" CHECK("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
+	CONSTRAINT "audit_log_event_type_check" CHECK("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
 	CONSTRAINT "audit_log_detail_length_check" CHECK("audit_log"."detail" IS NULL OR length("audit_log"."detail") <= 2048)
 );
 --> statement-breakpoint

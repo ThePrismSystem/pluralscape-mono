@@ -1,5 +1,5 @@
 {
-  "id": "fc8571d3-9f41-4692-8842-d6345786e09c",
+  "id": "d2981cc9-7bcc-4f89-8747-cc505495cc06",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -726,7 +726,7 @@
       "checkConstraints": {
         "audit_log_event_type_check": {
           "name": "audit_log_event_type_check",
-          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)"
+          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42)"
         },
         "audit_log_detail_length_check": {
           "name": "audit_log_detail_length_check",
@@ -813,6 +813,84 @@
           "value": "\"auth_keys\".\"key_type\" IS NULL OR \"auth_keys\".\"key_type\" IN ($1, $2)"
         }
       },
+      "isRLSEnabled": false
+    },
+    "public.biometric_tokens": {
+      "name": "biometric_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "biometric_tokens_session_id_idx": {
+          "name": "biometric_tokens_session_id_idx",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "biometric_tokens_token_hash_idx": {
+          "name": "biometric_tokens_token_hash_idx",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "biometric_tokens_session_id_sessions_id_fk": {
+          "name": "biometric_tokens_session_id_sessions_id_fk",
+          "tableFrom": "biometric_tokens",
+          "tableTo": "sessions",
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.blob_metadata": {

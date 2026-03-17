@@ -1,7 +1,7 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
-import { MAX_ENCRYPTED_DATA_BYTES } from "../routes/systems/systems.constants.js";
+import { MAX_ENCRYPTED_DATA_BYTES } from "../service.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 

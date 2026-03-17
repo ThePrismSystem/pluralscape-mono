@@ -68,7 +68,7 @@ CREATE TABLE "audit_log" (
 	"detail" text,
 	CONSTRAINT "audit_log_id_timestamp_pk" PRIMARY KEY("id","timestamp"),
 	CONSTRAINT "audit_log_id_unique" UNIQUE("id","timestamp"),
-	CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)),
+	CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42)),
 	CONSTRAINT "audit_log_detail_length_check" CHECK ("audit_log"."detail" IS NULL OR length("audit_log"."detail") <= 2048)
 );
 --> statement-breakpoint
@@ -80,6 +80,13 @@ CREATE TABLE "auth_keys" (
 	"key_type" varchar(50) NOT NULL,
 	"created_at" timestamptz NOT NULL,
 	CONSTRAINT "auth_keys_key_type_check" CHECK ("auth_keys"."key_type" IS NULL OR "auth_keys"."key_type" IN ($1, $2))
+);
+--> statement-breakpoint
+CREATE TABLE "biometric_tokens" (
+	"id" varchar(50) PRIMARY KEY NOT NULL,
+	"session_id" varchar(50) NOT NULL,
+	"token_hash" varchar(128) NOT NULL,
+	"created_at" timestamptz NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "blob_metadata" (
@@ -988,6 +995,7 @@ ALTER TABLE "api_keys" ADD CONSTRAINT "api_keys_system_id_account_id_systems_id_
 ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "auth_keys" ADD CONSTRAINT "auth_keys_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "biometric_tokens" ADD CONSTRAINT "biometric_tokens_session_id_sessions_id_fk" FOREIGN KEY ("session_id") REFERENCES "public"."sessions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "blob_metadata" ADD CONSTRAINT "blob_metadata_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "blob_metadata" ADD CONSTRAINT "blob_metadata_bucket_id_buckets_id_fk" FOREIGN KEY ("bucket_id") REFERENCES "public"."buckets"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "blob_metadata" ADD CONSTRAINT "blob_metadata_thumbnail_of_blob_id_blob_metadata_id_fk" FOREIGN KEY ("thumbnail_of_blob_id") REFERENCES "public"."blob_metadata"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -1119,6 +1127,8 @@ CREATE INDEX "audit_log_system_timestamp_idx" ON "audit_log" USING btree ("syste
 CREATE INDEX "audit_log_system_event_type_timestamp_idx" ON "audit_log" USING btree ("system_id","event_type","timestamp");--> statement-breakpoint
 CREATE INDEX "audit_log_timestamp_idx" ON "audit_log" USING btree ("timestamp");--> statement-breakpoint
 CREATE INDEX "auth_keys_account_id_idx" ON "auth_keys" USING btree ("account_id");--> statement-breakpoint
+CREATE INDEX "biometric_tokens_session_id_idx" ON "biometric_tokens" USING btree ("session_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "biometric_tokens_token_hash_idx" ON "biometric_tokens" USING btree ("token_hash");--> statement-breakpoint
 CREATE INDEX "blob_metadata_system_id_purpose_idx" ON "blob_metadata" USING btree ("system_id","purpose");--> statement-breakpoint
 CREATE INDEX "blob_metadata_system_archived_idx" ON "blob_metadata" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE UNIQUE INDEX "blob_metadata_storage_key_idx" ON "blob_metadata" USING btree ("storage_key");--> statement-breakpoint
