@@ -1,11 +1,11 @@
 ---
 # api-c7bc
 title: Setup wizard multi-step API
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-16T11:56:58Z
-updated_at: 2026-03-17T20:42:22Z
+updated_at: 2026-03-17T21:41:58Z
 parent: api-c3a1
 blocked_by:
   - api-6fv1
@@ -13,3 +13,10 @@ blocked_by:
 ---
 
 POST .../setup/nomenclature (step 1). POST .../setup/profile (step 2). POST .../setup/complete (step 3: mark onboardingComplete, verify recovery key backup acknowledged). Each step idempotent.
+
+## Summary of Changes
+
+- POST /setup/nomenclature (step 1, idempotent upsert)
+- POST /setup/profile (step 2, system encryptedData update)
+- POST /setup/complete (step 3, creates systemSettings singleton)
+- Precondition guards for recovery key, nomenclature, profile

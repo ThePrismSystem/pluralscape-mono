@@ -1,14 +1,21 @@
 ---
 # api-ca7z
 title: PIN hash management
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-16T11:56:58Z
-updated_at: 2026-03-17T20:42:22Z
+updated_at: 2026-03-17T21:41:58Z
 parent: api-6fv1
 blocked_by:
   - api-48ip
 ---
 
 POST .../settings/pin (set — Argon2id hash, 4-6 digits). DELETE .../settings/pin (remove). POST .../settings/pin/verify. Check constraint enforces $argon2id$ prefix.
+
+## Summary of Changes
+
+- POST/DELETE/POST-verify /systems/:id/settings/pin
+- Argon2id hashing via hashPin/verifyPin from @pluralscape/crypto
+- Anti-timing protection with dummy hash when no PIN is set
+- DB check constraint enforces $argon2id$ prefix
