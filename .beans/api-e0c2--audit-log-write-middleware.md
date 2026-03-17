@@ -13,4 +13,6 @@ blocked_by:
 
 Reusable helper that writes audit log entries: accepts eventType, actor, detail, extracts IP/userAgent from request context. Pattern used by all subsequent epics. Insert into partitioned audit_log table.
 
-## Summary of Changes\n\nCreated `createAuditWriter(c, auth?)` factory function in `apps/api/src/lib/audit-writer.ts` that returns a pre-bound `AuditWriter` function. The factory captures request metadata (IP, user-agent) from the Hono context at creation time and automatically includes accountId/systemId from auth context, with per-call override support. Includes 9 unit tests covering authenticated/unauthenticated routes, explicit overrides, IP extraction, user-agent capture, transaction passthrough, and multi-call reuse.
+## Summary of Changes
+
+Created `createAuditWriter(c, auth?)` factory function in `apps/api/src/lib/audit-writer.ts` that returns a pre-bound `AuditWriter` function. The factory captures request metadata (IP, user-agent) from the Hono context at creation time and automatically includes accountId/systemId from auth context, with per-call override support. Includes 9 unit tests covering authenticated/unauthenticated routes, explicit overrides, IP extraction, user-agent capture, transaction passthrough, and multi-call reuse.

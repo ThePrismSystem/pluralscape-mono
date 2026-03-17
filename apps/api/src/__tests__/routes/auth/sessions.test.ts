@@ -54,6 +54,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { listSessions, logoutCurrentSession, revokeSession, revokeAllSessions } =
   await import("../../../services/auth.service.js");
 const { authMiddleware } = await import("../../../middleware/auth.js");
@@ -177,6 +178,10 @@ describe("sessions route", () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as { ok: boolean };
       expect(body.ok).toBe(true);
+      expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ accountId: "acct_test" }),
+      );
     });
   });
 
@@ -197,6 +202,10 @@ describe("sessions route", () => {
         "sess_current",
         "acct_test",
         expect.any(Function),
+      );
+      expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ accountId: "acct_test" }),
       );
     });
   });
@@ -221,6 +230,10 @@ describe("sessions route", () => {
         "acct_test",
         "sess_current",
         expect.any(Function),
+      );
+      expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ accountId: "acct_test" }),
       );
     });
   });

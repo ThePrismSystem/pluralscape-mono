@@ -57,6 +57,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { changeEmail, ConcurrencyError } = await import("../../../services/account.service.js");
 const { ValidationError } = await import("../../../services/auth.service.js");
 const { accountRoutes } = await import("../../../routes/account/index.js");
@@ -159,6 +160,10 @@ describe("PUT /account/email", () => {
       "acct_test",
       { email: "new@example.com", currentPassword: "password123" },
       expect.any(Function),
+    );
+    expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ accountId: "acct_test" }),
     );
   });
 });

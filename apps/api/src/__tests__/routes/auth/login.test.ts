@@ -34,6 +34,7 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { loginAccount } = await import("../../../services/auth.service.js");
 const { loginRoute } = await import("../../../routes/auth/login.js");
 
@@ -93,6 +94,8 @@ describe("POST /login", () => {
     expect(body.accountId).toBe("acct_456");
     expect(body.systemId).toBe("sys_789");
     expect(body.accountType).toBe("system");
+    // Login is unauthenticated — createAuditWriter should be called without auth
+    expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(expect.anything());
   });
 
   it("returns 401 UNAUTHENTICATED when loginAccount returns null", async () => {

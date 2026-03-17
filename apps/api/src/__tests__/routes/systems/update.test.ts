@@ -48,6 +48,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { updateSystemProfile } = await import("../../../services/system.service.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
@@ -118,6 +119,7 @@ describe("PUT /systems/:id", () => {
       MOCK_AUTH,
       expect.any(Function),
     );
+    expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(expect.anything(), MOCK_AUTH);
   });
 
   it("returns 400 for malformed JSON body", async () => {

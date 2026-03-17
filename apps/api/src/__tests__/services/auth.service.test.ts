@@ -92,6 +92,7 @@ describe("auth service", () => {
 
   beforeEach(() => {
     mockNow.mockReturnValue(Date.now());
+    mockAudit.mockClear();
   });
   // ── extractIpAddress ───────────────────────────────────────────────
 

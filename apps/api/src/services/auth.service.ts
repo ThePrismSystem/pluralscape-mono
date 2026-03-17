@@ -34,7 +34,7 @@ import {
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
-import type { AccountType } from "@pluralscape/types";
+import type { AccountId, AccountType, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Registration ───────────────────────────────────────────────────
@@ -169,7 +169,7 @@ export async function registerAccount(
         eventType: "auth.register",
         actor: { kind: "account", id: accountId },
         detail: "Account registered",
-        accountId,
+        accountId: accountId as AccountId,
       });
     });
   } catch (error: unknown) {
@@ -230,12 +230,17 @@ export async function loginAccount(
 
   const valid = verifyPassword(account.passwordHash, parsed.password);
   if (!valid) {
-    await audit(db, {
-      eventType: "auth.login-failed",
-      actor: { kind: "account", id: account.id },
-      detail: "Invalid password",
-      accountId: account.id,
-    });
+    try {
+      await audit(db, {
+        eventType: "auth.login-failed",
+        actor: { kind: "account", id: account.id },
+        detail: "Invalid password",
+        accountId: account.id as AccountId,
+      });
+    } catch (auditError: unknown) {
+      // Audit failure must not change the authentication response (401 → 500)
+      console.error("[audit] Failed to write auth.login-failed:", auditError);
+    }
     return null;
   }
 
@@ -267,8 +272,8 @@ export async function loginAccount(
       eventType: "auth.login",
       actor: { kind: "account", id: account.id },
       detail: `Login via ${platform}`,
-      accountId: account.id,
-      systemId,
+      accountId: account.id as AccountId,
+      systemId: systemId as SystemId | null,
     });
   });
 

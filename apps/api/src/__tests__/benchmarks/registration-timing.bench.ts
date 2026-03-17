@@ -16,6 +16,8 @@ import { getDb } from "../../lib/db.js";
 import { ANTI_ENUM_TARGET_MS } from "../../routes/auth/auth.constants.js";
 import { registerAccount } from "../../services/auth.service.js";
 
+import type { Context } from "hono";
+
 /** Number of registration trials to run. */
 const TRIAL_COUNT = 20;
 
@@ -27,6 +29,18 @@ interface BenchmarkResult {
   readonly mean: number;
   readonly antiEnumTarget: number;
   readonly failureCount: number;
+}
+
+/** Minimal Hono context for benchmark — only header() is used by createAuditWriter. */
+function benchmarkContext(): Context {
+  const headers: Record<string, string> = { "user-agent": "benchmark-tool" };
+  return {
+    req: {
+      header(name: string) {
+        return headers[name.toLowerCase()];
+      },
+    },
+  } as Context;
 }
 
 function percentile(sorted: number[], p: number): number {
@@ -55,7 +69,7 @@ async function runBenchmark(): Promise<BenchmarkResult> {
           accountType: "system",
         },
         "web",
-        createAuditWriter({ req: { header: () => "benchmark-tool" } } as never),
+        createAuditWriter(benchmarkContext()),
       );
     } catch {
       // Account may fail for various reasons — we still measure timing

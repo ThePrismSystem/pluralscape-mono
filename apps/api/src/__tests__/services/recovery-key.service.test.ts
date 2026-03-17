@@ -48,6 +48,7 @@ describe("recovery-key service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockMemzero.mockClear();
+    mockAudit.mockClear();
   });
 
   // ── getRecoveryKeyStatus ──────────────────────────────────────────

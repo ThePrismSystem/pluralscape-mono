@@ -48,6 +48,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { archiveSystem } = await import("../../../services/system.service.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
@@ -97,6 +98,7 @@ describe("DELETE /systems/:id", () => {
       MOCK_AUTH,
       expect.any(Function),
     );
+    expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(expect.anything(), MOCK_AUTH);
   });
 
   it("returns 404 when system not found", async () => {

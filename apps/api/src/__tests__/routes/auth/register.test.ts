@@ -37,6 +37,7 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { registerAccount, ValidationError } = await import("../../../services/auth.service.js");
 const { registerRoute } = await import("../../../routes/auth/register.js");
 
@@ -97,6 +98,8 @@ describe("POST /register", () => {
     expect(body.recoveryKey).toBe("rk_abc");
     expect(body.accountId).toBe("acct_123");
     expect(body.accountType).toBe("system");
+    // Register is unauthenticated — createAuditWriter should be called without auth
+    expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(expect.anything());
   });
 
   it("returns 400 VALIDATION_ERROR when registerAccount throws ValidationError", async () => {

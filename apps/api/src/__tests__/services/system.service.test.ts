@@ -64,6 +64,7 @@ function makeSystemRow(overrides: Record<string, unknown> = {}): Record<string, 
 describe("listSystems", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    mockAudit.mockClear();
   });
 
   it("returns empty page when no systems exist", async () => {
@@ -142,6 +143,7 @@ describe("listSystems", () => {
 describe("getSystemProfile", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    mockAudit.mockClear();
   });
 
   it("returns system profile for owned system", async () => {
@@ -196,6 +198,7 @@ describe("getSystemProfile", () => {
 describe("updateSystemProfile", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    mockAudit.mockClear();
   });
 
   // Valid base64-encoded blob data (at least 32 bytes to have header + nonce room)
@@ -295,6 +298,7 @@ describe("updateSystemProfile", () => {
 describe("archiveSystem", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    mockAudit.mockClear();
   });
 
   it("archives an empty system when multiple systems exist", async () => {
@@ -362,6 +366,7 @@ describe("archiveSystem", () => {
 describe("createSystem", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    mockAudit.mockClear();
   });
 
   it("creates a system for system accounts", async () => {

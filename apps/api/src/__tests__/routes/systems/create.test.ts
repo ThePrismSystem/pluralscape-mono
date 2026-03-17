@@ -48,6 +48,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { createSystem } = await import("../../../services/system.service.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
@@ -108,6 +109,7 @@ describe("POST /systems", () => {
       MOCK_AUTH,
       expect.any(Function),
     );
+    expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(expect.anything(), MOCK_AUTH);
   });
 
   it("returns 403 when account type is not system", async () => {

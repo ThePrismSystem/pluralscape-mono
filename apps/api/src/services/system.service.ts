@@ -322,7 +322,7 @@ export async function createSystem(
       eventType: "system.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "System created",
-      systemId,
+      systemId: systemId as SystemId,
     });
 
     return inserted;

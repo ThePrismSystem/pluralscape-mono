@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Context } from "hono";
 
@@ -104,8 +105,8 @@ describe("createAuditWriter", () => {
     await audit(db, {
       eventType: "auth.login",
       actor: { kind: "account", id: "acc_override" },
-      accountId: "acc_explicit",
-      systemId: "sys_explicit",
+      accountId: "acc_explicit" as AccountId,
+      systemId: "sys_explicit" as SystemId,
     });
 
     expect(mockParams(0).accountId).toBe("acc_explicit");

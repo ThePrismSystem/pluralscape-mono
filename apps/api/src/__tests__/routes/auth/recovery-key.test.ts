@@ -57,6 +57,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup, NoActiveRecoveryKeyError } =
   await import("../../../services/recovery-key.service.js");
 const { ValidationError } = await import("../../../services/auth.service.js");
@@ -238,6 +239,10 @@ describe("POST /auth/recovery-key/regenerate", () => {
       "acct_test",
       { currentPassword: "password123", confirmed: true },
       expect.any(Function),
+    );
+    expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ accountId: "acct_test" }),
     );
   });
 });

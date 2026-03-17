@@ -3,7 +3,7 @@ import { extractRequestMeta } from "./request-meta.js";
 
 import type { AuthContext } from "./auth-context.js";
 import type { DbAuditActor } from "@pluralscape/db";
-import type { AuditEventType } from "@pluralscape/types";
+import type { AccountId, AuditEventType, SystemId } from "@pluralscape/types";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
@@ -11,11 +11,11 @@ import type { Context } from "hono";
 export interface AuditWriteParams {
   readonly eventType: AuditEventType;
   readonly actor: DbAuditActor;
-  readonly detail?: string | null;
+  readonly detail?: string;
   /** Override accountId from auth context. */
-  readonly accountId?: string | null;
+  readonly accountId?: AccountId | null;
   /** Override systemId from auth context. */
-  readonly systemId?: string | null;
+  readonly systemId?: SystemId | null;
 }
 
 /** A pre-bound audit log writer that captures request metadata at creation time. */
@@ -30,6 +30,11 @@ export type AuditWriter = (
  * Captures IP address and user-agent from the Hono context at creation time.
  * When auth is provided, accountId and systemId are automatically included
  * unless explicitly overridden in the per-call params.
+ *
+ * When called without auth (e.g. login/register routes where no session exists
+ * yet), callers are responsible for passing accountId/systemId per-call once
+ * the values are known. The db argument is not captured in the closure to allow
+ * callers to pass a transaction handle on some calls and the main db on others.
  */
 export function createAuditWriter(c: Context, auth?: AuthContext | null): AuditWriter {
   const requestMeta = extractRequestMeta(c);

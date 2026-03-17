@@ -50,6 +50,7 @@ describe("account service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockMemzero.mockClear();
+    mockAudit.mockClear();
   });
 
   // ── getAccountInfo ──────────────────────────────────────────────
