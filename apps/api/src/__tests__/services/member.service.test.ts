@@ -378,14 +378,12 @@ describe("duplicateMember", () => {
 
   it("copies photos when copyPhotos is true", async () => {
     const { db, chain } = mockDb();
-    // Source member lookup: db.select().from(members).where().limit(1)
+    // Source member lookup inside tx: tx.select().from(members).where().limit(1)
     chain.limit.mockResolvedValueOnce([makeMemberRow()]);
     // Insert new member in tx: tx.insert().values().returning()
     const newRow = makeMemberRow({ id: "mem_new-member" });
     chain.returning.mockResolvedValueOnce([newRow]);
     // Photos select in tx: tx.select().from(memberPhotos).where() — terminal (no .limit())
-    // where() call #1 = source member check (chains to limit, default mock handles it)
-    // where() call #2 = photos query (terminal, resolves to photo array)
     chain.where
       .mockReturnValueOnce(chain) // source member → chains to .limit()
       .mockResolvedValueOnce([
@@ -398,6 +396,8 @@ describe("duplicateMember", () => {
           archived: false,
         },
       ]);
+    // Photo copy insert: tx.insert().values().returning({ id })
+    chain.returning.mockResolvedValueOnce([{ id: "mphoto_new" }]);
 
     const result = await duplicateMember(
       db,
@@ -414,7 +414,7 @@ describe("duplicateMember", () => {
 
   it("copies field values when copyFields is true", async () => {
     const { db, chain } = mockDb();
-    // Source member lookup: db.select().from(members).where().limit(1)
+    // Source member lookup inside tx: tx.select().from(members).where().limit(1)
     chain.limit.mockResolvedValueOnce([makeMemberRow()]);
     // Insert new member in tx: tx.insert().values().returning()
     const newRow = makeMemberRow({ id: "mem_new-member" });
@@ -431,6 +431,8 @@ describe("duplicateMember", () => {
           encryptedData: new Uint8Array([7, 8, 9]),
         },
       ]);
+    // Field value copy insert: tx.insert().values().returning({ id })
+    chain.returning.mockResolvedValueOnce([{ id: "fval_new" }]);
 
     const result = await duplicateMember(
       db,

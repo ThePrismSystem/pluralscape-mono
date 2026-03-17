@@ -270,8 +270,10 @@ describe("reorderMemberPhotos", () => {
     chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
     // In tx: select existing photos — .where() is terminal here
     chain.where.mockResolvedValueOnce([{ id: PHOTO_ID }, { id: "mp_second" }]);
-    // Batch update: .where() x2 (each update call)
-    chain.where.mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined);
+    // Batch update: .returning() x2 (each update call now uses returning)
+    chain.returning
+      .mockResolvedValueOnce([{ id: PHOTO_ID }])
+      .mockResolvedValueOnce([{ id: "mp_second" }]);
     // Final select+orderBy
     chain.orderBy.mockResolvedValueOnce([
       makePhotoRow({ sortOrder: 1 }),

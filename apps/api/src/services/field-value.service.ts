@@ -51,6 +51,10 @@ function toFieldValueResult(row: {
   createdAt: number;
   updatedAt: number;
 }): FieldValueResult {
+  if (row.memberId === null) {
+    throw new Error("Unexpected null memberId in member-scoped field value query");
+  }
+
   return {
     id: row.id as FieldValueId,
     fieldDefinitionId: row.fieldDefinitionId as FieldDefinitionId,

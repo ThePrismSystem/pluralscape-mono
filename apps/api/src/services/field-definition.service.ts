@@ -114,25 +114,25 @@ export async function createFieldDefinition(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
   }
 
-  // Check quota
-  const [countResult] = await db
-    .select({ count: count() })
-    .from(fieldDefinitions)
-    .where(and(eq(fieldDefinitions.systemId, systemId), eq(fieldDefinitions.archived, false)));
-
-  if ((countResult?.count ?? 0) >= MAX_FIELD_DEFINITIONS_PER_SYSTEM) {
-    throw new ApiHttpError(
-      HTTP_CONFLICT,
-      "QUOTA_EXCEEDED",
-      `Maximum of ${String(MAX_FIELD_DEFINITIONS_PER_SYSTEM)} field definitions per system`,
-    );
-  }
-
   const blob = parseAndValidateFieldBlob(parsed.data.encryptedData);
   const fieldId = createId(ID_PREFIXES.fieldDefinition);
   const timestamp = now();
 
   return db.transaction(async (tx) => {
+    // Check quota inside transaction to prevent TOCTOU races
+    const [countResult] = await tx
+      .select({ count: count() })
+      .from(fieldDefinitions)
+      .where(and(eq(fieldDefinitions.systemId, systemId), eq(fieldDefinitions.archived, false)));
+
+    if ((countResult?.count ?? 0) >= MAX_FIELD_DEFINITIONS_PER_SYSTEM) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_FIELD_DEFINITIONS_PER_SYSTEM)} field definitions per system`,
+      );
+    }
+
     const [row] = await tx
       .insert(fieldDefinitions)
       .values({
@@ -191,7 +191,7 @@ export async function listFieldDefinitions(
     .select()
     .from(fieldDefinitions)
     .where(and(...conditions))
-    .orderBy(fieldDefinitions.sortOrder, fieldDefinitions.id)
+    .orderBy(fieldDefinitions.id)
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;

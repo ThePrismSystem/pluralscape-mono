@@ -1,5 +1,5 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
-import { members, memberPhotos } from "@pluralscape/db/pg";
+import { fieldValues, members, memberPhotos } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import {
   CreateMemberBodySchema,
@@ -292,24 +292,24 @@ export async function duplicateMember(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid duplicate payload");
   }
 
-  // Verify source member exists and is not archived
-  const [source] = await db
-    .select()
-    .from(members)
-    .where(
-      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
-    )
-    .limit(1);
-
-  if (!source) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
-  }
-
   const blob = parseAndValidateBlob(parsed.data.encryptedData);
   const newMemberId = createId(ID_PREFIXES.member);
   const timestamp = now();
 
   return db.transaction(async (tx) => {
+    // Verify source member inside transaction to prevent TOCTOU
+    const [source] = await tx
+      .select()
+      .from(members)
+      .where(
+        and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+      )
+      .limit(1);
+
+    if (!source) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
+
     const [row] = await tx
       .insert(members)
       .values({
@@ -339,36 +339,49 @@ export async function duplicateMember(
         );
 
       for (const photo of photos) {
-        await tx.insert(memberPhotos).values({
-          id: createId(ID_PREFIXES.memberPhoto),
-          memberId: newMemberId,
-          systemId,
-          sortOrder: photo.sortOrder,
-          encryptedData: photo.encryptedData,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
+        const [copied] = await tx
+          .insert(memberPhotos)
+          .values({
+            id: createId(ID_PREFIXES.memberPhoto),
+            memberId: newMemberId,
+            systemId,
+            sortOrder: photo.sortOrder,
+            encryptedData: photo.encryptedData,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          })
+          .returning({ id: memberPhotos.id });
+
+        if (!copied) {
+          throw new Error("Failed to copy member photo — INSERT returned no rows");
+        }
       }
     }
 
     // Copy field values if requested
     if (parsed.data.copyFields) {
-      const { fieldValues } = await import("@pluralscape/db/pg");
       const values = await tx
         .select()
         .from(fieldValues)
         .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
 
       for (const fv of values) {
-        await tx.insert(fieldValues).values({
-          id: createId(ID_PREFIXES.fieldValue),
-          fieldDefinitionId: fv.fieldDefinitionId,
-          memberId: newMemberId,
-          systemId,
-          encryptedData: fv.encryptedData,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        });
+        const [copied] = await tx
+          .insert(fieldValues)
+          .values({
+            id: createId(ID_PREFIXES.fieldValue),
+            fieldDefinitionId: fv.fieldDefinitionId,
+            memberId: newMemberId,
+            systemId,
+            encryptedData: fv.encryptedData,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          })
+          .returning({ id: fieldValues.id });
+
+        if (!copied) {
+          throw new Error("Failed to copy field value — INSERT returned no rows");
+        }
       }
     }
 

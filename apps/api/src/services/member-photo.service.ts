@@ -108,35 +108,14 @@ export async function createMemberPhoto(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
   }
 
-  // Check quota
-  const [countResult] = await db
-    .select({ count: count() })
-    .from(memberPhotos)
-    .where(
-      and(
-        eq(memberPhotos.memberId, memberId),
-        eq(memberPhotos.systemId, systemId),
-        eq(memberPhotos.archived, false),
-      ),
-    );
-
-  if ((countResult?.count ?? 0) >= MAX_PHOTOS_PER_MEMBER) {
-    throw new ApiHttpError(
-      HTTP_CONFLICT,
-      "QUOTA_EXCEEDED",
-      `Maximum of ${String(MAX_PHOTOS_PER_MEMBER)} photos per member`,
-    );
-  }
-
   const blob = parseAndValidatePhotoBlob(parsed.data.encryptedData);
   const photoId = createId(ID_PREFIXES.memberPhoto);
   const timestamp = now();
 
-  // Determine sort order
-  let sortOrder = parsed.data.sortOrder;
-  if (sortOrder === undefined) {
-    const [maxResult] = await db
-      .select({ maxSort: max(memberPhotos.sortOrder) })
+  return db.transaction(async (tx) => {
+    // Check quota inside transaction to prevent TOCTOU races
+    const [countResult] = await tx
+      .select({ count: count() })
       .from(memberPhotos)
       .where(
         and(
@@ -145,10 +124,31 @@ export async function createMemberPhoto(
           eq(memberPhotos.archived, false),
         ),
       );
-    sortOrder = (maxResult?.maxSort ?? -1) + 1;
-  }
 
-  return db.transaction(async (tx) => {
+    if ((countResult?.count ?? 0) >= MAX_PHOTOS_PER_MEMBER) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "QUOTA_EXCEEDED",
+        `Maximum of ${String(MAX_PHOTOS_PER_MEMBER)} photos per member`,
+      );
+    }
+
+    // Determine sort order
+    let sortOrder = parsed.data.sortOrder;
+    if (sortOrder === undefined) {
+      const [maxResult] = await tx
+        .select({ maxSort: max(memberPhotos.sortOrder) })
+        .from(memberPhotos)
+        .where(
+          and(
+            eq(memberPhotos.memberId, memberId),
+            eq(memberPhotos.systemId, systemId),
+            eq(memberPhotos.archived, false),
+          ),
+        );
+      sortOrder = (maxResult?.maxSort ?? -1) + 1;
+    }
+
     const [row] = await tx
       .insert(memberPhotos)
       .values({
@@ -248,9 +248,18 @@ export async function reorderMemberPhotos(
       }
     }
 
+    // Reorder must include all active photos
+    if (parsed.data.order.length !== existingPhotos.length) {
+      throw new ApiHttpError(
+        HTTP_BAD_REQUEST,
+        "VALIDATION_ERROR",
+        `Reorder must include all ${String(existingPhotos.length)} active photos, got ${String(parsed.data.order.length)}`,
+      );
+    }
+
     // Batch update sort orders
     for (const item of parsed.data.order) {
-      await tx
+      const [updated] = await tx
         .update(memberPhotos)
         .set({ sortOrder: item.sortOrder, updatedAt: timestamp })
         .where(
@@ -259,7 +268,12 @@ export async function reorderMemberPhotos(
             eq(memberPhotos.memberId, memberId),
             eq(memberPhotos.systemId, systemId),
           ),
-        );
+        )
+        .returning({ id: memberPhotos.id });
+
+      if (!updated) {
+        throw new Error(`Failed to update sort order for photo ${item.id}`);
+      }
     }
 
     await audit(tx, {
