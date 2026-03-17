@@ -1,11 +1,11 @@
 ---
 # api-xob6
 title: Validate X-Forwarded-For as IP format before using as rate-limit key
-status: todo
+status: completed
 type: bug
 priority: normal
 created_at: 2026-03-17T11:59:41Z
-updated_at: 2026-03-17T11:59:41Z
+updated_at: 2026-03-17T18:39:45Z
 parent: api-tspr
 ---
 
@@ -22,7 +22,7 @@ When TRUST_PROXY=1, the rate limiter (`apps/api/src/middleware/rate-limit.ts:36`
 // rate-limit.ts:35-37
 const forwarded = c.req.header("x-forwarded-for");
 const ip = forwarded?.split(",")[0]?.trim();
-return ip && ip.length > 0 ? ip : GLOBAL_KEY;  // No IP format validation
+return ip && ip.length > 0 ? ip : GLOBAL_KEY; // No IP format validation
 ```
 
 An attacker can inject arbitrary strings to create unlimited rate-limit buckets (up to the 10,000 MAX_RATE_LIMIT_ENTRIES eviction threshold).
@@ -52,3 +52,5 @@ Reject non-IP values and fall back to GLOBAL_KEY.
 ## References
 
 - CWE-345: Insufficient Verification of Data Authenticity
+
+## Summary of Changes\n\nCreated `ip-validation.ts` with `isValidIpFormat()` utility. Applied validation in `rate-limit.ts` (falls back to global bucket) and `request-meta.ts` (returns null). Added unit tests for the utility and integration tests for spoofed header scenarios.

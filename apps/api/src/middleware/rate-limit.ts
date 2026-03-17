@@ -1,6 +1,7 @@
 import { RATE_LIMITS } from "@pluralscape/types";
 
 import { HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
+import { isValidIpFormat } from "../lib/ip-validation.js";
 
 import { MAX_RATE_LIMIT_ENTRIES, MS_PER_SECOND } from "./middleware.constants.js";
 
@@ -34,7 +35,7 @@ function getClientKey(c: Context): string {
   }
   const forwarded = c.req.header("x-forwarded-for");
   const ip = forwarded?.split(",")[0]?.trim();
-  return ip && ip.length > 0 ? ip : GLOBAL_KEY;
+  return ip && isValidIpFormat(ip) ? ip : GLOBAL_KEY;
 }
 
 /**

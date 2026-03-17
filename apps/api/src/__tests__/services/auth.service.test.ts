@@ -149,6 +149,24 @@ describe("auth service", () => {
       expect(extractIpAddress(c)).toBeNull();
     });
 
+    it("returns null when TRUST_PROXY=1 and x-forwarded-for is not a valid IP", () => {
+      process.env["TRUST_PROXY"] = "1";
+      const c = mockContext({ "x-forwarded-for": "not-an-ip-address" });
+      expect(extractIpAddress(c)).toBeNull();
+    });
+
+    it("returns null when TRUST_PROXY=1 and x-forwarded-for contains script injection", () => {
+      process.env["TRUST_PROXY"] = "1";
+      const c = mockContext({ "x-forwarded-for": "<script>alert(1)</script>" });
+      expect(extractIpAddress(c)).toBeNull();
+    });
+
+    it("accepts valid IPv6 from x-forwarded-for when TRUST_PROXY=1", () => {
+      process.env["TRUST_PROXY"] = "1";
+      const c = mockContext({ "x-forwarded-for": "::1" });
+      expect(extractIpAddress(c)).toBe("::1");
+    });
+
     it("returns null when TRUST_PROXY=1 and x-forwarded-for contains only whitespace", () => {
       process.env["TRUST_PROXY"] = "1";
       const c = mockContext({ "x-forwarded-for": "   " });

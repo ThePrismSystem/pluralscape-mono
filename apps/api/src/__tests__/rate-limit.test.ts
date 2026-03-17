@@ -125,6 +125,39 @@ describe("rate limiter middleware", () => {
     expect(res.status).toBe(200);
   });
 
+  it("TRUST_PROXY=1: falls back to global bucket for non-IP x-forwarded-for", async () => {
+    process.env["TRUST_PROXY"] = "1";
+    const app = createApp(2);
+
+    // Garbage values should all share the global bucket
+    await app.request("/test", {
+      headers: { "x-forwarded-for": "not-an-ip" },
+    });
+    await app.request("/test", {
+      headers: { "x-forwarded-for": "<script>alert(1)</script>" },
+    });
+    const res = await app.request("/test", {
+      headers: { "x-forwarded-for": "example.com" },
+    });
+    expect(res.status).toBe(429);
+  });
+
+  it("TRUST_PROXY=1: accepts valid IPv6 as rate-limit key", async () => {
+    process.env["TRUST_PROXY"] = "1";
+    const app = createApp(1);
+
+    const res1 = await app.request("/test", {
+      headers: { "x-forwarded-for": "::1" },
+    });
+    expect(res1.status).toBe(200);
+
+    // Different IPv4 client — separate bucket
+    const res2 = await app.request("/test", {
+      headers: { "x-forwarded-for": "10.0.0.1" },
+    });
+    expect(res2.status).toBe(200);
+  });
+
   // ── X-RateLimit-* header tests ────────────────────────────────────
 
   it("includes X-RateLimit-Limit header on successful response", async () => {
