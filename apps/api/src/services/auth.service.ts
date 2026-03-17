@@ -172,8 +172,7 @@ export async function registerAccount(
         expiresAt,
       });
 
-      // Write audit log — tx is compatible with PostgresJsDatabase for insert operations
-      await writeAuditLog(tx as PostgresJsDatabase, {
+      await writeAuditLog(tx, {
         accountId,
         systemId: null,
         eventType: "auth.register",
@@ -277,7 +276,7 @@ export async function loginAccount(
       expiresAt,
     });
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId: account.id,
       systemId,
       eventType: "auth.login",
@@ -375,7 +374,7 @@ export async function revokeSession(
 
     if (updated.length === 0) return false;
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId: actorAccountId,
       systemId: null,
       eventType: "auth.logout",
@@ -408,7 +407,7 @@ export async function revokeAllSessions(
       )
       .returning({ id: sessions.id });
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId,
       systemId: null,
       eventType: "auth.logout",
@@ -434,7 +433,7 @@ export async function logoutCurrentSession(
       .set({ revoked: true })
       .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, accountId)));
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId,
       systemId: null,
       eventType: "auth.logout",
