@@ -70,7 +70,7 @@ export interface DiscoveryEvent extends LifecycleEventBase {
   readonly memberId: MemberId;
 }
 
-/** An entity is archived (non-destructive removal). */
+/** An entity is archived (reversible removal). */
 export interface ArchivalEvent extends LifecycleEventBase {
   readonly eventType: "archival";
   readonly entity: EntityReference;

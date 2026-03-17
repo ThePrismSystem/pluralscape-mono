@@ -71,11 +71,11 @@ export const fieldValues = sqliteTable(
     foreignKey({
       columns: [t.fieldDefinitionId, t.systemId],
       foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("field_values", t.version),
     uniqueIndex("field_values_definition_member_uniq")
       .on(t.fieldDefinitionId, t.memberId)
@@ -91,10 +91,10 @@ export const fieldBucketVisibility = sqliteTable(
   {
     fieldDefinitionId: text("field_definition_id")
       .notNull()
-      .references(() => fieldDefinitions.id, { onDelete: "cascade" }),
+      .references(() => fieldDefinitions.id, { onDelete: "restrict" }),
     bucketId: text("bucket_id")
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),

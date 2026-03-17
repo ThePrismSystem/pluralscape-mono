@@ -93,21 +93,20 @@ export const frontingSessions = pgTable(
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     // Single-column FK intentionally: composite (customFrontId, systemId) with ON DELETE SET NULL
     // would attempt to null system_id, violating its NOT NULL constraint. Cross-tenant isolation
     // for custom fronts is enforced by RLS and the system_id FK on this table.
     foreignKey({
       columns: [t.customFrontId],
       foreignColumns: [customFronts.id],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("fronting_sessions", t.version),
     archivableConsistencyCheckFor("fronting_sessions", t.archived, t.archivedAt),
     // Invariant: every session must have at least one subject (member or custom front).
-    // Both member_id and custom_front_id use ON DELETE SET NULL — if the sole subject is
-    // hard-deleted, the cascade will violate this CHECK. This is intentional fail-loud
-    // behavior: members/custom_fronts should be archived (not deleted) per project
-    // principles. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
+    // Both member_id and custom_front_id use ON DELETE RESTRICT — members/custom_fronts
+    // must be deleted or archived before the fronting session can be removed. Account
+    // purge cascades via system_id ON DELETE CASCADE, bypassing this.
     check(
       "fronting_sessions_subject_check",
       sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,
@@ -172,11 +171,11 @@ export const frontingComments = pgTable(
     foreignKey({
       columns: [t.frontingSessionId, t.systemId, t.sessionStartTime],
       foreignColumns: [frontingSessions.id, frontingSessions.systemId, frontingSessions.startTime],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("fronting_comments", t.version),
     archivableConsistencyCheckFor("fronting_comments", t.archived, t.archivedAt),
   ],

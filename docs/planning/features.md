@@ -21,7 +21,8 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Groups have: image, description, color, emoji
   - Move/copy entire folders between other folders
 - **Member duplication** — duplicate an existing member as a starting point for a new entry (copies name as "Copy of {name}", optionally copies photos, custom fields, group memberships, and structure memberships; records a `discovery` lifecycle event for the new member)
-- **Archival** — non-destructive, read-only preservation with instant restore
+- **Archival** — read-only preservation with instant restore
+- **Deletion** — permanent removal with confirmation and cascading cleanup
 - **Custom fronts** — abstract cognitive states logged like members (e.g., "Dissociated", "Blurry")
 
 ## 2. Fronting and Analytics

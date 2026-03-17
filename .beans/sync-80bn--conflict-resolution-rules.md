@@ -17,7 +17,7 @@ Design document: conflict detection and resolution rules for concurrent edits. O
 - Resolution strategies:
   - LWW with Lamport timestamps (most entities)
   - Union strategy for co-fronting (both concurrent fronting sessions valid)
-  - Tombstone handling: archived/deleted items use tombstones (non-destructive)
+  - Tombstone handling: archived/deleted items use tombstones
 - Edge cases:
   - Same member edited on two offline devices simultaneously
   - Group reparented to different parents concurrently
@@ -29,7 +29,7 @@ Design document: conflict detection and resolution rules for concurrent edits. O
 
 - [ ] Conflict resolution rules specified for each entity type
 - [ ] Edge cases documented with expected resolution
-- [ ] Tombstone pattern for non-destructive deletion
+- [ ] Tombstone pattern for archival and permanent deletion
 - [ ] Conflict notification type defined
 - [ ] All conflicts auto-resolved (no user intervention in V1)
 - [ ] Integration tests for each edge case

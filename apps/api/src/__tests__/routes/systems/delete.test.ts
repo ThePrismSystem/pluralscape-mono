@@ -116,7 +116,7 @@ describe("DELETE /systems/:id", () => {
     vi.mocked(archiveSystem).mockRejectedValueOnce(
       new ApiHttpError(
         409,
-        "CONFLICT",
+        "HAS_DEPENDENTS",
         "System has 3 active member(s). Delete all members before deleting the system.",
       ),
     );
@@ -126,7 +126,7 @@ describe("DELETE /systems/:id", () => {
 
     expect(res.status).toBe(409);
     const body = (await res.json()) as ApiErrorResponse;
-    expect(body.error.code).toBe("CONFLICT");
+    expect(body.error.code).toBe("HAS_DEPENDENTS");
   });
 
   it("returns 409 when it is the last system", async () => {

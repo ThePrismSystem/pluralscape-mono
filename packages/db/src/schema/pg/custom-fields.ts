@@ -75,11 +75,11 @@ export const fieldValues = pgTable(
     foreignKey({
       columns: [t.fieldDefinitionId, t.systemId],
       foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("field_values", t.version),
     uniqueIndex("field_values_definition_member_uniq")
       .on(t.fieldDefinitionId, t.memberId)
@@ -95,10 +95,10 @@ export const fieldBucketVisibility = pgTable(
   {
     fieldDefinitionId: varchar("field_definition_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => fieldDefinitions.id, { onDelete: "cascade" }),
+      .references(() => fieldDefinitions.id, { onDelete: "restrict" }),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH })
       .notNull()
-      .references(() => buckets.id, { onDelete: "cascade" }),
+      .references(() => buckets.id, { onDelete: "restrict" }),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),

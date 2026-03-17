@@ -51,7 +51,7 @@ export const channels = pgTable(
     foreignKey({
       columns: [t.parentId, t.systemId],
       foreignColumns: [t.id, t.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     check("channels_type_check", enumCheck(t.type, CHANNEL_TYPES)),
     check("channels_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("channels", t.version),
@@ -88,7 +88,7 @@ export const messages = pgTable(
     foreignKey({
       columns: [t.channelId, t.systemId],
       foreignColumns: [channels.id, channels.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     versionCheckFor("messages", t.version),
     archivableConsistencyCheckFor("messages", t.archived, t.archivedAt),
   ],
@@ -135,7 +135,7 @@ export const notes = pgTable(
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("notes", t.version),
     archivableConsistencyCheckFor("notes", t.archived, t.archivedAt),
   ],
@@ -171,7 +171,7 @@ export const polls = pgTable(
     foreignKey({
       columns: [t.createdByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     check("polls_status_check", enumCheck(t.status, POLL_STATUSES)),
     check("polls_kind_check", enumCheck(t.kind, POLL_KINDS)),
     check("polls_max_votes_check", sql`${t.maxVotesPerMember} >= 1`),
@@ -202,7 +202,7 @@ export const pollVotes = pgTable(
     foreignKey({
       columns: [t.pollId, t.systemId],
       foreignColumns: [polls.id, polls.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     archivableConsistencyCheckFor("poll_votes", t.archived, t.archivedAt),
   ],
 );
@@ -226,7 +226,7 @@ export const acknowledgements = pgTable(
     foreignKey({
       columns: [t.createdByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     archivableConsistencyCheckFor("acknowledgements", t.archived, t.archivedAt),
   ],
 );

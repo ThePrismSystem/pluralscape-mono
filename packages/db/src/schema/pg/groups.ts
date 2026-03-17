@@ -45,7 +45,7 @@ export const groups = pgTable(
     foreignKey({
       columns: [t.parentGroupId, t.systemId],
       foreignColumns: [t.id, t.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     check("groups_sort_order_check", sql`${t.sortOrder} >= 0`),
     versionCheckFor("groups", t.version),
     archivableConsistencyCheckFor("groups", t.archived, t.archivedAt),
@@ -69,11 +69,11 @@ export const groupMemberships = pgTable(
     foreignKey({
       columns: [t.groupId, t.systemId],
       foreignColumns: [groups.id, groups.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.memberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
   ],
 );
 

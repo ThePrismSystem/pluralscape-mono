@@ -340,7 +340,7 @@ describe("archiveSystem", () => {
     await expect(archiveSystem(db, SYSTEM_ID, AUTH, REQUEST_META)).rejects.toThrow(
       expect.objectContaining({
         status: 409,
-        code: "CONFLICT",
+        code: "HAS_DEPENDENTS",
         message: expect.stringContaining("3 active member(s)"),
       }),
     );

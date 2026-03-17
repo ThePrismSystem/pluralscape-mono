@@ -35,7 +35,7 @@ export const journalEntries = sqliteTable(
     foreignKey({
       columns: [t.frontingSessionId],
       foreignColumns: [frontingSessions.id],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     versionCheckFor("journal_entries", t.version),
     archivableConsistencyCheckFor("journal_entries", t.archived, t.archivedAt),
   ],

@@ -75,11 +75,11 @@ export const checkInRecords = pgTable(
     foreignKey({
       columns: [t.timerConfigId, t.systemId],
       foreignColumns: [timerConfigs.id, timerConfigs.systemId],
-    }).onDelete("cascade"),
+    }).onDelete("restrict"),
     foreignKey({
       columns: [t.respondedByMemberId, t.systemId],
       foreignColumns: [members.id, members.systemId],
-    }).onDelete("set null"),
+    }).onDelete("restrict"),
     index("check_in_records_system_pending_idx")
       .on(t.systemId, t.scheduledAt)
       .where(sql`${t.respondedAt} IS NULL AND ${t.dismissed} = false AND ${t.archived} = false`),

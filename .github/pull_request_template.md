@@ -14,7 +14,7 @@
 
 - [ ] Privacy: new data defaults to maximum restriction (fail-closed)
 - [ ] Offline: works correctly without network connectivity
-- [ ] Non-destructive: no user data is permanently deleted
+- [ ] Data lifecycle: deletions are intentional, confirmed, and handle cascading references
 - [ ] Accessibility: UI changes meet WCAG guidelines
 - [ ] Domain terms used correctly (community terminology, not clinical language)
 

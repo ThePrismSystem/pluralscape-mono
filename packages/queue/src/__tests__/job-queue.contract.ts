@@ -403,7 +403,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
         await expect(queue.cancel(running.id)).rejects.toThrow(InvalidJobTransitionError);
       });
 
-      it("cancels a dead-letter job (non-destructive purge)", async () => {
+      it("cancels a dead-letter job (purge via cancellation)", async () => {
         const queue = factory();
         await queue.enqueue(makeJobParams({ maxAttempts: 1 }));
         const running = await dequeueOrFail(queue);

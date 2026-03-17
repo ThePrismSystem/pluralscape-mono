@@ -2,9 +2,9 @@
 
 **Date:** 2026-03-14
 **Scope:** All entities with archival support (`archived` + `archivedAt` columns) in the PostgreSQL schema
-**Purpose:** Document the complete inbound FK dependency graph for every archivable entity, identify ON DELETE behaviors, and determine whether a hard delete of any archivable row is safe (CASCADE/SET NULL only) or blocked (would violate a remaining constraint).
+**Purpose:** Document the complete inbound FK dependency graph for every archivable entity and identify ON DELETE behaviors. All entity-to-entity FKs use `ON DELETE RESTRICT` — the API checks for dependents before deletion and returns 409 `HAS_DEPENDENTS` if any exist. Archival is always allowed regardless of dependents.
 
-The project principle is **non-destructive data**: entities should be archived, not hard-deleted. This audit exists to confirm that the FK graph enforces or supports that principle, and to surface any cases where hard deletion would cause silent data corruption or schema violations.
+**Note (2026-03-17):** Entity-to-entity FKs have been changed from CASCADE/SET NULL to RESTRICT. The verdicts below reflect the pre-RESTRICT state. With RESTRICT, all entities with inbound entity FKs will block on deletion until dependents are removed first.
 
 ---
 
