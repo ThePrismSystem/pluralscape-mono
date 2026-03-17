@@ -5,7 +5,12 @@ import {
 } from "@pluralscape/crypto";
 import { groupMemberships, groups } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
-import { CreateGroupBodySchema, UpdateGroupBodySchema } from "@pluralscape/validation";
+import {
+  CreateGroupBodySchema,
+  MoveGroupBodySchema,
+  ReorderGroupsBodySchema,
+  UpdateGroupBodySchema,
+} from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import {
@@ -17,6 +22,7 @@ import {
 import { ApiHttpError } from "../lib/api-error.js";
 import {
   DEFAULT_GROUP_LIMIT,
+  MAX_ANCESTOR_DEPTH,
   MAX_ENCRYPTED_DATA_BYTES,
   MAX_GROUP_LIMIT,
 } from "../routes/groups/groups.constants.js";
@@ -382,5 +388,301 @@ export async function deleteGroup(
 
     // Hard delete
     await tx.delete(groups).where(and(eq(groups.id, groupId), eq(groups.systemId, systemId)));
+  });
+}
+
+// ── MOVE ────────────────────────────────────────────────────────────
+
+export async function moveGroup(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  groupId: GroupId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<GroupResult> {
+  assertSystemOwnership(auth, systemId);
+
+  const parsed = MoveGroupBodySchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid move payload");
+  }
+
+  const { targetParentGroupId } = parsed.data;
+
+  // Reject self-parenting
+  if (targetParentGroupId === groupId) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Cannot set group as its own parent",
+    );
+  }
+
+  const timestamp = now();
+
+  return db.transaction(async (tx) => {
+    // If targetParentGroupId non-null, verify it exists and is not archived
+    if (targetParentGroupId !== null) {
+      const [target] = await tx
+        .select({ id: groups.id, parentGroupId: groups.parentGroupId })
+        .from(groups)
+        .where(
+          and(
+            eq(groups.id, targetParentGroupId),
+            eq(groups.systemId, systemId),
+            eq(groups.archived, false),
+          ),
+        )
+        .limit(1);
+
+      if (!target) {
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Target parent group not found");
+      }
+
+      // Cycle detection: walk ancestors from target up; if we find groupId, it's circular
+      let currentId: string | null = targetParentGroupId;
+      for (let i = 0; i < MAX_ANCESTOR_DEPTH && currentId !== null; i++) {
+        if (currentId === groupId) {
+          throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Circular reference detected");
+        }
+        const [ancestor] = await tx
+          .select({ parentGroupId: groups.parentGroupId })
+          .from(groups)
+          .where(and(eq(groups.id, currentId), eq(groups.systemId, systemId)))
+          .limit(1);
+        currentId = ancestor?.parentGroupId ?? null;
+      }
+    }
+
+    // OCC update
+    const updated = await tx
+      .update(groups)
+      .set({
+        parentGroupId: targetParentGroupId,
+        updatedAt: timestamp,
+        version: sql`${groups.version} + 1`,
+      })
+      .where(
+        and(
+          eq(groups.id, groupId),
+          eq(groups.systemId, systemId),
+          eq(groups.version, parsed.data.version),
+          eq(groups.archived, false),
+        ),
+      )
+      .returning();
+
+    if (updated.length === 0) {
+      const [existing] = await tx
+        .select({ id: groups.id })
+        .from(groups)
+        .where(
+          and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)),
+        )
+        .limit(1);
+
+      if (existing) {
+        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
+      }
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
+    }
+
+    const [row] = updated as [(typeof updated)[number], ...typeof updated];
+
+    await audit(tx, {
+      eventType: "group.moved",
+      actor: { kind: "account", id: auth.accountId },
+      detail: `Group moved to parent ${targetParentGroupId ?? "root"}`,
+      systemId,
+    });
+
+    return toGroupResult(row);
+  });
+}
+
+// ── TREE ────────────────────────────────────────────────────────────
+
+export interface GroupResultTree extends GroupResult {
+  readonly children: GroupResultTree[];
+}
+
+export async function getGroupTree(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+): Promise<GroupResultTree[]> {
+  assertSystemOwnership(auth, systemId);
+
+  const rows = await db
+    .select()
+    .from(groups)
+    .where(and(eq(groups.systemId, systemId), eq(groups.archived, false)))
+    .orderBy(groups.sortOrder);
+
+  // Build tree in-memory
+  const nodeMap = new Map<string, GroupResultTree>();
+  const roots: GroupResultTree[] = [];
+
+  for (const row of rows) {
+    const node: GroupResultTree = { ...toGroupResult(row), children: [] };
+    nodeMap.set(row.id, node);
+  }
+
+  for (const node of nodeMap.values()) {
+    if (node.parentGroupId !== null) {
+      const parent = nodeMap.get(node.parentGroupId);
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        // Orphaned — treat as root
+        roots.push(node);
+      }
+    } else {
+      roots.push(node);
+    }
+  }
+
+  return roots;
+}
+
+// ── REORDER ─────────────────────────────────────────────────────────
+
+export async function reorderGroups(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  assertSystemOwnership(auth, systemId);
+
+  const parsed = ReorderGroupsBodySchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid reorder payload");
+  }
+
+  await db.transaction(async (tx) => {
+    for (const op of parsed.data.operations) {
+      const updated = await tx
+        .update(groups)
+        .set({ sortOrder: op.sortOrder })
+        .where(
+          and(eq(groups.id, op.groupId), eq(groups.systemId, systemId), eq(groups.archived, false)),
+        )
+        .returning({ id: groups.id });
+
+      if (updated.length === 0) {
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `Group ${op.groupId} not found`);
+      }
+
+      await audit(tx, {
+        eventType: "group.updated",
+        actor: { kind: "account", id: auth.accountId },
+        detail: `Group ${op.groupId} reordered to ${String(op.sortOrder)}`,
+        systemId,
+      });
+    }
+  });
+}
+
+// ── ARCHIVE ─────────────────────────────────────────────────────────
+
+export async function archiveGroup(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  groupId: GroupId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  assertSystemOwnership(auth, systemId);
+
+  const timestamp = now();
+
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: groups.id })
+      .from(groups)
+      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
+    }
+
+    await tx
+      .update(groups)
+      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
+      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId)));
+
+    await audit(tx, {
+      eventType: "group.archived",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Group archived",
+      systemId,
+    });
+  });
+}
+
+// ── RESTORE ─────────────────────────────────────────────────────────
+
+export async function restoreGroup(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  groupId: GroupId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<GroupResult> {
+  assertSystemOwnership(auth, systemId);
+
+  const timestamp = now();
+
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: groups.id, parentGroupId: groups.parentGroupId })
+      .from(groups)
+      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, true)))
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived group not found");
+    }
+
+    // If parent is archived, promote to root
+    let newParentGroupId = existing.parentGroupId;
+    if (newParentGroupId !== null) {
+      const [parent] = await tx
+        .select({ archived: groups.archived })
+        .from(groups)
+        .where(and(eq(groups.id, newParentGroupId), eq(groups.systemId, systemId)))
+        .limit(1);
+
+      if (!parent || parent.archived) {
+        newParentGroupId = null;
+      }
+    }
+
+    const updated = await tx
+      .update(groups)
+      .set({
+        archived: false,
+        archivedAt: null,
+        parentGroupId: newParentGroupId,
+        updatedAt: timestamp,
+        version: sql`${groups.version} + 1`,
+      })
+      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId)))
+      .returning();
+
+    const [row] = updated as [(typeof updated)[number], ...typeof updated];
+
+    await audit(tx, {
+      eventType: "group.restored",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Group restored",
+      systemId,
+    });
+
+    return toGroupResult(row);
   });
 }

@@ -30,8 +30,18 @@ vi.mock("../../lib/audit-log.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const { createGroup, listGroups, getGroup, updateGroup, deleteGroup } =
-  await import("../../services/group.service.js");
+const {
+  createGroup,
+  listGroups,
+  getGroup,
+  updateGroup,
+  deleteGroup,
+  moveGroup,
+  getGroupTree,
+  reorderGroups,
+  archiveGroup,
+  restoreGroup,
+} = await import("../../services/group.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -362,5 +372,243 @@ describe("deleteGroup", () => {
         message: expect.stringContaining("2 child group(s)"),
       }),
     );
+  });
+});
+
+describe("moveGroup", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("moves group to new parent", async () => {
+    const { db, chain } = mockDb();
+    const parentId = "grp_parent" as GroupId;
+    // target parent lookup
+    chain.limit
+      .mockResolvedValueOnce([{ id: parentId, parentGroupId: null }])
+      // ancestor walk: parent has null parent → no cycle
+      .mockResolvedValueOnce([{ parentGroupId: null }]);
+    // OCC update
+    chain.returning.mockResolvedValueOnce([makeGroupRow({ parentGroupId: parentId, version: 2 })]);
+
+    const result = await moveGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { targetParentGroupId: parentId, version: 1 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.parentGroupId).toBe(parentId);
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "group.moved" }),
+    );
+  });
+
+  it("moves group to root", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([makeGroupRow({ parentGroupId: null, version: 2 })]);
+
+    const result = await moveGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { targetParentGroupId: null, version: 1 },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.parentGroupId).toBeNull();
+  });
+
+  it("throws 400 for self-parenting", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      moveGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { targetParentGroupId: GROUP_ID, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("throws 404 for nonexistent target parent", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]); // target not found
+
+    await expect(
+      moveGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { targetParentGroupId: "grp_nonexistent", version: 1 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 409 on circular reference", async () => {
+    const { db, chain } = mockDb();
+    const childId = "grp_child" as GroupId;
+    // target exists, its parent is GROUP_ID → cycle
+    chain.limit
+      .mockResolvedValueOnce([{ id: childId, parentGroupId: GROUP_ID }])
+      .mockResolvedValueOnce([{ parentGroupId: GROUP_ID }]);
+
+    await expect(
+      moveGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { targetParentGroupId: childId, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
+  });
+});
+
+describe("getGroupTree", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns empty array when no groups", async () => {
+    const { db, chain } = mockDb();
+    chain.orderBy.mockResolvedValueOnce([]);
+
+    const result = await getGroupTree(db, SYSTEM_ID, AUTH);
+
+    expect(result).toEqual([]);
+  });
+
+  it("assembles nested tree from flat rows", async () => {
+    const { db, chain } = mockDb();
+    const parent = makeGroupRow({ id: "grp_parent", parentGroupId: null });
+    const child = makeGroupRow({ id: "grp_child", parentGroupId: "grp_parent" });
+    chain.orderBy.mockResolvedValueOnce([parent, child]);
+
+    const result = await getGroupTree(db, SYSTEM_ID, AUTH);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe("grp_parent");
+    expect(result[0]?.children).toHaveLength(1);
+    expect(result[0]?.children[0]?.id).toBe("grp_child");
+  });
+});
+
+describe("reorderGroups", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("reorders groups successfully", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValue([{ id: GROUP_ID }]);
+
+    await reorderGroups(
+      db,
+      SYSTEM_ID,
+      { operations: [{ groupId: GROUP_ID, sortOrder: 5 }] },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "group.updated" }),
+    );
+  });
+
+  it("throws 404 when group in operation not found", async () => {
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
+
+    await expect(
+      reorderGroups(
+        db,
+        SYSTEM_ID,
+        { operations: [{ groupId: "grp_nonexistent", sortOrder: 0 }] },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 400 for invalid body", async () => {
+    const { db } = mockDb();
+
+    await expect(reorderGroups(db, SYSTEM_ID, { operations: [] }, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }),
+    );
+  });
+});
+
+describe("archiveGroup", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("archives a group", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
+
+    await archiveGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
+
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "group.archived" }),
+    );
+  });
+
+  it("throws 404 when group not found", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      archiveGroup(db, SYSTEM_ID, "grp_nonexistent" as GroupId, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+});
+
+describe("restoreGroup", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("restores an archived group", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([{ id: GROUP_ID, parentGroupId: null }]) // archived group found
+      .mockResolvedValueOnce([]); // no parent check needed (null parent)
+    chain.returning.mockResolvedValueOnce([makeGroupRow({ version: 2 })]);
+
+    const result = await restoreGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
+
+    expect(result.version).toBe(2);
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "group.restored" }),
+    );
+  });
+
+  it("throws 404 when archived group not found", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      restoreGroup(db, SYSTEM_ID, "grp_nonexistent" as GroupId, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
