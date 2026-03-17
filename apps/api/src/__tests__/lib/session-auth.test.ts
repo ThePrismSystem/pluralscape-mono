@@ -29,7 +29,7 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
   };
 });
 
-import { validateSession } from "../../lib/session-auth.js";
+import { getIdleTimeout, validateSession } from "../../lib/session-auth.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -247,5 +247,37 @@ describe("validateSession", () => {
     const result = await validateSession(db as never, session.id);
 
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("getIdleTimeout", () => {
+  it("returns 604_800_000 (7 days) for web session TTL", () => {
+    const result = getIdleTimeout({ createdAt: 0, expiresAt: 2_592_000_000 });
+    expect(result).toBe(604_800_000);
+  });
+
+  it("returns 2_592_000_000 (30 days) for mobile session TTL", () => {
+    const result = getIdleTimeout({ createdAt: 0, expiresAt: 7_776_000_000 });
+    expect(result).toBe(2_592_000_000);
+  });
+
+  it("returns null for device transfer TTL (300_000)", () => {
+    const result = getIdleTimeout({ createdAt: 0, expiresAt: 300_000 });
+    expect(result).toBeNull();
+  });
+
+  it("returns null when expiresAt is null", () => {
+    const result = getIdleTimeout({ createdAt: 0, expiresAt: null });
+    expect(result).toBeNull();
+  });
+
+  it("returns null for unknown TTL", () => {
+    const result = getIdleTimeout({ createdAt: 0, expiresAt: 999_999 });
+    expect(result).toBeNull();
+  });
+
+  it("returns same result regardless of createdAt when absoluteTtl matches", () => {
+    const result = getIdleTimeout({ createdAt: 5_000_000, expiresAt: 5_000_000 + 2_592_000_000 });
+    expect(result).toBe(604_800_000);
   });
 });

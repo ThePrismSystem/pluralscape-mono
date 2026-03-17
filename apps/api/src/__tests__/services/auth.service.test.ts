@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
@@ -78,9 +78,19 @@ vi.mock("../../lib/email-hash.js", () => ({
   hashEmail: (email: string) => `hashed_${email.toLowerCase().trim()}`,
 }));
 
+// Mock now() so tests can control the current time
+const mockNow = vi.fn<() => number>();
+vi.mock("@pluralscape/types", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, now: () => mockNow() };
+});
+
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe("auth service", () => {
+  beforeEach(() => {
+    mockNow.mockReturnValue(Date.now());
+  });
   // ── extractIpAddress ───────────────────────────────────────────────
 
   describe("extractIpAddress", () => {
@@ -510,6 +520,8 @@ describe("auth service", () => {
 
     it("filters out idle-timed-out sessions", async () => {
       const { db, chain } = mockDb();
+      const fixedTime = 700_000_000;
+      mockNow.mockReturnValue(fixedTime);
       // Session with very stale lastActive — idle timeout will exclude it
       const rows = [{ id: "sess_1", createdAt: 0, lastActive: 1, expiresAt: 2_592_000_000 }];
       chain.limit.mockResolvedValueOnce(rows);
@@ -520,14 +532,14 @@ describe("auth service", () => {
 
     it("includes sessions within idle window", async () => {
       const { db, chain } = mockDb();
-      // Session with recent lastActive — should not be filtered
-      const currentTime = Date.now();
+      const fixedTime = 1_000_000;
+      mockNow.mockReturnValue(fixedTime);
       const rows = [
         {
           id: "sess_1",
-          createdAt: currentTime - 1000,
-          lastActive: currentTime - 500,
-          expiresAt: currentTime + 2_592_000_000,
+          createdAt: fixedTime - 1000,
+          lastActive: fixedTime - 500,
+          expiresAt: fixedTime + 2_592_000_000,
         },
       ];
       chain.limit.mockResolvedValueOnce(rows);
