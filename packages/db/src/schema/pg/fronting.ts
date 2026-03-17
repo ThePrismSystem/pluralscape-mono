@@ -104,9 +104,9 @@ export const frontingSessions = pgTable(
     versionCheckFor("fronting_sessions", t.version),
     archivableConsistencyCheckFor("fronting_sessions", t.archived, t.archivedAt),
     // Invariant: every session must have at least one subject (member or custom front).
-    // Both member_id and custom_front_id use ON DELETE RESTRICT — members/custom_fronts
-    // must be deleted or archived before the fronting session can be removed. Account
-    // purge cascades via system_id ON DELETE CASCADE, bypassing this.
+    // Both member_id and custom_front_id use ON DELETE RESTRICT — fronting sessions
+    // referencing a member/custom_front must be removed before that member/custom_front
+    // can be deleted. Account purge cascades via system_id ON DELETE CASCADE, bypassing this.
     check(
       "fronting_sessions_subject_check",
       sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,

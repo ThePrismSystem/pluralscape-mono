@@ -35,6 +35,8 @@ export const auditLog = pgTable(
   "audit_log",
   {
     id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
+    // ON DELETE SET NULL: audit logs survive account/system deletion with nullified references.
+    // Intentional exception to the RESTRICT policy — audit history must be preserved.
     /** Denormalized for query performance — avoids joining through systems to get account. */
     accountId: varchar("account_id", { length: ID_MAX_LENGTH }).references(() => accounts.id, {
       onDelete: "set null",
