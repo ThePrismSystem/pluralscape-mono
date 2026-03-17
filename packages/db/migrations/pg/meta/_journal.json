@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1773790027639,
-      "tag": "0000_special_gertrude_yorkes",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1773784513931,
-      "tag": "0002_demonic_vapor",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1773786195140,
-      "tag": "0003_quick_red_skull",
+      "when": 1773790529112,
+      "tag": "0000_greedy_triathlon",
       "breakpoints": true
     }
   ]
