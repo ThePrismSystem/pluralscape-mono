@@ -1,16 +1,13 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
-import { nomenclatureSettings, systems } from "@pluralscape/db/pg";
+import { serializeEncryptedBlob } from "@pluralscape/crypto";
+import { nomenclatureSettings } from "@pluralscape/db/pg";
 import { now } from "@pluralscape/types";
 import { UpdateNomenclatureBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { MAX_ENCRYPTED_DATA_BYTES } from "../routes/systems/systems.constants.js";
+import { validateEncryptedBlob } from "../lib/validate-encrypted-blob.js";
+import { verifySystemOwnership } from "../lib/verify-system-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -43,28 +40,6 @@ function toResult(row: {
     createdAt: row.createdAt as UnixMillis,
     updatedAt: row.updatedAt as UnixMillis,
   };
-}
-
-async function verifySystemOwnership(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  auth: AuthContext,
-): Promise<void> {
-  const [system] = await db
-    .select({ id: systems.id })
-    .from(systems)
-    .where(
-      and(
-        eq(systems.id, systemId),
-        eq(systems.accountId, auth.accountId),
-        eq(systems.archived, false),
-      ),
-    )
-    .limit(1);
-
-  if (!system) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-  }
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -105,26 +80,7 @@ export async function updateNomenclatureSettings(
 
   await verifySystemOwnership(db, systemId, auth);
 
-  const rawBytes = Buffer.from(parsed.data.encryptedData, "base64");
-
-  if (rawBytes.length > MAX_ENCRYPTED_DATA_BYTES) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "BLOB_TOO_LARGE",
-      `encryptedData exceeds maximum size of ${String(MAX_ENCRYPTED_DATA_BYTES)} bytes`,
-    );
-  }
-
-  let blob: EncryptedBlob;
-  try {
-    blob = deserializeEncryptedBlob(new Uint8Array(rawBytes));
-  } catch (error) {
-    if (error instanceof InvalidInputError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
-    }
-    throw error;
-  }
-
+  const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
 
   return db.transaction(async (tx) => {

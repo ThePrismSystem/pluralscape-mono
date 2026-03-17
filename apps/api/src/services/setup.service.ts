@@ -1,8 +1,3 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
 import { nomenclatureSettings, systemSettings, systems } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
@@ -14,59 +9,16 @@ import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { MAX_ENCRYPTED_DATA_BYTES } from "../routes/systems/systems.constants.js";
+import { validateEncryptedBlob } from "../lib/validate-encrypted-blob.js";
+import { verifySystemOwnership } from "../lib/verify-system-ownership.js";
 
 import { getRecoveryKeyStatus } from "./recovery-key.service.js";
+import { toSystemSettingsResult } from "./system-settings.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { EncryptedBlob, SystemId, SystemSettingsId, UnixMillis } from "@pluralscape/types";
+import type { SetupStepName, SystemId, SystemSettingsId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Helpers ─────────────────────────────────────────────────────────
-
-async function verifySystemOwnership(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  auth: AuthContext,
-): Promise<void> {
-  const [system] = await db
-    .select({ id: systems.id })
-    .from(systems)
-    .where(
-      and(
-        eq(systems.id, systemId),
-        eq(systems.accountId, auth.accountId),
-        eq(systems.archived, false),
-      ),
-    )
-    .limit(1);
-
-  if (!system) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System not found");
-  }
-}
-
-function validateEncryptedBlob(base64Data: string): EncryptedBlob {
-  const rawBytes = Buffer.from(base64Data, "base64");
-
-  if (rawBytes.length > MAX_ENCRYPTED_DATA_BYTES) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "BLOB_TOO_LARGE",
-      `encryptedData exceeds maximum size of ${String(MAX_ENCRYPTED_DATA_BYTES)} bytes`,
-    );
-  }
-
-  try {
-    return deserializeEncryptedBlob(new Uint8Array(rawBytes));
-  } catch (error) {
-    if (error instanceof InvalidInputError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
-    }
-    throw error;
-  }
-}
 
 // ── GET Setup Status ────────────────────────────────────────────────
 
@@ -164,7 +116,7 @@ export async function setupNomenclatureStep(
   await audit(db, {
     eventType: "setup.step-completed",
     actor: { kind: "account", id: auth.accountId },
-    detail: "nomenclature",
+    detail: "nomenclature" satisfies SetupStepName,
     systemId,
   });
 
@@ -206,7 +158,7 @@ export async function setupProfileStep(
   await audit(db, {
     eventType: "setup.step-completed",
     actor: { kind: "account", id: auth.accountId },
-    detail: "profile",
+    detail: "profile" satisfies SetupStepName,
     systemId,
   });
 
@@ -215,16 +167,7 @@ export async function setupProfileStep(
 
 // ── Step 3: Complete ────────────────────────────────────────────────
 
-export interface SetupCompleteResult {
-  readonly id: SystemSettingsId;
-  readonly systemId: SystemId;
-  readonly locale: string | null;
-  readonly biometricEnabled: boolean;
-  readonly encryptedData: string;
-  readonly version: number;
-  readonly createdAt: UnixMillis;
-  readonly updatedAt: UnixMillis;
-}
+export type SetupCompleteResult = ReturnType<typeof toSystemSettingsResult>;
 
 export async function setupComplete(
   db: PostgresJsDatabase,
@@ -282,62 +225,49 @@ export async function setupComplete(
     );
   }
 
-  // Check if settings already exist (idempotent)
-  const [existing] = await db
-    .select()
-    .from(systemSettings)
-    .where(eq(systemSettings.systemId, systemId))
-    .limit(1);
-
-  if (existing) {
-    return {
-      id: existing.id as SystemSettingsId,
-      systemId: existing.systemId as SystemId,
-      locale: existing.locale,
-      biometricEnabled: existing.biometricEnabled,
-      encryptedData: Buffer.from(serializeEncryptedBlob(existing.encryptedData)).toString("base64"),
-      version: existing.version,
-      createdAt: existing.createdAt as UnixMillis,
-      updatedAt: existing.updatedAt as UnixMillis,
-    };
-  }
-
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const id = createId(ID_PREFIXES.systemSettings) as SystemSettingsId;
   const timestamp = now();
 
-  const [row] = await db
-    .insert(systemSettings)
-    .values({
-      id,
-      systemId,
-      locale: parsed.data.locale ?? null,
-      biometricEnabled: parsed.data.biometricEnabled ?? false,
-      encryptedData: blob,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    })
-    .returning();
+  // Atomic insert with onConflictDoNothing to avoid TOCTOU race
+  return db.transaction(async (tx) => {
+    const inserted = await tx
+      .insert(systemSettings)
+      .values({
+        id,
+        systemId,
+        locale: parsed.data.locale ?? null,
+        biometricEnabled: parsed.data.biometricEnabled ?? false,
+        encryptedData: blob,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      })
+      .onConflictDoNothing({ target: systemSettings.systemId })
+      .returning();
 
-  if (!row) {
-    throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Failed to create system settings");
-  }
+    if (inserted.length > 0) {
+      await audit(tx, {
+        eventType: "setup.completed",
+        actor: { kind: "account", id: auth.accountId },
+        detail: "Setup completed",
+        systemId,
+      });
 
-  await audit(db, {
-    eventType: "setup.completed",
-    actor: { kind: "account", id: auth.accountId },
-    detail: "Setup completed",
-    systemId,
+      const [row] = inserted as [(typeof inserted)[number], ...typeof inserted];
+      return toSystemSettingsResult(row);
+    }
+
+    // Already existed — idempotent return
+    const [existing] = await tx
+      .select()
+      .from(systemSettings)
+      .where(eq(systemSettings.systemId, systemId))
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Failed to create system settings");
+    }
+
+    return toSystemSettingsResult(existing);
   });
-
-  return {
-    id: row.id as SystemSettingsId,
-    systemId: row.systemId as SystemId,
-    locale: row.locale,
-    biometricEnabled: row.biometricEnabled,
-    encryptedData: Buffer.from(serializeEncryptedBlob(row.encryptedData)).toString("base64"),
-    version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
-  };
 }
