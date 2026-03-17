@@ -1,10 +1,8 @@
 import { RATE_LIMITS } from "@pluralscape/types";
 
-import {
-  HTTP_TOO_MANY_REQUESTS,
-  MAX_RATE_LIMIT_ENTRIES,
-  MS_PER_SECOND,
-} from "./middleware.constants.js";
+import { HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
+
+import { MAX_RATE_LIMIT_ENTRIES, MS_PER_SECOND } from "./middleware.constants.js";
 
 import type { ApiErrorResponse, RateLimitCategory } from "@pluralscape/types";
 import type { Context, MiddlewareHandler } from "hono";

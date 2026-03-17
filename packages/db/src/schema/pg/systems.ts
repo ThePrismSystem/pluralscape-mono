@@ -1,7 +1,13 @@
 import { index, pgTable, unique, varchar } from "drizzle-orm/pg-core";
 
 import { pgEncryptedBlob } from "../../columns/pg.js";
-import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
+import {
+  archivable,
+  archivableConsistencyCheckFor,
+  timestamps,
+  versioned,
+  versionCheckFor,
+} from "../../helpers/audit.pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { accounts } from "./auth.js";
@@ -20,11 +26,13 @@ export const systems = pgTable(
     encryptedData: pgEncryptedBlob("encrypted_data"),
     ...timestamps(),
     ...versioned(),
+    ...archivable(),
   },
   (t) => [
     index("systems_account_id_idx").on(t.accountId),
     unique("systems_id_account_id_unique").on(t.id, t.accountId),
     versionCheckFor("systems", t.version),
+    archivableConsistencyCheckFor("systems", t.archived, t.archivedAt),
   ],
 );
 

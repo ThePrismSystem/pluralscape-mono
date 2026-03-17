@@ -1,8 +1,7 @@
 import { HTTPException } from "hono/http-exception";
 
+import { HTTP_BAD_REQUEST, HTTP_INTERNAL_SERVER_ERROR } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-
-import { HTTP_INTERNAL_SERVER_ERROR } from "./middleware.constants.js";
 
 import type { ApiErrorCode, ApiErrorResponse } from "@pluralscape/types";
 import type { Context, ErrorHandler } from "hono";
@@ -78,6 +77,19 @@ export const errorHandler: ErrorHandler = (err, c) => {
       console.error("[api] Unhandled error:", err);
     }
     return formatError(c, err.status, err.code, err.message, requestId, isProduction, err.details);
+  }
+
+  // Check by name to avoid importing Zod as a dependency of the error handler
+  if (err instanceof Error && err.name === "ZodError") {
+    return formatError(
+      c,
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Validation failed",
+      requestId,
+      isProduction,
+      err,
+    );
   }
 
   if (err instanceof HTTPException) {

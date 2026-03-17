@@ -7,6 +7,7 @@ import { createCategoryRateLimiter } from "./middleware/rate-limit.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createSecureHeaders } from "./middleware/secure-headers.js";
 import { authRoutes } from "./routes/auth/index.js";
+import { systemRoutes } from "./routes/systems/index.js";
 
 const DEFAULT_PORT = 10045;
 const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
@@ -28,6 +29,7 @@ app.get("/health", (c) => {
 });
 
 app.route("/auth", authRoutes);
+app.route("/systems", systemRoutes);
 
 async function start(): Promise<void> {
   await initSodium();

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
 import { authMiddleware } from "../../middleware/auth.js";
@@ -13,7 +14,7 @@ import {
   revokeSession,
 } from "../../services/auth.service.js";
 
-import { DEFAULT_SESSION_LIMIT, HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "./auth.constants.js";
+import { DEFAULT_SESSION_LIMIT } from "./auth.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 

@@ -3,23 +3,6 @@
  * Domain: authentication routes and service layer.
  */
 
-// ── HTTP Status Codes ──────────────────────────────────────────────
-
-/** HTTP 200 OK. */
-export const HTTP_OK = 200;
-
-/** HTTP 201 Created. */
-export const HTTP_CREATED = 201;
-
-/** HTTP 400 Bad Request. */
-export const HTTP_BAD_REQUEST = 400;
-
-/** HTTP 401 Unauthorized. */
-export const HTTP_UNAUTHORIZED = 401;
-
-/** HTTP 404 Not Found. */
-export const HTTP_NOT_FOUND = 404;
-
 // ── Auth Configuration ─────────────────────────────────────────────
 
 /** Minimum password length enforced at the auth service layer (mirrors crypto MIN_PASSWORD_LENGTH). */

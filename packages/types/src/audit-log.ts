@@ -28,7 +28,10 @@ export type AuditEventType =
   | "auth.password-reset-via-recovery"
   | "auth.recovery-key-regenerated"
   | "auth.device-transfer-initiated"
-  | "auth.device-transfer-completed";
+  | "auth.device-transfer-completed"
+  | "system.created"
+  | "system.profile-updated"
+  | "system.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

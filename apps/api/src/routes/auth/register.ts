@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
@@ -11,8 +12,6 @@ import {
   extractUserAgent,
   registerAccount,
 } from "../../services/auth.service.js";
-
-import { HTTP_BAD_REQUEST, HTTP_CREATED } from "./auth.constants.js";
 
 export const registerRoute = new Hono();
 

@@ -52,6 +52,9 @@ describe("AuditEventType", () => {
         case "auth.recovery-key-regenerated":
         case "auth.device-transfer-initiated":
         case "auth.device-transfer-completed":
+        case "system.created":
+        case "system.profile-updated":
+        case "system.deleted":
           return type;
         default: {
           const _exhaustive: never = type;
