@@ -5,15 +5,15 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { parseIdParam } from "../../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
-import { archiveMemberPhoto } from "../../../services/member-photo.service.js";
+import { restoreMemberPhoto } from "../../../services/member-photo.service.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
 
-export const archiveRoute = new Hono<AuthEnv>();
+export const restoreRoute = new Hono<AuthEnv>();
 
-archiveRoute.use("*", createCategoryRateLimiter("write"));
+restoreRoute.use("*", createCategoryRateLimiter("write"));
 
-archiveRoute.post("/:photoId/archive", async (c) => {
+restoreRoute.post("/:photoId/restore", async (c) => {
   const auth = c.get("auth");
   const systemId = parseIdParam(c.req.param("systemId") as string, ID_PREFIXES.system);
   const memberId = parseIdParam(c.req.param("memberId") as string, ID_PREFIXES.member);
@@ -21,6 +21,6 @@ archiveRoute.post("/:photoId/archive", async (c) => {
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
-  await archiveMemberPhoto(db, systemId, memberId, photoId, auth, audit);
-  return c.json({ ok: true });
+  const result = await restoreMemberPhoto(db, systemId, memberId, photoId, auth, audit);
+  return c.json(result);
 });

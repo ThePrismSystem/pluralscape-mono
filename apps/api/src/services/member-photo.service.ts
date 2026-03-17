@@ -351,3 +351,62 @@ export async function archiveMemberPhoto(
       );
   });
 }
+
+// ── RESTORE ────────────────────────────────────────────────────────
+
+export async function restoreMemberPhoto(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  memberId: MemberId,
+  photoId: MemberPhotoId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<MemberPhotoResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(memberPhotos)
+      .where(
+        and(
+          eq(memberPhotos.id, photoId),
+          eq(memberPhotos.memberId, memberId),
+          eq(memberPhotos.systemId, systemId),
+          eq(memberPhotos.archived, true),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Photo not found");
+    }
+
+    const timestamp = now();
+
+    const [row] = await tx
+      .update(memberPhotos)
+      .set({ archived: false, archivedAt: null, updatedAt: timestamp })
+      .where(
+        and(
+          eq(memberPhotos.id, photoId),
+          eq(memberPhotos.memberId, memberId),
+          eq(memberPhotos.systemId, systemId),
+        ),
+      )
+      .returning();
+
+    if (!row) {
+      throw new Error("Failed to restore member photo — UPDATE returned no rows");
+    }
+
+    await audit(tx, {
+      eventType: "member-photo.restored",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Member photo restored",
+      systemId,
+    });
+
+    return toPhotoResult(row);
+  });
+}

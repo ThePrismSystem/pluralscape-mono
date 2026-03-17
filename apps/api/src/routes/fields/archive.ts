@@ -13,7 +13,7 @@ export const archiveRoute = new Hono<AuthEnv>();
 
 archiveRoute.use("*", createCategoryRateLimiter("write"));
 
-archiveRoute.delete("/:fieldId", async (c) => {
+archiveRoute.post("/:fieldId/archive", async (c) => {
   const auth = c.get("auth");
   const systemId = parseIdParam(c.req.param("systemId") as string, ID_PREFIXES.system);
   const fieldId = parseIdParam(c.req.param("fieldId"), ID_PREFIXES.fieldDefinition);
