@@ -1,11 +1,11 @@
 ---
 # api-yp99
 title: Add max length constraint to encryptedData validation schema
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-03-17T11:58:44Z
-updated_at: 2026-03-17T11:58:44Z
+updated_at: 2026-03-17T18:33:18Z
 parent: api-tspr
 ---
 
@@ -22,7 +22,7 @@ parent: api-tspr
 // packages/validation/src/system.ts:3-8
 export const UpdateSystemBodySchema = z
   .object({
-    encryptedData: z.string().min(1),  // No .max()
+    encryptedData: z.string().min(1), // No .max()
     version: z.int().min(1),
   })
   .readonly();
@@ -55,3 +55,5 @@ encryptedData: z.string().min(1).max(MAX_ENCRYPTED_SYSTEM_DATA_SIZE),
 ## References
 
 - CWE-400: Uncontrolled Resource Consumption
+
+## Summary of Changes\n\nAdded `MAX_ENCRYPTED_SYSTEM_DATA_SIZE` constant (131,072 / 128 KiB) to `validation.constants.ts` and applied `.max()` constraint to `encryptedData` in `UpdateSystemBodySchema`. Scanned all validation schemas — no other unbounded encrypted fields found.

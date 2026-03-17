@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { UpdateSystemBodySchema } from "../system.js";
+import { MAX_ENCRYPTED_SYSTEM_DATA_SIZE } from "../validation.constants.js";
 
 describe("UpdateSystemBodySchema", () => {
   it("accepts a valid body with encryptedData and version", () => {
@@ -63,6 +64,29 @@ describe("UpdateSystemBodySchema", () => {
       version: 1,
     });
     expect(result.success).toBe(false);
+  });
+
+  it("rejects encryptedData exceeding max size", () => {
+    const oversized = "x".repeat(MAX_ENCRYPTED_SYSTEM_DATA_SIZE + 1);
+    const result = UpdateSystemBodySchema.safeParse({
+      encryptedData: oversized,
+      version: 1,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["encryptedData"]);
+    }
+  });
+
+  it("accepts encryptedData at exactly max size", () => {
+    const atLimit = "x".repeat(MAX_ENCRYPTED_SYSTEM_DATA_SIZE);
+    const result = UpdateSystemBodySchema.safeParse({
+      encryptedData: atLimit,
+      version: 1,
+    });
+    expect(result.success).toBe(true);
   });
 
   it("strips extra properties", () => {
