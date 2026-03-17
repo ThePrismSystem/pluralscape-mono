@@ -1,0 +1,44 @@
+import {
+  CLIENT_PLATFORM_HEADER,
+  DEFAULT_PLATFORM,
+  VALID_PLATFORMS,
+} from "../routes/auth/auth.constants.js";
+
+import type { Context } from "hono";
+
+export interface RequestMeta {
+  readonly ipAddress: string | null;
+  readonly userAgent: string | null;
+}
+
+/** Extract IP address from request context. */
+export function extractIpAddress(c: Context): string | null {
+  if (process.env["TRUST_PROXY"] === "1") {
+    const forwarded = c.req.header("x-forwarded-for");
+    const ip = forwarded?.split(",")[0]?.trim();
+    if (ip && ip.length > 0) return ip;
+  }
+  return null;
+}
+
+/** Extract user agent from request context. */
+export function extractUserAgent(c: Context): string | null {
+  return c.req.header("user-agent") ?? null;
+}
+
+/** Extract both IP address and user agent as a RequestMeta object. */
+export function extractRequestMeta(c: Context): RequestMeta {
+  return {
+    ipAddress: extractIpAddress(c),
+    userAgent: extractUserAgent(c),
+  };
+}
+
+/** Determine the client platform for session TTL selection. */
+export function extractPlatform(c: Context): "web" | "mobile" {
+  const header = c.req.header(CLIENT_PLATFORM_HEADER);
+  if (header && (VALID_PLATFORMS as readonly string[]).includes(header)) {
+    return header as "web" | "mobile";
+  }
+  return DEFAULT_PLATFORM;
+}

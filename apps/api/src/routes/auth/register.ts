@@ -3,13 +3,11 @@ import { Hono } from "hono";
 import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
+import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
   type RegisterParams,
   ValidationError,
-  extractIpAddress,
-  extractPlatform,
-  extractUserAgent,
   registerAccount,
 } from "../../services/auth.service.js";
 

@@ -3,11 +3,10 @@ import { Hono } from "hono";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
+import { extractIpAddress, extractUserAgent } from "../../lib/request-meta.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
-  extractIpAddress,
-  extractUserAgent,
   listSessions,
   logoutCurrentSession,
   revokeAllSessions,

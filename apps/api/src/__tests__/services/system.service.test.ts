@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { RequestMeta } from "../../services/auth.service.js";
+import type { RequestMeta } from "../../lib/request-meta.js";
 import type { SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────

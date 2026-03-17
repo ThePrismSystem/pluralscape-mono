@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import {
   CLIENT_PLATFORM_HEADER,
   DEFAULT_PLATFORM,
@@ -8,9 +9,6 @@ import {
 } from "../../routes/auth/auth.constants.js";
 import {
   ValidationError,
-  extractIpAddress,
-  extractPlatform,
-  extractUserAgent,
   listSessions,
   logoutCurrentSession,
   loginAccount,

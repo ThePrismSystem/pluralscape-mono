@@ -3,8 +3,8 @@ import { Hono } from "hono";
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
+import { extractRequestMeta } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import { extractRequestMeta } from "../../services/auth.service.js";
 import { updateSystemProfile } from "../../services/system.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
