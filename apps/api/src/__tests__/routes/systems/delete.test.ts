@@ -14,10 +14,8 @@ vi.mock("../../../services/system.service.js", () => ({
   archiveSystem: vi.fn(),
 }));
 
-vi.mock("../../../lib/request-meta.js", () => ({
-  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
-  extractIpAddress: vi.fn().mockReturnValue(null),
-  extractUserAgent: vi.fn().mockReturnValue(null),
+vi.mock("../../../lib/audit-writer.js", () => ({
+  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
 }));
 
 vi.mock("../../../lib/db.js", () => ({
@@ -87,7 +85,7 @@ describe("DELETE /systems/:id", () => {
     expect(body.ok).toBe(true);
   });
 
-  it("forwards systemId, auth, and requestMeta to service", async () => {
+  it("forwards systemId, auth, and audit writer to service", async () => {
     vi.mocked(archiveSystem).mockResolvedValueOnce(undefined);
 
     const app = createApp();
@@ -97,10 +95,7 @@ describe("DELETE /systems/:id", () => {
       expect.anything(),
       "sys_550e8400-e29b-41d4-a716-446655440000",
       MOCK_AUTH,
-      {
-        ipAddress: null,
-        userAgent: null,
-      },
+      expect.any(Function),
     );
   });
 

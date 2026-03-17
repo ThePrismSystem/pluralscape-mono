@@ -2,8 +2,8 @@ import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { extractRequestMeta } from "../../lib/request-meta.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
@@ -54,9 +54,9 @@ sessionsRoute.delete("/sessions/:id", async (c) => {
     );
   }
 
-  const requestMeta = extractRequestMeta(c);
+  const audit = createAuditWriter(c, auth);
 
-  const success = await revokeSession(db, targetId, auth.accountId, requestMeta);
+  const success = await revokeSession(db, targetId, auth.accountId, audit);
   if (!success) {
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Session not found");
   }
@@ -68,9 +68,9 @@ sessionsRoute.delete("/sessions/:id", async (c) => {
 sessionsRoute.post("/logout", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
-  const requestMeta = extractRequestMeta(c);
+  const audit = createAuditWriter(c, auth);
 
-  await logoutCurrentSession(db, auth.sessionId, auth.accountId, requestMeta);
+  await logoutCurrentSession(db, auth.sessionId, auth.accountId, audit);
   return c.json({ ok: true });
 });
 
@@ -78,8 +78,8 @@ sessionsRoute.post("/logout", async (c) => {
 sessionsRoute.post("/sessions/revoke-all", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
-  const requestMeta = extractRequestMeta(c);
+  const audit = createAuditWriter(c, auth);
 
-  const count = await revokeAllSessions(db, auth.accountId, auth.sessionId, requestMeta);
+  const count = await revokeAllSessions(db, auth.accountId, auth.sessionId, audit);
   return c.json({ ok: true, revokedCount: count });
 });

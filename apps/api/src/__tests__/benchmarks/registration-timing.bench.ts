@@ -11,6 +11,7 @@
  * Requires: running PostgreSQL, valid .env with EMAIL_HASH_PEPPER, crypto deps.
  */
 
+import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { ANTI_ENUM_TARGET_MS } from "../../routes/auth/auth.constants.js";
 import { registerAccount } from "../../services/auth.service.js";
@@ -54,7 +55,7 @@ async function runBenchmark(): Promise<BenchmarkResult> {
           accountType: "system",
         },
         "web",
-        { ipAddress: null, userAgent: "benchmark-tool" },
+        createAuditWriter({ req: { header: () => "benchmark-tool" } } as never),
       );
     } catch {
       // Account may fail for various reasons — we still measure timing

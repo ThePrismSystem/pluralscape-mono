@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { RequestMeta } from "../../lib/request-meta.js";
 import type { SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
@@ -33,8 +32,6 @@ vi.mock("../../lib/audit-log.js", () => ({
 const { InvalidInputError } = await import("@pluralscape/crypto");
 const { listSystems, getSystemProfile, updateSystemProfile, archiveSystem, createSystem } =
   await import("../../services/system.service.js");
-const { writeAuditLog } = await import("../../lib/audit-log.js");
-
 // ── Fixtures ─────────────────────────────────────────────────────────
 
 const SYSTEM_ID = "sys_test-system" as SystemId;
@@ -46,10 +43,7 @@ const AUTH: AuthContext = {
   accountType: "system",
 };
 
-const REQUEST_META: RequestMeta = {
-  ipAddress: "127.0.0.1",
-  userAgent: "test-agent",
-};
+const mockAudit = vi.fn().mockResolvedValue(undefined);
 
 function makeSystemRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -217,13 +211,13 @@ describe("updateSystemProfile", () => {
       SYSTEM_ID,
       { encryptedData: VALID_BLOB_BASE64, version: 1 },
       AUTH,
-      REQUEST_META,
+      mockAudit,
     );
 
     expect(result.id).toBe("sys_test-system");
     expect(result.version).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
-    expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
+    expect(mockAudit).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ eventType: "system.profile-updated" }),
     );
@@ -241,7 +235,7 @@ describe("updateSystemProfile", () => {
         SYSTEM_ID,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
-        REQUEST_META,
+        mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 409, code: "CONFLICT" }));
   });
@@ -257,7 +251,7 @@ describe("updateSystemProfile", () => {
         "sys_nonexistent" as SystemId,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
-        REQUEST_META,
+        mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
@@ -275,7 +269,7 @@ describe("updateSystemProfile", () => {
         SYSTEM_ID,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
         AUTH,
-        REQUEST_META,
+        mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
@@ -285,13 +279,7 @@ describe("updateSystemProfile", () => {
     const oversized = Buffer.from(new Uint8Array(70_000)).toString("base64");
 
     await expect(
-      updateSystemProfile(
-        db,
-        SYSTEM_ID,
-        { encryptedData: oversized, version: 1 },
-        AUTH,
-        REQUEST_META,
-      ),
+      updateSystemProfile(db, SYSTEM_ID, { encryptedData: oversized, version: 1 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "BLOB_TOO_LARGE" }));
   });
 
@@ -299,7 +287,7 @@ describe("updateSystemProfile", () => {
     const { db } = mockDb();
 
     await expect(
-      updateSystemProfile(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, REQUEST_META),
+      updateSystemProfile(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 });
@@ -322,10 +310,10 @@ describe("archiveSystem", () => {
       .mockResolvedValueOnce([{ count: 0 }]); // member count
     chain.returning.mockResolvedValueOnce([{ id: "sys_test-system" }]);
 
-    await archiveSystem(db, SYSTEM_ID, AUTH, REQUEST_META);
+    await archiveSystem(db, SYSTEM_ID, AUTH, mockAudit);
 
     expect(chain.transaction).toHaveBeenCalled();
-    expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
+    expect(mockAudit).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ eventType: "system.deleted" }),
     );
@@ -334,9 +322,9 @@ describe("archiveSystem", () => {
   it("throws 404 when system not found", async () => {
     const { db } = mockDb();
 
-    await expect(
-      archiveSystem(db, "sys_nonexistent" as SystemId, AUTH, REQUEST_META),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    await expect(archiveSystem(db, "sys_nonexistent" as SystemId, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 
   it("throws 409 when it is the last system", async () => {
@@ -348,7 +336,7 @@ describe("archiveSystem", () => {
       .mockReturnValueOnce(chain) // ownership → chains to .limit()
       .mockResolvedValueOnce([{ count: 1 }]); // system count
 
-    await expect(archiveSystem(db, SYSTEM_ID, AUTH, REQUEST_META)).rejects.toThrow(
+    await expect(archiveSystem(db, SYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 409, code: "CONFLICT" }),
     );
   });
@@ -361,7 +349,7 @@ describe("archiveSystem", () => {
       .mockResolvedValueOnce([{ count: 2 }]) // system count
       .mockResolvedValueOnce([{ count: 3 }]); // member count
 
-    await expect(archiveSystem(db, SYSTEM_ID, AUTH, REQUEST_META)).rejects.toThrow(
+    await expect(archiveSystem(db, SYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({
         status: 409,
         code: "HAS_DEPENDENTS",
@@ -381,12 +369,12 @@ describe("createSystem", () => {
     const newRow = makeSystemRow({ id: "sys_new-system" });
     chain.returning.mockResolvedValueOnce([newRow]);
 
-    const result = await createSystem(db, AUTH, REQUEST_META);
+    const result = await createSystem(db, AUTH, mockAudit);
 
     expect(result.id).toBe("sys_new-system");
     expect(result.encryptedData).toBeNull();
     expect(result.version).toBe(1);
-    expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
+    expect(mockAudit).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ eventType: "system.created" }),
     );
@@ -399,7 +387,7 @@ describe("createSystem", () => {
       accountType: "viewer",
     };
 
-    await expect(createSystem(db, viewerAuth, REQUEST_META)).rejects.toThrow(
+    await expect(createSystem(db, viewerAuth, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 403, code: "FORBIDDEN" }),
     );
   });

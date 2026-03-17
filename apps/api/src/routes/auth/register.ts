@@ -2,8 +2,9 @@ import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { extractPlatform, extractRequestMeta } from "../../lib/request-meta.js";
+import { extractPlatform } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError, registerAccount } from "../../services/auth.service.js";
 
@@ -20,12 +21,12 @@ registerRoute.post("/", async (c) => {
   }
 
   const platform = extractPlatform(c);
-  const requestMeta = extractRequestMeta(c);
+  const audit = createAuditWriter(c);
 
   const db = await getDb();
 
   try {
-    const result = await registerAccount(db, body, platform, requestMeta);
+    const result = await registerAccount(db, body, platform, audit);
     return c.json(
       {
         sessionToken: result.sessionToken,

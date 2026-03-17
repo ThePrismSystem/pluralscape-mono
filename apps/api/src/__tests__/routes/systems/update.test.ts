@@ -14,10 +14,8 @@ vi.mock("../../../services/system.service.js", () => ({
   updateSystemProfile: vi.fn(),
 }));
 
-vi.mock("../../../lib/request-meta.js", () => ({
-  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
-  extractIpAddress: vi.fn().mockReturnValue(null),
-  extractUserAgent: vi.fn().mockReturnValue(null),
+vi.mock("../../../lib/audit-writer.js", () => ({
+  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
 }));
 
 vi.mock("../../../lib/db.js", () => ({
@@ -101,7 +99,7 @@ describe("PUT /systems/:id", () => {
     expect(body.version).toBe(2);
   });
 
-  it("forwards systemId, body, auth, and requestMeta to service", async () => {
+  it("forwards systemId, body, auth, and audit writer to service", async () => {
     vi.mocked(updateSystemProfile).mockResolvedValueOnce({
       id: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
       encryptedData: "dGVzdA==",
@@ -118,7 +116,7 @@ describe("PUT /systems/:id", () => {
       "sys_550e8400-e29b-41d4-a716-446655440000",
       VALID_BODY,
       MOCK_AUTH,
-      { ipAddress: null, userAgent: null },
+      expect.any(Function),
     );
   });
 

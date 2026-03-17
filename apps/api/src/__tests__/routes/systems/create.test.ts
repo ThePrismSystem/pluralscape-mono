@@ -14,10 +14,8 @@ vi.mock("../../../services/system.service.js", () => ({
   createSystem: vi.fn(),
 }));
 
-vi.mock("../../../lib/request-meta.js", () => ({
-  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
-  extractIpAddress: vi.fn().mockReturnValue(null),
-  extractUserAgent: vi.fn().mockReturnValue(null),
+vi.mock("../../../lib/audit-writer.js", () => ({
+  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
 }));
 
 vi.mock("../../../lib/db.js", () => ({
@@ -93,7 +91,7 @@ describe("POST /systems", () => {
     expect(body.version).toBe(1);
   });
 
-  it("forwards auth context and requestMeta to service", async () => {
+  it("forwards auth context and audit writer to service", async () => {
     vi.mocked(createSystem).mockResolvedValueOnce({
       id: "sys_new" as never,
       encryptedData: null,
@@ -105,10 +103,11 @@ describe("POST /systems", () => {
     const app = createApp();
     await app.request("/systems", { method: "POST" });
 
-    expect(vi.mocked(createSystem)).toHaveBeenCalledWith(expect.anything(), MOCK_AUTH, {
-      ipAddress: null,
-      userAgent: null,
-    });
+    expect(vi.mocked(createSystem)).toHaveBeenCalledWith(
+      expect.anything(),
+      MOCK_AUTH,
+      expect.any(Function),
+    );
   });
 
   it("returns 403 when account type is not system", async () => {

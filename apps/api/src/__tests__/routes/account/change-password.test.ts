@@ -26,8 +26,8 @@ vi.mock("../../../lib/db.js", () => ({
   getDb: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock("../../../lib/request-meta.js", () => ({
-  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
+vi.mock("../../../lib/audit-writer.js", () => ({
+  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
 }));
 
 vi.mock("../../../middleware/rate-limit.js", () => ({
@@ -128,7 +128,7 @@ describe("PUT /account/password", () => {
       "acct_test",
       "sess_current",
       { currentPassword: "oldpass123", newPassword: "newpass123" },
-      { ipAddress: null, userAgent: null },
+      expect.any(Function),
     );
   });
 
