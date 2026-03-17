@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
@@ -7,12 +7,7 @@ describe("middleware composition", () => {
   const originalTrustProxy = process.env["TRUST_PROXY"];
   const originalCorsOrigin = process.env["CORS_ORIGIN"];
 
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
-
   afterEach(() => {
-    vi.useRealTimers();
     if (originalEnv === undefined) {
       delete process.env["NODE_ENV"];
     } else {
@@ -76,21 +71,26 @@ describe("middleware composition", () => {
   });
 
   it("rate limiter returns 429 with structured error after threshold", async () => {
-    const { Hono } = await import("hono");
-    const { createRateLimiter } = await import("../middleware/rate-limit.js");
-    const { requestIdMiddleware } = await import("../middleware/request-id.js");
+    vi.useFakeTimers();
+    try {
+      const { Hono } = await import("hono");
+      const { createRateLimiter } = await import("../middleware/rate-limit.js");
+      const { requestIdMiddleware } = await import("../middleware/request-id.js");
 
-    const testApp = new Hono();
-    testApp.use("*", requestIdMiddleware());
-    testApp.use("*", createRateLimiter({ limit: 2, windowMs: 60_000 }));
-    testApp.get("/test", (c) => c.json({ ok: true }));
+      const testApp = new Hono();
+      testApp.use("*", requestIdMiddleware());
+      testApp.use("*", createRateLimiter({ limit: 2, windowMs: 60_000 }));
+      testApp.get("/test", (c) => c.json({ ok: true }));
 
-    await testApp.request("/test");
-    await testApp.request("/test");
-    const res = await testApp.request("/test");
-    expect(res.status).toBe(429);
-    const body = (await res.json()) as ApiErrorResponse;
-    expect(body.error.code).toBe("RATE_LIMITED");
+      await testApp.request("/test");
+      await testApp.request("/test");
+      const res = await testApp.request("/test");
+      expect(res.status).toBe(429);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("RATE_LIMITED");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rate limiter includes X-RateLimit-* headers on successful responses", async () => {
