@@ -246,6 +246,39 @@ describe("authMiddleware", () => {
     expect(mockDbUpdate).not.toHaveBeenCalled();
   });
 
+  it("does not crash when lastActive update fails", async () => {
+    const validResult = makeValidResult({ lastActive: null });
+    const failingUpdate = vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockRejectedValue(new Error("DB write error")),
+      }),
+    });
+    const mockDb = { update: failingUpdate };
+    mockGetDb.mockResolvedValue(mockDb);
+    mockValidateSession.mockResolvedValue(validResult);
+    mockNow.mockReturnValue(2_000_000);
+
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const app = createApp();
+    const res = await app.request("/protected", {
+      headers: { Authorization: "Bearer sess_abc123" },
+    });
+
+    // Request should still succeed — fire-and-forget error is caught
+    expect(res.status).toBe(200);
+
+    // Wait for the microtask to complete
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(consoleError).toHaveBeenCalledWith(
+      "[auth] Failed to update session lastActive:",
+      expect.any(Error),
+    );
+
+    consoleError.mockRestore();
+  });
+
   it("handles case-insensitive Bearer prefix", async () => {
     const mockDb = { update: mockDbUpdate };
     mockGetDb.mockResolvedValue(mockDb);

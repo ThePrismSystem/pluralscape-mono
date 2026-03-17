@@ -32,19 +32,30 @@ describe("getEmailHashPepper", () => {
     );
   });
 
-  it("returns correct bytes for valid hex", () => {
-    process.env["EMAIL_HASH_PEPPER"] = "deadbeef";
+  it("returns correct bytes for valid 64-char hex", () => {
+    // 64 hex chars = 32 bytes
+    process.env["EMAIL_HASH_PEPPER"] = "deadbeef".repeat(8);
     const result = getEmailHashPepper();
     expect(result).toBeInstanceOf(Uint8Array);
-    expect(result.length).toBe(4);
+    expect(result.length).toBe(32);
     expect(result[0]).toBe(0xde);
     expect(result[1]).toBe(0xad);
     expect(result[2]).toBe(0xbe);
     expect(result[3]).toBe(0xef);
   });
 
+  it("throws for wrong-length hex (not 64 chars)", () => {
+    process.env["EMAIL_HASH_PEPPER"] = "deadbeef";
+    expect(() => getEmailHashPepper()).toThrow("64-character hex string");
+  });
+
+  it("throws for odd-length hex string", () => {
+    process.env["EMAIL_HASH_PEPPER"] = "a".repeat(63);
+    expect(() => getEmailHashPepper()).toThrow("64-character hex string");
+  });
+
   it("throws for invalid hex characters", () => {
-    process.env["EMAIL_HASH_PEPPER"] = "zzzzzzzz";
+    process.env["EMAIL_HASH_PEPPER"] = "z".repeat(64);
     expect(() => getEmailHashPepper()).toThrow("EMAIL_HASH_PEPPER must be a valid hex string");
   });
 });
