@@ -82,6 +82,7 @@ describe("AuditEventType", () => {
         case "member.restored":
         case "member-photo.created":
         case "member-photo.archived":
+        case "member-photo.restored":
         case "member-photo.reordered":
         case "field-definition.created":
         case "field-definition.updated":
