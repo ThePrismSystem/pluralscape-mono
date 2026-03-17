@@ -18,6 +18,7 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
 import { writeAuditLog } from "../lib/audit-log.js";
 import { hashEmail } from "../lib/email-hash.js";
+import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
 import { getIdleTimeout } from "../lib/session-auth.js";
 import {
@@ -447,17 +448,7 @@ class ValidationError extends Error {
 
 export { ValidationError };
 
-function serializeEncryptedPayload(payload: {
-  ciphertext: Uint8Array;
-  nonce: Uint8Array;
-}): Uint8Array {
-  const result = new Uint8Array(payload.nonce.length + payload.ciphertext.length);
-  result.set(payload.nonce, 0);
-  result.set(payload.ciphertext, payload.nonce.length);
-  return result;
-}
-
-function isDuplicateEmailError(error: unknown): boolean {
+export function isDuplicateEmailError(error: unknown): boolean {
   if (error instanceof Error && "code" in error && "constraint_name" in error) {
     const pgErr = error as { code: string; constraint_name: string };
     return pgErr.code === "23505" && pgErr.constraint_name === "accounts_email_hash_idx";

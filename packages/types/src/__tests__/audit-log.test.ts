@@ -52,6 +52,7 @@ describe("AuditEventType", () => {
         case "auth.recovery-key-regenerated":
         case "auth.device-transfer-initiated":
         case "auth.device-transfer-completed":
+        case "auth.email-changed":
         case "system.created":
         case "system.profile-updated":
         case "system.deleted":

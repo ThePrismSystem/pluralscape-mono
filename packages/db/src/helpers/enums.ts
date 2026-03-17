@@ -191,6 +191,7 @@ export const AUDIT_EVENT_TYPES = [
   "auth.recovery-key-regenerated",
   "auth.device-transfer-initiated",
   "auth.device-transfer-completed",
+  "auth.email-changed",
 ] as const satisfies readonly AuditEventType[];
 export const CHANNEL_TYPES = [
   "category",
