@@ -3,6 +3,7 @@ export {
   ChangeEmailSchema,
   ChangePasswordSchema,
   LoginCredentialsSchema,
+  RegenerateRecoveryKeySchema,
   RegistrationInputSchema,
 } from "./auth.js";
 export { UpdateSystemBodySchema } from "./system.js";

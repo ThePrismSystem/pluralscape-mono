@@ -33,3 +33,10 @@ export const ChangePasswordSchema = z
     newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
   })
   .readonly();
+
+export const RegenerateRecoveryKeySchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    confirmed: z.boolean(),
+  })
+  .readonly();
