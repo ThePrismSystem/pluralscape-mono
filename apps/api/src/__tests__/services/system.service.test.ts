@@ -307,6 +307,10 @@ describe("createSystem", () => {
     expect(result.id).toBe("sys_new-system");
     expect(result.encryptedData).toBeNull();
     expect(result.version).toBe(1);
+    expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "system.created" }),
+    );
   });
 
   it("throws 403 for viewer accounts", async () => {

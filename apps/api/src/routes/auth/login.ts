@@ -14,9 +14,9 @@ export const loginRoute = new Hono();
 loginRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 loginRoute.post("/", async (c) => {
-  let body: { email: string; password: string };
+  let body: unknown;
   try {
-    body = await c.req.json<{ email: string; password: string }>();
+    body = await c.req.json();
   } catch {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
   }

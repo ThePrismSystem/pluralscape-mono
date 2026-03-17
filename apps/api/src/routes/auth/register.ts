@@ -5,20 +5,16 @@ import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
-import {
-  type RegisterParams,
-  ValidationError,
-  registerAccount,
-} from "../../services/auth.service.js";
+import { ValidationError, registerAccount } from "../../services/auth.service.js";
 
 export const registerRoute = new Hono();
 
 registerRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 registerRoute.post("/", async (c) => {
-  let body: RegisterParams;
+  let body: unknown;
   try {
-    body = await c.req.json<RegisterParams>();
+    body = await c.req.json();
   } catch {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
   }

@@ -234,6 +234,10 @@ describe("auth service", () => {
   // ── registerAccount ────────────────────────────────────────────────
 
   describe("registerAccount", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     const validParams = {
       email: "test@example.com",
       password: "securepassword123",
@@ -277,11 +281,11 @@ describe("auth service", () => {
       const { db } = mockDb();
       const result = await registerAccount(
         db,
-        { ...validParams, accountType: "caregiver" as "system" },
+        { ...validParams, accountType: "viewer" },
         "web",
         requestMeta,
       );
-      expect(result.accountType).toBe("caregiver");
+      expect(result.accountType).toBe("viewer");
     });
 
     it("returns a recovery key in group format", async () => {
@@ -357,6 +361,10 @@ describe("auth service", () => {
   // ── loginAccount ───────────────────────────────────────────────────
 
   describe("loginAccount", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     const credentials = { email: "test@example.com", password: "securepassword123" };
     const requestMeta = { ipAddress: "1.2.3.4", userAgent: "TestAgent/1.0" };
 

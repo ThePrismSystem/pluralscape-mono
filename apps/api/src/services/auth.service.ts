@@ -46,26 +46,15 @@ export interface RegistrationResult {
   readonly accountType: AccountType;
 }
 
-export interface RegisterParams {
-  readonly email: string;
-  readonly password: string;
-  readonly recoveryKeyBackupConfirmed: boolean;
-  readonly accountType?: AccountType;
-}
-
 export async function registerAccount(
   db: PostgresJsDatabase,
-  params: RegisterParams,
+  params: unknown,
   platform: "web" | "mobile",
   requestMeta: RequestMeta,
 ): Promise<RegistrationResult> {
   const startTime = performance.now();
 
-  const parsed = RegistrationInputSchema.parse({
-    email: params.email,
-    password: params.password,
-    recoveryKeyBackupConfirmed: params.recoveryKeyBackupConfirmed,
-  });
+  const parsed = RegistrationInputSchema.parse(params);
 
   if (!parsed.recoveryKeyBackupConfirmed) {
     throw new ValidationError("Recovery key backup must be confirmed");
@@ -77,7 +66,13 @@ export async function registerAccount(
     );
   }
 
-  const accountType = params.accountType ?? "system";
+  const accountType =
+    typeof params === "object" &&
+    params !== null &&
+    "accountType" in params &&
+    (params.accountType === "system" || params.accountType === "viewer")
+      ? (params.accountType as AccountType)
+      : "system";
   const emailHash = hashEmail(parsed.email);
   const adapter = getSodium();
 
@@ -224,7 +219,7 @@ export interface LoginResult {
 
 export async function loginAccount(
   db: PostgresJsDatabase,
-  credentials: { email: string; password: string },
+  credentials: unknown,
   platform: "web" | "mobile",
   requestMeta: RequestMeta,
 ): Promise<LoginResult | null> {
