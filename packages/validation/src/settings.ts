@@ -36,6 +36,12 @@ export const SetPinBodySchema = z
   })
   .readonly();
 
+export const RemovePinBodySchema = z
+  .object({
+    pin: z.string().regex(PIN_REGEX, "PIN must be 4-6 digits"),
+  })
+  .readonly();
+
 export const VerifyPinBodySchema = z
   .object({
     pin: z.string().regex(PIN_REGEX, "PIN must be 4-6 digits"),

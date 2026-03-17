@@ -18,6 +18,7 @@ export { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "./cust
 export {
   BiometricEnrollBodySchema,
   BiometricVerifyBodySchema,
+  RemovePinBodySchema,
   SetPinBodySchema,
   SetupCompleteBodySchema,
   SetupNomenclatureStepBodySchema,
