@@ -1,11 +1,11 @@
 ---
 # api-1v5r
 title: Registration endpoint
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-16T11:52:27Z
-updated_at: 2026-03-16T23:21:00Z
+updated_at: 2026-03-17T00:02:46Z
 parent: api-o89k
 ---
 
@@ -29,4 +29,8 @@ POST /auth/register: create account (Argon2id hash, emailHash+salt, kdfSalt), cr
 - [x] Create register.ts route handler
 - [x] Create routes/auth/index.ts
 - [x] Add EMAIL_HASH_PEPPER to .env.example
-- [ ] Write registration integration tests
+- [x] Write registration unit tests (mocked DB)
+
+## Summary of Changes
+
+Registration endpoint (POST /auth/register) with full crypto integration: Argon2id password hashing, BLAKE2b email hashing, KEK/DEK master key wrapping, identity keypair generation, recovery key generation, session creation. Anti-enumeration via fake 201 on duplicate email.

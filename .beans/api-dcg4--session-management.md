@@ -1,11 +1,11 @@
 ---
 # api-dcg4
 title: Session management
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-16T11:52:33Z
-updated_at: 2026-03-16T23:21:09Z
+updated_at: 2026-03-17T00:02:46Z
 parent: api-o89k
 blocked_by:
   - api-5mzr
@@ -19,5 +19,9 @@ GET /auth/sessions (list, cursor paginated), DELETE /auth/sessions/:id (revoke),
 - [x] Add session management functions to auth.service.ts (listSessions, revokeSession, revokeAllSessions, logoutCurrentSession)
 - [x] Create sessions.ts route handler
 - [x] Add session routes to auth/index.ts
-- [ ] Write session management tests
-- [ ] Write session-auth tests
+- [x] Write session management tests
+- [x] Write session-auth tests
+
+## Summary of Changes
+
+Session management endpoints: GET /auth/sessions (cursor paginated), DELETE /auth/sessions/:id, POST /auth/logout, POST /auth/sessions/revoke-all. Session validation utility (validateSession) with absolute/idle TTL checks.

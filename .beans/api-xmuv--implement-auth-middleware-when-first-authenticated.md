@@ -1,11 +1,11 @@
 ---
 # api-xmuv
 title: Implement auth middleware when first authenticated route is added
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-15T21:55:58Z
-updated_at: 2026-03-16T23:21:09Z
+updated_at: 2026-03-17T00:02:46Z
 parent: api-o89k
 blocked_by:
   - api-dcg4
@@ -16,5 +16,9 @@ Session token extraction (Bearer header), session lookup, expiry checks (absolut
 ## Todo
 
 - [x] Create middleware/auth.ts (authMiddleware)
-- [ ] Write auth middleware tests
-- [ ] Refactor session routes to use authMiddleware
+- [x] Write auth middleware tests
+- [x] Refactor session routes to use authMiddleware
+
+## Summary of Changes
+
+Auth middleware extracts Bearer token, calls validateSession, throttles lastActive updates (60s debounce), sets auth context on Hono context. Session routes refactored to use authMiddleware.
