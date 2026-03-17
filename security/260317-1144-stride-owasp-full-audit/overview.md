@@ -34,23 +34,23 @@ Remaining findings are Medium or Low severity and primarily defense-in-depth imp
 
 ### Trend
 
-| Metric | Previous | Current | Change |
-|--------|----------|---------|--------|
-| Critical | 0 | 0 | -- |
-| High | 1 | 0 | Improved (-1) |
-| Medium | 6 | 3 | Improved (-3) |
-| Low | 2 | 5 | Regressed (+3 new, 2 recurring) |
-| Total actionable | 8 | 8 | -- (different composition) |
-| OWASP coverage | 10/10 | 10/10 | -- |
-| STRIDE coverage | 6/6 | 6/6 | -- |
+| Metric           | Previous | Current | Change                          |
+| ---------------- | -------- | ------- | ------------------------------- |
+| Critical         | 0        | 0       | --                              |
+| High             | 1        | 0       | Improved (-1)                   |
+| Medium           | 6        | 3       | Improved (-3)                   |
+| Low              | 2        | 5       | Regressed (+3 new, 2 recurring) |
+| Total actionable | 8        | 8       | -- (different composition)      |
+| OWASP coverage   | 10/10    | 10/10   | --                              |
+| STRIDE coverage  | 6/6      | 6/6     | --                              |
 
 ### Finding Status
 
-| Status | Count | Details |
-|--------|-------|---------|
-| Fixed since last audit | 6 | Auth middleware, security headers, rate limiting, CORS, SQLite FK, error handler |
-| New findings | 5 | ZodError leak, unbounded encryptedData, session TOCTOU, IP validation, password schema |
-| Recurring (unfixed) | 3 | Webhook secret T3, audit PII, transfer code entropy |
+| Status                 | Count | Details                                                                                |
+| ---------------------- | ----- | -------------------------------------------------------------------------------------- |
+| Fixed since last audit | 6     | Auth middleware, security headers, rate limiting, CORS, SQLite FK, error handler       |
+| New findings           | 5     | ZodError leak, unbounded encryptedData, session TOCTOU, IP validation, password schema |
+| Recurring (unfixed)    | 3     | Webhook secret T3, audit PII, transfer code entropy                                    |
 
 ### Assessment
 
@@ -70,29 +70,29 @@ Remaining findings are Medium or Low severity and primarily defense-in-depth imp
 
 ### STRIDE
 
-| Category | Tested | Findings |
-|----------|--------|----------|
-| Spoofing | Yes | 2 (IP validation, password schema) |
-| Tampering | Yes | 1 (unbounded encryptedData) |
-| Repudiation | Yes | 0 |
-| Information Disclosure | Yes | 3 (ZodError leak, webhook secret, audit PII) |
-| Denial of Service | Yes | 1 (rate-limit bucket flooding) |
-| Elevation of Privilege | Yes | 1 (session revocation TOCTOU) |
+| Category               | Tested | Findings                                     |
+| ---------------------- | ------ | -------------------------------------------- |
+| Spoofing               | Yes    | 2 (IP validation, password schema)           |
+| Tampering              | Yes    | 1 (unbounded encryptedData)                  |
+| Repudiation            | Yes    | 0                                            |
+| Information Disclosure | Yes    | 3 (ZodError leak, webhook secret, audit PII) |
+| Denial of Service      | Yes    | 1 (rate-limit bucket flooding)               |
+| Elevation of Privilege | Yes    | 1 (session revocation TOCTOU)                |
 
 ### OWASP Top 10
 
-| Category | Status |
-|----------|--------|
-| A01 Broken Access Control | Partial (defense-in-depth gap in session revocation) |
-| A02 Cryptographic Failures | Partial (recurring design trade-offs) |
-| A03 Injection | Partial (no SQL/XSS; unbounded input field) |
-| A04 Insecure Design | Pass |
-| A05 Security Misconfiguration | Partial (ZodError leak, IP validation) |
-| A06 Vulnerable Components | Pass (0 CVEs) |
-| A07 Auth Failures | Partial (schema inconsistency) |
-| A08 Data Integrity | Pass |
-| A09 Logging Failures | Partial (PII retention) |
-| A10 SSRF | Pass |
+| Category                      | Status                                               |
+| ----------------------------- | ---------------------------------------------------- |
+| A01 Broken Access Control     | Partial (defense-in-depth gap in session revocation) |
+| A02 Cryptographic Failures    | Partial (recurring design trade-offs)                |
+| A03 Injection                 | Partial (no SQL/XSS; unbounded input field)          |
+| A04 Insecure Design           | Pass                                                 |
+| A05 Security Misconfiguration | Partial (ZodError leak, IP validation)               |
+| A06 Vulnerable Components     | Pass (0 CVEs)                                        |
+| A07 Auth Failures             | Partial (schema inconsistency)                       |
+| A08 Data Integrity            | Pass                                                 |
+| A09 Logging Failures          | Partial (PII retention)                              |
+| A10 SSRF                      | Pass                                                 |
 
 ## Metric
 

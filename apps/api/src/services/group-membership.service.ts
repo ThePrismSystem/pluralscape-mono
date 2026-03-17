@@ -1,0 +1,216 @@
+import { groupMemberships, groups, members } from "@pluralscape/db/pg";
+import { now, toCursor } from "@pluralscape/types";
+import { AddGroupMemberBodySchema } from "@pluralscape/validation";
+import { and, eq, gt } from "drizzle-orm";
+
+import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { ApiHttpError } from "../lib/api-error.js";
+import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
+
+import type { AuditWriter } from "../lib/audit-writer.js";
+import type { AuthContext } from "../lib/auth-context.js";
+import type {
+  GroupId,
+  MemberId,
+  PaginatedResult,
+  PaginationCursor,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+// ── Types ───────────────────────────────────────────────────────────
+
+export interface GroupMembershipResult {
+  readonly groupId: GroupId;
+  readonly memberId: MemberId;
+  readonly systemId: SystemId;
+  readonly createdAt: UnixMillis;
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+function toMembershipResult(row: {
+  groupId: string;
+  memberId: string;
+  systemId: string;
+  createdAt: number;
+}): GroupMembershipResult {
+  return {
+    groupId: row.groupId as GroupId,
+    memberId: row.memberId as MemberId,
+    systemId: row.systemId as SystemId,
+    createdAt: row.createdAt as UnixMillis,
+  };
+}
+
+// ── ADD MEMBER ──────────────────────────────────────────────────────
+
+export async function addMember(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  groupId: GroupId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<GroupMembershipResult> {
+  assertSystemOwnership(auth, systemId);
+
+  const parsed = AddGroupMemberBodySchema.safeParse(params);
+  if (!parsed.success) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid add member payload");
+  }
+
+  const { memberId } = parsed.data;
+  const timestamp = now();
+
+  return db.transaction(async (tx) => {
+    // Verify group exists and is not archived
+    const [group] = await tx
+      .select({ id: groups.id })
+      .from(groups)
+      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
+      .limit(1);
+
+    if (!group) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
+    }
+
+    // Verify member exists and is not archived
+    const [member] = await tx
+      .select({ id: members.id })
+      .from(members)
+      .where(
+        and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+      )
+      .limit(1);
+
+    if (!member) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
+
+    // Insert membership — handle PK violation
+    try {
+      const [row] = await tx
+        .insert(groupMemberships)
+        .values({
+          groupId,
+          memberId: memberId as MemberId,
+          systemId,
+          createdAt: timestamp,
+        })
+        .returning();
+
+      if (!row) {
+        throw new Error("Failed to add member — INSERT returned no rows");
+      }
+
+      await audit(tx, {
+        eventType: "group-membership.added",
+        actor: { kind: "account", id: auth.accountId },
+        detail: `Member ${memberId} added to group ${groupId}`,
+        systemId,
+      });
+
+      return toMembershipResult(row);
+    } catch (error) {
+      // PostgreSQL unique_violation code
+      if (error instanceof Error && "code" in error && error.code === "23505") {
+        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Already a member of this group");
+      }
+      throw error;
+    }
+  });
+}
+
+// ── REMOVE MEMBER ───────────────────────────────────────────────────
+
+export async function removeMember(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  groupId: GroupId,
+  memberId: MemberId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  assertSystemOwnership(auth, systemId);
+
+  await db.transaction(async (tx) => {
+    const deleted = await tx
+      .delete(groupMemberships)
+      .where(
+        and(
+          eq(groupMemberships.groupId, groupId),
+          eq(groupMemberships.memberId, memberId),
+          eq(groupMemberships.systemId, systemId),
+        ),
+      )
+      .returning({ groupId: groupMemberships.groupId });
+
+    if (deleted.length === 0) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group membership not found");
+    }
+
+    await audit(tx, {
+      eventType: "group-membership.removed",
+      actor: { kind: "account", id: auth.accountId },
+      detail: `Member ${memberId} removed from group ${groupId}`,
+      systemId,
+    });
+  });
+}
+
+// ── LIST MEMBERS ────────────────────────────────────────────────────
+
+export async function listGroupMembers(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  groupId: GroupId,
+  auth: AuthContext,
+  cursor?: PaginationCursor,
+  limit = DEFAULT_PAGE_LIMIT,
+): Promise<PaginatedResult<GroupMembershipResult>> {
+  assertSystemOwnership(auth, systemId);
+
+  // Verify group exists
+  const [group] = await db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
+    .limit(1);
+
+  if (!group) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
+  }
+
+  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
+
+  const conditions = [
+    eq(groupMemberships.groupId, groupId),
+    eq(groupMemberships.systemId, systemId),
+  ];
+
+  if (cursor) {
+    conditions.push(gt(groupMemberships.memberId, cursor));
+  }
+
+  const rows = await db
+    .select()
+    .from(groupMemberships)
+    .where(and(...conditions))
+    .orderBy(groupMemberships.memberId)
+    .limit(effectiveLimit + 1);
+
+  const hasMore = rows.length > effectiveLimit;
+  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
+  const lastItem = items[items.length - 1];
+  const nextCursor = hasMore && lastItem ? toCursor(lastItem.memberId) : null;
+
+  return {
+    items,
+    nextCursor,
+    hasMore,
+    totalCount: null,
+  };
+}

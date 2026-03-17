@@ -56,6 +56,19 @@ describe("AuditEventType", () => {
         case "system.created":
         case "system.profile-updated":
         case "system.deleted":
+        case "group.created":
+        case "group.updated":
+        case "group.archived":
+        case "group.restored":
+        case "group.moved":
+        case "group-membership.added":
+        case "group-membership.removed":
+        case "custom-front.created":
+        case "custom-front.updated":
+        case "custom-front.archived":
+        case "custom-front.restored":
+        case "group.deleted":
+        case "custom-front.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

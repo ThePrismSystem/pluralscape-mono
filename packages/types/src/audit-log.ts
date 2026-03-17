@@ -32,7 +32,20 @@ export type AuditEventType =
   | "auth.email-changed"
   | "system.created"
   | "system.profile-updated"
-  | "system.deleted";
+  | "system.deleted"
+  | "group.created"
+  | "group.updated"
+  | "group.archived"
+  | "group.restored"
+  | "group.moved"
+  | "group-membership.added"
+  | "group-membership.removed"
+  | "custom-front.created"
+  | "custom-front.updated"
+  | "custom-front.archived"
+  | "custom-front.restored"
+  | "group.deleted"
+  | "custom-front.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

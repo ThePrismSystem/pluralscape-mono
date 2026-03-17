@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 
 import { authMiddleware } from "../../middleware/auth.js";
+import { customFrontRoutes } from "../custom-fronts/index.js";
+import { groupRoutes } from "../groups/index.js";
 
 import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
@@ -21,3 +23,7 @@ systemRoutes.route("/", getRoute);
 systemRoutes.route("/", updateRoute);
 systemRoutes.route("/", deleteRoute);
 systemRoutes.route("/", createRoute);
+
+// Sub-resource routes
+systemRoutes.route("/:id/groups", groupRoutes);
+systemRoutes.route("/:id/custom-fronts", customFrontRoutes);

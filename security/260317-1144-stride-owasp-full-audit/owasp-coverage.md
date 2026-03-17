@@ -2,18 +2,18 @@
 
 ## Coverage Matrix
 
-| ID | Category | Tested | Findings | Status |
-|----|----------|--------|----------|--------|
-| A01 | Broken Access Control | Yes | 1 (TOCTOU in session revocation) | Partial — defense-in-depth gap |
-| A02 | Cryptographic Failures | Yes | 2 (webhook T3, transfer code entropy) | Partial — design trade-offs |
-| A03 | Injection | Yes | 1 (unbounded encryptedData) | Partial — no SQL/XSS/cmd injection |
-| A04 | Insecure Design | Yes | 0 | Pass — rate limiting, FK enforcement, concurrency controls |
-| A05 | Security Misconfiguration | Yes | 2 (ZodError leak, IP validation) | Partial |
-| A06 | Vulnerable Components | Yes | 0 | Pass — 0 CVEs |
-| A07 | Auth & Identification Failures | Yes | 1 (password schema inconsistency) | Partial |
-| A08 | Software & Data Integrity | Yes | 0 | Pass — AEAD + Ed25519 on sync |
-| A09 | Logging & Monitoring Failures | Yes | 1 (audit PII retention) | Partial |
-| A10 | Server-Side Request Forgery | Yes | 0 | Pass — no outbound HTTP |
+| ID  | Category                       | Tested | Findings                              | Status                                                     |
+| --- | ------------------------------ | ------ | ------------------------------------- | ---------------------------------------------------------- |
+| A01 | Broken Access Control          | Yes    | 1 (TOCTOU in session revocation)      | Partial — defense-in-depth gap                             |
+| A02 | Cryptographic Failures         | Yes    | 2 (webhook T3, transfer code entropy) | Partial — design trade-offs                                |
+| A03 | Injection                      | Yes    | 1 (unbounded encryptedData)           | Partial — no SQL/XSS/cmd injection                         |
+| A04 | Insecure Design                | Yes    | 0                                     | Pass — rate limiting, FK enforcement, concurrency controls |
+| A05 | Security Misconfiguration      | Yes    | 2 (ZodError leak, IP validation)      | Partial                                                    |
+| A06 | Vulnerable Components          | Yes    | 0                                     | Pass — 0 CVEs                                              |
+| A07 | Auth & Identification Failures | Yes    | 1 (password schema inconsistency)     | Partial                                                    |
+| A08 | Software & Data Integrity      | Yes    | 0                                     | Pass — AEAD + Ed25519 on sync                              |
+| A09 | Logging & Monitoring Failures  | Yes    | 1 (audit PII retention)               | Partial                                                    |
+| A10 | Server-Side Request Forgery    | Yes    | 0                                     | Pass — no outbound HTTP                                    |
 
 **Coverage: 10/10 categories tested**
 

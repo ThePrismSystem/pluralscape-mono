@@ -277,13 +277,13 @@ describe("updateSystemProfile", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
-  it("throws 400 for oversized blob", async () => {
+  it("throws 400 for oversized encryptedData", async () => {
     const { db } = mockDb();
     const oversized = Buffer.from(new Uint8Array(70_000)).toString("base64");
 
     await expect(
       updateSystemProfile(db, SYSTEM_ID, { encryptedData: oversized, version: 1 }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "BLOB_TOO_LARGE" }));
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
   it("throws 400 for invalid body (missing version)", async () => {
