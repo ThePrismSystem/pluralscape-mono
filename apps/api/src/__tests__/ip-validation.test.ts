@@ -46,6 +46,13 @@ describe("isValidIpFormat", () => {
     expect(isValidIpFormat("<script>alert(1)</script>")).toBe(false);
   });
 
+  it("rejects colon-containing non-IPs", () => {
+    expect(isValidIpFormat("foo:bar")).toBe(false);
+    expect(isValidIpFormat("javascript:alert(1)")).toBe(false);
+    expect(isValidIpFormat("localhost:8080")).toBe(false);
+    expect(isValidIpFormat("user:pass@host")).toBe(false);
+  });
+
   it("rejects partial IPv4", () => {
     expect(isValidIpFormat("192.168.1")).toBe(false);
   });

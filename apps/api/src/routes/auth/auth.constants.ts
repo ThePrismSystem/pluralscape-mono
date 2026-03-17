@@ -5,9 +5,6 @@
 
 // ── Auth Configuration ─────────────────────────────────────────────
 
-/** Minimum password length enforced at the auth service layer (mirrors crypto MIN_PASSWORD_LENGTH). */
-export const AUTH_MIN_PASSWORD_LENGTH = 8;
-
 /** Generic error message for login failures — prevents user enumeration. */
 export const AUTH_GENERIC_LOGIN_ERROR = "Invalid email or password";
 

@@ -25,9 +25,6 @@ export const MAX_ACK_RETRIES = 3;
 /** Delay in ms between acknowledge retry attempts. */
 export const ACK_RETRY_DELAY_MS = 50;
 
-/** Number of days to retain audit log entries before PII cleanup deletes them. */
-export const AUDIT_LOG_RETENTION_DAYS = 90;
-
 /** Cron expression for daily audit log cleanup (03:00 UTC). */
 export const AUDIT_LOG_CLEANUP_CRON = "0 3 * * *";
 

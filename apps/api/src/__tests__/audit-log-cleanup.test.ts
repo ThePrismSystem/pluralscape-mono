@@ -1,5 +1,5 @@
-import { AUDIT_LOG_RETENTION_DAYS } from "@pluralscape/queue";
-import { describe, expect, it, vi } from "vitest";
+import { AUDIT_LOG_RETENTION_DAYS } from "@pluralscape/db";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAuditLogCleanupHandler } from "../jobs/audit-log-cleanup.js";
 
@@ -7,11 +7,14 @@ import type { JobHandlerContext } from "@pluralscape/queue";
 import type { JobDefinition, JobId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-vi.mock("@pluralscape/db", () => ({
-  pgCleanupAuditLog: vi.fn().mockResolvedValue({ deletedCount: 0 }),
-}));
+vi.mock("@pluralscape/db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/db")>();
+  return {
+    ...actual,
+    pgCleanupAuditLog: vi.fn().mockResolvedValue({ deletedCount: 0 }),
+  };
+});
 
- 
 const { pgCleanupAuditLog } = await import("@pluralscape/db");
 
 /** Minimal job definition for testing. */
@@ -46,6 +49,10 @@ function stubCtx(): JobHandlerContext {
 }
 
 describe("audit-log-cleanup handler", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("calls pgCleanupAuditLog with AUDIT_LOG_RETENTION_DAYS", async () => {
     const db = {} as PostgresJsDatabase;
     const handler = createAuditLogCleanupHandler(db);
@@ -59,6 +66,20 @@ describe("audit-log-cleanup handler", () => {
 
   it("uses 90-day retention by default", () => {
     expect(AUDIT_LOG_RETENTION_DAYS).toBe(90);
+  });
+
+  it("skips cleanup when signal is already aborted", async () => {
+    const db = {} as PostgresJsDatabase;
+    const handler = createAuditLogCleanupHandler(db);
+    const abortController = new AbortController();
+    abortController.abort();
+
+    await handler(stubJob(), {
+      heartbeat: { heartbeat: vi.fn().mockResolvedValue(undefined) },
+      signal: abortController.signal,
+    });
+
+    expect(pgCleanupAuditLog).not.toHaveBeenCalled();
   });
 
   it("resolves without error when no rows to delete", async () => {

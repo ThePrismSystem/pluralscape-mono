@@ -352,7 +352,13 @@ export async function revokeSession(
       .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, actorAccountId)))
       .returning({ id: sessions.id });
 
-    if (updated.length === 0) return false;
+    if (updated.length === 0) {
+      console.warn("[auth] Cross-account session revocation attempt", {
+        sessionId,
+        actorAccountId,
+      });
+      return false;
+    }
 
     await audit(tx, {
       eventType: "auth.logout",

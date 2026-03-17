@@ -16,3 +16,5 @@ export const ENUM_MAX_LENGTH = 50;
 export const AUDIT_LOG_DETAIL_MAX_LENGTH = 2_048;
 /** Maximum length for webhook/callback URLs. */
 export const URL_MAX_LENGTH = 2_048;
+/** Number of days to retain audit log entries before PII cleanup deletes them. */
+export const AUDIT_LOG_RETENTION_DAYS = 90;

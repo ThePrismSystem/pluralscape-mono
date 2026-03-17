@@ -1,11 +1,7 @@
 // @pluralscape/queue — backend-agnostic job queue adapter interface
 
 // ── Types ───────────────────────────────────────────────────────────
-export {
-  AUDIT_LOG_CLEANUP_CRON,
-  AUDIT_LOG_RETENTION_DAYS,
-  DEFAULT_TIMEOUT_MS,
-} from "./queue.constants.js";
+export { AUDIT_LOG_CLEANUP_CRON, DEFAULT_TIMEOUT_MS } from "./queue.constants.js";
 export type { IdempotencyCheckResult, JobEnqueueParams, JobFilter } from "./types.js";
 
 // ── Interfaces ──────────────────────────────────────────────────────

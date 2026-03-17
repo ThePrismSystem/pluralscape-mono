@@ -285,7 +285,7 @@ describe("auth service", () => {
       const { db } = mockDb();
       await expect(
         registerAccount(db, { ...validParams, password: "short" }, "web", mockAudit),
-      ).rejects.toThrow();
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("returns registration result on success", async () => {
