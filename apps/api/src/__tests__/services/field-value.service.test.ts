@@ -233,6 +233,8 @@ describe("updateFieldValue", () => {
     const updatedRow = makeFieldValueRow({ version: 2 });
     // assertMemberActive → member found
     chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // assertFieldDefinitionActive → field def found
+    chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
     // update().set().where().returning() → returns updated row
     chain.returning.mockResolvedValueOnce([updatedRow]);
 
@@ -259,6 +261,8 @@ describe("updateFieldValue", () => {
     const { db, chain } = mockDb();
     // assertMemberActive → member found
     chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // assertFieldDefinitionActive → field def found
+    chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
     // update returning → empty (version mismatch)
     chain.returning.mockResolvedValueOnce([]);
     // follow-up SELECT finds existing → conflict
@@ -281,6 +285,8 @@ describe("updateFieldValue", () => {
     const { db, chain } = mockDb();
     // assertMemberActive → member found
     chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // assertFieldDefinitionActive → field def found
+    chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
     // update returning → empty
     chain.returning.mockResolvedValueOnce([]);
     // follow-up SELECT finds nothing → not found
@@ -303,6 +309,8 @@ describe("updateFieldValue", () => {
     const { db, chain } = mockDb();
     // assertMemberActive → member found
     chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // assertFieldDefinitionActive → field def found
+    chain.limit.mockResolvedValueOnce([{ id: FIELD_DEF_ID }]);
 
     await expect(
       updateFieldValue(
@@ -326,6 +334,8 @@ describe("deleteFieldValue", () => {
 
   it("deletes a field value successfully", async () => {
     const { db, chain } = mockDb();
+    // assertMemberActive → member found
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
     // delete().where().returning() → returns deleted row
     chain.returning.mockResolvedValueOnce([{ id: "fv_test-value" }]);
 
@@ -340,6 +350,8 @@ describe("deleteFieldValue", () => {
 
   it("throws 404 when field value not found", async () => {
     const { db, chain } = mockDb();
+    // assertMemberActive → member found
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
     // delete().where().returning() → empty
     chain.returning.mockResolvedValueOnce([]);
 

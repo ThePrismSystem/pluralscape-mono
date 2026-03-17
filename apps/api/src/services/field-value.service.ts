@@ -188,6 +188,7 @@ export async function updateFieldValue(
 ): Promise<FieldValueResult> {
   await assertSystemOwnership(db, systemId, auth);
   await assertMemberActive(db, systemId, memberId);
+  await assertFieldDefinitionActive(db, systemId, fieldDefId);
 
   const parsed = UpdateFieldValueBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -258,6 +259,7 @@ export async function deleteFieldValue(
   audit: AuditWriter,
 ): Promise<void> {
   await assertSystemOwnership(db, systemId, auth);
+  await assertMemberActive(db, systemId, memberId);
 
   await db.transaction(async (tx) => {
     const deleted = await tx

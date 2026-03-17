@@ -62,6 +62,7 @@ export type AuditEventType =
   | "member.restored"
   | "member-photo.created"
   | "member-photo.archived"
+  | "member-photo.restored"
   | "member-photo.reordered"
   | "field-definition.created"
   | "field-definition.updated"

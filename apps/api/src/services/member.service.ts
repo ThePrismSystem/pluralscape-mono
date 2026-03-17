@@ -434,10 +434,15 @@ export async function archiveMember(
         ),
       );
 
+    // Cascade delete field values
+    await tx
+      .delete(fieldValues)
+      .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
+
     await audit(tx, {
       eventType: "member.archived",
       actor: { kind: "account", id: auth.accountId },
-      detail: "Member archived",
+      detail: "Member archived (photos cascade-archived, field values deleted)",
       systemId,
     });
 

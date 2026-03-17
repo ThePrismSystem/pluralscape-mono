@@ -211,6 +211,7 @@ export const AUDIT_EVENT_TYPES = [
   "member.restored",
   "member-photo.created",
   "member-photo.archived",
+  "member-photo.restored",
   "member-photo.reordered",
   "field-definition.created",
   "field-definition.updated",
