@@ -1,4 +1,4 @@
-import { index, pgTable, varchar } from "drizzle-orm/pg-core";
+import { index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgTimestamp } from "../../columns/pg.js";
 import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
@@ -17,7 +17,10 @@ export const biometricTokens = pgTable(
     tokenHash: varchar("token_hash", { length: 128 }).notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
-  (t) => [index("biometric_tokens_session_id_idx").on(t.sessionId)],
+  (t) => [
+    index("biometric_tokens_session_id_idx").on(t.sessionId),
+    uniqueIndex("biometric_tokens_token_hash_idx").on(t.tokenHash),
+  ],
 );
 
 export type BiometricTokenRow = InferSelectModel<typeof biometricTokens>;
