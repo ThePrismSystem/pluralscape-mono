@@ -8,6 +8,9 @@ import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
+import { nomenclatureRoutes } from "./nomenclature/index.js";
+import { settingsRoutes } from "./settings/index.js";
+import { setupRoutes } from "./setup/index.js";
 import { updateRoute } from "./update.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -27,3 +30,6 @@ systemRoutes.route("/", createRoute);
 // Sub-resource routes
 systemRoutes.route("/:id/groups", groupRoutes);
 systemRoutes.route("/:id/custom-fronts", customFrontRoutes);
+systemRoutes.route("/:id/settings", settingsRoutes);
+systemRoutes.route("/:id/nomenclature", nomenclatureRoutes);
+systemRoutes.route("/:id/setup", setupRoutes);
