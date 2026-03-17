@@ -45,12 +45,13 @@ const { getAccountInfo, changeEmail, changePassword, ConcurrencyError } =
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe("account service", () => {
+  const mockAudit = vi.fn().mockResolvedValue(undefined);
+
   afterEach(() => {
     vi.restoreAllMocks();
     mockMemzero.mockClear();
+    mockAudit.mockClear();
   });
-
-  const requestMeta = { ipAddress: "1.2.3.4", userAgent: "TestAgent/1.0" };
 
   // ── getAccountInfo ──────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ describe("account service", () => {
           db,
           "acct_123" as AccountId,
           { email: "new@example.com", currentPassword: "wrong" },
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow("Incorrect password");
     });
@@ -152,7 +153,7 @@ describe("account service", () => {
           db,
           "acct_missing" as AccountId,
           { email: "new@example.com", currentPassword: "pass" },
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow("Incorrect password");
     });
@@ -171,7 +172,7 @@ describe("account service", () => {
         db,
         "acct_123" as AccountId,
         { email: "same@example.com", currentPassword: "pass" },
-        requestMeta,
+        mockAudit,
       );
       expect(result).toEqual({ ok: true });
       expect(chain.transaction).not.toHaveBeenCalled();
@@ -192,7 +193,7 @@ describe("account service", () => {
         db,
         "acct_123" as AccountId,
         { email: "new@example.com", currentPassword: "pass" },
-        requestMeta,
+        mockAudit,
       );
       expect(result).toEqual({ ok: true });
     });
@@ -216,7 +217,7 @@ describe("account service", () => {
           db,
           "acct_123" as AccountId,
           { email: "taken@example.com", currentPassword: "pass" },
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow("Email change failed");
     });
@@ -228,7 +229,7 @@ describe("account service", () => {
           db,
           "acct_123" as AccountId,
           { email: "not-an-email", currentPassword: "pass" },
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
@@ -250,7 +251,7 @@ describe("account service", () => {
           db,
           "acct_123" as AccountId,
           { email: "new@example.com", currentPassword: "pass" },
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow("Account was modified concurrently");
     });
@@ -276,13 +277,7 @@ describe("account service", () => {
       ]);
 
       await expect(
-        changePassword(
-          db,
-          "acct_123" as AccountId,
-          "sess_1" as SessionId,
-          validParams,
-          requestMeta,
-        ),
+        changePassword(db, "acct_123" as AccountId, "sess_1" as SessionId, validParams, mockAudit),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -296,7 +291,7 @@ describe("account service", () => {
           "acct_missing" as AccountId,
           "sess_1" as SessionId,
           validParams,
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow("Incorrect password");
     });
@@ -310,7 +305,7 @@ describe("account service", () => {
           "acct_123" as AccountId,
           "sess_1" as SessionId,
           { currentPassword: "current", newPassword: "short" },
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
@@ -336,7 +331,7 @@ describe("account service", () => {
         "acct_123" as AccountId,
         "sess_1" as SessionId,
         validParams,
-        requestMeta,
+        mockAudit,
       );
       expect(result).toEqual({ ok: true, revokedSessionCount: 2 });
       expect(mockMemzero).toHaveBeenCalledTimes(3);
@@ -359,7 +354,7 @@ describe("account service", () => {
         "acct_123" as AccountId,
         "sess_1" as SessionId,
         validParams,
-        requestMeta,
+        mockAudit,
       );
       expect(chain.transaction).toHaveBeenCalledOnce();
     });
@@ -377,13 +372,7 @@ describe("account service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(
-          db,
-          "acct_123" as AccountId,
-          "sess_1" as SessionId,
-          validParams,
-          requestMeta,
-        ),
+        changePassword(db, "acct_123" as AccountId, "sess_1" as SessionId, validParams, mockAudit),
       ).rejects.toThrow("Account was modified concurrently");
     });
 
@@ -400,13 +389,7 @@ describe("account service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        changePassword(
-          db,
-          "acct_123" as AccountId,
-          "sess_1" as SessionId,
-          validParams,
-          requestMeta,
-        ),
+        changePassword(db, "acct_123" as AccountId, "sess_1" as SessionId, validParams, mockAudit),
       ).rejects.toThrow();
 
       expect(mockMemzero).toHaveBeenCalledTimes(3);
@@ -424,13 +407,7 @@ describe("account service", () => {
       ]);
 
       await expect(
-        changePassword(
-          db,
-          "acct_123" as AccountId,
-          "sess_1" as SessionId,
-          validParams,
-          requestMeta,
-        ),
+        changePassword(db, "acct_123" as AccountId, "sess_1" as SessionId, validParams, mockAudit),
       ).rejects.toThrow("Account missing encrypted master key");
 
       expect(mockMemzero).toHaveBeenCalledTimes(0);
@@ -444,7 +421,7 @@ describe("account service", () => {
           "acct_123" as AccountId,
           "sess_1" as SessionId,
           { currentPassword: "", newPassword: "newpass123" },
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });

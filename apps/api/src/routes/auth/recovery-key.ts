@@ -2,8 +2,8 @@ import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CREATED, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { extractRequestMeta } from "../../lib/request-meta.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError } from "../../services/auth.service.js";
@@ -36,10 +36,10 @@ recoveryKeyRoutes.post("/regenerate", createCategoryRateLimiter("authHeavy"), as
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
   }
 
-  const requestMeta = extractRequestMeta(c);
+  const audit = createAuditWriter(c, auth);
 
   try {
-    const result = await regenerateRecoveryKeyBackup(db, auth.accountId, body, requestMeta);
+    const result = await regenerateRecoveryKeyBackup(db, auth.accountId, body, audit);
     return c.json(result, HTTP_CREATED);
   } catch (error: unknown) {
     if (error instanceof NoActiveRecoveryKeyError) {

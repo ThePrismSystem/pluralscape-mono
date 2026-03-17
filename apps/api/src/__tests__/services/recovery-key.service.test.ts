@@ -43,12 +43,13 @@ const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup, NoActiveRecoveryKeyEr
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe("recovery-key service", () => {
+  const mockAudit = vi.fn().mockResolvedValue(undefined);
+
   afterEach(() => {
     vi.restoreAllMocks();
     mockMemzero.mockClear();
+    mockAudit.mockClear();
   });
-
-  const requestMeta = { ipAddress: "1.2.3.4", userAgent: "TestAgent/1.0" };
 
   // ── getRecoveryKeyStatus ──────────────────────────────────────────
 
@@ -101,7 +102,7 @@ describe("recovery-key service", () => {
         db,
         "acct_123" as AccountId,
         validParams,
-        requestMeta,
+        mockAudit,
       );
       expect(result.recoveryKey).toBe(
         "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
@@ -119,7 +120,7 @@ describe("recovery-key service", () => {
       ]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -128,7 +129,7 @@ describe("recovery-key service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_missing" as AccountId, validParams, requestMeta),
+        regenerateRecoveryKeyBackup(db, "acct_missing" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Incorrect password");
     });
 
@@ -140,7 +141,7 @@ describe("recovery-key service", () => {
           db,
           "acct_123" as AccountId,
           { currentPassword: "password123", confirmed: false },
-          requestMeta,
+          mockAudit,
         ),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
@@ -159,7 +160,7 @@ describe("recovery-key service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow(NoActiveRecoveryKeyError);
     });
 
@@ -167,7 +168,7 @@ describe("recovery-key service", () => {
       const { db } = mockDb();
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, {}, requestMeta),
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, {}, mockAudit),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
@@ -185,7 +186,7 @@ describe("recovery-key service", () => {
       ]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Account missing encrypted master key");
     });
 
@@ -203,7 +204,7 @@ describe("recovery-key service", () => {
       ]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Stored KDF salt has invalid length");
 
       // KEK not derived yet, no crypto material to zero
@@ -226,7 +227,7 @@ describe("recovery-key service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("Recovery key not found during revocation");
 
       // Crypto material still zeroed despite transaction failure
@@ -251,7 +252,7 @@ describe("recovery-key service", () => {
       chain.transaction.mockRejectedValueOnce(new Error("DB error"));
 
       await expect(
-        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit),
       ).rejects.toThrow("DB error");
 
       expect(mockMemzero).toHaveBeenCalledTimes(5);
@@ -271,7 +272,7 @@ describe("recovery-key service", () => {
       ]);
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta);
+      await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit);
 
       expect(mockMemzero).toHaveBeenCalledTimes(5);
     });
@@ -290,7 +291,7 @@ describe("recovery-key service", () => {
       ]);
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta);
+      await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, mockAudit);
 
       expect(chain.transaction).toHaveBeenCalledOnce();
     });

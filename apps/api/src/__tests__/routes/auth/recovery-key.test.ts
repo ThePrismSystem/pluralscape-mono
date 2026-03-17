@@ -26,8 +26,8 @@ vi.mock("../../../lib/db.js", () => ({
   getDb: vi.fn().mockResolvedValue({}),
 }));
 
-vi.mock("../../../lib/request-meta.js", () => ({
-  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
+vi.mock("../../../lib/audit-writer.js", () => ({
+  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
 }));
 
 vi.mock("../../../middleware/rate-limit.js", () => ({
@@ -57,6 +57,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup, NoActiveRecoveryKeyError } =
   await import("../../../services/recovery-key.service.js");
 const { ValidationError } = await import("../../../services/auth.service.js");
@@ -221,7 +222,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
-  it("passes account ID and request meta to service", async () => {
+  it("passes account ID and audit writer to service", async () => {
     vi.mocked(regenerateRecoveryKeyBackup).mockResolvedValueOnce({
       recoveryKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
     });
@@ -237,7 +238,11 @@ describe("POST /auth/recovery-key/regenerate", () => {
       {},
       "acct_test",
       { currentPassword: "password123", confirmed: true },
-      { ipAddress: null, userAgent: null },
+      expect.any(Function),
+    );
+    expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ accountId: "acct_test" }),
     );
   });
 });

@@ -2,8 +2,8 @@ import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { extractRequestMeta } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ConcurrencyError, changePassword } from "../../services/account.service.js";
 import { ValidationError } from "../../services/auth.service.js";
@@ -17,10 +17,10 @@ changePasswordRoute.put("/", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
   const body: unknown = await c.req.json();
-  const requestMeta = extractRequestMeta(c);
+  const audit = createAuditWriter(c, auth);
 
   try {
-    const result = await changePassword(db, auth.accountId, auth.sessionId, body, requestMeta);
+    const result = await changePassword(db, auth.accountId, auth.sessionId, body, audit);
     return c.json(result);
   } catch (error: unknown) {
     if (error instanceof ConcurrencyError) {

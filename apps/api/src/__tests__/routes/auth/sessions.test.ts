@@ -8,10 +8,8 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../lib/request-meta.js", () => ({
-  extractIpAddress: vi.fn().mockReturnValue(null),
-  extractUserAgent: vi.fn().mockReturnValue(null),
-  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
+vi.mock("../../../lib/audit-writer.js", () => ({
+  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
@@ -56,6 +54,7 @@ vi.mock("../../../middleware/auth.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
+const { createAuditWriter } = await import("../../../lib/audit-writer.js");
 const { listSessions, logoutCurrentSession, revokeSession, revokeAllSessions } =
   await import("../../../services/auth.service.js");
 const { authMiddleware } = await import("../../../middleware/auth.js");
@@ -179,6 +178,10 @@ describe("sessions route", () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as { ok: boolean };
       expect(body.ok).toBe(true);
+      expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ accountId: "acct_test" }),
+      );
     });
   });
 
@@ -198,7 +201,11 @@ describe("sessions route", () => {
         {},
         "sess_current",
         "acct_test",
-        { ipAddress: null, userAgent: null },
+        expect.any(Function),
+      );
+      expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ accountId: "acct_test" }),
       );
     });
   });
@@ -218,10 +225,16 @@ describe("sessions route", () => {
       const body = (await res.json()) as { ok: boolean; revokedCount: number };
       expect(body.ok).toBe(true);
       expect(body.revokedCount).toBe(3);
-      expect(vi.mocked(revokeAllSessions)).toHaveBeenCalledWith({}, "acct_test", "sess_current", {
-        ipAddress: null,
-        userAgent: null,
-      });
+      expect(vi.mocked(revokeAllSessions)).toHaveBeenCalledWith(
+        {},
+        "acct_test",
+        "sess_current",
+        expect.any(Function),
+      );
+      expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ accountId: "acct_test" }),
+      );
     });
   });
 });

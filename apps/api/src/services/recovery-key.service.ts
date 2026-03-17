@@ -11,14 +11,13 @@ import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { RegenerateRecoveryKeySchema } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
-import { writeAuditLog } from "../lib/audit-log.js";
 import { deserializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { fromHex } from "../lib/hex.js";
 
 import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
 import { ValidationError } from "./auth.service.js";
 
-import type { RequestMeta } from "../lib/request-meta.js";
+import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AeadKey, KdfMasterKey, PwhashSalt, RecoveryKeyResult } from "@pluralscape/crypto";
 import type { AccountId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -59,7 +58,7 @@ export async function regenerateRecoveryKeyBackup(
   db: PostgresJsDatabase,
   accountId: AccountId,
   params: unknown,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<RegenerateRecoveryKeyResult> {
   const parsed = RegenerateRecoveryKeySchema.parse(params);
 
@@ -145,14 +144,10 @@ export async function regenerateRecoveryKeyBackup(
         createdAt: timestamp,
       });
 
-      await writeAuditLog(tx, {
-        accountId,
-        systemId: null,
+      await audit(tx, {
         eventType: "auth.recovery-key-regenerated",
         actor: { kind: "account", id: accountId },
         detail: "Recovery key regenerated",
-        ipAddress: requestMeta.ipAddress,
-        userAgent: requestMeta.userAgent,
       });
     });
 

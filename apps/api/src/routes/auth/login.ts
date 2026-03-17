@@ -2,8 +2,9 @@ import { Hono } from "hono";
 
 import { HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
+import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { extractPlatform, extractRequestMeta } from "../../lib/request-meta.js";
+import { extractPlatform } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { loginAccount } from "../../services/auth.service.js";
 
@@ -22,12 +23,12 @@ loginRoute.post("/", async (c) => {
   }
 
   const platform = extractPlatform(c);
-  const requestMeta = extractRequestMeta(c);
+  const audit = createAuditWriter(c);
 
   const db = await getDb();
 
   try {
-    const result = await loginAccount(db, body, platform, requestMeta);
+    const result = await loginAccount(db, body, platform, audit);
     if (!result) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", AUTH_GENERIC_LOGIN_ERROR);
     }

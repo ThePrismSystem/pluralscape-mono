@@ -16,7 +16,6 @@ import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
 import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
-import { writeAuditLog } from "../lib/audit-log.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
@@ -33,9 +32,9 @@ import {
   RECOVERY_KEY_GROUP_SIZE,
 } from "../routes/auth/auth.constants.js";
 
-import type { RequestMeta } from "../lib/request-meta.js";
+import type { AuditWriter } from "../lib/audit-writer.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
-import type { AccountType } from "@pluralscape/types";
+import type { AccountId, AccountType, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Registration ───────────────────────────────────────────────────
@@ -51,7 +50,7 @@ export async function registerAccount(
   db: PostgresJsDatabase,
   params: unknown,
   platform: ClientPlatform,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<RegistrationResult> {
   const startTime = performance.now();
 
@@ -166,14 +165,11 @@ export async function registerAccount(
         expiresAt,
       });
 
-      await writeAuditLog(tx, {
-        accountId,
-        systemId: null,
+      await audit(tx, {
         eventType: "auth.register",
         actor: { kind: "account", id: accountId },
         detail: "Account registered",
-        ipAddress: requestMeta.ipAddress,
-        userAgent: requestMeta.userAgent,
+        accountId: accountId as AccountId,
       });
     });
   } catch (error: unknown) {
@@ -215,7 +211,7 @@ export async function loginAccount(
   db: PostgresJsDatabase,
   credentials: unknown,
   platform: ClientPlatform,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<LoginResult | null> {
   const parsed = LoginCredentialsSchema.parse(credentials);
   const emailHash = hashEmail(parsed.email);
@@ -234,15 +230,17 @@ export async function loginAccount(
 
   const valid = verifyPassword(account.passwordHash, parsed.password);
   if (!valid) {
-    await writeAuditLog(db, {
-      accountId: account.id,
-      systemId: null,
-      eventType: "auth.login-failed",
-      actor: { kind: "account", id: account.id },
-      detail: "Invalid password",
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
-    });
+    try {
+      await audit(db, {
+        eventType: "auth.login-failed",
+        actor: { kind: "account", id: account.id },
+        detail: "Invalid password",
+        accountId: account.id as AccountId,
+      });
+    } catch (auditError: unknown) {
+      // Audit failure must not change the authentication response (401 → 500)
+      console.error("[audit] Failed to write auth.login-failed:", auditError);
+    }
     return null;
   }
 
@@ -270,14 +268,12 @@ export async function loginAccount(
       expiresAt,
     });
 
-    await writeAuditLog(tx, {
-      accountId: account.id,
-      systemId,
+    await audit(tx, {
       eventType: "auth.login",
       actor: { kind: "account", id: account.id },
       detail: `Login via ${platform}`,
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
+      accountId: account.id as AccountId,
+      systemId: systemId as SystemId | null,
     });
   });
 
@@ -348,7 +344,7 @@ export async function revokeSession(
   db: PostgresJsDatabase,
   sessionId: string,
   actorAccountId: string,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<boolean> {
   const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
 
@@ -369,14 +365,10 @@ export async function revokeSession(
 
     if (updated.length === 0) return false;
 
-    await writeAuditLog(tx, {
-      accountId: actorAccountId,
-      systemId: null,
+    await audit(tx, {
       eventType: "auth.logout",
       actor: { kind: "account", id: actorAccountId },
       detail: `Session ${sessionId} revoked`,
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
     });
 
     return true;
@@ -387,7 +379,7 @@ export async function revokeAllSessions(
   db: PostgresJsDatabase,
   accountId: string,
   exceptSessionId: string,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<number> {
   return db.transaction(async (tx) => {
     const result = await tx
@@ -402,14 +394,10 @@ export async function revokeAllSessions(
       )
       .returning({ id: sessions.id });
 
-    await writeAuditLog(tx, {
-      accountId,
-      systemId: null,
+    await audit(tx, {
       eventType: "auth.logout",
       actor: { kind: "account", id: accountId },
       detail: `All sessions revoked except ${exceptSessionId} (${String(result.length)} sessions)`,
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
     });
 
     return result.length;
@@ -420,7 +408,7 @@ export async function logoutCurrentSession(
   db: PostgresJsDatabase,
   sessionId: string,
   accountId: string,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await tx
@@ -428,14 +416,10 @@ export async function logoutCurrentSession(
       .set({ revoked: true })
       .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, accountId)));
 
-    await writeAuditLog(tx, {
-      accountId,
-      systemId: null,
+    await audit(tx, {
       eventType: "auth.logout",
       actor: { kind: "account", id: accountId },
       detail: "Logged out",
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
     });
   });
 }

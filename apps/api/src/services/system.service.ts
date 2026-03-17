@@ -15,15 +15,14 @@ import {
   HTTP_NOT_FOUND,
 } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { writeAuditLog } from "../lib/audit-log.js";
 import {
   DEFAULT_SYSTEM_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
   MAX_SYSTEM_LIMIT,
 } from "../routes/systems/systems.constants.js";
 
+import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type { RequestMeta } from "../lib/request-meta.js";
 import type {
   AccountId,
   EncryptedBlob,
@@ -136,7 +135,7 @@ export async function updateSystemProfile(
   systemId: SystemId,
   params: unknown,
   auth: AuthContext,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<SystemProfileResult> {
   const parsed = UpdateSystemBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -207,14 +206,11 @@ export async function updateSystemProfile(
     // Safe: we've verified updated.length > 0 above
     const [row] = updated as [(typeof updated)[number], ...typeof updated];
 
-    await writeAuditLog(tx, {
-      accountId: auth.accountId,
-      systemId,
+    await audit(tx, {
       eventType: "system.profile-updated",
       actor: { kind: "account", id: auth.accountId },
       detail: "System profile updated",
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
+      systemId,
     });
 
     return toSystemProfileResult(row);
@@ -227,7 +223,7 @@ export async function archiveSystem(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<void> {
   await db.transaction(async (tx) => {
     // 1. Verify ownership of non-archived system
@@ -276,14 +272,11 @@ export async function archiveSystem(
     }
 
     // 4. Audit log BEFORE archive (FK satisfied since system still exists)
-    await writeAuditLog(tx, {
-      accountId: auth.accountId,
-      systemId,
+    await audit(tx, {
       eventType: "system.deleted",
       actor: { kind: "account", id: auth.accountId },
       detail: "System archived (soft-delete)",
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
+      systemId,
     });
 
     // 5. Archive instead of hard delete
@@ -305,7 +298,7 @@ export async function archiveSystem(
 export async function createSystem(
   db: PostgresJsDatabase,
   auth: AuthContext,
-  requestMeta: RequestMeta,
+  audit: AuditWriter,
 ): Promise<SystemProfileResult> {
   if (auth.accountType !== "system") {
     throw new ApiHttpError(HTTP_FORBIDDEN, "FORBIDDEN", "Only system accounts can create systems");
@@ -325,14 +318,11 @@ export async function createSystem(
       })
       .returning();
 
-    await writeAuditLog(tx, {
-      accountId: auth.accountId,
-      systemId,
+    await audit(tx, {
       eventType: "system.created",
       actor: { kind: "account", id: auth.accountId },
       detail: "System created",
-      ipAddress: requestMeta.ipAddress,
-      userAgent: requestMeta.userAgent,
+      systemId: systemId as SystemId,
     });
 
     return inserted;
