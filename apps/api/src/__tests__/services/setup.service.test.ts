@@ -9,13 +9,17 @@ import type { SystemId, UnixMillis } from "@pluralscape/types";
 // ── Mocks ────────────────────────────────────────────────────────────
 
 vi.mock("@pluralscape/crypto", () => ({
-  deserializeEncryptedBlob: vi
+  serializeEncryptedBlob: vi.fn().mockReturnValue(new Uint8Array(32)),
+}));
+
+vi.mock("../../lib/verify-system-ownership.js", () => ({
+  verifySystemOwnership: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("../../lib/validate-encrypted-blob.js", () => ({
+  validateEncryptedBlob: vi
     .fn()
     .mockReturnValue({ ciphertext: new Uint8Array(16), nonce: new Uint8Array(12) }),
-  serializeEncryptedBlob: vi.fn().mockReturnValue(new Uint8Array(32)),
-  InvalidInputError: class InvalidInputError extends Error {
-    override readonly name = "InvalidInputError" as const;
-  },
 }));
 
 vi.mock("@pluralscape/db/pg", () => ({
@@ -107,7 +111,6 @@ describe("setup service", () => {
   describe("getSetupStatus", () => {
     it("returns all true when setup is fully complete", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
       chain.limit.mockResolvedValueOnce([{ id: "ss_abc" }]);
@@ -129,7 +132,6 @@ describe("setup service", () => {
 
     it("returns correct flags when setup is incomplete", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([]);
       chain.limit.mockResolvedValueOnce([{ encryptedData: null }]);
       chain.limit.mockResolvedValueOnce([]);
@@ -165,7 +167,6 @@ describe("setup service", () => {
 
     it("upserts and returns success", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
       chain.values.mockReturnValue({ onConflictDoUpdate });
 
@@ -194,6 +195,32 @@ describe("setup service", () => {
         },
       );
     });
+
+    it("throws BLOB_TOO_LARGE when encryptedData exceeds limit", async () => {
+      const { validateEncryptedBlob } = await import("../../lib/validate-encrypted-blob.js");
+      const { ApiHttpError } = await import("../../lib/api-error.js");
+      vi.mocked(validateEncryptedBlob).mockImplementationOnce(() => {
+        throw new ApiHttpError(
+          400,
+          "BLOB_TOO_LARGE",
+          "encryptedData exceeds maximum size of 65536 bytes",
+        );
+      });
+
+      const { db } = mockDb();
+
+      await expect(
+        setupNomenclatureStep(
+          db,
+          SYSTEM_ID,
+          { encryptedData: VALID_ENCRYPTED_DATA },
+          AUTH,
+          mockAudit,
+        ),
+      ).rejects.toMatchObject({
+        code: "BLOB_TOO_LARGE",
+      });
+    });
   });
 
   // ── setupProfileStep ──────────────────────────────────────────────
@@ -211,7 +238,6 @@ describe("setup service", () => {
 
     it("updates profile and returns success", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
 
       const result = await setupProfileStep(db, SYSTEM_ID, VALID_PARAMS, AUTH, mockAudit);
@@ -237,6 +263,26 @@ describe("setup service", () => {
         message: "Invalid profile payload",
       });
     });
+
+    it("throws BLOB_TOO_LARGE when encryptedData exceeds limit", async () => {
+      const { validateEncryptedBlob } = await import("../../lib/validate-encrypted-blob.js");
+      const { ApiHttpError } = await import("../../lib/api-error.js");
+      vi.mocked(validateEncryptedBlob).mockImplementationOnce(() => {
+        throw new ApiHttpError(
+          400,
+          "BLOB_TOO_LARGE",
+          "encryptedData exceeds maximum size of 65536 bytes",
+        );
+      });
+
+      const { db } = mockDb();
+
+      await expect(
+        setupProfileStep(db, SYSTEM_ID, { encryptedData: VALID_ENCRYPTED_DATA }, AUTH, mockAudit),
+      ).rejects.toMatchObject({
+        code: "BLOB_TOO_LARGE",
+      });
+    });
   });
 
   // ── setupComplete ─────────────────────────────────────────────────
@@ -259,10 +305,12 @@ describe("setup service", () => {
 
     it("creates settings and returns result on success", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
+      // Precondition checks: nomenclature, system profile
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
-      chain.limit.mockResolvedValueOnce([]);
+      // Transaction: insert with onConflictDoNothing
+      const onConflictDoNothing = vi.fn().mockReturnValue(chain);
+      chain.values.mockReturnValueOnce({ onConflictDoNothing });
       chain.returning.mockResolvedValueOnce([SETTINGS_ROW]);
 
       const result = await setupComplete(db, SYSTEM_ID, VALID_PARAMS, AUTH, mockAudit);
@@ -270,7 +318,7 @@ describe("setup service", () => {
       expect(result.id).toBe("ss_abc");
       expect(result.systemId).toBe(SYSTEM_ID);
       expect(mockAudit).toHaveBeenCalledWith(
-        db,
+        expect.anything(),
         expect.objectContaining({ eventType: "setup.completed" }),
       );
     });
@@ -281,8 +329,7 @@ describe("setup service", () => {
         createdAt: null,
       });
 
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
+      const { db } = mockDb();
 
       await expect(
         setupComplete(db, SYSTEM_ID, VALID_PARAMS, AUTH, mockAudit),
@@ -294,7 +341,6 @@ describe("setup service", () => {
 
     it("throws PRECONDITION_FAILED when nomenclature is missing", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([]);
       chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
 
@@ -308,7 +354,6 @@ describe("setup service", () => {
 
     it("throws PRECONDITION_FAILED when profile is missing", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([{ encryptedData: null }]);
 
@@ -322,15 +367,42 @@ describe("setup service", () => {
 
     it("returns existing settings when already created (idempotent)", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
+      // Precondition checks
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
+      // Transaction: insert returns empty (conflict)
+      const onConflictDoNothing = vi.fn().mockReturnValue(chain);
+      chain.values.mockReturnValueOnce({ onConflictDoNothing });
+      chain.returning.mockResolvedValueOnce([]);
+      // Then select existing
       chain.limit.mockResolvedValueOnce([SETTINGS_ROW]);
 
       const result = await setupComplete(db, SYSTEM_ID, VALID_PARAMS, AUTH, mockAudit);
 
       expect(result.id).toBe("ss_abc");
       expect(mockAudit).not.toHaveBeenCalled();
+    });
+
+    it("throws BLOB_TOO_LARGE when encryptedData exceeds limit", async () => {
+      const { validateEncryptedBlob } = await import("../../lib/validate-encrypted-blob.js");
+      const { ApiHttpError } = await import("../../lib/api-error.js");
+      vi.mocked(validateEncryptedBlob).mockImplementationOnce(() => {
+        throw new ApiHttpError(
+          400,
+          "BLOB_TOO_LARGE",
+          "encryptedData exceeds maximum size of 65536 bytes",
+        );
+      });
+
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
+      chain.limit.mockResolvedValueOnce([{ encryptedData: "data" }]);
+
+      await expect(
+        setupComplete(db, SYSTEM_ID, VALID_PARAMS, AUTH, mockAudit),
+      ).rejects.toMatchObject({
+        code: "BLOB_TOO_LARGE",
+      });
     });
   });
 });

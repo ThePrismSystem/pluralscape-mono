@@ -9,13 +9,17 @@ import type { SystemId } from "@pluralscape/types";
 // ── Mocks ────────────────────────────────────────────────────────────
 
 vi.mock("@pluralscape/crypto", () => ({
-  deserializeEncryptedBlob: vi
+  serializeEncryptedBlob: vi.fn().mockReturnValue(new Uint8Array(32)),
+}));
+
+vi.mock("../../lib/verify-system-ownership.js", () => ({
+  verifySystemOwnership: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("../../lib/validate-encrypted-blob.js", () => ({
+  validateEncryptedBlob: vi
     .fn()
     .mockReturnValue({ ciphertext: new Uint8Array(16), nonce: new Uint8Array(12) }),
-  serializeEncryptedBlob: vi.fn().mockReturnValue(new Uint8Array(32)),
-  InvalidInputError: class InvalidInputError extends Error {
-    override readonly name = "InvalidInputError" as const;
-  },
 }));
 
 vi.mock("@pluralscape/db/pg", () => ({
@@ -94,7 +98,6 @@ describe("nomenclature service", () => {
   describe("getNomenclatureSettings", () => {
     it("returns settings when found", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([NOMENCLATURE_ROW]);
 
       const result = await getNomenclatureSettings(db, SYSTEM_ID, AUTH);
@@ -104,19 +107,8 @@ describe("nomenclature service", () => {
       expect(typeof result.encryptedData).toBe("string");
     });
 
-    it("throws NOT_FOUND when system doesn't exist", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      await expect(getNomenclatureSettings(db, SYSTEM_ID, AUTH)).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "System not found",
-      });
-    });
-
     it("throws NOT_FOUND when settings don't exist", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(getNomenclatureSettings(db, SYSTEM_ID, AUTH)).rejects.toMatchObject({
@@ -138,7 +130,6 @@ describe("nomenclature service", () => {
 
     it("returns updated settings on success", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([NOMENCLATURE_ROW]);
 
       const result = await updateNomenclatureSettings(
@@ -171,7 +162,6 @@ describe("nomenclature service", () => {
 
     it("throws CONFLICT on version mismatch", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([]);
       chain.limit.mockResolvedValueOnce([{ systemId: SYSTEM_ID }]);
 
@@ -185,7 +175,6 @@ describe("nomenclature service", () => {
 
     it("throws NOT_FOUND when settings don't exist", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([]);
       chain.limit.mockResolvedValueOnce([]);
 
@@ -194,6 +183,26 @@ describe("nomenclature service", () => {
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "Nomenclature settings not found",
+      });
+    });
+
+    it("throws BLOB_TOO_LARGE when encryptedData exceeds limit", async () => {
+      const { validateEncryptedBlob } = await import("../../lib/validate-encrypted-blob.js");
+      const { ApiHttpError } = await import("../../lib/api-error.js");
+      vi.mocked(validateEncryptedBlob).mockImplementationOnce(() => {
+        throw new ApiHttpError(
+          400,
+          "BLOB_TOO_LARGE",
+          "encryptedData exceeds maximum size of 65536 bytes",
+        );
+      });
+
+      const { db } = mockDb();
+
+      await expect(
+        updateNomenclatureSettings(db, SYSTEM_ID, VALID_PAYLOAD, AUTH, mockAudit),
+      ).rejects.toMatchObject({
+        code: "BLOB_TOO_LARGE",
       });
     });
   });

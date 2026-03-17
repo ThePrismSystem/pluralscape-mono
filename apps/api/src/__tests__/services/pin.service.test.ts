@@ -8,9 +8,9 @@ import type { SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
-vi.mock("@pluralscape/crypto", () => ({
-  hashPin: vi.fn().mockReturnValue("$argon2id$fake$hash"),
-  verifyPin: vi.fn().mockReturnValue(true),
+vi.mock("../../lib/pwhash-offload.js", () => ({
+  hashPinOffload: vi.fn().mockResolvedValue("$argon2id$fake$hash"),
+  verifyPinOffload: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock("@pluralscape/db/pg", () => ({
@@ -22,20 +22,27 @@ vi.mock("@pluralscape/validation", () => ({
   SetPinBodySchema: {
     safeParse: vi.fn(),
   },
+  RemovePinBodySchema: {
+    safeParse: vi.fn(),
+  },
   VerifyPinBodySchema: {
     safeParse: vi.fn(),
   },
 }));
 
 vi.mock("drizzle-orm", () => ({
-  and: vi.fn((...args: unknown[]) => ({ type: "and", args })),
   eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
+}));
+
+vi.mock("../../lib/verify-system-ownership.js", () => ({
+  verifySystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ── Imports after mocks ──────────────────────────────────────────────
 
-const { SetPinBodySchema, VerifyPinBodySchema } = await import("@pluralscape/validation");
-const { hashPin, verifyPin: cryptoVerifyPin } = await import("@pluralscape/crypto");
+const { SetPinBodySchema, RemovePinBodySchema, VerifyPinBodySchema } =
+  await import("@pluralscape/validation");
+const { hashPinOffload, verifyPinOffload } = await import("../../lib/pwhash-offload.js");
 const { setPin, removePin, verifyPinCode } = await import("../../services/pin.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -70,12 +77,11 @@ describe("pin service", () => {
 
     it("succeeds and calls audit", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([{ id: "ss_abc" }]);
 
       await setPin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit);
 
-      expect(vi.mocked(hashPin)).toHaveBeenCalledWith("1234", "server");
+      expect(vi.mocked(hashPinOffload)).toHaveBeenCalledWith("1234", "server");
       expect(mockAudit).toHaveBeenCalledWith(
         db,
         expect.objectContaining({ eventType: "settings.pin-set" }),
@@ -99,7 +105,6 @@ describe("pin service", () => {
 
     it("throws NOT_FOUND when settings not found", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(setPin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit)).rejects.toMatchObject({
@@ -110,12 +115,20 @@ describe("pin service", () => {
   });
 
   describe("removePin", () => {
-    it("succeeds and calls audit", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
-      chain.returning.mockResolvedValueOnce([{ id: "ss_abc" }]);
+    beforeEach(() => {
+      const schema = vi.mocked(RemovePinBodySchema);
+      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValue({
+        success: true,
+        data: { pin: "1234" },
+      });
+    });
 
-      await removePin(db, SYSTEM_ID, AUTH, mockAudit);
+    it("succeeds when current PIN is correct", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);
+      vi.mocked(verifyPinOffload).mockResolvedValueOnce(true);
+
+      await removePin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit);
 
       expect(mockAudit).toHaveBeenCalledWith(
         db,
@@ -125,12 +138,53 @@ describe("pin service", () => {
 
     it("throws NOT_FOUND when settings not found", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
-      chain.returning.mockResolvedValueOnce([]);
+      chain.limit.mockResolvedValueOnce([]);
 
-      await expect(removePin(db, SYSTEM_ID, AUTH, mockAudit)).rejects.toMatchObject({
+      await expect(
+        removePin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit),
+      ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "System settings not found",
+      });
+    });
+
+    it("throws NOT_FOUND when no PIN is set", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ pinHash: null }]);
+
+      await expect(
+        removePin(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "No PIN is set",
+      });
+    });
+
+    it("throws INVALID_PIN when current PIN is wrong", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);
+      vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
+
+      await expect(
+        removePin(db, SYSTEM_ID, { pin: "9999" }, AUTH, mockAudit),
+      ).rejects.toMatchObject({
+        code: "INVALID_PIN",
+        message: "PIN is incorrect",
+      });
+    });
+
+    it("throws VALIDATION_ERROR for invalid payload", async () => {
+      const schema = vi.mocked(RemovePinBodySchema);
+      (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValueOnce({
+        success: false,
+        error: { issues: [] },
+      });
+
+      const { db } = mockDb();
+
+      await expect(removePin(db, SYSTEM_ID, {}, AUTH, mockAudit)).rejects.toMatchObject({
+        code: "VALIDATION_ERROR",
+        message: "Invalid PIN payload",
       });
     });
   });
@@ -146,9 +200,8 @@ describe("pin service", () => {
 
     it("returns { verified: true } on correct PIN", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);
-      vi.mocked(cryptoVerifyPin).mockReturnValueOnce(true);
+      vi.mocked(verifyPinOffload).mockResolvedValueOnce(true);
 
       const result = await verifyPinCode(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit);
 
@@ -161,9 +214,8 @@ describe("pin service", () => {
 
     it("throws INVALID_PIN when PIN is incorrect", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([{ pinHash: "$argon2id$fake$hash" }]);
-      vi.mocked(cryptoVerifyPin).mockReturnValueOnce(false);
+      vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
 
       await expect(
         verifyPinCode(db, SYSTEM_ID, { pin: "9999" }, AUTH, mockAudit),
@@ -173,21 +225,36 @@ describe("pin service", () => {
       });
     });
 
-    it("throws INVALID_PIN with anti-timing behavior when no PIN is set", async () => {
+    it("throws NOT_FOUND when settings don't exist", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
-      chain.limit.mockResolvedValueOnce([{ pinHash: null }]);
-      vi.mocked(cryptoVerifyPin).mockReturnValueOnce(false);
+      chain.limit.mockResolvedValueOnce([]);
+      vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
 
       await expect(
         verifyPinCode(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit),
       ).rejects.toMatchObject({
-        code: "INVALID_PIN",
-        message: "PIN is incorrect",
+        code: "NOT_FOUND",
+        message: "System settings not found",
       });
 
-      // Anti-timing: verifyPin must be called even when no PIN is stored
-      expect(vi.mocked(cryptoVerifyPin)).toHaveBeenCalled();
+      // Anti-timing: verifyPinOffload must be called even when no row
+      expect(vi.mocked(verifyPinOffload)).toHaveBeenCalled();
+    });
+
+    it("throws NOT_FOUND when no PIN is set (with anti-timing)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ pinHash: null }]);
+      vi.mocked(verifyPinOffload).mockResolvedValueOnce(false);
+
+      await expect(
+        verifyPinCode(db, SYSTEM_ID, { pin: "1234" }, AUTH, mockAudit),
+      ).rejects.toMatchObject({
+        code: "NOT_FOUND",
+        message: "No PIN is set",
+      });
+
+      // Anti-timing: verifyPinOffload must be called even when no PIN is stored
+      expect(vi.mocked(verifyPinOffload)).toHaveBeenCalled();
     });
   });
 });

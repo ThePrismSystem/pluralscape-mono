@@ -9,13 +9,17 @@ import type { SystemId } from "@pluralscape/types";
 // ── Mocks ────────────────────────────────────────────────────────────
 
 vi.mock("@pluralscape/crypto", () => ({
-  deserializeEncryptedBlob: vi
+  serializeEncryptedBlob: vi.fn().mockReturnValue(new Uint8Array(32)),
+}));
+
+vi.mock("../../lib/verify-system-ownership.js", () => ({
+  verifySystemOwnership: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("../../lib/validate-encrypted-blob.js", () => ({
+  validateEncryptedBlob: vi
     .fn()
     .mockReturnValue({ ciphertext: new Uint8Array(16), nonce: new Uint8Array(12) }),
-  serializeEncryptedBlob: vi.fn().mockReturnValue(new Uint8Array(32)),
-  InvalidInputError: class InvalidInputError extends Error {
-    override readonly name = "InvalidInputError" as const;
-  },
 }));
 
 vi.mock("@pluralscape/db/pg", () => ({
@@ -71,7 +75,6 @@ const SETTINGS_ROW = {
   updatedAt: 1700000000000,
 };
 
-/** Helper to mock safeParse success without triggering unbound-method lint. */
 function mockSafeParseSuccess(data: Record<string, unknown>): void {
   const schema = vi.mocked(UpdateSystemSettingsBodySchema);
   (schema.safeParse as ReturnType<typeof vi.fn>).mockReturnValue({ success: true, data });
@@ -100,7 +103,6 @@ describe("system-settings service", () => {
   describe("getSystemSettings", () => {
     it("returns settings when found", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([SETTINGS_ROW]);
 
       const result = await getSystemSettings(db, SYSTEM_ID, AUTH);
@@ -111,19 +113,8 @@ describe("system-settings service", () => {
       expect(typeof result.encryptedData).toBe("string");
     });
 
-    it("throws NOT_FOUND when system doesn't exist", async () => {
-      const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
-
-      await expect(getSystemSettings(db, SYSTEM_ID, AUTH)).rejects.toMatchObject({
-        code: "NOT_FOUND",
-        message: "System not found",
-      });
-    });
-
     it("throws NOT_FOUND when settings don't exist", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(getSystemSettings(db, SYSTEM_ID, AUTH)).rejects.toMatchObject({
@@ -147,7 +138,6 @@ describe("system-settings service", () => {
 
     it("returns updated settings on success", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([SETTINGS_ROW]);
 
       const result = await updateSystemSettings(db, SYSTEM_ID, VALID_PAYLOAD, AUTH, mockAudit);
@@ -172,7 +162,6 @@ describe("system-settings service", () => {
 
     it("throws CONFLICT on version mismatch", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([]);
       chain.limit.mockResolvedValueOnce([{ id: "ss_abc" }]);
 
@@ -186,7 +175,6 @@ describe("system-settings service", () => {
 
     it("throws NOT_FOUND when settings don't exist", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
       chain.returning.mockResolvedValueOnce([]);
       chain.limit.mockResolvedValueOnce([]);
 
@@ -195,6 +183,26 @@ describe("system-settings service", () => {
       ).rejects.toMatchObject({
         code: "NOT_FOUND",
         message: "System settings not found",
+      });
+    });
+
+    it("throws BLOB_TOO_LARGE when encryptedData exceeds limit", async () => {
+      const { validateEncryptedBlob } = await import("../../lib/validate-encrypted-blob.js");
+      const { ApiHttpError } = await import("../../lib/api-error.js");
+      vi.mocked(validateEncryptedBlob).mockImplementationOnce(() => {
+        throw new ApiHttpError(
+          400,
+          "BLOB_TOO_LARGE",
+          "encryptedData exceeds maximum size of 65536 bytes",
+        );
+      });
+
+      const { db } = mockDb();
+
+      await expect(
+        updateSystemSettings(db, SYSTEM_ID, VALID_PAYLOAD, AUTH, mockAudit),
+      ).rejects.toMatchObject({
+        code: "BLOB_TOO_LARGE",
       });
     });
   });
