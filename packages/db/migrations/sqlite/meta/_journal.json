@@ -15,6 +15,13 @@
       "when": 1773734115662,
       "tag": "0001_optimal_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773780276540,
+      "tag": "0002_chunky_grey_gargoyle",
+      "breakpoints": true
     }
   ]
 }
