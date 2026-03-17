@@ -14,5 +14,6 @@ export const RegistrationInputSchema = z
     // Minimum length ensures non-empty; strength rules enforced by auth service
     password: z.string().min(1),
     recoveryKeyBackupConfirmed: z.boolean(),
+    accountType: z.enum(["system", "viewer"]).default("system"),
   })
   .readonly();

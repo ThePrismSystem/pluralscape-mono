@@ -27,6 +27,7 @@ import {
   EMAIL_SALT_BYTES,
   HEX_BYTE_WIDTH,
   HEX_RADIX,
+  MAX_SESSIONS_FETCH_LIMIT,
   MAX_SESSION_LIMIT,
   RECOVERY_KEY_GROUP_COUNT,
   RECOVERY_KEY_GROUP_SIZE,
@@ -66,13 +67,7 @@ export async function registerAccount(
     );
   }
 
-  const accountType =
-    typeof params === "object" &&
-    params !== null &&
-    "accountType" in params &&
-    (params.accountType === "system" || params.accountType === "viewer")
-      ? (params.accountType as AccountType)
-      : "system";
+  const accountType = parsed.accountType;
   const emailHash = hashEmail(parsed.email);
   const adapter = getSodium();
 
@@ -329,7 +324,8 @@ export async function listSessions(
     })
     .from(sessions)
     .where(baseConditions)
-    .orderBy(sessions.id);
+    .orderBy(sessions.id)
+    .limit(MAX_SESSIONS_FETCH_LIMIT);
 
   // Post-filter: remove idle-timed-out sessions
   const activeRows = rows.filter((row) => {

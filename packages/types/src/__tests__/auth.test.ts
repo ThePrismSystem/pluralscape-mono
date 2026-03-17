@@ -2,6 +2,7 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type {
   Account,
+  AccountType,
   AuthKey,
   AuthKeyType,
   DeviceInfo,
@@ -121,6 +122,7 @@ describe("RegistrationInput", () => {
     expectTypeOf<RegistrationInput["email"]>().toEqualTypeOf<string>();
     expectTypeOf<RegistrationInput["password"]>().toEqualTypeOf<string>();
     expectTypeOf<RegistrationInput["recoveryKeyBackupConfirmed"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<RegistrationInput["accountType"]>().toEqualTypeOf<AccountType>();
   });
 });
 

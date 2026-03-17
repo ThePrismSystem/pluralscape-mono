@@ -458,7 +458,7 @@ describe("auth service", () => {
   describe("listSessions", () => {
     it("returns empty sessions array when no rows match", async () => {
       const { db, chain } = mockDb();
-      chain.orderBy.mockResolvedValueOnce([]);
+      chain.limit.mockResolvedValueOnce([]);
 
       const result = await listSessions(db, "acct_123");
       expect(result.sessions).toEqual([]);
@@ -471,7 +471,7 @@ describe("auth service", () => {
         { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
       ];
-      chain.orderBy.mockResolvedValueOnce(rows);
+      chain.limit.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, "acct_123");
       expect(result.sessions).toHaveLength(2);
@@ -485,7 +485,7 @@ describe("auth service", () => {
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
         { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200 },
       ];
-      chain.orderBy.mockResolvedValueOnce(rows);
+      chain.limit.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, "acct_123", undefined, 2);
       expect(result.sessions).toHaveLength(2);
@@ -499,7 +499,7 @@ describe("auth service", () => {
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
         { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200 },
       ];
-      chain.orderBy.mockResolvedValueOnce(rows);
+      chain.limit.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, "acct_123", "sess_1", 2);
       expect(result.sessions).toHaveLength(2);
@@ -512,7 +512,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       // Session with very stale lastActive — idle timeout will exclude it
       const rows = [{ id: "sess_1", createdAt: 0, lastActive: 1, expiresAt: 2_592_000_000 }];
-      chain.orderBy.mockResolvedValueOnce(rows);
+      chain.limit.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, "acct_123");
       expect(result.sessions).toHaveLength(0);
@@ -530,7 +530,7 @@ describe("auth service", () => {
           expiresAt: currentTime + 2_592_000_000,
         },
       ];
-      chain.orderBy.mockResolvedValueOnce(rows);
+      chain.limit.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, "acct_123");
       expect(result.sessions).toHaveLength(1);

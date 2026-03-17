@@ -82,6 +82,7 @@ export interface RegistrationInput {
   readonly email: string;
   readonly password: string;
   readonly recoveryKeyBackupConfirmed: boolean;
+  readonly accountType: AccountType;
 }
 
 /** A request to transfer encryption keys from one device to another. */
