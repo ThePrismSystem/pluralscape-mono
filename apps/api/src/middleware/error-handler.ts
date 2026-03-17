@@ -88,7 +88,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
       "Validation failed",
       requestId,
       isProduction,
-      err,
+      isProduction ? undefined : err,
     );
   }
 

@@ -1,11 +1,11 @@
 ---
 # api-l0pz
 title: Strip ZodError details from production 400 responses
-status: todo
+status: completed
 type: bug
 priority: high
 created_at: 2026-03-17T11:58:33Z
-updated_at: 2026-03-17T11:58:33Z
+updated_at: 2026-03-17T18:31:28Z
 parent: api-tspr
 ---
 
@@ -21,7 +21,15 @@ The global error handler at `apps/api/src/middleware/error-handler.ts:84-92` pas
 ```typescript
 // Line 82-93 — details leak
 if (err instanceof Error && err.name === "ZodError") {
-  return formatError(c, HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Validation failed", requestId, isProduction, err);
+  return formatError(
+    c,
+    HTTP_BAD_REQUEST,
+    "VALIDATION_ERROR",
+    "Validation failed",
+    requestId,
+    isProduction,
+    err,
+  );
   //                                                                                                      ^^^ full ZodError
 }
 ```
@@ -38,7 +46,15 @@ Pass `undefined` as details when `isProduction` is true:
 
 ```typescript
 if (err instanceof Error && err.name === "ZodError") {
-  return formatError(c, HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Validation failed", requestId, isProduction, isProduction ? undefined : err);
+  return formatError(
+    c,
+    HTTP_BAD_REQUEST,
+    "VALIDATION_ERROR",
+    "Validation failed",
+    requestId,
+    isProduction,
+    isProduction ? undefined : err,
+  );
 }
 ```
 
@@ -51,3 +67,5 @@ if (err instanceof Error && err.name === "ZodError") {
 ## References
 
 - CWE-209: Generation of Error Message Containing Sensitive Information
+
+## Summary of Changes\n\nPassed `undefined` instead of `err` as the details arg to `formatError` when `isProduction` is true for ZodError handling. Added integration tests verifying details are stripped in production and present in development.
