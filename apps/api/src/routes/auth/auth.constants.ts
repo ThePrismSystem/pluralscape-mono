@@ -17,8 +17,11 @@ export const CLIENT_PLATFORM_HEADER = "x-client-platform";
 /** Valid platform values for session TTL selection. */
 export const VALID_PLATFORMS = ["web", "mobile"] as const;
 
+/** Derived type for valid client platform values. */
+export type ClientPlatform = (typeof VALID_PLATFORMS)[number];
+
 /** Default platform when header is missing or unrecognized. */
-export const DEFAULT_PLATFORM = "web" as const;
+export const DEFAULT_PLATFORM = "web" as const satisfies ClientPlatform;
 
 /**
  * Dummy Argon2id hash for anti-timing attacks on login.

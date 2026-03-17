@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
-import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
+import { extractPlatform, extractRequestMeta } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { loginAccount } from "../../services/auth.service.js";
 
@@ -22,10 +22,7 @@ loginRoute.post("/", async (c) => {
   }
 
   const platform = extractPlatform(c);
-  const requestMeta = {
-    ipAddress: extractIpAddress(c),
-    userAgent: extractUserAgent(c),
-  };
+  const requestMeta = extractRequestMeta(c);
 
   const db = await getDb();
 

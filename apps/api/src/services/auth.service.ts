@@ -33,10 +33,9 @@ import {
 } from "../routes/auth/auth.constants.js";
 
 import type { RequestMeta } from "../lib/request-meta.js";
+import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { AccountType } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-export type { RequestMeta } from "../lib/request-meta.js";
 
 // ── Registration ───────────────────────────────────────────────────
 
@@ -50,7 +49,7 @@ export interface RegistrationResult {
 export async function registerAccount(
   db: PostgresJsDatabase,
   params: unknown,
-  platform: "web" | "mobile",
+  platform: ClientPlatform,
   requestMeta: RequestMeta,
 ): Promise<RegistrationResult> {
   const startTime = performance.now();
@@ -220,7 +219,7 @@ export interface LoginResult {
 export async function loginAccount(
   db: PostgresJsDatabase,
   credentials: unknown,
-  platform: "web" | "mobile",
+  platform: ClientPlatform,
   requestMeta: RequestMeta,
 ): Promise<LoginResult | null> {
   const parsed = LoginCredentialsSchema.parse(credentials);

@@ -12,6 +12,7 @@ vi.mock("../../../lib/request-meta.js", () => ({
   extractIpAddress: vi.fn().mockReturnValue(null),
   extractPlatform: vi.fn().mockReturnValue("web"),
   extractUserAgent: vi.fn().mockReturnValue(null),
+  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({

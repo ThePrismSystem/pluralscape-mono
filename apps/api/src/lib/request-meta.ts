@@ -4,6 +4,7 @@ import {
   VALID_PLATFORMS,
 } from "../routes/auth/auth.constants.js";
 
+import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { Context } from "hono";
 
 export interface RequestMeta {
@@ -34,11 +35,16 @@ export function extractRequestMeta(c: Context): RequestMeta {
   };
 }
 
+/** Type guard for valid client platform values. */
+function isClientPlatform(value: string): value is ClientPlatform {
+  return (VALID_PLATFORMS as readonly string[]).includes(value);
+}
+
 /** Determine the client platform for session TTL selection. */
-export function extractPlatform(c: Context): "web" | "mobile" {
+export function extractPlatform(c: Context): ClientPlatform {
   const header = c.req.header(CLIENT_PLATFORM_HEADER);
-  if (header && (VALID_PLATFORMS as readonly string[]).includes(header)) {
-    return header as "web" | "mobile";
+  if (header && isClientPlatform(header)) {
+    return header;
   }
   return DEFAULT_PLATFORM;
 }

@@ -11,6 +11,7 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 vi.mock("../../../lib/request-meta.js", () => ({
   extractIpAddress: vi.fn().mockReturnValue(null),
   extractUserAgent: vi.fn().mockReturnValue(null),
+  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
 }));
 
 vi.mock("../../../services/auth.service.js", () => ({
