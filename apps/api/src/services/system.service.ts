@@ -18,8 +18,8 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { writeAuditLog } from "../lib/audit-log.js";
 import { MAX_ENCRYPTED_DATA_BYTES } from "../routes/systems/systems.constants.js";
 
-import type { RequestMeta } from "./auth.service.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { RequestMeta } from "../lib/request-meta.js";
 import type { EncryptedBlob, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -160,7 +160,7 @@ export async function updateSystemProfile(
     // Safe: we've verified updated.length > 0 above
     const [row] = updated as [(typeof updated)[number], ...typeof updated];
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId: auth.accountId,
       systemId,
       eventType: "system.profile-updated",
@@ -229,7 +229,7 @@ export async function archiveSystem(
     }
 
     // 4. Audit log BEFORE archive (FK satisfied since system still exists)
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId: auth.accountId,
       systemId,
       eventType: "system.deleted",
@@ -278,7 +278,7 @@ export async function createSystem(
       })
       .returning();
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId: auth.accountId,
       systemId,
       eventType: "system.created",

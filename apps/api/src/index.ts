@@ -1,8 +1,12 @@
 import { initSodium } from "@pluralscape/crypto";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 
+import { HTTP_CONTENT_TOO_LARGE } from "./http.constants.js";
+import { ApiHttpError } from "./lib/api-error.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
+import { BODY_SIZE_LIMIT_BYTES } from "./middleware/middleware.constants.js";
 import { createCategoryRateLimiter } from "./middleware/rate-limit.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createSecureHeaders } from "./middleware/secure-headers.js";
@@ -17,6 +21,19 @@ export const app = new Hono();
 app.use("*", requestIdMiddleware());
 app.use("*", createSecureHeaders());
 app.use("*", createCorsMiddleware());
+app.use(
+  "*",
+  bodyLimit({
+    maxSize: BODY_SIZE_LIMIT_BYTES,
+    onError: () => {
+      throw new ApiHttpError(
+        HTTP_CONTENT_TOO_LARGE,
+        "BLOB_TOO_LARGE",
+        "Request body exceeds size limit",
+      );
+    },
+  }),
+);
 app.use("*", createCategoryRateLimiter("global"));
 app.onError(errorHandler);
 

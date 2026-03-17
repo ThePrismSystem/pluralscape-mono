@@ -8,13 +8,17 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
+vi.mock("../../../lib/request-meta.js", () => ({
+  extractIpAddress: vi.fn().mockReturnValue(null),
+  extractUserAgent: vi.fn().mockReturnValue(null),
+  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
+}));
+
 vi.mock("../../../services/auth.service.js", () => ({
   listSessions: vi.fn(),
   logoutCurrentSession: vi.fn(),
   revokeSession: vi.fn(),
   revokeAllSessions: vi.fn(),
-  extractIpAddress: vi.fn().mockReturnValue(null),
-  extractUserAgent: vi.fn().mockReturnValue(null),
 }));
 
 vi.mock("../../../lib/db.js", () => ({

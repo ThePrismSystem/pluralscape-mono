@@ -8,11 +8,15 @@ import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../services/auth.service.js", () => ({
-  loginAccount: vi.fn(),
+vi.mock("../../../lib/request-meta.js", () => ({
   extractIpAddress: vi.fn().mockReturnValue(null),
   extractPlatform: vi.fn().mockReturnValue("web"),
   extractUserAgent: vi.fn().mockReturnValue(null),
+  extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
+}));
+
+vi.mock("../../../services/auth.service.js", () => ({
+  loginAccount: vi.fn(),
 }));
 
 vi.mock("../../../lib/db.js", () => ({

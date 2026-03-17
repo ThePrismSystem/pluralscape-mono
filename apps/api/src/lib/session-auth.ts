@@ -74,7 +74,10 @@ export async function validateSession(
  * Determine idle timeout for a session based on its absolute TTL.
  * Uses exact match against known timeout configurations.
  */
-function getIdleTimeout(session: SessionRow): number | null {
+export function getIdleTimeout(session: {
+  expiresAt: number | null;
+  createdAt: number;
+}): number | null {
   if (session.expiresAt === null) return null;
 
   const absoluteTtl = session.expiresAt - session.createdAt;

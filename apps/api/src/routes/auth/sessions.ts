@@ -3,11 +3,10 @@ import { Hono } from "hono";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
+import { extractRequestMeta } from "../../lib/request-meta.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
-  extractIpAddress,
-  extractUserAgent,
   listSessions,
   logoutCurrentSession,
   revokeAllSessions,
@@ -55,10 +54,7 @@ sessionsRoute.delete("/sessions/:id", async (c) => {
     );
   }
 
-  const requestMeta = {
-    ipAddress: extractIpAddress(c),
-    userAgent: extractUserAgent(c),
-  };
+  const requestMeta = extractRequestMeta(c);
 
   const success = await revokeSession(db, targetId, auth.accountId, requestMeta);
   if (!success) {
@@ -72,10 +68,7 @@ sessionsRoute.delete("/sessions/:id", async (c) => {
 sessionsRoute.post("/logout", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
-  const requestMeta = {
-    ipAddress: extractIpAddress(c),
-    userAgent: extractUserAgent(c),
-  };
+  const requestMeta = extractRequestMeta(c);
 
   await logoutCurrentSession(db, auth.sessionId, auth.accountId, requestMeta);
   return c.json({ ok: true });
@@ -85,10 +78,7 @@ sessionsRoute.post("/logout", async (c) => {
 sessionsRoute.post("/sessions/revoke-all", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
-  const requestMeta = {
-    ipAddress: extractIpAddress(c),
-    userAgent: extractUserAgent(c),
-  };
+  const requestMeta = extractRequestMeta(c);
 
   const count = await revokeAllSessions(db, auth.accountId, auth.sessionId, requestMeta);
   return c.json({ ok: true, revokedCount: count });

@@ -17,8 +17,11 @@ export const CLIENT_PLATFORM_HEADER = "x-client-platform";
 /** Valid platform values for session TTL selection. */
 export const VALID_PLATFORMS = ["web", "mobile"] as const;
 
+/** Derived type for valid client platform values. */
+export type ClientPlatform = (typeof VALID_PLATFORMS)[number];
+
 /** Default platform when header is missing or unrecognized. */
-export const DEFAULT_PLATFORM = "web" as const;
+export const DEFAULT_PLATFORM = "web" as const satisfies ClientPlatform;
 
 /**
  * Dummy Argon2id hash for anti-timing attacks on login.
@@ -41,6 +44,9 @@ export const DEFAULT_SESSION_LIMIT = 25;
 /** Maximum page size for session listing. */
 export const MAX_SESSION_LIMIT = 100;
 
+/** Safety ceiling for session fetch queries (10x MAX_SESSION_LIMIT). */
+export const MAX_SESSIONS_FETCH_LIMIT = 1_000;
+
 /** Hex encoding radix. */
 export const HEX_RADIX = 16;
 
@@ -52,12 +58,6 @@ export const RECOVERY_KEY_GROUP_COUNT = 13;
 
 /** Characters per group in a recovery key. */
 export const RECOVERY_KEY_GROUP_SIZE = 4;
-
-/** Max length for audit_log.ip_address column (varchar(255)). */
-export const AUDIT_LOG_IP_MAX_LENGTH = 255;
-
-/** Max length for audit_log.user_agent column (varchar(1024)). */
-export const AUDIT_LOG_UA_MAX_LENGTH = 1024;
 
 /** Target registration time (ms) for anti-enumeration timing equalization. */
 export const ANTI_ENUM_TARGET_MS = 500;

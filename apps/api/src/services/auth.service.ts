@@ -18,64 +18,25 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
 import { writeAuditLog } from "../lib/audit-log.js";
 import { hashEmail } from "../lib/email-hash.js";
+import { getIdleTimeout } from "../lib/session-auth.js";
 import {
   ANTI_ENUM_TARGET_MS,
   AUTH_MIN_PASSWORD_LENGTH,
-  CLIENT_PLATFORM_HEADER,
-  DEFAULT_PLATFORM,
   DEFAULT_SESSION_LIMIT,
   DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
   HEX_BYTE_WIDTH,
   HEX_RADIX,
+  MAX_SESSIONS_FETCH_LIMIT,
   MAX_SESSION_LIMIT,
   RECOVERY_KEY_GROUP_COUNT,
   RECOVERY_KEY_GROUP_SIZE,
-  VALID_PLATFORMS,
 } from "../routes/auth/auth.constants.js";
 
+import type { RequestMeta } from "../lib/request-meta.js";
+import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { AccountType } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type { Context } from "hono";
-
-export interface RequestMeta {
-  readonly ipAddress: string | null;
-  readonly userAgent: string | null;
-}
-
-// ── Request metadata extraction ────────────────────────────────────
-
-/** Extract IP address from request context. */
-export function extractIpAddress(c: Context): string | null {
-  if (process.env["TRUST_PROXY"] === "1") {
-    const forwarded = c.req.header("x-forwarded-for");
-    const ip = forwarded?.split(",")[0]?.trim();
-    if (ip && ip.length > 0) return ip;
-  }
-  return null;
-}
-
-/** Extract user agent from request context. */
-export function extractUserAgent(c: Context): string | null {
-  return c.req.header("user-agent") ?? null;
-}
-
-/** Extract both IP address and user agent as a RequestMeta object. */
-export function extractRequestMeta(c: Context): RequestMeta {
-  return {
-    ipAddress: extractIpAddress(c),
-    userAgent: extractUserAgent(c),
-  };
-}
-
-/** Determine the client platform for session TTL selection. */
-export function extractPlatform(c: Context): "web" | "mobile" {
-  const header = c.req.header(CLIENT_PLATFORM_HEADER);
-  if (header && (VALID_PLATFORMS as readonly string[]).includes(header)) {
-    return header as "web" | "mobile";
-  }
-  return DEFAULT_PLATFORM;
-}
 
 // ── Registration ───────────────────────────────────────────────────
 
@@ -86,26 +47,15 @@ export interface RegistrationResult {
   readonly accountType: AccountType;
 }
 
-export interface RegisterParams {
-  readonly email: string;
-  readonly password: string;
-  readonly recoveryKeyBackupConfirmed: boolean;
-  readonly accountType?: AccountType;
-}
-
 export async function registerAccount(
   db: PostgresJsDatabase,
-  params: RegisterParams,
-  platform: "web" | "mobile",
+  params: unknown,
+  platform: ClientPlatform,
   requestMeta: RequestMeta,
 ): Promise<RegistrationResult> {
   const startTime = performance.now();
 
-  const parsed = RegistrationInputSchema.parse({
-    email: params.email,
-    password: params.password,
-    recoveryKeyBackupConfirmed: params.recoveryKeyBackupConfirmed,
-  });
+  const parsed = RegistrationInputSchema.parse(params);
 
   if (!parsed.recoveryKeyBackupConfirmed) {
     throw new ValidationError("Recovery key backup must be confirmed");
@@ -117,7 +67,7 @@ export async function registerAccount(
     );
   }
 
-  const accountType = params.accountType ?? "system";
+  const accountType = parsed.accountType;
   const emailHash = hashEmail(parsed.email);
   const adapter = getSodium();
 
@@ -216,8 +166,7 @@ export async function registerAccount(
         expiresAt,
       });
 
-      // Write audit log — tx is compatible with PostgresJsDatabase for insert operations
-      await writeAuditLog(tx as PostgresJsDatabase, {
+      await writeAuditLog(tx, {
         accountId,
         systemId: null,
         eventType: "auth.register",
@@ -264,8 +213,8 @@ export interface LoginResult {
 
 export async function loginAccount(
   db: PostgresJsDatabase,
-  credentials: { email: string; password: string },
-  platform: "web" | "mobile",
+  credentials: unknown,
+  platform: ClientPlatform,
   requestMeta: RequestMeta,
 ): Promise<LoginResult | null> {
   const parsed = LoginCredentialsSchema.parse(credentials);
@@ -321,7 +270,7 @@ export async function loginAccount(
       expiresAt,
     });
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId: account.id,
       systemId,
       eventType: "auth.login",
@@ -360,14 +309,11 @@ export async function listSessions(
   const currentTime = now();
   const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
 
-  const baseConditions = cursor
-    ? and(
-        eq(sessions.accountId, accountId),
-        eq(sessions.revoked, false),
-        notExpired,
-        gt(sessions.id, cursor),
-      )
-    : and(eq(sessions.accountId, accountId), eq(sessions.revoked, false), notExpired);
+  const baseConditions = and(
+    eq(sessions.accountId, accountId),
+    eq(sessions.revoked, false),
+    notExpired,
+  );
 
   const rows = await db
     .select({
@@ -379,10 +325,20 @@ export async function listSessions(
     .from(sessions)
     .where(baseConditions)
     .orderBy(sessions.id)
-    .limit(effectiveLimit + 1);
+    .limit(MAX_SESSIONS_FETCH_LIMIT);
 
-  const hasMore = rows.length > effectiveLimit;
-  const result = hasMore ? rows.slice(0, effectiveLimit) : rows;
+  // Post-filter: remove idle-timed-out sessions
+  const activeRows = rows.filter((row) => {
+    if (row.lastActive === null) return true;
+    const idleTimeout = getIdleTimeout(row);
+    if (idleTimeout === null) return true;
+    return currentTime - row.lastActive <= idleTimeout;
+  });
+
+  // Apply cursor + pagination in memory
+  const afterCursor = cursor ? activeRows.filter((r) => r.id > cursor) : activeRows;
+  const result = afterCursor.slice(0, effectiveLimit);
+  const hasMore = afterCursor.length > effectiveLimit;
   const nextCursor = hasMore ? (result[result.length - 1]?.id ?? null) : null;
 
   return { sessions: result, nextCursor };
@@ -413,7 +369,7 @@ export async function revokeSession(
 
     if (updated.length === 0) return false;
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId: actorAccountId,
       systemId: null,
       eventType: "auth.logout",
@@ -446,7 +402,7 @@ export async function revokeAllSessions(
       )
       .returning({ id: sessions.id });
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId,
       systemId: null,
       eventType: "auth.logout",
@@ -472,7 +428,7 @@ export async function logoutCurrentSession(
       .set({ revoked: true })
       .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, accountId)));
 
-    await writeAuditLog(tx as PostgresJsDatabase, {
+    await writeAuditLog(tx, {
       accountId,
       systemId: null,
       eventType: "auth.logout",

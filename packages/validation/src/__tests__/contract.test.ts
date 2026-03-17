@@ -64,6 +64,7 @@ describe("RegistrationInput contract", () => {
       email: "user@example.com",
       password: "hunter2",
       recoveryKeyBackupConfirmed: true,
+      accountType: "system",
     };
     const result = RegistrationInputSchema.safeParse(input);
     expect(result.success).toBe(true);
@@ -107,6 +108,7 @@ describe("RegistrationInput contract", () => {
         email: "user@example.com",
         password: "hunter2",
         recoveryKeyBackupConfirmed: true,
+        accountType: "system",
       });
       expect("admin" in result.data).toBe(false);
     }

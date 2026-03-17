@@ -1,65 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { mockDb } from "../helpers/mock-db.js";
+
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { RequestMeta } from "../../services/auth.service.js";
+import type { RequestMeta } from "../../lib/request-meta.js";
 import type { SystemId } from "@pluralscape/types";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-// ── Mock helpers ─────────────────────────────────────────────────────
-
-function asDb(mock: unknown): PostgresJsDatabase {
-  return mock as PostgresJsDatabase;
-}
-
-interface MockChain {
-  select: ReturnType<typeof vi.fn>;
-  from: ReturnType<typeof vi.fn>;
-  where: ReturnType<typeof vi.fn>;
-  limit: ReturnType<typeof vi.fn>;
-  insert: ReturnType<typeof vi.fn>;
-  values: ReturnType<typeof vi.fn>;
-  returning: ReturnType<typeof vi.fn>;
-  update: ReturnType<typeof vi.fn>;
-  set: ReturnType<typeof vi.fn>;
-  delete: ReturnType<typeof vi.fn>;
-  transaction: ReturnType<typeof vi.fn>;
-}
-
-function mockDb(overrides?: Partial<MockChain>): {
-  db: PostgresJsDatabase;
-  chain: MockChain;
-} {
-  const chain: MockChain = {
-    select: vi.fn(),
-    from: vi.fn(),
-    where: vi.fn(),
-    limit: vi.fn(),
-    insert: vi.fn(),
-    values: vi.fn(),
-    returning: vi.fn(),
-    update: vi.fn(),
-    set: vi.fn(),
-    delete: vi.fn(),
-    transaction: vi.fn(),
-    ...overrides,
-  };
-
-  chain.select.mockReturnValue(chain);
-  chain.from.mockReturnValue(chain);
-  chain.where.mockReturnValue(chain);
-  chain.limit.mockResolvedValue([]);
-  chain.insert.mockReturnValue(chain);
-  chain.values.mockReturnValue(chain);
-  chain.returning.mockResolvedValue([]);
-  chain.update.mockReturnValue(chain);
-  chain.set.mockReturnValue(chain);
-  chain.delete.mockReturnValue(chain);
-  chain.transaction = vi
-    .fn()
-    .mockImplementation((fn: (tx: MockChain) => Promise<unknown>) => fn(chain));
-
-  return { db: asDb(chain), chain };
-}
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -362,6 +307,10 @@ describe("createSystem", () => {
     expect(result.id).toBe("sys_new-system");
     expect(result.encryptedData).toBeNull();
     expect(result.version).toBe(1);
+    expect(vi.mocked(writeAuditLog)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "system.created" }),
+    );
   });
 
   it("throws 403 for viewer accounts", async () => {

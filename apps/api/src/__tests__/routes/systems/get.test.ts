@@ -14,7 +14,7 @@ vi.mock("../../../services/system.service.js", () => ({
   getSystemProfile: vi.fn(),
 }));
 
-vi.mock("../../../services/auth.service.js", () => ({
+vi.mock("../../../lib/request-meta.js", () => ({
   extractRequestMeta: vi.fn().mockReturnValue({ ipAddress: null, userAgent: null }),
   extractIpAddress: vi.fn().mockReturnValue(null),
   extractUserAgent: vi.fn().mockReturnValue(null),
