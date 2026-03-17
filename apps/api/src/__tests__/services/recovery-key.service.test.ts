@@ -132,7 +132,7 @@ describe("recovery-key service", () => {
       ).rejects.toThrow("Incorrect password");
     });
 
-    it("throws ValidationError when confirmed is false", async () => {
+    it("throws ZodError when confirmed is false", async () => {
       const { db } = mockDb();
 
       await expect(
@@ -142,7 +142,7 @@ describe("recovery-key service", () => {
           { currentPassword: "password123", confirmed: false },
           requestMeta,
         ),
-      ).rejects.toThrow("Recovery key backup must be confirmed");
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
     it("throws NoActiveRecoveryKeyError when no active key to revoke", async () => {
@@ -171,6 +171,68 @@ describe("recovery-key service", () => {
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
+    it("throws when account has no encrypted master key", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: null,
+        },
+      ]);
+      chain.limit.mockResolvedValueOnce([
+        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
+      ]);
+
+      await expect(
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+      ).rejects.toThrow("Account missing encrypted master key");
+    });
+
+    it("throws on invalid KDF salt length", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(8),
+          encryptedMasterKey: new Uint8Array(72),
+        },
+      ]);
+      chain.limit.mockResolvedValueOnce([
+        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
+      ]);
+
+      await expect(
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+      ).rejects.toThrow("Stored KDF salt has invalid length");
+
+      // KEK not derived yet, no crypto material to zero
+      expect(mockMemzero).toHaveBeenCalledTimes(0);
+    });
+
+    it("throws when recovery key revoked concurrently (TOCTOU)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: new Uint8Array(72),
+        },
+      ]);
+      chain.limit.mockResolvedValueOnce([
+        { id: "rk_old", accountId: "acct_123", createdAt: 500, revokedAt: null },
+      ]);
+      // Revoke returns empty (concurrent revocation)
+      chain.returning.mockResolvedValueOnce([]);
+
+      await expect(
+        regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
+      ).rejects.toThrow("Recovery key not found during revocation");
+
+      // Crypto material still zeroed despite transaction failure
+      expect(mockMemzero).toHaveBeenCalledTimes(5);
+    });
+
     it("calls memzero on KEK and master key even on transaction failure", async () => {
       const { db, chain } = mockDb();
       // Account lookup
@@ -192,7 +254,7 @@ describe("recovery-key service", () => {
         regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta),
       ).rejects.toThrow("DB error");
 
-      expect(mockMemzero).toHaveBeenCalledTimes(2);
+      expect(mockMemzero).toHaveBeenCalledTimes(5);
     });
 
     it("calls memzero on success", async () => {
@@ -211,7 +273,7 @@ describe("recovery-key service", () => {
 
       await regenerateRecoveryKeyBackup(db, "acct_123" as AccountId, validParams, requestMeta);
 
-      expect(mockMemzero).toHaveBeenCalledTimes(2);
+      expect(mockMemzero).toHaveBeenCalledTimes(5);
     });
 
     it("uses a transaction for the revoke+insert+audit", async () => {

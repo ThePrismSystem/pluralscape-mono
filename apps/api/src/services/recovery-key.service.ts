@@ -14,21 +14,20 @@ import { and, eq, isNull } from "drizzle-orm";
 import { writeAuditLog } from "../lib/audit-log.js";
 import { deserializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { fromHex } from "../lib/hex.js";
-import { INCORRECT_PASSWORD_ERROR } from "../routes/account/account.constants.js";
 
+import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
 import { ValidationError } from "./auth.service.js";
 
 import type { RequestMeta } from "../lib/request-meta.js";
-import type { AeadKey, KdfMasterKey, PwhashSalt } from "@pluralscape/crypto";
+import type { AeadKey, KdfMasterKey, PwhashSalt, RecoveryKeyResult } from "@pluralscape/crypto";
 import type { AccountId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Recovery Key Status ──────────────────────────────────────────
 
-export interface RecoveryKeyStatus {
-  readonly hasActiveKey: boolean;
-  readonly createdAt: UnixMillis | null;
-}
+export type RecoveryKeyStatus =
+  | { readonly hasActiveKey: true; readonly createdAt: UnixMillis }
+  | { readonly hasActiveKey: false; readonly createdAt: null };
 
 export async function getRecoveryKeyStatus(
   db: PostgresJsDatabase,
@@ -63,10 +62,6 @@ export async function regenerateRecoveryKeyBackup(
   requestMeta: RequestMeta,
 ): Promise<RegenerateRecoveryKeyResult> {
   const parsed = RegenerateRecoveryKeySchema.parse(params);
-
-  if (!parsed.confirmed) {
-    throw new ValidationError("Recovery key backup must be confirmed");
-  }
 
   const [account] = await db
     .select({
@@ -104,6 +99,8 @@ export async function regenerateRecoveryKeyBackup(
   const adapter = getSodium();
   let kek: AeadKey | undefined;
   let masterKey: KdfMasterKey | undefined;
+  let serializedBackup: Uint8Array | undefined;
+  let newRecoveryKeyResult: RecoveryKeyResult | undefined;
 
   try {
     const encMasterKeyBytes = account.encryptedMasterKey;
@@ -123,7 +120,10 @@ export async function regenerateRecoveryKeyBackup(
     kek = await derivePasswordKey(parsed.currentPassword, salt as PwhashSalt, "server");
     masterKey = unwrapMasterKey(payload, kek);
 
-    const { newRecoveryKey, serializedBackup } = regenerateRecoveryKey(masterKey);
+    const result = regenerateRecoveryKey(masterKey);
+    newRecoveryKeyResult = result.newRecoveryKey;
+    serializedBackup = result.serializedBackup;
+    const backup = serializedBackup;
     const timestamp = now();
     const newId = createId(ID_PREFIXES.recoveryKey);
 
@@ -131,7 +131,7 @@ export async function regenerateRecoveryKeyBackup(
       const revoked = await tx
         .update(recoveryKeys)
         .set({ revokedAt: timestamp })
-        .where(eq(recoveryKeys.id, activeKey.id))
+        .where(and(eq(recoveryKeys.id, activeKey.id), isNull(recoveryKeys.revokedAt)))
         .returning({ id: recoveryKeys.id });
 
       if (revoked.length === 0) {
@@ -141,7 +141,7 @@ export async function regenerateRecoveryKeyBackup(
       await tx.insert(recoveryKeys).values({
         id: newId,
         accountId,
-        encryptedMasterKey: serializedBackup,
+        encryptedMasterKey: backup,
         createdAt: timestamp,
       });
 
@@ -156,10 +156,15 @@ export async function regenerateRecoveryKeyBackup(
       });
     });
 
-    return { recoveryKey: newRecoveryKey.displayKey };
+    return { recoveryKey: newRecoveryKeyResult.displayKey };
   } finally {
     if (kek) adapter.memzero(kek);
     if (masterKey) adapter.memzero(masterKey);
+    if (serializedBackup) adapter.memzero(serializedBackup);
+    if (newRecoveryKeyResult) {
+      adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.ciphertext);
+      adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.nonce);
+    }
   }
 }
 

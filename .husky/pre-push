@@ -1,11 +1,13 @@
 pnpm typecheck && pnpm lint && pnpm test:unit:coverage
 
 # Migration freshness check (same as CI)
+set -e
 echo "Checking migration freshness..."
 cd packages/db
 pnpm db:generate:pg
 pnpm db:generate:sqlite
 cd ../..
+set +e
 
 if [ -n "$(git diff --name-only packages/db/migrations/)" ]; then
   echo "Migrations are out of date. Regenerating and committing..."

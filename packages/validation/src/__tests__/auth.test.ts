@@ -158,14 +158,16 @@ describe("RegenerateRecoveryKeySchema", () => {
     }
   });
 
-  it("parses when confirmed is false", () => {
+  it("rejects when confirmed is false", () => {
     const result = RegenerateRecoveryKeySchema.safeParse({
       currentPassword: "password123",
       confirmed: false,
     });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.confirmed).toBe(false);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["confirmed"]);
     }
   });
 

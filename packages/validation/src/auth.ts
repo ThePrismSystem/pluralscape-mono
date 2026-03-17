@@ -37,6 +37,6 @@ export const ChangePasswordSchema = z
 export const RegenerateRecoveryKeySchema = z
   .object({
     currentPassword: z.string().min(1),
-    confirmed: z.boolean(),
+    confirmed: z.literal(true),
   })
   .readonly();

@@ -149,7 +149,7 @@ describe("POST /auth/recovery-key/regenerate", () => {
       body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
     });
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
     const body = (await res.json()) as { recoveryKey: string };
     expect(body.recoveryKey).toBe(
       "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
@@ -188,6 +188,37 @@ describe("POST /auth/recovery-key/regenerate", () => {
     expect(res.status).toBe(404);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("NOT_FOUND");
+  });
+
+  it("returns 400 on malformed JSON body", async () => {
+    const app = createApp();
+    const res = await app.request("/auth/recovery-key/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "not json",
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.message).toBe("Invalid JSON body");
+  });
+
+  it("returns 400 on ZodError from service", async () => {
+    const zodError = new Error("Invalid input");
+    zodError.name = "ZodError";
+    vi.mocked(regenerateRecoveryKeyBackup).mockRejectedValueOnce(zodError);
+
+    const app = createApp();
+    const res = await app.request("/auth/recovery-key/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword: "password123", confirmed: true }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("passes account ID and request meta to service", async () => {
