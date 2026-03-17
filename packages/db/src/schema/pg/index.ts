@@ -47,6 +47,7 @@ export {
   subsystems,
 } from "./structure.js";
 export { blobMetadata } from "./blob-metadata.js";
+export { biometricTokens } from "./biometric-tokens.js";
 export { systemSettings } from "./system-settings.js";
 export { systems } from "./systems.js";
 export { checkInRecords, timerConfigs } from "./timers.js";
@@ -145,6 +146,9 @@ export type {
   FieldBucketVisibilityRow,
   NewFieldBucketVisibility,
 } from "./custom-fields.js";
+
+// Biometric Tokens
+export type { BiometricTokenRow, NewBiometricToken } from "./biometric-tokens.js";
 
 // Config & Settings
 export type { NomenclatureSettingsRow, NewNomenclatureSettings } from "./nomenclature-settings.js";

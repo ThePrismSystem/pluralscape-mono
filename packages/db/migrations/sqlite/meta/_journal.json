@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1773727637284,
-      "tag": "0000_married_maverick",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1773734115662,
-      "tag": "0001_optimal_medusa",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1773780276540,
-      "tag": "0002_chunky_grey_gargoyle",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1773786278584,
-      "tag": "0003_futuristic_pride",
+      "when": 1773790029928,
+      "tag": "0000_broken_garia",
       "breakpoints": true
     }
   ]

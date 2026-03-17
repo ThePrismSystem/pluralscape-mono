@@ -88,6 +88,9 @@ export { deriveMasterKey, generateSalt } from "./master-key.js";
 // ── Password hashing (string-based) ────────────────────────────────
 export { hashPassword, verifyPassword } from "./password.js";
 
+// ── PIN hashing (string-based) ─────────────────────────────────────
+export { hashPin, MIN_PIN_LENGTH, verifyPin } from "./pin.js";
+
 // ── Master key wrap (KEK/DEK two-layer architecture) ─────────────────
 export {
   derivePasswordKey,

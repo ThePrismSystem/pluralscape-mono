@@ -2,6 +2,9 @@ import type { Plaintext } from "./encryption.js";
 import type { AccountId, ApiKeyId, AuditLogEntryId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
+/** Step names used in setup wizard audit events. */
+export type SetupStepName = "nomenclature" | "profile";
+
 /** The category of audit event. */
 export type AuditEventType =
   | "auth.register"
@@ -45,7 +48,15 @@ export type AuditEventType =
   | "custom-front.archived"
   | "custom-front.restored"
   | "group.deleted"
-  | "custom-front.deleted";
+  | "custom-front.deleted"
+  | "auth.biometric-enrolled"
+  | "auth.biometric-verified"
+  | "settings.pin-set"
+  | "settings.pin-removed"
+  | "settings.pin-verified"
+  | "settings.nomenclature-updated"
+  | "setup.step-completed"
+  | "setup.completed";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

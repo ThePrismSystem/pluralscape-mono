@@ -64,6 +64,7 @@ export type {
   BucketKeyRotationId,
   BucketRotationItemId,
   SystemSnapshotId,
+  BiometricTokenId,
   StorageKey,
   HexColor,
   SlugHash,
@@ -376,7 +377,7 @@ export type {
 } from "./blob.js";
 
 // ── Audit log ─────────────────────────────────────────────────
-export type { AuditEventType, AuditActor, AuditLogEntry } from "./audit-log.js";
+export type { AuditEventType, AuditActor, AuditLogEntry, SetupStepName } from "./audit-log.js";
 
 // ── Webhooks ──────────────────────────────────────────────────
 export type {

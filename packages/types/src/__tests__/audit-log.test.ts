@@ -69,6 +69,14 @@ describe("AuditEventType", () => {
         case "custom-front.restored":
         case "group.deleted":
         case "custom-front.deleted":
+        case "auth.biometric-enrolled":
+        case "auth.biometric-verified":
+        case "settings.pin-set":
+        case "settings.pin-removed":
+        case "settings.pin-verified":
+        case "settings.nomenclature-updated":
+        case "setup.step-completed":
+        case "setup.completed":
           return type;
         default: {
           const _exhaustive: never = type;
