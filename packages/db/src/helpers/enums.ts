@@ -166,6 +166,7 @@ export const API_KEY_SCOPES = [
   "full",
 ] as const satisfies readonly ApiKeyScope[];
 export const AUDIT_EVENT_TYPES = [
+  "auth.register",
   "auth.login",
   "auth.login-failed",
   "auth.logout",

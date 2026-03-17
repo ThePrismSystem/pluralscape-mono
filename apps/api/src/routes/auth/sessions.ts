@@ -32,9 +32,10 @@ sessionsRoute.get("/sessions", async (c) => {
   const db = await getDb();
   const cursor = c.req.query("cursor");
   const limitParam = c.req.query("limit");
-  const limit = limitParam ? parseInt(limitParam, 10) : DEFAULT_SESSION_LIMIT;
+  const parsed = limitParam ? parseInt(limitParam, 10) : DEFAULT_SESSION_LIMIT;
+  const limit = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SESSION_LIMIT;
 
-  const result = await listSessions(db, auth.accountId as string, cursor, limit);
+  const result = await listSessions(db, auth.accountId, cursor, limit);
   return c.json(result);
 });
 
@@ -45,7 +46,7 @@ sessionsRoute.delete("/sessions/:id", async (c) => {
   const targetId = c.req.param("id");
 
   // Cannot revoke current session via this endpoint — use POST /auth/logout
-  if (targetId === (auth.sessionId as string)) {
+  if (targetId === auth.sessionId) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
@@ -58,7 +59,7 @@ sessionsRoute.delete("/sessions/:id", async (c) => {
     userAgent: extractUserAgent(c),
   };
 
-  const success = await revokeSession(db, targetId, auth.accountId as string, requestMeta);
+  const success = await revokeSession(db, targetId, auth.accountId, requestMeta);
   if (!success) {
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Session not found");
   }
@@ -75,7 +76,7 @@ sessionsRoute.post("/logout", async (c) => {
     userAgent: extractUserAgent(c),
   };
 
-  await logoutCurrentSession(db, auth.sessionId as string, auth.accountId as string, requestMeta);
+  await logoutCurrentSession(db, auth.sessionId, auth.accountId, requestMeta);
   return c.json({ ok: true });
 });
 
@@ -88,11 +89,6 @@ sessionsRoute.post("/sessions/revoke-all", async (c) => {
     userAgent: extractUserAgent(c),
   };
 
-  const count = await revokeAllSessions(
-    db,
-    auth.accountId as string,
-    auth.sessionId as string,
-    requestMeta,
-  );
+  const count = await revokeAllSessions(db, auth.accountId, auth.sessionId, requestMeta);
   return c.json({ ok: true, revokedCount: count });
 });

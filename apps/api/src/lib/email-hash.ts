@@ -1,6 +1,11 @@
 import { getSodium } from "@pluralscape/crypto";
 
-import { EMAIL_HASH_LENGTH, HEX_BYTE_WIDTH, HEX_RADIX } from "../routes/auth/auth.constants.js";
+import {
+  EMAIL_HASH_LENGTH,
+  HEX_BYTE_WIDTH,
+  HEX_RADIX,
+  PEPPER_HEX_LENGTH,
+} from "../routes/auth/auth.constants.js";
 
 /** Number of hex characters per byte. */
 const HEX_CHARS_PER_BYTE = 2;
@@ -16,6 +21,11 @@ export function getEmailHashPepper(): Uint8Array {
     throw new Error(
       "EMAIL_HASH_PEPPER environment variable is required but not set. " +
         "Set it to a 64-character hex string (32 bytes).",
+    );
+  }
+  if (hex.length !== PEPPER_HEX_LENGTH) {
+    throw new Error(
+      `EMAIL_HASH_PEPPER must be a ${String(PEPPER_HEX_LENGTH)}-character hex string (32 bytes).`,
     );
   }
   const bytes = new Uint8Array(hex.length / HEX_CHARS_PER_BYTE);

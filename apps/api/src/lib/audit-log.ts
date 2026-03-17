@@ -1,6 +1,8 @@
 import { auditLog } from "@pluralscape/db/pg";
 import { createId, now } from "@pluralscape/types";
 
+import { AUDIT_LOG_IP_MAX_LENGTH, AUDIT_LOG_UA_MAX_LENGTH } from "../routes/auth/auth.constants.js";
+
 import type { DbAuditActor } from "@pluralscape/db";
 import type { AuditEventType } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -31,8 +33,8 @@ export async function writeAuditLog(
     systemId: params.systemId,
     eventType: params.eventType,
     timestamp,
-    ipAddress: params.ipAddress ?? null,
-    userAgent: params.userAgent ?? null,
+    ipAddress: (params.ipAddress ?? null)?.slice(0, AUDIT_LOG_IP_MAX_LENGTH) ?? null,
+    userAgent: (params.userAgent ?? null)?.slice(0, AUDIT_LOG_UA_MAX_LENGTH) ?? null,
     actor: params.actor,
     detail: params.detail ?? null,
   });

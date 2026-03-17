@@ -109,6 +109,19 @@ describe("sessions route", () => {
       expect(vi.mocked(listSessions)).toHaveBeenCalledWith({}, "acct_test", undefined, 25);
     });
 
+    it("uses default limit when limit param is NaN", async () => {
+      vi.mocked(listSessions).mockResolvedValueOnce({
+        sessions: [],
+        nextCursor: null,
+      });
+
+      const app = createApp();
+      const res = await app.request("/auth/sessions?limit=abc");
+
+      expect(res.status).toBe(200);
+      expect(vi.mocked(listSessions)).toHaveBeenCalledWith({}, "acct_test", undefined, 25);
+    });
+
     it("passes cursor and limit query params", async () => {
       vi.mocked(listSessions).mockResolvedValueOnce({
         sessions: [],

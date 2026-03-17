@@ -123,6 +123,20 @@ describe("POST /register", () => {
     expect(body.error.message).toBe("Invalid registration input");
   });
 
+  it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
+    const app = createApp();
+    const res = await app.request("/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "not valid json{{{",
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.message).toBe("Invalid JSON body");
+  });
+
   it("re-throws unexpected errors", async () => {
     vi.mocked(registerAccount).mockRejectedValueOnce(new Error("Database connection failed"));
     vi.spyOn(console, "error").mockImplementation(() => undefined);

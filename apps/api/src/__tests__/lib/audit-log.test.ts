@@ -75,4 +75,22 @@ describe("writeAuditLog", () => {
     expect(insertedRow.ipAddress).toBeNull();
     expect(insertedRow.userAgent).toBeNull();
   });
+
+  it("truncates ipAddress longer than 255 characters", async () => {
+    const { db, valuesSpy } = createMockDb();
+    const longIp = "x".repeat(300);
+    await writeAuditLog(db, baseParams({ ipAddress: longIp }));
+
+    const insertedRow = valuesSpy.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(insertedRow.ipAddress).toHaveLength(255);
+  });
+
+  it("truncates userAgent longer than 1024 characters", async () => {
+    const { db, valuesSpy } = createMockDb();
+    const longUa = "y".repeat(2000);
+    await writeAuditLog(db, baseParams({ userAgent: longUa }));
+
+    const insertedRow = valuesSpy.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(insertedRow.userAgent).toHaveLength(1024);
+  });
 });

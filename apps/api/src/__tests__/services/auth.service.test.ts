@@ -362,9 +362,9 @@ describe("auth service", () => {
 
     it("returns fake result on duplicate email to prevent enumeration", async () => {
       const { db, chain } = mockDb();
-      chain.transaction.mockRejectedValueOnce(
-        new Error("unique constraint violated on email_hash"),
-      );
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, { code: "23505", constraint_name: "accounts_email_hash_idx" });
+      chain.transaction.mockRejectedValueOnce(pgError);
 
       const result = await registerAccount(db, validParams, "web", requestMeta);
       // Should still return a result (anti-enumeration)
@@ -387,6 +387,32 @@ describe("auth service", () => {
       await expect(
         registerAccount(db, { ...validParams, email: "not-an-email" }, "web", requestMeta),
       ).rejects.toThrow();
+    });
+
+    it("accepts password at exactly minimum length boundary", async () => {
+      const { db } = mockDb();
+      const result = await registerAccount(
+        db,
+        { ...validParams, password: "12345678" },
+        "web",
+        requestMeta,
+      );
+      expect(result).toHaveProperty("sessionToken");
+    });
+
+    it("generates fake recovery key with correct format for anti-enumeration", async () => {
+      const { db, chain } = mockDb();
+      const pgError = new Error("duplicate key value violates unique constraint");
+      Object.assign(pgError, { code: "23505", constraint_name: "accounts_email_hash_idx" });
+      chain.transaction.mockRejectedValueOnce(pgError);
+
+      const result = await registerAccount(db, validParams, "web", requestMeta);
+      const groups = result.recoveryKey.split("-");
+      expect(groups).toHaveLength(13);
+      for (const group of groups) {
+        expect(group).toHaveLength(4);
+        expect(group).toMatch(/^[A-Z2-7]+$/);
+      }
     });
   });
 
@@ -576,12 +602,20 @@ describe("auth service", () => {
 
     it("returns true and revokes session when actor owns it", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_123" }]);
+      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_123", revoked: false }]);
+      chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
       const result = await revokeSession(db, "sess_1", "acct_123", requestMeta);
       expect(result).toBe(true);
-      expect(chain.update).toHaveBeenCalled();
-      expect(chain.set).toHaveBeenCalledWith({ revoked: true });
+      expect(chain.transaction).toHaveBeenCalled();
+    });
+
+    it("returns false when session is already revoked", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_123", revoked: true }]);
+
+      const result = await revokeSession(db, "sess_1", "acct_123", requestMeta);
+      expect(result).toBe(false);
     });
   });
 

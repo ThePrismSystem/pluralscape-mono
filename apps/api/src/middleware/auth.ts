@@ -50,7 +50,11 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
       void db
         .update(sessions)
         .set({ lastActive: currentTime })
-        .where(eq(sessions.id, result.session.id));
+        .where(eq(sessions.id, result.session.id))
+        .then(() => {})
+        .catch((err: unknown) => {
+          console.error("[auth] Failed to update session lastActive:", err);
+        });
     }
 
     c.set("auth", result.auth);

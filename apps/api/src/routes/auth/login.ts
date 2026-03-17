@@ -17,7 +17,13 @@ export const loginRoute = new Hono();
 loginRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 loginRoute.post("/", async (c) => {
-  const body = await c.req.json<{ email: string; password: string }>();
+  let body: { email: string; password: string };
+  try {
+    body = await c.req.json<{ email: string; password: string }>();
+  } catch {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
+  }
+
   const platform = extractPlatform(c);
   const requestMeta = {
     ipAddress: extractIpAddress(c),
