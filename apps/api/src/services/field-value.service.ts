@@ -1,15 +1,13 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
-import { fieldDefinitions, fieldValues, members } from "@pluralscape/db/pg";
+import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
+import { fieldValues } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { SetFieldValueBodySchema, UpdateFieldValueBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { encryptedBlobToBase64 } from "../lib/crypto-helpers.js";
+import { assertFieldDefinitionActive, assertMemberActive } from "../lib/member-helpers.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -42,10 +40,6 @@ export interface FieldValueResult {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
-
-function encryptedBlobToBase64(blob: EncryptedBlob): string {
-  return Buffer.from(serializeEncryptedBlob(blob)).toString("base64");
-}
 
 function toFieldValueResult(row: {
   id: string;
@@ -87,46 +81,6 @@ function parseAndValidateValueBlob(base64: string): EncryptedBlob {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
     }
     throw error;
-  }
-}
-
-async function assertMemberActive(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  memberId: MemberId,
-): Promise<void> {
-  const [row] = await db
-    .select({ id: members.id })
-    .from(members)
-    .where(
-      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
-    )
-    .limit(1);
-
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
-  }
-}
-
-async function assertFieldDefinitionActive(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  fieldDefId: FieldDefinitionId,
-): Promise<void> {
-  const [row] = await db
-    .select({ id: fieldDefinitions.id })
-    .from(fieldDefinitions)
-    .where(
-      and(
-        eq(fieldDefinitions.id, fieldDefId),
-        eq(fieldDefinitions.systemId, systemId),
-        eq(fieldDefinitions.archived, false),
-      ),
-    )
-    .limit(1);
-
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Field definition not found");
   }
 }
 

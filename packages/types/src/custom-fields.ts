@@ -1,16 +1,19 @@
 import type { BucketId, FieldDefinitionId, FieldValueId, MemberId, SystemId } from "./ids.js";
 import type { Archived, AuditMetadata } from "./utility.js";
 
-/** The supported field types for custom fields. */
-export type FieldType =
-  | "text"
-  | "number"
-  | "boolean"
-  | "date"
-  | "color"
-  | "select"
-  | "multi-select"
-  | "url";
+/** The supported field types for custom fields (single source of truth). */
+export const FIELD_TYPES = [
+  "text",
+  "number",
+  "boolean",
+  "date",
+  "color",
+  "select",
+  "multi-select",
+  "url",
+] as const;
+
+export type FieldType = (typeof FIELD_TYPES)[number];
 
 /** Per-definition visibility within a privacy bucket. */
 export interface FieldBucketVisibility {

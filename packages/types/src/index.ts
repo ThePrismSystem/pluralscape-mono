@@ -473,6 +473,7 @@ export type {
 } from "./lifecycle.js";
 
 // ── Custom fields ─────────────────────────────────────────────────
+export { FIELD_TYPES } from "./custom-fields.js";
 export type {
   FieldType,
   FieldBucketVisibility,

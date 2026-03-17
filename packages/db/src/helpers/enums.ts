@@ -19,7 +19,6 @@ import type {
   EntityType,
   ExportFormat,
   ExportRequestStatus,
-  FieldType,
   FriendConnectionStatus,
   FrontingType,
   ImportJobStatus,
@@ -78,16 +77,7 @@ export const DISCOVERY_STATUSES = [
   "partially-mapped",
   "unknown",
 ] as const satisfies readonly DiscoveryStatus[];
-export const FIELD_TYPES = [
-  "text",
-  "number",
-  "boolean",
-  "date",
-  "color",
-  "select",
-  "multi-select",
-  "url",
-] as const satisfies readonly FieldType[];
+export { FIELD_TYPES } from "@pluralscape/types";
 export const LIFECYCLE_EVENT_TYPES = [
   "split",
   "fusion",

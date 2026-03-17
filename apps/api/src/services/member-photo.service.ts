@@ -1,15 +1,13 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
-import { members, memberPhotos } from "@pluralscape/db/pg";
+import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
+import { memberPhotos } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { CreateMemberPhotoBodySchema, ReorderPhotosBodySchema } from "@pluralscape/validation";
 import { and, count, eq, max } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { encryptedBlobToBase64 } from "../lib/crypto-helpers.js";
+import { assertMemberActive } from "../lib/member-helpers.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -44,10 +42,6 @@ export interface MemberPhotoResult {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
-
-function encryptedBlobToBase64(blob: EncryptedBlob): string {
-  return Buffer.from(serializeEncryptedBlob(blob)).toString("base64");
-}
 
 function toPhotoResult(row: {
   id: string;
@@ -93,24 +87,6 @@ function parseAndValidatePhotoBlob(base64: string): EncryptedBlob {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
     }
     throw error;
-  }
-}
-
-async function assertMemberActive(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  memberId: MemberId,
-): Promise<void> {
-  const [row] = await db
-    .select({ id: members.id })
-    .from(members)
-    .where(
-      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
-    )
-    .limit(1);
-
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
   }
 }
 

@@ -1,8 +1,4 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
+import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { fieldDefinitions } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import {
@@ -13,7 +9,9 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { encryptedBlobToBase64 } from "../lib/crypto-helpers.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../routes/fields/fields.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -30,8 +28,6 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Constants ───────────────────────────────────────────────────────
 
-const DEFAULT_FIELD_LIMIT = 25;
-const MAX_FIELD_LIMIT = 100;
 const MAX_FIELD_DEFINITIONS_PER_SYSTEM = 200;
 const MAX_ENCRYPTED_FIELD_DATA_BYTES = 32_768;
 
@@ -52,10 +48,6 @@ export interface FieldDefinitionResult {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
-
-function encryptedBlobToBase64(blob: EncryptedBlob): string {
-  return Buffer.from(serializeEncryptedBlob(blob)).toString("base64");
-}
 
 function toFieldDefinitionResult(row: {
   id: string;

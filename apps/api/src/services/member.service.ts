@@ -1,8 +1,4 @@
-import {
-  deserializeEncryptedBlob,
-  InvalidInputError,
-  serializeEncryptedBlob,
-} from "@pluralscape/crypto";
+import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { members, memberPhotos } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import {
@@ -14,6 +10,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { encryptedBlobToBase64 } from "../lib/crypto-helpers.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_MEMBER_LIMIT,
@@ -47,10 +44,6 @@ export interface MemberResult {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
-
-function encryptedBlobToBase64(blob: EncryptedBlob): string {
-  return Buffer.from(serializeEncryptedBlob(blob)).toString("base64");
-}
 
 function toMemberResult(row: {
   id: string;

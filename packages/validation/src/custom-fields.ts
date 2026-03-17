@@ -1,3 +1,4 @@
+import { FIELD_TYPES } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 import {
@@ -5,16 +6,7 @@ import {
   MAX_ENCRYPTED_FIELD_VALUE_SIZE,
 } from "./validation.constants.js";
 
-const FieldTypeSchema = z.enum([
-  "text",
-  "number",
-  "boolean",
-  "date",
-  "color",
-  "select",
-  "multi-select",
-  "url",
-]);
+const FieldTypeSchema = z.enum(FIELD_TYPES);
 
 export const CreateFieldDefinitionBodySchema = z
   .object({
