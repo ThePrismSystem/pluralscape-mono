@@ -33,8 +33,14 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
-const { createMemberPhoto, listMemberPhotos, reorderMemberPhotos, archiveMemberPhoto } =
-  await import("../../services/member-photo.service.js");
+const {
+  createMemberPhoto,
+  listMemberPhotos,
+  reorderMemberPhotos,
+  archiveMemberPhoto,
+  restoreMemberPhoto,
+} = await import("../../services/member-photo.service.js");
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -209,6 +215,24 @@ describe("createMemberPhoto", () => {
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
+
+  it("rejects cross-system access", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
+    );
+    const { db } = mockDb();
+    await expect(
+      createMemberPhoto(
+        db,
+        SYSTEM_ID,
+        MEMBER_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+  });
 });
 
 describe("listMemberPhotos", () => {
@@ -361,6 +385,49 @@ describe("archiveMemberPhoto", () => {
 
     await expect(
       archiveMemberPhoto(
+        db,
+        SYSTEM_ID,
+        MEMBER_ID,
+        "mp_nonexistent" as MemberPhotoId,
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+});
+
+describe("restoreMemberPhoto", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("restores an archived photo", async () => {
+    const { db, chain } = mockDb();
+    const archivedRow = makePhotoRow({ archived: true, archivedAt: 2000 });
+    // transaction → select().from().where().limit() finds archived photo
+    chain.limit.mockResolvedValueOnce([archivedRow]);
+    // transaction → update().set().where().returning() → restored row
+    chain.returning.mockResolvedValueOnce([makePhotoRow({ archived: false, archivedAt: null })]);
+
+    const result = await restoreMemberPhoto(db, SYSTEM_ID, MEMBER_ID, PHOTO_ID, AUTH, mockAudit);
+
+    expect(result.id).toBe(PHOTO_ID);
+    expect(result.archived).toBe(false);
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "member-photo.restored" }),
+    );
+  });
+
+  it("throws NOT_FOUND when photo not found", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+    chain.where.mockReturnValueOnce(chain);
+
+    await expect(
+      restoreMemberPhoto(
         db,
         SYSTEM_ID,
         MEMBER_ID,

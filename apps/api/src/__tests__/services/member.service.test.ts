@@ -43,6 +43,7 @@ const {
   archiveMember,
   restoreMember,
 } = await import("../../services/member.service.js");
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -132,6 +133,17 @@ describe("createMember", () => {
     await expect(
       createMember(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("rejects cross-system access", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
+    );
+    const { db } = mockDb();
+    await expect(
+      createMember(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
   });
 });
 

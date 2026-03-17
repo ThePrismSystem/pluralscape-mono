@@ -34,6 +34,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 const { setFieldValue, listFieldValues, updateFieldValue, deleteFieldValue } =
   await import("../../services/field-value.service.js");
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -185,6 +186,25 @@ describe("setFieldValue", () => {
         message: "Field definition not found",
       }),
     );
+  });
+
+  it("rejects cross-system access", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
+    );
+    const { db } = mockDb();
+    await expect(
+      setFieldValue(
+        db,
+        SYSTEM_ID,
+        MEMBER_ID,
+        FIELD_DEF_ID,
+        { encryptedData: VALID_BLOB_BASE64 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
   });
 });
 
