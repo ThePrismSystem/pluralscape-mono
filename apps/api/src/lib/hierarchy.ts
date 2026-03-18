@@ -10,10 +10,10 @@ import { ApiHttpError } from "./api-error.js";
  * @param getParentId Callback that returns the parent ID for a given entity.
  *   Return `null` for root (no parent) or `undefined` if the entity was not found.
  */
-export async function detectAncestorCycle(
+export async function detectAncestorCycle<TId extends string>(
   getParentId: (id: string) => Promise<string | null | undefined>,
-  startId: string,
-  targetId: string,
+  startId: TId,
+  targetId: TId,
   entityName: string,
 ): Promise<void> {
   let currentId: string | null = startId;

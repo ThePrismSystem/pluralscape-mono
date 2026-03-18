@@ -5,7 +5,7 @@ import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
-import { parseIdParam, requireParam } from "../../../lib/id-param.js";
+import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { updateFieldValue } from "../../../services/field-value.service.js";
 
@@ -24,11 +24,8 @@ updateRoute.put("/:fieldDefId", async (c) => {
   }
 
   const auth = c.get("auth");
-  const systemId = parseIdParam(
-    requireParam(c.req.param("systemId"), "systemId"),
-    ID_PREFIXES.system,
-  );
-  const memberId = parseIdParam(c.req.param("memberId") as string, ID_PREFIXES.member);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
+  const memberId = requireIdParam(c.req.param("memberId"), "memberId", ID_PREFIXES.member);
   const fieldDefId = parseIdParam(c.req.param("fieldDefId"), ID_PREFIXES.fieldDefinition);
   const audit = createAuditWriter(c, auth);
 

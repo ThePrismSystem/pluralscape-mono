@@ -57,13 +57,13 @@ interface NormalizedLinkRow {
   readonly createdAt: number;
 }
 
-interface LinkEntityConfig {
+interface LinkEntityConfig<TParsed> {
   readonly entityATable: EntityTable;
   readonly entityBTable: EntityTable;
   readonly entityAName: string;
   readonly entityBName: string;
-  readonly schema: z.ZodType<Record<string, unknown>>;
-  readonly getEntityIds: (parsed: Record<string, unknown>) => {
+  readonly schema: z.ZodType<TParsed>;
+  readonly getEntityIds: (parsed: TParsed) => {
     entityAId: string;
     entityBId: string;
   };
@@ -89,6 +89,11 @@ interface LinkEntityConfig {
     filterEntityAId?: string,
     filterEntityBId?: string,
   ) => Promise<NormalizedLinkRow[]>;
+}
+
+/** Identity function that validates and infers `TParsed` from the schema. */
+function defineLinkConfig<TParsed>(cfg: LinkEntityConfig<TParsed>): LinkEntityConfig<TParsed> {
+  return cfg;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -189,13 +194,13 @@ function normalizeSideSystemLayer(r: typeof sideSystemLayerLinks.$inferSelect): 
 // ── Entity configs ──────────────────────────────────────────────────
 
 const LINK_CONFIGS = {
-  subsystemLayer: {
+  subsystemLayer: defineLinkConfig({
     entityATable: subsystems,
     entityBTable: layers,
     entityAName: "Subsystem",
     entityBName: "Layer",
     schema: CreateSubsystemLayerLinkBodySchema,
-    getEntityIds: (p) => ({ entityAId: p.subsystemId as string, entityBId: p.layerId as string }),
+    getEntityIds: (p) => ({ entityAId: p.subsystemId, entityBId: p.layerId }),
     insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
       const [row] = await tx
         .insert(subsystemLayerLinks)
@@ -228,16 +233,16 @@ const LINK_CONFIGS = {
         .limit(limit);
       return rows.map(normalizeSubsystemLayer);
     },
-  },
-  subsystemSideSystem: {
+  }),
+  subsystemSideSystem: defineLinkConfig({
     entityATable: subsystems,
     entityBTable: sideSystems,
     entityAName: "Subsystem",
     entityBName: "Side system",
     schema: CreateSubsystemSideSystemLinkBodySchema,
     getEntityIds: (p) => ({
-      entityAId: p.subsystemId as string,
-      entityBId: p.sideSystemId as string,
+      entityAId: p.subsystemId,
+      entityBId: p.sideSystemId,
     }),
     insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
       const [row] = await tx
@@ -276,14 +281,14 @@ const LINK_CONFIGS = {
         .limit(limit);
       return rows.map(normalizeSubsystemSideSystem);
     },
-  },
-  sideSystemLayer: {
+  }),
+  sideSystemLayer: defineLinkConfig({
     entityATable: sideSystems,
     entityBTable: layers,
     entityAName: "Side system",
     entityBName: "Layer",
     schema: CreateSideSystemLayerLinkBodySchema,
-    getEntityIds: (p) => ({ entityAId: p.sideSystemId as string, entityBId: p.layerId as string }),
+    getEntityIds: (p) => ({ entityAId: p.sideSystemId, entityBId: p.layerId }),
     insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
       const [row] = await tx
         .insert(sideSystemLayerLinks)
@@ -318,18 +323,18 @@ const LINK_CONFIGS = {
         .limit(limit);
       return rows.map(normalizeSideSystemLayer);
     },
-  },
-} satisfies Record<string, LinkEntityConfig>;
+  }),
+};
 
 // ── Generic implementations ─────────────────────────────────────────
 
-async function createLinkGeneric(
+async function createLinkGeneric<TParsed>(
   db: PostgresJsDatabase,
   systemId: SystemId,
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
-  cfg: LinkEntityConfig,
+  cfg: LinkEntityConfig<TParsed>,
 ): Promise<StructureLinkResult> {
   await assertSystemOwnership(db, systemId, auth);
 
@@ -365,13 +370,13 @@ async function createLinkGeneric(
   });
 }
 
-async function deleteLinkGeneric(
+async function deleteLinkGeneric<TParsed>(
   db: PostgresJsDatabase,
   systemId: SystemId,
   linkId: string,
   auth: AuthContext,
   audit: AuditWriter,
-  cfg: LinkEntityConfig,
+  cfg: LinkEntityConfig<TParsed>,
 ): Promise<void> {
   await assertSystemOwnership(db, systemId, auth);
 
@@ -391,11 +396,11 @@ async function deleteLinkGeneric(
   });
 }
 
-async function listLinksGeneric(
+async function listLinksGeneric<TParsed>(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  cfg: LinkEntityConfig,
+  cfg: LinkEntityConfig<TParsed>,
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
   filterEntityAId?: string,

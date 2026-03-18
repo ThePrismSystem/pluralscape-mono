@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { HTTP_CREATED } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { parseIdParam, requireParam } from "../../lib/id-param.js";
+import { requireIdParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { getQuotaService, getStorageAdapter } from "../../lib/storage.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
@@ -18,10 +18,7 @@ uploadUrlRoute.use("*", createCategoryRateLimiter("blobUpload"));
 
 uploadUrlRoute.post("/upload-url", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(
-    requireParam(c.req.param("systemId"), "systemId"),
-    ID_PREFIXES.system,
-  );
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const audit = createAuditWriter(c, auth);
   const body = await parseJsonBody(c);
 

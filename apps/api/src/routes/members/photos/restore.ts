@@ -3,7 +3,7 @@ import { Hono } from "hono";
 
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
-import { parseIdParam, requireParam } from "../../../lib/id-param.js";
+import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { restoreMemberPhoto } from "../../../services/member-photo.service.js";
 
@@ -15,11 +15,8 @@ restoreRoute.use("*", createCategoryRateLimiter("write"));
 
 restoreRoute.post("/:photoId/restore", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(
-    requireParam(c.req.param("systemId"), "systemId"),
-    ID_PREFIXES.system,
-  );
-  const memberId = parseIdParam(c.req.param("memberId") as string, ID_PREFIXES.member);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
+  const memberId = requireIdParam(c.req.param("memberId"), "memberId", ID_PREFIXES.member);
   const photoId = parseIdParam(c.req.param("photoId"), ID_PREFIXES.memberPhoto);
   const audit = createAuditWriter(c, auth);
 

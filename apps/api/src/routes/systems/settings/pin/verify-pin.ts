@@ -5,7 +5,7 @@ import { HTTP_BAD_REQUEST } from "../../../../http.constants.js";
 import { ApiHttpError } from "../../../../lib/api-error.js";
 import { createAuditWriter } from "../../../../lib/audit-writer.js";
 import { getDb } from "../../../../lib/db.js";
-import { parseIdParam, requireParam } from "../../../../lib/id-param.js";
+import { requireIdParam } from "../../../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../../../middleware/rate-limit.js";
 import { verifyPinCode } from "../../../../services/pin.service.js";
 
@@ -24,10 +24,7 @@ verifyPinRoute.post("/", async (c) => {
   }
 
   const auth = c.get("auth");
-  const systemId = parseIdParam(
-    requireParam(c.req.param("systemId"), "systemId"),
-    ID_PREFIXES.system,
-  );
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();

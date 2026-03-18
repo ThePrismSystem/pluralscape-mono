@@ -47,3 +47,15 @@ export function parseIdParam<P extends keyof IdPrefixBrandMap>(
 
   return raw as Brand<string, IdPrefixBrandMap[P]>;
 }
+
+/**
+ * Combines `requireParam` and `parseIdParam` for route parameters inherited
+ * from a parent router mount. Throws 400 if missing or malformed.
+ */
+export function requireIdParam<P extends keyof IdPrefixBrandMap>(
+  raw: string | undefined,
+  name: string,
+  expectedPrefix: P,
+): Brand<string, IdPrefixBrandMap[P]> {
+  return parseIdParam(requireParam(raw, name), expectedPrefix);
+}
