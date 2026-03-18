@@ -1,0 +1,9 @@
+ALTER TABLE "audit_log" DROP CONSTRAINT "audit_log_event_type_check";--> statement-breakpoint
+ALTER TABLE "blob_metadata" DROP CONSTRAINT "blob_metadata_checksum_length_check";--> statement-breakpoint
+ALTER TABLE "blob_metadata" ALTER COLUMN "checksum" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "blob_metadata" ALTER COLUMN "uploaded_at" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "blob_metadata" ADD COLUMN "created_at" timestamptz NOT NULL;--> statement-breakpoint
+ALTER TABLE "blob_metadata" ADD COLUMN "expires_at" timestamptz;--> statement-breakpoint
+ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_event_type_check" CHECK ("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $60, $61, $62, $63, $64, $65, $66, $67, $68, $69, $70, $71, $72, $73, $74, $75, $76, $77, $78, $79, $80, $81, $82, $83, $84, $85, $86, $87, $88, $89, $90, $91, $92, $93, $94, $95, $96, $97, $98, $99, $100, $101, $102, $103, $104, $105, $106, $107, $108));--> statement-breakpoint
+ALTER TABLE "blob_metadata" ADD CONSTRAINT "blob_metadata_pending_consistency_check" CHECK (("blob_metadata"."checksum" IS NULL) = ("blob_metadata"."uploaded_at" IS NULL));--> statement-breakpoint
+ALTER TABLE "blob_metadata" ADD CONSTRAINT "blob_metadata_checksum_length_check" CHECK ("blob_metadata"."checksum" IS NULL OR length("blob_metadata"."checksum") = 64);
