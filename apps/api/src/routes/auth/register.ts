@@ -36,14 +36,6 @@ registerRoute.post("/", async (c) => {
     if (error instanceof ValidationError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
     }
-    if (error instanceof Error && error.name === "ZodError") {
-      throw new ApiHttpError(
-        HTTP_BAD_REQUEST,
-        "VALIDATION_ERROR",
-        "Invalid registration input",
-        error,
-      );
-    }
     throw error;
   }
 });

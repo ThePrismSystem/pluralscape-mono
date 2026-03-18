@@ -229,6 +229,15 @@ export async function loginAccount(
     } catch (err: unknown) {
       console.error("[anti-enum] Unexpected verifyPassword error:", err);
     }
+    // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
+    // Uses a zeroed account ID since no real account exists for this email.
+    void audit(db, {
+      eventType: "auth.login-failed",
+      actor: { kind: "account", id: "acct_00000000-0000-0000-0000-000000000000" },
+      detail: "Account not found",
+    }).catch((auditError: unknown) => {
+      console.error("[audit] Failed to write auth.login-failed:", auditError);
+    });
     return null;
   }
 

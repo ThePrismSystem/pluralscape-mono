@@ -79,9 +79,9 @@ describe("sessions route", () => {
   // ── GET /auth/sessions ──────────────────────────────────────────
 
   describe("GET /auth/sessions", () => {
-    it("applies authMiddleware to session endpoints", () => {
-      // authMiddleware is called during route module initialization
-      expect(vi.mocked(authMiddleware)).toHaveBeenCalled();
+    it("applies authMiddleware at the router level", () => {
+      // authMiddleware is applied once at router level via .use("*", ...)
+      expect(vi.mocked(authMiddleware)).toHaveBeenCalledOnce();
     });
 
     it("returns session list for authenticated user", async () => {

@@ -89,9 +89,10 @@ describe("POST /login", () => {
     expect(body.error.message).toBe("Invalid email or password");
   });
 
-  it("returns 400 VALIDATION_ERROR on ZodError", async () => {
+  it("returns 400 VALIDATION_ERROR on ZodError (via global handler)", async () => {
     const zodError = new Error("Validation failed");
     Object.defineProperty(zodError, "name", { value: "ZodError" });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     vi.mocked(loginAccount).mockRejectedValueOnce(zodError);
 
@@ -101,7 +102,6 @@ describe("POST /login", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.message).toBe("Invalid login input");
   });
 
   it("re-throws ApiHttpError as-is", async () => {

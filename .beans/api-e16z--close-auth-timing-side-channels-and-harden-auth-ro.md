@@ -1,11 +1,11 @@
 ---
 # api-e16z
 title: Close auth timing side-channels and harden auth routes
-status: todo
+status: in-progress
 type: task
 priority: high
 created_at: 2026-03-18T20:09:00Z
-updated_at: 2026-03-18T20:09:00Z
+updated_at: 2026-03-18T20:50:34Z
 parent: api-mzn0
 ---
 
@@ -13,11 +13,11 @@ Security fixes: add fire-and-forget audit write to email-not-found branch for ti
 
 ## TODO
 
-- [ ] Add fire-and-forget audit write to email-not-found branch in auth.service.ts
-- [ ] Remove redundant ZodError try/catch in register.ts
-- [ ] Remove redundant ZodError try/catch in login.ts
-- [ ] Remove redundant ZodError try/catch in password-reset.ts
-- [ ] Refactor sessions.ts triple .use() to router-level auth
-- [ ] Add test for email-not-found audit event
-- [ ] Update affected auth route tests
-- [ ] Verify: pnpm typecheck && pnpm lint && pnpm vitest run --project api
+- [x] Add fire-and-forget audit write to email-not-found branch in auth.service.ts
+- [x] Remove redundant ZodError try/catch in register.ts
+- [x] Remove redundant ZodError try/catch in login.ts
+- [x] Remove redundant ZodError try/catch in password-reset.ts
+- [x] Refactor sessions.ts triple .use() to router-level auth
+- [x] Add test for email-not-found audit event
+- [x] Update affected auth route tests
+- [x] Verify: pnpm typecheck && pnpm lint && pnpm vitest run --project api

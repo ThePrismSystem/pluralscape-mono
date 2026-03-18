@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED } from "../../http.constants.js";
+import { HTTP_UNAUTHORIZED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
@@ -44,14 +44,6 @@ passwordResetRoute.post("/recovery-key", async (c) => {
       error instanceof InvalidInputError
     ) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid email or recovery key");
-    }
-    if (error instanceof Error && error.name === "ZodError") {
-      throw new ApiHttpError(
-        HTTP_BAD_REQUEST,
-        "VALIDATION_ERROR",
-        "Invalid password reset input",
-        error,
-      );
     }
     throw error;
   }

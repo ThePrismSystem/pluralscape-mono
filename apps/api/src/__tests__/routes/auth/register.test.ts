@@ -95,9 +95,10 @@ describe("POST /register", () => {
     expect(body.error.message).toBe("Recovery key backup must be confirmed");
   });
 
-  it("returns 400 VALIDATION_ERROR when registerAccount throws ZodError", async () => {
+  it("returns 400 VALIDATION_ERROR when registerAccount throws ZodError (via global handler)", async () => {
     const zodError = new Error("Validation failed");
     Object.defineProperty(zodError, "name", { value: "ZodError" });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     vi.mocked(registerAccount).mockRejectedValueOnce(zodError);
 
@@ -107,7 +108,6 @@ describe("POST /register", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.message).toBe("Invalid registration input");
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
