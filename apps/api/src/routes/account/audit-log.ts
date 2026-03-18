@@ -16,7 +16,7 @@ const DEFAULT_RANGE_MS = MAX_RANGE_MS;
 
 export const auditLogRoute = new Hono<AuthEnv>();
 
-auditLogRoute.use("*", createCategoryRateLimiter("authLight"));
+auditLogRoute.use("*", createCategoryRateLimiter("auditQuery"));
 
 auditLogRoute.get("/", async (c) => {
   const auth = c.get("auth");

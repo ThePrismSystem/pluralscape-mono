@@ -24,6 +24,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { queryAuditLog } = await import("../../../services/audit-log-query.service.js");
+const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { accountRoutes } = await import("../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -54,6 +55,8 @@ describe("GET /account/audit-log", () => {
     vi.restoreAllMocks();
   });
 
+  // ── Successful query ──────────────────────────────────────────
+
   it("returns 200 with paginated audit log entries", async () => {
     const page = {
       items: [MOCK_ENTRY],
@@ -75,6 +78,20 @@ describe("GET /account/audit-log", () => {
     expect(body.nextCursor).toBe("cursor_abc");
   });
 
+  it("returns 200 with empty results when no entries match", async () => {
+    vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const res = await createApp().request("/account/audit-log");
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as typeof EMPTY_PAGE;
+    expect(body.items).toHaveLength(0);
+    expect(body.hasMore).toBe(false);
+    expect(body.nextCursor).toBeNull();
+  });
+
+  // ── event_type filter ─────────────────────────────────────────
+
   it("forwards event_type filter to service", async () => {
     vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
 
@@ -87,6 +104,52 @@ describe("GET /account/audit-log", () => {
       expect.objectContaining({ eventType: "member.created" }),
     );
   });
+
+  // ── resourceType filter (B-2) ─────────────────────────────────
+
+  it("forwards resource_type filter to service", async () => {
+    vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const res = await createApp().request("/account/audit-log?resource_type=member");
+
+    expect(res.status).toBe(200);
+    expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
+      {},
+      "acct_test",
+      expect.objectContaining({ resourceType: "member" }),
+    );
+  });
+
+  it("accepts hyphenated resource_type values", async () => {
+    vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const res = await createApp().request("/account/audit-log?resource_type=custom-front");
+
+    expect(res.status).toBe(200);
+    expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
+      {},
+      "acct_test",
+      expect.objectContaining({ resourceType: "custom-front" }),
+    );
+  });
+
+  it("returns 400 for resource_type with invalid characters", async () => {
+    const res = await createApp().request("/account/audit-log?resource_type=MEMBER");
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for resource_type starting with a digit", async () => {
+    const res = await createApp().request("/account/audit-log?resource_type=1member");
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  // ── Date range defaults ───────────────────────────────────────
 
   it("applies default date range when from/to omitted", async () => {
     vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
@@ -107,6 +170,8 @@ describe("GET /account/audit-log", () => {
     const expectedRange = 90 * MS_PER_DAY;
     expect(params.to - params.from).toBe(expectedRange);
   });
+
+  // ── Validation errors ─────────────────────────────────────────
 
   it("returns 400 when to < from", async () => {
     const res = await createApp().request("/account/audit-log?from=2000&to=1000");
@@ -130,6 +195,32 @@ describe("GET /account/audit-log", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("returns 400 when limit exceeds maximum", async () => {
+    const res = await createApp().request("/account/audit-log?limit=999");
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 when limit is zero", async () => {
+    const res = await createApp().request("/account/audit-log?limit=0");
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 when from is negative", async () => {
+    const res = await createApp().request("/account/audit-log?from=-1");
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  // ── Pagination ────────────────────────────────────────────────
+
   it("forwards pagination cursor and limit to service", async () => {
     vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
 
@@ -140,6 +231,56 @@ describe("GET /account/audit-log", () => {
       {},
       "acct_test",
       expect.objectContaining({ cursor: "abc123", limit: 10 }),
+    );
+  });
+
+  it("uses default limit of 25 when not specified", async () => {
+    vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
+
+    await createApp().request("/account/audit-log");
+
+    expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
+      {},
+      "acct_test",
+      expect.objectContaining({ limit: 25 }),
+    );
+  });
+
+  // ── Rate limiting (S-11) ──────────────────────────────────────
+
+  it("applies the auditQuery rate limit category", () => {
+    // The route module calls createCategoryRateLimiter during initialization.
+    // Verify it was called with the dedicated "auditQuery" category.
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("auditQuery");
+  });
+
+  // ── Combined filters ──────────────────────────────────────────
+
+  it("forwards both event_type and resource_type when provided", async () => {
+    vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const res = await createApp().request(
+      "/account/audit-log?event_type=member.created&resource_type=member",
+    );
+
+    expect(res.status).toBe(200);
+    expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
+      {},
+      "acct_test",
+      expect.objectContaining({ eventType: "member.created", resourceType: "member" }),
+    );
+  });
+
+  it("forwards explicit from/to timestamps to service", async () => {
+    vi.mocked(queryAuditLog).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const res = await createApp().request("/account/audit-log?from=1000&to=2000");
+
+    expect(res.status).toBe(200);
+    expect(vi.mocked(queryAuditLog)).toHaveBeenCalledWith(
+      {},
+      "acct_test",
+      expect.objectContaining({ from: 1000, to: 2000 }),
     );
   });
 });

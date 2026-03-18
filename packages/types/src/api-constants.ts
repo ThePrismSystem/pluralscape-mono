@@ -55,6 +55,7 @@ const RATE_LIMIT_BLOB_UPLOAD = 20;
 const RATE_LIMIT_WEBHOOK = 20;
 const RATE_LIMIT_EXPORT_IMPORT = 2;
 const RATE_LIMIT_PURGE = 1;
+const RATE_LIMIT_AUDIT_QUERY = 30;
 const RATE_LIMIT_FRIEND_CODE = 10;
 const RATE_LIMIT_PUBLIC_API = 60;
 
@@ -69,6 +70,7 @@ export const RATE_LIMITS = {
   dataExport: { limit: RATE_LIMIT_EXPORT_IMPORT, windowMs: MS_PER_HOUR },
   dataImport: { limit: RATE_LIMIT_EXPORT_IMPORT, windowMs: MS_PER_HOUR },
   accountPurge: { limit: RATE_LIMIT_PURGE, windowMs: MS_PER_DAY },
+  auditQuery: { limit: RATE_LIMIT_AUDIT_QUERY, windowMs: MS_PER_MINUTE },
   friendCodeGeneration: { limit: RATE_LIMIT_FRIEND_CODE, windowMs: MS_PER_MINUTE },
   publicApi: { limit: RATE_LIMIT_PUBLIC_API, windowMs: MS_PER_MINUTE },
 } as const satisfies Record<string, RateLimitConfig>;
