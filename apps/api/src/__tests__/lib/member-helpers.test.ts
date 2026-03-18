@@ -42,6 +42,34 @@ describe("assertMemberActive", () => {
     expect(err).toMatchObject({ status: 404, code: "NOT_FOUND" });
     expect((err as ApiHttpError).message).toContain("Member");
   });
+
+  it("throws ApiHttpError with exact message 'Member not found'", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    const err = await assertMemberActive(db, SYSTEM_ID, "mem_gone" as MemberId).catch(
+      (e: unknown) => e,
+    );
+
+    expect((err as ApiHttpError).message).toBe("Member not found");
+  });
+
+  it("queries with the correct systemId and memberId combination", async () => {
+    const { db, chain } = mockDb();
+    const otherSystemId = "sys_other-system" as SystemId;
+    const memberId = "mem_specific" as MemberId;
+    chain.limit.mockResolvedValueOnce([{ id: memberId }]);
+
+    await assertMemberActive(db, otherSystemId, memberId);
+
+    expect(chain.where).toHaveBeenCalledWith(
+      and(
+        eq(members.id, memberId),
+        eq(members.systemId, otherSystemId),
+        eq(members.archived, false),
+      ),
+    );
+  });
 });
 
 describe("assertFieldDefinitionActive", () => {
@@ -81,5 +109,35 @@ describe("assertFieldDefinitionActive", () => {
     expect(err).toBeInstanceOf(ApiHttpError);
     expect(err).toMatchObject({ status: 404, code: "NOT_FOUND" });
     expect((err as ApiHttpError).message).toContain("Field definition");
+  });
+
+  it("throws ApiHttpError with exact message 'Field definition not found'", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    const err = await assertFieldDefinitionActive(
+      db,
+      SYSTEM_ID,
+      "fd_missing" as FieldDefinitionId,
+    ).catch((e: unknown) => e);
+
+    expect((err as ApiHttpError).message).toBe("Field definition not found");
+  });
+
+  it("queries with the correct systemId and fieldDefId combination", async () => {
+    const { db, chain } = mockDb();
+    const otherSystemId = "sys_other-system" as SystemId;
+    const fieldDefId = "fd_specific" as FieldDefinitionId;
+    chain.limit.mockResolvedValueOnce([{ id: fieldDefId }]);
+
+    await assertFieldDefinitionActive(db, otherSystemId, fieldDefId);
+
+    expect(chain.where).toHaveBeenCalledWith(
+      and(
+        eq(fieldDefinitions.id, fieldDefId),
+        eq(fieldDefinitions.systemId, otherSystemId),
+        eq(fieldDefinitions.archived, false),
+      ),
+    );
   });
 });

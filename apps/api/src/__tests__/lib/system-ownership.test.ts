@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { ApiHttpError } from "../../lib/api-error.js";
+
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
 
@@ -10,6 +12,7 @@ const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 // ── Fixtures ─────────────────────────────────────────────────────────
 
 const SYSTEM_ID = "sys_test-system" as SystemId;
+const OTHER_SYSTEM_ID = "sys_other-system" as SystemId;
 
 const AUTH: AuthContext = {
   accountId: "acct_test-account" as AuthContext["accountId"],
@@ -47,6 +50,37 @@ describe("assertSystemOwnership", () => {
     };
     expect(() => {
       assertSystemOwnership(SYSTEM_ID, emptyAuth);
+    }).toThrow(
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+      }),
+    );
+  });
+
+  it("does not throw when checking one of multiple owned systems", () => {
+    const multiAuth: AuthContext = {
+      ...AUTH,
+      ownedSystemIds: new Set([SYSTEM_ID, OTHER_SYSTEM_ID]),
+    };
+    expect(() => {
+      assertSystemOwnership(OTHER_SYSTEM_ID, multiAuth);
+    }).not.toThrow();
+  });
+
+  it("throws ApiHttpError (not a generic Error)", () => {
+    expect(() => {
+      assertSystemOwnership("sys_unowned" as SystemId, AUTH);
+    }).toThrow(ApiHttpError);
+  });
+
+  it("throws for the second system when only one is owned", () => {
+    const singleAuth: AuthContext = {
+      ...AUTH,
+      ownedSystemIds: new Set([OTHER_SYSTEM_ID]),
+    };
+    expect(() => {
+      assertSystemOwnership(SYSTEM_ID, singleAuth);
     }).toThrow(
       expect.objectContaining({
         status: 404,

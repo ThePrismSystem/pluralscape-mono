@@ -25,6 +25,7 @@ describe("assertOccUpdated", () => {
 
     expect(err).toBeInstanceOf(ApiHttpError);
     expect(err).toMatchObject({ status: 409, code: "CONFLICT" });
+    expect((err as ApiHttpError).message).toBe("Version conflict");
     expect(existsFn).toHaveBeenCalledOnce();
   });
 
@@ -48,5 +49,30 @@ describe("assertOccUpdated", () => {
     const result = await assertOccUpdated(rows, existsFn, "System");
 
     expect(result).toBe(rows[0]);
+  });
+
+  it("includes entity name in the 404 message", async () => {
+    const existsFn = vi.fn().mockResolvedValue(undefined);
+
+    const err = await assertOccUpdated([], existsFn, "Layer").catch((e: unknown) => e);
+
+    expect((err as ApiHttpError).message).toBe("Layer not found");
+  });
+
+  it("propagates errors thrown by existsFn", async () => {
+    const dbError = new Error("Database connection lost");
+    const existsFn = vi.fn().mockRejectedValue(dbError);
+
+    await expect(assertOccUpdated([], existsFn, "System")).rejects.toThrow(
+      "Database connection lost",
+    );
+  });
+
+  it("does not call existsFn when rows are returned", async () => {
+    const existsFn = vi.fn();
+
+    await assertOccUpdated([{ id: "x" }], existsFn, "System");
+
+    expect(existsFn).not.toHaveBeenCalled();
   });
 });

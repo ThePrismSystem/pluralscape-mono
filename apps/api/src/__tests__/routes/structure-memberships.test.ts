@@ -66,16 +66,19 @@ vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 
 const service = await import("../../services/structure-membership.service.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
+const { ApiHttpError } = await import("../../lib/api-error.js");
 
 // ── Variant definitions ──────────────────────────────────────────
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
+const INVALID_SYS_ID = "not-a-system-id";
 
 interface MembershipVariant {
   label: string;
   urlSegment: string;
   entityId: string;
   membershipId: string;
+  invalidMembershipId: string;
   invalidParamSegment: string;
   addFn: keyof typeof service;
   removeFn: keyof typeof service;
@@ -88,6 +91,7 @@ const VARIANTS: MembershipVariant[] = [
     urlSegment: "layers",
     entityId: "lyr_550e8400-e29b-41d4-a716-446655440001",
     membershipId: "lyrm_550e8400-e29b-41d4-a716-446655440002",
+    invalidMembershipId: "not-a-membership-id",
     invalidParamSegment: "layers/not-valid/memberships",
     addFn: "addLayerMembership",
     removeFn: "removeLayerMembership",
@@ -98,6 +102,7 @@ const VARIANTS: MembershipVariant[] = [
     urlSegment: "side-systems",
     entityId: "ss_550e8400-e29b-41d4-a716-446655440001",
     membershipId: "ssm_550e8400-e29b-41d4-a716-446655440002",
+    invalidMembershipId: "not-a-membership-id",
     invalidParamSegment: "side-systems/not-valid/memberships",
     addFn: "addSideSystemMembership",
     removeFn: "removeSideSystemMembership",
@@ -108,6 +113,7 @@ const VARIANTS: MembershipVariant[] = [
     urlSegment: "subsystems",
     entityId: "sub_550e8400-e29b-41d4-a716-446655440001",
     membershipId: "subm_550e8400-e29b-41d4-a716-446655440002",
+    invalidMembershipId: "not-a-membership-id",
     invalidParamSegment: "subsystems/not-valid/memberships",
     addFn: "addSubsystemMembership",
     removeFn: "removeSubsystemMembership",
@@ -128,6 +134,7 @@ for (const variant of VARIANTS) {
     urlSegment,
     entityId,
     membershipId,
+    invalidMembershipId,
     invalidParamSegment,
     addFn,
     removeFn,
@@ -189,11 +196,7 @@ for (const variant of VARIANTS) {
 
     it("returns 400 for empty object body", async () => {
       addMock().mockRejectedValueOnce(
-        new (await import("../../lib/api-error.js")).ApiHttpError(
-          400,
-          "VALIDATION_ERROR",
-          "Missing required fields",
-        ),
+        new ApiHttpError(400, "VALIDATION_ERROR", "Missing required fields"),
       );
 
       const res = await createApp().request(baseUrl, {
@@ -203,6 +206,46 @@ for (const variant of VARIANTS) {
       });
 
       expect(res.status).toBe(400);
+    });
+
+    it("returns 400 for invalid systemId param format", async () => {
+      const badUrl = `/systems/${INVALID_SYS_ID}/${urlSegment}/${entityId}/memberships`;
+      const res = await createApp().request(badUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(VALID_BODY),
+      });
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("returns 409 when service throws CONFLICT", async () => {
+      addMock().mockRejectedValueOnce(new ApiHttpError(409, "CONFLICT", "Duplicate membership"));
+
+      const res = await createApp().request(baseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(VALID_BODY),
+      });
+
+      expect(res.status).toBe(409);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("CONFLICT");
+    });
+
+    it("returns 500 for unexpected errors", async () => {
+      addMock().mockRejectedValueOnce(new Error("DB timeout"));
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      const res = await createApp().request(baseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(VALID_BODY),
+      });
+
+      expect(res.status).toBe(500);
     });
   });
 
@@ -218,8 +261,21 @@ for (const variant of VARIANTS) {
       expect(res.status).toBe(204);
     });
 
+    it("forwards systemId, membershipId, auth, and audit to service", async () => {
+      removeMock().mockResolvedValueOnce(undefined);
+
+      await createApp().request(`${baseUrl}/${membershipId}`, { method: "DELETE" });
+
+      expect(removeMock()).toHaveBeenCalledWith(
+        expect.anything(),
+        SYS_ID,
+        membershipId,
+        MOCK_AUTH,
+        expect.any(Function),
+      );
+    });
+
     it("returns 404 when membership not found", async () => {
-      const { ApiHttpError } = await import("../../lib/api-error.js");
       removeMock().mockRejectedValueOnce(
         new ApiHttpError(404, "NOT_FOUND", "Membership not found"),
       );
@@ -229,6 +285,25 @@ for (const variant of VARIANTS) {
       expect(res.status).toBe(404);
       const body = (await res.json()) as ApiErrorResponse;
       expect(body.error.code).toBe("NOT_FOUND");
+    });
+
+    it("returns 400 for invalid membershipId param format", async () => {
+      const res = await createApp().request(`${baseUrl}/${invalidMembershipId}`, {
+        method: "DELETE",
+      });
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("returns 500 for unexpected errors", async () => {
+      removeMock().mockRejectedValueOnce(new Error("Connection lost"));
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      const res = await createApp().request(`${baseUrl}/${membershipId}`, { method: "DELETE" });
+
+      expect(res.status).toBe(500);
     });
   });
 
@@ -255,12 +330,58 @@ for (const variant of VARIANTS) {
       expect(body.nextCursor).toBe("cursor_next");
     });
 
+    it("forwards systemId, entityId, auth, cursor, and limit to service", async () => {
+      const emptyPage = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+      listMock().mockResolvedValueOnce(emptyPage);
+
+      await createApp().request(`${baseUrl}?cursor=cur_abc&limit=5`);
+
+      expect(listMock()).toHaveBeenCalledWith(
+        expect.anything(),
+        SYS_ID,
+        entityId,
+        MOCK_AUTH,
+        "cur_abc",
+        5,
+      );
+    });
+
+    it("returns 200 with empty list when no memberships exist", async () => {
+      const emptyPage = { items: [], nextCursor: null, hasMore: false, totalCount: null };
+      listMock().mockResolvedValueOnce(emptyPage);
+
+      const res = await createApp().request(baseUrl);
+
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { items: unknown[]; hasMore: boolean };
+      expect(body.items).toHaveLength(0);
+      expect(body.hasMore).toBe(false);
+    });
+
     it(`returns 400 for invalid ${label}Id param format`, async () => {
       const res = await createApp().request(`/systems/${SYS_ID}/${invalidParamSegment}`);
 
       expect(res.status).toBe(400);
       const body = (await res.json()) as ApiErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("returns 400 for invalid systemId param format", async () => {
+      const badUrl = `/systems/${INVALID_SYS_ID}/${urlSegment}/${entityId}/memberships`;
+      const res = await createApp().request(badUrl);
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("returns 500 for unexpected errors", async () => {
+      listMock().mockRejectedValueOnce(new Error("Query failed"));
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      const res = await createApp().request(baseUrl);
+
+      expect(res.status).toBe(500);
     });
   });
 }
