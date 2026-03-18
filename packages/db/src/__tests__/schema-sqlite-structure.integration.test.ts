@@ -1037,6 +1037,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const subsystemId = insertSubsystem(systemId);
       const id = crypto.randomUUID();
+      const memberId = insertMember(systemId);
       const now = Date.now();
       const data = testBlob(new Uint8Array([11, 22, 33]));
 
@@ -1044,6 +1045,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           subsystemId,
+          memberId,
           systemId,
           encryptedData: data,
           createdAt: now,
@@ -1065,6 +1067,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const subsystemId = insertSubsystem(systemId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -1072,6 +1075,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           subsystemId,
+          memberId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -1091,6 +1095,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const subsystemId = insertSubsystem(systemId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -1098,6 +1103,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           subsystemId,
+          memberId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -1116,6 +1122,7 @@ describe("SQLite structure schema", () => {
     it("rejects nonexistent subsystemId FK", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const memberId = insertMember(systemId);
       const now = Date.now();
 
       expect(() =>
@@ -1124,6 +1131,7 @@ describe("SQLite structure schema", () => {
           .values({
             id: crypto.randomUUID(),
             subsystemId: "nonexistent",
+            memberId,
             systemId,
             encryptedData: testBlob(new Uint8Array([1])),
             createdAt: now,
@@ -1139,6 +1147,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const sideSystemId = insertSideSystem(systemId);
       const id = crypto.randomUUID();
+      const memberId = insertMember(systemId);
       const now = Date.now();
       const data = testBlob(new Uint8Array([44, 55, 66]));
 
@@ -1146,6 +1155,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           sideSystemId,
+          memberId,
           systemId,
           encryptedData: data,
           createdAt: now,
@@ -1167,6 +1177,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const sideSystemId = insertSideSystem(systemId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -1174,6 +1185,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           sideSystemId,
+          memberId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -1193,6 +1205,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const sideSystemId = insertSideSystem(systemId);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -1200,6 +1213,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           sideSystemId,
+          memberId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -1222,6 +1236,7 @@ describe("SQLite structure schema", () => {
       const systemId = insertSystem(accountId);
       const layerId = insertLayer(systemId, 1);
       const id = crypto.randomUUID();
+      const memberId = insertMember(systemId);
       const now = Date.now();
       const data = testBlob(new Uint8Array([77, 88, 99]));
 
@@ -1229,6 +1244,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           layerId,
+          memberId,
           systemId,
           encryptedData: data,
           createdAt: now,
@@ -1246,6 +1262,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const layerId = insertLayer(systemId, 1);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -1253,6 +1270,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           layerId,
+          memberId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -1268,6 +1286,7 @@ describe("SQLite structure schema", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const layerId = insertLayer(systemId, 1);
+      const memberId = insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
@@ -1275,6 +1294,7 @@ describe("SQLite structure schema", () => {
         .values({
           id,
           layerId,
+          memberId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,

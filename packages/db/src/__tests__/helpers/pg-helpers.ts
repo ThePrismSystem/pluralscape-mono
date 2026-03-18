@@ -465,42 +465,51 @@ export const PG_DDL = {
     CREATE TABLE subsystem_memberships (
       id VARCHAR(50) PRIMARY KEY,
       subsystem_id VARCHAR(50) NOT NULL,
+      member_id VARCHAR(50) NOT NULL,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (subsystem_id, system_id) REFERENCES subsystems(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT
     )
   `,
   subsystemMembershipsIndexes: `
     CREATE INDEX subsystem_memberships_subsystem_id_idx ON subsystem_memberships (subsystem_id);
+    CREATE INDEX subsystem_memberships_member_id_idx ON subsystem_memberships (member_id);
     CREATE INDEX subsystem_memberships_system_id_idx ON subsystem_memberships (system_id)
   `,
   sideSystemMemberships: `
     CREATE TABLE side_system_memberships (
       id VARCHAR(50) PRIMARY KEY,
       side_system_id VARCHAR(50) NOT NULL,
+      member_id VARCHAR(50) NOT NULL,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (side_system_id, system_id) REFERENCES side_systems(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT
     )
   `,
   sideSystemMembershipsIndexes: `
     CREATE INDEX side_system_memberships_side_system_id_idx ON side_system_memberships (side_system_id);
+    CREATE INDEX side_system_memberships_member_id_idx ON side_system_memberships (member_id);
     CREATE INDEX side_system_memberships_system_id_idx ON side_system_memberships (system_id)
   `,
   layerMemberships: `
     CREATE TABLE layer_memberships (
       id VARCHAR(50) PRIMARY KEY,
       layer_id VARCHAR(50) NOT NULL,
+      member_id VARCHAR(50) NOT NULL,
       system_id VARCHAR(50) NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
       encrypted_data BYTEA NOT NULL,
       created_at TIMESTAMPTZ NOT NULL,
-      FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE CASCADE
+      FOREIGN KEY (layer_id, system_id) REFERENCES layers(id, system_id) ON DELETE RESTRICT,
+      FOREIGN KEY (member_id, system_id) REFERENCES members(id, system_id) ON DELETE RESTRICT
     )
   `,
   layerMembershipsIndexes: `
     CREATE INDEX layer_memberships_layer_id_idx ON layer_memberships (layer_id);
+    CREATE INDEX layer_memberships_member_id_idx ON layer_memberships (member_id);
     CREATE INDEX layer_memberships_system_id_idx ON layer_memberships (system_id)
   `,
   subsystemLayerLinks: `

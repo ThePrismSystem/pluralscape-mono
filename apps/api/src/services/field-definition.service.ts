@@ -10,6 +10,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
+import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../routes/fields/fields.constants.js";
@@ -279,26 +280,24 @@ export async function updateFieldDefinition(
       )
       .returning();
 
-    if (updated.length === 0) {
-      const [existing] = await tx
-        .select({ id: fieldDefinitions.id })
-        .from(fieldDefinitions)
-        .where(
-          and(
-            eq(fieldDefinitions.id, fieldId),
-            eq(fieldDefinitions.systemId, systemId),
-            eq(fieldDefinitions.archived, false),
-          ),
-        )
-        .limit(1);
-
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Field definition not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
+    const row = await assertOccUpdated(
+      updated,
+      async () => {
+        const [existing] = await tx
+          .select({ id: fieldDefinitions.id })
+          .from(fieldDefinitions)
+          .where(
+            and(
+              eq(fieldDefinitions.id, fieldId),
+              eq(fieldDefinitions.systemId, systemId),
+              eq(fieldDefinitions.archived, false),
+            ),
+          )
+          .limit(1);
+        return existing;
+      },
+      "Field definition",
+    );
 
     await audit(tx, {
       eventType: "field-definition.updated",
@@ -414,8 +413,10 @@ export async function deleteFieldDefinition(
   fieldId: FieldDefinitionId,
   auth: AuthContext,
   audit: AuditWriter,
+  opts?: { force?: boolean },
 ): Promise<void> {
   assertSystemOwnership(systemId, auth);
+  const force = opts?.force === true;
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -460,19 +461,47 @@ export async function deleteFieldDefinition(
     if (visibilityCount.count > 0)
       dependents.push({ type: "bucketVisibility", count: visibilityCount.count });
 
-    if (dependents.length > 0) {
+    if (dependents.length > 0 && !force) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        "Field definition has dependents. Remove all dependents before deleting.",
+        "Field definition has dependents. Remove all dependents before deleting, or use force=true.",
         { dependents },
       );
     }
 
+    // Cascade-delete dependents when force is enabled
+    if (dependents.length > 0) {
+      await Promise.all([
+        valueCount.count > 0
+          ? tx
+              .delete(fieldValues)
+              .where(
+                and(eq(fieldValues.fieldDefinitionId, fieldId), eq(fieldValues.systemId, systemId)),
+              )
+          : Promise.resolve(),
+        visibilityCount.count > 0
+          ? tx
+              .delete(fieldBucketVisibility)
+              .where(
+                and(
+                  eq(fieldBucketVisibility.fieldDefinitionId, fieldId),
+                  eq(fieldBucketVisibility.systemId, systemId),
+                ),
+              )
+          : Promise.resolve(),
+      ]);
+    }
+
+    const detail =
+      force && dependents.length > 0
+        ? `Field definition force-deleted (removed ${dependents.map((d) => `${String(d.count)} ${d.type}`).join(", ")})`
+        : "Field definition deleted";
+
     await audit(tx, {
       eventType: "field-definition.deleted",
       actor: { kind: "account", id: auth.accountId },
-      detail: "Field definition deleted",
+      detail,
       systemId,
     });
 

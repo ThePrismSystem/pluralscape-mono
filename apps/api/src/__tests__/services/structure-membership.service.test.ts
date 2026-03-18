@@ -76,6 +76,7 @@ function makeSubsystemMembershipRow(
   return {
     id: MEMBERSHIP_ID,
     subsystemId: SUBSYSTEM_ID,
+    memberId: MEMBER_ID,
     systemId: SYSTEM_ID,
     encryptedData: new Uint8Array([1, 2, 3]),
     createdAt: 1000,
@@ -89,6 +90,7 @@ function makeSideSystemMembershipRow(
   return {
     id: "ssysm_test",
     sideSystemId: SIDE_SYSTEM_ID,
+    memberId: MEMBER_ID,
     systemId: SYSTEM_ID,
     encryptedData: new Uint8Array([1, 2, 3]),
     createdAt: 1000,
@@ -100,6 +102,7 @@ function makeLayerMembershipRow(overrides: Record<string, unknown> = {}): Record
   return {
     id: "lyrm_test",
     layerId: LAYER_ID,
+    memberId: MEMBER_ID,
     systemId: SYSTEM_ID,
     encryptedData: new Uint8Array([1, 2, 3]),
     createdAt: 1000,

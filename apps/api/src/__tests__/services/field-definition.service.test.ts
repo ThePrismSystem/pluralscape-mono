@@ -488,6 +488,47 @@ describe("deleteFieldDefinition", () => {
     expect(mockAudit).not.toHaveBeenCalled();
   });
 
+  it("force-deletes field definition with dependents", async () => {
+    const { db, chain } = mockDb();
+    // transaction → select().from().where().limit() finds existing non-archived row
+    chain.limit.mockResolvedValueOnce([{ id: "fld_test-field" }]);
+    // Two parallel count queries: fieldValues=3, fieldBucketVisibility=1
+    chain.where
+      .mockReturnValueOnce(chain) // first where: lookup, chains to .limit
+      .mockResolvedValueOnce([{ count: 3 }]) // fieldValues count
+      .mockResolvedValueOnce([{ count: 1 }]); // fieldBucketVisibility count
+    // Cascade deletes: delete fieldValues, delete visibility, delete definition
+
+    await deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit, { force: true });
+
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(chain.delete).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventType: "field-definition.deleted",
+        detail: expect.stringContaining("force"),
+      }),
+    );
+  });
+
+  it("force-deletes field definition with no dependents", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: "fld_test-field" }]);
+    chain.where
+      .mockReturnValueOnce(chain)
+      .mockResolvedValueOnce([{ count: 0 }])
+      .mockResolvedValueOnce([{ count: 0 }]);
+
+    await deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit, { force: true });
+
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "field-definition.deleted" }),
+    );
+  });
+
   it("rejects cross-system access", async () => {
     const { ApiHttpError } = await import("../../lib/api-error.js");
     vi.mocked(assertSystemOwnership).mockImplementationOnce(() => {

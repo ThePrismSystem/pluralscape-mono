@@ -923,6 +923,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const subsystemId = await insertSubsystem(systemId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([11, 22, 33]));
@@ -930,6 +931,7 @@ describe("PG structure schema", () => {
       await db.insert(subsystemMemberships).values({
         id,
         subsystemId,
+        memberId,
         systemId,
         encryptedData: data,
         createdAt: now,
@@ -949,12 +951,14 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const subsystemId = await insertSubsystem(systemId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(subsystemMemberships).values({
         id,
         subsystemId,
+        memberId,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -972,12 +976,14 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const subsystemId = await insertSubsystem(systemId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(subsystemMemberships).values({
         id,
         subsystemId,
+        memberId,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -994,12 +1000,14 @@ describe("PG structure schema", () => {
     it("rejects nonexistent subsystemId FK", async () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
+      const memberId = await insertMember(systemId);
       const now = Date.now();
 
       await expect(
         db.insert(subsystemMemberships).values({
           id: crypto.randomUUID(),
           subsystemId: "nonexistent",
+          memberId,
           systemId,
           encryptedData: testBlob(new Uint8Array([1])),
           createdAt: now,
@@ -1013,6 +1021,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const sideSystemId = await insertSideSystem(systemId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([44, 55, 66]));
@@ -1020,6 +1029,7 @@ describe("PG structure schema", () => {
       await db.insert(sideSystemMemberships).values({
         id,
         sideSystemId,
+        memberId,
         systemId,
         encryptedData: data,
         createdAt: now,
@@ -1039,12 +1049,14 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const sideSystemId = await insertSideSystem(systemId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(sideSystemMemberships).values({
         id,
         sideSystemId,
+        memberId,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -1062,12 +1074,14 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const sideSystemId = await insertSideSystem(systemId);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(sideSystemMemberships).values({
         id,
         sideSystemId,
+        memberId,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -1087,6 +1101,7 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const layerId = await insertLayer(systemId, 0);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
       const data = testBlob(new Uint8Array([77, 88, 99]));
@@ -1094,6 +1109,7 @@ describe("PG structure schema", () => {
       await db.insert(layerMemberships).values({
         id,
         layerId,
+        memberId,
         systemId,
         encryptedData: data,
         createdAt: now,
@@ -1110,12 +1126,14 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const layerId = await insertLayer(systemId, 0);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(layerMemberships).values({
         id,
         layerId,
+        memberId,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
@@ -1130,12 +1148,14 @@ describe("PG structure schema", () => {
       const accountId = await insertAccount();
       const systemId = await insertSystem(accountId);
       const layerId = await insertLayer(systemId, 0);
+      const memberId = await insertMember(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
 
       await db.insert(layerMemberships).values({
         id,
         layerId,
+        memberId,
         systemId,
         encryptedData: testBlob(new Uint8Array([1])),
         createdAt: now,
