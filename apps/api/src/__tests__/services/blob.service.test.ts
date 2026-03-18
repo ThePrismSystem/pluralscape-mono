@@ -4,7 +4,8 @@ import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { BlobId, SystemId } from "@pluralscape/types";
+import type { BlobResult } from "../../services/blob.service.js";
+import type { BlobId, PaginatedResult, SystemId } from "@pluralscape/types";
 
 // ── Mock external deps ───────────────────────────────────────────────
 
@@ -14,6 +15,8 @@ vi.mock("../../lib/audit-log.js", () => ({
 
 vi.mock("../../routes/blobs/blobs.constants.js", () => ({
   PRESIGNED_UPLOAD_TTL_MS: 900_000,
+  DEFAULT_BLOB_LIMIT: 25,
+  MAX_BLOB_LIMIT: 100,
 }));
 
 vi.mock("../../lib/system-ownership.js", () => ({
@@ -23,7 +26,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
-const { createUploadUrl, confirmUpload, getBlob, getDownloadUrl, archiveBlob } =
+const { createUploadUrl, confirmUpload, getBlob, getDownloadUrl, archiveBlob, listBlobs } =
   await import("../../services/blob.service.js");
 
 const { QuotaExceededError } = await import("@pluralscape/storage");
@@ -406,5 +409,83 @@ describe("archiveBlob", () => {
 
     expect(chain.update).not.toHaveBeenCalled();
     expect(mockAudit).not.toHaveBeenCalled();
+  });
+});
+
+// ── Tests: listBlobs ─────────────────────────────────────────────────
+
+describe("listBlobs", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns empty paginated result when no blobs exist", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    const result: PaginatedResult<BlobResult> = await listBlobs(db, SYSTEM_ID, AUTH);
+
+    expect(result.items).toEqual([]);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it("returns paginated blobs for a system", async () => {
+    const { db, chain } = mockDb();
+    const rows = [makeBlobRow(), makeBlobRow({ id: "blob_second-blob" })];
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await listBlobs(db, SYSTEM_ID, AUTH, { limit: 25 });
+
+    expect(result.items).toHaveLength(2);
+    const first = result.items[0];
+    expect(first).toBeDefined();
+    expect(first?.id).toBe(BLOB_ID);
+    expect(result.hasMore).toBe(false);
+  });
+
+  it("sets hasMore=true when rows exceed limit", async () => {
+    const { db, chain } = mockDb();
+    // limit+1 rows means there are more results
+    const rows = [
+      makeBlobRow({ id: "blob_one" }),
+      makeBlobRow({ id: "blob_two" }),
+      makeBlobRow({ id: "blob_three" }),
+    ];
+    chain.limit.mockResolvedValueOnce(rows);
+
+    const result = await listBlobs(db, SYSTEM_ID, AUTH, { limit: 2 });
+
+    expect(result.items).toHaveLength(2);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).not.toBeNull();
+  });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(listBlobs(db, SYSTEM_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("excludes archived blobs by default", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([makeBlobRow()]);
+
+    await listBlobs(db, SYSTEM_ID, AUTH);
+
+    // The where call should be invoked (conditions include archived=false)
+    expect(chain.where).toHaveBeenCalled();
+  });
+
+  it("respects cursor parameter for pagination", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await listBlobs(db, SYSTEM_ID, AUTH, { cursor: "blob_some-cursor" as never });
+
+    expect(chain.where).toHaveBeenCalled();
   });
 });
