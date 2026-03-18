@@ -194,6 +194,21 @@ export const KEY_ROTATION = {
   maxItemAttempts: KEY_ROTATION_MAX_ITEM_ATTEMPTS,
 } as const;
 
+export const ROTATION_STATES = {
+  initiated: "initiated",
+  migrating: "migrating",
+  sealing: "sealing",
+  completed: "completed",
+  failed: "failed",
+} as const satisfies Record<string, import("./key-rotation.js").RotationState>;
+
+export const ROTATION_ITEM_STATUSES = {
+  pending: "pending",
+  claimed: "claimed",
+  completed: "completed",
+  failed: "failed",
+} as const satisfies Record<string, import("./key-rotation.js").RotationItemStatus>;
+
 // ── Client-Side Retry Guidance ───────────────────────────────────────
 
 const CLIENT_RETRY_MAX_ATTEMPTS = 3;

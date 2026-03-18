@@ -18,7 +18,7 @@ copyRoute.use("*", createCategoryRateLimiter("write"));
 copyRoute.post("/:groupId/copy", async (c) => {
   const body = await parseJsonBody(c);
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = parseIdParam(c.req.param("systemId") ?? "", ID_PREFIXES.system);
   const groupId = parseIdParam(c.req.param("groupId"), ID_PREFIXES.group);
   const audit = createAuditWriter(c, auth);
 

@@ -3,7 +3,7 @@ import { Hono } from "hono";
 
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
-import { parseIdParam } from "../../../lib/id-param.js";
+import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { updateEntity } from "../../../services/innerworld-entity.service.js";
@@ -16,7 +16,7 @@ updateRoute.use("*", createCategoryRateLimiter("write"));
 
 updateRoute.put("/:entityId", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("systemId") as string, ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const entityId = parseIdParam(c.req.param("entityId"), ID_PREFIXES.innerWorldEntity);
   const audit = createAuditWriter(c, auth);
   const body = await parseJsonBody(c);

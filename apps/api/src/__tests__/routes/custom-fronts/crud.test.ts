@@ -239,9 +239,7 @@ describe("DELETE /systems/:id/custom-fronts/:customFrontId", () => {
     const app = createApp();
     const res = await app.request(CF_URL, { method: "DELETE" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
-    expect(body.ok).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   it("returns 409 when has dependents", async () => {

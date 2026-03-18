@@ -12,9 +12,9 @@ import { and, count, eq, gt, max, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
-import { MAX_ANCESTOR_DEPTH } from "../routes/groups/groups.constants.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -389,30 +389,19 @@ export async function moveGroup(
       }
 
       // Cycle detection: walk ancestors from target up; if we find groupId, it's circular
-      let currentId: string | null = targetParentGroupId;
-      for (let i = 0; i < MAX_ANCESTOR_DEPTH && currentId !== null; i++) {
-        if (currentId === groupId) {
-          throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Circular reference detected");
-        }
-        const [ancestor] = await tx
-          .select({ parentGroupId: groups.parentGroupId })
-          .from(groups)
-          .where(and(eq(groups.id, currentId), eq(groups.systemId, systemId)))
-          .limit(1);
-        if (!ancestor) {
-          throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Group hierarchy integrity violation");
-        }
-        currentId = ancestor.parentGroupId;
-      }
-
-      // If we exhausted the depth limit without reaching root, reject
-      if (currentId !== null) {
-        throw new ApiHttpError(
-          HTTP_CONFLICT,
-          "CONFLICT",
-          "Group hierarchy too deep or contains a cycle",
-        );
-      }
+      await detectAncestorCycle(
+        async (id) => {
+          const [row] = await tx
+            .select({ parentGroupId: groups.parentGroupId })
+            .from(groups)
+            .where(and(eq(groups.id, id), eq(groups.systemId, systemId)))
+            .limit(1);
+          return row?.parentGroupId;
+        },
+        targetParentGroupId,
+        groupId,
+        "Group",
+      );
     }
 
     // OCC update

@@ -16,6 +16,7 @@ import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
 import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
+import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
@@ -439,7 +440,9 @@ export { ValidationError };
 export function isDuplicateEmailError(error: unknown): boolean {
   if (error instanceof Error && "code" in error && "constraint_name" in error) {
     const pgErr = error as { code: string; constraint_name: string };
-    return pgErr.code === "23505" && pgErr.constraint_name === "accounts_email_hash_idx";
+    return (
+      pgErr.code === PG_UNIQUE_VIOLATION && pgErr.constraint_name === "accounts_email_hash_idx"
+    );
   }
   return false;
 }

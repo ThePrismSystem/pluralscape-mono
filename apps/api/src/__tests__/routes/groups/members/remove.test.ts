@@ -61,15 +61,13 @@ describe("DELETE /systems/:id/groups/:groupId/members/:memberId", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with ok: true", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(removeMember).mockResolvedValueOnce(undefined);
 
     const app = createApp();
     const res = await app.request(REMOVE_URL, { method: "DELETE" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
-    expect(body.ok).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   it("returns 404 when membership not found", async () => {

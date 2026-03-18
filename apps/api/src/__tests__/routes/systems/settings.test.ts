@@ -64,7 +64,7 @@ const { settingsRoutes } = await import("../../../routes/systems/settings/index.
 function createApp(): Hono {
   const app = new Hono();
   app.use("*", requestIdMiddleware());
-  app.route("/:id/settings", settingsRoutes);
+  app.route("/:systemId/settings", settingsRoutes);
   app.onError(errorHandler);
   return app;
 }

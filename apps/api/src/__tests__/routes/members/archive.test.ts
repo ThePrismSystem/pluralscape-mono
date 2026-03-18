@@ -80,7 +80,7 @@ describe("POST /systems/:systemId/members/:memberId/archive", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with ok: true on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(archiveMember).mockResolvedValueOnce(undefined);
 
     const app = createApp();
@@ -88,9 +88,7 @@ describe("POST /systems/:systemId/members/:memberId/archive", () => {
       method: "POST",
     });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
-    expect(body.ok).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   it("forwards systemId, memberId, auth, and audit writer to service", async () => {

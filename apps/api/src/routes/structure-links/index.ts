@@ -1,10 +1,10 @@
 import { ID_PREFIXES, toCursor } from "@pluralscape/types";
 import { Hono } from "hono";
 
-import { HTTP_CREATED } from "../../http.constants.js";
+import { HTTP_CREATED, HTTP_NO_CONTENT } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { parseIdParam } from "../../lib/id-param.js";
+import { parseIdParam, requireIdParam } from "../../lib/id-param.js";
 import { parsePaginationLimit } from "../../lib/pagination.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
@@ -31,7 +31,7 @@ const slCreate = new Hono<AuthEnv>();
 slCreate.use("*", createCategoryRateLimiter("write"));
 slCreate.post("/subsystem-layer", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const audit = createAuditWriter(c, auth);
   const body = await parseJsonBody(c);
 
@@ -44,19 +44,19 @@ const slDelete = new Hono<AuthEnv>();
 slDelete.use("*", createCategoryRateLimiter("write"));
 slDelete.delete("/subsystem-layer/:linkId", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const linkId = parseIdParam(c.req.param("linkId"), ID_PREFIXES.structureLink);
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
   await deleteSubsystemLayerLink(db, systemId, linkId, auth, audit);
-  return c.json({ ok: true });
+  return c.body(null, HTTP_NO_CONTENT);
 });
 
 const slList = new Hono<AuthEnv>();
 slList.get("/subsystem-layer", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
   const subsystemId = c.req.query("subsystemId");
@@ -81,7 +81,7 @@ const ssCreate = new Hono<AuthEnv>();
 ssCreate.use("*", createCategoryRateLimiter("write"));
 ssCreate.post("/subsystem-side-system", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const audit = createAuditWriter(c, auth);
   const body = await parseJsonBody(c);
 
@@ -94,19 +94,19 @@ const ssDelete = new Hono<AuthEnv>();
 ssDelete.use("*", createCategoryRateLimiter("write"));
 ssDelete.delete("/subsystem-side-system/:linkId", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const linkId = parseIdParam(c.req.param("linkId"), ID_PREFIXES.structureLink);
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
   await deleteSubsystemSideSystemLink(db, systemId, linkId, auth, audit);
-  return c.json({ ok: true });
+  return c.body(null, HTTP_NO_CONTENT);
 });
 
 const ssList = new Hono<AuthEnv>();
 ssList.get("/subsystem-side-system", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
   const subsystemId = c.req.query("subsystemId");
@@ -131,7 +131,7 @@ const sslCreate = new Hono<AuthEnv>();
 sslCreate.use("*", createCategoryRateLimiter("write"));
 sslCreate.post("/side-system-layer", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const audit = createAuditWriter(c, auth);
   const body = await parseJsonBody(c);
 
@@ -144,19 +144,19 @@ const sslDelete = new Hono<AuthEnv>();
 sslDelete.use("*", createCategoryRateLimiter("write"));
 sslDelete.delete("/side-system-layer/:linkId", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const linkId = parseIdParam(c.req.param("linkId"), ID_PREFIXES.structureLink);
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
   await deleteSideSystemLayerLink(db, systemId, linkId, auth, audit);
-  return c.json({ ok: true });
+  return c.body(null, HTTP_NO_CONTENT);
 });
 
 const sslList = new Hono<AuthEnv>();
 sslList.get("/side-system-layer", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
   const sideSystemId = c.req.query("sideSystemId");

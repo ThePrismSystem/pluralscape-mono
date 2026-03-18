@@ -156,13 +156,13 @@ describe("DELETE /systems/:id/structure-links/subsystem-layer/:linkId", () => {
   beforeEach(() => vi.mocked(deleteSubsystemLayerLink).mockReset());
   afterEach(() => vi.restoreAllMocks());
 
-  it("returns 200 on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(deleteSubsystemLayerLink).mockResolvedValueOnce(undefined);
     const app = createApp();
     const res = await app.request(`${BASE_URL}/subsystem-layer/${LINK_ID}`, {
       method: "DELETE",
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 });
 
@@ -212,13 +212,13 @@ describe("DELETE /systems/:id/structure-links/subsystem-side-system/:linkId", ()
   beforeEach(() => vi.mocked(deleteSubsystemSideSystemLink).mockReset());
   afterEach(() => vi.restoreAllMocks());
 
-  it("returns 200 on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(deleteSubsystemSideSystemLink).mockResolvedValueOnce(undefined);
     const app = createApp();
     const res = await app.request(`${BASE_URL}/subsystem-side-system/${LINK_ID}`, {
       method: "DELETE",
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 });
 
@@ -268,12 +268,12 @@ describe("DELETE /systems/:id/structure-links/side-system-layer/:linkId", () => 
   beforeEach(() => vi.mocked(deleteSideSystemLayerLink).mockReset());
   afterEach(() => vi.restoreAllMocks());
 
-  it("returns 200 on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(deleteSideSystemLayerLink).mockResolvedValueOnce(undefined);
     const app = createApp();
     const res = await app.request(`${BASE_URL}/side-system-layer/${LINK_ID}`, {
       method: "DELETE",
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 });

@@ -181,7 +181,7 @@ describe("sessions route", () => {
       expect(body.error.code).toBe("NOT_FOUND");
     });
 
-    it("returns ok: true on successful revocation", async () => {
+    it("returns 204 on successful revocation", async () => {
       vi.mocked(revokeSession).mockResolvedValueOnce(true);
 
       const app = createApp();
@@ -189,9 +189,7 @@ describe("sessions route", () => {
         method: "DELETE",
       });
 
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as { ok: boolean };
-      expect(body.ok).toBe(true);
+      expect(res.status).toBe(204);
       expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ accountId: "acct_test" }),
@@ -202,15 +200,13 @@ describe("sessions route", () => {
   // ── POST /auth/logout ──────────────────────────────────────────
 
   describe("POST /auth/logout", () => {
-    it("returns ok: true on successful logout", async () => {
+    it("returns 204 on successful logout", async () => {
       vi.mocked(logoutCurrentSession).mockResolvedValueOnce(undefined);
 
       const app = createApp();
       const res = await app.request("/auth/logout", { method: "POST" });
 
-      expect(res.status).toBe(200);
-      const body = (await res.json()) as { ok: boolean };
-      expect(body.ok).toBe(true);
+      expect(res.status).toBe(204);
       expect(vi.mocked(logoutCurrentSession)).toHaveBeenCalledWith(
         {},
         MOCK_CURRENT_SESSION_ID,

@@ -56,7 +56,7 @@ const { nomenclatureRoutes } = await import("../../../routes/systems/nomenclatur
 function createApp(): Hono {
   const app = new Hono();
   app.use("*", requestIdMiddleware());
-  app.route("/:id/nomenclature", nomenclatureRoutes);
+  app.route("/:systemId/nomenclature", nomenclatureRoutes);
   app.onError(errorHandler);
   return app;
 }

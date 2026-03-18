@@ -9,6 +9,9 @@ export const HTTP_OK = 200;
 /** HTTP 201 Created. */
 export const HTTP_CREATED = 201;
 
+/** HTTP 204 No Content — successful operation with no response body. */
+export const HTTP_NO_CONTENT = 204;
+
 /** HTTP 400 Bad Request. */
 export const HTTP_BAD_REQUEST = 400;
 

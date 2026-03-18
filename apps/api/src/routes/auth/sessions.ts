@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NO_CONTENT, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
@@ -62,7 +62,7 @@ sessionsRoute.delete("/sessions/:id", async (c) => {
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Session not found");
   }
 
-  return c.json({ ok: true });
+  return c.body(null, HTTP_NO_CONTENT);
 });
 
 // POST /auth/logout — revoke the current session
@@ -72,7 +72,7 @@ sessionsRoute.post("/logout", async (c) => {
   const audit = createAuditWriter(c, auth);
 
   await logoutCurrentSession(db, auth.sessionId, auth.accountId, audit);
-  return c.json({ ok: true });
+  return c.body(null, HTTP_NO_CONTENT);
 });
 
 // POST /auth/sessions/revoke-all — revoke all sessions except current

@@ -69,15 +69,13 @@ describe("DELETE /systems/:id/groups/:groupId", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with ok: true on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(deleteGroup).mockResolvedValueOnce(undefined);
 
     const app = createApp();
     const res = await app.request(GROUP_URL, { method: "DELETE" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
-    expect(body.ok).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   it("returns 404 when group not found", async () => {
