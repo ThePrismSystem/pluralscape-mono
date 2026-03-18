@@ -31,11 +31,17 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 // ── Constants ───────────────────────────────────────────────────────
 
 /**
- * Maximum number of custom field definitions allowed per system.
+ * Maximum number of custom field definitions allowed per system (hard cap).
+ *
+ * Enforced at creation time — returns 409 Conflict when exceeded.
  * Prevents unbounded schema growth that could degrade query performance
  * and complicate client-side rendering of member profiles.
+ *
+ * See also: `docs/api-limits.md`
  */
 const MAX_FIELD_DEFINITIONS_PER_SYSTEM = 200;
+
+/** Maximum size of encrypted field definition data in bytes after base64 decode (32 KiB). */
 const MAX_ENCRYPTED_FIELD_DATA_BYTES = 32_768;
 
 // ── Types ───────────────────────────────────────────────────────────
