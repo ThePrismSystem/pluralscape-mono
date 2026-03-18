@@ -11,6 +11,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
@@ -409,6 +410,14 @@ export async function deleteSubsystem(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const SUBSYSTEM_LIFECYCLE = {
+  table: subsystems,
+  columns: subsystems,
+  entityName: "Subsystem",
+  archiveEvent: "subsystem.archived" as const,
+  restoreEvent: "subsystem.restored" as const,
+};
+
 export async function archiveSubsystem(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -416,39 +425,7 @@ export async function archiveSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: subsystems.id })
-      .from(subsystems)
-      .where(
-        and(
-          eq(subsystems.id, subsystemId),
-          eq(subsystems.systemId, systemId),
-          eq(subsystems.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Subsystem not found");
-    }
-
-    await tx
-      .update(subsystems)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(subsystems.id, subsystemId), eq(subsystems.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "subsystem.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Subsystem archived",
-      systemId,
-    });
-  });
+  await archiveEntity(db, systemId, subsystemId, auth, audit, SUBSYSTEM_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -298,6 +299,14 @@ export async function deleteCustomFront(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const CUSTOM_FRONT_LIFECYCLE = {
+  table: customFronts,
+  columns: customFronts,
+  entityName: "Custom front",
+  archiveEvent: "custom-front.archived" as const,
+  restoreEvent: "custom-front.restored" as const,
+};
+
 export async function archiveCustomFront(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -305,39 +314,7 @@ export async function archiveCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: customFronts.id })
-      .from(customFronts)
-      .where(
-        and(
-          eq(customFronts.id, customFrontId),
-          eq(customFronts.systemId, systemId),
-          eq(customFronts.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Custom front not found");
-    }
-
-    await tx
-      .update(customFronts)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(customFronts.id, customFrontId), eq(customFronts.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "custom-front.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Custom front archived",
-      systemId,
-    });
-  });
+  await archiveEntity(db, systemId, customFrontId, auth, audit, CUSTOM_FRONT_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -349,51 +326,7 @@ export async function restoreCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CustomFrontResult> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: customFronts.id })
-      .from(customFronts)
-      .where(
-        and(
-          eq(customFronts.id, customFrontId),
-          eq(customFronts.systemId, systemId),
-          eq(customFronts.archived, true),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived custom front not found");
-    }
-
-    const updated = await tx
-      .update(customFronts)
-      .set({
-        archived: false,
-        archivedAt: null,
-        updatedAt: timestamp,
-        version: sql`${customFronts.version} + 1`,
-      })
-      .where(and(eq(customFronts.id, customFrontId), eq(customFronts.systemId, systemId)))
-      .returning();
-
-    if (updated.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived custom front not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
-
-    await audit(tx, {
-      eventType: "custom-front.restored",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Custom front restored",
-      systemId,
-    });
-
-    return toCustomFrontResult(row);
-  });
+  return restoreEntity(db, systemId, customFrontId, auth, audit, CUSTOM_FRONT_LIFECYCLE, (row) =>
+    toCustomFrontResult(row as typeof customFronts.$inferSelect),
+  );
 }

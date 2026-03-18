@@ -11,6 +11,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -317,6 +318,14 @@ export async function deleteSideSystem(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const SIDE_SYSTEM_LIFECYCLE = {
+  table: sideSystems,
+  columns: sideSystems,
+  entityName: "Side system",
+  archiveEvent: "side-system.archived" as const,
+  restoreEvent: "side-system.restored" as const,
+};
+
 export async function archiveSideSystem(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -324,39 +333,7 @@ export async function archiveSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: sideSystems.id })
-      .from(sideSystems)
-      .where(
-        and(
-          eq(sideSystems.id, sideSystemId),
-          eq(sideSystems.systemId, systemId),
-          eq(sideSystems.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Side system not found");
-    }
-
-    await tx
-      .update(sideSystems)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(sideSystems.id, sideSystemId), eq(sideSystems.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "side-system.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Side system archived",
-      systemId,
-    });
-  });
+  await archiveEntity(db, systemId, sideSystemId, auth, audit, SIDE_SYSTEM_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -368,51 +345,7 @@ export async function restoreSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SideSystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: sideSystems.id })
-      .from(sideSystems)
-      .where(
-        and(
-          eq(sideSystems.id, sideSystemId),
-          eq(sideSystems.systemId, systemId),
-          eq(sideSystems.archived, true),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived side system not found");
-    }
-
-    const updated = await tx
-      .update(sideSystems)
-      .set({
-        archived: false,
-        archivedAt: null,
-        updatedAt: timestamp,
-        version: sql`${sideSystems.version} + 1`,
-      })
-      .where(and(eq(sideSystems.id, sideSystemId), eq(sideSystems.systemId, systemId)))
-      .returning();
-
-    if (updated.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived side system not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
-
-    await audit(tx, {
-      eventType: "side-system.restored",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Side system restored",
-      systemId,
-    });
-
-    return toSideSystemResult(row);
-  });
+  return restoreEntity(db, systemId, sideSystemId, auth, audit, SIDE_SYSTEM_LIFECYCLE, (row) =>
+    toSideSystemResult(row as typeof sideSystems.$inferSelect),
+  );
 }

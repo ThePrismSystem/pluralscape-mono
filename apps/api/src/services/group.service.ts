@@ -12,6 +12,7 @@ import { and, count, eq, gt, max, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
@@ -646,6 +647,14 @@ export async function reorderGroups(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const GROUP_LIFECYCLE = {
+  table: groups,
+  columns: groups,
+  entityName: "Group",
+  archiveEvent: "group.archived" as const,
+  restoreEvent: "group.restored" as const,
+};
+
 export async function archiveGroup(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -653,33 +662,7 @@ export async function archiveGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: groups.id })
-      .from(groups)
-      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
-    }
-
-    await tx
-      .update(groups)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "group.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Group archived",
-      systemId,
-    });
-  });
+  await archiveEntity(db, systemId, groupId, auth, audit, GROUP_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
