@@ -1,11 +1,11 @@
 ---
 # api-b7yy
 title: Add route-level tests for key rotation endpoints
-status: todo
+status: completed
 type: task
 priority: critical
 created_at: 2026-03-18T07:12:33Z
-updated_at: 2026-03-18T07:46:04Z
+updated_at: 2026-03-18T07:58:50Z
 parent: api-i2pw
 ---
 
@@ -18,7 +18,7 @@ Bucket key rotation routes (initiate, claim, complete-chunk, progress) have zero
   - 400 invalid body (InitiateRotationBodySchema)
   - 409 conflict: active rotation already running (migrating/sealing state)
   - Auto-cancels unclaimed "initiated" rotations before creating new one
-  - Triple-nested URL params: systemId (sys_), bucketId (bkt_) validated via parseIdParam
+  - Triple-nested URL params: systemId (sys*), bucketId (bkt*) validated via parseIdParam
   - Audit trail: bucket.key_rotation.initiated event written
   - write rate limiter applied
 
@@ -30,7 +30,7 @@ Bucket key rotation routes (initiate, claim, complete-chunk, progress) have zero
   - State transition: "initiated" → "migrating" on first claim
   - Reclaims stale items older than KEY_ROTATION.staleClaimTimeoutMs
   - Sets claimedBy (sessionId) and claimedAt on claimed items
-  - Triple-nested URL params: systemId, bucketId, rotationId (bkr_)
+  - Triple-nested URL params: systemId, bucketId, rotationId (bkr\_)
   - NOTE: No audit writer — only chunk completion logs
 
 - [ ] `apps/api/src/__tests__/routes/buckets/rotations/complete-chunk.test.ts` — POST /systems/:id/buckets/:bucketId/rotations/:rotationId/complete
@@ -56,3 +56,14 @@ Bucket key rotation routes (initiate, claim, complete-chunk, progress) have zero
 - Triple-nested params: URL format is `/systems/sys_.../buckets/bkt_.../rotations/bkr_.../...`
 - claim.ts has NO createAuditWriter — do not mock audit for claim tests
 - complete-chunk uses transactions — mock chain.transaction if testing service interactions
+
+## Summary of Changes
+
+Created 4 route-level test files in `apps/api/src/__tests__/routes/buckets/rotations/`:
+
+- initiate.test.ts (6 tests)
+- claim.test.ts (5 tests)
+- complete-chunk.test.ts (5 tests)
+- progress.test.ts (4 tests)
+
+All 20 tests pass.

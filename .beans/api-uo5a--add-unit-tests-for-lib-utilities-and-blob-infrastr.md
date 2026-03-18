@@ -1,11 +1,11 @@
 ---
 # api-uo5a
 title: Add unit tests for lib utilities and blob infrastructure
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T07:12:33Z
-updated_at: 2026-03-18T07:46:08Z
+updated_at: 2026-03-18T07:58:51Z
 parent: api-i2pw
 ---
 
@@ -62,7 +62,7 @@ Untested: occ-update.ts, validate-encrypted-blob.ts, system-ownership.ts, assert
   - initStorageAdapter: sets adapter, subsequent getStorageAdapter returns it
   - initStorageAdapter: throws on double init (already initialized)
   - setStorageAdapterForTesting: overrides adapter for tests
-  - _resetStorageAdapterForTesting: clears adapter
+  - \_resetStorageAdapterForTesting: clears adapter
   - getQuotaService: returns BlobQuotaService wrapping BlobUsageQueryImpl
 
 - [ ] `apps/api/src/__tests__/lib/pagination.test.ts` — parsePaginationLimit
@@ -85,5 +85,23 @@ Untested: occ-update.ts, validate-encrypted-blob.ts, system-ownership.ts, assert
 - occ-update, system-ownership, member-helpers, blob-usage-query, blob-archiver, orphan-blob-query all need mockDb()
 - assert-system-ownership (in-memory) and pagination need NO DB mock — pure function tests
 - validate-encrypted-blob: mock @pluralscape/crypto (deserializeEncryptedBlob)
-- storage.ts: use _resetStorageAdapterForTesting in afterEach for cleanup
+- storage.ts: use \_resetStorageAdapterForTesting in afterEach for cleanup
 - valkey-store createValkeyStore: mock dynamic import of ioredis module
+
+## Summary of Changes
+
+Created 11 test files:
+
+- apps/api/src/**tests**/lib/occ-update.test.ts (4 tests)
+- apps/api/src/**tests**/lib/validate-encrypted-blob.test.ts (4 tests)
+- apps/api/src/**tests**/lib/system-ownership.test.ts (4 tests)
+- apps/api/src/**tests**/lib/assert-system-ownership.test.ts (3 tests)
+- apps/api/src/**tests**/lib/member-helpers.test.ts (7 tests)
+- apps/api/src/**tests**/lib/blob-usage-query.test.ts (3 tests)
+- apps/api/src/**tests**/lib/blob-archiver.test.ts (2 tests)
+- apps/api/src/**tests**/lib/orphan-blob-query.test.ts (3 tests)
+- apps/api/src/**tests**/lib/storage.test.ts (5 tests)
+- apps/api/src/**tests**/lib/pagination.test.ts (9 tests)
+- apps/api/src/**tests**/middleware/stores/valkey-store-factory.test.ts (2 tests)
+
+All 46 tests pass.

@@ -1,11 +1,11 @@
 ---
 # api-eony
 title: Add route-level tests for blob endpoints
-status: todo
+status: completed
 type: task
 priority: critical
 created_at: 2026-03-18T07:12:33Z
-updated_at: 2026-03-18T07:46:02Z
+updated_at: 2026-03-18T07:58:50Z
 parent: api-i2pw
 ---
 
@@ -54,3 +54,15 @@ Blob routes (upload-url, confirm, get, download-url, delete) have zero route-lev
 - Mock: blob.service.ts (createUploadUrl, confirmUpload, getBlob, getDownloadUrl, archiveBlob), auth middleware, rate-limit middleware, system-ownership lib
 - Use `app.request()` with proper method/headers/body; assert status + parsed JSON
 - Use `mockRejectedValueOnce(new ApiHttpError(...))` for error paths
+
+## Summary of Changes
+
+Created 5 route-level test files in `apps/api/src/__tests__/routes/blobs/`:
+
+- upload-url.test.ts (5 tests)
+- confirm.test.ts (4 tests)
+- get.test.ts (3 tests)
+- download-url.test.ts (3 tests)
+- delete.test.ts (3 tests)
+
+All 18 tests pass.

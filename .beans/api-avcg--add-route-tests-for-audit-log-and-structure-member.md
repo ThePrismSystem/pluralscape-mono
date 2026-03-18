@@ -1,11 +1,11 @@
 ---
 # api-avcg
 title: Add route tests for audit-log and structure membership endpoints
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T07:12:33Z
-updated_at: 2026-03-18T07:46:07Z
+updated_at: 2026-03-18T07:58:51Z
 parent: api-i2pw
 ---
 
@@ -31,7 +31,7 @@ Account audit-log route, layers/memberships, side-systems/memberships, and subsy
   - GET 200 lists memberships with pagination (cursor, limit)
   - GET respects DEFAULT_PAGE_LIMIT / MAX_PAGE_LIMIT
   - All write ops use write rate limiter and audit writer
-  - Params: systemId (sys_), layerId (layer prefix), membershipId (layerMembership prefix)
+  - Params: systemId (sys\_), layerId (layer prefix), membershipId (layerMembership prefix)
 
 - [ ] `apps/api/src/__tests__/routes/side-systems/memberships.test.ts` — /systems/:id/side-systems/:sideSystemId/memberships
   - POST 201 adds side-system membership
@@ -56,3 +56,14 @@ Account audit-log route, layers/memberships, side-systems/memberships, and subsy
 - Audit-log is unique: GET-only with custom date-range validation logic (maxQueryRangeDays, timestamp math)
 - Mock: respective service fns, auth middleware, rate-limit middleware, system-ownership
 - Audit-log uses AuditLogQuerySchema from @pluralscape/validation — test schema rejection paths
+
+## Summary of Changes
+
+Created 4 test files:
+
+- apps/api/src/**tests**/routes/account/audit-log.test.ts (6 tests)
+- apps/api/src/**tests**/routes/layers/memberships.test.ts (6 tests)
+- apps/api/src/**tests**/routes/side-systems/memberships.test.ts (6 tests)
+- apps/api/src/**tests**/routes/subsystems/memberships.test.ts (6 tests)
+
+All 24 tests pass.

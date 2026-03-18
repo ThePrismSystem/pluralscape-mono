@@ -1,11 +1,11 @@
 ---
 # api-nnin
 title: Add route-level tests for innerworld endpoints
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-18T07:12:33Z
-updated_at: 2026-03-18T07:46:05Z
+updated_at: 2026-03-18T07:58:50Z
 parent: api-i2pw
 ---
 
@@ -99,3 +99,13 @@ Innerworld entities (7 handlers), regions (7 handlers), and canvas (1 handler) h
 - Mock: innerworld entity/region/canvas service fns, auth middleware, rate-limit middleware, system-ownership
 - Canvas is the simplest: only 2 operations (GET + PUT) in one test file
 - All handlers use parseIdParam with typed ID prefixes
+
+## Summary of Changes
+
+Created 15 route-level test files across entities (7), regions (7), and canvas (1):
+
+- apps/api/src/**tests**/routes/innerworld/entities/{get,list,create,update,delete,archive,restore}.test.ts
+- apps/api/src/**tests**/routes/innerworld/regions/{get,list,create,update,delete,archive,restore}.test.ts
+- apps/api/src/**tests**/routes/innerworld/canvas/canvas.test.ts
+
+All 37 tests pass.

@@ -1,11 +1,11 @@
 ---
 # api-boxz
 title: Add tests for pwhash worker thread pool
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-18T07:12:33Z
-updated_at: 2026-03-18T07:46:06Z
+updated_at: 2026-03-18T07:58:51Z
 parent: api-i2pw
 ---
 
@@ -20,7 +20,7 @@ pwhash-offload.ts and pwhash-worker-thread.ts (Argon2id worker thread pool) are 
   - Round-robin distribution across POOL_SIZE (2) workers
   - Worker error handler: rejects ALL pending requests on catastrophic worker failure
   - Worker message error: rejects individual request when response has ok=false
-  - _shutdownPool: terminates all workers, clears pending map, nulls pool ref
+  - \_shutdownPool: terminates all workers, clears pending map, nulls pool ref
   - Re-initialization: pool can be re-created after shutdown
   - Concurrent requests: multiple in-flight requests mapped by incrementing nextId
 
@@ -40,3 +40,12 @@ pwhash-offload.ts and pwhash-worker-thread.ts (Argon2id worker thread pool) are 
 - Mock `@pluralscape/crypto` (hashPin, verifyPin, initSodium)
 - Worker file path resolution: workers spawn `pwhash-worker-thread.js` — mock the path
 - Test pool lifecycle: init → use → shutdown → re-init
+
+## Summary of Changes
+
+Created 2 test files:
+
+- apps/api/src/**tests**/lib/pwhash-offload.test.ts (9 tests)
+- apps/api/src/**tests**/lib/pwhash-worker-thread.test.ts (6 tests)
+
+All 15 tests pass.
