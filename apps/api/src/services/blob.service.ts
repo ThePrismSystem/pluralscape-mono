@@ -6,7 +6,7 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONTENT_TOO_LARGE, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { PRESIGNED_UPLOAD_TTL_MS } from "../routes/blobs/blobs.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -52,7 +52,7 @@ export async function createUploadUrl(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<UploadUrlResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const result = CreateUploadUrlBodySchema.safeParse(params);
   if (!result.success) {
@@ -141,7 +141,7 @@ export async function confirmUpload(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BlobResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const result = ConfirmUploadBodySchema.safeParse(params);
   if (!result.success) {
@@ -228,7 +228,7 @@ export async function getBlob(
   blobId: BlobId,
   auth: AuthContext,
 ): Promise<BlobResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select()
@@ -259,7 +259,7 @@ export async function getDownloadUrl(
   blobId: BlobId,
   auth: AuthContext,
 ): Promise<DownloadUrlResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select({ storageKey: blobMetadata.storageKey })
@@ -306,7 +306,7 @@ export async function archiveBlob(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 

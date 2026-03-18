@@ -10,7 +10,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import {
@@ -77,7 +77,7 @@ export async function createSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SideSystemResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { blob } = parseAndValidateBlob(
     params,
@@ -124,7 +124,7 @@ export async function listSideSystems(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<SideSystemResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -162,7 +162,7 @@ export async function getSideSystem(
   sideSystemId: SideSystemId,
   auth: AuthContext,
 ): Promise<SideSystemResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select()
@@ -193,7 +193,7 @@ export async function updateSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SideSystemResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { blob, parsed } = parseAndValidateBlob(
     params,
@@ -260,7 +260,7 @@ export async function deleteSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -333,7 +333,7 @@ export async function archiveSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 
@@ -377,7 +377,7 @@ export async function restoreSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SideSystemResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 

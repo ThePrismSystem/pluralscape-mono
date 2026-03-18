@@ -8,7 +8,7 @@ import { and, eq, gt, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import {
@@ -87,7 +87,7 @@ export async function createRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -167,7 +167,7 @@ export async function listRelationships(
   limit = DEFAULT_PAGE_LIMIT,
   memberId?: string,
 ): Promise<PaginatedResult<RelationshipResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -215,7 +215,7 @@ export async function getRelationship(
   relationshipId: RelationshipId,
   auth: AuthContext,
 ): Promise<RelationshipResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select()
@@ -246,7 +246,7 @@ export async function updateRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -315,7 +315,7 @@ export async function deleteRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
     // Verify relationship exists
@@ -359,7 +359,7 @@ export async function archiveRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 
@@ -403,7 +403,7 @@ export async function restoreRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 

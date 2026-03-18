@@ -5,7 +5,7 @@ import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -55,7 +55,7 @@ export async function addMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupMembershipResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const parsed = AddGroupMemberBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -134,7 +134,7 @@ export async function removeMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
     const deleted = await tx
@@ -171,7 +171,7 @@ export async function listGroupMembers(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupMembershipResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   // Verify group exists
   const [group] = await db

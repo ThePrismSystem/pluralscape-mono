@@ -17,7 +17,7 @@ import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
@@ -100,7 +100,7 @@ export async function createSubsystemLayerLink(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureLinkResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseLinkBody(params, CreateSubsystemLayerLinkBodySchema);
 
@@ -157,7 +157,7 @@ export async function deleteSubsystemLayerLink(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
     const deleted = await tx
@@ -187,7 +187,7 @@ export async function listSubsystemLayerLinks(
   filterSubsystemId?: string,
   filterLayerId?: string,
 ): Promise<PaginatedResult<StructureLinkResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
   const conditions = [eq(subsystemLayerLinks.systemId, systemId)];
@@ -233,7 +233,7 @@ export async function createSubsystemSideSystemLink(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureLinkResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseLinkBody(params, CreateSubsystemSideSystemLinkBodySchema);
 
@@ -290,7 +290,7 @@ export async function deleteSubsystemSideSystemLink(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
     const deleted = await tx
@@ -325,7 +325,7 @@ export async function listSubsystemSideSystemLinks(
   filterSubsystemId?: string,
   filterSideSystemId?: string,
 ): Promise<PaginatedResult<StructureLinkResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
   const conditions = [eq(subsystemSideSystemLinks.systemId, systemId)];
@@ -373,7 +373,7 @@ export async function createSideSystemLayerLink(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureLinkResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseLinkBody(params, CreateSideSystemLayerLinkBodySchema);
 
@@ -430,7 +430,7 @@ export async function deleteSideSystemLayerLink(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
     const deleted = await tx
@@ -460,7 +460,7 @@ export async function listSideSystemLayerLinks(
   filterSideSystemId?: string,
   filterLayerId?: string,
 ): Promise<PaginatedResult<StructureLinkResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
   const conditions = [eq(sideSystemLayerLinks.systemId, systemId)];

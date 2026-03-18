@@ -5,7 +5,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import {
@@ -76,7 +76,7 @@ export async function createEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -148,7 +148,7 @@ export async function listEntities(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<EntityResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
@@ -194,7 +194,7 @@ export async function getEntity(
   entityId: InnerWorldEntityId,
   auth: AuthContext,
 ): Promise<EntityResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select()
@@ -225,7 +225,7 @@ export async function updateEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -292,7 +292,7 @@ export async function archiveEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 
@@ -336,7 +336,7 @@ export async function restoreEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 
@@ -409,7 +409,7 @@ export async function deleteEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

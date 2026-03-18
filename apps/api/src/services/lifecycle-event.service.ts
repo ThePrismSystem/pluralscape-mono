@@ -5,7 +5,7 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -93,7 +93,7 @@ export async function createLifecycleEvent(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<LifecycleEventResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -142,7 +142,7 @@ export async function listLifecycleEvents(
   limit = DEFAULT_PAGE_LIMIT,
   eventType?: string,
 ): Promise<PaginatedLifecycleEvents> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -187,7 +187,7 @@ export async function getLifecycleEvent(
   eventId: LifecycleEventId,
   auth: AuthContext,
 ): Promise<LifecycleEventResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select()
