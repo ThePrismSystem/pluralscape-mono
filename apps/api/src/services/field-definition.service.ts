@@ -1,5 +1,5 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
-import { fieldDefinitions } from "@pluralscape/db/pg";
+import { fieldDefinitions, fieldValues } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import {
   CreateFieldDefinitionBodySchema,
@@ -9,7 +9,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { encryptedBlobToBase64 } from "../lib/crypto-helpers.js";
+import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../routes/fields/fields.constants.js";
 
@@ -407,5 +407,60 @@ export async function restoreFieldDefinition(
     });
 
     return toFieldDefinitionResult(row);
+  });
+}
+
+// ── DELETE ──────────────────────────────────────────────────────────
+
+export async function deleteFieldDefinition(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  fieldId: FieldDefinitionId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  await assertSystemOwnership(db, systemId, auth);
+
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: fieldDefinitions.id })
+      .from(fieldDefinitions)
+      .where(
+        and(
+          eq(fieldDefinitions.id, fieldId),
+          eq(fieldDefinitions.systemId, systemId),
+          eq(fieldDefinitions.archived, false),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Field definition not found");
+    }
+
+    const [valueCount] = await tx
+      .select({ count: count() })
+      .from(fieldValues)
+      .where(and(eq(fieldValues.fieldDefinitionId, fieldId), eq(fieldValues.systemId, systemId)));
+
+    if (valueCount && valueCount.count > 0) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "HAS_DEPENDENTS",
+        `Field definition has ${String(valueCount.count)} field value(s). Remove all values before deleting.`,
+        { dependents: [{ type: "fieldValues", count: valueCount.count }] },
+      );
+    }
+
+    await audit(tx, {
+      eventType: "field-definition.deleted",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Field definition deleted",
+      systemId,
+    });
+
+    await tx
+      .delete(fieldDefinitions)
+      .where(and(eq(fieldDefinitions.id, fieldId), eq(fieldDefinitions.systemId, systemId)));
   });
 }

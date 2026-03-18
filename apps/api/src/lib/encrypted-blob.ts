@@ -5,6 +5,7 @@ import {
 } from "@pluralscape/crypto";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
+import { MAX_ENCRYPTED_DATA_BYTES } from "../service.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 
@@ -51,4 +52,28 @@ export function parseAndValidateBlob<T extends { encryptedData: string }>(
   }
 
   return { parsed: result.data, blob };
+}
+
+export function validateEncryptedBlob(
+  base64Data: string,
+  maxBytes = MAX_ENCRYPTED_DATA_BYTES,
+): EncryptedBlob {
+  const rawBytes = Buffer.from(base64Data, "base64");
+
+  if (rawBytes.length > maxBytes) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "BLOB_TOO_LARGE",
+      `encryptedData exceeds maximum size of ${String(maxBytes)} bytes`,
+    );
+  }
+
+  try {
+    return deserializeEncryptedBlob(new Uint8Array(rawBytes));
+  } catch (error) {
+    if (error instanceof InvalidInputError) {
+      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
+    }
+    throw error;
+  }
 }

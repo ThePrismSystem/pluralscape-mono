@@ -43,6 +43,7 @@ const {
   duplicateMember,
   archiveMember,
   restoreMember,
+  deleteMember,
 } = await import("../../services/member.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
@@ -458,6 +459,77 @@ describe("duplicateMember", () => {
     expect(chain.insert).toHaveBeenCalledTimes(2); // member + field value
   });
 
+  it("copies group memberships when copyMemberships is true", async () => {
+    const { db, chain } = mockDb();
+    // Source member lookup inside tx: tx.select().from(members).where().limit(1)
+    chain.limit.mockResolvedValueOnce([makeMemberRow()]);
+    // Insert new member in tx: tx.insert().values().returning()
+    const newRow = makeMemberRow({ id: "mem_new-member" });
+    chain.returning.mockResolvedValueOnce([newRow]);
+    // Group memberships select in tx: tx.select().from(groupMemberships).where() — terminal
+    chain.where
+      .mockReturnValueOnce(chain) // source member → chains to .limit()
+      .mockResolvedValueOnce([
+        {
+          groupId: "grp_group-1",
+          memberId: MEMBER_ID,
+          systemId: SYSTEM_ID,
+          createdAt: 1000,
+        },
+        {
+          groupId: "grp_group-2",
+          memberId: MEMBER_ID,
+          systemId: SYSTEM_ID,
+          createdAt: 1000,
+        },
+      ]);
+    // Membership copy insert: tx.insert().values() — no .returning() (returns chain)
+
+    const result = await duplicateMember(
+      db,
+      SYSTEM_ID,
+      MEMBER_ID,
+      { encryptedData: VALID_BLOB_BASE64, copyMemberships: true },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe("mem_new-member");
+    expect(chain.insert).toHaveBeenCalledTimes(2); // member + memberships
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        eventType: "member.duplicated",
+        detail: expect.stringContaining("2 membership(s) copied"),
+      }),
+    );
+  });
+
+  it("skips membership copy when source has no memberships", async () => {
+    const { db, chain } = mockDb();
+    // Source member lookup
+    chain.limit.mockResolvedValueOnce([makeMemberRow()]);
+    // Insert new member
+    const newRow = makeMemberRow({ id: "mem_new-member" });
+    chain.returning.mockResolvedValueOnce([newRow]);
+    // Group memberships select — empty
+    chain.where
+      .mockReturnValueOnce(chain) // source member → chains to .limit()
+      .mockResolvedValueOnce([]);
+
+    const result = await duplicateMember(
+      db,
+      SYSTEM_ID,
+      MEMBER_ID,
+      { encryptedData: VALID_BLOB_BASE64, copyMemberships: true },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe("mem_new-member");
+    expect(chain.insert).toHaveBeenCalledTimes(1); // only member, no memberships
+  });
+
   it("throws 400 for invalid duplicate payload", async () => {
     const { db } = mockDb();
 
@@ -531,5 +603,162 @@ describe("restoreMember", () => {
     await expect(
       restoreMember(db, SYSTEM_ID, "mem_nonexistent" as MemberId, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+});
+
+describe("deleteMember", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("deletes member with no dependents", async () => {
+    const { db, chain } = mockDb();
+    // 1. tx.select({ id }).from(members).where().limit(1) → find member
+    //    where() must return chain so .limit() can be called
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
+    // 2-11. Ten COUNT queries, each: tx.select({ count }).from(table).where() → terminal
+    for (let i = 0; i < 10; i++) {
+      chain.where.mockResolvedValueOnce([{ count: 0 }]);
+    }
+    // 12. tx.delete(members).where() → chain (no return value needed)
+
+    await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
+
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "member.deleted" }),
+    );
+    expect(chain.delete).toHaveBeenCalled();
+  });
+
+  it("throws 404 when member not found", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      deleteMember(db, SYSTEM_ID, "mem_nonexistent" as MemberId, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 409 HAS_DEPENDENTS when member has photos", async () => {
+    const { db, chain } = mockDb();
+    // Find member: where() chains to .limit()
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
+    // photoCount = 3, all others = 0
+    chain.where.mockResolvedValueOnce([{ count: 3 }]); // photos
+    for (let i = 0; i < 9; i++) {
+      chain.where.mockResolvedValueOnce([{ count: 0 }]);
+    }
+
+    await expect(deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({
+        status: 409,
+        code: "HAS_DEPENDENTS",
+      }),
+    );
+    expect(mockAudit).not.toHaveBeenCalled();
+  });
+
+  it("throws 409 HAS_DEPENDENTS with multiple dependent types", async () => {
+    const { db, chain } = mockDb();
+    // Find member: where() chains to .limit()
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
+    // photos=2, fieldValues=5, groupMemberships=0, frontingSessions=1,
+    // relationships=0, notes=3, frontingComments=0, checkInRecords=0, polls=0, acknowledgements=0
+    chain.where
+      .mockResolvedValueOnce([{ count: 2 }]) // photos
+      .mockResolvedValueOnce([{ count: 5 }]) // fieldValues
+      .mockResolvedValueOnce([{ count: 0 }]) // groupMemberships
+      .mockResolvedValueOnce([{ count: 1 }]) // frontingSessions
+      .mockResolvedValueOnce([{ count: 0 }]) // relationships
+      .mockResolvedValueOnce([{ count: 3 }]) // notes
+      .mockResolvedValueOnce([{ count: 0 }]) // frontingComments
+      .mockResolvedValueOnce([{ count: 0 }]) // checkInRecords
+      .mockResolvedValueOnce([{ count: 0 }]) // polls
+      .mockResolvedValueOnce([{ count: 0 }]); // acknowledgements
+
+    try {
+      await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
+      expect.unreachable("Should have thrown");
+    } catch (err: unknown) {
+      const error = err as {
+        status: number;
+        code: string;
+        details: { dependents: { type: string; count: number }[] };
+      };
+      expect(error.status).toBe(409);
+      expect(error.code).toBe("HAS_DEPENDENTS");
+      expect(error.details.dependents).toEqual([
+        { type: "photos", count: 2 },
+        { type: "fieldValues", count: 5 },
+        { type: "frontingSessions", count: 1 },
+        { type: "notes", count: 3 },
+      ]);
+    }
+    expect(mockAudit).not.toHaveBeenCalled();
+    expect(chain.delete).not.toHaveBeenCalled();
+  });
+
+  it("throws 409 HAS_DEPENDENTS for relationships", async () => {
+    const { db, chain } = mockDb();
+    // Find member: where() chains to .limit()
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
+    // All zero except relationships
+    chain.where
+      .mockResolvedValueOnce([{ count: 0 }]) // photos
+      .mockResolvedValueOnce([{ count: 0 }]) // fieldValues
+      .mockResolvedValueOnce([{ count: 0 }]) // groupMemberships
+      .mockResolvedValueOnce([{ count: 0 }]) // frontingSessions
+      .mockResolvedValueOnce([{ count: 2 }]) // relationships
+      .mockResolvedValueOnce([{ count: 0 }]) // notes
+      .mockResolvedValueOnce([{ count: 0 }]) // frontingComments
+      .mockResolvedValueOnce([{ count: 0 }]) // checkInRecords
+      .mockResolvedValueOnce([{ count: 0 }]) // polls
+      .mockResolvedValueOnce([{ count: 0 }]); // acknowledgements
+
+    try {
+      await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
+      expect.unreachable("Should have thrown");
+    } catch (err: unknown) {
+      const error = err as {
+        status: number;
+        code: string;
+        details: { dependents: { type: string; count: number }[] };
+      };
+      expect(error.status).toBe(409);
+      expect(error.code).toBe("HAS_DEPENDENTS");
+      expect(error.details.dependents).toEqual([{ type: "relationships", count: 2 }]);
+    }
+  });
+
+  it("throws 409 HAS_DEPENDENTS for acknowledgements", async () => {
+    const { db, chain } = mockDb();
+    // Find member: where() chains to .limit()
+    chain.where.mockReturnValueOnce(chain);
+    chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
+    // All zero except acknowledgements (last table)
+    for (let i = 0; i < 9; i++) {
+      chain.where.mockResolvedValueOnce([{ count: 0 }]);
+    }
+    chain.where.mockResolvedValueOnce([{ count: 4 }]); // acknowledgements
+
+    try {
+      await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
+      expect.unreachable("Should have thrown");
+    } catch (err: unknown) {
+      const error = err as {
+        status: number;
+        code: string;
+        details: { dependents: { type: string; count: number }[] };
+      };
+      expect(error.status).toBe(409);
+      expect(error.code).toBe("HAS_DEPENDENTS");
+      expect(error.details.dependents).toEqual([{ type: "acknowledgements", count: 4 }]);
+    }
   });
 });

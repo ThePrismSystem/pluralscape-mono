@@ -14,7 +14,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { addMember, removeMember, listGroupMembers } =
+const { addMember, removeMember, listGroupMembers, listMemberGroupMemberships } =
   await import("../../services/group-membership.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
@@ -163,6 +163,57 @@ describe("listGroupMembers", () => {
 
     await expect(listGroupMembers(db, SYSTEM_ID, GROUP_ID, AUTH)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+});
+
+describe("listMemberGroupMemberships", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns group memberships for member", async () => {
+    const { db, chain } = mockDb();
+    // member exists check
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // membership list
+    chain.limit.mockResolvedValueOnce([makeMembershipRow()]);
+
+    const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.groupId).toBe(GROUP_ID);
+  });
+
+  it("returns empty list when member has no memberships", async () => {
+    const { db, chain } = mockDb();
+    // member exists check
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // membership list — empty
+    chain.limit.mockResolvedValueOnce([]);
+
+    const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH);
+
+    expect(result.items).toHaveLength(0);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it("throws 404 when member not found", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]); // member not found
+
+    await expect(listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("throws 403 for system mismatch", async () => {
+    const { db } = mockDb();
+    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
+
+    await expect(listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, otherAuth)).rejects.toThrow(
+      expect.objectContaining({ status: 403, code: "FORBIDDEN" }),
     );
   });
 });

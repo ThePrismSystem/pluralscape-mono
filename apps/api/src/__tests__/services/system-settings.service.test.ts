@@ -17,7 +17,8 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../lib/validate-encrypted-blob.js", () => ({
+vi.mock("../../lib/encrypted-blob.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/encrypted-blob.js")>()),
   validateEncryptedBlob: vi
     .fn()
     .mockReturnValue({ ciphertext: new Uint8Array(16), nonce: new Uint8Array(12) }),
@@ -198,7 +199,7 @@ describe("system-settings service", () => {
     });
 
     it("throws BLOB_TOO_LARGE when encryptedData exceeds limit", async () => {
-      const { validateEncryptedBlob } = await import("../../lib/validate-encrypted-blob.js");
+      const { validateEncryptedBlob } = await import("../../lib/encrypted-blob.js");
       const { ApiHttpError } = await import("../../lib/api-error.js");
       vi.mocked(validateEncryptedBlob).mockImplementationOnce(() => {
         throw new ApiHttpError(

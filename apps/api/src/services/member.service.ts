@@ -1,16 +1,28 @@
-import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
-import { fieldValues, members, memberPhotos } from "@pluralscape/db/pg";
+import {
+  acknowledgements,
+  checkInRecords,
+  fieldValues,
+  frontingComments,
+  frontingSessions,
+  groupMemberships,
+  members,
+  memberPhotos,
+  notes,
+  polls,
+  relationships,
+} from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import {
   CreateMemberBodySchema,
   DuplicateMemberBodySchema,
   UpdateMemberBodySchema,
 } from "@pluralscape/validation";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, count, eq, gt, or, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { encryptedBlobToBase64 } from "../lib/crypto-helpers.js";
+import { encryptedBlobToBase64, validateEncryptedBlob } from "../lib/encrypted-blob.js";
+import { assertOccUpdated } from "../lib/occ-update.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_MEMBER_LIMIT,
@@ -67,27 +79,6 @@ function toMemberResult(row: {
   };
 }
 
-function parseAndValidateBlob(base64: string): EncryptedBlob {
-  const rawBytes = Buffer.from(base64, "base64");
-
-  if (rawBytes.length > MAX_ENCRYPTED_MEMBER_DATA_BYTES) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "BLOB_TOO_LARGE",
-      `encryptedData exceeds maximum size of ${String(MAX_ENCRYPTED_MEMBER_DATA_BYTES)} bytes`,
-    );
-  }
-
-  try {
-    return deserializeEncryptedBlob(new Uint8Array(rawBytes));
-  } catch (error) {
-    if (error instanceof InvalidInputError) {
-      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
-    }
-    throw error;
-  }
-}
-
 // ── CREATE ──────────────────────────────────────────────────────────
 
 export async function createMember(
@@ -104,7 +95,7 @@ export async function createMember(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid create payload");
   }
 
-  const blob = parseAndValidateBlob(parsed.data.encryptedData);
+  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
   const memberId = createId(ID_PREFIXES.member);
   const timestamp = now();
 
@@ -222,7 +213,7 @@ export async function updateMember(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid update payload");
   }
 
-  const blob = parseAndValidateBlob(parsed.data.encryptedData);
+  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
   const timestamp = now();
 
   return db.transaction(async (tx) => {
@@ -243,26 +234,24 @@ export async function updateMember(
       )
       .returning();
 
-    if (updated.length === 0) {
-      const [existing] = await tx
-        .select({ id: members.id })
-        .from(members)
-        .where(
-          and(
-            eq(members.id, memberId),
-            eq(members.systemId, systemId),
-            eq(members.archived, false),
-          ),
-        )
-        .limit(1);
-
-      if (existing) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Version conflict");
-      }
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
+    const row = await assertOccUpdated(
+      updated,
+      async () => {
+        const [existing] = await tx
+          .select({ id: members.id })
+          .from(members)
+          .where(
+            and(
+              eq(members.id, memberId),
+              eq(members.systemId, systemId),
+              eq(members.archived, false),
+            ),
+          )
+          .limit(1);
+        return existing;
+      },
+      "Member",
+    );
 
     await audit(tx, {
       eventType: "member.updated",
@@ -292,7 +281,7 @@ export async function duplicateMember(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid duplicate payload");
   }
 
-  const blob = parseAndValidateBlob(parsed.data.encryptedData);
+  const blob = validateEncryptedBlob(parsed.data.encryptedData, MAX_ENCRYPTED_MEMBER_DATA_BYTES);
   const newMemberId = createId(ID_PREFIXES.member);
   const timestamp = now();
 
@@ -338,22 +327,22 @@ export async function duplicateMember(
           ),
         );
 
-      for (const photo of photos) {
-        const [copied] = await tx
+      if (photos.length > 0) {
+        const photoRows = photos.map((photo) => ({
+          id: createId(ID_PREFIXES.memberPhoto),
+          memberId: newMemberId,
+          systemId,
+          sortOrder: photo.sortOrder,
+          encryptedData: photo.encryptedData,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        }));
+        const inserted = await tx
           .insert(memberPhotos)
-          .values({
-            id: createId(ID_PREFIXES.memberPhoto),
-            memberId: newMemberId,
-            systemId,
-            sortOrder: photo.sortOrder,
-            encryptedData: photo.encryptedData,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-          })
+          .values(photoRows)
           .returning({ id: memberPhotos.id });
-
-        if (!copied) {
-          throw new Error("Failed to copy member photo — INSERT returned no rows");
+        if (inserted.length !== photos.length) {
+          throw new Error("Failed to copy member photos — INSERT count mismatch");
         }
       }
     }
@@ -365,30 +354,52 @@ export async function duplicateMember(
         .from(fieldValues)
         .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
 
-      for (const fv of values) {
-        const [copied] = await tx
+      if (values.length > 0) {
+        const fieldRows = values.map((fv) => ({
+          id: createId(ID_PREFIXES.fieldValue),
+          fieldDefinitionId: fv.fieldDefinitionId,
+          memberId: newMemberId,
+          systemId,
+          encryptedData: fv.encryptedData,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        }));
+        const inserted = await tx
           .insert(fieldValues)
-          .values({
-            id: createId(ID_PREFIXES.fieldValue),
-            fieldDefinitionId: fv.fieldDefinitionId,
-            memberId: newMemberId,
-            systemId,
-            encryptedData: fv.encryptedData,
-            createdAt: timestamp,
-            updatedAt: timestamp,
-          })
+          .values(fieldRows)
           .returning({ id: fieldValues.id });
-
-        if (!copied) {
-          throw new Error("Failed to copy field value — INSERT returned no rows");
+        if (inserted.length !== values.length) {
+          throw new Error("Failed to copy field values — INSERT count mismatch");
         }
+      }
+    }
+
+    // Copy group memberships if requested
+    let membershipsCopied = 0;
+    if (parsed.data.copyMemberships) {
+      const memberships = await tx
+        .select()
+        .from(groupMemberships)
+        .where(
+          and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId)),
+        );
+
+      if (memberships.length > 0) {
+        const membershipRows = memberships.map((m) => ({
+          groupId: m.groupId,
+          memberId: newMemberId,
+          systemId,
+          createdAt: timestamp,
+        }));
+        await tx.insert(groupMemberships).values(membershipRows);
+        membershipsCopied = memberships.length;
       }
     }
 
     await audit(tx, {
       eventType: "member.duplicated",
       actor: { kind: "account", id: auth.accountId },
-      detail: `Member duplicated from ${memberId}`,
+      detail: `Member duplicated from ${memberId}${membershipsCopied > 0 ? ` (${String(membershipsCopied)} membership(s) copied)` : ""}`,
       systemId,
     });
 
@@ -434,15 +445,10 @@ export async function archiveMember(
         ),
       );
 
-    // Cascade delete field values
-    await tx
-      .delete(fieldValues)
-      .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
-
     await audit(tx, {
       eventType: "member.archived",
       actor: { kind: "account", id: auth.accountId },
-      detail: "Member archived (photos cascade-archived, field values deleted)",
+      detail: "Member archived (photos cascade-archived, field values preserved)",
       systemId,
     });
 
@@ -498,5 +504,124 @@ export async function restoreMember(
     });
 
     return toMemberResult(row);
+  });
+}
+
+// ── DELETE ──────────────────────────────────────────────────────────
+
+export async function deleteMember(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  memberId: MemberId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  await assertSystemOwnership(db, systemId, auth);
+
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: members.id })
+      .from(members)
+      .where(
+        and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+    }
+
+    // Count all dependents across FK tables
+    const [photoCount] = await tx
+      .select({ count: count() })
+      .from(memberPhotos)
+      .where(and(eq(memberPhotos.memberId, memberId), eq(memberPhotos.systemId, systemId)));
+
+    const [fieldValueCount] = await tx
+      .select({ count: count() })
+      .from(fieldValues)
+      .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
+
+    const [membershipCount] = await tx
+      .select({ count: count() })
+      .from(groupMemberships)
+      .where(and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId)));
+
+    const [frontingSessionCount] = await tx
+      .select({ count: count() })
+      .from(frontingSessions)
+      .where(eq(frontingSessions.memberId, memberId));
+
+    const [relationshipCount] = await tx
+      .select({ count: count() })
+      .from(relationships)
+      .where(
+        or(eq(relationships.sourceMemberId, memberId), eq(relationships.targetMemberId, memberId)),
+      );
+
+    const [noteCount] = await tx
+      .select({ count: count() })
+      .from(notes)
+      .where(eq(notes.memberId, memberId));
+
+    const [frontingCommentCount] = await tx
+      .select({ count: count() })
+      .from(frontingComments)
+      .where(eq(frontingComments.memberId, memberId));
+
+    const [checkInCount] = await tx
+      .select({ count: count() })
+      .from(checkInRecords)
+      .where(eq(checkInRecords.respondedByMemberId, memberId));
+
+    const [pollCount] = await tx
+      .select({ count: count() })
+      .from(polls)
+      .where(eq(polls.createdByMemberId, memberId));
+
+    const [ackCount] = await tx
+      .select({ count: count() })
+      .from(acknowledgements)
+      .where(eq(acknowledgements.createdByMemberId, memberId));
+
+    const dependents: { type: string; count: number }[] = [];
+    if (photoCount && photoCount.count > 0)
+      dependents.push({ type: "photos", count: photoCount.count });
+    if (fieldValueCount && fieldValueCount.count > 0)
+      dependents.push({ type: "fieldValues", count: fieldValueCount.count });
+    if (membershipCount && membershipCount.count > 0)
+      dependents.push({ type: "groupMemberships", count: membershipCount.count });
+    if (frontingSessionCount && frontingSessionCount.count > 0)
+      dependents.push({ type: "frontingSessions", count: frontingSessionCount.count });
+    if (relationshipCount && relationshipCount.count > 0)
+      dependents.push({ type: "relationships", count: relationshipCount.count });
+    if (noteCount && noteCount.count > 0)
+      dependents.push({ type: "notes", count: noteCount.count });
+    if (frontingCommentCount && frontingCommentCount.count > 0)
+      dependents.push({ type: "frontingComments", count: frontingCommentCount.count });
+    if (checkInCount && checkInCount.count > 0)
+      dependents.push({ type: "checkInRecords", count: checkInCount.count });
+    if (pollCount && pollCount.count > 0)
+      dependents.push({ type: "polls", count: pollCount.count });
+    if (ackCount && ackCount.count > 0)
+      dependents.push({ type: "acknowledgements", count: ackCount.count });
+
+    if (dependents.length > 0) {
+      throw new ApiHttpError(
+        HTTP_CONFLICT,
+        "HAS_DEPENDENTS",
+        "Member has dependents. Remove all dependents before deleting.",
+        { dependents },
+      );
+    }
+
+    await audit(tx, {
+      eventType: "member.deleted",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Member deleted",
+      systemId,
+    });
+
+    await tx.delete(members).where(and(eq(members.id, memberId), eq(members.systemId, systemId)));
   });
 }

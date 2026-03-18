@@ -1,7 +1,7 @@
 import { innerworldEntities, innerworldRegions } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import { CreateRegionBodySchema, UpdateRegionBodySchema } from "@pluralscape/validation";
-import { and, count, eq, gt, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -330,27 +330,28 @@ export async function archiveRegion(
       regionsToArchive.push(...frontier);
     }
 
-    // Archive all collected regions
-    for (const rid of regionsToArchive) {
-      await tx
-        .update(innerworldRegions)
-        .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-        .where(and(eq(innerworldRegions.id, rid), eq(innerworldRegions.systemId, systemId)));
-    }
+    // Batch archive all collected regions
+    await tx
+      .update(innerworldRegions)
+      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
+      .where(
+        and(
+          inArray(innerworldRegions.id, regionsToArchive),
+          eq(innerworldRegions.systemId, systemId),
+        ),
+      );
 
-    // Archive all entities in any of the archived regions
-    for (const rid of regionsToArchive) {
-      await tx
-        .update(innerworldEntities)
-        .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-        .where(
-          and(
-            eq(innerworldEntities.regionId, rid),
-            eq(innerworldEntities.systemId, systemId),
-            eq(innerworldEntities.archived, false),
-          ),
-        );
-    }
+    // Batch archive all entities in any of the archived regions
+    await tx
+      .update(innerworldEntities)
+      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
+      .where(
+        and(
+          inArray(innerworldEntities.regionId, regionsToArchive),
+          eq(innerworldEntities.systemId, systemId),
+          eq(innerworldEntities.archived, false),
+        ),
+      );
 
     await audit(tx, {
       eventType: "innerworld-region.archived",

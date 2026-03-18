@@ -214,3 +214,59 @@ export async function listGroupMembers(
     totalCount: null,
   };
 }
+
+// ── LIST MEMBER'S GROUP MEMBERSHIPS ─────────────────────────────────
+
+export async function listMemberGroupMemberships(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  memberId: MemberId,
+  auth: AuthContext,
+  cursor?: PaginationCursor,
+  limit = DEFAULT_PAGE_LIMIT,
+): Promise<PaginatedResult<GroupMembershipResult>> {
+  assertSystemOwnership(auth, systemId);
+
+  // Verify member exists
+  const [member] = await db
+    .select({ id: members.id })
+    .from(members)
+    .where(
+      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+    )
+    .limit(1);
+
+  if (!member) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+  }
+
+  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
+
+  const conditions = [
+    eq(groupMemberships.memberId, memberId),
+    eq(groupMemberships.systemId, systemId),
+  ];
+
+  if (cursor) {
+    conditions.push(gt(groupMemberships.groupId, cursor));
+  }
+
+  const rows = await db
+    .select()
+    .from(groupMemberships)
+    .where(and(...conditions))
+    .orderBy(groupMemberships.groupId)
+    .limit(effectiveLimit + 1);
+
+  const hasMore = rows.length > effectiveLimit;
+  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
+  const lastItem = items[items.length - 1];
+  const nextCursor = hasMore && lastItem ? toCursor(lastItem.groupId) : null;
+
+  return {
+    items,
+    nextCursor,
+    hasMore,
+    totalCount: null,
+  };
+}
