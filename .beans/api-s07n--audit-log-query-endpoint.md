@@ -1,11 +1,11 @@
 ---
 # api-s07n
 title: Audit log query endpoint
-status: todo
+status: in-progress
 type: task
 priority: low
 created_at: 2026-03-16T11:33:14Z
-updated_at: 2026-03-16T11:33:20Z
+updated_at: 2026-03-18T00:14:44Z
 parent: ps-rdqo
 blocked_by:
   - api-o89k

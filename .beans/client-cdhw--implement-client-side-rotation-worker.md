@@ -1,11 +1,11 @@
 ---
 # client-cdhw
 title: Implement client-side rotation worker
-status: todo
+status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-09T12:42:40Z
-updated_at: 2026-03-16T07:14:50Z
+updated_at: 2026-03-18T00:14:44Z
 parent: ps-rdqo
 blocked_by:
   - crypto-gkaa

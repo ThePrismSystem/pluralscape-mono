@@ -1,11 +1,11 @@
 ---
 # api-am91
 title: Add Valkey-backed rate limiter for horizontal scaling
-status: todo
+status: in-progress
 type: feature
 priority: deferred
 created_at: 2026-03-17T04:00:56Z
-updated_at: 2026-03-17T04:00:56Z
+updated_at: 2026-03-18T00:14:44Z
 parent: api-o89k
 ---
 
