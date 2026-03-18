@@ -1,6 +1,7 @@
 RotationState:
   type: string
   enum: [initiated, migrating, sealing, completed, failed]
+  example: migrating
 
 InitiateRotationRequest:
   type: object
@@ -9,9 +10,11 @@ InitiateRotationRequest:
     wrappedNewKey:
       type: string
       minLength: 1
+      description: New bucket key encrypted with the master key
     newKeyVersion:
       type: integer
       minimum: 2
+      description: Version number for the new key (must be greater than current)
     friendKeyGrants:
       type: array
       items:
@@ -21,9 +24,11 @@ InitiateRotationRequest:
           friendAccountId:
             type: string
             minLength: 1
+            description: Account ID of the friend receiving the key grant
           encryptedKey:
             type: string
             minLength: 1
+            description: New bucket key encrypted with the friend's X25519 public key
 
 RotationResponse:
   type: object
@@ -42,25 +47,36 @@ RotationResponse:
   properties:
     id:
       type: string
+      description: Rotation identifier
     bucketId:
       type: string
+      description: Privacy bucket being rotated
     fromKeyVersion:
       type: integer
+      description: Previous key version
     toKeyVersion:
       type: integer
+      description: New key version
     state:
       $ref: "#/RotationState"
     initiatedAt:
       type: integer
+      format: int64
+      description: Unix timestamp in milliseconds when rotation started
     completedAt:
       type: integer
+      format: int64
       nullable: true
+      description: Unix timestamp in milliseconds when rotation completed
     totalItems:
       type: integer
+      description: Total number of items to re-encrypt
     completedItems:
       type: integer
+      description: Number of items successfully re-encrypted
     failedItems:
       type: integer
+      description: Number of items that failed re-encryption
 
 ClaimChunkRequest:
   type: object
@@ -70,6 +86,7 @@ ClaimChunkRequest:
       minimum: 1
       maximum: 200
       default: 50
+      description: Number of items to claim for re-encryption
 
 ClaimChunkResponse:
   type: object
@@ -83,12 +100,15 @@ ClaimChunkResponse:
         properties:
           id:
             type: string
+            description: Rotation item identifier
           rotationId:
             type: string
           entityType:
             type: string
+            description: Type of entity to re-encrypt
           entityId:
             type: string
+            description: ID of the entity to re-encrypt
           status:
             type: string
           claimedBy:
@@ -96,9 +116,11 @@ ClaimChunkResponse:
             nullable: true
           claimedAt:
             type: integer
+            format: int64
             nullable: true
           completedAt:
             type: integer
+            format: int64
             nullable: true
           attempts:
             type: integer
@@ -119,9 +141,11 @@ CompleteChunkRequest:
           itemId:
             type: string
             minLength: 1
+            description: ID of the rotation item
           status:
             type: string
             enum: [completed, failed]
+            description: Whether re-encryption succeeded or failed
 
 CompleteChunkResponse:
   type: object
@@ -131,3 +155,4 @@ CompleteChunkResponse:
       $ref: "#/RotationResponse"
     transitioned:
       type: boolean
+      description: Whether the rotation state transitioned (e.g., to sealing or completed)

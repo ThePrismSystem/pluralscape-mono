@@ -3,6 +3,7 @@
     operationId: getSystemSettings
     tags: [System Settings]
     summary: Get system settings
+    description: Returns the encrypted settings payload for the given system. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -22,6 +23,7 @@
     operationId: updateSystemSettings
     tags: [System Settings]
     summary: Update system settings
+    description: Replaces the encrypted settings payload for the given system. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -51,7 +53,7 @@
     operationId: setPin
     tags: [System Settings]
     summary: Set system PIN
-    description: Rate limit 5 req/min (authHeavy)
+    description: Sets or replaces the system's PIN lock. Rate limit 5 req/min (authHeavy).
     security:
       - bearerAuth: []
     parameters:
@@ -69,6 +71,9 @@
           application/json:
             schema:
               type: object
+              properties:
+                ok:
+                  type: boolean
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -79,7 +84,7 @@
     operationId: removePin
     tags: [System Settings]
     summary: Remove system PIN
-    description: Requires the current PIN in the request body. Rate limit 5 req/min (authHeavy)
+    description: Removes the system's PIN lock. Requires the current PIN in the request body. Rate limit 5 req/min (authHeavy).
     security:
       - bearerAuth: []
     parameters:
@@ -105,7 +110,7 @@
     operationId: verifyPin
     tags: [System Settings]
     summary: Verify system PIN
-    description: Rate limit 5 req/min (authHeavy)
+    description: Checks whether the provided PIN matches the system's stored PIN hash. Rate limit 5 req/min (authHeavy).
     security:
       - bearerAuth: []
     parameters:
@@ -135,6 +140,7 @@
     operationId: getNomenclature
     tags: [System Settings]
     summary: Get system nomenclature
+    description: Returns the encrypted nomenclature payload for the given system. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -154,6 +160,7 @@
     operationId: updateNomenclature
     tags: [System Settings]
     summary: Update system nomenclature
+    description: Replaces the encrypted nomenclature payload for the given system. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -183,6 +190,7 @@
     operationId: getSetupStatus
     tags: [System Settings]
     summary: Get setup wizard status
+    description: Returns the current completion status of the system setup wizard, indicating which steps have been completed. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -193,7 +201,7 @@
         content:
           application/json:
             schema:
-              type: object
+              $ref: "../schemas/settings.yaml#/SetupStatusResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "429":
@@ -204,6 +212,7 @@
     operationId: setupNomenclatureStep
     tags: [System Settings]
     summary: Submit nomenclature setup step
+    description: Completes the nomenclature step of the system setup wizard by saving the system's preferred terminology. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -221,6 +230,9 @@
           application/json:
             schema:
               type: object
+              properties:
+                ok:
+                  type: boolean
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -233,6 +245,7 @@
     operationId: setupProfileStep
     tags: [System Settings]
     summary: Submit profile setup step
+    description: Completes the profile step of the system setup wizard by saving the system's initial profile data. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -250,6 +263,9 @@
           application/json:
             schema:
               type: object
+              properties:
+                ok:
+                  type: boolean
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -262,6 +278,7 @@
     operationId: completeSetup
     tags: [System Settings]
     summary: Complete system setup
+    description: Finalizes the system setup wizard, marking the system as fully configured. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -279,6 +296,9 @@
           application/json:
             schema:
               type: object
+              properties:
+                ok:
+                  type: boolean
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":

@@ -4,12 +4,14 @@ CreateRegionRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextInnerworldRegion (see ./plaintext.yaml#/PlaintextInnerworldRegion)"
     parentRegionId:
       type: string
       nullable: true
+      description: ID of the parent region for nesting
 
 UpdateRegionRequest:
   type: object
@@ -17,6 +19,7 @@ UpdateRegionRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextInnerworldRegion (see ./plaintext.yaml#/PlaintextInnerworldRegion)"
@@ -32,6 +35,7 @@ RegionResponse:
         parentRegionId:
           type: string
           nullable: true
+          description: ID of the parent region, null for top-level regions
 
 CreateEntityRequest:
   type: object
@@ -39,12 +43,14 @@ CreateEntityRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity)"
     regionId:
       type: string
       nullable: true
+      description: ID of the region this entity belongs to
 
 UpdateEntityRequest:
   type: object
@@ -52,6 +58,7 @@ UpdateEntityRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity)"
@@ -67,6 +74,7 @@ EntityResponse:
         regionId:
           type: string
           nullable: true
+          description: ID of the region this entity belongs to
 
 UpdateCanvasRequest:
   type: object
@@ -74,6 +82,7 @@ UpdateCanvasRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextInnerworldCanvas (see ./plaintext.yaml#/PlaintextInnerworldCanvas)"
@@ -82,18 +91,5 @@ UpdateCanvasRequest:
       minimum: 1
 
 CanvasResponse:
-  type: object
-  required: [id, systemId, encryptedData, version, createdAt, updatedAt]
-  properties:
-    id:
-      type: string
-    systemId:
-      type: string
-    encryptedData:
-      type: string
-    version:
-      type: integer
-    createdAt:
-      type: integer
-    updatedAt:
-      type: integer
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"

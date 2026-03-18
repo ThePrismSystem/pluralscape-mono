@@ -32,27 +32,35 @@ ErrorResponse:
             - RATE_LIMITED
             - INTERNAL_ERROR
             - SERVICE_UNAVAILABLE
+          example: VALIDATION_ERROR
         message:
           type: string
+          example: "Field 'email' is required"
         details:
           description: Optional structured error details
     requestId:
       type: string
       format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
 
 PaginationMeta:
   type: object
+  required: [nextCursor, hasMore]
   properties:
     nextCursor:
       type: string
       nullable: true
       description: Cursor for the next page, null if no more results
+      example: "eyJpZCI6Im1lbV8xMjM0NSJ9"
     hasMore:
       type: boolean
+      description: Whether more results exist beyond this page
+      example: true
     totalCount:
       type: integer
       nullable: true
       description: Total count (may be null for performance)
+      example: 42
 
 EncryptedEntity:
   type: object
@@ -67,27 +75,41 @@ EncryptedEntity:
   properties:
     id:
       type: string
+      description: Unique entity identifier with a type-specific prefix (e.g., `mem_`, `grp_`, `rel_`)
+      example: "mem_abc123def456"
     systemId:
       type: string
+      description: System ID that owns this entity
+      pattern: ^sys_
+      example: "sys_abc123def456"
     encryptedData:
       type: string
+      contentEncoding: base64
       description: |
         Base64-encoded ciphertext. Contains `{ciphertext, nonce, algorithm, keyVersion}`
         serialized by the client. T1 (master-key) encrypted data has `keyVersion: null`.
         T2 (bucket-encrypted) data includes the `keyVersion` and `bucketId`.
+      example: "eyJjaXBoZXJ0ZXh0IjoiLi4uIiwibm9uY2UiOiIuLi4ifQ=="
     version:
       type: integer
       minimum: 1
       description: Optimistic concurrency version. Must match current version on update.
+      example: 1
     createdAt:
       type: integer
+      format: int64
       description: Unix timestamp in milliseconds
+      example: 1710000000000
     updatedAt:
       type: integer
+      format: int64
       description: Unix timestamp in milliseconds
+      example: 1710000000000
     archived:
       type: boolean
       default: false
     archivedAt:
       type: integer
+      format: int64
       nullable: true
+      description: Unix timestamp in milliseconds when archived, null if not archived

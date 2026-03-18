@@ -47,6 +47,11 @@
           application/json:
             schema:
               type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -80,6 +85,10 @@
           application/json:
             schema:
               type: object
+              required: [ok]
+              properties:
+                ok:
+                  type: boolean
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -100,27 +109,29 @@
     security:
       - bearerAuth: []
     parameters:
-      - name: event_type
+      - name: eventType
         in: query
         schema:
           type: string
-      - name: resource_type
+        description: Filter by event type (e.g., "member.created", "session.revoked")
+      - name: resourceType
         in: query
         schema:
           type: string
           pattern: ^[a-z][a-z0-9-]*$
+        description: Filter by resource type (e.g., "member", "group", "session")
       - name: from
         in: query
         schema:
           type: integer
           minimum: 0
-        description: Start timestamp (ms)
+        description: Start of time range as Unix timestamp in milliseconds (inclusive)
       - name: to
         in: query
         schema:
           type: integer
           minimum: 0
-        description: End timestamp (ms)
+        description: End of time range as Unix timestamp in milliseconds (inclusive)
       - $ref: "../openapi.yaml#/components/parameters/Cursor"
       - $ref: "../openapi.yaml#/components/parameters/Limit"
     responses:

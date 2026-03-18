@@ -3,7 +3,12 @@
     operationId: listMembers
     tags: [Members]
     summary: List members
-    description: Rate limit 60 req/min (readDefault)
+    description: |
+      Returns a paginated list of all members belonging to the specified system.
+      Members are returned as encrypted entities — all user-visible fields are
+      encrypted client-side and opaque to the server.
+
+      Rate limit: 60 req/min (readDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -23,17 +28,24 @@
                     members:
                       type: array
                       items:
-                        $ref: "../schemas/common.yaml#/EncryptedEntity"
+                        $ref: "../schemas/members.yaml#/MemberResponse"
                 - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
       "429":
         $ref: "../openapi.yaml#/components/responses/RateLimited"
   post:
     operationId: createMember
     tags: [Members]
     summary: Create a member
-    description: Rate limit 60 req/min (write)
+    description: |
+      Creates a new member within the specified system. The member's display data
+      (name, pronouns, description, avatar, etc.) is encrypted before being sent
+      to the server.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -50,7 +62,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/members.yaml#/MemberResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -63,6 +75,10 @@
     operationId: getMember
     tags: [Members]
     summary: Get a member
+    description: |
+      Returns the encrypted entity for a single member by ID.
+
+      Rate limit: 60 req/min (readDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -74,7 +90,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/members.yaml#/MemberResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -85,6 +101,12 @@
     operationId: updateMember
     tags: [Members]
     summary: Update a member
+    description: |
+      Updates the encrypted payload for an existing member. The server stores
+      an opaque ciphertext blob; all field-level validation is client-side.
+      Returns 409 if the provided version conflicts with the server's current version.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -102,7 +124,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/members.yaml#/MemberResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -117,6 +139,12 @@
     operationId: deleteMember
     tags: [Members]
     summary: Delete a member
+    description: |
+      Permanently deletes a member and all directly dependent data. Returns 409
+      if the member has dependents that must be removed or force-deleted first.
+      This action is irreversible.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -139,6 +167,12 @@
     operationId: duplicateMember
     tags: [Members]
     summary: Duplicate a member
+    description: |
+      Creates a new member by copying the encrypted payload of an existing member.
+      The caller may override specific encrypted fields in the request body.
+      The new member receives a fresh ID and is not archived.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -156,7 +190,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/members.yaml#/MemberResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -171,6 +205,12 @@
     operationId: archiveMember
     tags: [Members]
     summary: Archive a member
+    description: |
+      Marks a member as archived. Archived members are hidden from default list
+      responses but remain fully accessible. Archival is always permitted
+      regardless of dependents.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -182,7 +222,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/members.yaml#/MemberResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -195,6 +235,11 @@
     operationId: restoreMember
     tags: [Members]
     summary: Restore an archived member
+    description: |
+      Removes the archived flag from a member, making it visible in default
+      list responses again.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -206,7 +251,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/members.yaml#/MemberResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -219,24 +264,33 @@
     operationId: getMemberMemberships
     tags: [Members]
     summary: List all group memberships for a member
+    description: |
+      Returns a paginated list of all groups the specified member belongs to,
+      including the membership metadata (role, sort order) for each group.
+
+      Rate limit: 60 req/min (readDefault)
     security:
       - bearerAuth: []
     parameters:
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
     responses:
       "200":
         description: Membership list
         content:
           application/json:
             schema:
-              type: object
-              required: [memberships]
-              properties:
-                memberships:
-                  type: array
-                  items:
-                    $ref: "../schemas/groups.yaml#/GroupMembership"
+              allOf:
+                - type: object
+                  required: [memberships]
+                  properties:
+                    memberships:
+                      type: array
+                      items:
+                        $ref: "../schemas/groups.yaml#/GroupMembership"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "429":

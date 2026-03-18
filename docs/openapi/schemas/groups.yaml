@@ -7,8 +7,42 @@ GroupResponse:
         parentGroupId:
           type: string
           nullable: true
+          description: ID of the parent group, null for top-level groups
+          example: "grp_parent123"
         sortOrder:
           type: integer
+          description: Display order among sibling groups
+          example: 0
+
+GroupTreeNode:
+  type: object
+  description: A node in the hierarchical group tree, with nested children
+  required: [id, systemId, encryptedData, sortOrder, children]
+  properties:
+    id:
+      type: string
+      example: "grp_abc123"
+    systemId:
+      type: string
+      example: "sys_abc123"
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      description: "T1-encrypted PlaintextGroup"
+    parentGroupId:
+      type: string
+      nullable: true
+    sortOrder:
+      type: integer
+    version:
+      type: integer
+    archived:
+      type: boolean
+    children:
+      type: array
+      items:
+        $ref: "#/GroupTreeNode"
+      description: Nested child groups
 
 CreateGroupRequest:
   type: object
@@ -16,15 +50,18 @@ CreateGroupRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextGroup (see ./plaintext.yaml#/PlaintextGroup)"
     parentGroupId:
       type: string
       nullable: true
+      description: ID of the parent group, null for top-level groups
     sortOrder:
       type: integer
       minimum: 0
+      description: Display order among sibling groups
 
 UpdateGroupRequest:
   type: object
@@ -32,6 +69,7 @@ UpdateGroupRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextGroup (see ./plaintext.yaml#/PlaintextGroup)"
@@ -46,6 +84,7 @@ MoveGroupRequest:
     targetParentGroupId:
       type: string
       nullable: true
+      description: ID of the new parent group, null to make top-level
     version:
       type: integer
       minimum: 1
@@ -56,9 +95,11 @@ CopyGroupRequest:
     targetParentGroupId:
       type: string
       nullable: true
+      description: ID of the parent group for the copy, null for top-level
     copyMemberships:
       type: boolean
       default: false
+      description: Whether to copy member assignments to the new group
 
 ReorderGroupsRequest:
   type: object
@@ -84,6 +125,7 @@ AddGroupMemberRequest:
   properties:
     memberId:
       type: string
+      description: ID of the member to add to the group
 
 GroupMembership:
   type: object
@@ -91,5 +133,9 @@ GroupMembership:
   properties:
     groupId:
       type: string
+      description: ID of the group
+      example: "grp_abc123"
     memberId:
       type: string
+      description: ID of the member
+      example: "mem_def456"

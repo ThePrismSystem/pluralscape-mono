@@ -4,6 +4,7 @@ UpdateSystemSettingsRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 131072
       description: "T1-encrypted PlaintextSystemSettings (see ./plaintext.yaml#/PlaintextSystemSettings)"
@@ -11,8 +12,10 @@ UpdateSystemSettingsRequest:
       type: string
       minLength: 1
       maxLength: 255
+      description: Locale code sent as plaintext (server needs it for locale-aware operations)
     biometricEnabled:
       type: boolean
+      description: Biometric state sent as plaintext (server needs it for biometric tracking)
     version:
       type: integer
       minimum: 1
@@ -23,6 +26,7 @@ UpdateNomenclatureRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 131072
       description: "T1-encrypted PlaintextNomenclature (see ./plaintext.yaml#/PlaintextNomenclature)"
@@ -37,6 +41,7 @@ PinRequest:
     pin:
       type: string
       pattern: ^\d{4,6}$
+      description: 4-6 digit numeric PIN
 
 PinVerifyResponse:
   type: object
@@ -44,6 +49,21 @@ PinVerifyResponse:
   properties:
     valid:
       type: boolean
+      description: Whether the provided PIN matches the stored PIN
+
+SetupStatusResponse:
+  type: object
+  required: [nomenclatureComplete, profileComplete, setupComplete]
+  properties:
+    nomenclatureComplete:
+      type: boolean
+      description: Whether the nomenclature step has been completed
+    profileComplete:
+      type: boolean
+      description: Whether the profile step has been completed
+    setupComplete:
+      type: boolean
+      description: Whether the full setup wizard has been completed
 
 SetupStepRequest:
   type: object
@@ -51,6 +71,7 @@ SetupStepRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 131072
       description: |
@@ -63,6 +84,7 @@ SetupCompleteRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 131072
       description: "T1-encrypted PlaintextSystemSettings (see ./plaintext.yaml#/PlaintextSystemSettings)"
@@ -75,3 +97,4 @@ SetupCompleteRequest:
     recoveryKeyBackupConfirmed:
       type: boolean
       const: true
+      description: Must be true to confirm the user has backed up their recovery key

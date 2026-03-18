@@ -3,6 +3,7 @@
     operationId: listFieldDefinitions
     tags: [Fields]
     summary: List field definitions
+    description: Returns a paginated list of custom field definitions for the given system. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -32,6 +33,7 @@
     operationId: createFieldDefinition
     tags: [Fields]
     summary: Create a field definition
+    description: Creates a new custom field definition for the given system. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -61,6 +63,7 @@
     operationId: getFieldDefinition
     tags: [Fields]
     summary: Get a field definition
+    description: Returns details for a single custom field definition by ID. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -68,6 +71,7 @@
       - name: fieldId
         in: path
         required: true
+        description: Field Definition ID
         schema:
           type: string
     responses:
@@ -87,6 +91,7 @@
     operationId: updateFieldDefinition
     tags: [Fields]
     summary: Update a field definition
+    description: Updates an existing custom field definition. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -94,6 +99,7 @@
       - name: fieldId
         in: path
         required: true
+        description: Field Definition ID
         schema:
           type: string
     requestBody:
@@ -123,6 +129,7 @@
     operationId: deleteFieldDefinition
     tags: [Fields]
     summary: Delete a field definition
+    description: Permanently deletes a custom field definition. Returns 409 if the field has values on any members. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -130,6 +137,7 @@
       - name: fieldId
         in: path
         required: true
+        description: Field Definition ID
         schema:
           type: string
     responses:
@@ -149,6 +157,7 @@
     operationId: archiveFieldDefinition
     tags: [Fields]
     summary: Archive a field definition
+    description: Marks a custom field definition as archived. Archived fields are hidden from default views but existing values are preserved. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -156,6 +165,7 @@
       - name: fieldId
         in: path
         required: true
+        description: Field Definition ID
         schema:
           type: string
     responses:
@@ -177,6 +187,7 @@
     operationId: restoreFieldDefinition
     tags: [Fields]
     summary: Restore an archived field definition
+    description: Removes the archived flag from a custom field definition, making it visible in default views again. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -184,6 +195,7 @@
       - name: fieldId
         in: path
         required: true
+        description: Field Definition ID
         schema:
           type: string
     responses:

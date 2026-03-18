@@ -3,6 +3,7 @@
     operationId: listMemberFieldValues
     tags: [Member Fields]
     summary: List field values for a member
+    description: Returns all custom field values set on the given member. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -31,6 +32,7 @@
     operationId: setFieldValue
     tags: [Member Fields]
     summary: Set a field value on a member
+    description: Creates a new field value for the given field definition on a member. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -39,6 +41,7 @@
       - name: fieldDefId
         in: path
         required: true
+        description: Field Definition ID
         schema:
           type: string
     requestBody:
@@ -64,6 +67,7 @@
     operationId: updateFieldValue
     tags: [Member Fields]
     summary: Update a field value on a member
+    description: Updates an existing field value for the given field definition on a member. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -72,6 +76,7 @@
       - name: fieldDefId
         in: path
         required: true
+        description: Field Definition ID
         schema:
           type: string
     requestBody:
@@ -101,6 +106,7 @@
     operationId: deleteFieldValue
     tags: [Member Fields]
     summary: Delete a field value from a member
+    description: Removes a field value for the given field definition from a member. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -109,6 +115,7 @@
       - name: fieldDefId
         in: path
         required: true
+        description: Field Definition ID
         schema:
           type: string
     responses:

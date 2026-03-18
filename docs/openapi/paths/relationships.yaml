@@ -3,6 +3,11 @@
     operationId: listRelationships
     tags: [Relationships]
     summary: List relationships
+    description: |
+      Returns a paginated list of all inter-member relationships for the
+      specified system (e.g., "friends", "rivals", "is a subsystem of").
+
+      Rate limit: 60 req/min (readDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -32,6 +37,11 @@
     operationId: createRelationship
     tags: [Relationships]
     summary: Create a relationship
+    description: |
+      Creates a new directed relationship between two members within the
+      same system. The relationship type and label are user-defined.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -61,6 +71,10 @@
     operationId: getRelationship
     tags: [Relationships]
     summary: Get a relationship
+    description: |
+      Returns details for a single relationship by ID.
+
+      Rate limit: 60 req/min (readDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -68,8 +82,10 @@
       - name: relationshipId
         in: path
         required: true
+        description: Relationship ID
         schema:
           type: string
+          pattern: ^rel_
     responses:
       "200":
         description: Relationship details
@@ -87,6 +103,11 @@
     operationId: updateRelationship
     tags: [Relationships]
     summary: Update a relationship
+    description: |
+      Updates the type, label, or notes for an existing relationship. Returns
+      409 if the provided version conflicts with the server's current version.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -94,8 +115,10 @@
       - name: relationshipId
         in: path
         required: true
+        description: Relationship ID
         schema:
           type: string
+          pattern: ^rel_
     requestBody:
       required: true
       content:
@@ -123,6 +146,11 @@
     operationId: deleteRelationship
     tags: [Relationships]
     summary: Delete a relationship
+    description: |
+      Permanently deletes a relationship record. The members themselves are
+      not affected. This action is irreversible.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -130,8 +158,10 @@
       - name: relationshipId
         in: path
         required: true
+        description: Relationship ID
         schema:
           type: string
+          pattern: ^rel_
     responses:
       "204":
         $ref: "../openapi.yaml#/components/responses/NoContent"
@@ -147,6 +177,11 @@
     operationId: archiveRelationship
     tags: [Relationships]
     summary: Archive a relationship
+    description: |
+      Marks a relationship as archived. Archived relationships are hidden from
+      default list responses but remain accessible. Archival is always permitted.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -154,8 +189,10 @@
       - name: relationshipId
         in: path
         required: true
+        description: Relationship ID
         schema:
           type: string
+          pattern: ^rel_
     responses:
       "200":
         description: Relationship archived
@@ -175,6 +212,11 @@
     operationId: restoreRelationship
     tags: [Relationships]
     summary: Restore an archived relationship
+    description: |
+      Removes the archived flag from a relationship, making it visible in
+      default list responses again.
+
+      Rate limit: 30 req/min (writeDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -182,8 +224,10 @@
       - name: relationshipId
         in: path
         required: true
+        description: Relationship ID
         schema:
           type: string
+          pattern: ^rel_
     responses:
       "200":
         description: Relationship restored

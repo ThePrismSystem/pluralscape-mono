@@ -3,6 +3,7 @@
     operationId: listSideSystems
     tags: [Side Systems]
     summary: List side systems
+    description: Returns a paginated list of side systems for the given system. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -22,7 +23,7 @@
                     sideSystems:
                       type: array
                       items:
-                        $ref: "../schemas/common.yaml#/EncryptedEntity"
+                        $ref: "../schemas/structures.yaml#/SideSystemResponse"
                 - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
@@ -32,6 +33,7 @@
     operationId: createSideSystem
     tags: [Side Systems]
     summary: Create a side system
+    description: Creates a new side system within the given system. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -48,7 +50,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/structures.yaml#/SideSystemResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -61,6 +63,7 @@
     operationId: getSideSystem
     tags: [Side Systems]
     summary: Get a side system
+    description: Returns details for a single side system by ID. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -68,6 +71,7 @@
       - name: sideSystemId
         in: path
         required: true
+        description: Side System ID
         schema:
           type: string
     responses:
@@ -76,7 +80,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/structures.yaml#/SideSystemResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -87,6 +91,7 @@
     operationId: updateSideSystem
     tags: [Side Systems]
     summary: Update a side system
+    description: Updates the encrypted payload or metadata for a side system. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -94,6 +99,7 @@
       - name: sideSystemId
         in: path
         required: true
+        description: Side System ID
         schema:
           type: string
     requestBody:
@@ -108,7 +114,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/structures.yaml#/SideSystemResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -123,6 +129,7 @@
     operationId: deleteSideSystem
     tags: [Side Systems]
     summary: Delete a side system
+    description: Permanently deletes a side system. Returns 409 if the side system has dependents. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -130,6 +137,7 @@
       - name: sideSystemId
         in: path
         required: true
+        description: Side System ID
         schema:
           type: string
     responses:
@@ -149,6 +157,7 @@
     operationId: archiveSideSystem
     tags: [Side Systems]
     summary: Archive a side system
+    description: Marks a side system as archived. Archived side systems are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -156,6 +165,7 @@
       - name: sideSystemId
         in: path
         required: true
+        description: Side System ID
         schema:
           type: string
     responses:
@@ -164,7 +174,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/structures.yaml#/SideSystemResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -177,6 +187,7 @@
     operationId: restoreSideSystem
     tags: [Side Systems]
     summary: Restore an archived side system
+    description: Removes the archived flag from a side system, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -184,6 +195,7 @@
       - name: sideSystemId
         in: path
         required: true
+        description: Side System ID
         schema:
           type: string
     responses:
@@ -192,7 +204,7 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/common.yaml#/EncryptedEntity"
+              $ref: "../schemas/structures.yaml#/SideSystemResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
@@ -205,6 +217,7 @@
     operationId: listSideSystemMemberships
     tags: [Structure Memberships]
     summary: List side system memberships
+    description: Returns a paginated list of member memberships for the given side system. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -212,6 +225,7 @@
       - name: sideSystemId
         in: path
         required: true
+        description: Side System ID
         schema:
           type: string
       - $ref: "../openapi.yaml#/components/parameters/Cursor"
@@ -222,13 +236,15 @@
         content:
           application/json:
             schema:
-              type: object
-              required: [memberships]
-              properties:
-                memberships:
-                  type: array
-                  items:
-                    type: object
+              allOf:
+                - type: object
+                  required: [memberships]
+                  properties:
+                    memberships:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/StructureMembershipResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "429":
@@ -237,6 +253,7 @@
     operationId: addSideSystemMembership
     tags: [Structure Memberships]
     summary: Add a member to a side system
+    description: Creates a membership record associating a member with this side system. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -244,6 +261,7 @@
       - name: sideSystemId
         in: path
         required: true
+        description: Side System ID
         schema:
           type: string
     requestBody:
@@ -258,7 +276,7 @@
         content:
           application/json:
             schema:
-              type: object
+              $ref: "../schemas/structures.yaml#/StructureMembershipResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -273,6 +291,7 @@
     operationId: removeSideSystemMembership
     tags: [Structure Memberships]
     summary: Remove a membership from a side system
+    description: Removes a member's membership from the given side system. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -280,11 +299,13 @@
       - name: sideSystemId
         in: path
         required: true
+        description: Side System ID
         schema:
           type: string
       - name: membershipId
         in: path
         required: true
+        description: Membership ID
         schema:
           type: string
     responses:

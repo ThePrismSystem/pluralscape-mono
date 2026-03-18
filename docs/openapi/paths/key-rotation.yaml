@@ -23,6 +23,7 @@
       - name: bucketId
         in: path
         required: true
+        description: Privacy Bucket ID
         schema:
           type: string
     requestBody:
@@ -52,6 +53,7 @@
     operationId: getRotationProgress
     tags: [Key Rotation]
     summary: Get rotation progress
+    description: Returns the current status and progress of an in-flight key rotation. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -59,11 +61,13 @@
       - name: bucketId
         in: path
         required: true
+        description: Privacy Bucket ID
         schema:
           type: string
       - name: rotationId
         in: path
         required: true
+        description: Rotation ID
         schema:
           type: string
     responses:
@@ -95,11 +99,13 @@
       - name: bucketId
         in: path
         required: true
+        description: Privacy Bucket ID
         schema:
           type: string
       - name: rotationId
         in: path
         required: true
+        description: Rotation ID
         schema:
           type: string
     requestBody:
@@ -136,11 +142,13 @@
       - name: bucketId
         in: path
         required: true
+        description: Privacy Bucket ID
         schema:
           type: string
       - name: rotationId
         in: path
         required: true
+        description: Rotation ID
         schema:
           type: string
     requestBody:

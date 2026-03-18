@@ -3,6 +3,7 @@
     operationId: listSubsystems
     tags: [Subsystems]
     summary: List subsystems
+    description: Returns a paginated list of subsystems for the given system. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -32,6 +33,7 @@
     operationId: createSubsystem
     tags: [Subsystems]
     summary: Create a subsystem
+    description: Creates a new subsystem within the given system. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -61,6 +63,7 @@
     operationId: getSubsystem
     tags: [Subsystems]
     summary: Get a subsystem
+    description: Returns details for a single subsystem by ID. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -68,6 +71,7 @@
       - name: subsystemId
         in: path
         required: true
+        description: Subsystem ID
         schema:
           type: string
     responses:
@@ -87,6 +91,7 @@
     operationId: updateSubsystem
     tags: [Subsystems]
     summary: Update a subsystem
+    description: Updates the encrypted payload or metadata for a subsystem. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -94,6 +99,7 @@
       - name: subsystemId
         in: path
         required: true
+        description: Subsystem ID
         schema:
           type: string
     requestBody:
@@ -123,6 +129,7 @@
     operationId: deleteSubsystem
     tags: [Subsystems]
     summary: Delete a subsystem
+    description: Permanently deletes a subsystem. Returns 409 if the subsystem has dependents. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -130,6 +137,7 @@
       - name: subsystemId
         in: path
         required: true
+        description: Subsystem ID
         schema:
           type: string
     responses:
@@ -149,6 +157,7 @@
     operationId: archiveSubsystem
     tags: [Subsystems]
     summary: Archive a subsystem
+    description: Marks a subsystem as archived. Archived subsystems are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -156,6 +165,7 @@
       - name: subsystemId
         in: path
         required: true
+        description: Subsystem ID
         schema:
           type: string
     responses:
@@ -177,6 +187,7 @@
     operationId: restoreSubsystem
     tags: [Subsystems]
     summary: Restore an archived subsystem
+    description: Removes the archived flag from a subsystem, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -184,6 +195,7 @@
       - name: subsystemId
         in: path
         required: true
+        description: Subsystem ID
         schema:
           type: string
     responses:
@@ -205,6 +217,7 @@
     operationId: listSubsystemMemberships
     tags: [Structure Memberships]
     summary: List subsystem memberships
+    description: Returns a paginated list of member memberships for the given subsystem. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -212,6 +225,7 @@
       - name: subsystemId
         in: path
         required: true
+        description: Subsystem ID
         schema:
           type: string
       - $ref: "../openapi.yaml#/components/parameters/Cursor"
@@ -222,13 +236,15 @@
         content:
           application/json:
             schema:
-              type: object
-              required: [memberships]
-              properties:
-                memberships:
-                  type: array
-                  items:
-                    type: object
+              allOf:
+                - type: object
+                  required: [memberships]
+                  properties:
+                    memberships:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/StructureMembershipResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "429":
@@ -237,6 +253,7 @@
     operationId: addSubsystemMembership
     tags: [Structure Memberships]
     summary: Add a member to a subsystem
+    description: Creates a membership record associating a member with this subsystem. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -244,6 +261,7 @@
       - name: subsystemId
         in: path
         required: true
+        description: Subsystem ID
         schema:
           type: string
     requestBody:
@@ -258,7 +276,7 @@
         content:
           application/json:
             schema:
-              type: object
+              $ref: "../schemas/structures.yaml#/StructureMembershipResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -273,6 +291,7 @@
     operationId: removeSubsystemMembership
     tags: [Structure Memberships]
     summary: Remove a membership from a subsystem
+    description: Removes a member's membership from the given subsystem. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -280,11 +299,13 @@
       - name: subsystemId
         in: path
         required: true
+        description: Subsystem ID
         schema:
           type: string
       - name: membershipId
         in: path
         required: true
+        description: Membership ID
         schema:
           type: string
     responses:

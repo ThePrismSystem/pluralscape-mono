@@ -3,12 +3,14 @@
     operationId: listBlobs
     tags: [Blobs]
     summary: List blobs
+    description: Returns a paginated list of blob metadata records for the given system. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
       - $ref: "../openapi.yaml#/components/parameters/SystemId"
       - name: purpose
         in: query
+        description: Filter blobs by purpose
         schema:
           $ref: "../schemas/blobs.yaml#/BlobPurpose"
       - $ref: "../openapi.yaml#/components/parameters/Cursor"
@@ -89,6 +91,7 @@
       - name: blobId
         in: path
         required: true
+        description: Blob ID
         schema:
           type: string
     requestBody:
@@ -118,6 +121,7 @@
     operationId: getDownloadUrl
     tags: [Blobs]
     summary: Get a presigned download URL
+    description: Returns a short-lived presigned URL for downloading the encrypted blob from S3-compatible storage. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -125,6 +129,7 @@
       - name: blobId
         in: path
         required: true
+        description: Blob ID
         schema:
           type: string
     responses:
@@ -146,6 +151,7 @@
     operationId: getBlob
     tags: [Blobs]
     summary: Get blob metadata
+    description: Returns metadata for a single blob by ID, not the blob content itself. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -153,6 +159,7 @@
       - name: blobId
         in: path
         required: true
+        description: Blob ID
         schema:
           type: string
     responses:
@@ -172,6 +179,7 @@
     operationId: deleteBlob
     tags: [Blobs]
     summary: Delete a blob
+    description: Permanently deletes a blob record and schedules the associated object for deletion from storage. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -179,6 +187,7 @@
       - name: blobId
         in: path
         required: true
+        description: Blob ID
         schema:
           type: string
     responses:

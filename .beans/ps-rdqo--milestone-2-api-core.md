@@ -12,4 +12,6 @@ blocked_by:
 
 Authentication, identity management, core CRUD
 
-## Summary of Changes\n\nAll API Core work is complete: auth system, system/member/group/custom-front/field/relationship/subsystem/side-system/layer/innerworld/blob/lifecycle-event CRUD, media upload pipeline, key rotation, setup wizard, settings, nomenclature, security audit remediation, and comprehensive OpenAPI 3.1 specification.
+## Summary of Changes
+
+All API Core work is complete: auth system, system/member/group/custom-front/field/relationship/subsystem/side-system/layer/innerworld/blob/lifecycle-event CRUD, media upload pipeline, key rotation, setup wizard, settings, nomenclature, security audit remediation, and comprehensive OpenAPI 3.1 specification.

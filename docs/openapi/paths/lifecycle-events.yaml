@@ -3,6 +3,7 @@
     operationId: listLifecycleEvents
     tags: [Lifecycle Events]
     summary: List lifecycle events
+    description: Returns a paginated list of lifecycle events recorded for the given system. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -64,6 +65,7 @@
     operationId: getLifecycleEvent
     tags: [Lifecycle Events]
     summary: Get a lifecycle event
+    description: Returns details for a single lifecycle event by ID. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -71,6 +73,7 @@
       - name: eventId
         in: path
         required: true
+        description: Lifecycle Event ID
         schema:
           type: string
     responses:

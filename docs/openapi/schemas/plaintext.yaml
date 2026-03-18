@@ -195,7 +195,7 @@ PlaintextMemberPhoto:
 
     A photo entry in a member's gallery. Encryption tier: **T1**.
   type: object
-  required: [imageSource, sortOrder]
+  required: [imageSource]
   properties:
     imageSource:
       $ref: "#/PlaintextImageSource"
@@ -211,7 +211,7 @@ PlaintextGroup:
 
     A user-defined group for organizing members. Encryption tier: **T1**.
   type: object
-  required: [name, sortOrder]
+  required: [name]
   properties:
     name:
       type: string
@@ -679,13 +679,13 @@ PlaintextNomenclature:
     switching:
       type: string
       description: "Term for switching (default: 'Switch'). Presets: Switch, Shift"
-    co-presence:
+    coPresence:
       type: string
       description: "Term for co-fronting (default: 'Co-fronting'). Presets: Co-fronting, Co-conscious, Co-driving"
-    internal-space:
+    internalSpace:
       type: string
       description: "Term for the internal space (default: 'Headspace'). Presets: Headspace, Innerworld"
-    primary-fronter:
+    primaryFronter:
       type: string
       description: "Term for the host (default: 'Host'). Presets: Host, Primary fronter, Main fronter"
     structure:

@@ -88,6 +88,25 @@ servers:
   - url: http://localhost:3000
     description: Local development
 
+security:
+  - bearerAuth: []
+
+x-tagGroups:
+  - name: Infrastructure
+    tags: [Health]
+  - name: Authentication & Account
+    tags: [Auth, Account]
+  - name: System Management
+    tags: [Systems, System Settings]
+  - name: Core Resources
+    tags: [Members, Member Photos, Member Fields, Groups, Custom Fronts, Fields, Relationships]
+  - name: System Structures
+    tags: [Subsystems, Side Systems, Layers, Structure Links, Structure Memberships]
+  - name: Lifecycle & Innerworld
+    tags: [Lifecycle Events, Innerworld]
+  - name: Media & Crypto
+    tags: [Blobs, Key Rotation]
+
 tags:
   - name: Health
     description: Service health checks
@@ -205,6 +224,10 @@ components:
       $ref: "./schemas/auth.yaml#/PasswordResetResponse"
     BiometricTokenRequest:
       $ref: "./schemas/auth.yaml#/BiometricTokenRequest"
+    BiometricEnrollResponse:
+      $ref: "./schemas/auth.yaml#/BiometricEnrollResponse"
+    BiometricVerifyResponse:
+      $ref: "./schemas/auth.yaml#/BiometricVerifyResponse"
     SessionInfo:
       $ref: "./schemas/auth.yaml#/SessionInfo"
     SessionListResponse:
@@ -224,6 +247,8 @@ components:
       $ref: "./schemas/account.yaml#/ChangePasswordRequest"
     AuditLogQuery:
       $ref: "./schemas/account.yaml#/AuditLogQuery"
+    AuditLogEntry:
+      $ref: "./schemas/account.yaml#/AuditLogEntry"
     AuditLogResponse:
       $ref: "./schemas/account.yaml#/AuditLogResponse"
     # Systems
@@ -232,6 +257,8 @@ components:
     UpdateSystemRequest:
       $ref: "./schemas/systems.yaml#/UpdateSystemRequest"
     # Members
+    MemberResponse:
+      $ref: "./schemas/members.yaml#/MemberResponse"
     CreateMemberRequest:
       $ref: "./schemas/members.yaml#/CreateMemberRequest"
     UpdateMemberRequest:
@@ -259,6 +286,8 @@ components:
     FieldValueResponse:
       $ref: "./schemas/fields.yaml#/FieldValueResponse"
     # Groups
+    GroupTreeNode:
+      $ref: "./schemas/groups.yaml#/GroupTreeNode"
     GroupResponse:
       $ref: "./schemas/groups.yaml#/GroupResponse"
     CreateGroupRequest:
@@ -276,6 +305,8 @@ components:
     GroupMembership:
       $ref: "./schemas/groups.yaml#/GroupMembership"
     # Custom Fronts
+    CustomFrontResponse:
+      $ref: "./schemas/custom-fronts.yaml#/CustomFrontResponse"
     CreateCustomFrontRequest:
       $ref: "./schemas/custom-fronts.yaml#/CreateCustomFrontRequest"
     UpdateCustomFrontRequest:
@@ -312,6 +343,10 @@ components:
       $ref: "./schemas/structures.yaml#/UpdateLayerRequest"
     LayerResponse:
       $ref: "./schemas/structures.yaml#/LayerResponse"
+    StructureMembershipResponse:
+      $ref: "./schemas/structures.yaml#/StructureMembershipResponse"
+    SideSystemResponse:
+      $ref: "./schemas/structures.yaml#/SideSystemResponse"
     AddStructureMembershipRequest:
       $ref: "./schemas/structures.yaml#/AddStructureMembershipRequest"
     CreateSubsystemLayerLinkRequest:
@@ -383,6 +418,8 @@ components:
       $ref: "./schemas/settings.yaml#/PinRequest"
     PinVerifyResponse:
       $ref: "./schemas/settings.yaml#/PinVerifyResponse"
+    SetupStatusResponse:
+      $ref: "./schemas/settings.yaml#/SetupStatusResponse"
     SetupStepRequest:
       $ref: "./schemas/settings.yaml#/SetupStepRequest"
     SetupCompleteRequest:

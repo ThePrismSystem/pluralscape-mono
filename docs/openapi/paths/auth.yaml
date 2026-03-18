@@ -16,6 +16,7 @@
       way to recover the master encryption key if the password is forgotten.
 
       Rate limit: 5 req/min (authHeavy)
+    security: []
     requestBody:
       required: true
       content:
@@ -50,6 +51,7 @@
       Argon2 DoS on this unauthenticated endpoint.
 
       Rate limit: 5 req/min (authHeavy)
+    security: []
     requestBody:
       required: true
       content:
@@ -85,6 +87,7 @@
       unchanged — only its wrapping changes.
 
       Rate limit: 5 req/min (authHeavy)
+    security: []
     requestBody:
       required: true
       content:
@@ -128,7 +131,7 @@
         content:
           application/json:
             schema:
-              type: object
+              $ref: "../schemas/auth.yaml#/BiometricEnrollResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -159,7 +162,7 @@
         content:
           application/json:
             schema:
-              type: object
+              $ref: "../schemas/auth.yaml#/BiometricVerifyResponse"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":

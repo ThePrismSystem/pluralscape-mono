@@ -1,18 +1,18 @@
 SystemProfile:
-  type: object
-  required: [id, version, createdAt, updatedAt]
-  properties:
-    id:
-      type: string
-    encryptedData:
-      type: string
-      nullable: true
-    version:
-      type: integer
-    createdAt:
-      type: integer
-    updatedAt:
-      type: integer
+  description: |
+    The system (plural system) profile. Unlike most entities, a newly created
+    system may not yet have encrypted data if the profile has not been set up.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      properties:
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          nullable: true
+          description: |
+            T1-encrypted PlaintextSystem. Nullable because a system created via
+            registration may not have profile data until the setup wizard completes.
 
 UpdateSystemRequest:
   type: object
@@ -20,6 +20,7 @@ UpdateSystemRequest:
   properties:
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 131072
       description: "T1-encrypted PlaintextSystem (see ./plaintext.yaml#/PlaintextSystem)"

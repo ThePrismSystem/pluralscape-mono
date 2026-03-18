@@ -1,6 +1,8 @@
 BlobPurpose:
   type: string
   enum: [avatar, member-photo, journal-image, attachment, export, littles-safe-mode]
+  description: The intended purpose of the blob, which determines size limits
+  example: avatar
 
 CreateUploadUrlRequest:
   type: object
@@ -12,6 +14,8 @@ CreateUploadUrlRequest:
       type: string
       minLength: 1
       maxLength: 255
+      description: MIME type of the file
+      example: "image/png"
     sizeBytes:
       type: integer
       minimum: 1
@@ -22,7 +26,7 @@ CreateUploadUrlRequest:
     encryptionTier:
       type: integer
       enum: [1, 2]
-      description: "1 = master-key encrypted, 2 = per-bucket encrypted"
+      description: "1 = master-key encrypted (private), 2 = per-bucket encrypted (shared)"
 
 UploadUrlResponse:
   type: object
@@ -30,11 +34,16 @@ UploadUrlResponse:
   properties:
     blobId:
       type: string
+      description: ID of the created blob record
+      example: "blob_abc123"
     uploadUrl:
       type: string
       format: uri
+      description: Presigned URL for uploading the encrypted file
     expiresAt:
       type: integer
+      format: int64
+      description: Unix timestamp in milliseconds when the upload URL expires
 
 ConfirmUploadRequest:
   type: object
@@ -45,31 +54,47 @@ ConfirmUploadRequest:
       minLength: 64
       maxLength: 64
       description: SHA-256 hex digest of the uploaded file
+      example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     thumbnailOfBlobId:
       type: string
+      description: If this blob is a thumbnail, the ID of the parent blob
 
 BlobResponse:
   type: object
-  required: [id, systemId, purpose, sizeBytes, checksum, uploadedAt]
+  required: [id, systemId, purpose, sizeBytes, checksum, encryptionTier, uploadedAt]
   properties:
     id:
       type: string
+      description: Blob identifier
+      example: "blob_abc123"
     systemId:
       type: string
+      description: System that owns this blob
+      example: "sys_abc123"
     purpose:
       $ref: "#/BlobPurpose"
     mimeType:
       type: string
       nullable: true
+      description: MIME type of the uploaded file
     sizeBytes:
       type: integer
+      description: File size in bytes
     checksum:
       type: string
+      description: SHA-256 hex digest of the uploaded file
+    encryptionTier:
+      type: integer
+      enum: [1, 2]
+      description: "1 = master-key encrypted, 2 = per-bucket encrypted. Needed to select the correct decryption key."
     uploadedAt:
       type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
     thumbnailOfBlobId:
       type: string
       nullable: true
+      description: If this blob is a thumbnail, the ID of the parent blob
 
 DownloadUrlResponse:
   type: object
@@ -77,8 +102,12 @@ DownloadUrlResponse:
   properties:
     blobId:
       type: string
+      description: ID of the blob
     downloadUrl:
       type: string
       format: uri
+      description: Presigned URL for downloading the encrypted file
     expiresAt:
       type: integer
+      format: int64
+      description: Unix timestamp in milliseconds when the download URL expires

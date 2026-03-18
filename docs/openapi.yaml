@@ -86,6 +86,8 @@ info:
 servers:
   - url: http://localhost:3000
     description: Local development
+security:
+  - bearerAuth: []
 tags:
   - name: Health
     description: Service health checks
@@ -136,6 +138,8 @@ paths:
       tags:
         - Health
       summary: Service info
+      description: Returns basic service information. No authentication required.
+      security: []
       responses:
         "200":
           description: Service is running
@@ -159,6 +163,8 @@ paths:
       tags:
         - Health
       summary: Health check
+      description: Returns service health status. No authentication required.
+      security: []
       responses:
         "200":
           description: Service is healthy
@@ -191,6 +197,7 @@ paths:
         way to recover the master encryption key if the password is forgotten.
 
         Rate limit: 5 req/min (authHeavy)
+      security: []
       requestBody:
         required: true
         content:
@@ -225,6 +232,7 @@ paths:
         Argon2 DoS on this unauthenticated endpoint.
 
         Rate limit: 5 req/min (authHeavy)
+      security: []
       requestBody:
         required: true
         content:
@@ -260,6 +268,7 @@ paths:
         unchanged — only its wrapping changes.
 
         Rate limit: 5 req/min (authHeavy)
+      security: []
       requestBody:
         required: true
         content:
@@ -303,7 +312,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/BiometricEnrollResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -334,7 +343,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/BiometricVerifyResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -554,6 +563,12 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - email
+                properties:
+                  email:
+                    type: string
+                    format: email
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -587,6 +602,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - ok
+                properties:
+                  ok:
+                    type: boolean
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -607,27 +627,29 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: event_type
+        - name: eventType
           in: query
           schema:
             type: string
-        - name: resource_type
+          description: Filter by event type (e.g., "member.created", "session.revoked")
+        - name: resourceType
           in: query
           schema:
             type: string
             pattern: ^[a-z][a-z0-9-]*$
+          description: Filter by resource type (e.g., "member", "group", "session")
         - name: from
           in: query
           schema:
             type: integer
             minimum: 0
-          description: Start timestamp (ms)
+          description: Start of time range as Unix timestamp in milliseconds (inclusive)
         - name: to
           in: query
           schema:
             type: integer
             minimum: 0
-          description: End timestamp (ms)
+          description: End of time range as Unix timestamp in milliseconds (inclusive)
         - $ref: "#/components/parameters/Cursor"
         - $ref: "#/components/parameters/Limit"
       responses:
@@ -793,6 +815,7 @@ paths:
       tags:
         - System Settings
       summary: Get system settings
+      description: Returns the encrypted settings payload for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -813,6 +836,7 @@ paths:
       tags:
         - System Settings
       summary: Update system settings
+      description: Replaces the encrypted settings payload for the given system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -842,7 +866,7 @@ paths:
       tags:
         - System Settings
       summary: Set system PIN
-      description: Rate limit 5 req/min (authHeavy)
+      description: Sets or replaces the system's PIN lock. Rate limit 5 req/min (authHeavy).
       security:
         - bearerAuth: []
       parameters:
@@ -860,6 +884,9 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  ok:
+                    type: boolean
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -871,7 +898,7 @@ paths:
       tags:
         - System Settings
       summary: Remove system PIN
-      description: Requires the current PIN in the request body. Rate limit 5 req/min (authHeavy)
+      description: Removes the system's PIN lock. Requires the current PIN in the request body. Rate limit 5 req/min (authHeavy).
       security:
         - bearerAuth: []
       parameters:
@@ -897,7 +924,7 @@ paths:
       tags:
         - System Settings
       summary: Verify system PIN
-      description: Rate limit 5 req/min (authHeavy)
+      description: Checks whether the provided PIN matches the system's stored PIN hash. Rate limit 5 req/min (authHeavy).
       security:
         - bearerAuth: []
       parameters:
@@ -927,6 +954,7 @@ paths:
       tags:
         - System Settings
       summary: Get system nomenclature
+      description: Returns the encrypted nomenclature payload for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -947,6 +975,7 @@ paths:
       tags:
         - System Settings
       summary: Update system nomenclature
+      description: Replaces the encrypted nomenclature payload for the given system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -976,6 +1005,7 @@ paths:
       tags:
         - System Settings
       summary: Get setup wizard status
+      description: Returns the current completion status of the system setup wizard, indicating which steps have been completed. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -986,7 +1016,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/SetupStatusResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -997,6 +1027,7 @@ paths:
       tags:
         - System Settings
       summary: Submit nomenclature setup step
+      description: Completes the nomenclature step of the system setup wizard by saving the system's preferred terminology. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1014,6 +1045,9 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  ok:
+                    type: boolean
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1026,6 +1060,7 @@ paths:
       tags:
         - System Settings
       summary: Submit profile setup step
+      description: Completes the profile step of the system setup wizard by saving the system's initial profile data. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1043,6 +1078,9 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  ok:
+                    type: boolean
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1055,6 +1093,7 @@ paths:
       tags:
         - System Settings
       summary: Complete system setup
+      description: Finalizes the system setup wizard, marking the system as fully configured. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1072,6 +1111,9 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  ok:
+                    type: boolean
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1084,7 +1126,12 @@ paths:
       tags:
         - Members
       summary: List members
-      description: Rate limit 60 req/min (readDefault)
+      description: |
+        Returns a paginated list of all members belonging to the specified system.
+        Members are returned as encrypted entities — all user-visible fields are
+        encrypted client-side and opaque to the server.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1105,10 +1152,12 @@ paths:
                       members:
                         type: array
                         items:
-                          $ref: "#/components/schemas/EncryptedEntity"
+                          $ref: "#/components/schemas/MemberResponse"
                   - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
     post:
@@ -1116,7 +1165,12 @@ paths:
       tags:
         - Members
       summary: Create a member
-      description: Rate limit 60 req/min (write)
+      description: |
+        Creates a new member within the specified system. The member's display data
+        (name, pronouns, description, avatar, etc.) is encrypted before being sent
+        to the server.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1133,7 +1187,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/MemberResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1146,6 +1200,10 @@ paths:
       tags:
         - Members
       summary: Get a member
+      description: |
+        Returns the encrypted entity for a single member by ID.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1157,7 +1215,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/MemberResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -1169,6 +1227,12 @@ paths:
       tags:
         - Members
       summary: Update a member
+      description: |
+        Updates the encrypted payload for an existing member. The server stores
+        an opaque ciphertext blob; all field-level validation is client-side.
+        Returns 409 if the provided version conflicts with the server's current version.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1186,7 +1250,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/MemberResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1202,6 +1266,12 @@ paths:
       tags:
         - Members
       summary: Delete a member
+      description: |
+        Permanently deletes a member and all directly dependent data. Returns 409
+        if the member has dependents that must be removed or force-deleted first.
+        This action is irreversible.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1224,6 +1294,12 @@ paths:
       tags:
         - Members
       summary: Duplicate a member
+      description: |
+        Creates a new member by copying the encrypted payload of an existing member.
+        The caller may override specific encrypted fields in the request body.
+        The new member receives a fresh ID and is not archived.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1241,7 +1317,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/MemberResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1256,6 +1332,12 @@ paths:
       tags:
         - Members
       summary: Archive a member
+      description: |
+        Marks a member as archived. Archived members are hidden from default list
+        responses but remain fully accessible. Archival is always permitted
+        regardless of dependents.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1267,7 +1349,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/MemberResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -1280,6 +1362,11 @@ paths:
       tags:
         - Members
       summary: Restore an archived member
+      description: |
+        Removes the archived flag from a member, making it visible in default
+        list responses again.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1291,7 +1378,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/MemberResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -1304,25 +1391,34 @@ paths:
       tags:
         - Members
       summary: List all group memberships for a member
+      description: |
+        Returns a paginated list of all groups the specified member belongs to,
+        including the membership metadata (role, sort order) for each group.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
         - $ref: "#/components/parameters/MemberId"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
       responses:
         "200":
           description: Membership list
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - memberships
-                properties:
-                  memberships:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/GroupMembership"
+                allOf:
+                  - type: object
+                    required:
+                      - memberships
+                    properties:
+                      memberships:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/GroupMembership"
+                  - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -1333,6 +1429,7 @@ paths:
       tags:
         - Member Photos
       summary: List member photos
+      description: Returns all photos associated with a member. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1361,6 +1458,7 @@ paths:
       tags:
         - Member Photos
       summary: Create a member photo
+      description: Attaches a new encrypted photo record to a member. The blob must be uploaded separately via the blobs API. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1391,6 +1489,7 @@ paths:
       tags:
         - Member Photos
       summary: Reorder member photos
+      description: Updates the display order of a member's photos. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1409,6 +1508,9 @@ paths:
             application/json:
               schema:
                 type: object
+                properties:
+                  ok:
+                    type: boolean
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1421,6 +1523,7 @@ paths:
       tags:
         - Member Photos
       summary: Archive a member photo
+      description: Marks a member photo as archived. Archived photos are hidden from default views but not deleted. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1429,6 +1532,7 @@ paths:
         - name: photoId
           in: path
           required: true
+          description: Photo ID
           schema:
             type: string
       responses:
@@ -1450,6 +1554,7 @@ paths:
       tags:
         - Member Photos
       summary: Restore an archived member photo
+      description: Removes the archived flag from a member photo, making it visible in default views again. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1458,6 +1563,7 @@ paths:
         - name: photoId
           in: path
           required: true
+          description: Photo ID
           schema:
             type: string
       responses:
@@ -1479,6 +1585,7 @@ paths:
       tags:
         - Member Photos
       summary: Delete a member photo
+      description: Permanently deletes a member photo record. The associated blob must be deleted separately. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1487,6 +1594,7 @@ paths:
         - name: photoId
           in: path
           required: true
+          description: Photo ID
           schema:
             type: string
       responses:
@@ -1504,6 +1612,7 @@ paths:
       tags:
         - Member Fields
       summary: List field values for a member
+      description: Returns all custom field values set on the given member. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1533,6 +1642,7 @@ paths:
       tags:
         - Member Fields
       summary: Set a field value on a member
+      description: Creates a new field value for the given field definition on a member. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1541,6 +1651,7 @@ paths:
         - name: fieldDefId
           in: path
           required: true
+          description: Field Definition ID
           schema:
             type: string
       requestBody:
@@ -1567,6 +1678,7 @@ paths:
       tags:
         - Member Fields
       summary: Update a field value on a member
+      description: Updates an existing field value for the given field definition on a member. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1575,6 +1687,7 @@ paths:
         - name: fieldDefId
           in: path
           required: true
+          description: Field Definition ID
           schema:
             type: string
       requestBody:
@@ -1605,6 +1718,7 @@ paths:
       tags:
         - Member Fields
       summary: Delete a field value from a member
+      description: Removes a field value for the given field definition from a member. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -1613,6 +1727,7 @@ paths:
         - name: fieldDefId
           in: path
           required: true
+          description: Field Definition ID
           schema:
             type: string
       responses:
@@ -1630,6 +1745,11 @@ paths:
       tags:
         - Groups
       summary: List groups
+      description: |
+        Returns a paginated flat list of all groups belonging to the specified system.
+        For a hierarchical view, use the `/tree` endpoint.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1654,6 +1774,8 @@ paths:
                   - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
     post:
@@ -1661,6 +1783,11 @@ paths:
       tags:
         - Groups
       summary: Create a group
+      description: |
+        Creates a new group within the specified system. Groups can be nested
+        hierarchically via a `parentId` in the request body.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1690,6 +1817,12 @@ paths:
       tags:
         - Groups
       summary: Get hierarchical group tree
+      description: |
+        Returns all groups as a nested tree structure. Each node contains its
+        direct children recursively. Useful for rendering a full hierarchy
+        without making multiple paginated requests.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1702,8 +1835,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  description: GroupTree node with nested children
+                  $ref: "#/components/schemas/GroupTreeNode"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -1714,6 +1846,11 @@ paths:
       tags:
         - Groups
       summary: Batch reorder groups
+      description: |
+        Updates the sort order of multiple groups in a single request. Accepts
+        an ordered array of group IDs and applies the new ordering atomically.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1731,6 +1868,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - ok
+                properties:
+                  ok:
+                    type: boolean
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1743,6 +1885,10 @@ paths:
       tags:
         - Groups
       summary: Get a group
+      description: |
+        Returns details for a single group by ID.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1766,6 +1912,11 @@ paths:
       tags:
         - Groups
       summary: Update a group
+      description: |
+        Updates the metadata for an existing group. Returns 409 if the provided
+        version conflicts with the server's current version.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1799,6 +1950,11 @@ paths:
       tags:
         - Groups
       summary: Delete a group
+      description: |
+        Permanently deletes a group. Returns 409 if the group has members or
+        child groups that must be removed first. This action is irreversible.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1821,6 +1977,12 @@ paths:
       tags:
         - Groups
       summary: Move a group to a new parent
+      description: |
+        Reparents a group by changing its `parentId`. Pass `null` as the parent
+        to move the group to the root level. Returns 409 if moving would create
+        a cycle in the hierarchy.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1855,6 +2017,12 @@ paths:
       tags:
         - Groups
       summary: Copy a group
+      description: |
+        Creates a deep copy of a group, including its members and optionally
+        its child groups. The copy is placed at the same hierarchy level as
+        the original unless a `targetParentId` is specified in the request.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1885,6 +2053,12 @@ paths:
       tags:
         - Groups
       summary: Archive a group
+      description: |
+        Marks a group as archived. Archived groups are hidden from default list
+        responses but remain accessible. Archival is always permitted regardless
+        of members or child groups.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1909,6 +2083,11 @@ paths:
       tags:
         - Groups
       summary: Restore an archived group
+      description: |
+        Removes the archived flag from a group, making it visible in default
+        list responses again.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1933,6 +2112,11 @@ paths:
       tags:
         - Groups
       summary: List members in a group
+      description: |
+        Returns a paginated list of all members belonging to the specified group,
+        including their membership metadata (role, sort order).
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1946,16 +2130,20 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - members
-                properties:
-                  members:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/GroupMembership"
+                allOf:
+                  - type: object
+                    required:
+                      - members
+                    properties:
+                      members:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/GroupMembership"
+                  - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "429":
           $ref: "#/components/responses/RateLimited"
     post:
@@ -1963,6 +2151,11 @@ paths:
       tags:
         - Groups
       summary: Add a member to a group
+      description: |
+        Adds an existing member to the specified group. Returns 409 if the
+        member is already in the group.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -1995,6 +2188,11 @@ paths:
       tags:
         - Groups
       summary: Remove a member from a group
+      description: |
+        Removes a member from the specified group. The member itself is not
+        deleted — only the group membership record is removed.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2016,6 +2214,12 @@ paths:
       tags:
         - Custom Fronts
       summary: List custom fronts
+      description: |
+        Returns a paginated list of all custom fronts for the specified system.
+        Custom fronts are abstract cognitive states (e.g., "Dissociated", "Blurry")
+        that can be logged like members without representing a distinct headmate.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2036,7 +2240,7 @@ paths:
                       customFronts:
                         type: array
                         items:
-                          $ref: "#/components/schemas/EncryptedEntity"
+                          $ref: "#/components/schemas/CustomFrontResponse"
                   - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
@@ -2047,6 +2251,12 @@ paths:
       tags:
         - Custom Fronts
       summary: Create a custom front
+      description: |
+        Creates a new custom front within the specified system. Custom fronts
+        behave like members in the fronting log but do not represent individual
+        headmates.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2063,7 +2273,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/CustomFrontResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2076,6 +2286,10 @@ paths:
       tags:
         - Custom Fronts
       summary: Get a custom front
+      description: |
+        Returns the encrypted entity for a single custom front by ID.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2083,15 +2297,17 @@ paths:
         - name: customFrontId
           in: path
           required: true
+          description: Custom front ID
           schema:
             type: string
+            pattern: ^cf_
       responses:
         "200":
           description: Custom front details
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/CustomFrontResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -2103,6 +2319,11 @@ paths:
       tags:
         - Custom Fronts
       summary: Update a custom front
+      description: |
+        Updates the encrypted payload for an existing custom front. Returns 409
+        if the provided version conflicts with the server's current version.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2110,8 +2331,10 @@ paths:
         - name: customFrontId
           in: path
           required: true
+          description: Custom front ID
           schema:
             type: string
+            pattern: ^cf_
       requestBody:
         required: true
         content:
@@ -2124,7 +2347,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/CustomFrontResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2141,6 +2364,12 @@ paths:
       tags:
         - Custom Fronts
       summary: Archive a custom front
+      description: |
+        Marks a custom front as archived. Archived custom fronts are hidden from
+        default list responses but remain accessible. Archival is always permitted
+        regardless of dependents.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2148,15 +2377,17 @@ paths:
         - name: customFrontId
           in: path
           required: true
+          description: Custom front ID
           schema:
             type: string
+            pattern: ^cf_
       responses:
         "200":
           description: Custom front archived
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/CustomFrontResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -2169,6 +2400,11 @@ paths:
       tags:
         - Custom Fronts
       summary: Restore an archived custom front
+      description: |
+        Removes the archived flag from a custom front, making it visible in
+        default list responses again.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2176,15 +2412,17 @@ paths:
         - name: customFrontId
           in: path
           required: true
+          description: Custom front ID
           schema:
             type: string
+            pattern: ^cf_
       responses:
         "200":
           description: Custom front restored
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/CustomFrontResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -2197,6 +2435,11 @@ paths:
       tags:
         - Custom Fronts
       summary: Delete a custom front
+      description: |
+        Permanently deletes a custom front. This path uses the `/delete` suffix
+        to match the actual API implementation path. This action is irreversible.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2204,8 +2447,10 @@ paths:
         - name: customFrontId
           in: path
           required: true
+          description: Custom front ID
           schema:
             type: string
+            pattern: ^cf_
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -2221,6 +2466,7 @@ paths:
       tags:
         - Fields
       summary: List field definitions
+      description: Returns a paginated list of custom field definitions for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2252,6 +2498,7 @@ paths:
       tags:
         - Fields
       summary: Create a field definition
+      description: Creates a new custom field definition for the given system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2281,6 +2528,7 @@ paths:
       tags:
         - Fields
       summary: Get a field definition
+      description: Returns details for a single custom field definition by ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2288,6 +2536,7 @@ paths:
         - name: fieldId
           in: path
           required: true
+          description: Field Definition ID
           schema:
             type: string
       responses:
@@ -2308,6 +2557,7 @@ paths:
       tags:
         - Fields
       summary: Update a field definition
+      description: Updates an existing custom field definition. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2315,6 +2565,7 @@ paths:
         - name: fieldId
           in: path
           required: true
+          description: Field Definition ID
           schema:
             type: string
       requestBody:
@@ -2345,6 +2596,7 @@ paths:
       tags:
         - Fields
       summary: Delete a field definition
+      description: Permanently deletes a custom field definition. Returns 409 if the field has values on any members. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2352,6 +2604,7 @@ paths:
         - name: fieldId
           in: path
           required: true
+          description: Field Definition ID
           schema:
             type: string
       responses:
@@ -2371,6 +2624,7 @@ paths:
       tags:
         - Fields
       summary: Archive a field definition
+      description: Marks a custom field definition as archived. Archived fields are hidden from default views but existing values are preserved. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2378,6 +2632,7 @@ paths:
         - name: fieldId
           in: path
           required: true
+          description: Field Definition ID
           schema:
             type: string
       responses:
@@ -2399,6 +2654,7 @@ paths:
       tags:
         - Fields
       summary: Restore an archived field definition
+      description: Removes the archived flag from a custom field definition, making it visible in default views again. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2406,6 +2662,7 @@ paths:
         - name: fieldId
           in: path
           required: true
+          description: Field Definition ID
           schema:
             type: string
       responses:
@@ -2427,6 +2684,11 @@ paths:
       tags:
         - Relationships
       summary: List relationships
+      description: |
+        Returns a paginated list of all inter-member relationships for the
+        specified system (e.g., "friends", "rivals", "is a subsystem of").
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2458,6 +2720,11 @@ paths:
       tags:
         - Relationships
       summary: Create a relationship
+      description: |
+        Creates a new directed relationship between two members within the
+        same system. The relationship type and label are user-defined.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2487,6 +2754,10 @@ paths:
       tags:
         - Relationships
       summary: Get a relationship
+      description: |
+        Returns details for a single relationship by ID.
+
+        Rate limit: 60 req/min (readDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2494,8 +2765,10 @@ paths:
         - name: relationshipId
           in: path
           required: true
+          description: Relationship ID
           schema:
             type: string
+            pattern: ^rel_
       responses:
         "200":
           description: Relationship details
@@ -2514,6 +2787,11 @@ paths:
       tags:
         - Relationships
       summary: Update a relationship
+      description: |
+        Updates the type, label, or notes for an existing relationship. Returns
+        409 if the provided version conflicts with the server's current version.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2521,8 +2799,10 @@ paths:
         - name: relationshipId
           in: path
           required: true
+          description: Relationship ID
           schema:
             type: string
+            pattern: ^rel_
       requestBody:
         required: true
         content:
@@ -2551,6 +2831,11 @@ paths:
       tags:
         - Relationships
       summary: Delete a relationship
+      description: |
+        Permanently deletes a relationship record. The members themselves are
+        not affected. This action is irreversible.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2558,8 +2843,10 @@ paths:
         - name: relationshipId
           in: path
           required: true
+          description: Relationship ID
           schema:
             type: string
+            pattern: ^rel_
       responses:
         "204":
           $ref: "#/components/responses/NoContent"
@@ -2575,6 +2862,11 @@ paths:
       tags:
         - Relationships
       summary: Archive a relationship
+      description: |
+        Marks a relationship as archived. Archived relationships are hidden from
+        default list responses but remain accessible. Archival is always permitted.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2582,8 +2874,10 @@ paths:
         - name: relationshipId
           in: path
           required: true
+          description: Relationship ID
           schema:
             type: string
+            pattern: ^rel_
       responses:
         "200":
           description: Relationship archived
@@ -2603,6 +2897,11 @@ paths:
       tags:
         - Relationships
       summary: Restore an archived relationship
+      description: |
+        Removes the archived flag from a relationship, making it visible in
+        default list responses again.
+
+        Rate limit: 30 req/min (writeDefault)
       security:
         - bearerAuth: []
       parameters:
@@ -2610,8 +2909,10 @@ paths:
         - name: relationshipId
           in: path
           required: true
+          description: Relationship ID
           schema:
             type: string
+            pattern: ^rel_
       responses:
         "200":
           description: Relationship restored
@@ -2631,6 +2932,7 @@ paths:
       tags:
         - Subsystems
       summary: List subsystems
+      description: Returns a paginated list of subsystems for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2662,6 +2964,7 @@ paths:
       tags:
         - Subsystems
       summary: Create a subsystem
+      description: Creates a new subsystem within the given system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2691,6 +2994,7 @@ paths:
       tags:
         - Subsystems
       summary: Get a subsystem
+      description: Returns details for a single subsystem by ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2698,6 +3002,7 @@ paths:
         - name: subsystemId
           in: path
           required: true
+          description: Subsystem ID
           schema:
             type: string
       responses:
@@ -2718,6 +3023,7 @@ paths:
       tags:
         - Subsystems
       summary: Update a subsystem
+      description: Updates the encrypted payload or metadata for a subsystem. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2725,6 +3031,7 @@ paths:
         - name: subsystemId
           in: path
           required: true
+          description: Subsystem ID
           schema:
             type: string
       requestBody:
@@ -2755,6 +3062,7 @@ paths:
       tags:
         - Subsystems
       summary: Delete a subsystem
+      description: Permanently deletes a subsystem. Returns 409 if the subsystem has dependents. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2762,6 +3070,7 @@ paths:
         - name: subsystemId
           in: path
           required: true
+          description: Subsystem ID
           schema:
             type: string
       responses:
@@ -2781,6 +3090,7 @@ paths:
       tags:
         - Subsystems
       summary: Archive a subsystem
+      description: Marks a subsystem as archived. Archived subsystems are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2788,6 +3098,7 @@ paths:
         - name: subsystemId
           in: path
           required: true
+          description: Subsystem ID
           schema:
             type: string
       responses:
@@ -2809,6 +3120,7 @@ paths:
       tags:
         - Subsystems
       summary: Restore an archived subsystem
+      description: Removes the archived flag from a subsystem, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2816,6 +3128,7 @@ paths:
         - name: subsystemId
           in: path
           required: true
+          description: Subsystem ID
           schema:
             type: string
       responses:
@@ -2837,6 +3150,7 @@ paths:
       tags:
         - Structure Memberships
       summary: List subsystem memberships
+      description: Returns a paginated list of member memberships for the given subsystem. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2844,6 +3158,7 @@ paths:
         - name: subsystemId
           in: path
           required: true
+          description: Subsystem ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
@@ -2854,14 +3169,16 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - memberships
-                properties:
-                  memberships:
-                    type: array
-                    items:
-                      type: object
+                allOf:
+                  - type: object
+                    required:
+                      - memberships
+                    properties:
+                      memberships:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/StructureMembershipResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -2871,6 +3188,7 @@ paths:
       tags:
         - Structure Memberships
       summary: Add a member to a subsystem
+      description: Creates a membership record associating a member with this subsystem. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2878,6 +3196,7 @@ paths:
         - name: subsystemId
           in: path
           required: true
+          description: Subsystem ID
           schema:
             type: string
       requestBody:
@@ -2892,7 +3211,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/StructureMembershipResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2907,6 +3226,7 @@ paths:
       tags:
         - Structure Memberships
       summary: Remove a membership from a subsystem
+      description: Removes a member's membership from the given subsystem. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2914,11 +3234,13 @@ paths:
         - name: subsystemId
           in: path
           required: true
+          description: Subsystem ID
           schema:
             type: string
         - name: membershipId
           in: path
           required: true
+          description: Membership ID
           schema:
             type: string
       responses:
@@ -2936,6 +3258,7 @@ paths:
       tags:
         - Side Systems
       summary: List side systems
+      description: Returns a paginated list of side systems for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2956,7 +3279,7 @@ paths:
                       sideSystems:
                         type: array
                         items:
-                          $ref: "#/components/schemas/EncryptedEntity"
+                          $ref: "#/components/schemas/SideSystemResponse"
                   - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
@@ -2967,6 +3290,7 @@ paths:
       tags:
         - Side Systems
       summary: Create a side system
+      description: Creates a new side system within the given system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -2983,7 +3307,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/SideSystemResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -2996,6 +3320,7 @@ paths:
       tags:
         - Side Systems
       summary: Get a side system
+      description: Returns details for a single side system by ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3003,6 +3328,7 @@ paths:
         - name: sideSystemId
           in: path
           required: true
+          description: Side System ID
           schema:
             type: string
       responses:
@@ -3011,7 +3337,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/SideSystemResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -3023,6 +3349,7 @@ paths:
       tags:
         - Side Systems
       summary: Update a side system
+      description: Updates the encrypted payload or metadata for a side system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3030,6 +3357,7 @@ paths:
         - name: sideSystemId
           in: path
           required: true
+          description: Side System ID
           schema:
             type: string
       requestBody:
@@ -3044,7 +3372,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/SideSystemResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -3060,6 +3388,7 @@ paths:
       tags:
         - Side Systems
       summary: Delete a side system
+      description: Permanently deletes a side system. Returns 409 if the side system has dependents. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3067,6 +3396,7 @@ paths:
         - name: sideSystemId
           in: path
           required: true
+          description: Side System ID
           schema:
             type: string
       responses:
@@ -3086,6 +3416,7 @@ paths:
       tags:
         - Side Systems
       summary: Archive a side system
+      description: Marks a side system as archived. Archived side systems are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3093,6 +3424,7 @@ paths:
         - name: sideSystemId
           in: path
           required: true
+          description: Side System ID
           schema:
             type: string
       responses:
@@ -3101,7 +3433,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/SideSystemResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -3114,6 +3446,7 @@ paths:
       tags:
         - Side Systems
       summary: Restore an archived side system
+      description: Removes the archived flag from a side system, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3121,6 +3454,7 @@ paths:
         - name: sideSystemId
           in: path
           required: true
+          description: Side System ID
           schema:
             type: string
       responses:
@@ -3129,7 +3463,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EncryptedEntity"
+                $ref: "#/components/schemas/SideSystemResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "404":
@@ -3142,6 +3476,7 @@ paths:
       tags:
         - Structure Memberships
       summary: List side system memberships
+      description: Returns a paginated list of member memberships for the given side system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3149,6 +3484,7 @@ paths:
         - name: sideSystemId
           in: path
           required: true
+          description: Side System ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
@@ -3159,14 +3495,16 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - memberships
-                properties:
-                  memberships:
-                    type: array
-                    items:
-                      type: object
+                allOf:
+                  - type: object
+                    required:
+                      - memberships
+                    properties:
+                      memberships:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/StructureMembershipResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -3176,6 +3514,7 @@ paths:
       tags:
         - Structure Memberships
       summary: Add a member to a side system
+      description: Creates a membership record associating a member with this side system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3183,6 +3522,7 @@ paths:
         - name: sideSystemId
           in: path
           required: true
+          description: Side System ID
           schema:
             type: string
       requestBody:
@@ -3197,7 +3537,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/StructureMembershipResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -3212,6 +3552,7 @@ paths:
       tags:
         - Structure Memberships
       summary: Remove a membership from a side system
+      description: Removes a member's membership from the given side system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3219,11 +3560,13 @@ paths:
         - name: sideSystemId
           in: path
           required: true
+          description: Side System ID
           schema:
             type: string
         - name: membershipId
           in: path
           required: true
+          description: Membership ID
           schema:
             type: string
       responses:
@@ -3241,6 +3584,7 @@ paths:
       tags:
         - Layers
       summary: List layers
+      description: Returns a paginated list of layers for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3272,6 +3616,7 @@ paths:
       tags:
         - Layers
       summary: Create a layer
+      description: Creates a new layer within the given system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3301,6 +3646,7 @@ paths:
       tags:
         - Layers
       summary: Get a layer
+      description: Returns details for a single layer by ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3308,6 +3654,7 @@ paths:
         - name: layerId
           in: path
           required: true
+          description: Layer ID
           schema:
             type: string
       responses:
@@ -3328,6 +3675,7 @@ paths:
       tags:
         - Layers
       summary: Update a layer
+      description: Updates the encrypted payload or metadata for a layer. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3335,6 +3683,7 @@ paths:
         - name: layerId
           in: path
           required: true
+          description: Layer ID
           schema:
             type: string
       requestBody:
@@ -3365,6 +3714,7 @@ paths:
       tags:
         - Layers
       summary: Delete a layer
+      description: Permanently deletes a layer. Returns 409 if the layer has dependents. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3372,6 +3722,7 @@ paths:
         - name: layerId
           in: path
           required: true
+          description: Layer ID
           schema:
             type: string
       responses:
@@ -3391,6 +3742,7 @@ paths:
       tags:
         - Layers
       summary: Archive a layer
+      description: Marks a layer as archived. Archived layers are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3398,6 +3750,7 @@ paths:
         - name: layerId
           in: path
           required: true
+          description: Layer ID
           schema:
             type: string
       responses:
@@ -3419,6 +3772,7 @@ paths:
       tags:
         - Layers
       summary: Restore an archived layer
+      description: Removes the archived flag from a layer, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3426,6 +3780,7 @@ paths:
         - name: layerId
           in: path
           required: true
+          description: Layer ID
           schema:
             type: string
       responses:
@@ -3447,6 +3802,7 @@ paths:
       tags:
         - Structure Memberships
       summary: List layer memberships
+      description: Returns a paginated list of member memberships for the given layer. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3454,6 +3810,7 @@ paths:
         - name: layerId
           in: path
           required: true
+          description: Layer ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
@@ -3464,14 +3821,16 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - memberships
-                properties:
-                  memberships:
-                    type: array
-                    items:
-                      type: object
+                allOf:
+                  - type: object
+                    required:
+                      - memberships
+                    properties:
+                      memberships:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/StructureMembershipResponse"
+                  - $ref: "#/components/schemas/PaginationMeta"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -3481,6 +3840,7 @@ paths:
       tags:
         - Structure Memberships
       summary: Add a member to a layer
+      description: Creates a membership record associating a member with this layer. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3488,6 +3848,7 @@ paths:
         - name: layerId
           in: path
           required: true
+          description: Layer ID
           schema:
             type: string
       requestBody:
@@ -3502,7 +3863,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/StructureMembershipResponse"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -3517,6 +3878,7 @@ paths:
       tags:
         - Structure Memberships
       summary: Remove a membership from a layer
+      description: Removes a member's membership from the given layer. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3524,11 +3886,13 @@ paths:
         - name: layerId
           in: path
           required: true
+          description: Layer ID
           schema:
             type: string
         - name: membershipId
           in: path
           required: true
+          description: Membership ID
           schema:
             type: string
       responses:
@@ -3546,16 +3910,19 @@ paths:
       tags:
         - Structure Links
       summary: List subsystem-layer links
+      description: Returns a paginated list of links between subsystems and layers. Optionally filter by subsystem or layer ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
         - name: subsystemId
           in: query
+          description: Filter by Subsystem ID
           schema:
             type: string
         - name: layerId
           in: query
+          description: Filter by Layer ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
@@ -3585,6 +3952,7 @@ paths:
       tags:
         - Structure Links
       summary: Link a subsystem to a layer
+      description: Creates a structural link between a subsystem and a layer. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3616,6 +3984,7 @@ paths:
       tags:
         - Structure Links
       summary: Delete a subsystem-layer link
+      description: Permanently removes a structural link between a subsystem and a layer. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3623,6 +3992,7 @@ paths:
         - name: linkId
           in: path
           required: true
+          description: Link ID
           schema:
             type: string
       responses:
@@ -3640,16 +4010,19 @@ paths:
       tags:
         - Structure Links
       summary: List subsystem-side-system links
+      description: Returns a paginated list of links between subsystems and side systems. Optionally filter by subsystem or side system ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
         - name: subsystemId
           in: query
+          description: Filter by Subsystem ID
           schema:
             type: string
         - name: sideSystemId
           in: query
+          description: Filter by Side System ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
@@ -3679,6 +4052,7 @@ paths:
       tags:
         - Structure Links
       summary: Link a subsystem to a side system
+      description: Creates a structural link between a subsystem and a side system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3710,6 +4084,7 @@ paths:
       tags:
         - Structure Links
       summary: Delete a subsystem-side-system link
+      description: Permanently removes a structural link between a subsystem and a side system. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3717,6 +4092,7 @@ paths:
         - name: linkId
           in: path
           required: true
+          description: Link ID
           schema:
             type: string
       responses:
@@ -3734,16 +4110,19 @@ paths:
       tags:
         - Structure Links
       summary: List side-system-layer links
+      description: Returns a paginated list of links between side systems and layers. Optionally filter by side system or layer ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
         - name: sideSystemId
           in: query
+          description: Filter by Side System ID
           schema:
             type: string
         - name: layerId
           in: query
+          description: Filter by Layer ID
           schema:
             type: string
         - $ref: "#/components/parameters/Cursor"
@@ -3773,6 +4152,7 @@ paths:
       tags:
         - Structure Links
       summary: Link a side system to a layer
+      description: Creates a structural link between a side system and a layer. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3804,6 +4184,7 @@ paths:
       tags:
         - Structure Links
       summary: Delete a side-system-layer link
+      description: Permanently removes a structural link between a side system and a layer. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3811,6 +4192,7 @@ paths:
         - name: linkId
           in: path
           required: true
+          description: Link ID
           schema:
             type: string
       responses:
@@ -3828,6 +4210,7 @@ paths:
       tags:
         - Lifecycle Events
       summary: List lifecycle events
+      description: Returns a paginated list of lifecycle events recorded for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3891,6 +4274,7 @@ paths:
       tags:
         - Lifecycle Events
       summary: Get a lifecycle event
+      description: Returns details for a single lifecycle event by ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3898,6 +4282,7 @@ paths:
         - name: eventId
           in: path
           required: true
+          description: Lifecycle Event ID
           schema:
             type: string
       responses:
@@ -3919,6 +4304,7 @@ paths:
       tags:
         - Innerworld
       summary: List innerworld regions
+      description: Returns a paginated list of innerworld regions for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3950,6 +4336,7 @@ paths:
       tags:
         - Innerworld
       summary: Create an innerworld region
+      description: Creates a new region within the system's innerworld. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3979,6 +4366,7 @@ paths:
       tags:
         - Innerworld
       summary: Get an innerworld region
+      description: Returns details for a single innerworld region by ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -3986,6 +4374,7 @@ paths:
         - name: regionId
           in: path
           required: true
+          description: Region ID
           schema:
             type: string
       responses:
@@ -4006,6 +4395,7 @@ paths:
       tags:
         - Innerworld
       summary: Update an innerworld region
+      description: Updates the encrypted payload or metadata for an innerworld region. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4013,6 +4403,7 @@ paths:
         - name: regionId
           in: path
           required: true
+          description: Region ID
           schema:
             type: string
       requestBody:
@@ -4043,6 +4434,7 @@ paths:
       tags:
         - Innerworld
       summary: Delete an innerworld region
+      description: Permanently deletes an innerworld region. Returns 409 if the region has dependents. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4050,6 +4442,7 @@ paths:
         - name: regionId
           in: path
           required: true
+          description: Region ID
           schema:
             type: string
       responses:
@@ -4069,6 +4462,7 @@ paths:
       tags:
         - Innerworld
       summary: Archive an innerworld region
+      description: Marks an innerworld region as archived. Archived regions are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4076,6 +4470,7 @@ paths:
         - name: regionId
           in: path
           required: true
+          description: Region ID
           schema:
             type: string
       responses:
@@ -4097,6 +4492,7 @@ paths:
       tags:
         - Innerworld
       summary: Restore an archived innerworld region
+      description: Removes the archived flag from an innerworld region, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4104,6 +4500,7 @@ paths:
         - name: regionId
           in: path
           required: true
+          description: Region ID
           schema:
             type: string
       responses:
@@ -4125,6 +4522,7 @@ paths:
       tags:
         - Innerworld
       summary: List innerworld entities
+      description: Returns a paginated list of innerworld entities for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4156,6 +4554,7 @@ paths:
       tags:
         - Innerworld
       summary: Create an innerworld entity
+      description: Creates a new entity within the system's innerworld. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4185,6 +4584,7 @@ paths:
       tags:
         - Innerworld
       summary: Get an innerworld entity
+      description: Returns details for a single innerworld entity by ID. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4192,6 +4592,7 @@ paths:
         - name: entityId
           in: path
           required: true
+          description: Entity ID
           schema:
             type: string
       responses:
@@ -4212,6 +4613,7 @@ paths:
       tags:
         - Innerworld
       summary: Update an innerworld entity
+      description: Updates the encrypted payload or metadata for an innerworld entity. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4219,6 +4621,7 @@ paths:
         - name: entityId
           in: path
           required: true
+          description: Entity ID
           schema:
             type: string
       requestBody:
@@ -4249,6 +4652,7 @@ paths:
       tags:
         - Innerworld
       summary: Delete an innerworld entity
+      description: Permanently deletes an innerworld entity. Returns 409 if the entity has dependents. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4256,6 +4660,7 @@ paths:
         - name: entityId
           in: path
           required: true
+          description: Entity ID
           schema:
             type: string
       responses:
@@ -4273,6 +4678,7 @@ paths:
       tags:
         - Innerworld
       summary: Archive an innerworld entity
+      description: Marks an innerworld entity as archived. Archived entities are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4280,6 +4686,7 @@ paths:
         - name: entityId
           in: path
           required: true
+          description: Entity ID
           schema:
             type: string
       responses:
@@ -4301,6 +4708,7 @@ paths:
       tags:
         - Innerworld
       summary: Restore an archived innerworld entity
+      description: Removes the archived flag from an innerworld entity, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4308,6 +4716,7 @@ paths:
         - name: entityId
           in: path
           required: true
+          description: Entity ID
           schema:
             type: string
       responses:
@@ -4329,6 +4738,7 @@ paths:
       tags:
         - Innerworld
       summary: Get the innerworld canvas
+      description: Returns the canvas layout data for the system's innerworld, including region and entity positions. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4349,6 +4759,7 @@ paths:
       tags:
         - Innerworld
       summary: Update the innerworld canvas
+      description: Updates the canvas layout data for the system's innerworld. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4380,12 +4791,14 @@ paths:
       tags:
         - Blobs
       summary: List blobs
+      description: Returns a paginated list of blob metadata records for the given system. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/SystemId"
         - name: purpose
           in: query
+          description: Filter blobs by purpose
           schema:
             $ref: "#/components/schemas/BlobPurpose"
         - $ref: "#/components/parameters/Cursor"
@@ -4467,6 +4880,7 @@ paths:
         - name: blobId
           in: path
           required: true
+          description: Blob ID
           schema:
             type: string
       requestBody:
@@ -4496,6 +4910,7 @@ paths:
       tags:
         - Blobs
       summary: Get a presigned download URL
+      description: Returns a short-lived presigned URL for downloading the encrypted blob from S3-compatible storage. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4503,6 +4918,7 @@ paths:
         - name: blobId
           in: path
           required: true
+          description: Blob ID
           schema:
             type: string
       responses:
@@ -4524,6 +4940,7 @@ paths:
       tags:
         - Blobs
       summary: Get blob metadata
+      description: Returns metadata for a single blob by ID, not the blob content itself. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4531,6 +4948,7 @@ paths:
         - name: blobId
           in: path
           required: true
+          description: Blob ID
           schema:
             type: string
       responses:
@@ -4551,6 +4969,7 @@ paths:
       tags:
         - Blobs
       summary: Delete a blob
+      description: Permanently deletes a blob record and schedules the associated object for deletion from storage. Rate limit 30 req/min (writeDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4558,6 +4977,7 @@ paths:
         - name: blobId
           in: path
           required: true
+          description: Blob ID
           schema:
             type: string
       responses:
@@ -4595,6 +5015,7 @@ paths:
         - name: bucketId
           in: path
           required: true
+          description: Privacy Bucket ID
           schema:
             type: string
       requestBody:
@@ -4624,6 +5045,7 @@ paths:
       tags:
         - Key Rotation
       summary: Get rotation progress
+      description: Returns the current status and progress of an in-flight key rotation. Rate limit 60 req/min (readDefault).
       security:
         - bearerAuth: []
       parameters:
@@ -4631,11 +5053,13 @@ paths:
         - name: bucketId
           in: path
           required: true
+          description: Privacy Bucket ID
           schema:
             type: string
         - name: rotationId
           in: path
           required: true
+          description: Rotation ID
           schema:
             type: string
       responses:
@@ -4667,11 +5091,13 @@ paths:
         - name: bucketId
           in: path
           required: true
+          description: Privacy Bucket ID
           schema:
             type: string
         - name: rotationId
           in: path
           required: true
+          description: Rotation ID
           schema:
             type: string
       requestBody:
@@ -4708,11 +5134,13 @@ paths:
         - name: bucketId
           in: path
           required: true
+          description: Privacy Bucket ID
           schema:
             type: string
         - name: rotationId
           in: path
           required: true
+          description: Rotation ID
           schema:
             type: string
       requestBody:
@@ -4823,26 +5251,36 @@ components:
                 - RATE_LIMITED
                 - INTERNAL_ERROR
                 - SERVICE_UNAVAILABLE
+              example: VALIDATION_ERROR
             message:
               type: string
+              example: Field 'email' is required
             details:
               description: Optional structured error details
         requestId:
           type: string
           format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
     PaginationMeta:
       type: object
+      required:
+        - nextCursor
+        - hasMore
       properties:
         nextCursor:
           type: string
           nullable: true
           description: Cursor for the next page, null if no more results
+          example: eyJpZCI6Im1lbV8xMjM0NSJ9
         hasMore:
           type: boolean
+          description: Whether more results exist beyond this page
+          example: true
         totalCount:
           type: integer
           nullable: true
           description: Total count (may be null for performance)
+          example: 42
     EncryptedEntity:
       type: object
       description: |
@@ -4862,30 +5300,44 @@ components:
       properties:
         id:
           type: string
+          description: Unique entity identifier with a type-specific prefix (e.g., `mem_`, `grp_`, `rel_`)
+          example: mem_abc123def456
         systemId:
           type: string
+          description: System ID that owns this entity
+          pattern: ^sys_
+          example: sys_abc123def456
         encryptedData:
           type: string
+          contentEncoding: base64
           description: |
             Base64-encoded ciphertext. Contains `{ciphertext, nonce, algorithm, keyVersion}`
             serialized by the client. T1 (master-key) encrypted data has `keyVersion: null`.
             T2 (bucket-encrypted) data includes the `keyVersion` and `bucketId`.
+          example: eyJjaXBoZXJ0ZXh0IjoiLi4uIiwibm9uY2UiOiIuLi4ifQ==
         version:
           type: integer
           minimum: 1
           description: Optimistic concurrency version. Must match current version on update.
+          example: 1
         createdAt:
           type: integer
+          format: int64
           description: Unix timestamp in milliseconds
+          example: 1710000000000
         updatedAt:
           type: integer
+          format: int64
           description: Unix timestamp in milliseconds
+          example: 1710000000000
         archived:
           type: boolean
           default: false
         archivedAt:
           type: integer
+          format: int64
           nullable: true
+          description: Unix timestamp in milliseconds when archived, null if not archived
     LoginRequest:
       type: object
       required:
@@ -4895,6 +5347,7 @@ components:
         email:
           type: string
           format: email
+          example: user@example.com
         password:
           type: string
           minLength: 1
@@ -4908,11 +5361,15 @@ components:
       properties:
         sessionToken:
           type: string
+          description: 32-byte hex-encoded session token (64 characters)
+          example: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
         accountId:
           type: string
+          example: acc_abc123
         systemId:
           type: string
           nullable: true
+          example: sys_abc123
         accountType:
           type: string
           enum:
@@ -4951,8 +5408,10 @@ components:
       properties:
         sessionToken:
           type: string
+          description: 32-byte hex-encoded session token
         recoveryKey:
           type: string
+          description: Recovery key for master key recovery — must be stored securely by the client
         accountId:
           type: string
         accountType:
@@ -4989,6 +5448,7 @@ components:
           type: string
         recoveryKey:
           type: string
+          description: New recovery key (old one is invalidated)
         accountId:
           type: string
     BiometricTokenRequest:
@@ -5000,6 +5460,28 @@ components:
           type: string
           minLength: 1
           maxLength: 4096
+          description: Platform-specific biometric token
+    BiometricEnrollResponse:
+      type: object
+      required:
+        - enrolled
+      properties:
+        enrolled:
+          type: boolean
+          description: Whether biometric enrollment succeeded
+    BiometricVerifyResponse:
+      type: object
+      required:
+        - valid
+        - sessionToken
+      properties:
+        valid:
+          type: boolean
+          description: Whether the biometric verification succeeded
+        sessionToken:
+          type: string
+          nullable: true
+          description: New session token if verification succeeded, null otherwise
     SessionInfo:
       type: object
       required:
@@ -5008,15 +5490,22 @@ components:
       properties:
         id:
           type: string
+          description: Session identifier
+          example: sess_abc123
         createdAt:
           type: integer
+          format: int64
           description: Unix timestamp in milliseconds
         lastActive:
           type: integer
+          format: int64
           nullable: true
+          description: Unix timestamp in milliseconds of last activity
         expiresAt:
           type: integer
+          format: int64
           nullable: true
+          description: Unix timestamp in milliseconds when the session expires
     SessionListResponse:
       type: object
       required:
@@ -5051,7 +5540,9 @@ components:
           type: boolean
         createdAt:
           type: integer
+          format: int64
           nullable: true
+          description: Unix timestamp in milliseconds when the recovery key was created
     RevokeAllResponse:
       type: object
       required:
@@ -5062,6 +5553,7 @@ components:
           type: boolean
         revokedCount:
           type: integer
+          description: Number of sessions revoked
     AccountInfo:
       type: object
       required:
@@ -5072,18 +5564,29 @@ components:
       properties:
         accountId:
           type: string
+          description: Unique account identifier
+          example: acc_abc123
         accountType:
           type: string
           enum:
             - system
             - viewer
+          description: Account type — system accounts own a plural system, viewer accounts have read-only access
         systemId:
           type: string
           nullable: true
+          description: Associated system ID (null for viewer accounts without a system)
+          example: sys_abc123
         createdAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1710000000000
         updatedAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1710000000000
     ChangeEmailRequest:
       type: object
       required:
@@ -5093,6 +5596,7 @@ components:
         email:
           type: string
           format: email
+          example: user@example.com
         currentPassword:
           type: string
           minLength: 1
@@ -5112,17 +5616,21 @@ components:
     AuditLogQuery:
       type: object
       properties:
-        event_type:
+        eventType:
           type: string
-        resource_type:
+          description: Filter by event type
+        resourceType:
           type: string
           pattern: ^[a-z][a-z0-9-]*$
+          description: Filter by resource type
         from:
           type: integer
+          format: int64
           minimum: 0
           description: Start timestamp in milliseconds
         to:
           type: integer
+          format: int64
           minimum: 0
           description: End timestamp in milliseconds
         cursor:
@@ -5132,6 +5640,43 @@ components:
           minimum: 1
           maximum: 100
           default: 25
+    AuditLogEntry:
+      type: object
+      required:
+        - id
+        - eventType
+        - timestamp
+        - resourceType
+      properties:
+        id:
+          type: string
+          description: Unique audit log entry identifier
+        eventType:
+          type: string
+          description: Type of event (e.g., login, member.create, settings.update)
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds when the event occurred
+        resourceType:
+          type: string
+          description: Type of resource affected (e.g., member, group, session)
+        resourceId:
+          type: string
+          nullable: true
+          description: ID of the affected resource
+        actor:
+          type: string
+          nullable: true
+          description: Account ID of the actor
+        ipAddress:
+          type: string
+          nullable: true
+          description: IP address of the request
+        userAgent:
+          type: string
+          nullable: true
+          description: User-Agent header from the request
     AuditLogResponse:
       type: object
       required:
@@ -5141,32 +5686,27 @@ components:
         events:
           type: array
           items:
-            type: object
-            description: Audit log entry
+            $ref: "#/components/schemas/AuditLogEntry"
         nextCursor:
           type: string
           nullable: true
         hasMore:
           type: boolean
     SystemProfile:
-      type: object
-      required:
-        - id
-        - version
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-        encryptedData:
-          type: string
-          nullable: true
-        version:
-          type: integer
-        createdAt:
-          type: integer
-        updatedAt:
-          type: integer
+      description: |
+        The system (plural system) profile. Unlike most entities, a newly created
+        system may not yet have encrypted data if the profile has not been set up.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
+        - type: object
+          properties:
+            encryptedData:
+              type: string
+              contentEncoding: base64
+              nullable: true
+              description: |
+                T1-encrypted PlaintextSystem. Nullable because a system created via
+                registration may not have profile data until the setup wizard completes.
     UpdateSystemRequest:
       type: object
       required:
@@ -5175,12 +5715,17 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: T1-encrypted PlaintextSystem (see ./plaintext.yaml#/PlaintextSystem)
         version:
           type: integer
           minimum: 1
+    MemberResponse:
+      description: A member (headmate) within a system. Extends EncryptedEntity with the server-visible `archived` field.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
     CreateMemberRequest:
       type: object
       required:
@@ -5188,6 +5733,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: T1-encrypted PlaintextMember (see ./plaintext.yaml#/PlaintextMember)
@@ -5199,6 +5745,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: T1-encrypted PlaintextMember (see ./plaintext.yaml#/PlaintextMember)
@@ -5209,21 +5756,25 @@ components:
       type: object
       required:
         - encryptedData
+        - copyPhotos
+        - copyFields
+        - copyMemberships
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: T1-encrypted PlaintextMember for the new duplicate (see ./plaintext.yaml#/PlaintextMember)
         copyPhotos:
           type: boolean
-          default: false
+          description: Whether to copy the source member's photos to the duplicate
         copyFields:
           type: boolean
-          default: false
+          description: Whether to copy the source member's custom field values to the duplicate
         copyMemberships:
           type: boolean
-          default: false
+          description: Whether to copy the source member's group memberships to the duplicate
     CreateMemberPhotoRequest:
       type: object
       required:
@@ -5231,12 +5782,14 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: T1-encrypted PlaintextMemberPhoto (see ./plaintext.yaml#/PlaintextMemberPhoto)
         sortOrder:
           type: integer
           minimum: 0
+          description: Display order within the member's photo gallery
     ReorderPhotosRequest:
       type: object
       required:
@@ -5254,6 +5807,7 @@ components:
             properties:
               id:
                 type: string
+                description: Photo ID
               sortOrder:
                 type: integer
                 minimum: 0
@@ -5268,6 +5822,8 @@ components:
         - select
         - multi-select
         - url
+      description: The data type of a custom field
+      example: text
     CreateFieldDefinitionRequest:
       type: object
       required:
@@ -5279,12 +5835,15 @@ components:
         required:
           type: boolean
           default: false
+          description: Whether members must have a value for this field
         sortOrder:
           type: integer
           minimum: 0
           default: 0
+          description: Display order among field definitions
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 32768
           description: T1-encrypted PlaintextFieldDefinition (see ./plaintext.yaml#/PlaintextFieldDefinition)
@@ -5301,6 +5860,7 @@ components:
           minimum: 0
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 32768
           description: T1-encrypted PlaintextFieldDefinition (see ./plaintext.yaml#/PlaintextFieldDefinition)
@@ -5320,8 +5880,10 @@ components:
               $ref: "#/components/schemas/FieldType"
             required:
               type: boolean
+              description: Whether members must have a value for this field
             sortOrder:
               type: integer
+              description: Display order among field definitions
     SetFieldValueRequest:
       type: object
       required:
@@ -5329,6 +5891,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 16384
           description: T1-encrypted PlaintextFieldValue (see ./plaintext.yaml#/PlaintextFieldValue)
@@ -5340,6 +5903,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 16384
           description: T1-encrypted PlaintextFieldValue (see ./plaintext.yaml#/PlaintextFieldValue)
@@ -5362,18 +5926,59 @@ components:
           type: string
         fieldDefinitionId:
           type: string
+          description: ID of the field definition this value belongs to
         memberId:
           type: string
+          description: ID of the member this value is set on
         systemId:
           type: string
         encryptedData:
           type: string
+          contentEncoding: base64
         version:
           type: integer
         createdAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
         updatedAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+    GroupTreeNode:
+      type: object
+      description: A node in the hierarchical group tree, with nested children
+      required:
+        - id
+        - systemId
+        - encryptedData
+        - sortOrder
+        - children
+      properties:
+        id:
+          type: string
+          example: grp_abc123
+        systemId:
+          type: string
+          example: sys_abc123
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          description: T1-encrypted PlaintextGroup
+        parentGroupId:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+        version:
+          type: integer
+        archived:
+          type: boolean
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/GroupTreeNode"
+          description: Nested child groups
     GroupResponse:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
@@ -5385,8 +5990,12 @@ components:
             parentGroupId:
               type: string
               nullable: true
+              description: ID of the parent group, null for top-level groups
+              example: grp_parent123
             sortOrder:
               type: integer
+              description: Display order among sibling groups
+              example: 0
     CreateGroupRequest:
       type: object
       required:
@@ -5396,15 +6005,18 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextGroup (see ./plaintext.yaml#/PlaintextGroup)
         parentGroupId:
           type: string
           nullable: true
+          description: ID of the parent group, null for top-level groups
         sortOrder:
           type: integer
           minimum: 0
+          description: Display order among sibling groups
     UpdateGroupRequest:
       type: object
       required:
@@ -5413,6 +6025,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextGroup (see ./plaintext.yaml#/PlaintextGroup)
@@ -5428,6 +6041,7 @@ components:
         targetParentGroupId:
           type: string
           nullable: true
+          description: ID of the new parent group, null to make top-level
         version:
           type: integer
           minimum: 1
@@ -5437,9 +6051,11 @@ components:
         targetParentGroupId:
           type: string
           nullable: true
+          description: ID of the parent group for the copy, null for top-level
         copyMemberships:
           type: boolean
           default: false
+          description: Whether to copy member assignments to the new group
     ReorderGroupsRequest:
       type: object
       required:
@@ -5467,6 +6083,7 @@ components:
       properties:
         memberId:
           type: string
+          description: ID of the member to add to the group
     GroupMembership:
       type: object
       required:
@@ -5475,8 +6092,18 @@ components:
       properties:
         groupId:
           type: string
+          description: ID of the group
+          example: grp_abc123
         memberId:
           type: string
+          description: ID of the member
+          example: mem_def456
+    CustomFrontResponse:
+      description: |
+        A custom front (abstract cognitive state). Extends EncryptedEntity with
+        the server-visible `archived` field.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
     CreateCustomFrontRequest:
       type: object
       required:
@@ -5484,6 +6111,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextCustomFront (see ./plaintext.yaml#/PlaintextCustomFront)
@@ -5495,6 +6123,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextCustomFront (see ./plaintext.yaml#/PlaintextCustomFront)
@@ -5514,6 +6143,7 @@ components:
         - gatekeeper-of
         - source
         - custom
+      example: sibling
     CreateRelationshipRequest:
       type: object
       required:
@@ -5525,14 +6155,20 @@ components:
       properties:
         sourceMemberId:
           type: string
+          description: ID of the source member in the relationship
+          example: mem_abc123
         targetMemberId:
           type: string
+          description: ID of the target member in the relationship
+          example: mem_def456
         type:
           $ref: "#/components/schemas/RelationshipType"
         bidirectional:
           type: boolean
+          description: Whether the relationship applies in both directions
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextRelationship (see ./plaintext.yaml#/PlaintextRelationship)
@@ -5550,6 +6186,7 @@ components:
           type: boolean
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextRelationship (see ./plaintext.yaml#/PlaintextRelationship)
@@ -5568,14 +6205,17 @@ components:
           properties:
             sourceMemberId:
               type: string
-              nullable: true
+              description: ID of the source member
+              example: mem_abc123
             targetMemberId:
               type: string
-              nullable: true
+              description: ID of the target member
+              example: mem_def456
             type:
               $ref: "#/components/schemas/RelationshipType"
             bidirectional:
               type: boolean
+              description: Whether the relationship applies in both directions
     KnownArchitectureType:
       type: string
       enum:
@@ -5586,6 +6226,7 @@ components:
         - webbed
         - unknown
         - fluid
+      example: orbital
     ArchitectureType:
       oneOf:
         - type: object
@@ -5624,18 +6265,21 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextSubsystem (see ./plaintext.yaml#/PlaintextSubsystem)
         parentSubsystemId:
           type: string
           nullable: true
+          description: ID of the parent subsystem for nesting
         architectureType:
           oneOf:
             - $ref: "#/components/schemas/ArchitectureType"
             - type: "null"
         hasCore:
           type: boolean
+          description: Whether this subsystem has a core identity
         discoveryStatus:
           oneOf:
             - $ref: "#/components/schemas/DiscoveryStatus"
@@ -5649,6 +6293,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextSubsystem (see ./plaintext.yaml#/PlaintextSubsystem)
@@ -5678,15 +6323,18 @@ components:
             parentSubsystemId:
               type: string
               nullable: true
+              description: ID of the parent subsystem
             architectureType:
               oneOf:
                 - $ref: "#/components/schemas/ArchitectureType"
                 - type: "null"
             hasCore:
               type: boolean
+              description: Whether this subsystem has a core identity
             discoveryStatus:
               type: string
               nullable: true
+              description: How well-mapped the subsystem is
     CreateSideSystemRequest:
       type: object
       required:
@@ -5694,6 +6342,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextSideSystem (see ./plaintext.yaml#/PlaintextSideSystem)
@@ -5705,6 +6354,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextSideSystem (see ./plaintext.yaml#/PlaintextSideSystem)
@@ -5719,12 +6369,14 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextLayer (see ./plaintext.yaml#/PlaintextLayer)
         sortOrder:
           type: integer
           minimum: 0
+          description: Display order among layers
     UpdateLayerRequest:
       type: object
       required:
@@ -5734,6 +6386,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextLayer (see ./plaintext.yaml#/PlaintextLayer)
@@ -5752,6 +6405,38 @@ components:
           properties:
             sortOrder:
               type: integer
+              description: Display order among layers
+    StructureMembershipResponse:
+      type: object
+      description: A member's assignment to a structural entity (subsystem, side system, or layer)
+      required:
+        - id
+        - systemId
+        - memberId
+        - encryptedData
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Membership identifier
+        systemId:
+          type: string
+          description: System that owns this membership
+        memberId:
+          type: string
+          description: ID of the assigned member
+        encryptedData:
+          type: string
+          contentEncoding: base64
+          description: T1-encrypted PlaintextStructureMembership
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+    SideSystemResponse:
+      description: A side system structure. Extends EncryptedEntity.
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
     AddStructureMembershipRequest:
       type: object
       required:
@@ -5760,8 +6445,10 @@ components:
       properties:
         memberId:
           type: string
+          description: ID of the member to add
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextStructureMembership (see ./plaintext.yaml#/PlaintextStructureMembership)
@@ -5773,10 +6460,13 @@ components:
       properties:
         subsystemId:
           type: string
+          description: ID of the subsystem to link
         layerId:
           type: string
+          description: ID of the layer to link
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)
@@ -5788,10 +6478,13 @@ components:
       properties:
         subsystemId:
           type: string
+          description: ID of the subsystem to link
         sideSystemId:
           type: string
+          description: ID of the side system to link
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)
@@ -5803,10 +6496,13 @@ components:
       properties:
         sideSystemId:
           type: string
+          description: ID of the side system to link
         layerId:
           type: string
+          description: ID of the layer to link
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)
@@ -5819,19 +6515,27 @@ components:
       properties:
         id:
           type: string
+          description: Link identifier
         systemId:
           type: string
         subsystemId:
           type: string
+          description: Present for subsystem-layer and subsystem-side-system links
         sideSystemId:
           type: string
+          description: Present for subsystem-side-system and side-system-layer links
         layerId:
           type: string
+          description: Present for subsystem-layer and side-system-layer links
         encryptedData:
           type: string
+          contentEncoding: base64
           nullable: true
+          description: Optional T1-encrypted PlaintextStructureLink
         createdAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
     LifecycleEventType:
       type: string
       enum:
@@ -5848,6 +6552,7 @@ components:
         - name-change
         - structure-move
         - innerworld-move
+      example: split
     CreateLifecycleEventRequest:
       type: object
       required:
@@ -5859,32 +6564,39 @@ components:
           $ref: "#/components/schemas/LifecycleEventType"
         occurredAt:
           type: integer
+          format: int64
           minimum: 0
           description: Unix timestamp in milliseconds when the event occurred
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextLifecycleEvent (see ./plaintext.yaml#/PlaintextLifecycleEvent)
         plaintextMetadata:
           type: object
+          description: Server-visible metadata for querying and relationship tracking
           properties:
             memberIds:
               type: array
               items:
                 type: string
+              description: IDs of members involved in this event
             structureIds:
               type: array
               items:
                 type: string
+              description: IDs of structures involved
             entityIds:
               type: array
               items:
                 type: string
+              description: IDs of innerworld entities involved
             regionIds:
               type: array
               items:
                 type: string
+              description: IDs of innerworld regions involved
     LifecycleEventResponse:
       allOf:
         - $ref: "#/components/schemas/EncryptedEntity"
@@ -5897,9 +6609,12 @@ components:
               $ref: "#/components/schemas/LifecycleEventType"
             occurredAt:
               type: integer
+              format: int64
+              description: Unix timestamp in milliseconds when the event occurred
             plaintextMetadata:
               type: object
               nullable: true
+              description: Server-visible metadata (member/structure/entity/region IDs)
     CreateRegionRequest:
       type: object
       required:
@@ -5907,12 +6622,14 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextInnerworldRegion (see ./plaintext.yaml#/PlaintextInnerworldRegion)
         parentRegionId:
           type: string
           nullable: true
+          description: ID of the parent region for nesting
     UpdateRegionRequest:
       type: object
       required:
@@ -5921,6 +6638,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextInnerworldRegion (see ./plaintext.yaml#/PlaintextInnerworldRegion)
@@ -5935,6 +6653,7 @@ components:
             parentRegionId:
               type: string
               nullable: true
+              description: ID of the parent region, null for top-level regions
     CreateEntityRequest:
       type: object
       required:
@@ -5942,12 +6661,14 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity)
         regionId:
           type: string
           nullable: true
+          description: ID of the region this entity belongs to
     UpdateEntityRequest:
       type: object
       required:
@@ -5956,6 +6677,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity)
@@ -5970,6 +6692,7 @@ components:
             regionId:
               type: string
               nullable: true
+              description: ID of the region this entity belongs to
     UpdateCanvasRequest:
       type: object
       required:
@@ -5978,6 +6701,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 87382
           description: T1-encrypted PlaintextInnerworldCanvas (see ./plaintext.yaml#/PlaintextInnerworldCanvas)
@@ -5985,27 +6709,8 @@ components:
           type: integer
           minimum: 1
     CanvasResponse:
-      type: object
-      required:
-        - id
-        - systemId
-        - encryptedData
-        - version
-        - createdAt
-        - updatedAt
-      properties:
-        id:
-          type: string
-        systemId:
-          type: string
-        encryptedData:
-          type: string
-        version:
-          type: integer
-        createdAt:
-          type: integer
-        updatedAt:
-          type: integer
+      allOf:
+        - $ref: "#/components/schemas/EncryptedEntity"
     BlobPurpose:
       type: string
       enum:
@@ -6015,6 +6720,8 @@ components:
         - attachment
         - export
         - littles-safe-mode
+      description: The intended purpose of the blob, which determines size limits
+      example: avatar
     CreateUploadUrlRequest:
       type: object
       required:
@@ -6029,6 +6736,8 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+          description: MIME type of the file
+          example: image/png
         sizeBytes:
           type: integer
           minimum: 1
@@ -6041,7 +6750,7 @@ components:
           enum:
             - 1
             - 2
-          description: 1 = master-key encrypted, 2 = per-bucket encrypted
+          description: 1 = master-key encrypted (private), 2 = per-bucket encrypted (shared)
     UploadUrlResponse:
       type: object
       required:
@@ -6051,11 +6760,16 @@ components:
       properties:
         blobId:
           type: string
+          description: ID of the created blob record
+          example: blob_abc123
         uploadUrl:
           type: string
           format: uri
+          description: Presigned URL for uploading the encrypted file
         expiresAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds when the upload URL expires
     ConfirmUploadRequest:
       type: object
       required:
@@ -6066,8 +6780,10 @@ components:
           minLength: 64
           maxLength: 64
           description: SHA-256 hex digest of the uploaded file
+          example: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         thumbnailOfBlobId:
           type: string
+          description: If this blob is a thumbnail, the ID of the parent blob
     BlobResponse:
       type: object
       required:
@@ -6076,26 +6792,43 @@ components:
         - purpose
         - sizeBytes
         - checksum
+        - encryptionTier
         - uploadedAt
       properties:
         id:
           type: string
+          description: Blob identifier
+          example: blob_abc123
         systemId:
           type: string
+          description: System that owns this blob
+          example: sys_abc123
         purpose:
           $ref: "#/components/schemas/BlobPurpose"
         mimeType:
           type: string
           nullable: true
+          description: MIME type of the uploaded file
         sizeBytes:
           type: integer
+          description: File size in bytes
         checksum:
           type: string
+          description: SHA-256 hex digest of the uploaded file
+        encryptionTier:
+          type: integer
+          enum:
+            - 1
+            - 2
+          description: 1 = master-key encrypted, 2 = per-bucket encrypted. Needed to select the correct decryption key.
         uploadedAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
         thumbnailOfBlobId:
           type: string
           nullable: true
+          description: If this blob is a thumbnail, the ID of the parent blob
     DownloadUrlResponse:
       type: object
       required:
@@ -6105,11 +6838,15 @@ components:
       properties:
         blobId:
           type: string
+          description: ID of the blob
         downloadUrl:
           type: string
           format: uri
+          description: Presigned URL for downloading the encrypted file
         expiresAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds when the download URL expires
     RotationState:
       type: string
       enum:
@@ -6118,6 +6855,7 @@ components:
         - sealing
         - completed
         - failed
+      example: migrating
     InitiateRotationRequest:
       type: object
       required:
@@ -6128,9 +6866,11 @@ components:
         wrappedNewKey:
           type: string
           minLength: 1
+          description: New bucket key encrypted with the master key
         newKeyVersion:
           type: integer
           minimum: 2
+          description: Version number for the new key (must be greater than current)
         friendKeyGrants:
           type: array
           items:
@@ -6142,9 +6882,11 @@ components:
               friendAccountId:
                 type: string
                 minLength: 1
+                description: Account ID of the friend receiving the key grant
               encryptedKey:
                 type: string
                 minLength: 1
+                description: New bucket key encrypted with the friend's X25519 public key
     RotationResponse:
       type: object
       required:
@@ -6160,25 +6902,36 @@ components:
       properties:
         id:
           type: string
+          description: Rotation identifier
         bucketId:
           type: string
+          description: Privacy bucket being rotated
         fromKeyVersion:
           type: integer
+          description: Previous key version
         toKeyVersion:
           type: integer
+          description: New key version
         state:
           $ref: "#/components/schemas/RotationState"
         initiatedAt:
           type: integer
+          format: int64
+          description: Unix timestamp in milliseconds when rotation started
         completedAt:
           type: integer
+          format: int64
           nullable: true
+          description: Unix timestamp in milliseconds when rotation completed
         totalItems:
           type: integer
+          description: Total number of items to re-encrypt
         completedItems:
           type: integer
+          description: Number of items successfully re-encrypted
         failedItems:
           type: integer
+          description: Number of items that failed re-encryption
     ClaimChunkRequest:
       type: object
       properties:
@@ -6187,6 +6940,7 @@ components:
           minimum: 1
           maximum: 200
           default: 50
+          description: Number of items to claim for re-encryption
     ClaimChunkResponse:
       type: object
       required:
@@ -6206,12 +6960,15 @@ components:
             properties:
               id:
                 type: string
+                description: Rotation item identifier
               rotationId:
                 type: string
               entityType:
                 type: string
+                description: Type of entity to re-encrypt
               entityId:
                 type: string
+                description: ID of the entity to re-encrypt
               status:
                 type: string
               claimedBy:
@@ -6219,9 +6976,11 @@ components:
                 nullable: true
               claimedAt:
                 type: integer
+                format: int64
                 nullable: true
               completedAt:
                 type: integer
+                format: int64
                 nullable: true
               attempts:
                 type: integer
@@ -6244,11 +7003,13 @@ components:
               itemId:
                 type: string
                 minLength: 1
+                description: ID of the rotation item
               status:
                 type: string
                 enum:
                   - completed
                   - failed
+                description: Whether re-encryption succeeded or failed
     CompleteChunkResponse:
       type: object
       required:
@@ -6259,6 +7020,7 @@ components:
           $ref: "#/components/schemas/RotationResponse"
         transitioned:
           type: boolean
+          description: Whether the rotation state transitioned (e.g., to sealing or completed)
     UpdateSystemSettingsRequest:
       type: object
       required:
@@ -6267,6 +7029,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: T1-encrypted PlaintextSystemSettings (see ./plaintext.yaml#/PlaintextSystemSettings)
@@ -6274,8 +7037,10 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+          description: Locale code sent as plaintext (server needs it for locale-aware operations)
         biometricEnabled:
           type: boolean
+          description: Biometric state sent as plaintext (server needs it for biometric tracking)
         version:
           type: integer
           minimum: 1
@@ -6287,6 +7052,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: T1-encrypted PlaintextNomenclature (see ./plaintext.yaml#/PlaintextNomenclature)
@@ -6301,6 +7067,7 @@ components:
         pin:
           type: string
           pattern: ^\d{4,6}$
+          description: 4-6 digit numeric PIN
     PinVerifyResponse:
       type: object
       required:
@@ -6308,6 +7075,23 @@ components:
       properties:
         valid:
           type: boolean
+          description: Whether the provided PIN matches the stored PIN
+    SetupStatusResponse:
+      type: object
+      required:
+        - nomenclatureComplete
+        - profileComplete
+        - setupComplete
+      properties:
+        nomenclatureComplete:
+          type: boolean
+          description: Whether the nomenclature step has been completed
+        profileComplete:
+          type: boolean
+          description: Whether the profile step has been completed
+        setupComplete:
+          type: boolean
+          description: Whether the full setup wizard has been completed
     SetupStepRequest:
       type: object
       required:
@@ -6315,6 +7099,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: |
@@ -6328,6 +7113,7 @@ components:
       properties:
         encryptedData:
           type: string
+          contentEncoding: base64
           minLength: 1
           maxLength: 131072
           description: T1-encrypted PlaintextSystemSettings (see ./plaintext.yaml#/PlaintextSystemSettings)
@@ -6340,6 +7126,7 @@ components:
         recoveryKeyBackupConfirmed:
           type: boolean
           const: true
+          description: Must be true to confirm the user has backed up their recovery key
     PlaintextImageSource:
       description: |
         How an image is referenced. Either a blob stored via the Blobs API
@@ -6541,7 +7328,6 @@ components:
       type: object
       required:
         - imageSource
-        - sortOrder
       properties:
         imageSource:
           $ref: "#/components/schemas/PlaintextImageSource"
@@ -6558,7 +7344,6 @@ components:
       type: object
       required:
         - name
-        - sortOrder
       properties:
         name:
           type: string
@@ -7064,13 +7849,13 @@ components:
         switching:
           type: string
           description: "Term for switching (default: 'Switch'). Presets: Switch, Shift"
-        co-presence:
+        coPresence:
           type: string
           description: "Term for co-fronting (default: 'Co-fronting'). Presets: Co-fronting, Co-conscious, Co-driving"
-        internal-space:
+        internalSpace:
           type: string
           description: "Term for the internal space (default: 'Headspace'). Presets: Headspace, Innerworld"
-        primary-fronter:
+        primaryFronter:
           type: string
           description: "Term for the host (default: 'Host'). Presets: Host, Primary fronter, Main fronter"
         structure:
@@ -7152,3 +7937,39 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+x-tagGroups:
+  - name: Infrastructure
+    tags:
+      - Health
+  - name: Authentication & Account
+    tags:
+      - Auth
+      - Account
+  - name: System Management
+    tags:
+      - Systems
+      - System Settings
+  - name: Core Resources
+    tags:
+      - Members
+      - Member Photos
+      - Member Fields
+      - Groups
+      - Custom Fronts
+      - Fields
+      - Relationships
+  - name: System Structures
+    tags:
+      - Subsystems
+      - Side Systems
+      - Layers
+      - Structure Links
+      - Structure Memberships
+  - name: Lifecycle & Innerworld
+    tags:
+      - Lifecycle Events
+      - Innerworld
+  - name: Media & Crypto
+    tags:
+      - Blobs
+      - Key Rotation

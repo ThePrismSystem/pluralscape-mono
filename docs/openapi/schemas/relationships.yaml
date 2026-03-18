@@ -11,6 +11,7 @@ RelationshipType:
     - gatekeeper-of
     - source
     - custom
+  example: sibling
 
 CreateRelationshipRequest:
   type: object
@@ -18,14 +19,20 @@ CreateRelationshipRequest:
   properties:
     sourceMemberId:
       type: string
+      description: ID of the source member in the relationship
+      example: "mem_abc123"
     targetMemberId:
       type: string
+      description: ID of the target member in the relationship
+      example: "mem_def456"
     type:
       $ref: "#/RelationshipType"
     bidirectional:
       type: boolean
+      description: Whether the relationship applies in both directions
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextRelationship (see ./plaintext.yaml#/PlaintextRelationship)"
@@ -40,6 +47,7 @@ UpdateRelationshipRequest:
       type: boolean
     encryptedData:
       type: string
+      contentEncoding: base64
       minLength: 1
       maxLength: 87382
       description: "T1-encrypted PlaintextRelationship (see ./plaintext.yaml#/PlaintextRelationship)"
@@ -55,11 +63,14 @@ RelationshipResponse:
       properties:
         sourceMemberId:
           type: string
-          nullable: true
+          description: ID of the source member
+          example: "mem_abc123"
         targetMemberId:
           type: string
-          nullable: true
+          description: ID of the target member
+          example: "mem_def456"
         type:
           $ref: "#/RelationshipType"
         bidirectional:
           type: boolean
+          description: Whether the relationship applies in both directions

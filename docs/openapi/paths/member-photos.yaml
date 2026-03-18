@@ -3,6 +3,7 @@
     operationId: listMemberPhotos
     tags: [Member Photos]
     summary: List member photos
+    description: Returns all photos associated with a member. Rate limit 60 req/min (readDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -29,6 +30,7 @@
     operationId: createMemberPhoto
     tags: [Member Photos]
     summary: Create a member photo
+    description: Attaches a new encrypted photo record to a member. The blob must be uploaded separately via the blobs API. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -59,6 +61,7 @@
     operationId: reorderMemberPhotos
     tags: [Member Photos]
     summary: Reorder member photos
+    description: Updates the display order of a member's photos. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -77,6 +80,9 @@
           application/json:
             schema:
               type: object
+              properties:
+                ok:
+                  type: boolean
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -89,6 +95,7 @@
     operationId: archiveMemberPhoto
     tags: [Member Photos]
     summary: Archive a member photo
+    description: Marks a member photo as archived. Archived photos are hidden from default views but not deleted. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -97,6 +104,7 @@
       - name: photoId
         in: path
         required: true
+        description: Photo ID
         schema:
           type: string
     responses:
@@ -118,6 +126,7 @@
     operationId: restoreMemberPhoto
     tags: [Member Photos]
     summary: Restore an archived member photo
+    description: Removes the archived flag from a member photo, making it visible in default views again. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -126,6 +135,7 @@
       - name: photoId
         in: path
         required: true
+        description: Photo ID
         schema:
           type: string
     responses:
@@ -147,6 +157,7 @@
     operationId: deleteMemberPhoto
     tags: [Member Photos]
     summary: Delete a member photo
+    description: Permanently deletes a member photo record. The associated blob must be deleted separately. Rate limit 30 req/min (writeDefault).
     security:
       - bearerAuth: []
     parameters:
@@ -155,6 +166,7 @@
       - name: photoId
         in: path
         required: true
+        description: Photo ID
         schema:
           type: string
     responses:
