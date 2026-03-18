@@ -8,26 +8,25 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-1 complete, Milestone 2 (API Core) nearing completion.**
+**Active development — Milestones 0-2 complete, starting Milestone 3 (Sync and Real-Time).**
 
-Milestones 0 (infrastructure), 1 (data layer), and the core of Milestone 2 (API) are complete. M2 completed epics:
+Milestones 0 (infrastructure), 1 (data layer), and 2 (API Core) are complete. The full REST API is implemented with 155 operations across 20 route domains, documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
 
-- Auth system — registration, login, session management, recovery key backup/regeneration, password reset via recovery key, biometric token enrollment, session token hashing
-- Member CRUD — full lifecycle (create, read, update, archive, restore, duplicate, permanent delete), member photos, custom field values, member-centric membership queries
+Milestone 2 delivered:
+
+- Auth system — registration, login, session management, recovery key backup/regeneration, password reset via recovery key, biometric token enrollment
+- Member CRUD — full lifecycle with photos, custom field values, membership queries
 - Groups and folders — CRUD, hierarchical nesting, membership management, group copy, cycle detection
-- Custom fronts — CRUD with archive/restore
-- System settings — CRUD with PIN verification
-- Initial setup wizard — multi-step onboarding flow
-- System structure — subsystems, side-systems, layers, relationships, structure links, structure memberships with generic CRUD extraction
-- Media upload pipeline — presigned upload/download URLs, blob confirmation, lifecycle management, orphan cleanup
-- Per-category rate limit middleware — read/write/auth/sensitive categories with Valkey-backed distributed store
+- Custom fronts, system settings, initial setup wizard, nomenclature
+- System structure — subsystems, side-systems, layers, relationships, structure links, structure memberships
+- Media upload pipeline — presigned upload/download URLs, blob confirmation, lifecycle management
+- Per-category rate limiting with Valkey-backed distributed store
 - Key rotation API — initiate, claim, complete-chunk, progress tracking
-- Innerworld CRUD — regions, entities, canvas with archive/restore/delete
-- Lifecycle events — type-specific validation, pagination
-- Audit log — query endpoint with resourceType filtering, PII cleanup scheduling
-- Comprehensive API audit remediation — 52 issues across security, ownership, testing, and code quality (10 parallel worktree PRs)
-- Hierarchy service factory — shared generic CRUD for group and subsystem services
-- Blob list endpoint, S3 cleanup job, API limits documentation
+- Innerworld CRUD — regions, entities, canvas
+- Lifecycle events with type-specific validation
+- Audit log with query filtering and PII cleanup scheduling
+- Security audit remediation — 52 issues across security, ownership, testing, and code quality
+- OpenAPI 3.1 specification with client-side plaintext schemas for E2E encryption
 
 See the full [milestone roadmap](docs/planning/milestones.md) and [feature specification](docs/planning/features.md).
 
@@ -101,6 +100,8 @@ ui-design/
   BRANDING.md      Brand guidelines — colors, typography, components
 
 docs/
+  openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
+  openapi.yaml     Bundled single-file OpenAPI spec (generated)
   adr/             Architecture Decision Records (23 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
@@ -190,6 +191,8 @@ pnpm test:coverage     # Tests with coverage report
 pnpm clean             # Clean build artifacts
 pnpm roadmap           # Generate docs/roadmap.md from beans
 pnpm codeql            # Run CodeQL security analysis
+pnpm openapi:lint      # Validate OpenAPI spec
+pnpm openapi:bundle    # Bundle multi-file spec into docs/openapi.yaml
 ```
 
 ### Code Quality
