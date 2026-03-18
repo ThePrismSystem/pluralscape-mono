@@ -8,13 +8,6 @@
       "when": 1773790531238,
       "tag": "0000_complete_black_queen",
       "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1773810394263,
-      "tag": "0001_mute_klaw",
-      "breakpoints": true
     }
   ]
 }
