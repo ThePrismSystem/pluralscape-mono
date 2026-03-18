@@ -216,6 +216,7 @@ function createLinkTableOps(mapping: LinkColumnMapping): {
       };
       const [row] = await tx
         .insert(table)
+        // Drizzle union tables require type erasure for dynamic column names
         .values(values as never)
         .returning();
       return row ? normalize(row as Record<string, unknown>) : undefined;

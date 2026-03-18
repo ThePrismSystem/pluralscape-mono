@@ -438,7 +438,7 @@ class ValidationError extends Error {
 export { ValidationError };
 
 export function isDuplicateEmailError(error: unknown): boolean {
-  if (isUniqueViolation(error) && error instanceof Error && "constraint_name" in error) {
+  if (isUniqueViolation(error) && "constraint_name" in error) {
     return (error as { constraint_name: string }).constraint_name === "accounts_email_hash_idx";
   }
   return false;

@@ -9,7 +9,7 @@ import { ApiHttpError } from "./api-error.js";
  * Checks for the `code` property set to `"23505"` on Error instances,
  * matching the shape produced by the postgres.js driver.
  */
-export function isUniqueViolation(error: unknown): boolean {
+export function isUniqueViolation(error: unknown): error is Error & { code: string } {
   return error instanceof Error && "code" in error && error.code === PG_UNIQUE_VIOLATION;
 }
 
