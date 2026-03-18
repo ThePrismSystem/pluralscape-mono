@@ -2,6 +2,7 @@ import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { InnerWorldRegionId, SystemId } from "@pluralscape/types";
@@ -33,6 +34,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { InvalidInputError } = await import("@pluralscape/crypto");
 const {
   createRegion,
@@ -81,6 +83,15 @@ describe("createRegion", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+  });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(
+      createRegion(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("creates a region successfully", async () => {

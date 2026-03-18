@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
@@ -66,6 +67,7 @@ vi.mock("../../services/recovery-key.service.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────────
 
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { SetupCompleteBodySchema, SetupNomenclatureStepBodySchema, SetupProfileStepBodySchema } =
   await import("@pluralscape/validation");
 const { getRecoveryKeyStatus } = await import("../../services/recovery-key.service.js");
@@ -104,6 +106,15 @@ describe("setup service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     (mockAudit as ReturnType<typeof vi.fn>).mockClear();
+  });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(getSetupStatus(db, SYSTEM_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 
   // ── getSetupStatus ────────────────────────────────────────────────

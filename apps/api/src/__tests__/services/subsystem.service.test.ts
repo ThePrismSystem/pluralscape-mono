@@ -2,6 +2,7 @@ import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SubsystemId, SystemId } from "@pluralscape/types";
@@ -136,10 +137,7 @@ describe("createSubsystem", () => {
   });
 
   it("throws 404 for system ownership failure", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(404, "NOT_FOUND", "System not found"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
 
     await expect(
@@ -209,10 +207,7 @@ describe("listSubsystems", () => {
   });
 
   it("throws 404 for system ownership failure", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(404, "NOT_FOUND", "System not found"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
 
     await expect(listSubsystems(db, SYSTEM_ID, AUTH)).rejects.toThrow(
@@ -265,10 +260,7 @@ describe("getSubsystem", () => {
   });
 
   it("throws 404 for system ownership failure", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(404, "NOT_FOUND", "System not found"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
 
     await expect(getSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH)).rejects.toThrow(
@@ -312,10 +304,7 @@ describe("updateSubsystem", () => {
   });
 
   it("throws 404 for system ownership failure", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(404, "NOT_FOUND", "System not found"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
 
     await expect(
@@ -551,15 +540,12 @@ describe("deleteSubsystem", () => {
   });
 
   it("throws 404 for system ownership failure", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(404, "NOT_FOUND", "System not found"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
 
-    await expect(
-      deleteSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    await expect(deleteSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });
 
@@ -591,15 +577,12 @@ describe("archiveSubsystem", () => {
   });
 
   it("throws 404 for system ownership failure", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(404, "NOT_FOUND", "System not found"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
 
-    await expect(
-      archiveSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    await expect(archiveSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });
 
@@ -667,14 +650,11 @@ describe("restoreSubsystem", () => {
   });
 
   it("throws 404 for system ownership failure", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(404, "NOT_FOUND", "System not found"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
 
-    await expect(
-      restoreSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+    await expect(restoreSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });

@@ -2,6 +2,7 @@ import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { GroupId, SystemId } from "@pluralscape/types";
@@ -126,10 +127,7 @@ describe("createGroup", () => {
   });
 
   it("throws 404 for system ownership failure", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(404, "NOT_FOUND", "System not found"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
 
     await expect(

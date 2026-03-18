@@ -86,12 +86,12 @@ export async function setupNomenclatureStep(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupStepResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
   const parsed = SetupNomenclatureStepBodySchema.safeParse(params);
   if (!parsed.success) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid nomenclature payload");
   }
-
-  await assertSystemOwnership(db, systemId, auth);
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
@@ -132,12 +132,12 @@ export async function setupProfileStep(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupStepResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
   const parsed = SetupProfileStepBodySchema.safeParse(params);
   if (!parsed.success) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid profile payload");
   }
-
-  await assertSystemOwnership(db, systemId, auth);
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
@@ -176,12 +176,12 @@ export async function setupComplete(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupCompleteResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
   const parsed = SetupCompleteBodySchema.safeParse(params);
   if (!parsed.success) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid setup complete payload");
   }
-
-  await assertSystemOwnership(db, systemId, auth);
 
   // Guard: recovery key must exist
   const recoveryStatus = await getRecoveryKeyStatus(db, auth.accountId);

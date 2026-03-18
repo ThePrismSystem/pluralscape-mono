@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { BlobId, SystemId } from "@pluralscape/types";
@@ -21,6 +22,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 
 // ── Import under test ────────────────────────────────────────────────
 
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { createUploadUrl, confirmUpload, getBlob, getDownloadUrl, archiveBlob } =
   await import("../../services/blob.service.js");
 
@@ -93,6 +95,25 @@ describe("createUploadUrl", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+  });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+    const storageAdapter = makeStorageAdapter();
+    const quotaService = makeQuotaService();
+
+    await expect(
+      createUploadUrl(
+        db,
+        storageAdapter as never,
+        quotaService as never,
+        SYSTEM_ID,
+        { purpose: "avatar", mimeType: "image/png", sizeBytes: 1024, encryptionTier: 1 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("creates a presigned upload URL successfully", async () => {
