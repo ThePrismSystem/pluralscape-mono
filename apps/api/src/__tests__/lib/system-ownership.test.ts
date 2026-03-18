@@ -1,6 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { mockDb } from "../helpers/mock-db.js";
+import { describe, expect, it } from "vitest";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
@@ -24,35 +22,36 @@ const AUTH: AuthContext = {
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe("assertSystemOwnership", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("does not throw when system is in ownedSystemIds", () => {
+    expect(() => {
+      assertSystemOwnership(SYSTEM_ID, AUTH);
+    }).not.toThrow();
   });
 
-  it("resolves when system is in ownedSystemIds", async () => {
-    const { db } = mockDb();
-    await expect(assertSystemOwnership(db, SYSTEM_ID, AUTH)).resolves.toBeUndefined();
+  it("throws 404 when system is not in ownedSystemIds", () => {
+    expect(() => {
+      assertSystemOwnership("sys_not-owned" as SystemId, AUTH);
+    }).toThrow(
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "System not found",
+      }),
+    );
   });
 
-  it("throws 404 when system is not in ownedSystemIds", async () => {
-    const { db } = mockDb();
-    await expect(
-      assertSystemOwnership(db, "sys_not-owned" as SystemId, AUTH),
-    ).rejects.toMatchObject({
-      status: 404,
-      code: "NOT_FOUND",
-      message: "System not found",
-    });
-  });
-
-  it("throws 404 when ownedSystemIds is empty", async () => {
-    const { db } = mockDb();
+  it("throws 404 when ownedSystemIds is empty", () => {
     const emptyAuth: AuthContext = {
       ...AUTH,
       ownedSystemIds: new Set(),
     };
-    await expect(assertSystemOwnership(db, SYSTEM_ID, emptyAuth)).rejects.toMatchObject({
-      status: 404,
-      code: "NOT_FOUND",
-    });
+    expect(() => {
+      assertSystemOwnership(SYSTEM_ID, emptyAuth);
+    }).toThrow(
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+      }),
+    );
   });
 });

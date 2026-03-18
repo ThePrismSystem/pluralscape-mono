@@ -337,7 +337,7 @@ describe("archiveEntity", () => {
 
   it("archives an entity successfully", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]); // existence check
+    chain.returning.mockResolvedValueOnce([{ id: ENTITY_ID }]); // existence check
 
     await archiveEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit);
 

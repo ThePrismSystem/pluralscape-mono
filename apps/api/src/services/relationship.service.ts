@@ -89,7 +89,7 @@ export async function createRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -169,7 +169,7 @@ export async function listRelationships(
   limit = DEFAULT_PAGE_LIMIT,
   memberId?: string,
 ): Promise<PaginatedResult<RelationshipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -207,7 +207,7 @@ export async function getRelationship(
   relationshipId: RelationshipId,
   auth: AuthContext,
 ): Promise<RelationshipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -238,7 +238,7 @@ export async function updateRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -307,7 +307,7 @@ export async function deleteRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     // Verify relationship exists

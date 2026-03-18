@@ -92,7 +92,7 @@ export async function createSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SubsystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -161,7 +161,7 @@ export async function listSubsystems(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<SubsystemResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -189,7 +189,7 @@ export async function getSubsystem(
   subsystemId: SubsystemId,
   auth: AuthContext,
 ): Promise<SubsystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -220,7 +220,7 @@ export async function updateSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SubsystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -317,7 +317,7 @@ export async function deleteSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -437,7 +437,7 @@ export async function restoreSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SubsystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 

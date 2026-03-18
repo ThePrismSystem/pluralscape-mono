@@ -113,7 +113,7 @@ export async function createFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldDefinitionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = CreateFieldDefinitionBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -180,7 +180,7 @@ export async function listFieldDefinitions(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<FieldDefinitionResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const limit = Math.min(opts?.limit ?? DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT);
   const conditions = [eq(fieldDefinitions.systemId, systemId)];
@@ -211,7 +211,7 @@ export async function getFieldDefinition(
   fieldId: FieldDefinitionId,
   auth: AuthContext,
 ): Promise<FieldDefinitionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -242,7 +242,7 @@ export async function updateFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldDefinitionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = UpdateFieldDefinitionBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -320,7 +320,7 @@ export async function archiveFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -364,7 +364,7 @@ export async function restoreFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldDefinitionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   return db.transaction(async (tx) => {
     const [existing] = await tx
@@ -415,7 +415,7 @@ export async function deleteFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

@@ -337,7 +337,7 @@ async function createLinkGeneric<TParsed>(
   audit: AuditWriter,
   cfg: LinkEntityConfig<TParsed>,
 ): Promise<StructureLinkResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseLinkBody(params, cfg.schema);
   const { entityAId, entityBId } = cfg.getEntityIds(parsed);
@@ -379,7 +379,7 @@ async function deleteLinkGeneric<TParsed>(
   audit: AuditWriter,
   cfg: LinkEntityConfig<TParsed>,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const deleted = await cfg.remove(tx, linkId, systemId);
@@ -407,7 +407,7 @@ async function listLinksGeneric<TParsed>(
   filterEntityAId?: string,
   filterEntityBId?: string,
 ): Promise<PaginatedResult<StructureLinkResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
   const rows = await cfg.query(

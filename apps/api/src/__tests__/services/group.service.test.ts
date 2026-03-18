@@ -574,7 +574,7 @@ describe("archiveGroup", () => {
 
   it("archives a group", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: GROUP_ID }]);
 
     await archiveGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
 

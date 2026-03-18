@@ -82,7 +82,7 @@ export async function createLayer(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<LayerResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -130,7 +130,7 @@ export async function listLayers(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<LayerResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -158,7 +158,7 @@ export async function getLayer(
   layerId: LayerId,
   auth: AuthContext,
 ): Promise<LayerResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -183,7 +183,7 @@ export async function updateLayer(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<LayerResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -247,7 +247,7 @@ export async function deleteLayer(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

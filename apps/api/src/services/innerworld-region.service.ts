@@ -76,7 +76,7 @@ export async function createRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RegionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -147,7 +147,7 @@ export async function listRegions(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<RegionResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
@@ -179,7 +179,7 @@ export async function getRegion(
   regionId: InnerWorldRegionId,
   auth: AuthContext,
 ): Promise<RegionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -210,7 +210,7 @@ export async function updateRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RegionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -277,7 +277,7 @@ export async function archiveRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 
@@ -362,7 +362,7 @@ export async function restoreRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RegionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 
@@ -440,7 +440,7 @@ export async function deleteRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     // Verify region exists

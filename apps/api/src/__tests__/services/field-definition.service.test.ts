@@ -490,9 +490,9 @@ describe("deleteFieldDefinition", () => {
 
   it("rejects cross-system access", async () => {
     const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
-    );
+    vi.mocked(assertSystemOwnership).mockImplementationOnce(() => {
+      throw new ApiHttpError(403, "FORBIDDEN", "System ownership check failed");
+    });
     const { db } = mockDb();
 
     await expect(deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit)).rejects.toThrow(

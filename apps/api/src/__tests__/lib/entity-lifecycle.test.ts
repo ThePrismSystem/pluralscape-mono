@@ -19,7 +19,7 @@ const MOCK_AUTH: AuthContext = {
   systemId: "sys_test" as AuthContext["systemId"],
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
-  ownedSystemIds: new Set(["sys_test" as AuthContext["systemId"] & string]),
+  ownedSystemIds: new Set(["sys_test" as SystemId]),
 };
 
 const SYSTEM_ID = "sys_test" as SystemId;
@@ -56,7 +56,7 @@ describe("archiveEntity", () => {
 
   it("archives an existing non-archived entity", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: ENTITY_ID }]);
     const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
 
     await archiveEntity(db, SYSTEM_ID, ENTITY_ID, MOCK_AUTH, audit, TEST_CONFIG);
@@ -70,7 +70,7 @@ describe("archiveEntity", () => {
 
   it("throws NOT_FOUND when entity does not exist", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
+    chain.returning.mockResolvedValueOnce([]);
     const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
 
     await expect(
@@ -87,7 +87,6 @@ describe("restoreEntity", () => {
   it("restores an archived entity and returns mapped result", async () => {
     const rawRow = { id: ENTITY_ID, name: "Restored" };
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]);
     chain.returning.mockResolvedValueOnce([rawRow]);
     const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
     const mapper = (row: Record<string, unknown>) => ({ mapped: String(row["name"]) });
@@ -110,7 +109,8 @@ describe("restoreEntity", () => {
   });
 
   it("throws NOT_FOUND when archived entity does not exist", async () => {
-    const { db } = mockDb();
+    const { db, chain } = mockDb();
+    chain.returning.mockResolvedValueOnce([]);
     const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
 
     await expect(
@@ -120,7 +120,6 @@ describe("restoreEntity", () => {
 
   it("throws NOT_FOUND when update returns empty", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]);
     chain.returning.mockResolvedValueOnce([]);
     const audit: AuditWriter = vi.fn().mockResolvedValue(undefined) as AuditWriter;
 

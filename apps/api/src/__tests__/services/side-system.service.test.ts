@@ -271,7 +271,7 @@ describe("archiveSideSystem", () => {
 
   it("archives a side system", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: SIDE_SYSTEM_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: SIDE_SYSTEM_ID }]);
 
     await archiveSideSystem(db, SYSTEM_ID, SIDE_SYSTEM_ID, AUTH, mockAudit);
 

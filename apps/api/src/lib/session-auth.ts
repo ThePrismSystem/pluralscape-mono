@@ -60,12 +60,16 @@ export async function validateSession(
     }
   }
 
-  // Fetch all non-archived system IDs for this account
+  // Fetch all non-archived system IDs for system accounts (viewers never own systems)
   const accountId = row.session.accountId as AccountId;
-  const systemRows = await db
-    .select({ id: systems.id })
-    .from(systems)
-    .where(and(eq(systems.accountId, accountId), eq(systems.archived, false)));
+  const systemRows =
+    row.accountType === "system"
+      ? await db
+          .select({ id: systems.id })
+          .from(systems)
+          .where(and(eq(systems.accountId, accountId), eq(systems.archived, false)))
+          .orderBy(systems.createdAt)
+      : [];
 
   const ownedSystemIds = new Set(systemRows.map((r) => r.id as SystemId));
   const firstSystemId = systemRows[0]?.id as SystemId | undefined;

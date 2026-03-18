@@ -89,7 +89,7 @@ export async function createMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = CreateMemberBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -139,7 +139,7 @@ export async function listMembers(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<MemberResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const limit = Math.min(opts?.limit ?? DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT);
   const conditions = [eq(members.systemId, systemId)];
@@ -170,7 +170,7 @@ export async function getMember(
   memberId: MemberId,
   auth: AuthContext,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -197,7 +197,7 @@ export async function updateMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = UpdateMemberBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -265,7 +265,7 @@ export async function duplicateMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = DuplicateMemberBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -413,7 +413,7 @@ export async function archiveMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -465,7 +465,7 @@ export async function restoreMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   return db.transaction(async (tx) => {
     const [existing] = await tx
@@ -513,7 +513,7 @@ export async function deleteMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

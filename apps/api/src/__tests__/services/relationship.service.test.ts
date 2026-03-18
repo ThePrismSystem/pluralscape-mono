@@ -420,7 +420,7 @@ describe("archiveRelationship", () => {
   it("archives a relationship", async () => {
     const { db, chain } = mockDb();
     // Verify exists check
-    chain.limit.mockResolvedValueOnce([{ id: RELATIONSHIP_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: RELATIONSHIP_ID }]);
 
     await archiveRelationship(db, SYSTEM_ID, RELATIONSHIP_ID, AUTH, mockAudit);
 

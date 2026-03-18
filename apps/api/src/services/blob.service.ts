@@ -52,7 +52,7 @@ export async function createUploadUrl(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<UploadUrlResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const result = CreateUploadUrlBodySchema.safeParse(params);
   if (!result.success) {
@@ -141,7 +141,7 @@ export async function confirmUpload(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BlobResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const result = ConfirmUploadBodySchema.safeParse(params);
   if (!result.success) {
@@ -228,7 +228,7 @@ export async function getBlob(
   blobId: BlobId,
   auth: AuthContext,
 ): Promise<BlobResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -259,7 +259,7 @@ export async function getDownloadUrl(
   blobId: BlobId,
   auth: AuthContext,
 ): Promise<DownloadUrlResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select({ storageKey: blobMetadata.storageKey })
@@ -306,7 +306,7 @@ export async function archiveBlob(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 

@@ -39,13 +39,14 @@ describe("DELETE /systems/:id/members/:memberId", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 204 on success", async () => {
+  it("returns 204 with empty body on success", async () => {
     vi.mocked(deleteMember).mockResolvedValueOnce(undefined);
 
     const app = createRouteApp("/systems", systemRoutes);
     const res = await app.request(MEMBER_URL, { method: "DELETE" });
 
     expect(res.status).toBe(204);
+    expect(await res.text()).toBe("");
   });
 
   it("returns 404 when member not found", async () => {

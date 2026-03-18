@@ -38,7 +38,7 @@ export async function setPin(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
   }
 
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const pinHash = await hashPinOffload(parsed.data.pin, "server");
 
@@ -74,7 +74,7 @@ export async function removePin(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
   }
 
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   // Fetch current PIN hash
   const [row] = await db
@@ -124,7 +124,7 @@ export async function verifyPinCode(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
   }
 
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select({ pinHash: systemSettings.pinHash })

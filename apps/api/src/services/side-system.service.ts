@@ -79,7 +79,7 @@ export async function createSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SideSystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { blob } = parseAndValidateBlob(
     params,
@@ -126,7 +126,7 @@ export async function listSideSystems(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<SideSystemResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -154,7 +154,7 @@ export async function getSideSystem(
   sideSystemId: SideSystemId,
   auth: AuthContext,
 ): Promise<SideSystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -185,7 +185,7 @@ export async function updateSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SideSystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { blob, parsed } = parseAndValidateBlob(
     params,
@@ -252,7 +252,7 @@ export async function deleteSideSystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

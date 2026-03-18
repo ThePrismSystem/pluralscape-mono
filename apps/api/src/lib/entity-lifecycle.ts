@@ -34,7 +34,13 @@ export interface ArchivableEntityConfig {
   readonly restoreEvent: AuditEventType;
 }
 
-/** Archive an entity by setting archived=true within a transaction. */
+/**
+ * Archive an entity by setting archived=true within a transaction.
+ *
+ * The `.set()` object uses `as Record<string, unknown>` to satisfy Drizzle's
+ * generic table types. The expected column names at runtime are:
+ * `archived`, `archivedAt`, `updatedAt`, `version`.
+ */
 export async function archiveEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -43,32 +49,28 @@ export async function archiveEntity(
   audit: AuditWriter,
   cfg: ArchivableEntityConfig,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
   const { table, columns, entityName, archiveEvent } = cfg;
 
   await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: columns.id })
-      .from(table)
-      .where(
-        and(eq(columns.id, entityId), eq(columns.systemId, systemId), eq(columns.archived, false)),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
-    }
-
-    await tx
+    const updated = await tx
       .update(table)
       .set({
         archived: true,
         archivedAt: timestamp,
         updatedAt: timestamp,
+        version: sql`${columns.version} + 1`,
       } as Record<string, unknown>)
-      .where(and(eq(columns.id, entityId), eq(columns.systemId, systemId)));
+      .where(
+        and(eq(columns.id, entityId), eq(columns.systemId, systemId), eq(columns.archived, false)),
+      )
+      .returning({ id: columns.id });
+
+    if (updated.length === 0) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
+    }
 
     await audit(tx, {
       eventType: archiveEvent,
@@ -85,6 +87,10 @@ export async function archiveEntity(
  * The mapper receives the raw Drizzle row; callers should pass their existing
  * typed mapper (e.g. `toCustomFrontResult`) which will receive the correctly
  * shaped row at runtime from `.returning()`.
+ *
+ * The `.set()` object uses `as Record<string, unknown>` to satisfy Drizzle's
+ * generic table types. The expected column names at runtime are:
+ * `archived`, `archivedAt`, `updatedAt`, `version`.
  */
 export async function restoreEntity<TResult>(
   db: PostgresJsDatabase,
@@ -95,28 +101,12 @@ export async function restoreEntity<TResult>(
   cfg: ArchivableEntityConfig,
   toResult: (row: Record<string, unknown>) => TResult,
 ): Promise<TResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
   const { table, columns, entityName, restoreEvent } = cfg;
 
   return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: columns.id })
-      .from(table)
-      .where(
-        and(eq(columns.id, entityId), eq(columns.systemId, systemId), eq(columns.archived, true)),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(
-        HTTP_NOT_FOUND,
-        "NOT_FOUND",
-        `Archived ${entityName.toLowerCase()} not found`,
-      );
-    }
-
     const updated = await tx
       .update(table)
       .set({
@@ -125,7 +115,9 @@ export async function restoreEntity<TResult>(
         updatedAt: timestamp,
         version: sql`${columns.version} + 1`,
       } as Record<string, unknown>)
-      .where(and(eq(columns.id, entityId), eq(columns.systemId, systemId)))
+      .where(
+        and(eq(columns.id, entityId), eq(columns.systemId, systemId), eq(columns.archived, true)),
+      )
       .returning();
 
     const row = updated[0];

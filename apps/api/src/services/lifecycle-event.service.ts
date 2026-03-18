@@ -100,7 +100,7 @@ export async function createLifecycleEvent(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<LifecycleEventResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -164,7 +164,7 @@ export async function listLifecycleEvents(
   limit = DEFAULT_PAGE_LIMIT,
   eventType?: string,
 ): Promise<PaginatedLifecycleEvents> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -209,7 +209,7 @@ export async function getLifecycleEvent(
   eventId: LifecycleEventId,
   auth: AuthContext,
 ): Promise<LifecycleEventResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()

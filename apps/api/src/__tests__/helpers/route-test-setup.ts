@@ -4,6 +4,7 @@ import { errorHandler } from "../../middleware/error-handler.js";
 import { requestIdMiddleware } from "../../middleware/request-id.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { SystemId } from "@pluralscape/types";
 import type { Env } from "hono";
 
 /** System ID used across all route tests. */
@@ -15,7 +16,7 @@ export const MOCK_AUTH: AuthContext = {
   systemId: MOCK_SYSTEM_ID as AuthContext["systemId"],
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
-  ownedSystemIds: new Set([MOCK_SYSTEM_ID as AuthContext["systemId"] & string]),
+  ownedSystemIds: new Set([MOCK_SYSTEM_ID as SystemId]),
 };
 
 /** Auth context for account-level routes with no active system (systemId: null). */
@@ -24,7 +25,7 @@ export const MOCK_ACCOUNT_ONLY_AUTH: AuthContext = {
   systemId: null,
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
-  ownedSystemIds: new Set<AuthContext["systemId"] & string>(),
+  ownedSystemIds: new Set<SystemId>(),
 };
 
 /** Create a Hono app with request-id middleware, the given routes, and the error handler. */

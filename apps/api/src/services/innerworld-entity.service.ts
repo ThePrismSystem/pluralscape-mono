@@ -78,7 +78,7 @@ export async function createEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -150,7 +150,7 @@ export async function listEntities(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<EntityResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
@@ -186,7 +186,7 @@ export async function getEntity(
   entityId: InnerWorldEntityId,
   auth: AuthContext,
 ): Promise<EntityResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -217,7 +217,7 @@ export async function updateEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -304,7 +304,7 @@ export async function restoreEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 
@@ -377,7 +377,7 @@ export async function deleteEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

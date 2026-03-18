@@ -68,10 +68,10 @@ function makeSession(overrides: Partial<MockSession> = {}): MockSession {
 /**
  * Creates a mock DB that supports:
  * 1. Session query: `.select().from().innerJoin().where().limit()`
- * 2. Systems query: `.select().from().where()` (returns array directly)
+ * 2. Systems query: `.select().from().where().orderBy()` (for system accounts only)
  *
  * The first `.limit()` call resolves with sessionResult.
- * Subsequent `.where()` calls after `.from(systems)` resolve with systemRows.
+ * Subsequent `.where()` calls resolve with a chain ending in `.orderBy()`.
  */
 function createMockDb(
   sessionResult: Array<{
@@ -91,8 +91,8 @@ function createMockDb(
         // Session query — returns chain with .limit()
         return { limit: vi.fn().mockResolvedValue(sessionResult) };
       }
-      // Systems query — returns rows directly (no .limit())
-      return Promise.resolve(systemRows);
+      // Systems query — returns chain with .orderBy()
+      return { orderBy: vi.fn().mockResolvedValue(systemRows) };
     }),
   };
   return db;

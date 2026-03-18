@@ -74,7 +74,7 @@ export async function createCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CustomFrontResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { blob } = parseAndValidateBlob(
     params,
@@ -121,7 +121,7 @@ export async function listCustomFronts(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<CustomFrontResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -149,7 +149,7 @@ export async function getCustomFront(
   customFrontId: CustomFrontId,
   auth: AuthContext,
 ): Promise<CustomFrontResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -180,7 +180,7 @@ export async function updateCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CustomFrontResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -247,7 +247,7 @@ export async function deleteCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

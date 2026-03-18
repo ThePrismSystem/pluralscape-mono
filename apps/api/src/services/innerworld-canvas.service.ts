@@ -49,7 +49,7 @@ export async function getCanvas(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<CanvasResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -73,7 +73,7 @@ export async function upsertCanvas(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CanvasResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,

@@ -286,7 +286,7 @@ async function addMembershipGeneric(
   audit: AuditWriter,
   cfg: MembershipEntityConfig,
 ): Promise<StructureMembershipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -331,7 +331,7 @@ async function removeMembershipGeneric(
   audit: AuditWriter,
   cfg: MembershipEntityConfig,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const deleted = await cfg.remove(tx, membershipId, systemId);
@@ -358,7 +358,7 @@ async function listMembershipsGeneric(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await verifyEntityExists(db, cfg.entityTable, entityId, systemId, cfg.entityName);
 

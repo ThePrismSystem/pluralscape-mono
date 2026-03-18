@@ -322,7 +322,7 @@ describe("archiveCustomFront", () => {
 
   it("archives a custom front", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: CF_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: CF_ID }]);
 
     await archiveCustomFront(db, SYSTEM_ID, CF_ID, AUTH, mockAudit);
 

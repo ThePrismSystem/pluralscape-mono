@@ -87,7 +87,7 @@ export async function createGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -155,7 +155,7 @@ export async function listGroups(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -183,7 +183,7 @@ export async function getGroup(
   groupId: GroupId,
   auth: AuthContext,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -208,7 +208,7 @@ export async function updateGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -271,7 +271,7 @@ export async function deleteGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     // Verify group exists
@@ -341,7 +341,7 @@ export async function moveGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = MoveGroupBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -450,7 +450,7 @@ export async function copyGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = CopyGroupBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -571,7 +571,7 @@ export async function getGroupTree(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<GroupResultTree[]> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const rows = await db
     .select()
@@ -614,7 +614,7 @@ export async function reorderGroups(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = ReorderGroupsBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -674,7 +674,7 @@ export async function restoreGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 
