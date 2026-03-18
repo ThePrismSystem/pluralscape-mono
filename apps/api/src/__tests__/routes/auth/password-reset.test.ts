@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorHandler } from "../../../middleware/error-handler.js";
 import { requestIdMiddleware } from "../../../middleware/request-id.js";
 
-import type { ApiErrorResponse } from "@pluralscape/types";
+import type { AccountId, ApiErrorResponse, SessionId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -20,6 +20,12 @@ vi.mock("../../../services/recovery-key.service.js", () => ({
   resetPasswordWithRecoveryKey: vi.fn(),
   NoActiveRecoveryKeyError: class extends Error {
     override name = "NoActiveRecoveryKeyError" as const;
+  },
+  DecryptionFailedError: class extends Error {
+    override name = "DecryptionFailedError" as const;
+  },
+  InvalidInputError: class extends Error {
+    override name = "InvalidInputError" as const;
   },
 }));
 
@@ -37,8 +43,12 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
 
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { resetPasswordWithRecoveryKey, NoActiveRecoveryKeyError } =
-  await import("../../../services/recovery-key.service.js");
+const {
+  resetPasswordWithRecoveryKey,
+  NoActiveRecoveryKeyError,
+  DecryptionFailedError,
+  InvalidInputError,
+} = await import("../../../services/recovery-key.service.js");
 const { passwordResetRoute } = await import("../../../routes/auth/password-reset.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -78,9 +88,9 @@ describe("POST /password-reset/recovery-key", () => {
 
   it("returns 200 with session data on successful reset", async () => {
     vi.mocked(resetPasswordWithRecoveryKey).mockResolvedValueOnce({
-      sessionToken: "sess_new",
+      sessionToken: "sess_new" as SessionId,
       recoveryKey: "NEW-RECOVERY-KEY",
-      accountId: "acct_123",
+      accountId: "acct_123" as AccountId,
     });
 
     const app = createApp();
@@ -146,6 +156,32 @@ describe("POST /password-reset/recovery-key", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 401 for DecryptionFailedError (bad recovery key)", async () => {
+    vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValueOnce(
+      new DecryptionFailedError("Decryption failed"),
+    );
+
+    const app = createApp();
+    const res = await postJSON(app, VALID_BODY);
+
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("UNAUTHENTICATED");
+  });
+
+  it("returns 401 for InvalidInputError (malformed recovery key)", async () => {
+    vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValueOnce(
+      new InvalidInputError("Invalid recovery key format"),
+    );
+
+    const app = createApp();
+    const res = await postJSON(app, VALID_BODY);
+
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("UNAUTHENTICATED");
   });
 
   it("re-throws unexpected errors as 500", async () => {

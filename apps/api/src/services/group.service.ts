@@ -469,7 +469,7 @@ export async function copyGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const parsed = CopyGroupBodySchema.safeParse(params);
   if (!parsed.success) {

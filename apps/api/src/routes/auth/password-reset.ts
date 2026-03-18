@@ -7,6 +7,8 @@ import { getDb } from "../../lib/db.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
+  DecryptionFailedError,
+  InvalidInputError,
   NoActiveRecoveryKeyError,
   resetPasswordWithRecoveryKey,
 } from "../../services/recovery-key.service.js";
@@ -40,7 +42,11 @@ passwordResetRoute.post("/recovery-key", async (c) => {
     });
   } catch (error) {
     if (error instanceof ApiHttpError) throw error;
-    if (error instanceof NoActiveRecoveryKeyError) {
+    if (
+      error instanceof NoActiveRecoveryKeyError ||
+      error instanceof DecryptionFailedError ||
+      error instanceof InvalidInputError
+    ) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid email or recovery key");
     }
     if (error instanceof Error && error.name === "ZodError") {
@@ -50,10 +56,6 @@ passwordResetRoute.post("/recovery-key", async (c) => {
         "Invalid password reset input",
         error,
       );
-    }
-    // Crypto errors (bad recovery key) should return 401
-    if (error instanceof Error && error.message.includes("decrypt")) {
-      throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid email or recovery key");
     }
     throw error;
   }

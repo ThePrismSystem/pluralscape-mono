@@ -1,6 +1,10 @@
 import { z } from "zod/v4";
 
-import { AUTH_MIN_PASSWORD_LENGTH } from "./validation.constants.js";
+import {
+  AUTH_MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  MAX_RECOVERY_KEY_LENGTH,
+} from "./validation.constants.js";
 
 export const LoginCredentialsSchema = z
   .object({
@@ -43,7 +47,7 @@ export const RegenerateRecoveryKeySchema = z
 export const PasswordResetViaRecoveryKeySchema = z
   .object({
     email: z.email(),
-    recoveryKey: z.string().min(1),
-    newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
+    recoveryKey: z.string().min(1).max(MAX_RECOVERY_KEY_LENGTH),
+    newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
   })
   .readonly();

@@ -1,4 +1,6 @@
 import {
+  DecryptionFailedError,
+  InvalidInputError,
   PWHASH_SALT_BYTES,
   derivePasswordKey,
   getSodium,
@@ -17,12 +19,14 @@ import {
 } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
+
 import { hashEmail } from "../lib/email-hash.js";
 import {
   deserializeEncryptedPayload,
   serializeEncryptedPayload,
 } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
+import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { ANTI_ENUM_TARGET_MS, DUMMY_ARGON2_HASH } from "../routes/auth/auth.constants.js";
 
 import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
@@ -31,7 +35,7 @@ import { ValidationError } from "./auth.service.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { AeadKey, KdfMasterKey, PwhashSalt, RecoveryKeyResult } from "@pluralscape/crypto";
-import type { AccountId, UnixMillis } from "@pluralscape/types";
+import type { AccountId, SessionId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Recovery Key Status ──────────────────────────────────────────
@@ -134,7 +138,7 @@ export async function regenerateRecoveryKeyBackup(
     const result = regenerateRecoveryKey(masterKey);
     newRecoveryKeyResult = result.newRecoveryKey;
     serializedBackup = result.serializedBackup;
-    const backup = serializedBackup;
+    const backupForInsert = serializedBackup;
     const timestamp = now();
     const newId = createId(ID_PREFIXES.recoveryKey);
 
@@ -152,7 +156,7 @@ export async function regenerateRecoveryKeyBackup(
       await tx.insert(recoveryKeys).values({
         id: newId,
         accountId,
-        encryptedMasterKey: backup,
+        encryptedMasterKey: backupForInsert,
         createdAt: timestamp,
       });
 
@@ -178,9 +182,9 @@ export async function regenerateRecoveryKeyBackup(
 // ── Reset Password via Recovery Key ──────────────────────────────
 
 export interface PasswordResetResult {
-  readonly sessionToken: string;
+  readonly sessionToken: SessionId;
   readonly recoveryKey: string;
-  readonly accountId: string;
+  readonly accountId: AccountId;
 }
 
 export async function resetPasswordWithRecoveryKey(
@@ -208,12 +212,12 @@ export async function resetPasswordWithRecoveryKey(
 
   if (!account) {
     // Anti-enumeration: do dummy work + timing equalization
-    verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
-    const elapsed = performance.now() - startTime;
-    const remaining = ANTI_ENUM_TARGET_MS - elapsed;
-    if (remaining > 0) {
-      await new Promise<void>((resolve) => setTimeout(resolve, remaining));
+    try {
+      verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
+    } catch {
+      // Swallow — timing equalization must always complete
     }
+    await equalizeAntiEnumTiming(startTime);
     return null;
   }
 
@@ -228,6 +232,8 @@ export async function resetPasswordWithRecoveryKey(
     .limit(1);
 
   if (!activeKey) {
+    // Anti-enumeration: equalize timing so "no account" and "no recovery key" are indistinguishable
+    await equalizeAntiEnumTiming(startTime);
     throw new NoActiveRecoveryKeyError("No active recovery key found");
   }
 
@@ -260,9 +266,12 @@ export async function resetPasswordWithRecoveryKey(
     wrappedMasterKeyBytes = serializeEncryptedPayload(resetResult.wrappedMasterKey);
     newRecoveryBackupBytes = serializeRecoveryBackup(resetResult.newRecoveryKey.encryptedMasterKey);
 
-    const wrappedKey = wrappedMasterKeyBytes;
-    const recoveryBackup = newRecoveryBackupBytes;
+    // Capture for use in transaction closure (avoids non-null assertions)
+    const wrappedKeyForTx = wrappedMasterKeyBytes;
+    const recoveryBackupForTx = newRecoveryBackupBytes;
     const timestamp = now();
+    const rawToken = generateSessionToken();
+    const tokenHash = hashSessionToken(rawToken);
     const sessionId = createId(ID_PREFIXES.session);
     const newRecoveryKeyId = createId(ID_PREFIXES.recoveryKey);
     const timeouts = SESSION_TIMEOUTS[platform];
@@ -275,22 +284,27 @@ export async function resetPasswordWithRecoveryKey(
         .set({
           passwordHash: newPasswordHash,
           kdfSalt: newKdfSaltHex,
-          encryptedMasterKey: wrappedKey,
+          encryptedMasterKey: wrappedKeyForTx,
           updatedAt: timestamp,
         })
         .where(eq(accounts.id, account.id));
 
-      // Revoke old recovery key
-      await tx
+      // Revoke old recovery key (verify it succeeded to prevent TOCTOU race)
+      const revoked = await tx
         .update(recoveryKeys)
         .set({ revokedAt: timestamp })
-        .where(and(eq(recoveryKeys.id, activeKey.id), isNull(recoveryKeys.revokedAt)));
+        .where(and(eq(recoveryKeys.id, activeKey.id), isNull(recoveryKeys.revokedAt)))
+        .returning({ id: recoveryKeys.id });
+
+      if (revoked.length === 0) {
+        throw new Error("Recovery key not found during revocation");
+      }
 
       // Insert new recovery key
       await tx.insert(recoveryKeys).values({
         id: newRecoveryKeyId,
         accountId: account.id,
-        encryptedMasterKey: recoveryBackup,
+        encryptedMasterKey: recoveryBackupForTx,
         createdAt: timestamp,
       });
 
@@ -303,6 +317,7 @@ export async function resetPasswordWithRecoveryKey(
       // Create new session
       await tx.insert(sessions).values({
         id: sessionId,
+        tokenHash,
         accountId: account.id,
         createdAt: timestamp,
         lastActive: timestamp,
@@ -319,9 +334,9 @@ export async function resetPasswordWithRecoveryKey(
     });
 
     return {
-      sessionToken: sessionId,
+      sessionToken: rawToken as SessionId,
       recoveryKey: newRecoveryKeyResult.displayKey,
-      accountId: account.id,
+      accountId: account.id as AccountId,
     };
   } finally {
     if (masterKey) adapter.memzero(masterKey);
@@ -335,10 +350,18 @@ export async function resetPasswordWithRecoveryKey(
   }
 }
 
+async function equalizeAntiEnumTiming(startTime: number): Promise<void> {
+  const elapsed = performance.now() - startTime;
+  const remaining = ANTI_ENUM_TARGET_MS - elapsed;
+  if (remaining > 0) {
+    await new Promise<void>((resolve) => setTimeout(resolve, remaining));
+  }
+}
+
 // ── Errors ───────────────────────────────────────────────────────
 
 class NoActiveRecoveryKeyError extends Error {
   override readonly name = "NoActiveRecoveryKeyError" as const;
 }
 
-export { NoActiveRecoveryKeyError };
+export { DecryptionFailedError, InvalidInputError, NoActiveRecoveryKeyError };

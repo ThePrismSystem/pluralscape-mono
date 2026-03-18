@@ -46,6 +46,7 @@ const {
   reorderGroups,
   archiveGroup,
   restoreGroup,
+  copyGroup,
 } = await import("../../services/group.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
@@ -620,5 +621,147 @@ describe("restoreGroup", () => {
     await expect(
       restoreGroup(db, SYSTEM_ID, "grp_nonexistent" as GroupId, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+});
+
+// ── copyGroup ────────────────────────────────────────────────────────
+
+describe("copyGroup", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("copies a group with default parent (same as source)", async () => {
+    const { db, chain } = mockDb();
+    // Inside transaction: source lookup, target parent lookup, max sort (terminal where), insert
+    chain.limit
+      .mockResolvedValueOnce([makeGroupRow({ parentGroupId: "grp_parent" })]) // source
+      .mockResolvedValueOnce([{ id: "grp_parent" }]); // target parent
+    // Max sort query has no .limit() — where() is terminal
+    chain.where
+      .mockReturnValueOnce(chain) // source group where
+      .mockReturnValueOnce(chain) // target parent where
+      .mockResolvedValueOnce([{ maxSort: 3 }]); // max sort where (terminal)
+    chain.returning.mockResolvedValueOnce([
+      makeGroupRow({ id: "grp_copy", parentGroupId: "grp_parent", sortOrder: 4 }),
+    ]);
+
+    const result = await copyGroup(db, SYSTEM_ID, GROUP_ID, {}, AUTH, mockAudit);
+
+    expect(result.id).toBe("grp_copy");
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "group.created" }),
+    );
+  });
+
+  it("copies a group to root when targetParentGroupId is null", async () => {
+    const { db, chain } = mockDb();
+    // Source lookup, no parent validation (null), max sort (terminal), insert
+    chain.limit.mockResolvedValueOnce([makeGroupRow()]); // source
+    chain.where
+      .mockReturnValueOnce(chain) // source group where
+      .mockResolvedValueOnce([{ maxSort: 5 }]); // max sort where (terminal)
+    chain.returning.mockResolvedValueOnce([
+      makeGroupRow({ id: "grp_root_copy", parentGroupId: null, sortOrder: 6 }),
+    ]);
+
+    const result = await copyGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { targetParentGroupId: null },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe("grp_root_copy");
+  });
+
+  it("copies memberships when copyMemberships is true", async () => {
+    const { db, chain } = mockDb();
+    // Source lookup (null parent), no parent validation, max sort (terminal), insert, membership select (terminal)
+    chain.limit.mockResolvedValueOnce([makeGroupRow()]); // source
+    chain.where
+      .mockReturnValueOnce(chain) // source group where
+      .mockResolvedValueOnce([{ maxSort: 0 }]) // max sort where (terminal)
+      .mockResolvedValueOnce([{ memberId: "mem_a" }, { memberId: "mem_b" }]); // membership select (terminal)
+    chain.returning.mockResolvedValueOnce([makeGroupRow({ id: "grp_copy_m" })]);
+
+    const result = await copyGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { copyMemberships: true },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe("grp_copy_m");
+    expect(chain.transaction).toHaveBeenCalledOnce();
+  });
+
+  it("does not copy memberships when copyMemberships is false", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([makeGroupRow()]); // source
+    chain.where.mockReturnValueOnce(chain).mockResolvedValueOnce([{ maxSort: 0 }]);
+    chain.returning.mockResolvedValueOnce([makeGroupRow({ id: "grp_no_copy" })]);
+
+    const result = await copyGroup(
+      db,
+      SYSTEM_ID,
+      GROUP_ID,
+      { copyMemberships: false },
+      AUTH,
+      mockAudit,
+    );
+
+    expect(result.id).toBe("grp_no_copy");
+  });
+
+  it("throws 404 when source group not found", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+
+    await expect(copyGroup(db, SYSTEM_ID, GROUP_ID, {}, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("throws 404 when target parent group not found", async () => {
+    const { db, chain } = mockDb();
+    chain.limit
+      .mockResolvedValueOnce([makeGroupRow()]) // source found
+      .mockResolvedValueOnce([]); // target parent not found
+
+    await expect(
+      copyGroup(
+        db,
+        SYSTEM_ID,
+        GROUP_ID,
+        { targetParentGroupId: "grp_nonexistent" },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws VALIDATION_ERROR for invalid params", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      copyGroup(db, SYSTEM_ID, GROUP_ID, { copyMemberships: "yes" }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
+  });
+
+  it("throws 404 for wrong system ownership (fail-closed privacy)", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]); // ownership check returns no matching system
+    const wrongAuth = { ...AUTH, systemId: "sys_other" as SystemId };
+
+    await expect(copyGroup(db, SYSTEM_ID, GROUP_ID, {}, wrongAuth, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });

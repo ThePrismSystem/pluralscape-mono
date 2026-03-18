@@ -26,30 +26,18 @@ export { LIFECYCLE_EVENT_TYPES };
 const memberIdArray = z.array(brandedString<"MemberId">()).min(1);
 const structureIdArray = z.array(brandedString<"SubsystemId">()).min(1);
 const entityIdArray = z.array(brandedString<"InnerWorldEntityId">()).min(1);
-const regionIdArray = z.array(brandedString<"InnerWorldRegionId">());
+const regionIdArray = z.array(brandedString<"InnerWorldRegionId">()).min(1);
 
-const DiscoveryMetadataSchema = z.object({
+const SingleMemberMetadataSchema = z.object({
   memberIds: memberIdArray.length(1),
 });
 
-const SplitMetadataSchema = z.object({
-  memberIds: memberIdArray.min(2),
-});
-
-const FusionMetadataSchema = z.object({
+const TwoOrMoreMembersMetadataSchema = z.object({
   memberIds: memberIdArray.min(2),
 });
 
 const MergeMetadataSchema = z.object({
   memberIds: memberIdArray.length(2),
-});
-
-const UnmergeMetadataSchema = z.object({
-  memberIds: memberIdArray.min(2),
-});
-
-const SingleMemberMetadataSchema = z.object({
-  memberIds: memberIdArray.length(1),
 });
 
 const SubsystemFormationMetadataSchema = z.object({
@@ -63,15 +51,15 @@ const StructureMoveMetadataSchema = z.object({
 
 const InnerworldMoveMetadataSchema = z.object({
   entityIds: entityIdArray.length(1),
-  regionIds: regionIdArray.min(1).max(2),
+  regionIds: regionIdArray.max(2),
 });
 
 const METADATA_SCHEMAS: Record<(typeof LIFECYCLE_EVENT_TYPES)[number], z.ZodType> = {
-  discovery: DiscoveryMetadataSchema,
-  split: SplitMetadataSchema,
-  fusion: FusionMetadataSchema,
+  discovery: SingleMemberMetadataSchema,
+  split: TwoOrMoreMembersMetadataSchema,
+  fusion: TwoOrMoreMembersMetadataSchema,
   merge: MergeMetadataSchema,
-  unmerge: UnmergeMetadataSchema,
+  unmerge: TwoOrMoreMembersMetadataSchema,
   "dormancy-start": SingleMemberMetadataSchema,
   "dormancy-end": SingleMemberMetadataSchema,
   archival: SingleMemberMetadataSchema,

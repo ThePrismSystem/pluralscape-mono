@@ -43,3 +43,9 @@ export const MAX_ENCRYPTED_FIELD_VALUE_SIZE = 16_384;
 
 /** Maximum character length for custom architecture type values. */
 export const MAX_CUSTOM_ARCHITECTURE_TYPE_LENGTH = 100;
+
+/** Maximum length for recovery key input strings. */
+export const MAX_RECOVERY_KEY_LENGTH = 200;
+
+/** Maximum password length to prevent Argon2 DoS on unauthenticated endpoints. */
+export const MAX_PASSWORD_LENGTH = 1024;

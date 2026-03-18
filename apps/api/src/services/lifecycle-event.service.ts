@@ -1,6 +1,10 @@
 import { lifecycleEvents } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { CreateLifecycleEventBodySchema, validateLifecycleMetadata } from "@pluralscape/validation";
+import {
+  CreateLifecycleEventBodySchema,
+  validateLifecycleMetadata,
+  type PlaintextMetadata,
+} from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -27,7 +31,7 @@ export interface LifecycleEventResult {
   readonly occurredAt: UnixMillis;
   readonly recordedAt: UnixMillis;
   readonly encryptedData: string;
-  readonly plaintextMetadata: Record<string, unknown> | null;
+  readonly plaintextMetadata: PlaintextMetadata | null;
 }
 
 export interface LifecycleEventCursor {
@@ -51,7 +55,7 @@ function toLifecycleEventResult(row: {
   occurredAt: number;
   recordedAt: number;
   encryptedData: EncryptedBlob;
-  plaintextMetadata?: Record<string, unknown> | null;
+  plaintextMetadata?: PlaintextMetadata | null;
 }): LifecycleEventResult {
   return {
     id: row.id as LifecycleEventId,
@@ -108,7 +112,7 @@ export async function createLifecycleEvent(
   const timestamp = now();
 
   // Validate per-event-type metadata if provided
-  let metadata: Record<string, unknown> | null = null;
+  let metadata: PlaintextMetadata | null = null;
   if (parsed.plaintextMetadata) {
     const metaResult = validateLifecycleMetadata(parsed.eventType, parsed.plaintextMetadata);
     if (!metaResult.success) {
@@ -118,7 +122,7 @@ export async function createLifecycleEvent(
         `Invalid plaintext metadata for event type "${parsed.eventType}"`,
       );
     }
-    metadata = parsed.plaintextMetadata as Record<string, unknown>;
+    metadata = parsed.plaintextMetadata;
   }
 
   return db.transaction(async (tx) => {
