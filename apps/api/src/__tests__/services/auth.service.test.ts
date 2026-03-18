@@ -32,6 +32,7 @@ function mockContext(headers: Record<string, string> = {}): Context {
 // ── Mock external dependencies ───────────────────────────────────────
 
 vi.mock("@pluralscape/crypto", () => ({
+  GENERIC_HASH_BYTES_MAX: 64,
   getSodium: () => ({
     randomBytes: (n: number) => new Uint8Array(n),
     memzero: vi.fn(),
@@ -296,7 +297,7 @@ describe("auth service", () => {
       expect(result).toHaveProperty("recoveryKey");
       expect(result).toHaveProperty("accountId");
       expect(result).toHaveProperty("accountType");
-      expect(result.sessionToken).toMatch(/^sess_/);
+      expect(result.sessionToken).toMatch(/^[0-9a-f]{64}$/);
       expect(result.accountId).toMatch(/^acct_/);
       expect(result.accountType).toBe("system");
     });
@@ -437,7 +438,7 @@ describe("auth service", () => {
       expect(result?.accountId).toBe("acct_123");
       expect(result?.systemId).toBe("sys_456");
       expect(result?.accountType).toBe("system");
-      expect(result?.sessionToken).toMatch(/^sess_/);
+      expect(result?.sessionToken).toMatch(/^[0-9a-f]{64}$/);
     });
 
     it("returns null systemId for non-system accounts", async () => {

@@ -58,9 +58,13 @@ function createApp(): Hono<AuthEnv> {
   return app;
 }
 
+/** A valid 64-char lowercase hex token for tests. */
+const VALID_TOKEN = "a0".repeat(32);
+
 interface MockSessionData {
   id: string;
   accountId: string;
+  tokenHash: string;
   revoked: boolean;
   createdAt: number;
   expiresAt: number | null;
@@ -75,6 +79,7 @@ function makeValidResult(
   const session: MockSessionData = {
     id: "sess_00000000-0000-0000-0000-000000000001",
     accountId: "acct_xyz",
+    tokenHash: "hashed_token",
     revoked: false,
     createdAt: 1_000_000,
     expiresAt: 1_000_000 + 2_592_000_000,
@@ -139,10 +144,10 @@ describe("authMiddleware", () => {
     expect(body.error.code).toBe("UNAUTHENTICATED");
   });
 
-  it("returns 401 for token without sess_ prefix", async () => {
+  it("returns 401 for token with non-hex characters", async () => {
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer xxxx_00000000-0000-0000-0000-000000000001" },
+      headers: { Authorization: `Bearer ${"g".repeat(64)}` },
     });
 
     expect(res.status).toBe(401);
@@ -155,7 +160,7 @@ describe("authMiddleware", () => {
   it("returns 401 for token with wrong length", async () => {
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_tooshort" },
+      headers: { Authorization: "Bearer abcdef1234" },
     });
 
     expect(res.status).toBe(401);
@@ -172,7 +177,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000002" },
+      headers: { Authorization: `Bearer ${"b0".repeat(32)}` },
     });
 
     expect(res.status).toBe(401);
@@ -188,7 +193,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000003" },
+      headers: { Authorization: `Bearer ${"c0".repeat(32)}` },
     });
 
     expect(res.status).toBe(401);
@@ -207,7 +212,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
+      headers: { Authorization: `Bearer ${VALID_TOKEN}` },
     });
 
     expect(res.status).toBe(200);
@@ -229,7 +234,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
+      headers: { Authorization: `Bearer ${VALID_TOKEN}` },
     });
 
     expect(res.status).toBe(200);
@@ -247,7 +252,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
+      headers: { Authorization: `Bearer ${VALID_TOKEN}` },
     });
 
     expect(res.status).toBe(200);
@@ -265,7 +270,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
+      headers: { Authorization: `Bearer ${VALID_TOKEN}` },
     });
 
     expect(res.status).toBe(200);
@@ -288,7 +293,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "Bearer sess_00000000-0000-0000-0000-000000000001" },
+      headers: { Authorization: `Bearer ${VALID_TOKEN}` },
     });
 
     // Request should still succeed — fire-and-forget error is caught
@@ -313,7 +318,7 @@ describe("authMiddleware", () => {
 
     const app = createApp();
     const res = await app.request("/protected", {
-      headers: { Authorization: "bearer sess_00000000-0000-0000-0000-000000000001" },
+      headers: { Authorization: `bearer ${VALID_TOKEN}` },
     });
 
     expect(res.status).toBe(200);

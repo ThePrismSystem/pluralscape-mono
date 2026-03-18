@@ -15,6 +15,13 @@
       "when": 1773811434354,
       "tag": "0001_massive_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773819682399,
+      "tag": "0002_right_black_bird",
+      "breakpoints": true
     }
   ]
 }

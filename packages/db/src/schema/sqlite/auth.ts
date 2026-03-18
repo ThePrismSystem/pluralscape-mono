@@ -56,6 +56,7 @@ export const sessions = sqliteTable(
     accountId: text("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data"),
     createdAt: sqliteTimestamp("created_at").notNull(),
     lastActive: sqliteTimestamp("last_active"),
@@ -64,6 +65,7 @@ export const sessions = sqliteTable(
   },
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
+    uniqueIndex("sessions_token_hash_idx").on(t.tokenHash),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
     index("sessions_expires_at_idx")
       .on(t.expiresAt)

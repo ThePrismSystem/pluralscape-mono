@@ -2,6 +2,8 @@ import { accounts, sessions, systems } from "@pluralscape/db/pg";
 import { SESSION_TIMEOUTS, now } from "@pluralscape/types";
 import { eq } from "drizzle-orm";
 
+import { hashSessionToken } from "./session-token.js";
+
 import type { AuthContext } from "./auth-context.js";
 import type { SessionRow } from "@pluralscape/db/pg";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
@@ -15,13 +17,15 @@ export type ValidateSessionResult =
 /**
  * Validate a session token and return the auth context.
  *
- * Per design decision D2, the token IS the session ID directly.
+ * Hashes the incoming Bearer token and looks up by tokenHash.
  * Checks: exists, not revoked, not expired (absolute TTL), not idle-timed-out.
  */
 export async function validateSession(
   db: PostgresJsDatabase,
   token: string,
 ): Promise<ValidateSessionResult> {
+  const tokenHash = hashSessionToken(token);
+
   // Single JOIN query: session + account + optional system
   const [row] = await db
     .select({
@@ -32,7 +36,7 @@ export async function validateSession(
     .from(sessions)
     .innerJoin(accounts, eq(accounts.id, sessions.accountId))
     .leftJoin(systems, eq(systems.accountId, sessions.accountId))
-    .where(eq(sessions.id, token))
+    .where(eq(sessions.tokenHash, tokenHash))
     .limit(1);
 
   if (!row) {
