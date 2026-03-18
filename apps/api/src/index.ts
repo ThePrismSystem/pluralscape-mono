@@ -7,9 +7,10 @@ import { ApiHttpError } from "./lib/api-error.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { BODY_SIZE_LIMIT_BYTES } from "./middleware/middleware.constants.js";
-import { createCategoryRateLimiter } from "./middleware/rate-limit.js";
+import { createCategoryRateLimiter, setRateLimitStore } from "./middleware/rate-limit.js";
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createSecureHeaders } from "./middleware/secure-headers.js";
+import { createValkeyStore } from "./middleware/stores/valkey-store.js";
 import { accountRoutes } from "./routes/account/index.js";
 import { authRoutes } from "./routes/auth/index.js";
 import { systemRoutes } from "./routes/systems/index.js";
@@ -52,6 +53,15 @@ app.route("/systems", systemRoutes);
 
 async function start(): Promise<void> {
   await initSodium();
+
+  // Resolve rate limit store: prefer Valkey if configured, fall back to in-memory
+  const valkeyUrl = process.env["VALKEY_URL"];
+  if (valkeyUrl) {
+    const store = await createValkeyStore(valkeyUrl);
+    if (store) {
+      setRateLimitStore(store);
+    }
+  }
 
   if (typeof Bun !== "undefined") {
     Bun.serve({

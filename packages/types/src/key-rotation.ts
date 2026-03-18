@@ -33,3 +33,15 @@ export interface BucketRotationItem {
   readonly completedAt: UnixMillis | null;
   readonly attempts: number;
 }
+
+/** Response from claiming a rotation chunk. */
+export interface ChunkClaimResponse {
+  readonly items: readonly BucketRotationItem[];
+  readonly rotationState: RotationState;
+}
+
+/** Response from completing a rotation chunk. */
+export interface ChunkCompletionResponse {
+  readonly rotation: BucketKeyRotation;
+  readonly transitioned: boolean;
+}

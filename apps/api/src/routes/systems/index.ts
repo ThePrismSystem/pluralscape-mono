@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { authMiddleware } from "../../middleware/auth.js";
+import { bucketRoutes } from "../buckets/index.js";
 import { customFrontRoutes } from "../custom-fronts/index.js";
 import { fieldRoutes } from "../fields/index.js";
 import { groupRoutes } from "../groups/index.js";
@@ -35,5 +36,6 @@ systemRoutes.route("/:id/custom-fronts", customFrontRoutes);
 systemRoutes.route("/:id/settings", settingsRoutes);
 systemRoutes.route("/:id/nomenclature", nomenclatureRoutes);
 systemRoutes.route("/:id/setup", setupRoutes);
+systemRoutes.route("/:id/buckets", bucketRoutes);
 systemRoutes.route("/:systemId/members", memberRoutes);
 systemRoutes.route("/:systemId/fields", fieldRoutes);
