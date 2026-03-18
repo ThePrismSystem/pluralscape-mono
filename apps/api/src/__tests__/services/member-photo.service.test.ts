@@ -476,4 +476,16 @@ describe("deleteMemberPhoto", () => {
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
+
+  it("rejects cross-system access", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
+    );
+    const { db } = mockDb();
+
+    await expect(
+      deleteMemberPhoto(db, SYSTEM_ID, MEMBER_ID, PHOTO_ID, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+  });
 });

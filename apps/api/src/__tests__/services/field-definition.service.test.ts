@@ -422,10 +422,11 @@ describe("deleteFieldDefinition", () => {
     const { db, chain } = mockDb();
     // transaction → select().from().where().limit() finds existing non-archived row
     chain.limit.mockResolvedValueOnce([{ id: "fld_test-field" }]);
-    // transaction → select count from fieldValues where() is terminal (no .limit)
+    // transaction → two parallel count queries (fieldValues + fieldBucketVisibility)
     chain.where
       .mockReturnValueOnce(chain) // first where: lookup, chains to .limit
-      .mockResolvedValueOnce([{ count: 0 }]); // second where: count query, terminal
+      .mockResolvedValueOnce([{ count: 0 }]) // fieldValues count
+      .mockResolvedValueOnce([{ count: 0 }]); // fieldBucketVisibility count
 
     await deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit);
 
@@ -448,14 +449,40 @@ describe("deleteFieldDefinition", () => {
     const { db, chain } = mockDb();
     // transaction → select().from().where().limit() finds existing non-archived row
     chain.limit.mockResolvedValueOnce([{ id: "fld_test-field" }]);
-    // transaction → select count from fieldValues where() is terminal (no .limit)
+    // transaction → two parallel count queries (fieldValues + fieldBucketVisibility)
     chain.where
       .mockReturnValueOnce(chain) // first where: lookup, chains to .limit
-      .mockResolvedValueOnce([{ count: 3 }]); // second where: count query, terminal
+      .mockResolvedValueOnce([{ count: 3 }]) // fieldValues count
+      .mockResolvedValueOnce([{ count: 0 }]); // fieldBucketVisibility count
 
     await expect(deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS" }),
     );
+
+    expect(mockAudit).not.toHaveBeenCalled();
+  });
+
+  it("throws 409 HAS_DEPENDENTS when bucket visibility rows exist", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: "fld_test-field" }]);
+    chain.where
+      .mockReturnValueOnce(chain) // lookup
+      .mockResolvedValueOnce([{ count: 0 }]) // fieldValues count
+      .mockResolvedValueOnce([{ count: 2 }]); // fieldBucketVisibility count
+
+    try {
+      await deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit);
+      expect.unreachable("Should have thrown");
+    } catch (err: unknown) {
+      const error = err as {
+        status: number;
+        code: string;
+        details: { dependents: { type: string; count: number }[] };
+      };
+      expect(error.status).toBe(409);
+      expect(error.code).toBe("HAS_DEPENDENTS");
+      expect(error.details.dependents).toEqual([{ type: "bucketVisibility", count: 2 }]);
+    }
 
     expect(mockAudit).not.toHaveBeenCalled();
   });

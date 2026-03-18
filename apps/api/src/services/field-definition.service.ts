@@ -1,5 +1,5 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
-import { fieldDefinitions, fieldValues } from "@pluralscape/db/pg";
+import { fieldBucketVisibility, fieldDefinitions, fieldValues } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import {
   CreateFieldDefinitionBodySchema,
@@ -438,17 +438,38 @@ export async function deleteFieldDefinition(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Field definition not found");
     }
 
-    const [valueCount] = await tx
-      .select({ count: count() })
-      .from(fieldValues)
-      .where(and(eq(fieldValues.fieldDefinitionId, fieldId), eq(fieldValues.systemId, systemId)));
+    const [[valueCount], [visibilityCount]] = await Promise.all([
+      tx
+        .select({ count: count() })
+        .from(fieldValues)
+        .where(and(eq(fieldValues.fieldDefinitionId, fieldId), eq(fieldValues.systemId, systemId))),
+      tx
+        .select({ count: count() })
+        .from(fieldBucketVisibility)
+        .where(
+          and(
+            eq(fieldBucketVisibility.fieldDefinitionId, fieldId),
+            eq(fieldBucketVisibility.systemId, systemId),
+          ),
+        ),
+    ]);
 
-    if (valueCount && valueCount.count > 0) {
+    if (!valueCount || !visibilityCount) {
+      throw new Error("Unexpected: count query returned no rows");
+    }
+
+    type FieldDefinitionDependentType = "fieldValues" | "bucketVisibility";
+    const dependents: { type: FieldDefinitionDependentType; count: number }[] = [];
+    if (valueCount.count > 0) dependents.push({ type: "fieldValues", count: valueCount.count });
+    if (visibilityCount.count > 0)
+      dependents.push({ type: "bucketVisibility", count: visibilityCount.count });
+
+    if (dependents.length > 0) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "HAS_DEPENDENTS",
-        `Field definition has ${String(valueCount.count)} field value(s). Remove all values before deleting.`,
-        { dependents: [{ type: "fieldValues", count: valueCount.count }] },
+        "Field definition has dependents. Remove all dependents before deleting.",
+        { dependents },
       );
     }
 
@@ -459,8 +480,6 @@ export async function deleteFieldDefinition(
       systemId,
     });
 
-    await tx
-      .delete(fieldDefinitions)
-      .where(and(eq(fieldDefinitions.id, fieldId), eq(fieldDefinitions.systemId, systemId)));
+    await tx.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldId));
   });
 }

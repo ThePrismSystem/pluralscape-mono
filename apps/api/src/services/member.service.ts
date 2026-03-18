@@ -391,7 +391,13 @@ export async function duplicateMember(
           systemId,
           createdAt: timestamp,
         }));
-        await tx.insert(groupMemberships).values(membershipRows);
+        const inserted = await tx
+          .insert(groupMemberships)
+          .values(membershipRows)
+          .returning({ groupId: groupMemberships.groupId });
+        if (inserted.length !== memberships.length) {
+          throw new Error("Failed to copy memberships — INSERT count mismatch");
+        }
         membershipsCopied = memberships.length;
       }
     }
@@ -531,80 +537,106 @@ export async function deleteMember(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
     }
 
-    // Count all dependents across FK tables
-    const [photoCount] = await tx
-      .select({ count: count() })
-      .from(memberPhotos)
-      .where(and(eq(memberPhotos.memberId, memberId), eq(memberPhotos.systemId, systemId)));
+    // Count all dependents across FK tables (parallel for performance)
+    const [
+      [photoCount],
+      [fieldValueCount],
+      [membershipCount],
+      [frontingSessionCount],
+      [relationshipCount],
+      [noteCount],
+      [frontingCommentCount],
+      [checkInCount],
+      [pollCount],
+      [ackCount],
+    ] = await Promise.all([
+      tx
+        .select({ count: count() })
+        .from(memberPhotos)
+        .where(and(eq(memberPhotos.memberId, memberId), eq(memberPhotos.systemId, systemId))),
+      tx
+        .select({ count: count() })
+        .from(fieldValues)
+        .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId))),
+      tx
+        .select({ count: count() })
+        .from(groupMemberships)
+        .where(
+          and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId)),
+        ),
+      tx
+        .select({ count: count() })
+        .from(frontingSessions)
+        .where(eq(frontingSessions.memberId, memberId)),
+      tx
+        .select({ count: count() })
+        .from(relationships)
+        .where(
+          or(
+            eq(relationships.sourceMemberId, memberId),
+            eq(relationships.targetMemberId, memberId),
+          ),
+        ),
+      tx.select({ count: count() }).from(notes).where(eq(notes.memberId, memberId)),
+      tx
+        .select({ count: count() })
+        .from(frontingComments)
+        .where(eq(frontingComments.memberId, memberId)),
+      tx
+        .select({ count: count() })
+        .from(checkInRecords)
+        .where(eq(checkInRecords.respondedByMemberId, memberId)),
+      tx.select({ count: count() }).from(polls).where(eq(polls.createdByMemberId, memberId)),
+      tx
+        .select({ count: count() })
+        .from(acknowledgements)
+        .where(eq(acknowledgements.createdByMemberId, memberId)),
+    ]);
 
-    const [fieldValueCount] = await tx
-      .select({ count: count() })
-      .from(fieldValues)
-      .where(and(eq(fieldValues.memberId, memberId), eq(fieldValues.systemId, systemId)));
+    if (
+      !photoCount ||
+      !fieldValueCount ||
+      !membershipCount ||
+      !frontingSessionCount ||
+      !relationshipCount ||
+      !noteCount ||
+      !frontingCommentCount ||
+      !checkInCount ||
+      !pollCount ||
+      !ackCount
+    ) {
+      throw new Error("Unexpected: count query returned no rows");
+    }
 
-    const [membershipCount] = await tx
-      .select({ count: count() })
-      .from(groupMemberships)
-      .where(and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId)));
+    type MemberDependentType =
+      | "photos"
+      | "fieldValues"
+      | "groupMemberships"
+      | "frontingSessions"
+      | "relationships"
+      | "notes"
+      | "frontingComments"
+      | "checkInRecords"
+      | "polls"
+      | "acknowledgements";
 
-    const [frontingSessionCount] = await tx
-      .select({ count: count() })
-      .from(frontingSessions)
-      .where(eq(frontingSessions.memberId, memberId));
-
-    const [relationshipCount] = await tx
-      .select({ count: count() })
-      .from(relationships)
-      .where(
-        or(eq(relationships.sourceMemberId, memberId), eq(relationships.targetMemberId, memberId)),
-      );
-
-    const [noteCount] = await tx
-      .select({ count: count() })
-      .from(notes)
-      .where(eq(notes.memberId, memberId));
-
-    const [frontingCommentCount] = await tx
-      .select({ count: count() })
-      .from(frontingComments)
-      .where(eq(frontingComments.memberId, memberId));
-
-    const [checkInCount] = await tx
-      .select({ count: count() })
-      .from(checkInRecords)
-      .where(eq(checkInRecords.respondedByMemberId, memberId));
-
-    const [pollCount] = await tx
-      .select({ count: count() })
-      .from(polls)
-      .where(eq(polls.createdByMemberId, memberId));
-
-    const [ackCount] = await tx
-      .select({ count: count() })
-      .from(acknowledgements)
-      .where(eq(acknowledgements.createdByMemberId, memberId));
-
-    const dependents: { type: string; count: number }[] = [];
-    if (photoCount && photoCount.count > 0)
-      dependents.push({ type: "photos", count: photoCount.count });
-    if (fieldValueCount && fieldValueCount.count > 0)
+    const dependents: { type: MemberDependentType; count: number }[] = [];
+    if (photoCount.count > 0) dependents.push({ type: "photos", count: photoCount.count });
+    if (fieldValueCount.count > 0)
       dependents.push({ type: "fieldValues", count: fieldValueCount.count });
-    if (membershipCount && membershipCount.count > 0)
+    if (membershipCount.count > 0)
       dependents.push({ type: "groupMemberships", count: membershipCount.count });
-    if (frontingSessionCount && frontingSessionCount.count > 0)
+    if (frontingSessionCount.count > 0)
       dependents.push({ type: "frontingSessions", count: frontingSessionCount.count });
-    if (relationshipCount && relationshipCount.count > 0)
+    if (relationshipCount.count > 0)
       dependents.push({ type: "relationships", count: relationshipCount.count });
-    if (noteCount && noteCount.count > 0)
-      dependents.push({ type: "notes", count: noteCount.count });
-    if (frontingCommentCount && frontingCommentCount.count > 0)
+    if (noteCount.count > 0) dependents.push({ type: "notes", count: noteCount.count });
+    if (frontingCommentCount.count > 0)
       dependents.push({ type: "frontingComments", count: frontingCommentCount.count });
-    if (checkInCount && checkInCount.count > 0)
+    if (checkInCount.count > 0)
       dependents.push({ type: "checkInRecords", count: checkInCount.count });
-    if (pollCount && pollCount.count > 0)
-      dependents.push({ type: "polls", count: pollCount.count });
-    if (ackCount && ackCount.count > 0)
-      dependents.push({ type: "acknowledgements", count: ackCount.count });
+    if (pollCount.count > 0) dependents.push({ type: "polls", count: pollCount.count });
+    if (ackCount.count > 0) dependents.push({ type: "acknowledgements", count: ackCount.count });
 
     if (dependents.length > 0) {
       throw new ApiHttpError(

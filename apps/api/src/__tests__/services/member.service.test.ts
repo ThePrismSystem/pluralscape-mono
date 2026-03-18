@@ -483,7 +483,8 @@ describe("duplicateMember", () => {
           createdAt: 1000,
         },
       ]);
-    // Membership copy insert: tx.insert().values() — no .returning() (returns chain)
+    // Membership copy insert: tx.insert().values().returning()
+    chain.returning.mockResolvedValueOnce([{ groupId: "grp_group-1" }, { groupId: "grp_group-2" }]);
 
     const result = await duplicateMember(
       db,
@@ -545,7 +546,7 @@ describe("archiveMember", () => {
     mockAudit.mockClear();
   });
 
-  it("archives member and cascades to photos", async () => {
+  it("archives member and cascades to photos but preserves field values", async () => {
     const { db, chain } = mockDb();
     // 1. tx.select().from().where().limit() → find member
     chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
@@ -557,9 +558,14 @@ describe("archiveMember", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(chain.update).toHaveBeenCalled();
+    // Field values must NOT be deleted during archival (audit S-6 fix)
+    expect(chain.delete).not.toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ eventType: "member.archived" }),
+      expect.objectContaining({
+        eventType: "member.archived",
+        detail: expect.stringContaining("field values preserved"),
+      }),
     );
   });
 
@@ -734,6 +740,18 @@ describe("deleteMember", () => {
       expect(error.code).toBe("HAS_DEPENDENTS");
       expect(error.details.dependents).toEqual([{ type: "relationships", count: 2 }]);
     }
+  });
+
+  it("rejects cross-system access", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
+    );
+    const { db } = mockDb();
+
+    await expect(deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 403, code: "FORBIDDEN" }),
+    );
   });
 
   it("throws 409 HAS_DEPENDENTS for acknowledgements", async () => {

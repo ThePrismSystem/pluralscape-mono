@@ -225,7 +225,7 @@ export async function listMemberGroupMemberships(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupMembershipResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   // Verify member exists
   const [member] = await db

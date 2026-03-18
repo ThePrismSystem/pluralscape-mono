@@ -432,6 +432,7 @@ export async function deleteMemberPhoto(
           eq(memberPhotos.id, photoId),
           eq(memberPhotos.memberId, memberId),
           eq(memberPhotos.systemId, systemId),
+          eq(memberPhotos.archived, false),
         ),
       )
       .limit(1);
@@ -447,14 +448,6 @@ export async function deleteMemberPhoto(
       systemId,
     });
 
-    await tx
-      .delete(memberPhotos)
-      .where(
-        and(
-          eq(memberPhotos.id, photoId),
-          eq(memberPhotos.memberId, memberId),
-          eq(memberPhotos.systemId, systemId),
-        ),
-      );
+    await tx.delete(memberPhotos).where(eq(memberPhotos.id, photoId));
   });
 }
