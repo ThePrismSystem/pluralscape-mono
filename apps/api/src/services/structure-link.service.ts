@@ -15,12 +15,12 @@ import {
 } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
-import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { throwOnUniqueViolation } from "../lib/unique-violation.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -32,6 +32,7 @@ import type {
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";
 
@@ -39,6 +40,11 @@ import type { z } from "zod/v4";
 
 type TransactionLike = Parameters<Parameters<PostgresJsDatabase["transaction"]>[0]>[0];
 type EntityTable = typeof subsystems | typeof sideSystems | typeof layers;
+
+type LinkTable =
+  | typeof subsystemLayerLinks
+  | typeof subsystemSideSystemLinks
+  | typeof sideSystemLayerLinks;
 
 export interface StructureLinkResult {
   readonly id: string;
@@ -155,44 +161,119 @@ function toLinkResult(row: NormalizedLinkRow): StructureLinkResult {
   };
 }
 
-// ── Normalizers ─────────────────────────────────────────────────────
+// ── Link table CRUD factory ─────────────────────────────────────────
 
-function normalizeSubsystemLayer(r: typeof subsystemLayerLinks.$inferSelect): NormalizedLinkRow {
-  return {
-    id: r.id,
-    entityAId: r.subsystemId,
-    entityBId: r.layerId,
-    systemId: r.systemId,
-    encryptedData: r.encryptedData,
-    createdAt: r.createdAt,
-  };
+/**
+ * Column mapping for a link table's entity-A and entity-B foreign keys.
+ *
+ * All link tables share the same structural shape (id, entityA, entityB,
+ * systemId, encryptedData, createdAt). This interface captures the
+ * per-table column references so a single factory can generate the
+ * insert/remove/query callbacks.
+ */
+interface LinkColumnMapping {
+  readonly table: LinkTable;
+  readonly id: LinkTable["id"];
+  readonly entityACol: PgColumn;
+  readonly entityBCol: PgColumn;
+  readonly systemId: LinkTable["systemId"];
+  readonly entityAInsertKey: string;
+  readonly entityBInsertKey: string;
 }
 
-function normalizeSubsystemSideSystem(
-  r: typeof subsystemSideSystemLinks.$inferSelect,
-): NormalizedLinkRow {
-  return {
-    id: r.id,
-    entityAId: r.subsystemId,
-    entityBId: r.sideSystemId,
-    systemId: r.systemId,
-    encryptedData: r.encryptedData,
-    createdAt: r.createdAt,
-  };
-}
+/**
+ * Creates insert/remove/query callbacks and a row normalizer for a link table.
+ *
+ * Every link table has the same shape: id, entityA column, entityB column,
+ * systemId, encryptedData, createdAt. The factory eliminates the per-table
+ * boilerplate by accepting the column mapping.
+ */
+function createLinkTableOps(mapping: LinkColumnMapping): {
+  insert: LinkEntityConfig<unknown>["insert"];
+  remove: LinkEntityConfig<unknown>["remove"];
+  query: LinkEntityConfig<unknown>["query"];
+} {
+  const { table, id: idCol, entityACol, entityBCol, systemId: systemIdCol } = mapping;
 
-function normalizeSideSystemLayer(r: typeof sideSystemLayerLinks.$inferSelect): NormalizedLinkRow {
+  const normalize = (row: Record<string, unknown>): NormalizedLinkRow => ({
+    id: row.id as string,
+    entityAId: row[mapping.entityAInsertKey] as string,
+    entityBId: row[mapping.entityBInsertKey] as string,
+    systemId: row.systemId as string,
+    encryptedData: row.encryptedData as EncryptedBlob | null,
+    createdAt: row.createdAt as number,
+  });
+
   return {
-    id: r.id,
-    entityAId: r.sideSystemId,
-    entityBId: r.layerId,
-    systemId: r.systemId,
-    encryptedData: r.encryptedData,
-    createdAt: r.createdAt,
+    insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
+      const values: Record<string, unknown> = {
+        id,
+        [mapping.entityAInsertKey]: entityAId,
+        [mapping.entityBInsertKey]: entityBId,
+        systemId,
+        encryptedData: blob ?? null,
+        createdAt: timestamp,
+      };
+      const [row] = await tx
+        .insert(table)
+        .values(values as never)
+        .returning();
+      return row ? normalize(row as Record<string, unknown>) : undefined;
+    },
+
+    remove: (tx, linkId, systemId) =>
+      tx
+        .delete(table)
+        .where(and(eq(idCol, linkId), eq(systemIdCol, systemId)))
+        .returning({ id: idCol }),
+
+    query: async (db, systemId, cursor, limit, filterA, filterB) => {
+      const conds = [eq(systemIdCol, systemId)];
+      if (filterA) conds.push(eq(entityACol, filterA));
+      if (filterB) conds.push(eq(entityBCol, filterB));
+      if (cursor) conds.push(gt(idCol, cursor));
+      const rows = await db
+        .select()
+        .from(table)
+        .where(and(...conds))
+        .orderBy(idCol)
+        .limit(limit);
+      return (rows as Record<string, unknown>[]).map(normalize);
+    },
   };
 }
 
 // ── Entity configs ──────────────────────────────────────────────────
+
+const subsystemLayerOps = createLinkTableOps({
+  table: subsystemLayerLinks,
+  id: subsystemLayerLinks.id,
+  entityACol: subsystemLayerLinks.subsystemId,
+  entityBCol: subsystemLayerLinks.layerId,
+  systemId: subsystemLayerLinks.systemId,
+  entityAInsertKey: "subsystemId",
+  entityBInsertKey: "layerId",
+});
+
+const subsystemSideSystemOps = createLinkTableOps({
+  table: subsystemSideSystemLinks,
+  id: subsystemSideSystemLinks.id,
+  entityACol: subsystemSideSystemLinks.subsystemId,
+  entityBCol: subsystemSideSystemLinks.sideSystemId,
+  systemId: subsystemSideSystemLinks.systemId,
+  entityAInsertKey: "subsystemId",
+  entityBInsertKey: "sideSystemId",
+});
+
+const sideSystemLayerOps = createLinkTableOps({
+  table: sideSystemLayerLinks,
+  id: sideSystemLayerLinks.id,
+  entityACol: sideSystemLayerLinks.sideSystemId,
+  entityBCol: sideSystemLayerLinks.layerId,
+  systemId: sideSystemLayerLinks.systemId,
+  entityAInsertKey: "sideSystemId",
+  entityBInsertKey: "layerId",
+});
 
 const LINK_CONFIGS = {
   subsystemLayer: defineLinkConfig({
@@ -202,38 +283,7 @@ const LINK_CONFIGS = {
     entityBName: "Layer",
     schema: CreateSubsystemLayerLinkBodySchema,
     getEntityIds: (p) => ({ entityAId: p.subsystemId, entityBId: p.layerId }),
-    insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
-      const [row] = await tx
-        .insert(subsystemLayerLinks)
-        .values({
-          id,
-          subsystemId: entityAId,
-          layerId: entityBId,
-          systemId,
-          encryptedData: blob ?? null,
-          createdAt: timestamp,
-        })
-        .returning();
-      return row ? normalizeSubsystemLayer(row) : undefined;
-    },
-    remove: (tx, linkId, systemId) =>
-      tx
-        .delete(subsystemLayerLinks)
-        .where(and(eq(subsystemLayerLinks.id, linkId), eq(subsystemLayerLinks.systemId, systemId)))
-        .returning({ id: subsystemLayerLinks.id }),
-    query: async (db, systemId, cursor, limit, filterA, filterB) => {
-      const conds = [eq(subsystemLayerLinks.systemId, systemId)];
-      if (filterA) conds.push(eq(subsystemLayerLinks.subsystemId, filterA));
-      if (filterB) conds.push(eq(subsystemLayerLinks.layerId, filterB));
-      if (cursor) conds.push(gt(subsystemLayerLinks.id, cursor));
-      const rows = await db
-        .select()
-        .from(subsystemLayerLinks)
-        .where(and(...conds))
-        .orderBy(subsystemLayerLinks.id)
-        .limit(limit);
-      return rows.map(normalizeSubsystemLayer);
-    },
+    ...subsystemLayerOps,
   }),
   subsystemSideSystem: defineLinkConfig({
     entityATable: subsystems,
@@ -245,43 +295,7 @@ const LINK_CONFIGS = {
       entityAId: p.subsystemId,
       entityBId: p.sideSystemId,
     }),
-    insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
-      const [row] = await tx
-        .insert(subsystemSideSystemLinks)
-        .values({
-          id,
-          subsystemId: entityAId,
-          sideSystemId: entityBId,
-          systemId,
-          encryptedData: blob ?? null,
-          createdAt: timestamp,
-        })
-        .returning();
-      return row ? normalizeSubsystemSideSystem(row) : undefined;
-    },
-    remove: (tx, linkId, systemId) =>
-      tx
-        .delete(subsystemSideSystemLinks)
-        .where(
-          and(
-            eq(subsystemSideSystemLinks.id, linkId),
-            eq(subsystemSideSystemLinks.systemId, systemId),
-          ),
-        )
-        .returning({ id: subsystemSideSystemLinks.id }),
-    query: async (db, systemId, cursor, limit, filterA, filterB) => {
-      const conds = [eq(subsystemSideSystemLinks.systemId, systemId)];
-      if (filterA) conds.push(eq(subsystemSideSystemLinks.subsystemId, filterA));
-      if (filterB) conds.push(eq(subsystemSideSystemLinks.sideSystemId, filterB));
-      if (cursor) conds.push(gt(subsystemSideSystemLinks.id, cursor));
-      const rows = await db
-        .select()
-        .from(subsystemSideSystemLinks)
-        .where(and(...conds))
-        .orderBy(subsystemSideSystemLinks.id)
-        .limit(limit);
-      return rows.map(normalizeSubsystemSideSystem);
-    },
+    ...subsystemSideSystemOps,
   }),
   sideSystemLayer: defineLinkConfig({
     entityATable: sideSystems,
@@ -290,40 +304,7 @@ const LINK_CONFIGS = {
     entityBName: "Layer",
     schema: CreateSideSystemLayerLinkBodySchema,
     getEntityIds: (p) => ({ entityAId: p.sideSystemId, entityBId: p.layerId }),
-    insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
-      const [row] = await tx
-        .insert(sideSystemLayerLinks)
-        .values({
-          id,
-          sideSystemId: entityAId,
-          layerId: entityBId,
-          systemId,
-          encryptedData: blob ?? null,
-          createdAt: timestamp,
-        })
-        .returning();
-      return row ? normalizeSideSystemLayer(row) : undefined;
-    },
-    remove: (tx, linkId, systemId) =>
-      tx
-        .delete(sideSystemLayerLinks)
-        .where(
-          and(eq(sideSystemLayerLinks.id, linkId), eq(sideSystemLayerLinks.systemId, systemId)),
-        )
-        .returning({ id: sideSystemLayerLinks.id }),
-    query: async (db, systemId, cursor, limit, filterA, filterB) => {
-      const conds = [eq(sideSystemLayerLinks.systemId, systemId)];
-      if (filterA) conds.push(eq(sideSystemLayerLinks.sideSystemId, filterA));
-      if (filterB) conds.push(eq(sideSystemLayerLinks.layerId, filterB));
-      if (cursor) conds.push(gt(sideSystemLayerLinks.id, cursor));
-      const rows = await db
-        .select()
-        .from(sideSystemLayerLinks)
-        .where(and(...conds))
-        .orderBy(sideSystemLayerLinks.id)
-        .limit(limit);
-      return rows.map(normalizeSideSystemLayer);
-    },
+    ...sideSystemLayerOps,
   }),
 };
 
@@ -363,10 +344,7 @@ async function createLinkGeneric<TParsed>(
 
       return toLinkResult(row);
     } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === PG_UNIQUE_VIOLATION) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Link already exists");
-      }
-      throw error;
+      throwOnUniqueViolation(error, "Link already exists");
     }
   });
 }

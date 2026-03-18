@@ -11,12 +11,12 @@ import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { AddStructureMembershipBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
-import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
-import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { throwOnUniqueViolation } from "../lib/unique-violation.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -315,10 +315,7 @@ async function addMembershipGeneric(
 
       return toMembershipResult(row);
     } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === PG_UNIQUE_VIOLATION) {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Membership already exists");
-      }
-      throw error;
+      throwOnUniqueViolation(error, "Membership already exists");
     }
   });
 }
