@@ -107,6 +107,15 @@ describe("GET /systems/:systemId/members/:memberId/memberships", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("returns 400 for invalid system ID format", async () => {
+    const app = createApp();
+    const res = await app.request(`/systems/not-a-valid-id/members/${MEM_ID}/memberships`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("applies the readDefault rate limit category", () => {
     expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });

@@ -606,10 +606,9 @@ export function createHierarchyService<
     );
 
     const counts: { label: string; count: number }[] = [];
-    for (let i = 0; i < results.length; i++) {
-      const rows = results[i];
+    results.forEach((rows, i) => {
       const dep = dependentChecks[i];
-      if (!rows || !dep) {
+      if (!dep) {
         throw new Error("Unexpected: results/dependentChecks length mismatch");
       }
       const [result] = rows;
@@ -619,7 +618,7 @@ export function createHierarchyService<
       if (result.count > 0) {
         counts.push({ label: dep.label, count: result.count });
       }
-    }
+    });
 
     if (counts.length > 0) {
       const parts = counts.map((c) => `${String(c.count)} ${c.label}`);

@@ -386,31 +386,42 @@ describe("deleteGroup", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
 
-    // Track that both dependent check queries are initiated before either resolves.
-    // With sequential execution, the second call would only happen after the first resolves.
-    let pendingCount = 0;
-    let maxConcurrent = 0;
-
-    const createDeferredQuery = (): Promise<{ count: number }[]> => {
-      pendingCount++;
-      maxConcurrent = Math.max(maxConcurrent, pendingCount);
-      return Promise.resolve().then(() => {
-        pendingCount--;
-        return [{ count: 0 }];
-      });
-    };
+    // Use manually-controlled deferred promises. If the implementation dispatches
+    // queries sequentially, it will block on the first unresolved promise and never
+    // reach the second .where() call. With Promise.all, both .where() calls happen
+    // synchronously before either promise resolves.
+    let resolve1!: (v: { count: number }[]) => void;
+    let resolve2!: (v: { count: number }[]) => void;
 
     chain.where
       .mockReturnValueOnce(chain) // existence → .limit()
-      .mockReturnValueOnce(createDeferredQuery())
-      .mockReturnValueOnce(createDeferredQuery());
+      .mockReturnValueOnce(
+        new Promise<{ count: number }[]>((r) => {
+          resolve1 = r;
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise<{ count: number }[]>((r) => {
+          resolve2 = r;
+        }),
+      );
 
-    await deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
+    // Start deleteGroup without awaiting — sequential impl would deadlock here
+    const done = deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
 
-    // Both queries were in-flight concurrently (proves Promise.all dispatch)
-    expect(maxConcurrent).toBe(2);
-    // Both select calls happened (child groups + memberships)
-    expect(chain.select).toHaveBeenCalledTimes(3); // 1 existence + 2 dependent checks
+    // Flush microtasks so existence check resolves and dependent queries dispatch
+    await new Promise<void>((r) => {
+      queueMicrotask(r);
+    });
+
+    // Both dependent-check .where() calls dispatched before either resolved
+    expect(chain.where).toHaveBeenCalledTimes(3); // 1 existence + 2 dependents
+
+    resolve1([{ count: 0 }]);
+    resolve2([{ count: 0 }]);
+    await done;
+
+    expect(chain.select).toHaveBeenCalledTimes(3);
   });
 });
 
