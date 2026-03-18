@@ -41,10 +41,12 @@ export class ValkeyRateLimitStore implements RateLimitStore {
 /** Create a ValkeyRateLimitStore from a VALKEY_URL, or return null on failure. */
 export async function createValkeyStore(url: string): Promise<ValkeyRateLimitStore | null> {
   try {
-    // Dynamic import to avoid hard dependency when Valkey is not used
-    const mod = await (import("ioredis") as Promise<{
+    // Dynamic import to avoid hard dependency when Valkey is not used.
+    // Variable indirection prevents TypeScript from resolving the module at compile time.
+    const moduleName = "ioredis";
+    const mod = (await import(moduleName)) as {
       default: new (url: string, opts: Record<string, unknown>) => ValkeyClient;
-    }>);
+    };
     const Redis = mod.default;
     const client = new Redis(url, { maxRetriesPerRequest: 3 });
     return new ValkeyRateLimitStore(client);
