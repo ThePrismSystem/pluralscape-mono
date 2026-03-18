@@ -46,6 +46,22 @@ export {
 } from "./key-rotation.js";
 export { AuditLogQuerySchema } from "./audit-log-query.js";
 export {
+  CreateSubsystemBodySchema,
+  UpdateSubsystemBodySchema,
+  CreateSideSystemBodySchema,
+  UpdateSideSystemBodySchema,
+  CreateLayerBodySchema,
+  UpdateLayerBodySchema,
+} from "./structure.js";
+export { CreateRelationshipBodySchema, UpdateRelationshipBodySchema } from "./relationship.js";
+export { CreateLifecycleEventBodySchema } from "./lifecycle-event.js";
+export {
+  AddStructureMembershipBodySchema,
+  CreateSubsystemLayerLinkBodySchema,
+  CreateSubsystemSideSystemLinkBodySchema,
+  CreateSideSystemLayerLinkBodySchema,
+} from "./structure-junction.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_REORDER_OPERATIONS,
