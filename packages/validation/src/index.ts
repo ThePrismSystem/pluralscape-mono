@@ -3,6 +3,7 @@ export {
   ChangeEmailSchema,
   ChangePasswordSchema,
   LoginCredentialsSchema,
+  PasswordResetViaRecoveryKeySchema,
   RegenerateRecoveryKeySchema,
   RegistrationInputSchema,
 } from "./auth.js";
@@ -12,6 +13,7 @@ export {
   UpdateGroupBodySchema,
   MoveGroupBodySchema,
   ReorderGroupsBodySchema,
+  CopyGroupBodySchema,
   AddGroupMemberBodySchema,
 } from "./group.js";
 export { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "./custom-front.js";
@@ -54,7 +56,12 @@ export {
   UpdateLayerBodySchema,
 } from "./structure.js";
 export { CreateRelationshipBodySchema, UpdateRelationshipBodySchema } from "./relationship.js";
-export { CreateLifecycleEventBodySchema } from "./lifecycle-event.js";
+export {
+  CreateLifecycleEventBodySchema,
+  LIFECYCLE_EVENT_TYPES,
+  validateLifecycleMetadata,
+} from "./lifecycle-event.js";
+export type { PlaintextMetadata } from "./lifecycle-event.js";
 export {
   AddStructureMembershipBodySchema,
   CreateSubsystemLayerLinkBodySchema,
@@ -72,6 +79,7 @@ export { CreateUploadUrlBodySchema, ConfirmUploadBodySchema } from "./blob.js";
 export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
+  MAX_ENCRYPTED_SYSTEM_DATA_SIZE,
   MAX_REORDER_OPERATIONS,
   MAX_ENCRYPTED_MEMBER_DATA_SIZE,
   MAX_ENCRYPTED_PHOTO_DATA_SIZE,

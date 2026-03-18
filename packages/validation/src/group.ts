@@ -39,6 +39,13 @@ export const ReorderGroupsBodySchema = z
   })
   .readonly();
 
+export const CopyGroupBodySchema = z
+  .object({
+    targetParentGroupId: brandedString<"GroupId">().nullable().optional(),
+    copyMemberships: z.boolean().optional().default(false),
+  })
+  .readonly();
+
 export const AddGroupMemberBodySchema = z
   .object({
     memberId: brandedString<"MemberId">(),

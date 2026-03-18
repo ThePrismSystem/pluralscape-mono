@@ -5,7 +5,7 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-03-17T11:58:44Z
-updated_at: 2026-03-17T18:33:18Z
+updated_at: 2026-03-18T07:51:10Z
 parent: api-tspr
 ---
 
@@ -57,3 +57,5 @@ encryptedData: z.string().min(1).max(MAX_ENCRYPTED_SYSTEM_DATA_SIZE),
 - CWE-400: Uncontrolled Resource Consumption
 
 ## Summary of Changes\n\nAdded `MAX_ENCRYPTED_SYSTEM_DATA_SIZE` constant (131,072 / 128 KiB) to `validation.constants.ts` and applied `.max()` constraint to `encryptedData` in `UpdateSystemBodySchema`. Scanned all validation schemas — no other unbounded encrypted fields found.
+
+## Audit Note (B-4)\n\nThe UpdateSystemBodySchema was using MAX_ENCRYPTED_DATA_SIZE (87K / 64 KiB) instead of MAX_ENCRYPTED_SYSTEM_DATA_SIZE (131K / 128 KiB). Corrected in feat/audit-012-auth-features branch.

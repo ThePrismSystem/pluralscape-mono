@@ -1,5 +1,5 @@
 {
-  "id": "801af421-4c37-4ba0-a6f6-c9815eb55602",
+  "id": "94bc3b2e-1ea6-4c0a-a529-11939dc55088",
   "prevId": "4e41148a-3cfc-4935-866c-f53b0bb2d824",
   "version": "7",
   "dialect": "postgresql",
@@ -5356,6 +5356,12 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": true
+        },
+        "plaintext_metadata": {
+          "name": "plaintext_metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -6980,12 +6986,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "token_hash": {
-          "name": "token_hash",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
         "encrypted_data": {
           "name": "encrypted_data",
           "type": "bytea",
@@ -7030,21 +7030,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "sessions_token_hash_idx": {
-          "name": "sessions_token_hash_idx",
-          "columns": [
-            {
-              "expression": "token_hash",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}

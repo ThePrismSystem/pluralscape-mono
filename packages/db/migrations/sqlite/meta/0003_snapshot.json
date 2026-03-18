@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3fff72f3-4f69-4af4-9eb5-f810d27939f6",
-  "prevId": "5bbe4179-d979-405e-a00f-7908edf1a068",
+  "id": "025f5130-25dc-4ddd-81d6-2cdac5b09224",
+  "prevId": "3fff72f3-4f69-4af4-9eb5-f810d27939f6",
   "tables": {
     "account_purge_requests": {
       "name": "account_purge_requests",
@@ -5988,6 +5988,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "encrypted_data": {
           "name": "encrypted_data",
           "type": "blob",
@@ -6030,6 +6037,11 @@
           "name": "sessions_account_id_idx",
           "columns": ["account_id"],
           "isUnique": false
+        },
+        "sessions_token_hash_idx": {
+          "name": "sessions_token_hash_idx",
+          "columns": ["token_hash"],
+          "isUnique": true
         },
         "sessions_revoked_last_active_idx": {
           "name": "sessions_revoked_last_active_idx",

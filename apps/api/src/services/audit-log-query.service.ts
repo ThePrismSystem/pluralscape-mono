@@ -1,5 +1,5 @@
 import { auditLog } from "@pluralscape/db/pg";
-import { and, desc, eq, gt, lt, or } from "drizzle-orm";
+import { and, desc, eq, gt, like, lt, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -28,6 +28,7 @@ export interface AuditLogEntryResult {
 
 export interface AuditLogQueryParams {
   readonly eventType?: string;
+  readonly resourceType?: string;
   readonly from: number;
   readonly to: number;
   readonly cursor?: string;
@@ -94,6 +95,10 @@ export async function queryAuditLog(
 
   if (params.eventType) {
     conditions.push(eq(auditLog.eventType, params.eventType as AuditEventType));
+  }
+
+  if (params.resourceType) {
+    conditions.push(like(auditLog.eventType, `${params.resourceType}.%`));
   }
 
   if (params.cursor) {

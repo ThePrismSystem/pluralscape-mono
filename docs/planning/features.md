@@ -14,7 +14,7 @@ Actionable feature spec for Pluralscape, organized by domain.
   - Tags: well-known tags (protector, gatekeeper, caretaker, little, age-slider, trauma-holder, host, persecutor, mediator, anp, memory-holder, symptom-holder, middle, introject, fictive, factive, non-human) or custom user-defined tags. Discriminated union with `kind` field.
   - Per-member notification settings: suppress friend front notification, auto-post board message on front
 - **Image editing** — built-in crop and resize when uploading avatars or gallery photos (no external tool needed)
-- **Custom fields** — unlimited user-defined fields per member
+- **Custom fields** — up to 200 user-defined fields per member
 - **Group membership display** — member profiles show all groups they belong to, with links to view each group
 - **System structure membership display** — optional setting to show which subsystems/side systems a member belongs to on their profile, with links to those entities
 - **Groups/folders** — hierarchical organization with multi-group membership, drag-and-drop reorder
@@ -92,7 +92,7 @@ Nomenclature option: "Structure" / "Topology" / "Map" / custom
   - Relationship types: split-from, fused-from, sibling, partner, parent-child, protector-of, caretaker-of, gatekeeper-of, source (for introjects), and custom user-defined types
   - Bidirectional flag per relationship (e.g., "sibling" is mutual, "protector-of" is directional)
 - **Multiple structure types** for complex/polyfragmented systems:
-  - Recursive tree model (no hard depth limit) — subsystems within subsystems within subsystems
+  - Recursive tree model (depth capped at 50 levels) — subsystems within subsystems within subsystems
   - Side systems (parallel groups, not nested inside a member)
   - Layers (vertically stacked divisions with differing access rules, optionally gatekept)
   - Subsystem metadata: architecture type (orbital, spectrum, median, age-sliding, webbed, unknown, fluid, custom), has-core flag, discovery status (fully mapped vs still discovering)

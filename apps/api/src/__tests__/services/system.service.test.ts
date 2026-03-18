@@ -279,7 +279,8 @@ describe("updateSystemProfile", () => {
 
   it("throws 400 for oversized encryptedData", async () => {
     const { db } = mockDb();
-    const oversized = Buffer.from(new Uint8Array(70_000)).toString("base64");
+    // Must exceed MAX_ENCRYPTED_SYSTEM_DATA_SIZE (131,072 base64 chars = ~98 KiB)
+    const oversized = Buffer.from(new Uint8Array(100_000)).toString("base64");
 
     await expect(
       updateSystemProfile(db, SYSTEM_ID, { encryptedData: oversized, version: 1 }, AUTH, mockAudit),

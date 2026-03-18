@@ -9,7 +9,7 @@ import { encryptedBlobToBase64OrNull, parseAndValidateBlob } from "../lib/encryp
 import { assertOccUpdated } from "../lib/occ-update.js";
 import {
   DEFAULT_PAGE_LIMIT,
-  MAX_ENCRYPTED_DATA_BYTES,
+  MAX_ENCRYPTED_SYSTEM_DATA_BYTES,
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
 
@@ -127,7 +127,7 @@ export async function updateSystemProfile(
   const { parsed, blob } = parseAndValidateBlob(
     params,
     UpdateSystemBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
+    MAX_ENCRYPTED_SYSTEM_DATA_BYTES,
   );
 
   const timestamp = now();

@@ -5,7 +5,7 @@ status: completed
 type: bug
 priority: high
 created_at: 2026-03-17T11:59:41Z
-updated_at: 2026-03-17T18:35:34Z
+updated_at: 2026-03-18T07:51:12Z
 parent: api-tspr
 ---
 
@@ -61,3 +61,5 @@ Consider collapsing the ownership check + transaction into a single atomic opera
 - CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition
 
 ## Summary of Changes\n\nAdded `eq(sessions.accountId, actorAccountId)` to the UPDATE WHERE clause in `revokeSession`, making the ownership check atomic with the revocation. Removed the pre-transaction ownership check (TOCTOU-vulnerable). Kept the `session.revoked` early-return to avoid unnecessary transactions.
+
+## Audit Note (B-5)\n\nThe pre-transaction ownership check is intentionally kept as an optimization to fail fast before entering a transaction. Ownership is also enforced atomically in the UPDATE WHERE clause, so the pre-check is redundant but not harmful.

@@ -31,7 +31,11 @@ import type {
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-/** Safety cap for ancestor walk cycle detection. */
+/**
+ * Safety cap for ancestor walk during cycle detection.
+ * Limits subsystem nesting to 50 levels — sufficient for any practical
+ * system structure while preventing runaway traversals from circular references.
+ */
 const MAX_ANCESTOR_DEPTH = 50;
 
 // ── Types ───────────────────────────────────────────────────────────
