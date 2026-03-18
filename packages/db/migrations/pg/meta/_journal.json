@@ -8,6 +8,13 @@
       "when": 1773790529112,
       "tag": "0000_greedy_triathlon",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773810391938,
+      "tag": "0001_cuddly_wrecker",
+      "breakpoints": true
     }
   ]
 }
