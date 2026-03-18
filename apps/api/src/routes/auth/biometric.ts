@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
-import { ApiHttpError } from "../../lib/api-error.js";
+import { HTTP_CREATED } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
+import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { enrollBiometric, verifyBiometric } from "../../services/biometric.service.js";
@@ -16,12 +16,7 @@ biometricRoute.use("*", authMiddleware());
 biometricRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 biometricRoute.post("/enroll", async (c) => {
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
-  }
+  const body = await parseJsonBody(c);
 
   const auth = c.get("auth");
   const audit = createAuditWriter(c, auth);
@@ -32,12 +27,7 @@ biometricRoute.post("/enroll", async (c) => {
 });
 
 biometricRoute.post("/verify", async (c) => {
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
-  }
+  const body = await parseJsonBody(c);
 
   const auth = c.get("auth");
   const audit = createAuditWriter(c, auth);

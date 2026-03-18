@@ -345,6 +345,33 @@ describe("reorderMemberPhotos", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
+  it("throws NOT_FOUND when a batch update returns empty for one photo", async () => {
+    const { db, chain } = mockDb();
+    // assertMemberActive
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    chain.where.mockReturnValueOnce(chain); // assertMemberActive → chains to .limit()
+    // In tx: select existing photos — both exist
+    chain.where.mockResolvedValueOnce([{ id: PHOTO_ID }, { id: "mp_second" }]);
+    // Batch update: first succeeds, second returns empty (simulating race condition)
+    chain.returning.mockResolvedValueOnce([{ id: PHOTO_ID }]).mockResolvedValueOnce([]);
+
+    await expect(
+      reorderMemberPhotos(
+        db,
+        SYSTEM_ID,
+        MEMBER_ID,
+        {
+          order: [
+            { id: PHOTO_ID, sortOrder: 1 },
+            { id: "mp_second" as MemberPhotoId, sortOrder: 0 },
+          ],
+        },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
   it("throws VALIDATION_ERROR for invalid body", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);

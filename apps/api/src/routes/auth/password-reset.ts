@@ -4,6 +4,7 @@ import { HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
+import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
@@ -18,12 +19,7 @@ export const passwordResetRoute = new Hono();
 passwordResetRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 passwordResetRoute.post("/recovery-key", async (c) => {
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
-  }
+  const body = await parseJsonBody(c);
 
   const platform = extractPlatform(c);
   const audit = createAuditWriter(c);

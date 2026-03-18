@@ -7,7 +7,7 @@ import type { Context } from "hono";
 export async function parseJsonBody(c: Context): Promise<unknown> {
   try {
     return await c.req.json();
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
+  } catch (cause: unknown) {
+    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body", { cause });
   }
 }

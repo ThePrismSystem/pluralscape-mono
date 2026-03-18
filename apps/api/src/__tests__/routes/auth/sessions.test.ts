@@ -56,6 +56,7 @@ const { listSessions, logoutCurrentSession, revokeSession, revokeAllSessions } =
   await import("../../../services/auth.service.js");
 const { authMiddleware } = await import("../../../middleware/auth.js");
 const { sessionsRoute } = await import("../../../routes/auth/sessions.js");
+const { MAX_SESSION_LIMIT } = await import("../../../routes/auth/auth.constants.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -127,6 +128,24 @@ describe("sessions route", () => {
 
       expect(res.status).toBe(200);
       expect(vi.mocked(listSessions)).toHaveBeenCalledWith({}, "acct_test", "sess_abc", 10);
+    });
+
+    it("caps limit to MAX_SESSION_LIMIT when value exceeds max", async () => {
+      vi.mocked(listSessions).mockResolvedValueOnce({
+        sessions: [],
+        nextCursor: null,
+      });
+
+      const app = createApp();
+      const res = await app.request("/auth/sessions?limit=999");
+
+      expect(res.status).toBe(200);
+      expect(vi.mocked(listSessions)).toHaveBeenCalledWith(
+        {},
+        "acct_test",
+        undefined,
+        MAX_SESSION_LIMIT,
+      );
     });
   });
 

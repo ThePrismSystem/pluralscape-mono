@@ -5,6 +5,7 @@ import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
+import { parsePaginationLimit } from "../../lib/pagination.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
@@ -14,7 +15,7 @@ import {
   revokeSession,
 } from "../../services/auth.service.js";
 
-import { DEFAULT_SESSION_LIMIT } from "./auth.constants.js";
+import { DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT } from "./auth.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
@@ -33,8 +34,7 @@ sessionsRoute.get("/sessions", async (c) => {
   const db = await getDb();
   const cursor = c.req.query("cursor");
   const limitParam = c.req.query("limit");
-  const parsed = limitParam ? parseInt(limitParam, 10) : DEFAULT_SESSION_LIMIT;
-  const limit = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SESSION_LIMIT;
+  const limit = parsePaginationLimit(limitParam, DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT);
 
   const result = await listSessions(db, auth.accountId, cursor, limit);
   return c.json(result);
