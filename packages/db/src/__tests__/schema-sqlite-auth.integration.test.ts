@@ -391,6 +391,13 @@ describe("SQLite auth schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("rejects duplicate tokenHash", () => {
+      const account = insertAccount();
+      const tokenHash = `tok_${crypto.randomUUID()}`;
+      insertSession(account.id, { tokenHash });
+      expect(() => insertSession(account.id, { tokenHash })).toThrow(/UNIQUE|constraint/i);
+    });
+
     it("rejects nonexistent accountId FK", () => {
       expect(() =>
         db

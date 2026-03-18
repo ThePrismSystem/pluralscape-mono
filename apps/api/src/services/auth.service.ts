@@ -177,8 +177,10 @@ export async function registerAccount(
       if (remaining > 0) {
         await new Promise<void>((resolve) => setTimeout(resolve, remaining));
       }
+      const fakeToken = generateSessionToken();
+      hashSessionToken(fakeToken); // match timing of real path
       return {
-        sessionToken: generateSessionToken(),
+        sessionToken: fakeToken,
         recoveryKey: generateFakeRecoveryKey(),
         accountId: createId(ID_PREFIXES.account),
         accountType,

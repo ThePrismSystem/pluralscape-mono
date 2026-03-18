@@ -363,6 +363,13 @@ describe("PG auth schema", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("rejects duplicate tokenHash", async () => {
+      const account = await insertAccount();
+      const tokenHash = `tok_${crypto.randomUUID()}`;
+      await insertSession(account.id, { tokenHash });
+      await expect(insertSession(account.id, { tokenHash })).rejects.toThrow();
+    });
+
     it("rejects nonexistent accountId FK", async () => {
       await expect(
         db.insert(sessions).values({

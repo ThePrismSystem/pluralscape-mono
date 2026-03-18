@@ -13,10 +13,7 @@ export const MAX_RATE_LIMIT_ENTRIES = 10_000;
 
 // ── Session token format ────────────────────────────────────────────
 
-/** Expected length of session tokens (32 random bytes, hex-encoded). */
-export const SESSION_TOKEN_LENGTH = 64;
-
-/** Regex pattern for valid hex-encoded session tokens. */
+/** Regex pattern for valid hex-encoded session tokens (32 bytes = 64 lowercase hex chars). */
 export const SESSION_TOKEN_PATTERN = /^[0-9a-f]{64}$/;
 
 // ── Body limit ──────────────────────────────────────────────────────

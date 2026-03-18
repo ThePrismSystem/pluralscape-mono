@@ -157,6 +157,19 @@ describe("authMiddleware", () => {
     expect(mockValidateSession).not.toHaveBeenCalled();
   });
 
+  it("returns 401 for uppercase hex token", async () => {
+    const app = createApp();
+    const res = await app.request("/protected", {
+      headers: { Authorization: `Bearer ${"A0".repeat(32)}` },
+    });
+
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("UNAUTHENTICATED");
+    expect(body.error.message).toBe("Invalid or revoked session");
+    expect(mockValidateSession).not.toHaveBeenCalled();
+  });
+
   it("returns 401 for token with wrong length", async () => {
     const app = createApp();
     const res = await app.request("/protected", {
