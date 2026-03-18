@@ -67,7 +67,8 @@ const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/innerworld/c
 const MOCK_CANVAS = {
   id: "iwc_660e8400-e29b-41d4-a716-446655440000" as never,
   systemId: MOCK_AUTH.systemId as never,
-  data: { nodes: [], edges: [] },
+  encryptedData: "dGVzdA==",
+  version: 1,
   createdAt: 1000 as never,
   updatedAt: 1000 as never,
 };

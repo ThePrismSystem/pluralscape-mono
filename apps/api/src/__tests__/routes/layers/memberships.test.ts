@@ -90,9 +90,9 @@ const BASE_URL = `/systems/${SYS_ID}/layers/${LYR_ID}/memberships`;
 const MOCK_MEMBERSHIP = {
   id: MEMBERSHIP_ID,
   entityId: LYR_ID,
-  systemId: SYS_ID,
+  systemId: SYS_ID as never,
   encryptedData: "dGVzdA==",
-  createdAt: 1000,
+  createdAt: 1000 as never,
 };
 
 const VALID_BODY = {
@@ -178,7 +178,7 @@ describe("GET /systems/:id/layers/:layerId/memberships", () => {
   it("returns 200 with paginated list", async () => {
     const page = {
       items: [MOCK_MEMBERSHIP],
-      nextCursor: "cursor_next",
+      nextCursor: "cursor_next" as never,
       hasMore: true,
       totalCount: null,
     };
@@ -190,7 +190,7 @@ describe("GET /systems/:id/layers/:layerId/memberships", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof page;
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].id).toBe(MEMBERSHIP_ID);
+    expect((body.items[0] as Record<string, unknown>).id).toBe(MEMBERSHIP_ID);
     expect(body.hasMore).toBe(true);
   });
 

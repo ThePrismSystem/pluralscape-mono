@@ -67,7 +67,9 @@ const REGION_URL = `${BASE_URL}/iwr_660e8400-e29b-41d4-a716-446655440000`;
 const MOCK_REGION = {
   id: "iwr_660e8400-e29b-41d4-a716-446655440000" as never,
   systemId: MOCK_AUTH.systemId as never,
-  name: "Updated Region",
+  parentRegionId: null,
+  encryptedData: "dGVzdA==",
+  version: 1,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,
@@ -91,12 +93,12 @@ describe("PUT /systems/:id/innerworld/regions/:regionId", () => {
     const res = await app.request(REGION_URL, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "Updated Region" }),
+      body: JSON.stringify({ encryptedData: "dXBkYXRlZA==" }),
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { name: string };
-    expect(body.name).toBe("Updated Region");
+    const body = (await res.json()) as { id: string };
+    expect(body.id).toBe("iwr_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 400 for malformed JSON body", async () => {

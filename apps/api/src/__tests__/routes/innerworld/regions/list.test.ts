@@ -65,7 +65,9 @@ const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/innerworld/r
 const MOCK_REGION = {
   id: "iwr_660e8400-e29b-41d4-a716-446655440000" as never,
   systemId: MOCK_AUTH.systemId as never,
-  name: "Test Region",
+  parentRegionId: null,
+  encryptedData: "dGVzdA==",
+  version: 1,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,
@@ -94,7 +96,9 @@ describe("GET /systems/:id/innerworld/regions", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof page;
     expect(body.items).toHaveLength(1);
-    expect(body.items[0].id).toBe("iwr_660e8400-e29b-41d4-a716-446655440000");
+    expect((body.items[0] as Record<string, unknown>).id).toBe(
+      "iwr_660e8400-e29b-41d4-a716-446655440000",
+    );
   });
 
   it("returns 200 with empty list", async () => {

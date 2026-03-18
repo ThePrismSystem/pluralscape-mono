@@ -70,12 +70,12 @@ const ROTATION_ID = "bkr_770e8400-e29b-41d4-a716-446655440000";
 const PROGRESS_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/rotations/${ROTATION_ID}`;
 
 const MOCK_ROTATION = {
-  id: ROTATION_ID,
-  bucketId: BUCKET_ID,
+  id: ROTATION_ID as never,
+  bucketId: BUCKET_ID as never,
   fromKeyVersion: 1,
   toKeyVersion: 2,
-  state: "migrating",
-  initiatedAt: 1000,
+  state: "migrating" as never,
+  initiatedAt: 1000 as never,
   completedAt: null,
   totalItems: 10,
   completedItems: 6,

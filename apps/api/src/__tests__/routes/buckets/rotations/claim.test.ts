@@ -72,18 +72,18 @@ const CLAIM_URL = `/systems/${SYS_ID}/buckets/${BUCKET_ID}/rotations/${ROTATION_
 const MOCK_CLAIM_RESPONSE = {
   items: [
     {
-      id: "bri_880e8400-e29b-41d4-a716-446655440000",
-      rotationId: ROTATION_ID,
-      entityType: "content_tag",
+      id: "bri_880e8400-e29b-41d4-a716-446655440000" as never,
+      rotationId: ROTATION_ID as never,
+      entityType: "content_tag" as never,
       entityId: "ct_990e8400-e29b-41d4-a716-446655440000",
-      status: "claimed",
+      status: "claimed" as never,
       claimedBy: "sess_test",
-      claimedAt: 1000,
+      claimedAt: 1000 as never,
       completedAt: null,
       attempts: 0,
     },
   ],
-  rotationState: "migrating",
+  rotationState: "migrating" as never,
 };
 
 const VALID_BODY = { chunkSize: 10 };

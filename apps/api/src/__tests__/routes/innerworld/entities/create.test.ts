@@ -65,7 +65,9 @@ const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/innerworld/e
 const MOCK_ENTITY = {
   id: "iwe_660e8400-e29b-41d4-a716-446655440000" as never,
   systemId: MOCK_AUTH.systemId as never,
-  name: "Test Entity",
+  regionId: "iwr_test" as never,
+  encryptedData: "dGVzdA==",
+  version: 1,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,

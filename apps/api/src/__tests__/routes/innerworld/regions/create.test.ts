@@ -65,7 +65,9 @@ const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/innerworld/r
 const MOCK_REGION = {
   id: "iwr_660e8400-e29b-41d4-a716-446655440000" as never,
   systemId: MOCK_AUTH.systemId as never,
-  name: "Test Region",
+  parentRegionId: null,
+  encryptedData: "dGVzdA==",
+  version: 1,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,

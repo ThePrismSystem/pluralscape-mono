@@ -67,7 +67,9 @@ const RESTORE_URL = `${BASE_URL}/iwr_660e8400-e29b-41d4-a716-446655440000/restor
 const MOCK_REGION = {
   id: "iwr_660e8400-e29b-41d4-a716-446655440000" as never,
   systemId: MOCK_AUTH.systemId as never,
-  name: "Restored Region",
+  parentRegionId: null,
+  encryptedData: "dGVzdA==",
+  version: 1,
   archived: false,
   archivedAt: null,
   createdAt: 1000 as never,
