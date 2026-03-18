@@ -32,6 +32,9 @@ function mockContext(headers: Record<string, string> = {}): Context {
 
 // ── Mock external dependencies ───────────────────────────────────────
 
+const mockVerifyPassword = vi.fn<(hash: string, password: string) => boolean>();
+mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid");
+
 vi.mock("@pluralscape/crypto", () => ({
   GENERIC_HASH_BYTES_MAX: 64,
   getSodium: () => ({
@@ -40,7 +43,7 @@ vi.mock("@pluralscape/crypto", () => ({
     genericHash: () => new Uint8Array(32),
   }),
   hashPassword: () => "$argon2id$fake$hash",
-  verifyPassword: (hash: string) => hash === "$argon2id$fake$valid",
+  verifyPassword: (hash: string, password: string) => mockVerifyPassword(hash, password),
   generateSalt: () => new Uint8Array(16),
   derivePasswordKey: () => Promise.resolve(new Uint8Array(32)),
   generateMasterKey: () => new Uint8Array(32),
@@ -95,6 +98,7 @@ describe("auth service", () => {
   beforeEach(() => {
     mockNow.mockReturnValue(Date.now());
     mockAudit.mockClear();
+    mockVerifyPassword.mockClear();
   });
   // ── extractIpAddress ───────────────────────────────────────────────
 
@@ -481,6 +485,41 @@ describe("auth service", () => {
       expect(chain.values).toHaveBeenCalled();
     });
 
+    it("calls audit on invalid password (fire-and-forget)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+
+      const result = await loginAccount(db, credentials, "web", mockAudit);
+      expect(result).toBeNull();
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ eventType: "auth.login-failed" }),
+      );
+    });
+
+    it("returns null even when audit write fails", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+      mockAudit.mockRejectedValueOnce(new Error("audit DB down"));
+
+      const result = await loginAccount(db, credentials, "web", mockAudit);
+      expect(result).toBeNull();
+    });
+
     it("throws on invalid email format", async () => {
       const { db } = mockDb();
       await expect(
@@ -580,7 +619,7 @@ describe("auth service", () => {
   describe("revokeSession", () => {
     it("returns false when session is not found", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
+      chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_999", "acct_123", mockAudit);
       expect(result).toBe(false);
@@ -588,9 +627,6 @@ describe("auth service", () => {
 
     it("returns false when session belongs to a different account", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        { id: "sess_1", accountId: "acct_other", revoked: false },
-      ]);
       // UPDATE with accountId in WHERE matches zero rows
       chain.returning.mockResolvedValueOnce([]);
 
@@ -600,7 +636,6 @@ describe("auth service", () => {
 
     it("returns true and revokes session when actor owns it", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_123", revoked: false }]);
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
       const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
@@ -610,10 +645,6 @@ describe("auth service", () => {
 
     it("returns false for cross-account revocation without modifying the session", async () => {
       const { db, chain } = mockDb();
-      // Session belongs to acct_other, but revocation is attempted by acct_attacker
-      chain.limit.mockResolvedValueOnce([
-        { id: "sess_target", accountId: "acct_other", revoked: false },
-      ]);
       // The UPDATE should match zero rows (accountId mismatch in WHERE clause)
       chain.returning.mockResolvedValueOnce([]);
 
@@ -625,7 +656,8 @@ describe("auth service", () => {
 
     it("returns false when session is already revoked", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_123", revoked: true }]);
+      // WHERE includes revoked = false, so already-revoked sessions match zero rows
+      chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
       expect(result).toBe(false);

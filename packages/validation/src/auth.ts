@@ -9,15 +9,15 @@ import {
 export const LoginCredentialsSchema = z
   .object({
     email: z.email(),
-    // Minimum length ensures non-empty; strength rules enforced by auth service
-    password: z.string().min(1),
+    // Minimum length ensures non-empty; max prevents Argon2 DoS
+    password: z.string().min(1).max(MAX_PASSWORD_LENGTH),
   })
   .readonly();
 
 export const RegistrationInputSchema = z
   .object({
     email: z.email(),
-    password: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
+    password: z.string().min(AUTH_MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
     recoveryKeyBackupConfirmed: z.boolean(),
     accountType: z.enum(["system", "viewer"]).default("system"),
   })
@@ -33,7 +33,7 @@ export const ChangeEmailSchema = z
 export const ChangePasswordSchema = z
   .object({
     currentPassword: z.string().min(1),
-    newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
+    newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
   })
   .readonly();
 

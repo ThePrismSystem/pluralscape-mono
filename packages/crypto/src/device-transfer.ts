@@ -1,3 +1,19 @@
+/**
+ * Device transfer protocol — transfers encrypted master key between devices.
+ *
+ * Security model:
+ * - Verification code: 8 decimal digits (~26.5 bits entropy)
+ * - Protected by Argon2id mobile profile (32 MiB / 2 iterations) to slow brute force
+ * - Transfer sessions expire after 5 minutes (TRANSFER_TIMEOUT_MS)
+ * - QR payload includes cleartext verification code for convenience — security relies
+ *   on physical proximity to the source device's screen (single-factor)
+ * - To enable two-factor verification, remove `code` from QR payload and require
+ *   separate manual entry on the target device
+ * - Offline brute force of the full code space is theoretically feasible (~28 hours
+ *   on a single 2024-era GPU per hashcat benchmarks) but mitigated by the 5-minute
+ *   server-side timeout for online attacks
+ */
+
 import { KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 import { PROFILE_PARAMS, type PwhashProfile } from "./master-key.js";
@@ -229,9 +245,8 @@ export function decryptFromTransfer(payload: EncryptedPayload, transferKey: Aead
  * Encode a TransferInitiation as a JSON string for QR code embedding.
  *
  * Note: The QR payload includes the verification code for convenience — scanning
- * the QR replaces manual code entry. Security relies on physical proximity to the
- * source device's screen. If two-factor verification is needed in the future,
- * remove the `code` field and require separate manual entry.
+ * the QR replaces manual code entry. See file-level security model note for threat
+ * analysis and two-factor upgrade path.
  */
 export function encodeQRPayload(init: TransferInitiation): string {
   const saltHex = toHex(init.codeSalt);

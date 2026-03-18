@@ -7,6 +7,8 @@ import type { AccountId } from "@pluralscape/types";
 // ── Mock external dependencies ───────────────────────────────────────
 
 const mockMemzero = vi.fn();
+const mockVerifyPassword = vi.fn<(hash: string, password: string) => boolean>();
+mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid");
 
 vi.mock("@pluralscape/crypto", () => ({
   PWHASH_SALT_BYTES: 16,
@@ -18,7 +20,7 @@ vi.mock("@pluralscape/crypto", () => ({
     memzero: mockMemzero,
     genericHash: () => new Uint8Array(64),
   }),
-  verifyPassword: (hash: string) => hash === "$argon2id$fake$valid",
+  verifyPassword: (hash: string, password: string) => mockVerifyPassword(hash, password),
   derivePasswordKey: () => Promise.resolve(new Uint8Array(32)),
   unwrapMasterKey: () => new Uint8Array(32),
   hashPassword: () => "$argon2id$fake$newhash",
@@ -77,6 +79,7 @@ describe("recovery-key service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockMemzero.mockClear();
+    mockVerifyPassword.mockClear();
     mockAudit.mockClear();
   });
 
@@ -384,7 +387,7 @@ describe("recovery-key service", () => {
       expect(result).toBeNull();
     });
 
-    it("throws NoActiveRecoveryKeyError when no active key (with timing equalization)", async () => {
+    it("calls verifyPassword for timing equalization when no active recovery key", async () => {
       const { db, chain } = mockDb();
       // Account found
       chain.limit.mockResolvedValueOnce([
@@ -401,6 +404,12 @@ describe("recovery-key service", () => {
       await expect(
         resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit),
       ).rejects.toThrow(NoActiveRecoveryKeyError);
+
+      // verifyPassword should have been called with DUMMY_ARGON2_HASH for timing equalization
+      expect(mockVerifyPassword).toHaveBeenCalledWith(
+        expect.stringContaining("$argon2id$"),
+        validResetParams.newPassword,
+      );
     });
 
     it("throws ZodError on invalid input", async () => {

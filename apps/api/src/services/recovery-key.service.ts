@@ -213,8 +213,8 @@ export async function resetPasswordWithRecoveryKey(
     // Anti-enumeration: do dummy work + timing equalization
     try {
       verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
-    } catch {
-      // Swallow — timing equalization must always complete
+    } catch (err: unknown) {
+      console.error("[anti-enum] Unexpected verifyPassword error:", err);
     }
     await equalizeAntiEnumTiming(startTime);
     return null;
@@ -231,7 +231,12 @@ export async function resetPasswordWithRecoveryKey(
     .limit(1);
 
   if (!activeKey) {
-    // Anti-enumeration: equalize timing so "no account" and "no recovery key" are indistinguishable
+    // Anti-enumeration: match the verifyPassword latency of the "no account" path
+    try {
+      verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
+    } catch (err: unknown) {
+      console.error("[anti-enum] Unexpected verifyPassword error:", err);
+    }
     await equalizeAntiEnumTiming(startTime);
     throw new NoActiveRecoveryKeyError("No active recovery key found");
   }
