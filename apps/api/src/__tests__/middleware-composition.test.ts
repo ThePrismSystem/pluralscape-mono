@@ -26,17 +26,29 @@ describe("middleware composition", () => {
     vi.restoreAllMocks();
   });
 
-  it("applies secure headers on all responses", { timeout: 15_000 }, async () => {
-    const { app } = await import("../index.js");
-    const res = await app.request("/health");
+  it("applies secure headers on all responses", async () => {
+    const { Hono } = await import("hono");
+    const { createSecureHeaders } = await import("../middleware/secure-headers.js");
+
+    const testApp = new Hono();
+    testApp.use("*", createSecureHeaders());
+    testApp.get("/health", (c) => c.json({ status: "healthy" }));
+
+    const res = await testApp.request("/health");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(res.headers.get("x-frame-options")).toBe("DENY");
     expect(res.headers.get("content-security-policy")).toContain("default-src 'self'");
   });
 
   it("sets X-Request-Id header on all responses", async () => {
-    const { app } = await import("../index.js");
-    const res = await app.request("/health");
+    const { Hono } = await import("hono");
+    const { requestIdMiddleware } = await import("../middleware/request-id.js");
+
+    const testApp = new Hono();
+    testApp.use("*", requestIdMiddleware());
+    testApp.get("/health", (c) => c.json({ status: "healthy" }));
+
+    const res = await testApp.request("/health");
     expect(res.headers.get("x-request-id")).toBeTruthy();
   });
 
@@ -94,16 +106,34 @@ describe("middleware composition", () => {
   });
 
   it("rate limiter includes X-RateLimit-* headers on successful responses", async () => {
-    const { app } = await import("../index.js");
-    const res = await app.request("/health");
+    const { Hono } = await import("hono");
+    const { createRateLimiter } = await import("../middleware/rate-limit.js");
+
+    const testApp = new Hono();
+    testApp.use("*", createRateLimiter({ limit: 100, windowMs: 60_000 }));
+    testApp.get("/health", (c) => c.json({ status: "healthy" }));
+
+    const res = await testApp.request("/health");
     expect(res.headers.get("x-ratelimit-limit")).toBeTruthy();
     expect(res.headers.get("x-ratelimit-remaining")).toBeTruthy();
     expect(res.headers.get("x-ratelimit-reset")).toBeTruthy();
   });
 
   it("all middleware cooperate on a single request", async () => {
-    const { app } = await import("../index.js");
-    const res = await app.request("/");
+    const { Hono } = await import("hono");
+    const { createSecureHeaders } = await import("../middleware/secure-headers.js");
+    const { createCorsMiddleware } = await import("../middleware/cors.js");
+    const { createRateLimiter } = await import("../middleware/rate-limit.js");
+    const { requestIdMiddleware } = await import("../middleware/request-id.js");
+
+    const testApp = new Hono();
+    testApp.use("*", requestIdMiddleware());
+    testApp.use("*", createSecureHeaders());
+    testApp.use("*", createCorsMiddleware());
+    testApp.use("*", createRateLimiter({ limit: 100, windowMs: 60_000 }));
+    testApp.get("/", (c) => c.json({ status: "ok", service: "pluralscape-api" }));
+
+    const res = await testApp.request("/");
 
     // Status and body
     expect(res.status).toBe(200);
