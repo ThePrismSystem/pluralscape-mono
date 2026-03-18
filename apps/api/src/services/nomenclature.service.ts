@@ -7,7 +7,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { validateEncryptedBlob } from "../lib/validate-encrypted-blob.js";
-import { verifySystemOwnership } from "../lib/verify-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -49,7 +49,7 @@ export async function getNomenclatureSettings(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<NomenclatureSettingsResult> {
-  await verifySystemOwnership(db, systemId, auth);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select()
@@ -78,7 +78,7 @@ export async function updateNomenclatureSettings(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid nomenclature payload");
   }
 
-  await verifySystemOwnership(db, systemId, auth);
+  await assertSystemOwnership(db, systemId, auth);
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();

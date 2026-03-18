@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { hashPinOffload, verifyPinOffload } from "../lib/pwhash-offload.js";
-import { verifySystemOwnership } from "../lib/verify-system-ownership.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -38,7 +38,7 @@ export async function setPin(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
   }
 
-  await verifySystemOwnership(db, systemId, auth);
+  await assertSystemOwnership(db, systemId, auth);
 
   const pinHash = await hashPinOffload(parsed.data.pin, "server");
 
@@ -74,7 +74,7 @@ export async function removePin(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
   }
 
-  await verifySystemOwnership(db, systemId, auth);
+  await assertSystemOwnership(db, systemId, auth);
 
   // Fetch current PIN hash
   const [row] = await db
@@ -124,7 +124,7 @@ export async function verifyPinCode(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid PIN payload");
   }
 
-  await verifySystemOwnership(db, systemId, auth);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select({ pinHash: systemSettings.pinHash })
