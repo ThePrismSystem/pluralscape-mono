@@ -59,11 +59,12 @@ describe("PG auth schema", () => {
 
   async function insertSession(
     accountId: string,
-    overrides: Partial<{ id: string; createdAt: number }> = {},
-  ): Promise<{ id: string; accountId: string; createdAt: number }> {
+    overrides: Partial<{ id: string; createdAt: number; tokenHash: string }> = {},
+  ): Promise<{ id: string; accountId: string; tokenHash: string; createdAt: number }> {
     const data = {
       id: overrides.id ?? crypto.randomUUID(),
       accountId,
+      tokenHash: overrides.tokenHash ?? `tok_${crypto.randomUUID()}`,
       createdAt: overrides.createdAt ?? Date.now(),
     };
     await db.insert(sessions).values(data);
@@ -272,6 +273,7 @@ describe("PG auth schema", () => {
         lastActive: now,
         revoked: false,
         expiresAt,
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -291,6 +293,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         createdAt: Date.now(),
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -305,6 +308,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         createdAt: Date.now(),
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -321,6 +325,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         createdAt: Date.now(),
         expiresAt,
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -335,6 +340,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         createdAt: Date.now(),
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -349,11 +355,19 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         createdAt: Date.now(),
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       await db.delete(accounts).where(eq(accounts.id, account.id));
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
       expect(rows).toHaveLength(0);
+    });
+
+    it("rejects duplicate tokenHash", async () => {
+      const account = await insertAccount();
+      const tokenHash = `tok_${crypto.randomUUID()}`;
+      await insertSession(account.id, { tokenHash });
+      await expect(insertSession(account.id, { tokenHash })).rejects.toThrow();
     });
 
     it("rejects nonexistent accountId FK", async () => {
@@ -362,6 +376,7 @@ describe("PG auth schema", () => {
           id: crypto.randomUUID(),
           accountId: "nonexistent",
           createdAt: Date.now(),
+          tokenHash: `tok_${crypto.randomUUID()}`,
         }),
       ).rejects.toThrow();
     });
@@ -376,6 +391,7 @@ describe("PG auth schema", () => {
           accountId: account.id,
           createdAt: now,
           expiresAt: now - 1000,
+          tokenHash: `tok_${crypto.randomUUID()}`,
         }),
       ).rejects.toThrow();
     });
@@ -390,6 +406,7 @@ describe("PG auth schema", () => {
           accountId: account.id,
           createdAt: now,
           expiresAt: now,
+          tokenHash: `tok_${crypto.randomUUID()}`,
         }),
       ).rejects.toThrow();
     });
@@ -403,6 +420,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         createdAt: now,
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       const expiresAt = now + ONE_DAY_MS;
@@ -420,6 +438,7 @@ describe("PG auth schema", () => {
         id,
         accountId: account.id,
         createdAt: Date.now(),
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -436,6 +455,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         encryptedData: blob,
         createdAt: Date.now(),
+        tokenHash: `tok_${crypto.randomUUID()}`,
       });
 
       const rows = await db.select().from(sessions).where(eq(sessions.id, id));

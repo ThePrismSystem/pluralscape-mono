@@ -7,7 +7,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { getDb } from "../lib/db.js";
 import { validateSession } from "../lib/session-auth.js";
 
-import { SESSION_TOKEN_LENGTH, SESSION_TOKEN_PREFIX } from "./middleware.constants.js";
+import { SESSION_TOKEN_PATTERN } from "./middleware.constants.js";
 
 import type { AuthEnv } from "../lib/auth-context.js";
 import type { MiddlewareHandler } from "hono";
@@ -33,7 +33,7 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
 
     const token = match[1];
 
-    if (!token.startsWith(SESSION_TOKEN_PREFIX) || token.length !== SESSION_TOKEN_LENGTH) {
+    if (!SESSION_TOKEN_PATTERN.test(token)) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid or revoked session");
     }
 

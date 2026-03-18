@@ -60,6 +60,7 @@ export const sessions = pgTable(
     accountId: varchar("account_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 128 }).notNull(),
     encryptedData: pgEncryptedBlob("encrypted_data"),
     createdAt: pgTimestamp("created_at").notNull(),
     // Updated on every authenticated request. At scale, throttle updates (e.g.
@@ -70,6 +71,7 @@ export const sessions = pgTable(
   },
   (t) => [
     index("sessions_account_id_idx").on(t.accountId),
+    uniqueIndex("sessions_token_hash_idx").on(t.tokenHash),
     index("sessions_revoked_last_active_idx").on(t.revoked, t.lastActive),
     index("sessions_expires_at_idx")
       .on(t.expiresAt)

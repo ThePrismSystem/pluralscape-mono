@@ -20,6 +20,7 @@ import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
 import { getIdleTimeout } from "../lib/session-auth.js";
+import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import {
   ANTI_ENUM_TARGET_MS,
   DEFAULT_SESSION_LIMIT,
@@ -97,6 +98,8 @@ export async function registerAccount(
 
   const accountId = createId(ID_PREFIXES.account);
   const sessionId = createId(ID_PREFIXES.session);
+  const rawToken = generateSessionToken();
+  const tokenHash = hashSessionToken(rawToken);
   const timestamp = now();
   const timeouts = SESSION_TIMEOUTS[platform];
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
@@ -153,6 +156,7 @@ export async function registerAccount(
       await tx.insert(sessions).values({
         id: sessionId,
         accountId,
+        tokenHash,
         createdAt: timestamp,
         lastActive: timestamp,
         expiresAt,
@@ -173,8 +177,10 @@ export async function registerAccount(
       if (remaining > 0) {
         await new Promise<void>((resolve) => setTimeout(resolve, remaining));
       }
+      const fakeToken = generateSessionToken();
+      hashSessionToken(fakeToken); // match timing of real path
       return {
-        sessionToken: createId(ID_PREFIXES.session),
+        sessionToken: fakeToken,
         recoveryKey: generateFakeRecoveryKey(),
         accountId: createId(ID_PREFIXES.account),
         accountType,
@@ -184,7 +190,7 @@ export async function registerAccount(
   }
 
   return {
-    sessionToken: sessionId,
+    sessionToken: rawToken,
     recoveryKey: recovery.displayKey,
     accountId,
     accountType,
@@ -248,6 +254,8 @@ export async function loginAccount(
   }
 
   const sessionId = createId(ID_PREFIXES.session);
+  const rawToken = generateSessionToken();
+  const tokenHash = hashSessionToken(rawToken);
   const timestamp = now();
   const timeouts = SESSION_TIMEOUTS[platform];
   const expiresAt = timestamp + timeouts.absoluteTtlMs;
@@ -256,6 +264,7 @@ export async function loginAccount(
     await tx.insert(sessions).values({
       id: sessionId,
       accountId: account.id,
+      tokenHash,
       createdAt: timestamp,
       lastActive: timestamp,
       expiresAt,
@@ -271,7 +280,7 @@ export async function loginAccount(
   });
 
   return {
-    sessionToken: sessionId,
+    sessionToken: rawToken,
     accountId: account.id,
     systemId,
     accountType: account.accountType,

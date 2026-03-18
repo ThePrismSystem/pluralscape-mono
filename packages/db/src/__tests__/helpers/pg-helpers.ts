@@ -79,6 +79,7 @@ export const PG_DDL = {
     CREATE TABLE sessions (
       id VARCHAR(50) PRIMARY KEY,
       account_id VARCHAR(50) NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      token_hash VARCHAR(128) NOT NULL,
       encrypted_data BYTEA,
       created_at TIMESTAMPTZ NOT NULL,
       last_active TIMESTAMPTZ,
@@ -88,6 +89,7 @@ export const PG_DDL = {
     )
   `,
   sessionsIndexes: `
+    CREATE UNIQUE INDEX sessions_token_hash_idx ON sessions (token_hash);
     CREATE INDEX sessions_revoked_last_active_idx ON sessions (revoked, last_active);
     CREATE INDEX sessions_expires_at_idx ON sessions (expires_at) WHERE expires_at IS NOT NULL
   `,

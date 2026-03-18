@@ -13,11 +13,8 @@ export const MAX_RATE_LIMIT_ENTRIES = 10_000;
 
 // ── Session token format ────────────────────────────────────────────
 
-/** Expected prefix for session tokens. */
-export const SESSION_TOKEN_PREFIX = "sess_";
-
-/** Expected length of session tokens (5-char prefix + 36-char UUID). */
-export const SESSION_TOKEN_LENGTH = 41;
+/** Regex pattern for valid hex-encoded session tokens (32 bytes = 64 lowercase hex chars). */
+export const SESSION_TOKEN_PATTERN = /^[0-9a-f]{64}$/;
 
 // ── Body limit ──────────────────────────────────────────────────────
 

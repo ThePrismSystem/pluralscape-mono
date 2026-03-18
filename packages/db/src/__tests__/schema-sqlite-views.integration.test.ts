@@ -580,8 +580,8 @@ describe("SQLite views / query helpers", () => {
 
       db.insert(sessions)
         .values([
-          { id: sourceSession, accountId, createdAt: now },
-          { id: targetSession, accountId, createdAt: now },
+          { id: sourceSession, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
+          { id: targetSession, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
         ])
         .run();
 
@@ -603,8 +603,18 @@ describe("SQLite views / query helpers", () => {
       const targetSession2 = crypto.randomUUID();
       db.insert(sessions)
         .values([
-          { id: sourceSession2, accountId, createdAt: now },
-          { id: targetSession2, accountId, createdAt: now },
+          {
+            id: sourceSession2,
+            accountId,
+            tokenHash: `tok_${crypto.randomUUID()}`,
+            createdAt: now,
+          },
+          {
+            id: targetSession2,
+            accountId,
+            tokenHash: `tok_${crypto.randomUUID()}`,
+            createdAt: now,
+          },
         ])
         .run();
       db.insert(deviceTransferRequests)

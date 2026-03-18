@@ -11,12 +11,18 @@ vi.mock("@pluralscape/db/pg", () => ({
   sessions: {
     id: "sessions.id",
     accountId: "sessions.accountId",
+    tokenHash: "sessions.tokenHash",
     revoked: "sessions.revoked",
     expiresAt: "sessions.expiresAt",
     createdAt: "sessions.createdAt",
     lastActive: "sessions.lastActive",
   },
   systems: { id: "systems.id", accountId: "systems.accountId" },
+}));
+
+// Mock session-token module used by session-auth for hashing
+vi.mock("../../lib/session-token.js", () => ({
+  hashSessionToken: (token: string) => `hashed_${token}`,
 }));
 
 // Mock the `now()` function so we can control the current time
@@ -36,6 +42,7 @@ import { getIdleTimeout, validateSession } from "../../lib/session-auth.js";
 interface MockSession {
   id: string;
   accountId: string;
+  tokenHash: string;
   revoked: boolean;
   createdAt: number;
   expiresAt: number | null;
@@ -47,6 +54,7 @@ function makeSession(overrides: Partial<MockSession> = {}): MockSession {
   return {
     id: "sess_abc123",
     accountId: "acct_xyz",
+    tokenHash: "hashed_test_token",
     revoked: false,
     createdAt: 1_000_000,
     expiresAt: 1_000_000 + 2_592_000_000, // +30 days (web session)
