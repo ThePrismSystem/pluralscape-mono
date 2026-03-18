@@ -1,11 +1,11 @@
 ---
 # api-o89k
 title: Auth system
-status: in-progress
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:46Z
-updated_at: 2026-03-16T22:33:16Z
+updated_at: 2026-03-18T05:35:25Z
 parent: ps-rdqo
 ---
 
