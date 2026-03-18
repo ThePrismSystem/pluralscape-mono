@@ -15,6 +15,10 @@ vi.mock("../../routes/blobs/blobs.constants.js", () => ({
   PRESIGNED_UPLOAD_TTL_MS: 900_000,
 }));
 
+vi.mock("../../lib/system-ownership.js", () => ({
+  assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { createUploadUrl, confirmUpload, getBlob, getDownloadUrl, archiveBlob } =

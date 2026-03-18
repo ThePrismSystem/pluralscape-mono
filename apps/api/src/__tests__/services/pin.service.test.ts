@@ -34,8 +34,8 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
 }));
 
-vi.mock("../../lib/verify-system-ownership.js", () => ({
-  verifySystemOwnership: vi.fn().mockResolvedValue(undefined),
+vi.mock("../../lib/system-ownership.js", () => ({
+  assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ── Imports after mocks ──────────────────────────────────────────────

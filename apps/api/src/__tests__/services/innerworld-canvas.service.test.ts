@@ -26,10 +26,15 @@ vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../lib/system-ownership.js", () => ({
+  assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
 const { getCanvas, upsertCanvas } = await import("../../services/innerworld-canvas.service.js");
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -84,12 +89,15 @@ describe("getCanvas", () => {
     );
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "System not found"),
+    );
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
-    await expect(getCanvas(db, SYSTEM_ID, otherAuth)).rejects.toThrow(
-      expect.objectContaining({ status: 403, code: "FORBIDDEN" }),
+    await expect(getCanvas(db, SYSTEM_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
 });
@@ -202,18 +210,21 @@ describe("upsertCanvas", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "System not found"),
+    );
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
     await expect(
       upsertCanvas(
         db,
         SYSTEM_ID,
         { encryptedData: VALID_BLOB_BASE64, version: 1 },
-        otherAuth,
+        AUTH,
         mockAudit,
       ),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });

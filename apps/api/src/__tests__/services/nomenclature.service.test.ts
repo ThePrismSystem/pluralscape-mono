@@ -12,8 +12,8 @@ vi.mock("@pluralscape/crypto", () => ({
   serializeEncryptedBlob: vi.fn().mockReturnValue(new Uint8Array(32)),
 }));
 
-vi.mock("../../lib/verify-system-ownership.js", () => ({
-  verifySystemOwnership: vi.fn().mockResolvedValue(undefined),
+vi.mock("../../lib/system-ownership.js", () => ({
+  assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../../lib/validate-encrypted-blob.js", () => ({
