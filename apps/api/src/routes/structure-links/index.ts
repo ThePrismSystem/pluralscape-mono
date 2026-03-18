@@ -54,6 +54,7 @@ slDelete.delete("/subsystem-layer/:linkId", async (c) => {
 });
 
 const slList = new Hono<AuthEnv>();
+slList.use("*", createCategoryRateLimiter("readDefault"));
 slList.get("/subsystem-layer", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
@@ -104,6 +105,7 @@ ssDelete.delete("/subsystem-side-system/:linkId", async (c) => {
 });
 
 const ssList = new Hono<AuthEnv>();
+ssList.use("*", createCategoryRateLimiter("readDefault"));
 ssList.get("/subsystem-side-system", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
@@ -154,6 +156,7 @@ sslDelete.delete("/side-system-layer/:linkId", async (c) => {
 });
 
 const sslList = new Hono<AuthEnv>();
+sslList.use("*", createCategoryRateLimiter("readDefault"));
 sslList.get("/side-system-layer", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);

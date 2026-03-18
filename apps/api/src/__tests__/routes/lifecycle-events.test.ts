@@ -30,6 +30,7 @@ vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 
 const { createLifecycleEvent, listLifecycleEvents, getLifecycleEvent } =
   await import("../../services/lifecycle-event.service.js");
+const { createCategoryRateLimiter } = await import("../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -134,6 +135,10 @@ describe("GET /systems/:id/lifecycle-events", () => {
       expect.any(Number),
       undefined,
     );
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 });
 

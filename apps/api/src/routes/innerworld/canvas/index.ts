@@ -12,7 +12,10 @@ import type { AuthEnv } from "../../../lib/auth-context.js";
 
 export const canvasRoutes = new Hono<AuthEnv>();
 
-canvasRoutes.get("/", async (c) => {
+const canvasReadRoutes = new Hono<AuthEnv>();
+canvasReadRoutes.use("*", createCategoryRateLimiter("readDefault"));
+
+canvasReadRoutes.get("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
 
@@ -20,6 +23,8 @@ canvasRoutes.get("/", async (c) => {
   const result = await getCanvas(db, systemId, auth);
   return c.json(result);
 });
+
+canvasRoutes.route("/", canvasReadRoutes);
 
 const canvasWriteRoutes = new Hono<AuthEnv>();
 canvasWriteRoutes.use("*", createCategoryRateLimiter("write"));

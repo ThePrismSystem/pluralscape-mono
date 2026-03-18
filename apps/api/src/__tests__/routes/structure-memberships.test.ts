@@ -65,6 +65,7 @@ vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const service = await import("../../services/structure-membership.service.js");
+const { createCategoryRateLimiter } = await import("../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 const { ApiHttpError } = await import("../../lib/api-error.js");
 
@@ -373,6 +374,10 @@ for (const variant of VARIANTS) {
       expect(res.status).toBe(400);
       const body = (await res.json()) as ApiErrorResponse;
       expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
+    it("applies the readDefault rate limit category", () => {
+      expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
     });
 
     it("returns 500 for unexpected errors", async () => {

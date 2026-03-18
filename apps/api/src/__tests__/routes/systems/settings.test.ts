@@ -37,6 +37,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 const { getSystemSettings, updateSystemSettings } =
   await import("../../../services/system-settings.service.js");
+const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { settingsRoutes } = await import("../../../routes/systems/settings/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -77,6 +78,10 @@ describe("GET /:id/settings", () => {
     const body = (await res.json()) as typeof MOCK_SETTINGS;
     expect(body.id).toBe("sset_abc");
     expect(body.locale).toBe("en-US");
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 
   it("re-throws unexpected errors", async () => {

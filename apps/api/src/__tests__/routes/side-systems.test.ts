@@ -41,6 +41,7 @@ const {
   archiveSideSystem,
   restoreSideSystem,
 } = await import("../../services/side-system.service.js");
+const { createCategoryRateLimiter } = await import("../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -145,6 +146,10 @@ describe("GET /systems/:id/side-systems", () => {
       undefined,
       expect.any(Number),
     );
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 });
 

@@ -29,6 +29,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 
 const { getCanvas, upsertCanvas } =
   await import("../../../../services/innerworld-canvas.service.js");
+const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -137,8 +138,15 @@ describe("PUT /systems/:id/innerworld/canvas", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(VALID_BODY),
     });
+
     expect(res.status).toBe(409);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("CONFLICT");
+  });
+});
+
+describe("read rate limit", () => {
+  it("applies the readDefault rate limit category to the canvas GET route", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 });
