@@ -69,10 +69,14 @@ describe("requestIdMiddleware", () => {
     const res1 = await app.request("/test");
     const res2 = await app.request("/test");
 
-    const id1 = res1.headers.get("X-Request-Id") ?? "";
-    const id2 = res2.headers.get("X-Request-Id") ?? "";
+    const id1 = res1.headers.get("X-Request-Id");
+    const id2 = res2.headers.get("X-Request-Id");
+
+    if (!id1 || !id2) {
+      throw new Error("Expected both requests to have X-Request-Id headers");
+    }
 
     // UUIDv7 encodes timestamp in the first 48 bits — lexicographic order matches time order
-    expect(id1 < id2 || id1 === id2).toBe(true);
+    expect(id1 < id2).toBe(true);
   });
 });
