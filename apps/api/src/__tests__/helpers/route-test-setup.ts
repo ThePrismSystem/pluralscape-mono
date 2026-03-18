@@ -21,3 +21,30 @@ export function createRouteApp(mountPath: string, routes: Hono<AuthEnv>): Hono {
   app.onError(errorHandler);
   return app;
 }
+
+/** Send a POST request with a JSON body. */
+export async function postJSON(app: Hono, url: string, body: unknown): Promise<Response> {
+  return app.request(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Send a PUT request with a JSON body. */
+export async function putJSON(app: Hono, url: string, body: unknown): Promise<Response> {
+  return app.request(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Send a PATCH request with a JSON body. */
+export async function patchJSON(app: Hono, url: string, body: unknown): Promise<Response> {
+  return app.request(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
