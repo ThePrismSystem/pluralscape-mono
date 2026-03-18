@@ -199,6 +199,29 @@ describe("createRelationship", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
 
+  it("throws 404 when both members are missing", async () => {
+    const { db, chain } = mockDb();
+
+    // No members found at all
+    chain.where.mockResolvedValueOnce([]);
+
+    await expect(
+      createRelationship(
+        db,
+        SYSTEM_ID,
+        {
+          sourceMemberId: "mem_source",
+          targetMemberId: "mem_target",
+          type: "sibling",
+          bidirectional: true,
+          encryptedData: VALID_BLOB_BASE64,
+        },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
   it("throws 400 for invalid relationship type", async () => {
     const { db } = mockDb();
 
@@ -278,6 +301,15 @@ describe("listRelationships", () => {
 
     expect(chain.where).toHaveBeenCalled();
   });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(listRelationships(db, SYSTEM_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
 });
 
 describe("getRelationship", () => {
@@ -302,6 +334,15 @@ describe("getRelationship", () => {
     await expect(
       getRelationship(db, SYSTEM_ID, "rel_nonexistent" as RelationshipId, AUTH),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(getRelationship(db, SYSTEM_ID, RELATIONSHIP_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });
 
@@ -379,6 +420,22 @@ describe("updateRelationship", () => {
       updateRelationship(db, SYSTEM_ID, RELATIONSHIP_ID, { invalid: true }, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 400, code: "VALIDATION_ERROR" }));
   });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(
+      updateRelationship(
+        db,
+        SYSTEM_ID,
+        RELATIONSHIP_ID,
+        { type: "sibling", bidirectional: true, encryptedData: VALID_BLOB_BASE64, version: 1 },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
 });
 
 describe("deleteRelationship", () => {
@@ -409,6 +466,15 @@ describe("deleteRelationship", () => {
       deleteRelationship(db, SYSTEM_ID, "rel_nonexistent" as RelationshipId, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(
+      deleteRelationship(db, SYSTEM_ID, RELATIONSHIP_ID, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
 });
 
 describe("archiveRelationship", () => {
@@ -437,6 +503,15 @@ describe("archiveRelationship", () => {
 
     await expect(
       archiveRelationship(db, SYSTEM_ID, "rel_nonexistent" as RelationshipId, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(
+      archiveRelationship(db, SYSTEM_ID, RELATIONSHIP_ID, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
@@ -472,6 +547,15 @@ describe("restoreRelationship", () => {
 
     await expect(
       restoreRelationship(db, SYSTEM_ID, "rel_nonexistent" as RelationshipId, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
+    const { db } = mockDb();
+
+    await expect(
+      restoreRelationship(db, SYSTEM_ID, RELATIONSHIP_ID, AUTH, mockAudit),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
