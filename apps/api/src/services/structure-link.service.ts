@@ -15,16 +15,11 @@ import {
 } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
-
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
-import {
-  DEFAULT_PAGE_LIMIT,
-  MAX_ENCRYPTED_DATA_BYTES,
-  MAX_PAGE_LIMIT,
-} from "../service.constants.js";
+import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -66,13 +61,6 @@ function parseLinkBody<T>(
   }
 
   const rawBytes = Buffer.from(data.encryptedData, "base64");
-  if (rawBytes.length > MAX_ENCRYPTED_DATA_BYTES) {
-    throw new ApiHttpError(
-      HTTP_BAD_REQUEST,
-      "BLOB_TOO_LARGE",
-      `encryptedData exceeds maximum size of ${String(MAX_ENCRYPTED_DATA_BYTES)} bytes`,
-    );
-  }
 
   try {
     const blob = deserializeEncryptedBlob(new Uint8Array(rawBytes));
