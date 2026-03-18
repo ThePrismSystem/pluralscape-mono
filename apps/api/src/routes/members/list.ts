@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
+import { parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { listMembers } from "../../services/member.service.js";
 
@@ -19,11 +20,7 @@ listRoute.get("/", async (c) => {
   const cursorParam = c.req.query("cursor");
   const limitParam = c.req.query("limit");
   const includeArchived = c.req.query("include_archived") === "true";
-  const parsed = limitParam ? parseInt(limitParam, 10) : DEFAULT_MEMBER_LIMIT;
-  const limit =
-    Number.isFinite(parsed) && parsed > 0
-      ? Math.min(parsed, MAX_MEMBER_LIMIT)
-      : DEFAULT_MEMBER_LIMIT;
+  const limit = parsePaginationLimit(limitParam, DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT);
 
   const db = await getDb();
   const result = await listMembers(db, systemId, auth, {

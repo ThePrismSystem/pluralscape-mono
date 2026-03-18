@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
+import { parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { listFieldDefinitions } from "../../services/field-definition.service.js";
 
@@ -19,9 +20,7 @@ listRoute.get("/", async (c) => {
   const cursorParam = c.req.query("cursor");
   const limitParam = c.req.query("limit");
   const includeArchived = c.req.query("include_archived") === "true";
-  const parsed = limitParam ? parseInt(limitParam, 10) : DEFAULT_FIELD_LIMIT;
-  const limit =
-    Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, MAX_FIELD_LIMIT) : DEFAULT_FIELD_LIMIT;
+  const limit = parsePaginationLimit(limitParam, DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT);
 
   const db = await getDb();
   const result = await listFieldDefinitions(db, systemId, auth, {
