@@ -91,6 +91,35 @@ describe("AuditEventType", () => {
         case "field-value.set":
         case "field-value.updated":
         case "field-value.deleted":
+        case "subsystem.created":
+        case "subsystem.updated":
+        case "subsystem.archived":
+        case "subsystem.restored":
+        case "subsystem.deleted":
+        case "side-system.created":
+        case "side-system.updated":
+        case "side-system.archived":
+        case "side-system.restored":
+        case "side-system.deleted":
+        case "layer.created":
+        case "layer.updated":
+        case "layer.archived":
+        case "layer.restored":
+        case "layer.deleted":
+        case "relationship.created":
+        case "relationship.updated":
+        case "relationship.archived":
+        case "relationship.restored":
+        case "relationship.deleted":
+        case "lifecycle-event.created":
+        case "subsystem-membership.added":
+        case "subsystem-membership.removed":
+        case "side-system-membership.added":
+        case "side-system-membership.removed":
+        case "layer-membership.added":
+        case "layer-membership.removed":
+        case "structure-link.created":
+        case "structure-link.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

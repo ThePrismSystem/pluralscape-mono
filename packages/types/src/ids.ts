@@ -72,6 +72,10 @@ export type BucketKeyRotationId = Brand<string, "BucketKeyRotationId">;
 export type BucketRotationItemId = Brand<string, "BucketRotationItemId">;
 export type SystemSnapshotId = Brand<string, "SystemSnapshotId">;
 export type BiometricTokenId = Brand<string, "BiometricTokenId">;
+export type SubsystemMembershipId = Brand<string, "SubsystemMembershipId">;
+export type SideSystemMembershipId = Brand<string, "SideSystemMembershipId">;
+export type LayerMembershipId = Brand<string, "LayerMembershipId">;
+export type StructureLinkId = Brand<string, "StructureLinkId">;
 export type StorageKey = Brand<string, "StorageKey">;
 export type HexColor = Brand<string, "HexColor">;
 export type SlugHash = Brand<string, "SlugHash">;
@@ -140,6 +144,10 @@ export const ID_PREFIXES = {
   bucketRotationItem: "bri_",
   systemSnapshot: "snap_",
   biometricToken: "bt_",
+  subsystemMembership: "subm_",
+  sideSystemMembership: "ssm_",
+  layerMembership: "lyrm_",
+  structureLink: "slink_",
 } as const;
 
 /** Maps each ID prefix value to its Brand tag string. */
@@ -205,6 +213,10 @@ export interface IdPrefixBrandMap {
   bri_: "BucketRotationItemId";
   snap_: "SystemSnapshotId";
   bt_: "BiometricTokenId";
+  subm_: "SubsystemMembershipId";
+  ssm_: "SideSystemMembershipId";
+  lyrm_: "LayerMembershipId";
+  slink_: "StructureLinkId";
 }
 
 // ── EntityType union ────────────────────────────────────────────────

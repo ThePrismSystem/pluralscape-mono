@@ -40,3 +40,6 @@ export const MAX_ENCRYPTED_FIELD_DATA_SIZE = 32_768;
 
 /** Maximum byte length for encrypted field value data (16 KiB). */
 export const MAX_ENCRYPTED_FIELD_VALUE_SIZE = 16_384;
+
+/** Maximum character length for custom architecture type values. */
+export const MAX_CUSTOM_ARCHITECTURE_TYPE_LENGTH = 100;
