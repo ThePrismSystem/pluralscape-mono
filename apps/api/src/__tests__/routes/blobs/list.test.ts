@@ -9,7 +9,7 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { BlobResult } from "../../../services/blob.service.js";
-import type { PaginatedResult } from "@pluralscape/types";
+import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -185,6 +185,17 @@ describe("GET /systems/:systemId/blobs", () => {
         includeArchived: true,
       }),
     );
+  });
+
+  it("returns 400 for invalid include_archived value", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/blobs?include_archived=yes`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("re-throws unexpected errors as 500", async () => {

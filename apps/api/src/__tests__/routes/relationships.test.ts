@@ -153,6 +153,39 @@ describe("GET /systems/:id/relationships", () => {
     );
   });
 
+  it("forwards valid memberId to service", async () => {
+    const memberId = "mem_550e8400-e29b-41d4-a716-446655440000";
+    vi.mocked(listRelationships).mockResolvedValueOnce(MOCK_PAGINATED);
+    const app = createApp();
+    await app.request(`${BASE_URL}?memberId=${memberId}`);
+    expect(vi.mocked(listRelationships)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      MOCK_AUTH,
+      undefined,
+      expect.any(Number),
+      memberId,
+    );
+  });
+
+  it("returns 400 for memberId with wrong prefix", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const app = createApp();
+    const res = await app.request(`${BASE_URL}?memberId=sys_550e8400-e29b-41d4-a716-446655440000`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for memberId with malformed UUID", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const app = createApp();
+    const res = await app.request(`${BASE_URL}?memberId=mem_not-a-uuid`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("applies the readDefault rate limit category", () => {
     expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });

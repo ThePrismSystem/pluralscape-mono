@@ -1,10 +1,11 @@
 ---
 # api-srjx
 title: Add query parameter validation to list endpoints
-status: todo
+status: in-progress
 type: task
+priority: normal
 created_at: 2026-03-18T20:09:20Z
-updated_at: 2026-03-18T20:09:20Z
+updated_at: 2026-03-18T20:13:37Z
 parent: api-mzn0
 ---
 

@@ -1,4 +1,5 @@
 import { ID_PREFIXES, toCursor } from "@pluralscape/types";
+import { IncludeArchivedQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
@@ -19,7 +20,9 @@ listRoute.get("/", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limitParam = c.req.query("limit");
-  const includeArchived = c.req.query("include_archived") === "true";
+  const { includeArchived } = IncludeArchivedQuerySchema.parse({
+    includeArchived: c.req.query("include_archived"),
+  });
   const limit = parsePaginationLimit(limitParam, DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT);
 
   const db = await getDb();

@@ -1,4 +1,5 @@
 import { ID_PREFIXES, toCursor } from "@pluralscape/types";
+import { StructureLinkQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_CREATED, HTTP_NO_CONTENT } from "../../http.constants.js";
@@ -60,8 +61,10 @@ slList.get("/subsystem-layer", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const subsystemId = c.req.query("subsystemId");
-  const layerId = c.req.query("layerId");
+  const { subsystemId, layerId } = StructureLinkQuerySchema.parse({
+    subsystemId: c.req.query("subsystemId"),
+    layerId: c.req.query("layerId"),
+  });
 
   const db = await getDb();
   const result = await listSubsystemLayerLinks(
@@ -111,8 +114,10 @@ ssList.get("/subsystem-side-system", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const subsystemId = c.req.query("subsystemId");
-  const sideSystemId = c.req.query("sideSystemId");
+  const { subsystemId, sideSystemId } = StructureLinkQuerySchema.parse({
+    subsystemId: c.req.query("subsystemId"),
+    sideSystemId: c.req.query("sideSystemId"),
+  });
 
   const db = await getDb();
   const result = await listSubsystemSideSystemLinks(
@@ -162,8 +167,10 @@ sslList.get("/side-system-layer", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const sideSystemId = c.req.query("sideSystemId");
-  const layerId = c.req.query("layerId");
+  const { sideSystemId, layerId } = StructureLinkQuerySchema.parse({
+    sideSystemId: c.req.query("sideSystemId"),
+    layerId: c.req.query("layerId"),
+  });
 
   const db = await getDb();
   const result = await listSideSystemLayerLinks(

@@ -137,6 +137,29 @@ describe("GET /systems/:id/lifecycle-events", () => {
     );
   });
 
+  it("forwards valid eventType to service", async () => {
+    vi.mocked(listLifecycleEvents).mockResolvedValueOnce(MOCK_PAGINATED);
+    const app = createApp();
+    await app.request(`${BASE_URL}?eventType=discovery`);
+    expect(vi.mocked(listLifecycleEvents)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      MOCK_AUTH,
+      undefined,
+      expect.any(Number),
+      "discovery",
+    );
+  });
+
+  it("returns 400 for invalid eventType", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const app = createApp();
+    const res = await app.request(`${BASE_URL}?eventType=invalid-type`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("applies the readDefault rate limit category", () => {
     expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
