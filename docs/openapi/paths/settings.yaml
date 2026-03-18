@@ -71,9 +71,15 @@
           application/json:
             schema:
               type: object
+              required: [data]
               properties:
-                ok:
-                  type: boolean
+                data:
+                  type: object
+                  required: [success]
+                  properties:
+                    success:
+                      type: boolean
+                      const: true
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -96,8 +102,21 @@
           schema:
             $ref: "../schemas/settings.yaml#/PinRequest"
     responses:
-      "204":
-        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "200":
+        description: PIN removed
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  type: object
+                  required: [success]
+                  properties:
+                    success:
+                      type: boolean
+                      const: true
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":

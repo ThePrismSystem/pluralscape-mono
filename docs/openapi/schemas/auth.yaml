@@ -184,10 +184,15 @@ RecoveryKeyStatusResponse:
 
 RevokeAllResponse:
   type: object
-  required: [ok, revokedCount]
+  required: [data]
   properties:
-    ok:
-      type: boolean
-    revokedCount:
-      type: integer
-      description: Number of sessions revoked
+    data:
+      type: object
+      required: [success, revokedCount]
+      properties:
+        success:
+          type: boolean
+          const: true
+        revokedCount:
+          type: integer
+          description: Number of sessions revoked

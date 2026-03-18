@@ -67,16 +67,16 @@ describe("PUT /systems/:systemId/members/:memberId/photos/reorder", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with items array on success", async () => {
+  it("returns 200 with items array in data envelope on success", async () => {
     vi.mocked(reorderMemberPhotos).mockResolvedValueOnce([PHOTO_RESULT]);
 
     const app = createApp();
     const res = await putJSON(app, REORDER_PATH, VALID_BODY);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: (typeof PHOTO_RESULT)[] };
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0]?.id).toBe(PHOTO_ID);
+    const body = (await res.json()) as { data: { items: (typeof PHOTO_RESULT)[] } };
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.items[0]?.id).toBe(PHOTO_ID);
   });
 
   it("forwards systemId, memberId, body, and auth to service", async () => {

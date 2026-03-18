@@ -67,28 +67,28 @@ describe("GET /systems/:systemId/members/:memberId/photos", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with items array on success", async () => {
+  it("returns 200 with items array in data envelope on success", async () => {
     vi.mocked(listMemberPhotos).mockResolvedValueOnce([PHOTO_RESULT]);
 
     const app = createApp();
     const res = await app.request(PHOTOS_PATH);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: (typeof PHOTO_RESULT)[] };
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0]?.id).toBe(PHOTO_ID);
-    expect(body.items[0]?.memberId).toBe(MEM_ID);
+    const body = (await res.json()) as { data: { items: (typeof PHOTO_RESULT)[] } };
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.items[0]?.id).toBe(PHOTO_ID);
+    expect(body.data.items[0]?.memberId).toBe(MEM_ID);
   });
 
-  it("returns 200 with empty items array when no photos", async () => {
+  it("returns 200 with empty items array in data envelope when no photos", async () => {
     vi.mocked(listMemberPhotos).mockResolvedValueOnce([]);
 
     const app = createApp();
     const res = await app.request(PHOTOS_PATH);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toEqual([]);
+    const body = (await res.json()) as { data: { items: unknown[] } };
+    expect(body.data.items).toEqual([]);
   });
 
   it("forwards systemId, memberId, and auth to service", async () => {

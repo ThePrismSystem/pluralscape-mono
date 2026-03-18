@@ -3,6 +3,7 @@ import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
+import { wrapResult } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { listMemberPhotos } from "../../../services/member-photo.service.js";
 
@@ -18,5 +19,5 @@ listRoute.get("/", async (c) => {
 
   const db = await getDb();
   const result = await listMemberPhotos(db, systemId, memberId, auth);
-  return c.json({ items: result });
+  return c.json(wrapResult({ items: result }));
 });

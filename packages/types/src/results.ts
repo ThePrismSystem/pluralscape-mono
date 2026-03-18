@@ -18,10 +18,15 @@ export interface ApiErrorResponse {
   readonly requestId: string;
 }
 
-/** Discriminated API response — exactly one of `data` or `error` is non-null. */
+/** Discriminated API response — exactly one of `data` or `error` is present. */
 export type ApiResponse<T> =
-  | { readonly data: T; readonly error: null }
-  | { readonly data: null; readonly error: ApiError };
+  | { readonly data: T; readonly error?: never }
+  | { readonly data?: never; readonly error: ApiError; readonly requestId: string };
+
+/** Standard mutation confirmation payload. */
+export interface ActionResult {
+  readonly success: true;
+}
 
 /** A single field-level validation error. */
 export interface ValidationError {

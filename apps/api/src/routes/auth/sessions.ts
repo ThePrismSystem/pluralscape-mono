@@ -6,6 +6,7 @@ import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
 import { parsePaginationLimit } from "../../lib/pagination.js";
+import { wrapAction } from "../../lib/response.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
@@ -82,5 +83,5 @@ sessionsRoute.post("/sessions/revoke-all", async (c) => {
   const audit = createAuditWriter(c, auth);
 
   const count = await revokeAllSessions(db, auth.accountId, auth.sessionId, audit);
-  return c.json({ ok: true, revokedCount: count });
+  return c.json(wrapAction({ revokedCount: count }));
 });

@@ -16,12 +16,16 @@
           application/json:
             schema:
               type: object
-              required: [fields]
+              required: [data]
               properties:
-                fields:
-                  type: array
-                  items:
-                    $ref: "../schemas/fields.yaml#/FieldValueResponse"
+                data:
+                  type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/fields.yaml#/FieldValueResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "429":
