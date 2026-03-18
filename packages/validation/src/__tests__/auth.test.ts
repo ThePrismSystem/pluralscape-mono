@@ -6,7 +6,7 @@ import {
   RegenerateRecoveryKeySchema,
   RegistrationInputSchema,
 } from "../auth.js";
-import { AUTH_MIN_PASSWORD_LENGTH } from "../validation.constants.js";
+import { AUTH_MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "../validation.constants.js";
 
 // ── RegistrationInputSchema ──────────────────────────────────────────
 
@@ -29,6 +29,29 @@ describe("RegistrationInputSchema", () => {
     const result = RegistrationInputSchema.safeParse({
       email: "user@example.com",
       password: "12345678", // exactly 8 chars
+      recoveryKeyBackupConfirmed: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects password exceeding MAX_PASSWORD_LENGTH", () => {
+    const result = RegistrationInputSchema.safeParse({
+      email: "user@example.com",
+      password: "a".repeat(MAX_PASSWORD_LENGTH + 1),
+      recoveryKeyBackupConfirmed: true,
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["password"]);
+    }
+  });
+
+  it("accepts password at exactly MAX_PASSWORD_LENGTH", () => {
+    const result = RegistrationInputSchema.safeParse({
+      email: "user@example.com",
+      password: "a".repeat(MAX_PASSWORD_LENGTH),
       recoveryKeyBackupConfirmed: true,
     });
     expect(result.success).toBe(true);
@@ -154,6 +177,27 @@ describe("ChangePasswordSchema", () => {
       expect(issue).toBeDefined();
       expect(issue?.path).toEqual(["newPassword"]);
     }
+  });
+
+  it("rejects newPassword exceeding MAX_PASSWORD_LENGTH", () => {
+    const result = ChangePasswordSchema.safeParse({
+      currentPassword: "oldpassword",
+      newPassword: "a".repeat(MAX_PASSWORD_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["newPassword"]);
+    }
+  });
+
+  it("accepts newPassword at exactly MAX_PASSWORD_LENGTH", () => {
+    const result = ChangePasswordSchema.safeParse({
+      currentPassword: "oldpassword",
+      newPassword: "a".repeat(MAX_PASSWORD_LENGTH),
+    });
+    expect(result.success).toBe(true);
   });
 
   it("strips unknown properties", () => {

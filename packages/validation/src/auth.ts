@@ -17,7 +17,7 @@ export const LoginCredentialsSchema = z
 export const RegistrationInputSchema = z
   .object({
     email: z.email(),
-    password: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
+    password: z.string().min(AUTH_MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
     recoveryKeyBackupConfirmed: z.boolean(),
     accountType: z.enum(["system", "viewer"]).default("system"),
   })
@@ -33,7 +33,7 @@ export const ChangeEmailSchema = z
 export const ChangePasswordSchema = z
   .object({
     currentPassword: z.string().min(1),
-    newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
+    newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
   })
   .readonly();
 
