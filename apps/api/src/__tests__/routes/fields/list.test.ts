@@ -37,6 +37,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { listFieldDefinitions } = await import("../../../services/field-definition.service.js");
+const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -148,6 +149,10 @@ describe("GET /systems/:systemId/fields", () => {
       MOCK_AUTH,
       { cursor: undefined, limit: 25, includeArchived: false },
     );
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 
   it("re-throws unexpected errors as 500", async () => {

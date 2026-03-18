@@ -25,6 +25,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 const { getGroup } = await import("../../../services/group.service.js");
+const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
@@ -86,6 +87,10 @@ describe("GET /systems/:id/groups/:groupId", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 
   it("re-throws unexpected errors as 500", async () => {

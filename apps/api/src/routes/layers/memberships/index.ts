@@ -47,6 +47,7 @@ removeRoute.delete("/:membershipId", async (c) => {
 });
 
 const listRoute = new Hono<AuthEnv>();
+listRoute.use("*", createCategoryRateLimiter("readDefault"));
 listRoute.get("/", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);

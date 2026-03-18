@@ -45,6 +45,7 @@ const {
   deleteSideSystemLayerLink,
   listSideSystemLayerLinks,
 } = await import("../../services/structure-link.service.js");
+const { createCategoryRateLimiter } = await import("../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -113,6 +114,10 @@ describe("GET /systems/:id/structure-links/subsystem-layer", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: unknown[] };
     expect(body.items).toHaveLength(1);
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 });
 

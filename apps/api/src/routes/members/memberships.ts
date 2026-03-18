@@ -3,11 +3,14 @@ import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
+import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { listAllMemberMemberships } from "../../services/member.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
 export const membershipsRoute = new Hono<AuthEnv>();
+
+membershipsRoute.use("*", createCategoryRateLimiter("readDefault"));
 
 membershipsRoute.get("/", async (c) => {
   const auth = c.get("auth");

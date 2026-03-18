@@ -27,6 +27,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { getEntity } = await import("../../../../services/innerworld-entity.service.js");
+const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -87,5 +88,9 @@ describe("GET /systems/:id/innerworld/entities/:entityId", () => {
     const res = await createApp().request(`${BASE_URL}/not-valid`);
 
     expect(res.status).toBe(400);
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 });

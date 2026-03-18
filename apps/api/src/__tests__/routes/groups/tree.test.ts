@@ -18,6 +18,7 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 const { getGroupTree } = await import("../../../services/group.service.js");
+const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 const createApp = () => createRouteApp("/systems", systemRoutes);
@@ -41,6 +42,10 @@ describe("GET /systems/:id/groups/tree", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as unknown[];
     expect(body).toEqual([]);
+  });
+
+  it("applies the readHeavy rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readHeavy");
   });
 
   it("re-throws unexpected errors as 500", async () => {

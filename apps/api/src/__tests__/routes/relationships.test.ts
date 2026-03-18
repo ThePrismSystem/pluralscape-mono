@@ -41,6 +41,7 @@ const {
   archiveRelationship,
   restoreRelationship,
 } = await import("../../services/relationship.service.js");
+const { createCategoryRateLimiter } = await import("../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -150,6 +151,10 @@ describe("GET /systems/:id/relationships", () => {
       expect.any(Number),
       undefined,
     );
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 });
 

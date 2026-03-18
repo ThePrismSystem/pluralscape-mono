@@ -27,6 +27,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { getRegion } = await import("../../../../services/innerworld-region.service.js");
+const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -87,5 +88,9 @@ describe("GET /systems/:id/innerworld/regions/:regionId", () => {
     const res = await createApp().request(`${BASE_URL}/not-valid`);
 
     expect(res.status).toBe(400);
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 });

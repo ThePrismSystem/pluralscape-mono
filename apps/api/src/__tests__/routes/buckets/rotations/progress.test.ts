@@ -30,6 +30,7 @@ vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 // ── Imports after mocks ──────────────────────────────────────────
 
 const { getRotationProgress } = await import("../../../../services/key-rotation.service.js");
+const { createCategoryRateLimiter } = await import("../../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -100,6 +101,10 @@ describe("GET /systems/:id/buckets/:bucketId/rotations/:rotationId", () => {
     );
 
     expect(res.status).toBe(400);
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 
   it("calls service without audit writer", async () => {

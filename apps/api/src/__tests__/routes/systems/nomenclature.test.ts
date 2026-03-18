@@ -29,6 +29,7 @@ vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 const { getNomenclatureSettings, updateNomenclatureSettings } =
   await import("../../../services/nomenclature.service.js");
+const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { nomenclatureRoutes } = await import("../../../routes/systems/nomenclature/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -66,6 +67,10 @@ describe("GET /:id/nomenclature", () => {
     const body = (await res.json()) as typeof MOCK_RESULT;
     expect(body.systemId).toBe(SYS_ID);
     expect(body.version).toBe(1);
+  });
+
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 
   it("re-throws unexpected errors", async () => {

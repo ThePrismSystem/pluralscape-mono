@@ -37,6 +37,7 @@ const {
   updateCustomFront,
   deleteCustomFront,
 } = await import("../../../services/custom-front.service.js");
+const { createCategoryRateLimiter } = await import("../../../middleware/rate-limit.js");
 const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -226,5 +227,11 @@ describe("DELETE /systems/:id/custom-fronts/:customFrontId", () => {
     expect(res.status).toBe(409);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("HAS_DEPENDENTS");
+  });
+});
+
+describe("read rate limits", () => {
+  it("applies the readDefault rate limit category", () => {
+    expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 });

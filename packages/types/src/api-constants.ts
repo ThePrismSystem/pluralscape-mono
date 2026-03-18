@@ -51,6 +51,8 @@ const RATE_LIMIT_AUTH_HEAVY = 5;
 const RATE_LIMIT_AUTH_LIGHT = 20;
 const RATE_LIMIT_DEVICE_TRANSFER = 10;
 const RATE_LIMIT_WRITE = 60;
+const RATE_LIMIT_READ_DEFAULT = 60;
+const RATE_LIMIT_READ_HEAVY = 30;
 const RATE_LIMIT_BLOB_UPLOAD = 20;
 const RATE_LIMIT_WEBHOOK = 20;
 const RATE_LIMIT_EXPORT_IMPORT = 2;
@@ -65,6 +67,8 @@ export const RATE_LIMITS = {
   authLight: { limit: RATE_LIMIT_AUTH_LIGHT, windowMs: MS_PER_MINUTE },
   deviceTransfer: { limit: RATE_LIMIT_DEVICE_TRANSFER, windowMs: MS_PER_MINUTE },
   write: { limit: RATE_LIMIT_WRITE, windowMs: MS_PER_MINUTE },
+  readDefault: { limit: RATE_LIMIT_READ_DEFAULT, windowMs: MS_PER_MINUTE },
+  readHeavy: { limit: RATE_LIMIT_READ_HEAVY, windowMs: MS_PER_MINUTE },
   blobUpload: { limit: RATE_LIMIT_BLOB_UPLOAD, windowMs: MS_PER_MINUTE },
   webhookManagement: { limit: RATE_LIMIT_WEBHOOK, windowMs: MS_PER_MINUTE },
   dataExport: { limit: RATE_LIMIT_EXPORT_IMPORT, windowMs: MS_PER_HOUR },
