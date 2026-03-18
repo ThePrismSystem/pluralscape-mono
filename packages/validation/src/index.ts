@@ -40,6 +40,12 @@ export {
 } from "./custom-fields.js";
 export { CreateMemberPhotoBodySchema, ReorderPhotosBodySchema } from "./member-photo.js";
 export {
+  InitiateRotationBodySchema,
+  ClaimChunkBodySchema,
+  CompleteChunkBodySchema,
+} from "./key-rotation.js";
+export { AuditLogQuerySchema } from "./audit-log-query.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_REORDER_OPERATIONS,

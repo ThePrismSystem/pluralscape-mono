@@ -526,6 +526,8 @@ export type {
   RotationItemStatus,
   BucketKeyRotation,
   BucketRotationItem,
+  ChunkClaimResponse,
+  ChunkCompletionResponse,
 } from "./key-rotation.js";
 
 // ── Analytics ─────────────────────────────────────────────────────
@@ -624,6 +626,7 @@ export {
   FRIEND_CODE,
   AUDIT_RETENTION,
   CLIENT_RETRY,
+  KEY_ROTATION,
 } from "./api-constants.js";
 
 // ── Runtime utilities ──────────────────────────────────────────────

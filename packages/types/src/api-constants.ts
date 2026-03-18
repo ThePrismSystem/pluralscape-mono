@@ -180,6 +180,20 @@ export const AUDIT_RETENTION = {
   dlqRetentionDays: RETENTION_DLQ_DAYS,
 } as const;
 
+// ── Key Rotation ────────────────────────────────────────────────
+
+const KEY_ROTATION_DEFAULT_CHUNK_SIZE = 50;
+const KEY_ROTATION_MAX_CHUNK_SIZE = 200;
+const KEY_ROTATION_MAX_ITEM_ATTEMPTS = 3;
+
+export const KEY_ROTATION = {
+  defaultChunkSize: KEY_ROTATION_DEFAULT_CHUNK_SIZE,
+  maxChunkSize: KEY_ROTATION_MAX_CHUNK_SIZE,
+  staleClaimTimeoutMs: FIVE_MINUTES_MS,
+  hardLimitMs: SEVEN_DAYS_MS,
+  maxItemAttempts: KEY_ROTATION_MAX_ITEM_ATTEMPTS,
+} as const;
+
 // ── Client-Side Retry Guidance ───────────────────────────────────────
 
 const CLIENT_RETRY_MAX_ATTEMPTS = 3;
