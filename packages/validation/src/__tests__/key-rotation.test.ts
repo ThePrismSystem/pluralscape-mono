@@ -1,7 +1,6 @@
 import { KEY_ROTATION } from "@pluralscape/types";
 import { describe, expect, it } from "vitest";
 
-
 import {
   ClaimChunkBodySchema,
   CompleteChunkBodySchema,

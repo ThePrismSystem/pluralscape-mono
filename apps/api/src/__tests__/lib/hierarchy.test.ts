@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-
 import { ApiHttpError } from "../../lib/api-error.js";
 import { detectAncestorCycle } from "../../lib/hierarchy.js";
 
