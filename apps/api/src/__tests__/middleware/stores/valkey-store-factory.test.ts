@@ -13,12 +13,11 @@ describe("createValkeyStore", () => {
   it("returns ValkeyRateLimitStore when connection succeeds", async () => {
     const fakeClient = { eval: vi.fn() };
 
-    vi.doMock("ioredis", () => {
-      function FakeRedis() {
-        return fakeClient;
-      }
-      return { default: FakeRedis };
-    });
+    vi.doMock("ioredis", () => ({
+      default: class FakeRedis {
+        eval = fakeClient.eval;
+      },
+    }));
 
     const { createValkeyStore, ValkeyRateLimitStore } =
       await import("../../../middleware/stores/valkey-store.js");
