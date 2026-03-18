@@ -2,18 +2,31 @@ import { blobMetadata } from "@pluralscape/db/pg";
 import { QuotaExceededError } from "@pluralscape/storage";
 import { BLOB_SIZE_LIMITS, ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { ConfirmUploadBodySchema, CreateUploadUrlBodySchema } from "@pluralscape/validation";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONTENT_TOO_LARGE, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
-import { PRESIGNED_UPLOAD_TTL_MS } from "../routes/blobs/blobs.constants.js";
+import {
+  DEFAULT_BLOB_LIMIT,
+  MAX_BLOB_LIMIT,
+  PRESIGNED_UPLOAD_TTL_MS,
+} from "../routes/blobs/blobs.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { BlobStorageAdapter } from "@pluralscape/storage";
 import type { BlobQuotaService } from "@pluralscape/storage/quota";
-import type { BlobId, BlobPurpose, StorageKey, SystemId, UnixMillis } from "@pluralscape/types";
+import type {
+  BlobId,
+  BlobPurpose,
+  PaginatedResult,
+  PaginationCursor,
+  StorageKey,
+  SystemId,
+  UnixMillis,
+} from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -248,6 +261,44 @@ export async function getBlob(
   }
 
   return toBlobResult(row);
+}
+
+// ── LIST BLOBS ──────────────────────────────────────────────────────
+
+export async function listBlobs(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+  opts?: {
+    cursor?: PaginationCursor;
+    limit?: number;
+    includeArchived?: boolean;
+  },
+): Promise<PaginatedResult<BlobResult>> {
+  assertSystemOwnership(systemId, auth);
+
+  const limit = Math.min(opts?.limit ?? DEFAULT_BLOB_LIMIT, MAX_BLOB_LIMIT);
+  const conditions = [
+    eq(blobMetadata.systemId, systemId),
+    sql`${blobMetadata.uploadedAt} IS NOT NULL`,
+  ];
+
+  if (!opts?.includeArchived) {
+    conditions.push(eq(blobMetadata.archived, false));
+  }
+
+  if (opts?.cursor) {
+    conditions.push(gt(blobMetadata.id, opts.cursor));
+  }
+
+  const rows = await db
+    .select()
+    .from(blobMetadata)
+    .where(and(...conditions))
+    .orderBy(blobMetadata.id)
+    .limit(limit + 1);
+
+  return buildPaginatedResult(rows, limit, toBlobResult);
 }
 
 // ── DOWNLOAD URL ────────────────────────────────────────────────────
