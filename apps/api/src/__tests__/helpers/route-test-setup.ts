@@ -5,12 +5,16 @@ import { requestIdMiddleware } from "../../middleware/request-id.js";
 
 import type { AuthContext, AuthEnv } from "../../lib/auth-context.js";
 
+/** System ID used across all route tests. */
+export const MOCK_SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
+
 /** Shared auth context used across all route tests. */
 export const MOCK_AUTH: AuthContext = {
   accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
+  systemId: MOCK_SYSTEM_ID as AuthContext["systemId"],
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([MOCK_SYSTEM_ID as AuthContext["systemId"] & string]),
 };
 
 /** Create a Hono app with request-id middleware, the given routes, and the error handler. */

@@ -49,6 +49,7 @@ vi.mock("../../../middleware/auth.js", () => ({
             sessionId: MOCK_CURRENT_SESSION_ID,
             systemId: null,
             accountType: "system",
+            ownedSystemIds: new Set(),
           });
           await next();
         },

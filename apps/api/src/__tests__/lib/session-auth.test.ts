@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Mock drizzle-orm operators
 vi.mock("drizzle-orm", () => ({
+  and: vi.fn((...args: unknown[]) => ({ _and: args })),
   eq: vi.fn((_col: unknown, val: unknown) => ({ _eq: val })),
 }));
 
@@ -17,7 +18,7 @@ vi.mock("@pluralscape/db/pg", () => ({
     createdAt: "sessions.createdAt",
     lastActive: "sessions.lastActive",
   },
-  systems: { id: "systems.id", accountId: "systems.accountId" },
+  systems: { id: "systems.id", accountId: "systems.accountId", archived: "systems.archived" },
 }));
 
 // Mock session-token module used by session-auth for hashing
@@ -65,26 +66,36 @@ function makeSession(overrides: Partial<MockSession> = {}): MockSession {
 }
 
 /**
- * Creates a mock DB that supports the JOIN query pattern:
- * `.select().from().innerJoin().leftJoin().where().limit()`
+ * Creates a mock DB that supports:
+ * 1. Session query: `.select().from().innerJoin().where().limit()`
+ * 2. Systems query: `.select().from().where()` (returns array directly)
  *
- * Returns a single joined result row (or empty array if no match).
+ * The first `.limit()` call resolves with sessionResult.
+ * Subsequent `.where()` calls after `.from(systems)` resolve with systemRows.
  */
 function createMockDb(
-  joinResult: Array<{
+  sessionResult: Array<{
     session: MockSession;
     accountType: string;
-    systemId: string | null;
   }> = [],
+  systemRows: Array<{ id: string }> = [],
 ) {
-  return {
+  let queryCount = 0;
+  const db = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     innerJoin: vi.fn().mockReturnThis(),
-    leftJoin: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue(joinResult),
+    where: vi.fn().mockImplementation(() => {
+      queryCount++;
+      if (queryCount === 1) {
+        // Session query — returns chain with .limit()
+        return { limit: vi.fn().mockResolvedValue(sessionResult) };
+      }
+      // Systems query — returns rows directly (no .limit())
+      return Promise.resolve(systemRows);
+    }),
   };
+  return db;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -103,7 +114,7 @@ describe("validateSession", () => {
 
   it("returns UNAUTHENTICATED when session is revoked", async () => {
     const session = makeSession({ revoked: true });
-    const db = createMockDb([{ session, accountType: "system", systemId: "sys_001" }]);
+    const db = createMockDb([{ session, accountType: "system" }]);
 
     const result = await validateSession(db as never, session.id);
 
@@ -112,7 +123,7 @@ describe("validateSession", () => {
 
   it("returns SESSION_EXPIRED when absolute TTL is exceeded", async () => {
     const session = makeSession({ expiresAt: 2_000_000 });
-    const db = createMockDb([{ session, accountType: "system", systemId: "sys_001" }]);
+    const db = createMockDb([{ session, accountType: "system" }]);
     mockNow.mockReturnValue(2_000_001);
 
     const result = await validateSession(db as never, session.id);
@@ -128,7 +139,7 @@ describe("validateSession", () => {
       expiresAt: createdAt + 2_592_000_000, // +30 days (web)
       lastActive,
     });
-    const db = createMockDb([{ session, accountType: "system", systemId: "sys_001" }]);
+    const db = createMockDb([{ session, accountType: "system" }]);
     // Now is lastActive + 7 days + 1ms (just past idle timeout)
     mockNow.mockReturnValue(lastActive + 604_800_000 + 1);
 
@@ -145,7 +156,7 @@ describe("validateSession", () => {
       expiresAt: createdAt + 7_776_000_000, // +90 days (mobile)
       lastActive,
     });
-    const db = createMockDb([{ session, accountType: "system", systemId: "sys_001" }]);
+    const db = createMockDb([{ session, accountType: "system" }]);
     // Now is lastActive + 30 days + 1ms (just past idle timeout)
     mockNow.mockReturnValue(lastActive + 2_592_000_000 + 1);
 
@@ -154,67 +165,72 @@ describe("validateSession", () => {
     expect(result).toEqual({ ok: false, error: "SESSION_EXPIRED" });
   });
 
-  it("returns valid AuthContext for a system account", async () => {
+  it("returns valid AuthContext with ownedSystemIds for a system account", async () => {
     const session = makeSession();
-    const db = createMockDb([{ session, accountType: "system", systemId: "sys_001" }]);
+    const db = createMockDb([{ session, accountType: "system" }], [{ id: "sys_001" }]);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
     const result = await validateSession(db as never, session.id);
 
     expect(result).toEqual({
       ok: true,
-      auth: {
+      auth: expect.objectContaining({
         accountId: session.accountId,
         systemId: "sys_001",
         sessionId: session.id,
         accountType: "system",
-      },
+      }),
       session,
     });
+    if (result.ok) {
+      expect(result.auth.ownedSystemIds).toEqual(new Set(["sys_001"]));
+    }
   });
 
-  it("returns valid AuthContext for a viewer account (no system lookup)", async () => {
+  it("returns empty ownedSystemIds for a viewer account", async () => {
     const session = makeSession();
-    const db = createMockDb([{ session, accountType: "viewer", systemId: null }]);
+    const db = createMockDb([{ session, accountType: "viewer" }], []);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
     const result = await validateSession(db as never, session.id);
 
     expect(result).toEqual({
       ok: true,
-      auth: {
+      auth: expect.objectContaining({
         accountId: session.accountId,
         systemId: null,
         sessionId: session.id,
         accountType: "viewer",
-      },
+      }),
       session,
     });
+    if (result.ok) {
+      expect(result.auth.ownedSystemIds).toEqual(new Set());
+    }
   });
 
   it("returns null systemId when system account has no system row", async () => {
     const session = makeSession();
-    // leftJoin returns null for systemId when no system row
-    const db = createMockDb([{ session, accountType: "system", systemId: null }]);
+    const db = createMockDb([{ session, accountType: "system" }], []);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
     const result = await validateSession(db as never, session.id);
 
     expect(result).toEqual({
       ok: true,
-      auth: {
+      auth: expect.objectContaining({
         accountId: session.accountId,
         systemId: null,
         sessionId: session.id,
         accountType: "system",
-      },
+      }),
       session,
     });
   });
 
   it("does not expire when expiresAt is null (no absolute TTL)", async () => {
     const session = makeSession({ expiresAt: null, lastActive: null });
-    const db = createMockDb([{ session, accountType: "system", systemId: "sys_002" }]);
+    const db = createMockDb([{ session, accountType: "system" }], [{ id: "sys_002" }]);
     mockNow.mockReturnValue(999_999_999_999);
 
     const result = await validateSession(db as never, session.id);
@@ -224,7 +240,7 @@ describe("validateSession", () => {
 
   it("does not idle-expire when lastActive is null", async () => {
     const session = makeSession({ lastActive: null });
-    const db = createMockDb([{ session, accountType: "viewer", systemId: null }]);
+    const db = createMockDb([{ session, accountType: "viewer" }], []);
     mockNow.mockReturnValue(session.createdAt + 1000);
 
     const result = await validateSession(db as never, session.id);
@@ -234,7 +250,7 @@ describe("validateSession", () => {
 
   it("allows session that is exactly at expiresAt boundary", async () => {
     const session = makeSession({ expiresAt: 5_000_000 });
-    const db = createMockDb([{ session, accountType: "viewer", systemId: null }]);
+    const db = createMockDb([{ session, accountType: "viewer" }], []);
     mockNow.mockReturnValue(5_000_000);
 
     const result = await validateSession(db as never, session.id);
@@ -249,12 +265,28 @@ describe("validateSession", () => {
       expiresAt: createdAt + 300_000, // 5 minutes
       lastActive: createdAt + 100_000,
     });
-    const db = createMockDb([{ session, accountType: "viewer", systemId: null }]);
+    const db = createMockDb([{ session, accountType: "viewer" }], []);
     mockNow.mockReturnValue(createdAt + 200_000);
 
     const result = await validateSession(db as never, session.id);
 
     expect(result.ok).toBe(true);
+  });
+
+  it("returns multiple system IDs in ownedSystemIds", async () => {
+    const session = makeSession();
+    const db = createMockDb(
+      [{ session, accountType: "system" }],
+      [{ id: "sys_001" }, { id: "sys_002" }],
+    );
+    mockNow.mockReturnValue(session.createdAt + 1000);
+
+    const result = await validateSession(db as never, session.id);
+
+    if (result.ok) {
+      expect(result.auth.ownedSystemIds).toEqual(new Set(["sys_001", "sys_002"]));
+      expect(result.auth.systemId).toBe("sys_001");
+    }
   });
 });
 

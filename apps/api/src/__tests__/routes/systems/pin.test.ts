@@ -40,6 +40,7 @@ vi.mock("../../../middleware/auth.js", () => ({
           systemId: "sys_test",
           sessionId: "sess_test",
           accountType: "system",
+          ownedSystemIds: new Set(["sys_test"]),
         });
         await next();
       },

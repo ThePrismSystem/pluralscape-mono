@@ -43,6 +43,9 @@ const MOCK_AUTH: AuthContext = {
   systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([
+    "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"] & string,
+  ]),
 };
 
 vi.mock("../../middleware/auth.js", () => ({

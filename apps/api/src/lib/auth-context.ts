@@ -7,6 +7,8 @@ export interface AuthContext {
   readonly systemId: SystemId | null;
   readonly sessionId: SessionId;
   readonly accountType: AccountType;
+  /** Non-archived system IDs owned by this account, populated at auth time. */
+  readonly ownedSystemIds: ReadonlySet<SystemId>;
 }
 
 /** Hono environment type augmentation for authenticated routes. */

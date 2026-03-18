@@ -48,6 +48,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);

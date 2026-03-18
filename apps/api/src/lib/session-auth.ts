@@ -1,6 +1,6 @@
 import { accounts, sessions, systems } from "@pluralscape/db/pg";
 import { SESSION_TIMEOUTS, now } from "@pluralscape/types";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { hashSessionToken } from "./session-token.js";
 
@@ -26,16 +26,14 @@ export async function validateSession(
 ): Promise<ValidateSessionResult> {
   const tokenHash = hashSessionToken(token);
 
-  // Single JOIN query: session + account + optional system
+  // Session + account lookup (no system JOIN — systems fetched separately below)
   const [row] = await db
     .select({
       session: sessions,
       accountType: accounts.accountType,
-      systemId: systems.id,
     })
     .from(sessions)
     .innerJoin(accounts, eq(accounts.id, sessions.accountId))
-    .leftJoin(systems, eq(systems.accountId, sessions.accountId))
     .where(eq(sessions.tokenHash, tokenHash))
     .limit(1);
 
@@ -62,13 +60,24 @@ export async function validateSession(
     }
   }
 
+  // Fetch all non-archived system IDs for this account
+  const accountId = row.session.accountId as AccountId;
+  const systemRows = await db
+    .select({ id: systems.id })
+    .from(systems)
+    .where(and(eq(systems.accountId, accountId), eq(systems.archived, false)));
+
+  const ownedSystemIds = new Set(systemRows.map((r) => r.id as SystemId));
+  const firstSystemId = systemRows[0]?.id as SystemId | undefined;
+
   return {
     ok: true,
     auth: {
-      accountId: row.session.accountId as AccountId,
-      systemId: (row.systemId ?? null) as SystemId | null,
+      accountId,
+      systemId: firstSystemId ?? null,
       sessionId: row.session.id as SessionId,
       accountType: row.accountType,
+      ownedSystemIds,
     },
     session: row.session,
   };
