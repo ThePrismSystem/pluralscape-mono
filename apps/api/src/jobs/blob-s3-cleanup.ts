@@ -33,11 +33,19 @@ export function createBlobS3CleanupHandler(
 
     if (rows.length === 0) return;
 
-    // Delete S3 objects (adapter.delete is idempotent)
+    // Delete S3 objects — skip individual failures so one poison blob
+    // doesn't block the entire batch. Failed rows keep their metadata
+    // and will be retried on the next run.
     const deletedIds: string[] = [];
     for (const row of rows) {
-      await storageAdapter.delete(row.storageKey as StorageKey);
-      deletedIds.push(row.id);
+      try {
+        await storageAdapter.delete(row.storageKey as StorageKey);
+        deletedIds.push(row.id);
+      } catch (error) {
+        // Skip and continue — the blob metadata stays and will be retried next run
+        const message = error instanceof Error ? error.message : "unknown error";
+        console.warn(`[blob-cleanup] Failed to delete S3 object for blob ${row.id}: ${message}`);
+      }
       await ctx.heartbeat.heartbeat();
     }
 

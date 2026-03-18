@@ -132,6 +132,32 @@ describe("blob-s3-cleanup handler", () => {
     expect(chain.delete).toHaveBeenCalled();
   });
 
+  it("skips failed S3 deletes and only hard-deletes successful rows", async () => {
+    const { db, chain } = mockDb();
+    const archivedRows = [
+      { id: "blob_ok", storageKey: "sys_test/blob_ok" },
+      { id: "blob_poison", storageKey: "sys_test/blob_poison" },
+      { id: "blob_ok2", storageKey: "sys_test/blob_ok2" },
+    ];
+    chain.limit.mockResolvedValueOnce(archivedRows);
+    const { adapter, deleteFn } = makeStorageAdapter();
+    // Second delete (blob_poison) throws
+    deleteFn
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("S3 unavailable"))
+      .mockResolvedValueOnce(undefined);
+    const handler = createBlobS3CleanupHandler(db, adapter);
+    const { ctx } = stubCtx();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await handler(stubJob(), ctx);
+
+    // All 3 S3 deletes attempted
+    expect(deleteFn).toHaveBeenCalledTimes(3);
+    // Only 2 successful blobs should be hard-deleted from metadata
+    expect(chain.where).toHaveBeenCalled();
+  });
+
   it("emits heartbeats during batch processing", async () => {
     const { db, chain } = mockDb();
     const archivedRows = [
