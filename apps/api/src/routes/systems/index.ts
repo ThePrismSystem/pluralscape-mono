@@ -10,6 +10,7 @@ import { lifecycleEventRoutes } from "../lifecycle-events/index.js";
 import { memberRoutes } from "../members/index.js";
 import { relationshipRoutes } from "../relationships/index.js";
 import { sideSystemRoutes } from "../side-systems/index.js";
+import { structureLinkRoutes } from "../structure-links/index.js";
 import { subsystemRoutes } from "../subsystems/index.js";
 
 import { createRoute } from "./create.js";
@@ -49,3 +50,4 @@ systemRoutes.route("/:id/side-systems", sideSystemRoutes);
 systemRoutes.route("/:id/layers", layerRoutes);
 systemRoutes.route("/:id/relationships", relationshipRoutes);
 systemRoutes.route("/:id/lifecycle-events", lifecycleEventRoutes);
+systemRoutes.route("/:id/structure-links", structureLinkRoutes);
