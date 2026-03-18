@@ -40,6 +40,15 @@ describe("storage", () => {
 
       expect(getStorageAdapter()).toBe(adapter);
     });
+
+    it("returns the same adapter on repeated calls", () => {
+      const adapter = fakeAdapter();
+      initStorageAdapter(adapter);
+
+      const first = getStorageAdapter();
+      const second = getStorageAdapter();
+      expect(first).toBe(second);
+    });
   });
 
   describe("initStorageAdapter", () => {
@@ -48,6 +57,16 @@ describe("storage", () => {
       initStorageAdapter(adapter);
 
       expect(getStorageAdapter()).toBe(adapter);
+    });
+
+    it("replaces a previously initialized adapter", () => {
+      const first = fakeAdapter();
+      const second = fakeAdapter();
+
+      initStorageAdapter(first);
+      initStorageAdapter(second);
+
+      expect(getStorageAdapter()).toBe(second);
     });
   });
 
@@ -61,11 +80,25 @@ describe("storage", () => {
 
       expect(getStorageAdapter()).toBe(second);
     });
+
+    it("works when no adapter was previously set", () => {
+      const adapter = fakeAdapter();
+      setStorageAdapterForTesting(adapter);
+
+      expect(getStorageAdapter()).toBe(adapter);
+    });
   });
 
   describe("_resetStorageAdapterForTesting", () => {
     it("clears the cached adapter so getStorageAdapter throws again", () => {
       initStorageAdapter(fakeAdapter());
+      _resetStorageAdapterForTesting();
+
+      expect(() => getStorageAdapter()).toThrow("Storage adapter not initialized");
+    });
+
+    it("is idempotent — double reset does not throw", () => {
+      _resetStorageAdapterForTesting();
       _resetStorageAdapterForTesting();
 
       expect(() => getStorageAdapter()).toThrow("Storage adapter not initialized");
@@ -82,6 +115,15 @@ describe("storage", () => {
       expect(service).toHaveProperty("checkQuota");
       expect(service).toHaveProperty("getUsage");
       expect(service).toHaveProperty("assertQuota");
+    });
+
+    it("returns a new instance on each call", () => {
+      const { db } = mockDb();
+
+      const first = getQuotaService(db);
+      const second = getQuotaService(db);
+
+      expect(first).not.toBe(second);
     });
   });
 });
