@@ -6,7 +6,7 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { encryptedBlobToBase64 } from "../lib/crypto-helpers.js";
+import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertFieldDefinitionActive, assertMemberActive } from "../lib/member-helpers.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 

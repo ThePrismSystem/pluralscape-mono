@@ -114,7 +114,10 @@ export type AuditEventType =
   | "innerworld-canvas.updated"
   | "blob.upload-requested"
   | "blob.confirmed"
-  | "blob.archived";
+  | "blob.archived"
+  | "member.deleted"
+  | "member-photo.deleted"
+  | "field-definition.deleted";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

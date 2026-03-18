@@ -135,6 +135,9 @@ describe("AuditEventType", () => {
         case "blob.upload-requested":
         case "blob.confirmed":
         case "blob.archived":
+        case "member.deleted":
+        case "member-photo.deleted":
+        case "field-definition.deleted":
           return type;
         default: {
           const _exhaustive: never = type;

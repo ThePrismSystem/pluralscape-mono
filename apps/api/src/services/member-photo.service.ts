@@ -6,7 +6,7 @@ import { and, count, eq, max } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { encryptedBlobToBase64 } from "../lib/crypto-helpers.js";
+import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertMemberActive } from "../lib/member-helpers.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
@@ -408,5 +408,46 @@ export async function restoreMemberPhoto(
     });
 
     return toPhotoResult(row);
+  });
+}
+
+// ── DELETE (hard delete) ────────────────────────────────────────────
+
+export async function deleteMemberPhoto(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  memberId: MemberId,
+  photoId: MemberPhotoId,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  await assertSystemOwnership(db, systemId, auth);
+
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: memberPhotos.id })
+      .from(memberPhotos)
+      .where(
+        and(
+          eq(memberPhotos.id, photoId),
+          eq(memberPhotos.memberId, memberId),
+          eq(memberPhotos.systemId, systemId),
+          eq(memberPhotos.archived, false),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Photo not found");
+    }
+
+    await audit(tx, {
+      eventType: "member-photo.deleted",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Member photo deleted",
+      systemId,
+    });
+
+    await tx.delete(memberPhotos).where(eq(memberPhotos.id, photoId));
   });
 }

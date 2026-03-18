@@ -40,6 +40,7 @@ const {
   updateFieldDefinition,
   archiveFieldDefinition,
   restoreFieldDefinition,
+  deleteFieldDefinition,
 } = await import("../../services/field-definition.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
@@ -408,5 +409,93 @@ describe("restoreFieldDefinition", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+});
+
+describe("deleteFieldDefinition", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("deletes a field definition with no dependents", async () => {
+    const { db, chain } = mockDb();
+    // transaction → select().from().where().limit() finds existing non-archived row
+    chain.limit.mockResolvedValueOnce([{ id: "fld_test-field" }]);
+    // transaction → two parallel count queries (fieldValues + fieldBucketVisibility)
+    chain.where
+      .mockReturnValueOnce(chain) // first where: lookup, chains to .limit
+      .mockResolvedValueOnce([{ count: 0 }]) // fieldValues count
+      .mockResolvedValueOnce([{ count: 0 }]); // fieldBucketVisibility count
+
+    await deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit);
+
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "field-definition.deleted" }),
+    );
+  });
+
+  it("throws 404 when field definition not found", async () => {
+    const { db } = mockDb();
+
+    await expect(
+      deleteFieldDefinition(db, SYSTEM_ID, "fld_nonexistent" as FieldDefinitionId, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 409 HAS_DEPENDENTS when field values exist", async () => {
+    const { db, chain } = mockDb();
+    // transaction → select().from().where().limit() finds existing non-archived row
+    chain.limit.mockResolvedValueOnce([{ id: "fld_test-field" }]);
+    // transaction → two parallel count queries (fieldValues + fieldBucketVisibility)
+    chain.where
+      .mockReturnValueOnce(chain) // first where: lookup, chains to .limit
+      .mockResolvedValueOnce([{ count: 3 }]) // fieldValues count
+      .mockResolvedValueOnce([{ count: 0 }]); // fieldBucketVisibility count
+
+    await expect(deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS" }),
+    );
+
+    expect(mockAudit).not.toHaveBeenCalled();
+  });
+
+  it("throws 409 HAS_DEPENDENTS when bucket visibility rows exist", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: "fld_test-field" }]);
+    chain.where
+      .mockReturnValueOnce(chain) // lookup
+      .mockResolvedValueOnce([{ count: 0 }]) // fieldValues count
+      .mockResolvedValueOnce([{ count: 2 }]); // fieldBucketVisibility count
+
+    try {
+      await deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit);
+      expect.unreachable("Should have thrown");
+    } catch (err: unknown) {
+      const error = err as {
+        status: number;
+        code: string;
+        details: { dependents: { type: string; count: number }[] };
+      };
+      expect(error.status).toBe(409);
+      expect(error.code).toBe("HAS_DEPENDENTS");
+      expect(error.details.dependents).toEqual([{ type: "bucketVisibility", count: 2 }]);
+    }
+
+    expect(mockAudit).not.toHaveBeenCalled();
+  });
+
+  it("rejects cross-system access", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
+    );
+    const { db } = mockDb();
+
+    await expect(deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 403, code: "FORBIDDEN" }),
+    );
   });
 });

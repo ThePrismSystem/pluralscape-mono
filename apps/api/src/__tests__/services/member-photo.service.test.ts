@@ -40,6 +40,7 @@ const {
   reorderMemberPhotos,
   archiveMemberPhoto,
   restoreMemberPhoto,
+  deleteMemberPhoto,
 } = await import("../../services/member-photo.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
@@ -434,5 +435,57 @@ describe("restoreMemberPhoto", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+});
+
+describe("deleteMemberPhoto", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+  });
+
+  it("deletes a photo successfully", async () => {
+    const { db, chain } = mockDb();
+    // In tx: select photo by id → .limit(1) finds it
+    chain.limit.mockResolvedValueOnce([{ id: PHOTO_ID }]);
+    chain.where.mockReturnValueOnce(chain); // select → chains to .limit()
+
+    await deleteMemberPhoto(db, SYSTEM_ID, MEMBER_ID, PHOTO_ID, AUTH, mockAudit);
+
+    expect(chain.transaction).toHaveBeenCalled();
+    expect(mockAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ eventType: "member-photo.deleted" }),
+    );
+  });
+
+  it("throws NOT_FOUND when photo does not exist", async () => {
+    const { db, chain } = mockDb();
+    // In tx: select photo by id → .limit(1) returns empty
+    chain.limit.mockResolvedValueOnce([]);
+    chain.where.mockReturnValueOnce(chain); // select → chains to .limit()
+
+    await expect(
+      deleteMemberPhoto(
+        db,
+        SYSTEM_ID,
+        MEMBER_ID,
+        "mp_nonexistent" as MemberPhotoId,
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("rejects cross-system access", async () => {
+    const { ApiHttpError } = await import("../../lib/api-error.js");
+    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
+      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
+    );
+    const { db } = mockDb();
+
+    await expect(
+      deleteMemberPhoto(db, SYSTEM_ID, MEMBER_ID, PHOTO_ID, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
   });
 });

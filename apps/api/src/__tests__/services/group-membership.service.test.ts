@@ -1,3 +1,4 @@
+import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -14,7 +15,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
   assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
 }));
 
-const { addMember, removeMember, listGroupMembers } =
+const { addMember, removeMember, listGroupMembers, listMemberGroupMemberships } =
   await import("../../services/group-membership.service.js");
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
@@ -162,6 +163,96 @@ describe("listGroupMembers", () => {
     chain.limit.mockResolvedValueOnce([]); // group not found
 
     await expect(listGroupMembers(db, SYSTEM_ID, GROUP_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+});
+
+describe("listMemberGroupMemberships", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns group memberships for member", async () => {
+    const { db, chain } = mockDb();
+    // member exists check
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // membership list
+    chain.limit.mockResolvedValueOnce([makeMembershipRow()]);
+
+    const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.groupId).toBe(GROUP_ID);
+  });
+
+  it("returns empty list when member has no memberships", async () => {
+    const { db, chain } = mockDb();
+    // member exists check
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // membership list — empty
+    chain.limit.mockResolvedValueOnce([]);
+
+    const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH);
+
+    expect(result.items).toHaveLength(0);
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it("throws 404 when member not found", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]); // member not found
+
+    await expect(listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
+  });
+
+  it("returns hasMore and nextCursor when more results exist", async () => {
+    const { db, chain } = mockDb();
+    // member exists check
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // membership list — returns limit+1 rows (overfetch indicates more)
+    chain.limit.mockResolvedValueOnce([
+      makeMembershipRow({ groupId: "grp_group-1" }),
+      makeMembershipRow({ groupId: "grp_group-2" }),
+    ]);
+
+    const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH, undefined, 1);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.hasMore).toBe(true);
+    expect(result.nextCursor).toBe("grp_group-1");
+  });
+
+  it("applies cursor filter when cursor provided", async () => {
+    const { db, chain } = mockDb();
+    // member exists check
+    chain.limit.mockResolvedValueOnce([{ id: MEMBER_ID }]);
+    // membership list with cursor applied
+    chain.limit.mockResolvedValueOnce([makeMembershipRow({ groupId: "grp_group-3" })]);
+
+    const result = await listMemberGroupMemberships(
+      db,
+      SYSTEM_ID,
+      MEMBER_ID,
+      AUTH,
+      toCursor("grp_group-2"),
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]?.groupId).toBe("grp_group-3");
+    expect(result.hasMore).toBe(false);
+    expect(result.nextCursor).toBeNull();
+  });
+
+  it("throws 404 for system mismatch (fail-closed privacy)", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]); // ownership check returns no matching system
+    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
+
+    await expect(listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, otherAuth)).rejects.toThrow(
       expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
