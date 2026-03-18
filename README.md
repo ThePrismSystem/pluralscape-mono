@@ -25,33 +25,36 @@ Milestones 0 (infrastructure), 1 (data layer), and the core of Milestone 2 (API)
 - Innerworld CRUD — regions, entities, canvas with archive/restore/delete
 - Lifecycle events — type-specific validation, pagination
 - Audit log — query endpoint with resourceType filtering, PII cleanup scheduling
-- Comprehensive API audit remediation — 36 issues across security, ownership, testing, and code quality (7 parallel worktree PRs)
+- Comprehensive API audit remediation — 52 issues across security, ownership, testing, and code quality (10 parallel worktree PRs)
+- Hierarchy service factory — shared generic CRUD for group and subsystem services
+- Blob list endpoint, S3 cleanup job, API limits documentation
 
 See the full [milestone roadmap](docs/planning/milestones.md) and [feature specification](docs/planning/features.md).
 
 ## Test Suite
 
-4,144 tests across 307 test files — all passing.
+4,258 tests across 316 test files — all passing.
 
 | Metric     | Coverage |
 | ---------- | -------- |
-| Statements | 94.16%   |
-| Branches   | 83.74%   |
-| Functions  | 93.52%   |
-| Lines      | 94.35%   |
+| Statements | 94.64%   |
+| Branches   | 84.30%   |
+| Functions  | 93.87%   |
+| Lines      | 94.82%   |
 
 Coverage by package:
 
-| Package                | Statements | Notes                                                           |
-| ---------------------- | ---------- | --------------------------------------------------------------- |
-| `@pluralscape/types`   | 100%       | Runtime validators and API constants fully covered              |
-| `@pluralscape/db`      | 100%       | Schema, helpers, RLS, and views                                 |
-| `@pluralscape/crypto`  | 98.70%     | Full coverage across all crypto operations                      |
-| `@pluralscape/api`     | 94.29%     | 23 service modules, 80+ route handlers, middleware, auth, audit |
-| `@pluralscape/sync`    | 95.98%     | Encrypted CRDT relay and session management                     |
-| `@pluralscape/i18n`    | 95.20%     | Locale formatting, nomenclature, and React integration          |
-| `@pluralscape/queue`   | ~95%       | Job queue, retry policies, DLQ, observability                   |
-| `@pluralscape/storage` | ~93%       | Filesystem adapter, quota management, lifecycle                 |
+| Package                   | Statements | Notes                                                           |
+| ------------------------- | ---------- | --------------------------------------------------------------- |
+| `@pluralscape/types`      | 100%       | Runtime validators and API constants fully covered              |
+| `@pluralscape/db`         | 100%       | Schema, helpers, RLS, and views                                 |
+| `@pluralscape/queue`      | 100%       | Job queue, retry policies, DLQ, observability                   |
+| `@pluralscape/storage`    | 100%       | S3 + filesystem adapters, quota management, lifecycle           |
+| `@pluralscape/validation` | 100%       | Shared Zod schemas with contract tests                          |
+| `@pluralscape/crypto`     | 98.70%     | Full coverage across all crypto operations                      |
+| `@pluralscape/sync`       | 95.98%     | Encrypted CRDT relay and session management                     |
+| `@pluralscape/i18n`       | 95.20%     | Locale formatting, nomenclature, and React integration          |
+| `@pluralscape/api`        | 94.44%     | 25 service modules, 90+ route handlers, middleware, auth, audit |
 
 ```bash
 pnpm test              # Run all tests
@@ -212,7 +215,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 25 accepted ADRs cover the full stack from licensing through Zod-type alignment. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 26 accepted ADRs cover the full stack from licensing through lifecycle event validation. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 
