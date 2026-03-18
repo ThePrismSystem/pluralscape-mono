@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { HTTP_BAD_REQUEST } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { getDb } from "../../lib/db.js";
+import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { queryAuditLog } from "../../services/audit-log-query.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
@@ -14,6 +15,8 @@ const MAX_RANGE_MS = AUDIT_RETENTION.maxQueryRangeDays * MS_PER_DAY;
 const DEFAULT_RANGE_MS = MAX_RANGE_MS;
 
 export const auditLogRoute = new Hono<AuthEnv>();
+
+auditLogRoute.use("*", createCategoryRateLimiter("authLight"));
 
 auditLogRoute.get("/", async (c) => {
   const auth = c.get("auth");

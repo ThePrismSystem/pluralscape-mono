@@ -1,9 +1,12 @@
 import { initSodium } from "@pluralscape/crypto";
+import { FilesystemBlobStorageAdapter } from "@pluralscape/storage/filesystem";
+import { S3BlobStorageAdapter } from "@pluralscape/storage/s3";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
 import { HTTP_CONTENT_TOO_LARGE } from "./http.constants.js";
 import { ApiHttpError } from "./lib/api-error.js";
+import { initStorageAdapter } from "./lib/storage.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { BODY_SIZE_LIMIT_BYTES } from "./middleware/middleware.constants.js";
@@ -53,6 +56,22 @@ app.route("/systems", systemRoutes);
 
 async function start(): Promise<void> {
   await initSodium();
+
+  // Initialize blob storage: prefer S3 if configured, fall back to filesystem
+  const s3Bucket = process.env["BLOB_STORAGE_S3_BUCKET"];
+  if (s3Bucket) {
+    initStorageAdapter(
+      new S3BlobStorageAdapter({
+        bucket: s3Bucket,
+        region: process.env["BLOB_STORAGE_S3_REGION"] ?? "us-east-1",
+        endpoint: process.env["BLOB_STORAGE_S3_ENDPOINT"],
+        forcePathStyle: process.env["BLOB_STORAGE_S3_FORCE_PATH_STYLE"] === "1",
+      }),
+    );
+  } else {
+    const storageRoot = process.env["BLOB_STORAGE_PATH"] ?? "./data/blobs";
+    initStorageAdapter(new FilesystemBlobStorageAdapter({ storageRoot }));
+  }
 
   // Resolve rate limit store: prefer Valkey if configured, fall back to in-memory
   const valkeyUrl = process.env["VALKEY_URL"];

@@ -20,7 +20,7 @@ export function createSecureHeaders(): MiddlewareHandler {
     },
     xFrameOptions: "DENY",
     strictTransportSecurity: isProduction
-      ? `max-age=${String(HSTS_MAX_AGE_SECONDS)}; includeSubDomains`
+      ? `max-age=${String(HSTS_MAX_AGE_SECONDS)}; includeSubDomains; preload`
       : false,
   });
 }

@@ -18,8 +18,10 @@ interface RateLimiterOptions {
   readonly limit: number;
   /** Window duration in milliseconds. */
   readonly windowMs: number;
-  /** Optional external store. Defaults to in-memory. */
+  /** Optional external store. Defaults to shared store or in-memory. */
   readonly store?: RateLimitStore;
+  /** Optional category prefix for rate-limit keys. */
+  readonly category?: string;
 }
 
 /**
@@ -46,12 +48,14 @@ function getClientKey(c: Context): string {
  * to avoid X-Forwarded-For spoofing. Set TRUST_PROXY=1 behind a reverse proxy.
  */
 export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandler {
-  const store = options.store ?? new MemoryRateLimitStore();
-  const { limit, windowMs } = options;
+  const { limit, windowMs, category } = options;
+  let resolvedStore: RateLimitStore | undefined;
 
   return async (c, next) => {
+    resolvedStore ??= options.store ?? sharedStore ?? new MemoryRateLimitStore();
     const clientKey = getClientKey(c);
-    const result = await store.increment(clientKey, windowMs);
+    const key = category ? `${category}:${clientKey}` : clientKey;
+    const result = await resolvedStore.increment(key, windowMs);
 
     // Set rate limit headers on all responses
     c.header("X-RateLimit-Limit", String(limit));
@@ -90,5 +94,5 @@ export function setRateLimitStore(store: RateLimitStore): void {
 /** Creates a rate limiter using the predefined limits for a given category. */
 export function createCategoryRateLimiter(category: RateLimitCategory): MiddlewareHandler {
   const config = RATE_LIMITS[category];
-  return createRateLimiter({ ...config, store: sharedStore });
+  return createRateLimiter({ ...config, category });
 }

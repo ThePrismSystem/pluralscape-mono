@@ -52,7 +52,7 @@ describe("secureHeaders middleware", () => {
     const app = createApp();
     const res = await app.request("/test");
     expect(res.headers.get("strict-transport-security")).toBe(
-      "max-age=63072000; includeSubDomains",
+      "max-age=63072000; includeSubDomains; preload",
     );
   });
 
