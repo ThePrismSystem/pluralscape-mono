@@ -99,7 +99,22 @@ export type AuditEventType =
   | "layer-membership.added"
   | "layer-membership.removed"
   | "structure-link.created"
-  | "structure-link.deleted";
+  | "structure-link.deleted"
+  | "innerworld-region.created"
+  | "innerworld-region.updated"
+  | "innerworld-region.archived"
+  | "innerworld-region.restored"
+  | "innerworld-region.deleted"
+  | "innerworld-entity.created"
+  | "innerworld-entity.updated"
+  | "innerworld-entity.archived"
+  | "innerworld-entity.restored"
+  | "innerworld-entity.deleted"
+  | "innerworld-canvas.created"
+  | "innerworld-canvas.updated"
+  | "blob.upload-requested"
+  | "blob.confirmed"
+  | "blob.archived";
 
 /** The actor who performed an audit-logged action. */
 export type AuditActor =

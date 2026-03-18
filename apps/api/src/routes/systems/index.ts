@@ -1,10 +1,12 @@
 import { Hono } from "hono";
 
 import { authMiddleware } from "../../middleware/auth.js";
+import { blobRoutes } from "../blobs/index.js";
 import { bucketRoutes } from "../buckets/index.js";
 import { customFrontRoutes } from "../custom-fronts/index.js";
 import { fieldRoutes } from "../fields/index.js";
 import { groupRoutes } from "../groups/index.js";
+import { innerworldRoutes } from "../innerworld/index.js";
 import { layerRoutes } from "../layers/index.js";
 import { lifecycleEventRoutes } from "../lifecycle-events/index.js";
 import { memberRoutes } from "../members/index.js";
@@ -51,3 +53,5 @@ systemRoutes.route("/:id/layers", layerRoutes);
 systemRoutes.route("/:id/relationships", relationshipRoutes);
 systemRoutes.route("/:id/lifecycle-events", lifecycleEventRoutes);
 systemRoutes.route("/:id/structure-links", structureLinkRoutes);
+systemRoutes.route("/:systemId/innerworld", innerworldRoutes);
+systemRoutes.route("/:systemId/blobs", blobRoutes);

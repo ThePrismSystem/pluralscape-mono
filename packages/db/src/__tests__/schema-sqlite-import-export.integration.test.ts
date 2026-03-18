@@ -424,6 +424,7 @@ describe("SQLite import-export schema", () => {
           encryptionTier: 1,
           purpose: "export",
           checksum: "a".repeat(64),
+          createdAt: now,
           uploadedAt: now,
         })
         .run();
@@ -580,6 +581,7 @@ describe("SQLite import-export schema", () => {
           encryptionTier: 1,
           purpose: "export",
           checksum: "a".repeat(64),
+          createdAt: now,
           uploadedAt: now,
         })
         .run();

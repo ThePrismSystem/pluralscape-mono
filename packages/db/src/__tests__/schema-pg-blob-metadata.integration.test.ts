@@ -55,6 +55,7 @@ describe("PG blob_metadata schema", () => {
       encryptionTier: 1,
       purpose: "avatar",
       checksum: "a".repeat(64),
+      createdAt: now,
       uploadedAt: now,
     });
 
@@ -82,6 +83,7 @@ describe("PG blob_metadata schema", () => {
       encryptionTier: 1,
       purpose: "attachment",
       checksum: "a".repeat(64),
+      createdAt: now,
       uploadedAt: now,
     });
 
@@ -94,6 +96,7 @@ describe("PG blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "attachment",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -113,6 +116,7 @@ describe("PG blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "avatar",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -133,6 +137,7 @@ describe("PG blob_metadata schema", () => {
         encryptionTier: 3,
         purpose: "avatar",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -152,6 +157,7 @@ describe("PG blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "invalid" as "avatar",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       }),
     ).rejects.toThrow();
@@ -171,6 +177,7 @@ describe("PG blob_metadata schema", () => {
       encryptionTier: 2,
       purpose: "member-photo",
       checksum: "a".repeat(64),
+      createdAt: now,
       uploadedAt: now,
     });
 
@@ -203,6 +210,7 @@ describe("PG blob_metadata schema", () => {
       purpose: "attachment",
       checksum: "a".repeat(64),
       bucketId,
+      createdAt: now,
       uploadedAt: now,
     });
 
@@ -212,20 +220,37 @@ describe("PG blob_metadata schema", () => {
     expect(rows[0]?.bucketId).toBeNull();
   });
 
-  it("rejects null checksum", async () => {
+  it("allows null checksum when uploadedAt is also null (pending upload)", async () => {
     const accountId = await insertAccount();
     const systemId = await insertSystem(accountId);
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
 
-    // Use raw SQL to bypass Drizzle's type checking and test the DB constraint
+    // NULL checksum + NULL uploadedAt = valid pending upload
+    await client.query(
+      `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, created_at, uploaded_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NULL, $7, NULL)`,
+      [id, systemId, `blobs/${crypto.randomUUID()}`, 100, 1, "avatar", now],
+    );
+
+    const rows = await db.select().from(blobMetadata).where(eq(blobMetadata.id, id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.checksum).toBeNull();
+    expect(rows[0]?.uploadedAt).toBeNull();
+  });
+
+  it("rejects null checksum with non-null uploadedAt (pending consistency)", async () => {
+    const accountId = await insertAccount();
+    const systemId = await insertSystem(accountId);
+    const now = new Date().toISOString();
+
     await expect(
       client.query(
-        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NULL, $7)`,
-        [id, systemId, `blobs/${crypto.randomUUID()}`, 100, 1, "avatar", now],
+        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, created_at, uploaded_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NULL, $7, $8)`,
+        [crypto.randomUUID(), systemId, `blobs/${crypto.randomUUID()}`, 100, 1, "avatar", now, now],
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/check|constraint/i);
   });
 
   it("rejects checksum not exactly 64 characters", async () => {
@@ -242,6 +267,7 @@ describe("PG blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "avatar",
         checksum: "a".repeat(63),
+        createdAt: now,
         uploadedAt: now,
       }),
     ).rejects.toThrow(/check|constraint/i);
@@ -255,6 +281,7 @@ describe("PG blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "avatar",
         checksum: "a".repeat(65),
+        createdAt: now,
         uploadedAt: now,
       }),
     ).rejects.toThrow(/check|constraint/i);
@@ -273,6 +300,7 @@ describe("PG blob_metadata schema", () => {
       encryptionTier: 1,
       purpose: "avatar",
       checksum: "a".repeat(64),
+      createdAt: now,
       uploadedAt: now,
     });
   });
@@ -291,6 +319,7 @@ describe("PG blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "avatar",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       }),
     ).rejects.toThrow(/check|constraint/i);
@@ -310,6 +339,7 @@ describe("PG blob_metadata schema", () => {
       encryptionTier: 1,
       purpose: "avatar",
       checksum: "a".repeat(64),
+      createdAt: now,
       uploadedAt: now,
     });
 
@@ -332,6 +362,7 @@ describe("PG blob_metadata schema", () => {
       encryptionTier: 1,
       purpose: "avatar",
       checksum: "a".repeat(64),
+      createdAt: now,
       uploadedAt: now,
       archived: true,
       archivedAt: now,
@@ -356,6 +387,7 @@ describe("PG blob_metadata schema", () => {
       encryptionTier: 1,
       purpose: "avatar",
       checksum: "a".repeat(64),
+      createdAt: now,
       uploadedAt: now,
     });
 
@@ -377,8 +409,8 @@ describe("PG blob_metadata schema", () => {
 
     await expect(
       client.query(
-        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at, archived, archived_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, NULL)`,
+        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, created_at, uploaded_at, archived, archived_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, NULL)`,
         [
           crypto.randomUUID(),
           systemId,
@@ -387,6 +419,7 @@ describe("PG blob_metadata schema", () => {
           1,
           "avatar",
           "a".repeat(64),
+          now,
           now,
         ],
       ),
@@ -400,8 +433,8 @@ describe("PG blob_metadata schema", () => {
 
     await expect(
       client.query(
-        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, uploaded_at, archived, archived_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, $9)`,
+        `INSERT INTO blob_metadata (id, system_id, storage_key, size_bytes, encryption_tier, purpose, checksum, created_at, uploaded_at, archived, archived_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10)`,
         [
           crypto.randomUUID(),
           systemId,
@@ -410,6 +443,7 @@ describe("PG blob_metadata schema", () => {
           1,
           "avatar",
           "a".repeat(64),
+          now,
           now,
           now,
         ],
