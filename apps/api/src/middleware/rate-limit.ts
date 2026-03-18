@@ -18,8 +18,10 @@ interface RateLimiterOptions {
   readonly limit: number;
   /** Window duration in milliseconds. */
   readonly windowMs: number;
-  /** Optional external store. Defaults to in-memory. */
+  /** Optional external store. Defaults to shared store or in-memory. */
   readonly store?: RateLimitStore;
+  /** Optional key prefix for rate-limit keys (prevents cross-category collisions). */
+  readonly keyPrefix?: string;
 }
 
 /**
@@ -46,12 +48,17 @@ function getClientKey(c: Context): string {
  * to avoid X-Forwarded-For spoofing. Set TRUST_PROXY=1 behind a reverse proxy.
  */
 export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandler {
-  const store = options.store ?? new MemoryRateLimitStore();
-  const { limit, windowMs } = options;
+  const { limit, windowMs, keyPrefix } = options;
+  const explicitStore = options.store;
+  // Fallback store created once per limiter; sharedStore is checked dynamically
+  // each request so it is picked up as soon as start() sets it.
+  const fallbackStore = new MemoryRateLimitStore();
 
   return async (c, next) => {
+    const store = explicitStore ?? sharedStore ?? fallbackStore;
     const clientKey = getClientKey(c);
-    const result = await store.increment(clientKey, windowMs);
+    const key = keyPrefix ? `${keyPrefix}:${clientKey}` : clientKey;
+    const result = await store.increment(key, windowMs);
 
     // Set rate limit headers on all responses
     c.header("X-RateLimit-Limit", String(limit));
@@ -87,8 +94,13 @@ export function setRateLimitStore(store: RateLimitStore): void {
   sharedStore = store;
 }
 
+/** Reset the shared store (for testing). */
+export function _resetRateLimitStoreForTesting(): void {
+  sharedStore = undefined;
+}
+
 /** Creates a rate limiter using the predefined limits for a given category. */
 export function createCategoryRateLimiter(category: RateLimitCategory): MiddlewareHandler {
   const config = RATE_LIMITS[category];
-  return createRateLimiter({ ...config, store: sharedStore });
+  return createRateLimiter({ ...config, keyPrefix: category });
 }

@@ -178,6 +178,8 @@ describe("ValkeyRateLimitStore", () => {
 
     mockClient = {
       eval: evalMock,
+      ping: vi.fn().mockResolvedValue("PONG"),
+      disconnect: vi.fn().mockResolvedValue(undefined),
     };
     store = new ValkeyRateLimitStore(mockClient);
   });

@@ -4,6 +4,7 @@ import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
+import { parseIdParam } from "../../lib/id-param.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import {
@@ -43,7 +44,7 @@ sessionsRoute.get("/sessions", async (c) => {
 sessionsRoute.delete("/sessions/:id", async (c) => {
   const auth = c.get("auth");
   const db = await getDb();
-  const targetId = c.req.param("id");
+  const targetId = parseIdParam(c.req.param("id"), "sess_");
 
   // Cannot revoke current session via this endpoint — use POST /auth/logout
   if (targetId === auth.sessionId) {

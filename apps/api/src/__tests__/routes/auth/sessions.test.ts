@@ -35,6 +35,9 @@ vi.mock("../../../lib/session-auth.js", () => ({
   validateSession: vi.fn(),
 }));
 
+const MOCK_CURRENT_SESSION_ID = "sess_00000000-0000-4000-8000-000000000001";
+const MOCK_OTHER_SESSION_ID = "sess_00000000-0000-4000-8000-000000000002";
+
 vi.mock("../../../middleware/auth.js", () => ({
   authMiddleware: vi
     .fn()
@@ -43,7 +46,7 @@ vi.mock("../../../middleware/auth.js", () => ({
         async (c: { set: (key: string, value: unknown) => void }, next: () => Promise<void>) => {
           c.set("auth", {
             accountId: "acct_test",
-            sessionId: "sess_current",
+            sessionId: MOCK_CURRENT_SESSION_ID,
             systemId: null,
             accountType: "system",
           });
@@ -142,9 +145,20 @@ describe("sessions route", () => {
   // ── DELETE /auth/sessions/:id ───────────────────────────────────
 
   describe("DELETE /auth/sessions/:id", () => {
+    it("returns 400 for a malformed session ID", async () => {
+      const app = createApp();
+      const res = await app.request("/auth/sessions/not-a-valid-id", {
+        method: "DELETE",
+      });
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
     it("returns 400 when trying to revoke the current session", async () => {
       const app = createApp();
-      const res = await app.request("/auth/sessions/sess_current", {
+      const res = await app.request(`/auth/sessions/${MOCK_CURRENT_SESSION_ID}`, {
         method: "DELETE",
       });
 
@@ -158,7 +172,7 @@ describe("sessions route", () => {
       vi.mocked(revokeSession).mockResolvedValueOnce(false);
 
       const app = createApp();
-      const res = await app.request("/auth/sessions/sess_other", {
+      const res = await app.request(`/auth/sessions/${MOCK_OTHER_SESSION_ID}`, {
         method: "DELETE",
       });
 
@@ -171,7 +185,7 @@ describe("sessions route", () => {
       vi.mocked(revokeSession).mockResolvedValueOnce(true);
 
       const app = createApp();
-      const res = await app.request("/auth/sessions/sess_other", {
+      const res = await app.request(`/auth/sessions/${MOCK_OTHER_SESSION_ID}`, {
         method: "DELETE",
       });
 
@@ -199,7 +213,7 @@ describe("sessions route", () => {
       expect(body.ok).toBe(true);
       expect(vi.mocked(logoutCurrentSession)).toHaveBeenCalledWith(
         {},
-        "sess_current",
+        MOCK_CURRENT_SESSION_ID,
         "acct_test",
         expect.any(Function),
       );
@@ -228,7 +242,7 @@ describe("sessions route", () => {
       expect(vi.mocked(revokeAllSessions)).toHaveBeenCalledWith(
         {},
         "acct_test",
-        "sess_current",
+        MOCK_CURRENT_SESSION_ID,
         expect.any(Function),
       );
       expect(vi.mocked(createAuditWriter)).toHaveBeenCalledWith(
