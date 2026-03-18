@@ -504,8 +504,8 @@ describe("PG views / query helpers", () => {
       const targetSession = crypto.randomUUID();
 
       await db.insert(sessions).values([
-        { id: sourceSession, accountId, createdAt: now },
-        { id: targetSession, accountId, createdAt: now },
+        { id: sourceSession, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
+        { id: targetSession, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
       ]);
 
       // Pending, not expired
@@ -523,8 +523,8 @@ describe("PG views / query helpers", () => {
       const sourceSession2 = crypto.randomUUID();
       const targetSession2 = crypto.randomUUID();
       await db.insert(sessions).values([
-        { id: sourceSession2, accountId, createdAt: now },
-        { id: targetSession2, accountId, createdAt: now },
+        { id: sourceSession2, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
+        { id: targetSession2, accountId, tokenHash: `tok_${crypto.randomUUID()}`, createdAt: now },
       ]);
       await db.insert(deviceTransferRequests).values({
         id: crypto.randomUUID(),

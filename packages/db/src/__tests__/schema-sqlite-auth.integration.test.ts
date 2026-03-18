@@ -59,11 +59,12 @@ describe("SQLite auth schema", () => {
 
   function insertSession(
     accountId: string,
-    overrides: Partial<{ id: string; createdAt: number }> = {},
-  ): { id: string; accountId: string; createdAt: number } {
+    overrides: Partial<{ id: string; tokenHash: string; createdAt: number }> = {},
+  ): { id: string; accountId: string; tokenHash: string; createdAt: number } {
     const data = {
       id: overrides.id ?? crypto.randomUUID(),
       accountId,
+      tokenHash: overrides.tokenHash ?? `tok_${crypto.randomUUID()}`,
       createdAt: overrides.createdAt ?? Date.now(),
     };
     db.insert(sessions).values(data).run();
@@ -285,6 +286,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           createdAt: now,
           lastActive: now,
           revoked: false,
@@ -309,6 +311,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           createdAt: Date.now(),
         })
         .run();
@@ -325,6 +328,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           createdAt: Date.now(),
         })
         .run();
@@ -342,6 +346,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           createdAt: Date.now(),
           expiresAt,
         })
@@ -359,6 +364,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           createdAt: Date.now(),
         })
         .run();
@@ -375,6 +381,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           createdAt: Date.now(),
         })
         .run();
@@ -391,6 +398,7 @@ describe("SQLite auth schema", () => {
           .values({
             id: crypto.randomUUID(),
             accountId: "nonexistent",
+            tokenHash: `tok_${crypto.randomUUID()}`,
             createdAt: Date.now(),
           })
           .run(),
@@ -407,6 +415,7 @@ describe("SQLite auth schema", () => {
           .values({
             id: crypto.randomUUID(),
             accountId: account.id,
+            tokenHash: `tok_${crypto.randomUUID()}`,
             createdAt: now,
             expiresAt: now - 1000,
           })
@@ -424,6 +433,7 @@ describe("SQLite auth schema", () => {
           .values({
             id: crypto.randomUUID(),
             accountId: account.id,
+            tokenHash: `tok_${crypto.randomUUID()}`,
             createdAt: now,
             expiresAt: now,
           })
@@ -440,6 +450,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           createdAt: now,
         })
         .run();
@@ -459,6 +470,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           createdAt: Date.now(),
         })
         .run();
@@ -476,6 +488,7 @@ describe("SQLite auth schema", () => {
         .values({
           id,
           accountId: account.id,
+          tokenHash: `tok_${crypto.randomUUID()}`,
           encryptedData: blob,
           createdAt: Date.now(),
         })

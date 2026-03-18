@@ -78,6 +78,7 @@ export const SQLITE_DDL = {
     CREATE TABLE sessions (
       id TEXT PRIMARY KEY,
       account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL,
       encrypted_data BLOB,
       created_at INTEGER NOT NULL,
       last_active INTEGER,
@@ -87,6 +88,7 @@ export const SQLITE_DDL = {
     )
   `,
   sessionsIndexes: `
+    CREATE UNIQUE INDEX sessions_token_hash_idx ON sessions (token_hash);
     CREATE INDEX sessions_revoked_last_active_idx ON sessions (revoked, last_active);
     CREATE INDEX sessions_expires_at_idx ON sessions (expires_at) WHERE expires_at IS NOT NULL
   `,
