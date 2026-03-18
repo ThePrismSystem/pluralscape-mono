@@ -499,14 +499,12 @@ describe("deleteSubsystem", () => {
 
   it("deletes a subsystem with no dependents", async () => {
     const { db, chain } = mockDb();
-    // exists check → chains to .limit()
-    chain.where
-      .mockReturnValueOnce(chain) // existence check → chains to .limit()
-      .mockResolvedValueOnce([{ count: 0 }]) // child subsystems count
-      .mockResolvedValueOnce([{ count: 0 }]) // memberships count
-      .mockResolvedValueOnce([{ count: 0 }]) // layer link count
-      .mockResolvedValueOnce([{ count: 0 }]); // side system link count
-    chain.limit.mockResolvedValueOnce([{ id: SUBSYSTEM_ID }]); // exists check
+    // exists check: select().from().where().limit()
+    chain.limit.mockResolvedValueOnce([{ id: SUBSYSTEM_ID }]);
+    // dependents check: select({subqueries}).from(sql) — from() is terminal
+    chain.from
+      .mockReturnValueOnce(chain) // existence check from() → chains to .where()
+      .mockResolvedValueOnce([{ children: 0, memberships: 0, layerLinks: 0, sideSystemLinks: 0 }]);
 
     await deleteSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit);
 
@@ -519,13 +517,12 @@ describe("deleteSubsystem", () => {
 
   it("throws 409 when subsystem has dependents", async () => {
     const { db, chain } = mockDb();
-    chain.where
-      .mockReturnValueOnce(chain) // existence check → chains to .limit()
-      .mockResolvedValueOnce([{ count: 3 }]) // child subsystems
-      .mockResolvedValueOnce([{ count: 0 }]) // memberships
-      .mockResolvedValueOnce([{ count: 0 }]) // layer links
-      .mockResolvedValueOnce([{ count: 0 }]); // side system links
+    // exists check: select().from().where().limit()
     chain.limit.mockResolvedValueOnce([{ id: SUBSYSTEM_ID }]);
+    // dependents check: select({subqueries}).from(sql) — from() is terminal
+    chain.from
+      .mockReturnValueOnce(chain) // existence check from() → chains to .where()
+      .mockResolvedValueOnce([{ children: 3, memberships: 0, layerLinks: 0, sideSystemLinks: 0 }]);
 
     await expect(deleteSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS" }),
