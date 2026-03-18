@@ -39,3 +39,11 @@ export const RegenerateRecoveryKeySchema = z
     confirmed: z.literal(true),
   })
   .readonly();
+
+export const PasswordResetViaRecoveryKeySchema = z
+  .object({
+    email: z.email(),
+    recoveryKey: z.string().min(1),
+    newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH),
+  })
+  .readonly();

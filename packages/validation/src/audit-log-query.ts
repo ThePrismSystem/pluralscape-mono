@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const AuditLogQuerySchema = z.object({
   event_type: z.string().optional(),
+  resource_type: z.string().optional(),
   from: z.coerce.number().int().min(0).optional(),
   to: z.coerce.number().int().min(0).optional(),
   cursor: z.string().optional(),

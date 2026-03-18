@@ -45,6 +45,7 @@ auditLogRoute.get("/", async (c) => {
   const db = await getDb();
   const result = await queryAuditLog(db, auth.accountId, {
     eventType: parsed.data.event_type,
+    resourceType: parsed.data.resource_type,
     from,
     to,
     cursor: parsed.data.cursor,

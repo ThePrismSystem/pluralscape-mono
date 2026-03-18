@@ -1,0 +1,1 @@
+ALTER TABLE "lifecycle_events" ADD COLUMN "plaintext_metadata" jsonb;

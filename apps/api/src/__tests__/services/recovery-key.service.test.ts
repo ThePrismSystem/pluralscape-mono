@@ -19,6 +19,7 @@ vi.mock("@pluralscape/crypto", () => ({
   verifyPassword: (hash: string) => hash === "$argon2id$fake$valid",
   derivePasswordKey: () => Promise.resolve(new Uint8Array(32)),
   unwrapMasterKey: () => new Uint8Array(32),
+  hashPassword: () => "$argon2id$fake$newhash",
   regenerateRecoveryKey: () => ({
     newRecoveryKey: {
       displayKey: "ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL-MNOP-QRST",
@@ -29,16 +30,42 @@ vi.mock("@pluralscape/crypto", () => ({
     },
     serializedBackup: new Uint8Array(72),
   }),
+  resetPasswordViaRecoveryKey: () =>
+    Promise.resolve({
+      masterKey: new Uint8Array(32),
+      newSalt: new Uint8Array(16),
+      wrappedMasterKey: {
+        ciphertext: new Uint8Array(48),
+        nonce: new Uint8Array(24),
+      },
+      newRecoveryKey: {
+        displayKey: "NEW-RKEY-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL",
+        encryptedMasterKey: {
+          ciphertext: new Uint8Array(48),
+          nonce: new Uint8Array(24),
+        },
+      },
+    }),
+  serializeRecoveryBackup: () => new Uint8Array(72),
 }));
 
 vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../lib/email-hash.js", () => ({
+  hashEmail: vi.fn().mockReturnValue("hashed_email_hex"),
+  getEmailHashPepper: vi.fn().mockReturnValue(new Uint8Array(32)),
+}));
+
 // ── Imports after mocks ──────────────────────────────────────────
 
-const { getRecoveryKeyStatus, regenerateRecoveryKeyBackup, NoActiveRecoveryKeyError } =
-  await import("../../services/recovery-key.service.js");
+const {
+  getRecoveryKeyStatus,
+  regenerateRecoveryKeyBackup,
+  resetPasswordWithRecoveryKey,
+  NoActiveRecoveryKeyError,
+} = await import("../../services/recovery-key.service.js");
 
 // ── Tests ────────────────────────────────────────────────────────────
 
@@ -308,6 +335,112 @@ describe("recovery-key service", () => {
     it("extends Error", () => {
       const err = new NoActiveRecoveryKeyError("test");
       expect(err).toBeInstanceOf(Error);
+    });
+  });
+
+  // ── resetPasswordWithRecoveryKey ───────────────────────────────
+
+  describe("resetPasswordWithRecoveryKey", () => {
+    const validResetParams = {
+      email: "test@example.com",
+      recoveryKey: "ABCD-EFGH-IJKL-MNOP",
+      newPassword: "newstrongpassword123",
+    };
+
+    it("returns session token and new recovery key on success", async () => {
+      const { db, chain } = mockDb();
+      // Account lookup by emailHash
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: new Uint8Array(72),
+        },
+      ]);
+      // Active recovery key lookup
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
+
+      const result = await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+
+      expect(result).not.toBeNull();
+      const r = result as NonNullable<typeof result>;
+      expect(r.sessionToken).toBeTruthy();
+      expect(r.recoveryKey).toBe("NEW-RKEY-ABCD-EFGH-IJKL-MNOP-QRST-UVWX-YZ23-4567-ABCD-EFGH-IJKL");
+      expect(r.accountId).toBe("acct_123");
+    });
+
+    it("returns null when account not found (anti-enumeration)", async () => {
+      const { db, chain } = mockDb();
+      // No account found
+      chain.limit.mockResolvedValueOnce([]);
+
+      const result = await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+
+      expect(result).toBeNull();
+    });
+
+    it("throws NoActiveRecoveryKeyError when no active key", async () => {
+      const { db, chain } = mockDb();
+      // Account found
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: new Uint8Array(72),
+        },
+      ]);
+      // No active recovery key
+      chain.limit.mockResolvedValueOnce([]);
+
+      await expect(
+        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit),
+      ).rejects.toThrow(NoActiveRecoveryKeyError);
+    });
+
+    it("throws ZodError on invalid input", async () => {
+      const { db } = mockDb();
+
+      await expect(
+        resetPasswordWithRecoveryKey(db, { email: "bad" }, "web", mockAudit),
+      ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
+    });
+
+    it("uses a transaction for the atomic update", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: new Uint8Array(72),
+        },
+      ]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
+
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+
+      expect(chain.transaction).toHaveBeenCalledOnce();
+    });
+
+    it("calls memzero on crypto material after success", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          passwordHash: "$argon2id$fake$valid",
+          kdfSalt: "00".repeat(16),
+          encryptedMasterKey: new Uint8Array(72),
+        },
+      ]);
+      chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
+
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+
+      // Should memzero: masterKey, newSalt, wrappedMasterKeyBytes, newRecoveryBackupBytes,
+      // newRecoveryKey.ciphertext, newRecoveryKey.nonce
+      expect(mockMemzero).toHaveBeenCalled();
     });
   });
 });

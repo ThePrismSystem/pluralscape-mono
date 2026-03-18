@@ -84,6 +84,7 @@ const MOCK_EVENT = {
   occurredAt: 1000 as never,
   recordedAt: 1000 as never,
   encryptedData: "dGVzdA==",
+  plaintextMetadata: null,
 };
 
 const MOCK_PAGINATED = {

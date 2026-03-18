@@ -1,0 +1,1 @@
+ALTER TABLE `lifecycle_events` ADD `plaintext_metadata` text;

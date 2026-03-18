@@ -1,6 +1,6 @@
 import { lifecycleEvents } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
-import { CreateLifecycleEventBodySchema } from "@pluralscape/validation";
+import { CreateLifecycleEventBodySchema, validateLifecycleMetadata } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
@@ -27,6 +27,7 @@ export interface LifecycleEventResult {
   readonly occurredAt: UnixMillis;
   readonly recordedAt: UnixMillis;
   readonly encryptedData: string;
+  readonly plaintextMetadata: Record<string, unknown> | null;
 }
 
 export interface LifecycleEventCursor {
@@ -50,6 +51,7 @@ function toLifecycleEventResult(row: {
   occurredAt: number;
   recordedAt: number;
   encryptedData: EncryptedBlob;
+  plaintextMetadata?: Record<string, unknown> | null;
 }): LifecycleEventResult {
   return {
     id: row.id as LifecycleEventId,
@@ -58,6 +60,7 @@ function toLifecycleEventResult(row: {
     occurredAt: row.occurredAt as UnixMillis,
     recordedAt: row.recordedAt as UnixMillis,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
+    plaintextMetadata: row.plaintextMetadata ?? null,
   };
 }
 
@@ -104,6 +107,20 @@ export async function createLifecycleEvent(
   const eventId = createId(ID_PREFIXES.lifecycleEvent);
   const timestamp = now();
 
+  // Validate per-event-type metadata if provided
+  let metadata: Record<string, unknown> | null = null;
+  if (parsed.plaintextMetadata) {
+    const metaResult = validateLifecycleMetadata(parsed.eventType, parsed.plaintextMetadata);
+    if (!metaResult.success) {
+      throw new ApiHttpError(
+        HTTP_BAD_REQUEST,
+        "VALIDATION_ERROR",
+        `Invalid plaintext metadata for event type "${parsed.eventType}"`,
+      );
+    }
+    metadata = parsed.plaintextMetadata as Record<string, unknown>;
+  }
+
   return db.transaction(async (tx) => {
     const [row] = await tx
       .insert(lifecycleEvents)
@@ -114,6 +131,7 @@ export async function createLifecycleEvent(
         occurredAt: parsed.occurredAt,
         recordedAt: timestamp,
         encryptedData: blob,
+        plaintextMetadata: metadata,
       })
       .returning();
 

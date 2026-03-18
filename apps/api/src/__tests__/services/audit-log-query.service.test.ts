@@ -164,6 +164,32 @@ describe("queryAuditLog", () => {
     expect(chain.where).toHaveBeenCalled();
   });
 
+  it("applies resourceType filter as LIKE prefix when provided", async () => {
+    const { db, chain } = mockDb();
+
+    await queryAuditLog(db, ACCOUNT_ID, { ...BASE_PARAMS, resourceType: "member" });
+
+    expect(chain.where).toHaveBeenCalled();
+  });
+
+  it("combines resourceType and eventType filters", async () => {
+    const { db, chain } = mockDb();
+
+    await queryAuditLog(db, ACCOUNT_ID, {
+      ...BASE_PARAMS,
+      eventType: "member.created",
+      resourceType: "member",
+    });
+
+    expect(chain.where).toHaveBeenCalled();
+  });
+
+  it("does not include resourceType condition when resourceType is undefined", async () => {
+    const { db, chain } = mockDb();
+    await expect(queryAuditLog(db, ACCOUNT_ID, { ...BASE_PARAMS })).resolves.not.toThrow();
+    expect(chain.where).toHaveBeenCalled();
+  });
+
   it("requests limit+1 rows from the database", async () => {
     const { db, chain } = mockDb();
 

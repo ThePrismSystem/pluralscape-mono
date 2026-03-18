@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import { archiveRoute } from "./archive.js";
+import { copyRoute } from "./copy.js";
 import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
 import { getRoute } from "./get.js";
@@ -25,6 +26,7 @@ groupRoutes.route("/", updateRoute);
 groupRoutes.route("/", deleteRoute);
 groupRoutes.route("/", createRoute);
 groupRoutes.route("/", moveRoute);
+groupRoutes.route("/", copyRoute);
 groupRoutes.route("/", archiveRoute);
 groupRoutes.route("/", restoreRoute);
 

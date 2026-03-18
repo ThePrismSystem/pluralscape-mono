@@ -22,6 +22,9 @@ export const lifecycleEvents = sqliteTable(
     occurredAt: sqliteTimestamp("occurred_at").notNull(),
     recordedAt: sqliteTimestamp("recorded_at").notNull(),
     encryptedData: sqliteEncryptedBlob("encrypted_data").notNull(),
+    plaintextMetadata: text("plaintext_metadata", { mode: "json" }).$type<
+      Record<string, unknown>
+    >(),
   },
   (t) => [
     index("lifecycle_events_system_occurred_idx").on(t.systemId, t.occurredAt),
