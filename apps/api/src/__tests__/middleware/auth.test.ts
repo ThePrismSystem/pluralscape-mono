@@ -19,6 +19,24 @@ const mockDbUpdate = vi.fn().mockReturnValue({
   }),
 });
 
+const { mockLogError } = vi.hoisted(() => ({
+  mockLogError: vi.fn(),
+}));
+
+vi.mock("../../lib/logger.js", () => {
+  const instance = {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: mockLogError,
+    debug: vi.fn(),
+  };
+  return {
+    logger: instance,
+    createRequestLogger: () => instance,
+    getContextLogger: () => instance,
+  };
+});
+
 vi.mock("../../lib/session-auth.js", () => ({
   validateSession: (): Promise<ValidateSessionResult> => mockValidateSession(),
 }));
@@ -110,6 +128,7 @@ describe("authMiddleware", () => {
     mockGetDb.mockReset();
     mockNow.mockReset();
     mockDbUpdate.mockClear();
+    mockLogError.mockClear();
   });
 
   it("returns 401 when Authorization header is missing", async () => {
@@ -305,8 +324,6 @@ describe("authMiddleware", () => {
     mockValidateSession.mockResolvedValue(validResult);
     mockNow.mockReturnValue(2_000_000);
 
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
     const app = createApp();
     const res = await app.request("/protected", {
       headers: { Authorization: `Bearer ${VALID_TOKEN}` },
@@ -318,12 +335,10 @@ describe("authMiddleware", () => {
     // Wait for the microtask to complete
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    expect(consoleError).toHaveBeenCalledWith(
-      "[auth] Failed to update session lastActive:",
-      expect.any(Error),
+    expect(mockLogError).toHaveBeenCalledWith(
+      "Failed to update session lastActive",
+      expect.objectContaining({ error: "DB write error" }),
     );
-
-    consoleError.mockRestore();
   });
 
   it("handles case-insensitive Bearer prefix", async () => {

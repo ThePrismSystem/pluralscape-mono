@@ -92,6 +92,14 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
 
 // ── Tests ────────────────────────────────────────────────────────────
 
+/** A no-op logger for service functions that require an AppLogger. */
+const mockLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
 describe("auth service", () => {
   const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -99,6 +107,8 @@ describe("auth service", () => {
     mockNow.mockReturnValue(Date.now());
     mockAudit.mockClear();
     mockVerifyPassword.mockClear();
+    mockLogger.error.mockClear();
+    mockLogger.warn.mockClear();
   });
   // ── extractIpAddress ───────────────────────────────────────────────
 
@@ -408,7 +418,7 @@ describe("auth service", () => {
       // limit() resolves to [] by default (no account found)
       chain.limit.mockResolvedValue([]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
     });
 
@@ -456,7 +466,7 @@ describe("auth service", () => {
         },
       ]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
     });
 
@@ -475,7 +485,7 @@ describe("auth service", () => {
         // Second limit() call: system lookup
         .mockResolvedValueOnce([{ id: "sys_456" }]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
       expect(result).not.toBeNull();
       expect(result?.accountId).toBe("acct_123");
@@ -495,7 +505,7 @@ describe("auth service", () => {
         },
       ]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
       expect(result).not.toBeNull();
       expect(result?.systemId).toBeNull();
@@ -512,7 +522,7 @@ describe("auth service", () => {
         },
       ]);
 
-      await loginAccount(db, credentials, "web", mockAudit);
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(chain.insert).toHaveBeenCalled();
       expect(chain.values).toHaveBeenCalled();
     });
@@ -528,7 +538,7 @@ describe("auth service", () => {
         },
       ]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
       expect(mockAudit).toHaveBeenCalledWith(
         expect.anything(),
@@ -548,14 +558,14 @@ describe("auth service", () => {
       ]);
       mockAudit.mockRejectedValueOnce(new Error("audit DB down"));
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
     });
 
     it("throws on invalid email format", async () => {
       const { db } = mockDb();
       await expect(
-        loginAccount(db, { email: "bad", password: "test" }, "web", mockAudit),
+        loginAccount(db, { email: "bad", password: "test" }, "web", mockAudit, mockLogger),
       ).rejects.toThrow();
     });
   });

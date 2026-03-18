@@ -32,6 +32,7 @@ import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
 import { ValidationError } from "./auth.service.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
+import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { AeadKey, KdfMasterKey, PwhashSalt, RecoveryKeyResult } from "@pluralscape/crypto";
 import type { AccountId, SessionId, UnixMillis } from "@pluralscape/types";
@@ -191,6 +192,7 @@ export async function resetPasswordWithRecoveryKey(
   params: unknown,
   platform: ClientPlatform,
   audit: AuditWriter,
+  log: AppLogger,
 ): Promise<PasswordResetResult | null> {
   const startTime = performance.now();
   const parsed = PasswordResetViaRecoveryKeySchema.parse(params);
@@ -214,7 +216,9 @@ export async function resetPasswordWithRecoveryKey(
     try {
       verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
     } catch (err: unknown) {
-      console.error("[anti-enum] Unexpected verifyPassword error:", err);
+      log.error("Unexpected verifyPassword error during anti-enumeration", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
     await equalizeAntiEnumTiming(startTime);
     return null;
@@ -235,7 +239,9 @@ export async function resetPasswordWithRecoveryKey(
     try {
       verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
     } catch (err: unknown) {
-      console.error("[anti-enum] Unexpected verifyPassword error:", err);
+      log.error("Unexpected verifyPassword error during anti-enumeration", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
     await equalizeAntiEnumTiming(startTime);
     throw new NoActiveRecoveryKeyError("No active recovery key found");

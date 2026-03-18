@@ -1,3 +1,5 @@
+import { logger } from "../../lib/logger.js";
+
 import type { RateLimitResult, RateLimitStore } from "../rate-limit-store.js";
 
 const RATE_LIMIT_LUA = `
@@ -56,10 +58,9 @@ export async function createValkeyStore(url: string): Promise<ValkeyRateLimitSto
     await client.ping();
     return new ValkeyRateLimitStore(client);
   } catch (error) {
-    console.warn(
-      "Failed to connect to Valkey for rate limiting, falling back to in-memory store:",
-      error,
-    );
+    logger.warn("Failed to connect to Valkey for rate limiting, falling back to in-memory store", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }

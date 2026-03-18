@@ -1,0 +1,150 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// We need to mock pino before importing the logger module
+const mockChild = vi.fn();
+const mockInfo = vi.fn();
+const mockWarn = vi.fn();
+const mockError = vi.fn();
+const mockDebug = vi.fn();
+
+const childInfo = vi.fn();
+const childWarn = vi.fn();
+const childError = vi.fn();
+const childDebug = vi.fn();
+
+vi.mock("pino", () => ({
+  default: vi.fn(() => ({
+    info: mockInfo,
+    warn: mockWarn,
+    error: mockError,
+    debug: mockDebug,
+    child: mockChild.mockReturnValue({
+      info: childInfo,
+      warn: childWarn,
+      error: childError,
+      debug: childDebug,
+    }),
+  })),
+}));
+
+describe("logger", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockChild.mockClear();
+    mockInfo.mockClear();
+    mockWarn.mockClear();
+    mockError.mockClear();
+    mockDebug.mockClear();
+    childInfo.mockClear();
+    childWarn.mockClear();
+    childError.mockClear();
+    childDebug.mockClear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("exports a logger with info, warn, error, debug methods", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    expect(logger).toBeDefined();
+    expect(typeof logger.info).toBe("function");
+    expect(typeof logger.warn).toBe("function");
+    expect(typeof logger.error).toBe("function");
+    expect(typeof logger.debug).toBe("function");
+  });
+
+  it("logger.info delegates to pino with message only", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    logger.info("test message");
+
+    expect(mockInfo).toHaveBeenCalledWith("test message");
+  });
+
+  it("logger.info delegates to pino with message and data", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    logger.info("test message", { port: 3000 });
+
+    expect(mockInfo).toHaveBeenCalledWith({ port: 3000 }, "test message");
+  });
+
+  it("logger.warn delegates to pino with message only", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    logger.warn("warning message");
+
+    expect(mockWarn).toHaveBeenCalledWith("warning message");
+  });
+
+  it("logger.warn delegates to pino with message and data", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    logger.warn("warning message", { detail: "info" });
+
+    expect(mockWarn).toHaveBeenCalledWith({ detail: "info" }, "warning message");
+  });
+
+  it("logger.error delegates to pino with message only", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    logger.error("error message");
+
+    expect(mockError).toHaveBeenCalledWith("error message");
+  });
+
+  it("logger.error delegates to pino with message and data", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    logger.error("error message", { code: "ERR_TEST" });
+
+    expect(mockError).toHaveBeenCalledWith({ code: "ERR_TEST" }, "error message");
+  });
+
+  it("logger.debug delegates to pino with message only", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    logger.debug("debug message");
+
+    expect(mockDebug).toHaveBeenCalledWith("debug message");
+  });
+
+  it("logger.debug delegates to pino with message and data", async () => {
+    const { logger } = await import("../../lib/logger.js");
+
+    logger.debug("debug message", { key: "value" });
+
+    expect(mockDebug).toHaveBeenCalledWith({ key: "value" }, "debug message");
+  });
+
+  it("createRequestLogger creates a child logger with requestId", async () => {
+    const { createRequestLogger } = await import("../../lib/logger.js");
+
+    const requestId = "019012ab-cdef-7890-abcd-ef1234567890";
+    const childLogger = createRequestLogger(requestId);
+
+    expect(mockChild).toHaveBeenCalledWith({ requestId });
+    expect(childLogger).toBeDefined();
+    expect(typeof childLogger.info).toBe("function");
+  });
+
+  it("child logger delegates calls to pino child instance", async () => {
+    const { createRequestLogger } = await import("../../lib/logger.js");
+
+    const childLogger = createRequestLogger("req-123");
+
+    childLogger.info("child info");
+    expect(childInfo).toHaveBeenCalledWith("child info");
+
+    childLogger.warn("child warn", { detail: "x" });
+    expect(childWarn).toHaveBeenCalledWith({ detail: "x" }, "child warn");
+
+    childLogger.error("child error");
+    expect(childError).toHaveBeenCalledWith("child error");
+
+    childLogger.debug("child debug");
+    expect(childDebug).toHaveBeenCalledWith("child debug");
+  });
+});

@@ -71,7 +71,6 @@ describe("middleware composition", () => {
     });
 
     process.env["NODE_ENV"] = "production";
-    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await testApp.request("/boom");
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;
@@ -79,7 +78,6 @@ describe("middleware composition", () => {
     expect(body.error.message).toBe("Internal Server Error");
     expect(JSON.stringify(body)).not.toContain("secret internal details");
     expect(body.requestId).toBeTruthy();
-    expect(spy).toHaveBeenCalled();
   });
 
   it("rate limiter returns 429 with structured error after threshold", async () => {
