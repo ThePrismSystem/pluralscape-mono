@@ -421,6 +421,7 @@ describe("auth service", () => {
         expect.anything(),
         expect.objectContaining({
           eventType: "auth.login-failed",
+          actor: { kind: "account", id: "acct_00000000-0000-0000-0000-000000000000" },
           detail: "Account not found",
         }),
       );
@@ -429,10 +430,18 @@ describe("auth service", () => {
     it("returns null even when email-not-found audit write fails", async () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValue([]);
-      mockAudit.mockRejectedValueOnce(new Error("audit DB down"));
+      const auditError = new Error("audit DB down");
+      mockAudit.mockRejectedValueOnce(auditError);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       const result = await loginAccount(db, credentials, "web", mockAudit);
       expect(result).toBeNull();
+      await vi.waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "[audit] Failed to write auth.login-failed:",
+          auditError,
+        );
+      });
     });
 
     it("returns null when password is invalid", async () => {

@@ -92,6 +92,7 @@ describe("POST /login", () => {
   it("returns 400 VALIDATION_ERROR on ZodError (via global handler)", async () => {
     const zodError = new Error("Validation failed");
     Object.defineProperty(zodError, "name", { value: "ZodError" });
+    // Suppress global error handler console.warn in test output
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     vi.mocked(loginAccount).mockRejectedValueOnce(zodError);
