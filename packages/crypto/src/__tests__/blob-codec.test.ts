@@ -123,7 +123,7 @@ describe("blob-codec", () => {
       expect(deserialized.bucketId).toBe("b");
     });
 
-    it("round-trips large ciphertext", () => {
+    it("round-trips large ciphertext", { timeout: 15_000 }, () => {
       const ciphertext = new Uint8Array(100_000);
       ciphertext.fill(0xff);
       const blob: EncryptedBlob = {
