@@ -6,7 +6,7 @@ import {
 } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { CreateSubsystemBodySchema, UpdateSubsystemBodySchema } from "@pluralscape/validation";
-import { and, count, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
@@ -336,56 +336,46 @@ export async function deleteSubsystem(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Subsystem not found");
     }
 
-    // Check for child subsystems
-    const [childCount] = await tx
-      .select({ count: count() })
-      .from(subsystems)
-      .where(
-        and(
-          eq(subsystems.parentSubsystemId, subsystemId),
-          eq(subsystems.systemId, systemId),
-          eq(subsystems.archived, false),
-        ),
-      );
+    // Check all dependents in a single query using subselects
+    const [dependents] = await tx
+      .select({
+        children: sql<number>`(
+          SELECT count(*)
+          FROM ${subsystems}
+          WHERE ${subsystems.parentSubsystemId} = ${subsystemId}
+            AND ${subsystems.systemId} = ${systemId}
+            AND ${subsystems.archived} = false
+        )`.mapWith(Number),
+        memberships: sql<number>`(
+          SELECT count(*)
+          FROM ${subsystemMemberships}
+          WHERE ${subsystemMemberships.subsystemId} = ${subsystemId}
+            AND ${subsystemMemberships.systemId} = ${systemId}
+        )`.mapWith(Number),
+        layerLinks: sql<number>`(
+          SELECT count(*)
+          FROM ${subsystemLayerLinks}
+          WHERE ${subsystemLayerLinks.subsystemId} = ${subsystemId}
+            AND ${subsystemLayerLinks.systemId} = ${systemId}
+        )`.mapWith(Number),
+        sideSystemLinks: sql<number>`(
+          SELECT count(*)
+          FROM ${subsystemSideSystemLinks}
+          WHERE ${subsystemSideSystemLinks.subsystemId} = ${subsystemId}
+            AND ${subsystemSideSystemLinks.systemId} = ${systemId}
+        )`.mapWith(Number),
+      })
+      .from(sql`(SELECT 1) AS _`);
 
-    // Check for memberships
-    const [membershipCount] = await tx
-      .select({ count: count() })
-      .from(subsystemMemberships)
-      .where(
-        and(
-          eq(subsystemMemberships.subsystemId, subsystemId),
-          eq(subsystemMemberships.systemId, systemId),
-        ),
-      );
-
-    // Check for cross-structure links (subsystem-layer + subsystem-side-system)
-    const [layerLinkCount] = await tx
-      .select({ count: count() })
-      .from(subsystemLayerLinks)
-      .where(
-        and(
-          eq(subsystemLayerLinks.subsystemId, subsystemId),
-          eq(subsystemLayerLinks.systemId, systemId),
-        ),
-      );
-
-    const [sideSystemLinkCount] = await tx
-      .select({ count: count() })
-      .from(subsystemSideSystemLinks)
-      .where(
-        and(
-          eq(subsystemSideSystemLinks.subsystemId, subsystemId),
-          eq(subsystemSideSystemLinks.systemId, systemId),
-        ),
-      );
-
-    if (!childCount || !membershipCount || !layerLinkCount || !sideSystemLinkCount) {
-      throw new Error("Unexpected: count query returned no rows");
+    if (!dependents) {
+      throw new Error("Unexpected: dependent count query returned no rows");
     }
 
     const totalDependents =
-      childCount.count + membershipCount.count + layerLinkCount.count + sideSystemLinkCount.count;
+      dependents.children +
+      dependents.memberships +
+      dependents.layerLinks +
+      dependents.sideSystemLinks;
 
     if (totalDependents > 0) {
       throw new ApiHttpError(
