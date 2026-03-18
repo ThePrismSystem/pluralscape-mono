@@ -6,8 +6,8 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { validateEncryptedBlob } from "../lib/validate-encrypted-blob.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { validateEncryptedBlob } from "../lib/validate-encrypted-blob.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
