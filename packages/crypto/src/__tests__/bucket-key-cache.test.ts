@@ -155,3 +155,137 @@ describe("isolation", () => {
     expect(cache2.has(bucket1)).toBe(false);
   });
 });
+
+describe("versioned key operations", () => {
+  it("getByVersion returns undefined for unknown bucket and version", () => {
+    expect(cache.getByVersion(bucket1, 1)).toBeUndefined();
+  });
+
+  it("setVersioned and getByVersion roundtrip", () => {
+    const key = generateBucketKey();
+    cache.setVersioned(bucket1, 1, key);
+    expect(cache.getByVersion(bucket1, 1)).toBe(key);
+  });
+
+  it("different versions for the same bucket are stored independently", () => {
+    const key1 = generateBucketKey();
+    const key2 = generateBucketKey();
+    cache.setVersioned(bucket1, 1, key1);
+    cache.setVersioned(bucket1, 2, key2);
+    expect(cache.getByVersion(bucket1, 1)).toBe(key1);
+    expect(cache.getByVersion(bucket1, 2)).toBe(key2);
+  });
+
+  it("same version for different buckets are stored independently", () => {
+    const key1 = generateBucketKey();
+    const key2 = generateBucketKey();
+    cache.setVersioned(bucket1, 1, key1);
+    cache.setVersioned(bucket2, 1, key2);
+    expect(cache.getByVersion(bucket1, 1)).toBe(key1);
+    expect(cache.getByVersion(bucket2, 1)).toBe(key2);
+  });
+
+  it("versioned keys do not affect the main store size", () => {
+    cache.setVersioned(bucket1, 1, generateBucketKey());
+    cache.setVersioned(bucket1, 2, generateBucketKey());
+    expect(cache.size).toBe(0);
+  });
+
+  it("deleteVersion removes the versioned key", () => {
+    const key = generateBucketKey();
+    cache.setVersioned(bucket1, 1, key);
+    cache.deleteVersion(bucket1, 1);
+    expect(cache.getByVersion(bucket1, 1)).toBeUndefined();
+  });
+
+  it("deleteVersion is a no-op for an unknown version", () => {
+    expect(() => {
+      cache.deleteVersion(bucket1, 99);
+    }).not.toThrow();
+  });
+
+  it("deleteVersion only removes the targeted version", () => {
+    const key1 = generateBucketKey();
+    const key2 = generateBucketKey();
+    cache.setVersioned(bucket1, 1, key1);
+    cache.setVersioned(bucket1, 2, key2);
+    cache.deleteVersion(bucket1, 1);
+    expect(cache.getByVersion(bucket1, 1)).toBeUndefined();
+    expect(cache.getByVersion(bucket1, 2)).toBe(key2);
+  });
+});
+
+describe("memory safety: memzero on versioned removal", () => {
+  it("deleteVersion memzeros the removed key", () => {
+    const key = generateBucketKey();
+    cache.setVersioned(bucket1, 1, key);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.deleteVersion(bucket1, 1);
+    expect(memzeroSpy).toHaveBeenCalledWith(key);
+    memzeroSpy.mockRestore();
+  });
+
+  it("deleteVersion does not call memzero for unknown version", () => {
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.deleteVersion(bucket1, 99);
+    expect(memzeroSpy).not.toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+  });
+
+  it("setVersioned memzeros old key when replacing an existing version", () => {
+    const oldKey = generateBucketKey();
+    const newKey = generateBucketKey();
+    cache.setVersioned(bucket1, 1, oldKey);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.setVersioned(bucket1, 1, newKey);
+    expect(memzeroSpy).toHaveBeenCalledWith(oldKey);
+    expect(memzeroSpy).toHaveBeenCalledTimes(1);
+    memzeroSpy.mockRestore();
+    expect(cache.getByVersion(bucket1, 1)).toBe(newKey);
+  });
+
+  it("setVersioned does not memzero when inserting a new version", () => {
+    const key = generateBucketKey();
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.setVersioned(bucket1, 1, key);
+    expect(memzeroSpy).not.toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+  });
+
+  it("clearAll memzeros versioned keys in addition to main keys", () => {
+    const mainKey = generateBucketKey();
+    const vKey1 = generateBucketKey();
+    const vKey2 = generateBucketKey();
+    cache.set(bucket1, mainKey);
+    cache.setVersioned(bucket1, 1, vKey1);
+    cache.setVersioned(bucket2, 1, vKey2);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.clearAll();
+    expect(memzeroSpy).toHaveBeenCalledTimes(3);
+    expect(memzeroSpy).toHaveBeenCalledWith(mainKey);
+    expect(memzeroSpy).toHaveBeenCalledWith(vKey1);
+    expect(memzeroSpy).toHaveBeenCalledWith(vKey2);
+    memzeroSpy.mockRestore();
+  });
+
+  it("clearAll removes all versioned keys", () => {
+    cache.setVersioned(bucket1, 1, generateBucketKey());
+    cache.setVersioned(bucket1, 2, generateBucketKey());
+    cache.clearAll();
+    expect(cache.getByVersion(bucket1, 1)).toBeUndefined();
+    expect(cache.getByVersion(bucket1, 2)).toBeUndefined();
+  });
+
+  it("clearAll on cache with only versioned keys does not throw", () => {
+    cache.setVersioned(bucket1, 1, generateBucketKey());
+    expect(() => {
+      cache.clearAll();
+    }).not.toThrow();
+    expect(cache.size).toBe(0);
+  });
+});
