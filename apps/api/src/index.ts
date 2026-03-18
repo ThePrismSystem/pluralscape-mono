@@ -60,14 +60,20 @@ async function start(): Promise<void> {
   // Initialize blob storage: prefer S3 if configured, fall back to filesystem
   const s3Bucket = process.env["BLOB_STORAGE_S3_BUCKET"];
   if (s3Bucket) {
-    initStorageAdapter(
-      new S3BlobStorageAdapter({
-        bucket: s3Bucket,
-        region: process.env["BLOB_STORAGE_S3_REGION"] ?? "us-east-1",
-        endpoint: process.env["BLOB_STORAGE_S3_ENDPOINT"],
-        forcePathStyle: process.env["BLOB_STORAGE_S3_FORCE_PATH_STYLE"] === "1",
-      }),
-    );
+    const adapter = new S3BlobStorageAdapter({
+      bucket: s3Bucket,
+      region: process.env["BLOB_STORAGE_S3_REGION"] ?? "us-east-1",
+      endpoint: process.env["BLOB_STORAGE_S3_ENDPOINT"],
+      forcePathStyle: process.env["BLOB_STORAGE_S3_FORCE_PATH_STYLE"] === "1",
+    });
+    initStorageAdapter(adapter);
+    // Probe bucket accessibility — logs a warning if credentials or bucket are misconfigured
+    // rather than waiting for the first blob operation to fail.
+    try {
+      await adapter.exists("__healthcheck__" as import("@pluralscape/types").StorageKey);
+    } catch (error) {
+      console.warn("S3 blob storage probe failed — check credentials and bucket config:", error);
+    }
   } else {
     const storageRoot = process.env["BLOB_STORAGE_PATH"] ?? "./data/blobs";
     initStorageAdapter(new FilesystemBlobStorageAdapter({ storageRoot }));

@@ -13,6 +13,8 @@ const KEY_PREFIX = "ps:rl:";
 /** Minimal interface for the Redis/Valkey client we need. */
 export interface ValkeyClient {
   eval(script: string, numkeys: number, ...args: string[]): Promise<unknown>;
+  ping(): Promise<string>;
+  disconnect(): Promise<void>;
 }
 
 /** Valkey/Redis-backed rate limit store using atomic Lua script. */
@@ -49,6 +51,9 @@ export async function createValkeyStore(url: string): Promise<ValkeyRateLimitSto
     };
     const Redis = mod.default;
     const client = new Redis(url, { maxRetriesPerRequest: 3 });
+    // Verify connectivity before returning — ioredis connects lazily, so without
+    // this ping a misconfigured URL would only surface on the first rate-limit check.
+    await client.ping();
     return new ValkeyRateLimitStore(client);
   } catch (error) {
     console.warn(

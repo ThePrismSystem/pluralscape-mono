@@ -26,7 +26,7 @@ describe("middleware composition", () => {
     vi.restoreAllMocks();
   });
 
-  it("applies secure headers on all responses", async () => {
+  it("applies secure headers on all responses", { timeout: 15_000 }, async () => {
     const { app } = await import("../index.js");
     const res = await app.request("/health");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");

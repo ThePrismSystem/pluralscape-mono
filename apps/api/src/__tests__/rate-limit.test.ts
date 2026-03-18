@@ -3,9 +3,15 @@ import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { errorHandler } from "../middleware/error-handler.js";
-import { createCategoryRateLimiter, createRateLimiter } from "../middleware/rate-limit.js";
+import {
+  _resetRateLimitStoreForTesting,
+  createCategoryRateLimiter,
+  createRateLimiter,
+  setRateLimitStore,
+} from "../middleware/rate-limit.js";
 import { requestIdMiddleware } from "../middleware/request-id.js";
 
+import type { RateLimitResult, RateLimitStore } from "../middleware/rate-limit-store.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 describe("rate limiter middleware", () => {
@@ -221,6 +227,56 @@ describe("rate limiter middleware", () => {
 
     const res = await app.request("/test");
     expect(res.headers.get("x-ratelimit-limit")).toBe(String(RATE_LIMITS.authHeavy.limit));
+  });
+
+  it("category rate limiters have independent counters", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.use("/heavy/*", createCategoryRateLimiter("authHeavy"));
+    app.use("/light/*", createCategoryRateLimiter("authLight"));
+    app.onError(errorHandler);
+    app.get("/heavy/test", (c) => c.json({ ok: true }));
+    app.get("/light/test", (c) => c.json({ ok: true }));
+
+    // Exhaust the authLight limit (20/min)
+    for (let i = 0; i < RATE_LIMITS.authLight.limit; i++) {
+      await app.request("/light/test");
+    }
+    const blockedLight = await app.request("/light/test");
+    expect(blockedLight.status).toBe(429);
+
+    // authHeavy should still be available (separate counter)
+    const heavyRes = await app.request("/heavy/test");
+    expect(heavyRes.status).toBe(200);
+  });
+
+  it("uses shared store set after limiter creation", async () => {
+    _resetRateLimitStoreForTesting();
+
+    const keys: string[] = [];
+    const incrementFn = vi.fn((key: string, windowMs: number): Promise<RateLimitResult> => {
+      keys.push(key);
+      return Promise.resolve({ count: 1, resetAt: Date.now() + windowMs });
+    });
+    const mockStore: RateLimitStore = { increment: incrementFn };
+
+    // Create the limiter BEFORE setting the shared store
+    const limiter = createCategoryRateLimiter("authHeavy");
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.use("*", limiter);
+    app.onError(errorHandler);
+    app.get("/test", (c) => c.json({ ok: true }));
+
+    // Now set the shared store (simulates start() completing)
+    setRateLimitStore(mockStore);
+
+    const res = await app.request("/test");
+    expect(res.status).toBe(200);
+    expect(incrementFn).toHaveBeenCalled();
+    expect(keys[0]).toMatch(/^authHeavy:/);
+
+    _resetRateLimitStoreForTesting();
   });
 
   it("createCategoryRateLimiter uses RATE_LIMITS windowMs constant", async () => {

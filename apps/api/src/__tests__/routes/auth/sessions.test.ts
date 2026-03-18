@@ -145,6 +145,17 @@ describe("sessions route", () => {
   // ── DELETE /auth/sessions/:id ───────────────────────────────────
 
   describe("DELETE /auth/sessions/:id", () => {
+    it("returns 400 for a malformed session ID", async () => {
+      const app = createApp();
+      const res = await app.request("/auth/sessions/not-a-valid-id", {
+        method: "DELETE",
+      });
+
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as ApiErrorResponse;
+      expect(body.error.code).toBe("VALIDATION_ERROR");
+    });
+
     it("returns 400 when trying to revoke the current session", async () => {
       const app = createApp();
       const res = await app.request(`/auth/sessions/${MOCK_CURRENT_SESSION_ID}`, {
