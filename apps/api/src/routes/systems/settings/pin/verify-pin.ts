@@ -1,11 +1,10 @@
 import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
-import { HTTP_BAD_REQUEST } from "../../../../http.constants.js";
-import { ApiHttpError } from "../../../../lib/api-error.js";
 import { createAuditWriter } from "../../../../lib/audit-writer.js";
 import { getDb } from "../../../../lib/db.js";
 import { requireIdParam } from "../../../../lib/id-param.js";
+import { parseJsonBody } from "../../../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../../../middleware/rate-limit.js";
 import { verifyPinCode } from "../../../../services/pin.service.js";
 
@@ -16,12 +15,7 @@ export const verifyPinRoute = new Hono<AuthEnv>();
 verifyPinRoute.use("*", createCategoryRateLimiter("authHeavy"));
 
 verifyPinRoute.post("/", async (c) => {
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
-  }
+  const body = await parseJsonBody(c);
 
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);

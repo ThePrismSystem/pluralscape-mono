@@ -4,6 +4,7 @@ import { HTTP_BAD_REQUEST, HTTP_CREATED, HTTP_NOT_FOUND } from "../../http.const
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
+import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { ValidationError } from "../../services/auth.service.js";
@@ -29,12 +30,7 @@ recoveryKeyRoutes.post("/regenerate", createCategoryRateLimiter("authHeavy"), as
   const auth = c.get("auth");
   const db = await getDb();
 
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid JSON body");
-  }
+  const body = await parseJsonBody(c);
 
   const audit = createAuditWriter(c, auth);
 
