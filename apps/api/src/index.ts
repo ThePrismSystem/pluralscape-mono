@@ -17,8 +17,8 @@ import { createValkeyStore } from "./middleware/stores/valkey-store.js";
 import { accountRoutes } from "./routes/account/index.js";
 import { authRoutes } from "./routes/auth/index.js";
 import { systemRoutes } from "./routes/systems/index.js";
+import { DEFAULT_PORT } from "./server.constants.js";
 
-const DEFAULT_PORT = 10045;
 const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
 
 export const app = new Hono();
