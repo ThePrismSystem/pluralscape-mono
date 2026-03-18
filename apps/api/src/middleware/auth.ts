@@ -62,9 +62,10 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
         .where(eq(sessions.id, result.session.id))
         .then(() => {})
         .catch((err: unknown) => {
-          log.error("Failed to update session lastActive", {
-            error: err instanceof Error ? err.message : String(err),
-          });
+          log.error(
+            "Failed to update session lastActive",
+            err instanceof Error ? { err } : { error: String(err) },
+          );
         });
     }
 

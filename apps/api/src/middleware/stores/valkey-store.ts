@@ -58,9 +58,10 @@ export async function createValkeyStore(url: string): Promise<ValkeyRateLimitSto
     await client.ping();
     return new ValkeyRateLimitStore(client);
   } catch (error) {
-    logger.warn("Failed to connect to Valkey for rate limiting, falling back to in-memory store", {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    logger.warn(
+      "Failed to connect to Valkey for rate limiting, falling back to in-memory store",
+      error instanceof Error ? { err: error } : { error: String(error) },
+    );
     return null;
   }
 }

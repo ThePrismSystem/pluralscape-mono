@@ -337,7 +337,7 @@ describe("authMiddleware", () => {
 
     expect(mockLogError).toHaveBeenCalledWith(
       "Failed to update session lastActive",
-      expect.objectContaining({ error: "DB write error" }),
+      expect.objectContaining({ err: expect.any(Error) }),
     );
   });
 

@@ -73,9 +73,10 @@ async function start(): Promise<void> {
     try {
       await adapter.exists("__healthcheck__" as import("@pluralscape/types").StorageKey);
     } catch (error) {
-      logger.warn("S3 blob storage probe failed — check credentials and bucket config", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn(
+        "S3 blob storage probe failed — check credentials and bucket config",
+        error instanceof Error ? { err: error } : { error: String(error) },
+      );
     }
   } else {
     const storageRoot = process.env["BLOB_STORAGE_PATH"] ?? "./data/blobs";

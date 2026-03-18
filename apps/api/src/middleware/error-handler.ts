@@ -1,6 +1,11 @@
 import { HTTPException } from "hono/http-exception";
 
-import { HTTP_BAD_REQUEST, HTTP_INTERNAL_SERVER_ERROR } from "../http.constants.js";
+import {
+  HTTP_BAD_REQUEST,
+  HTTP_FORBIDDEN,
+  HTTP_INTERNAL_SERVER_ERROR,
+  HTTP_UNAUTHORIZED,
+} from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { getContextLogger } from "../lib/logger.js";
 
@@ -76,18 +81,18 @@ export const errorHandler: ErrorHandler = (err, c) => {
 
   if (err instanceof ApiHttpError) {
     if (err.status >= HTTP_INTERNAL_SERVER_ERROR) {
-      log.error("Unhandled error", {
-        status: err.status,
-        code: err.code,
-        error: err.message,
-      });
+      log.error("Unhandled error", { status: err.status, code: err.code, err });
+    } else if (err.status === HTTP_UNAUTHORIZED || err.status === HTTP_FORBIDDEN) {
+      log.info("Auth rejection", { status: err.status, code: err.code, message: err.message });
+    } else {
+      log.debug("Client error", { status: err.status, code: err.code, message: err.message });
     }
     return formatError(c, err.status, err.code, err.message, requestId, isProduction, err.details);
   }
 
   // Check by name to avoid importing Zod as a dependency of the error handler
   if (err instanceof Error && err.name === "ZodError") {
-    log.warn("ZodError in request");
+    log.warn("ZodError in request", { requestId, err });
     return formatError(
       c,
       HTTP_BAD_REQUEST,
@@ -101,10 +106,11 @@ export const errorHandler: ErrorHandler = (err, c) => {
 
   if (err instanceof HTTPException) {
     if (err.status >= HTTP_INTERNAL_SERVER_ERROR) {
-      log.error("Unhandled error", {
-        status: err.status,
-        error: err.message,
-      });
+      log.error("Unhandled error", { status: err.status, err });
+    } else if (err.status === HTTP_UNAUTHORIZED || err.status === HTTP_FORBIDDEN) {
+      log.info("Auth rejection", { status: err.status, message: err.message });
+    } else {
+      log.debug("Client error", { status: err.status, message: err.message });
     }
     return formatError(
       c,
@@ -117,9 +123,7 @@ export const errorHandler: ErrorHandler = (err, c) => {
   }
 
   // Unknown error — always 500
-  log.error("Unhandled error", {
-    error: err instanceof Error ? err.message : String(err),
-  });
+  log.error("Unhandled error", err instanceof Error ? { err } : { error: String(err) });
   const message = isProduction
     ? "Internal Server Error"
     : err instanceof Error

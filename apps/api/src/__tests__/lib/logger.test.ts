@@ -1,16 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// We need to mock pino before importing the logger module
-const mockChild = vi.fn();
-const mockInfo = vi.fn();
-const mockWarn = vi.fn();
-const mockError = vi.fn();
-const mockDebug = vi.fn();
-
-const childInfo = vi.fn();
-const childWarn = vi.fn();
-const childError = vi.fn();
-const childDebug = vi.fn();
+// vi.hoisted ensures these are initialized before vi.mock factory runs
+const {
+  mockChild,
+  mockInfo,
+  mockWarn,
+  mockError,
+  mockDebug,
+  childInfo,
+  childWarn,
+  childError,
+  childDebug,
+} = vi.hoisted(() => ({
+  mockChild: vi.fn(),
+  mockInfo: vi.fn(),
+  mockWarn: vi.fn(),
+  mockError: vi.fn(),
+  mockDebug: vi.fn(),
+  childInfo: vi.fn(),
+  childWarn: vi.fn(),
+  childError: vi.fn(),
+  childDebug: vi.fn(),
+}));
 
 vi.mock("pino", () => ({
   default: vi.fn(() => ({
@@ -146,5 +157,58 @@ describe("logger", () => {
 
     childLogger.debug("child debug");
     expect(childDebug).toHaveBeenCalledWith("child debug");
+  });
+});
+
+describe("getContextLogger", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockInfo.mockClear();
+    mockWarn.mockClear();
+    mockError.mockClear();
+    mockDebug.mockClear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns the logger from context when branded AppLogger is present", async () => {
+    const { getContextLogger, createRequestLogger } = await import("../../lib/logger.js");
+    const brandedLogger = createRequestLogger("req-test");
+    const c = { get: () => brandedLogger };
+
+    const result = getContextLogger(c);
+    expect(result).toBe(brandedLogger);
+  });
+
+  it("falls back to root logger when context has no logger", async () => {
+    const { getContextLogger, logger } = await import("../../lib/logger.js");
+    const c = { get: () => undefined };
+
+    const result = getContextLogger(c);
+    expect(result).toBe(logger);
+  });
+
+  it("falls back to root logger when context has non-branded object", async () => {
+    const { getContextLogger, logger } = await import("../../lib/logger.js");
+    const c = { get: () => ({ error: "not a logger" }) };
+
+    const result = getContextLogger(c);
+    expect(result).toBe(logger);
+  });
+
+  it("falls back to root logger when context returns null", async () => {
+    const { getContextLogger, logger } = await import("../../lib/logger.js");
+    const c = { get: () => null };
+
+    const result = getContextLogger(c);
+    expect(result).toBe(logger);
+  });
+
+  it("branded logger carries the APP_LOGGER_BRAND symbol", async () => {
+    const { createRequestLogger, APP_LOGGER_BRAND: brand } = await import("../../lib/logger.js");
+    const brandedLogger = createRequestLogger("req-brand");
+    expect(brand in brandedLogger).toBe(true);
   });
 });

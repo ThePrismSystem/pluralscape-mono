@@ -216,9 +216,10 @@ export async function resetPasswordWithRecoveryKey(
     try {
       verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
     } catch (err: unknown) {
-      log.error("Unexpected verifyPassword error during anti-enumeration", {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      log.error(
+        "Unexpected verifyPassword error during anti-enumeration",
+        err instanceof Error ? { err } : { error: String(err) },
+      );
     }
     await equalizeAntiEnumTiming(startTime);
     return null;
@@ -239,9 +240,10 @@ export async function resetPasswordWithRecoveryKey(
     try {
       verifyPassword(DUMMY_ARGON2_HASH, parsed.newPassword);
     } catch (err: unknown) {
-      log.error("Unexpected verifyPassword error during anti-enumeration", {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      log.error(
+        "Unexpected verifyPassword error during anti-enumeration",
+        err instanceof Error ? { err } : { error: String(err) },
+      );
     }
     await equalizeAntiEnumTiming(startTime);
     throw new NoActiveRecoveryKeyError("No active recovery key found");

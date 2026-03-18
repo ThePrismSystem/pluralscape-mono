@@ -8,9 +8,20 @@ import type { JobDefinition, JobId, StorageKey, UnixMillis } from "@pluralscape/
 
 // ── Mock deps ────────────────────────────────────────────────────────
 
+const mockLogWarn = vi.fn();
+
 vi.mock("../jobs/jobs.constants.js", () => ({
   BLOB_S3_CLEANUP_GRACE_PERIOD_MS: 30 * 86_400_000,
   BLOB_S3_CLEANUP_BATCH_SIZE: 100,
+}));
+
+vi.mock("../lib/logger.js", () => ({
+  logger: {
+    info: vi.fn(),
+    warn: mockLogWarn,
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
 }));
 
 const { createBlobS3CleanupHandler } = await import("../jobs/blob-s3-cleanup.js");
@@ -74,6 +85,7 @@ function stubCtx(): { ctx: JobHandlerContext; heartbeatFn: ReturnType<typeof vi.
 describe("blob-s3-cleanup handler", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    mockLogWarn.mockClear();
   });
 
   it("skips cleanup when signal is already aborted", async () => {
@@ -148,14 +160,20 @@ describe("blob-s3-cleanup handler", () => {
       .mockResolvedValueOnce(undefined);
     const handler = createBlobS3CleanupHandler(db, adapter);
     const { ctx } = stubCtx();
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
     await handler(stubJob(), ctx);
 
     // All 3 S3 deletes attempted
     expect(deleteFn).toHaveBeenCalledTimes(3);
     // Only 2 successful blobs should be hard-deleted from metadata
     expect(chain.where).toHaveBeenCalled();
+    // Poison blob logged via structured logger
+    expect(mockLogWarn).toHaveBeenCalledWith(
+      "Failed to delete S3 object for blob",
+      expect.objectContaining({
+        blobId: "blob_poison",
+        err: expect.any(Error),
+      }),
+    );
   });
 
   it("emits heartbeats during batch processing", async () => {

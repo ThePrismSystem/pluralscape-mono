@@ -61,7 +61,7 @@ describe("createValkeyStore", () => {
     expect(result).toBeNull();
     expect(mockLogWarn).toHaveBeenCalledWith(
       expect.stringContaining("Failed to connect to Valkey"),
-      expect.objectContaining({ error: expect.any(String) }),
+      expect.objectContaining({ err: expect.any(Error) }),
     );
   });
 });

@@ -47,7 +47,7 @@ export function createBlobS3CleanupHandler(
         // Skip and continue — the blob metadata stays and will be retried next run
         logger.warn("Failed to delete S3 object for blob", {
           blobId: row.id,
-          error: error instanceof Error ? error.message : "unknown error",
+          ...(error instanceof Error ? { err: error } : { error: String(error) }),
         });
       }
       await ctx.heartbeat.heartbeat();

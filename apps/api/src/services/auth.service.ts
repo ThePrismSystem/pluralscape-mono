@@ -231,9 +231,10 @@ export async function loginAccount(
     try {
       verifyPassword(DUMMY_ARGON2_HASH, parsed.password);
     } catch (err: unknown) {
-      log.error("Unexpected verifyPassword error during anti-enumeration", {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      log.error(
+        "Unexpected verifyPassword error during anti-enumeration",
+        err instanceof Error ? { err } : { error: String(err) },
+      );
     }
     // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
     // Uses a zeroed account ID since no real account exists for this email.
@@ -242,7 +243,9 @@ export async function loginAccount(
       actor: { kind: "account", id: ANTI_ENUM_SENTINEL_ACCOUNT_ID },
       detail: "Account not found",
     }).catch((auditError: unknown) => {
-      console.error("[audit] Failed to write auth.login-failed:", auditError);
+      log.error("[audit] Failed to write auth.login-failed:", {
+        err: auditError instanceof Error ? auditError : { message: String(auditError) },
+      });
     });
     return null;
   }
@@ -256,9 +259,10 @@ export async function loginAccount(
       detail: "Invalid password",
       accountId: account.id as AccountId,
     }).catch((auditError: unknown) => {
-      log.error("Failed to write auth.login-failed audit event", {
-        error: auditError instanceof Error ? auditError.message : String(auditError),
-      });
+      log.error(
+        "Failed to write auth.login-failed audit event",
+        auditError instanceof Error ? { err: auditError } : { error: String(auditError) },
+      );
     });
     return null;
   }

@@ -8,17 +8,19 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
-const { mockLogError, mockLogWarn } = vi.hoisted(() => ({
+const { mockLogError, mockLogWarn, mockLogInfo, mockLogDebug } = vi.hoisted(() => ({
   mockLogError: vi.fn(),
   mockLogWarn: vi.fn(),
+  mockLogInfo: vi.fn(),
+  mockLogDebug: vi.fn(),
 }));
 
 vi.mock("../lib/logger.js", () => {
   const instance = {
-    info: vi.fn(),
+    info: mockLogInfo,
     warn: mockLogWarn,
     error: mockLogError,
-    debug: vi.fn(),
+    debug: mockLogDebug,
   };
   return {
     logger: instance,
@@ -39,6 +41,8 @@ describe("errorHandler", () => {
     vi.restoreAllMocks();
     mockLogError.mockClear();
     mockLogWarn.mockClear();
+    mockLogInfo.mockClear();
+    mockLogDebug.mockClear();
   });
 
   function createApp(): Hono {
@@ -240,20 +244,33 @@ describe("errorHandler", () => {
     expect(body.error.details).toBeUndefined();
   });
 
-  it("logs unhandled errors via structured logger", async () => {
+  it("logs unhandled errors via structured logger with err object", async () => {
     const app = createApp();
     await app.request("/fail");
     expect(mockLogError).toHaveBeenCalledWith(
       "Unhandled error",
-      expect.objectContaining({ error: "Something broke" }),
+      expect.objectContaining({ err: expect.any(Error) }),
     );
   });
 
-  it("does not log HTTPException 4xx errors", async () => {
-    mockLogError.mockClear();
+  it("logs HTTPException 403 at info level for security audit", async () => {
     const app = createApp();
     await app.request("/forbidden");
     expect(mockLogError).not.toHaveBeenCalled();
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      "Auth rejection",
+      expect.objectContaining({ status: 403, message: "Forbidden" }),
+    );
+  });
+
+  it("logs HTTPException 404 at debug level", async () => {
+    const app = createApp();
+    await app.request("/not-found");
+    expect(mockLogError).not.toHaveBeenCalled();
+    expect(mockLogDebug).toHaveBeenCalledWith(
+      "Client error",
+      expect.objectContaining({ status: 404, message: "Not Found" }),
+    );
   });
 
   it("logs HTTPException 5xx errors via structured logger", async () => {
@@ -261,7 +278,30 @@ describe("errorHandler", () => {
     await app.request("/server-error");
     expect(mockLogError).toHaveBeenCalledWith(
       "Unhandled error",
-      expect.objectContaining({ status: 500, error: "Internal failure" }),
+      expect.objectContaining({ status: 500, err: expect.any(HTTPException) }),
+    );
+  });
+
+  it("logs 401 ApiHttpError at info level for security audit", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.onError(errorHandler);
+    app.get("/unauth", () => {
+      throw new ApiHttpError(401, "UNAUTHENTICATED", "Not authenticated");
+    });
+    await app.request("/unauth");
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      "Auth rejection",
+      expect.objectContaining({ status: 401, code: "UNAUTHENTICATED" }),
+    );
+  });
+
+  it("logs 422 ApiHttpError at debug level", async () => {
+    const app = createApp();
+    await app.request("/api-error");
+    expect(mockLogDebug).toHaveBeenCalledWith(
+      "Client error",
+      expect.objectContaining({ status: 422, code: "VALIDATION_ERROR" }),
     );
   });
 
@@ -285,7 +325,7 @@ describe("errorHandler", () => {
     expect(headerValue).toBe(body.requestId);
   });
 
-  it("logs ZodError via structured logger warn", async () => {
+  it("logs ZodError via structured logger warn with context", async () => {
     const app = new Hono();
     app.use("*", requestIdMiddleware());
     app.onError(errorHandler);
@@ -295,6 +335,12 @@ describe("errorHandler", () => {
       throw err;
     });
     await app.request("/zod-fail");
-    expect(mockLogWarn).toHaveBeenCalledWith("ZodError in request");
+    expect(mockLogWarn).toHaveBeenCalledWith(
+      "ZodError in request",
+      expect.objectContaining({
+        requestId: expect.any(String),
+        err: expect.any(Error),
+      }),
+    );
   });
 });

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 
+import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { requestIdMiddleware } from "../../middleware/request-id.js";
 
 import type { Env } from "hono";
@@ -78,5 +79,23 @@ describe("requestIdMiddleware", () => {
 
     // UUIDv7 encodes timestamp in the first 48 bits — lexicographic order matches time order
     expect(id1 < id2).toBe(true);
+  });
+
+  it("attaches a branded AppLogger to context", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    let contextLog: unknown;
+    app.get("/test", (c) => {
+      // Access via c.var to avoid type narrowing on the generic Hono context
+      contextLog = (c.var as Record<string, unknown>)["log"];
+      return c.json({ ok: true });
+    });
+    await app.request("/test");
+    expect(contextLog).toBeDefined();
+    expect(typeof (contextLog as Record<string, unknown>).info).toBe("function");
+    expect(typeof (contextLog as Record<string, unknown>).warn).toBe("function");
+    expect(typeof (contextLog as Record<string, unknown>).error).toBe("function");
+    expect(typeof (contextLog as Record<string, unknown>).debug).toBe("function");
+    expect(APP_LOGGER_BRAND in (contextLog as object)).toBe(true);
   });
 });

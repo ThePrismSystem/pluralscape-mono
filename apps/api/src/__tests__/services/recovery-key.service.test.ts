@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { AccountId } from "@pluralscape/types";
 
@@ -73,13 +74,7 @@ const {
 
 // ── Tests ────────────────────────────────────────────────────────────
 
-/** A no-op logger for service functions that require an AppLogger. */
-const mockLogger = {
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  debug: vi.fn(),
-};
+const { logger: mockLogger, methods: logMethods } = createMockLogger();
 
 describe("recovery-key service", () => {
   const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -89,8 +84,10 @@ describe("recovery-key service", () => {
     mockMemzero.mockClear();
     mockVerifyPassword.mockClear();
     mockAudit.mockClear();
-    mockLogger.error.mockClear();
-    mockLogger.warn.mockClear();
+    logMethods.error.mockClear();
+    logMethods.warn.mockClear();
+    logMethods.info.mockClear();
+    logMethods.debug.mockClear();
   });
 
   // ── getRecoveryKeyStatus ──────────────────────────────────────────
