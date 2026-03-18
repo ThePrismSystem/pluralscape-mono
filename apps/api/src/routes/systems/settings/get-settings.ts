@@ -11,7 +11,10 @@ export const getSettingsRoute = new Hono<AuthEnv>();
 
 getSettingsRoute.get("/", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(requireParam(c.req.param("id"), "id"), ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
 
   const db = await getDb();
   const result = await getSystemSettings(db, systemId, auth);

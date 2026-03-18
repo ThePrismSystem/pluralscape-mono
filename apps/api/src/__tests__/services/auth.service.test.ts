@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
 import {
@@ -330,7 +331,10 @@ describe("auth service", () => {
     it("returns fake result on duplicate email to prevent enumeration", async () => {
       const { db, chain } = mockDb();
       const pgError = new Error("duplicate key value violates unique constraint");
-      Object.assign(pgError, { code: "23505", constraint_name: "accounts_email_hash_idx" });
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
       chain.transaction.mockRejectedValueOnce(pgError);
 
       const result = await registerAccount(db, validParams, "web", mockAudit);
@@ -370,7 +374,10 @@ describe("auth service", () => {
     it("generates fake recovery key with correct format for anti-enumeration", async () => {
       const { db, chain } = mockDb();
       const pgError = new Error("duplicate key value violates unique constraint");
-      Object.assign(pgError, { code: "23505", constraint_name: "accounts_email_hash_idx" });
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
       chain.transaction.mockRejectedValueOnce(pgError);
 
       const result = await registerAccount(db, validParams, "web", mockAudit);

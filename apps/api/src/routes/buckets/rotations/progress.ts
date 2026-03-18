@@ -11,7 +11,10 @@ export const progressRoute = new Hono<AuthEnv>();
 
 progressRoute.get("/:rotationId", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(requireParam(c.req.param("id"), "id"), ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
   const bucketId = parseIdParam(
     requireParam(c.req.param("bucketId"), "bucketId"),
     ID_PREFIXES.bucket,

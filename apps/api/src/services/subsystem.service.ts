@@ -11,6 +11,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
@@ -30,13 +31,6 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-
-/**
- * Safety cap for ancestor walk during cycle detection.
- * Limits subsystem nesting to 50 levels — sufficient for any practical
- * system structure while preventing runaway traversals from circular references.
- */
-const MAX_ANCESTOR_DEPTH = 50;
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -256,29 +250,19 @@ export async function updateSubsystem(
 
     // If parentSubsystemId is non-null, validate and check for cycles
     if (parsed.parentSubsystemId !== null) {
-      let currentId: string | null = parsed.parentSubsystemId;
-      for (let i = 0; i < MAX_ANCESTOR_DEPTH && currentId !== null; i++) {
-        if (currentId === subsystemId) {
-          throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Circular reference detected");
-        }
-        const [ancestor] = await tx
-          .select({ parentSubsystemId: subsystems.parentSubsystemId })
-          .from(subsystems)
-          .where(and(eq(subsystems.id, currentId), eq(subsystems.systemId, systemId)))
-          .limit(1);
-        if (!ancestor) {
-          throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Parent subsystem not found");
-        }
-        currentId = ancestor.parentSubsystemId;
-      }
-
-      if (currentId !== null) {
-        throw new ApiHttpError(
-          HTTP_CONFLICT,
-          "CONFLICT",
-          "Subsystem hierarchy too deep or contains a cycle",
-        );
-      }
+      await detectAncestorCycle(
+        async (id) => {
+          const [row] = await tx
+            .select({ parentSubsystemId: subsystems.parentSubsystemId })
+            .from(subsystems)
+            .where(and(eq(subsystems.id, id), eq(subsystems.systemId, systemId)))
+            .limit(1);
+          return row?.parentSubsystemId;
+        },
+        parsed.parentSubsystemId,
+        subsystemId,
+        "Subsystem",
+      );
     }
 
     const updated = await tx

@@ -59,7 +59,7 @@ describe("POST /systems/:id/groups/reorder", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with ok: true", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(reorderGroups).mockResolvedValueOnce(undefined);
 
     const app = createApp();
@@ -69,9 +69,7 @@ describe("POST /systems/:id/groups/reorder", () => {
       body: JSON.stringify({ operations: [{ groupId: "grp_abc", sortOrder: 0 }] }),
     });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
-    expect(body.ok).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   it("re-throws unexpected errors as 500", async () => {

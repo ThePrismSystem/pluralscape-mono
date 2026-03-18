@@ -4,7 +4,14 @@ import {
   bucketRotationItems,
   keyGrants,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, KEY_ROTATION, createId, now } from "@pluralscape/types";
+import {
+  ID_PREFIXES,
+  KEY_ROTATION,
+  ROTATION_ITEM_STATUSES,
+  ROTATION_STATES,
+  createId,
+  now,
+} from "@pluralscape/types";
 import {
   ClaimChunkBodySchema,
   CompleteChunkBodySchema,
@@ -88,17 +95,21 @@ export async function initiateRotation(
       and(
         eq(bucketKeyRotations.bucketId, bucketId),
         eq(bucketKeyRotations.systemId, systemId),
-        inArray(bucketKeyRotations.state, ["initiated", "migrating", "sealing"]),
+        inArray(bucketKeyRotations.state, [
+          ROTATION_STATES.initiated,
+          ROTATION_STATES.migrating,
+          ROTATION_STATES.sealing,
+        ]),
       ),
     )
     .limit(1);
 
   if (activeRotation) {
-    if (activeRotation.state === "initiated") {
+    if (activeRotation.state === ROTATION_STATES.initiated) {
       // Cancel the unclaimed rotation and proceed
       await db
         .update(bucketKeyRotations)
-        .set({ state: "failed" })
+        .set({ state: ROTATION_STATES.failed })
         .where(eq(bucketKeyRotations.id, activeRotation.id));
     } else {
       throw new ApiHttpError(
@@ -130,7 +141,7 @@ export async function initiateRotation(
         systemId,
         fromKeyVersion: parsed.data.newKeyVersion - 1,
         toKeyVersion: parsed.data.newKeyVersion,
-        state: "initiated",
+        state: ROTATION_STATES.initiated,
         initiatedAt: timestamp,
         totalItems: tags.length,
         completedItems: 0,
@@ -151,7 +162,7 @@ export async function initiateRotation(
           systemId,
           entityType: tag.entityType,
           entityId: tag.entityId,
-          status: "pending" as RotationItemStatus,
+          status: ROTATION_ITEM_STATUSES.pending as RotationItemStatus,
           attempts: 0,
         })),
       );
@@ -230,7 +241,10 @@ export async function claimRotationChunk(
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Rotation not found");
   }
 
-  if (rotation.state !== "initiated" && rotation.state !== "migrating") {
+  if (
+    rotation.state !== ROTATION_STATES.initiated &&
+    rotation.state !== ROTATION_STATES.migrating
+  ) {
     throw new ApiHttpError(
       HTTP_CONFLICT,
       "CONFLICT",
@@ -244,11 +258,11 @@ export async function claimRotationChunk(
   // Reclaim stale items
   await db
     .update(bucketRotationItems)
-    .set({ status: "pending", claimedBy: null, claimedAt: null })
+    .set({ status: ROTATION_ITEM_STATUSES.pending, claimedBy: null, claimedAt: null })
     .where(
       and(
         eq(bucketRotationItems.rotationId, rotationId),
-        eq(bucketRotationItems.status, "claimed"),
+        eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.claimed),
         lt(bucketRotationItems.claimedAt, staleThreshold),
       ),
     );
@@ -260,7 +274,7 @@ export async function claimRotationChunk(
     .where(
       and(
         eq(bucketRotationItems.rotationId, rotationId),
-        eq(bucketRotationItems.status, "pending"),
+        eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.pending),
       ),
     )
     .limit(chunkSize);
@@ -278,23 +292,31 @@ export async function claimRotationChunk(
   const claimedRows = await db
     .update(bucketRotationItems)
     .set({
-      status: "claimed",
+      status: ROTATION_ITEM_STATUSES.claimed,
       claimedBy: auth.sessionId,
       claimedAt: timestamp,
     })
     .where(
-      and(inArray(bucketRotationItems.id, pendingIds), eq(bucketRotationItems.status, "pending")),
+      and(
+        inArray(bucketRotationItems.id, pendingIds),
+        eq(bucketRotationItems.status, ROTATION_ITEM_STATUSES.pending),
+      ),
     )
     .returning();
 
   // Transition initiated → migrating on first claim
   let currentState = rotation.state as RotationState;
-  if (currentState === "initiated" && claimedRows.length > 0) {
+  if (currentState === ROTATION_STATES.initiated && claimedRows.length > 0) {
     await db
       .update(bucketKeyRotations)
-      .set({ state: "migrating" })
-      .where(and(eq(bucketKeyRotations.id, rotationId), eq(bucketKeyRotations.state, "initiated")));
-    currentState = "migrating";
+      .set({ state: ROTATION_STATES.migrating })
+      .where(
+        and(
+          eq(bucketKeyRotations.id, rotationId),
+          eq(bucketKeyRotations.state, ROTATION_STATES.initiated),
+        ),
+      );
+    currentState = ROTATION_STATES.migrating;
   }
 
   return {
@@ -340,7 +362,7 @@ export async function completeRotationChunk(
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Rotation not found");
     }
 
-    if (rotation.state !== "migrating") {
+    if (rotation.state !== ROTATION_STATES.migrating) {
       throw new ApiHttpError(
         HTTP_CONFLICT,
         "CONFLICT",
@@ -354,10 +376,10 @@ export async function completeRotationChunk(
 
     // Update each item's status
     for (const item of parsed.data.items) {
-      if (item.status === "completed") {
+      if (item.status === ROTATION_ITEM_STATUSES.completed) {
         await tx
           .update(bucketRotationItems)
-          .set({ status: "completed", completedAt: timestamp })
+          .set({ status: ROTATION_ITEM_STATUSES.completed, completedAt: timestamp })
           .where(eq(bucketRotationItems.id, item.itemId));
         completedDelta++;
       } else {
@@ -373,7 +395,7 @@ export async function completeRotationChunk(
           .where(eq(bucketRotationItems.id, item.itemId))
           .returning();
 
-        if (updated?.status === "failed") {
+        if (updated?.status === ROTATION_ITEM_STATUSES.failed) {
           failedDelta++;
         }
       }
@@ -419,7 +441,7 @@ export async function completeRotationChunk(
             systemId,
             entityType: tag.entityType,
             entityId: tag.entityId,
-            status: "pending" as RotationItemStatus,
+            status: ROTATION_ITEM_STATUSES.pending as RotationItemStatus,
             attempts: 0,
           })),
         );
@@ -440,7 +462,7 @@ export async function completeRotationChunk(
         await tx
           .update(bucketKeyRotations)
           .set({
-            state: "failed",
+            state: ROTATION_STATES.failed,
             completedItems: newCompleted,
             failedItems: newFailed,
           })
@@ -457,7 +479,7 @@ export async function completeRotationChunk(
         await tx
           .update(bucketKeyRotations)
           .set({
-            state: "completed",
+            state: ROTATION_STATES.completed,
             completedItems: newCompleted,
             failedItems: newFailed,
             completedAt: timestamp,

@@ -3,7 +3,7 @@ import { Hono } from "hono";
 
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { parseIdParam } from "../../lib/id-param.js";
+import { parseIdParam, requireParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { updateCustomFront } from "../../services/custom-front.service.js";
@@ -17,7 +17,10 @@ updateRoute.use("*", createCategoryRateLimiter("write"));
 updateRoute.put("/:customFrontId", async (c) => {
   const body = await parseJsonBody(c);
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
   const customFrontId = parseIdParam(c.req.param("customFrontId"), ID_PREFIXES.customFront);
   const audit = createAuditWriter(c, auth);
 

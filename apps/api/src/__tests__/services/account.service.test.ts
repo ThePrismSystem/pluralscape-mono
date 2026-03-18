@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { AccountId, SessionId } from "@pluralscape/types";
@@ -209,7 +210,10 @@ describe("account service", () => {
       ]);
 
       const pgError = new Error("duplicate key value violates unique constraint");
-      Object.assign(pgError, { code: "23505", constraint_name: "accounts_email_hash_idx" });
+      Object.assign(pgError, {
+        code: PG_UNIQUE_VIOLATION,
+        constraint_name: "accounts_email_hash_idx",
+      });
       chain.transaction.mockRejectedValueOnce(pgError);
 
       await expect(

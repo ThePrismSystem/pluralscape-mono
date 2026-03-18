@@ -11,6 +11,7 @@ import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
 import { AddStructureMembershipBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
+import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
@@ -35,6 +36,8 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
 
+type TransactionLike = Parameters<Parameters<PostgresJsDatabase["transaction"]>[0]>[0];
+
 export interface StructureMembershipResult {
   readonly id: string;
   readonly entityId: string;
@@ -43,56 +46,56 @@ export interface StructureMembershipResult {
   readonly createdAt: UnixMillis;
 }
 
-type EntityType = "subsystem" | "sideSystem" | "layer";
+interface NormalizedRow {
+  readonly id: string;
+  readonly entityId: string;
+  readonly systemId: string;
+  readonly encryptedData: EncryptedBlob;
+  readonly createdAt: number;
+}
 
-interface EntityConfig {
+interface MembershipEntityConfig {
   readonly idPrefix: string;
   readonly entityName: string;
   readonly addEventType: AuditEventType;
   readonly removeEventType: AuditEventType;
+  readonly entityTable: typeof subsystems | typeof sideSystems | typeof layers;
+  readonly insert: (
+    tx: TransactionLike,
+    id: string,
+    entityId: string,
+    systemId: SystemId,
+    blob: EncryptedBlob,
+    timestamp: number,
+  ) => Promise<NormalizedRow | undefined>;
+  readonly remove: (
+    tx: TransactionLike,
+    membershipId: string,
+    systemId: SystemId,
+  ) => Promise<{ id: string }[]>;
+  readonly query: (
+    db: PostgresJsDatabase,
+    entityId: string,
+    systemId: SystemId,
+    cursor: PaginationCursor | undefined,
+    limit: number,
+  ) => Promise<NormalizedRow[]>;
 }
-
-const ENTITY_CONFIGS: Record<EntityType, EntityConfig> = {
-  subsystem: {
-    idPrefix: ID_PREFIXES.subsystemMembership,
-    entityName: "Subsystem",
-    addEventType: "subsystem-membership.added",
-    removeEventType: "subsystem-membership.removed",
-  },
-  sideSystem: {
-    idPrefix: ID_PREFIXES.sideSystemMembership,
-    entityName: "Side system",
-    addEventType: "side-system-membership.added",
-    removeEventType: "side-system-membership.removed",
-  },
-  layer: {
-    idPrefix: ID_PREFIXES.layerMembership,
-    entityName: "Layer",
-    addEventType: "layer-membership.added",
-    removeEventType: "layer-membership.removed",
-  },
-};
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function toMembershipResult(
-  id: string,
-  entityId: string,
-  sysId: string,
-  blob: EncryptedBlob,
-  createdAt: number,
-): StructureMembershipResult {
+function toMembershipResult(row: NormalizedRow): StructureMembershipResult {
   return {
-    id,
-    entityId,
-    systemId: sysId as SystemId,
-    encryptedData: encryptedBlobToBase64(blob),
-    createdAt: createdAt as UnixMillis,
+    id: row.id,
+    entityId: row.entityId,
+    systemId: row.systemId as SystemId,
+    encryptedData: encryptedBlobToBase64(row.encryptedData),
+    createdAt: row.createdAt as UnixMillis,
   };
 }
 
 async function verifyMemberExists(
-  tx: Parameters<Parameters<PostgresJsDatabase["transaction"]>[0]>[0],
+  tx: TransactionLike,
   memberId: string,
   systemId: SystemId,
 ): Promise<void> {
@@ -109,77 +112,209 @@ async function verifyMemberExists(
   }
 }
 
-// ── SUBSYSTEM MEMBERSHIPS ───────────────────────────────────────────
-
-export async function addSubsystemMembership(
-  db: PostgresJsDatabase,
+async function verifyEntityExists(
+  dbOrTx: PostgresJsDatabase | TransactionLike,
+  table: typeof subsystems | typeof sideSystems | typeof layers,
+  entityId: string,
   systemId: SystemId,
-  subsystemId: string,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<StructureMembershipResult> {
-  await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.subsystem;
+  entityName: string,
+): Promise<void> {
+  const [entity] = await dbOrTx
+    .select({ id: table.id })
+    .from(table)
+    .where(and(eq(table.id, entityId), eq(table.systemId, systemId), eq(table.archived, false)))
+    .limit(1);
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    AddStructureMembershipBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+  if (!entity) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${entityName} not found`);
+  }
+}
 
-  const membershipId = createId(cfg.idPrefix);
-  const timestamp = now();
+// ── Entity configs ──────────────────────────────────────────────────
 
-  return db.transaction(async (tx) => {
-    const [entity] = await tx
-      .select({ id: subsystems.id })
-      .from(subsystems)
-      .where(
-        and(
-          eq(subsystems.id, subsystemId),
-          eq(subsystems.systemId, systemId),
-          eq(subsystems.archived, false),
-        ),
-      )
-      .limit(1);
+function normalizeSubsystem(r: typeof subsystemMemberships.$inferSelect): NormalizedRow {
+  return {
+    id: r.id,
+    entityId: r.subsystemId,
+    systemId: r.systemId,
+    encryptedData: r.encryptedData,
+    createdAt: r.createdAt,
+  };
+}
 
-    if (!entity) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${cfg.entityName} not found`);
-    }
+function normalizeSideSystem(r: typeof sideSystemMemberships.$inferSelect): NormalizedRow {
+  return {
+    id: r.id,
+    entityId: r.sideSystemId,
+    systemId: r.systemId,
+    encryptedData: r.encryptedData,
+    createdAt: r.createdAt,
+  };
+}
 
-    await verifyMemberExists(tx, parsed.memberId, systemId);
+function normalizeLayer(r: typeof layerMemberships.$inferSelect): NormalizedRow {
+  return {
+    id: r.id,
+    entityId: r.layerId,
+    systemId: r.systemId,
+    encryptedData: r.encryptedData,
+    createdAt: r.createdAt,
+  };
+}
 
-    try {
+const ENTITY_CONFIGS = {
+  subsystem: {
+    idPrefix: ID_PREFIXES.subsystemMembership,
+    entityName: "Subsystem",
+    addEventType: "subsystem-membership.added",
+    removeEventType: "subsystem-membership.removed",
+    entityTable: subsystems,
+    insert: async (tx, id, entityId, systemId, blob, timestamp) => {
       const [row] = await tx
         .insert(subsystemMemberships)
-        .values({
-          id: membershipId,
-          subsystemId,
-          systemId,
-          encryptedData: blob,
-          createdAt: timestamp,
-        })
+        .values({ id, subsystemId: entityId, systemId, encryptedData: blob, createdAt: timestamp })
         .returning();
+      return row ? normalizeSubsystem(row) : undefined;
+    },
+    remove: (tx, membershipId, systemId) =>
+      tx
+        .delete(subsystemMemberships)
+        .where(
+          and(
+            eq(subsystemMemberships.id, membershipId),
+            eq(subsystemMemberships.systemId, systemId),
+          ),
+        )
+        .returning({ id: subsystemMemberships.id }),
+    query: async (db, entityId, systemId, cursor, limit) => {
+      const conds = [
+        eq(subsystemMemberships.subsystemId, entityId),
+        eq(subsystemMemberships.systemId, systemId),
+      ];
+      if (cursor) conds.push(gt(subsystemMemberships.id, cursor));
+      const rows = await db
+        .select()
+        .from(subsystemMemberships)
+        .where(and(...conds))
+        .orderBy(subsystemMemberships.id)
+        .limit(limit);
+      return rows.map(normalizeSubsystem);
+    },
+  },
+  sideSystem: {
+    idPrefix: ID_PREFIXES.sideSystemMembership,
+    entityName: "Side system",
+    addEventType: "side-system-membership.added",
+    removeEventType: "side-system-membership.removed",
+    entityTable: sideSystems,
+    insert: async (tx, id, entityId, systemId, blob, timestamp) => {
+      const [row] = await tx
+        .insert(sideSystemMemberships)
+        .values({ id, sideSystemId: entityId, systemId, encryptedData: blob, createdAt: timestamp })
+        .returning();
+      return row ? normalizeSideSystem(row) : undefined;
+    },
+    remove: (tx, membershipId, systemId) =>
+      tx
+        .delete(sideSystemMemberships)
+        .where(
+          and(
+            eq(sideSystemMemberships.id, membershipId),
+            eq(sideSystemMemberships.systemId, systemId),
+          ),
+        )
+        .returning({ id: sideSystemMemberships.id }),
+    query: async (db, entityId, systemId, cursor, limit) => {
+      const conds = [
+        eq(sideSystemMemberships.sideSystemId, entityId),
+        eq(sideSystemMemberships.systemId, systemId),
+      ];
+      if (cursor) conds.push(gt(sideSystemMemberships.id, cursor));
+      const rows = await db
+        .select()
+        .from(sideSystemMemberships)
+        .where(and(...conds))
+        .orderBy(sideSystemMemberships.id)
+        .limit(limit);
+      return rows.map(normalizeSideSystem);
+    },
+  },
+  layer: {
+    idPrefix: ID_PREFIXES.layerMembership,
+    entityName: "Layer",
+    addEventType: "layer-membership.added",
+    removeEventType: "layer-membership.removed",
+    entityTable: layers,
+    insert: async (tx, id, entityId, systemId, blob, timestamp) => {
+      const [row] = await tx
+        .insert(layerMemberships)
+        .values({ id, layerId: entityId, systemId, encryptedData: blob, createdAt: timestamp })
+        .returning();
+      return row ? normalizeLayer(row) : undefined;
+    },
+    remove: (tx, membershipId, systemId) =>
+      tx
+        .delete(layerMemberships)
+        .where(and(eq(layerMemberships.id, membershipId), eq(layerMemberships.systemId, systemId)))
+        .returning({ id: layerMemberships.id }),
+    query: async (db, entityId, systemId, cursor, limit) => {
+      const conds = [
+        eq(layerMemberships.layerId, entityId),
+        eq(layerMemberships.systemId, systemId),
+      ];
+      if (cursor) conds.push(gt(layerMemberships.id, cursor));
+      const rows = await db
+        .select()
+        .from(layerMemberships)
+        .where(and(...conds))
+        .orderBy(layerMemberships.id)
+        .limit(limit);
+      return rows.map(normalizeLayer);
+    },
+  },
+} satisfies Record<string, MembershipEntityConfig>;
+
+// ── Generic implementations ─────────────────────────────────────────
+
+async function addMembershipGeneric(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  entityId: string,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+  cfg: MembershipEntityConfig,
+): Promise<StructureMembershipResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
+  const { parsed, blob } = parseAndValidateBlob(
+    params,
+    AddStructureMembershipBodySchema,
+    MAX_ENCRYPTED_DATA_BYTES,
+  );
+
+  const membershipId = createId(cfg.idPrefix);
+  const timestamp = now();
+
+  return db.transaction(async (tx) => {
+    await verifyEntityExists(tx, cfg.entityTable, entityId, systemId, cfg.entityName);
+    await verifyMemberExists(tx, parsed.memberId, systemId);
+
+    try {
+      const row = await cfg.insert(tx, membershipId, entityId, systemId, blob, timestamp);
 
       if (!row) throw new Error("INSERT returned no rows");
 
       await audit(tx, {
         eventType: cfg.addEventType,
         actor: { kind: "account", id: auth.accountId },
-        detail: `Member ${parsed.memberId} added to ${cfg.entityName} ${subsystemId}`,
+        detail: `Member ${parsed.memberId} added to ${cfg.entityName} ${entityId}`,
         systemId,
       });
 
-      return toMembershipResult(
-        row.id,
-        row.subsystemId,
-        row.systemId,
-        row.encryptedData,
-        row.createdAt,
-      );
+      return toMembershipResult(row);
     } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "23505") {
+      if (error instanceof Error && "code" in error && error.code === PG_UNIQUE_VIOLATION) {
         throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Membership already exists");
       }
       throw error;
@@ -187,23 +322,18 @@ export async function addSubsystemMembership(
   });
 }
 
-export async function removeSubsystemMembership(
+async function removeMembershipGeneric(
   db: PostgresJsDatabase,
   systemId: SystemId,
   membershipId: string,
   auth: AuthContext,
   audit: AuditWriter,
+  cfg: MembershipEntityConfig,
 ): Promise<void> {
   await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.subsystem;
 
   await db.transaction(async (tx) => {
-    const deleted = await tx
-      .delete(subsystemMemberships)
-      .where(
-        and(eq(subsystemMemberships.id, membershipId), eq(subsystemMemberships.systemId, systemId)),
-      )
-      .returning({ id: subsystemMemberships.id });
+    const deleted = await cfg.remove(tx, membershipId, systemId);
 
     if (deleted.length === 0) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Membership not found");
@@ -218,374 +348,167 @@ export async function removeSubsystemMembership(
   });
 }
 
-export async function listSubsystemMemberships(
+async function listMembershipsGeneric(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  entityId: string,
+  auth: AuthContext,
+  cfg: MembershipEntityConfig,
+  cursor?: PaginationCursor,
+  limit = DEFAULT_PAGE_LIMIT,
+): Promise<PaginatedResult<StructureMembershipResult>> {
+  await assertSystemOwnership(db, systemId, auth);
+
+  await verifyEntityExists(db, cfg.entityTable, entityId, systemId, cfg.entityName);
+
+  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
+  const rows = await cfg.query(db, entityId, systemId, cursor, effectiveLimit + 1);
+
+  const hasMore = rows.length > effectiveLimit;
+  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
+  const lastItem = items[items.length - 1];
+
+  return {
+    items,
+    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
+    hasMore,
+    totalCount: null,
+  };
+}
+
+// ── Public API ──────────────────────────────────────────────────────
+
+export function addSubsystemMembership(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  subsystemId: string,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<StructureMembershipResult> {
+  return addMembershipGeneric(
+    db,
+    systemId,
+    subsystemId,
+    params,
+    auth,
+    audit,
+    ENTITY_CONFIGS.subsystem,
+  );
+}
+
+export function addSideSystemMembership(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  sideSystemId: string,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<StructureMembershipResult> {
+  return addMembershipGeneric(
+    db,
+    systemId,
+    sideSystemId,
+    params,
+    auth,
+    audit,
+    ENTITY_CONFIGS.sideSystem,
+  );
+}
+
+export function addLayerMembership(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  layerId: string,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<StructureMembershipResult> {
+  return addMembershipGeneric(db, systemId, layerId, params, auth, audit, ENTITY_CONFIGS.layer);
+}
+
+export function removeSubsystemMembership(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  membershipId: string,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  return removeMembershipGeneric(db, systemId, membershipId, auth, audit, ENTITY_CONFIGS.subsystem);
+}
+
+export function removeSideSystemMembership(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  membershipId: string,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  return removeMembershipGeneric(
+    db,
+    systemId,
+    membershipId,
+    auth,
+    audit,
+    ENTITY_CONFIGS.sideSystem,
+  );
+}
+
+export function removeLayerMembership(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  membershipId: string,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  return removeMembershipGeneric(db, systemId, membershipId, auth, audit, ENTITY_CONFIGS.layer);
+}
+
+export function listSubsystemMemberships(
   db: PostgresJsDatabase,
   systemId: SystemId,
   subsystemId: string,
   auth: AuthContext,
   cursor?: PaginationCursor,
-  limit = DEFAULT_PAGE_LIMIT,
+  limit?: number,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.subsystem;
-
-  const [entity] = await db
-    .select({ id: subsystems.id })
-    .from(subsystems)
-    .where(
-      and(
-        eq(subsystems.id, subsystemId),
-        eq(subsystems.systemId, systemId),
-        eq(subsystems.archived, false),
-      ),
-    )
-    .limit(1);
-
-  if (!entity) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${cfg.entityName} not found`);
-  }
-
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
-  const conditions = [
-    eq(subsystemMemberships.subsystemId, subsystemId),
-    eq(subsystemMemberships.systemId, systemId),
-  ];
-  if (cursor) conditions.push(gt(subsystemMemberships.id, cursor));
-
-  const rows = await db
-    .select()
-    .from(subsystemMemberships)
-    .where(and(...conditions))
-    .orderBy(subsystemMemberships.id)
-    .limit(effectiveLimit + 1);
-
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map((r) =>
-    toMembershipResult(r.id, r.subsystemId, r.systemId, r.encryptedData, r.createdAt),
+  return listMembershipsGeneric(
+    db,
+    systemId,
+    subsystemId,
+    auth,
+    ENTITY_CONFIGS.subsystem,
+    cursor,
+    limit,
   );
-  const lastItem = items[items.length - 1];
-
-  return {
-    items,
-    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
-    hasMore,
-    totalCount: null,
-  };
 }
 
-// ── SIDE SYSTEM MEMBERSHIPS ─────────────────────────────────────────
-
-export async function addSideSystemMembership(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  sideSystemId: string,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<StructureMembershipResult> {
-  await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.sideSystem;
-
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    AddStructureMembershipBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-
-  const membershipId = createId(cfg.idPrefix);
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const [entity] = await tx
-      .select({ id: sideSystems.id })
-      .from(sideSystems)
-      .where(
-        and(
-          eq(sideSystems.id, sideSystemId),
-          eq(sideSystems.systemId, systemId),
-          eq(sideSystems.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!entity) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${cfg.entityName} not found`);
-    }
-
-    await verifyMemberExists(tx, parsed.memberId, systemId);
-
-    try {
-      const [row] = await tx
-        .insert(sideSystemMemberships)
-        .values({
-          id: membershipId,
-          sideSystemId,
-          systemId,
-          encryptedData: blob,
-          createdAt: timestamp,
-        })
-        .returning();
-
-      if (!row) throw new Error("INSERT returned no rows");
-
-      await audit(tx, {
-        eventType: cfg.addEventType,
-        actor: { kind: "account", id: auth.accountId },
-        detail: `Member ${parsed.memberId} added to ${cfg.entityName} ${sideSystemId}`,
-        systemId,
-      });
-
-      return toMembershipResult(
-        row.id,
-        row.sideSystemId,
-        row.systemId,
-        row.encryptedData,
-        row.createdAt,
-      );
-    } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "23505") {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Membership already exists");
-      }
-      throw error;
-    }
-  });
-}
-
-export async function removeSideSystemMembership(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  membershipId: string,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.sideSystem;
-
-  await db.transaction(async (tx) => {
-    const deleted = await tx
-      .delete(sideSystemMemberships)
-      .where(
-        and(
-          eq(sideSystemMemberships.id, membershipId),
-          eq(sideSystemMemberships.systemId, systemId),
-        ),
-      )
-      .returning({ id: sideSystemMemberships.id });
-
-    if (deleted.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Membership not found");
-    }
-
-    await audit(tx, {
-      eventType: cfg.removeEventType,
-      actor: { kind: "account", id: auth.accountId },
-      detail: `Membership ${membershipId} removed`,
-      systemId,
-    });
-  });
-}
-
-export async function listSideSystemMemberships(
+export function listSideSystemMemberships(
   db: PostgresJsDatabase,
   systemId: SystemId,
   sideSystemId: string,
   auth: AuthContext,
   cursor?: PaginationCursor,
-  limit = DEFAULT_PAGE_LIMIT,
+  limit?: number,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.sideSystem;
-
-  const [entity] = await db
-    .select({ id: sideSystems.id })
-    .from(sideSystems)
-    .where(
-      and(
-        eq(sideSystems.id, sideSystemId),
-        eq(sideSystems.systemId, systemId),
-        eq(sideSystems.archived, false),
-      ),
-    )
-    .limit(1);
-
-  if (!entity) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${cfg.entityName} not found`);
-  }
-
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
-  const conditions = [
-    eq(sideSystemMemberships.sideSystemId, sideSystemId),
-    eq(sideSystemMemberships.systemId, systemId),
-  ];
-  if (cursor) conditions.push(gt(sideSystemMemberships.id, cursor));
-
-  const rows = await db
-    .select()
-    .from(sideSystemMemberships)
-    .where(and(...conditions))
-    .orderBy(sideSystemMemberships.id)
-    .limit(effectiveLimit + 1);
-
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map((r) =>
-    toMembershipResult(r.id, r.sideSystemId, r.systemId, r.encryptedData, r.createdAt),
+  return listMembershipsGeneric(
+    db,
+    systemId,
+    sideSystemId,
+    auth,
+    ENTITY_CONFIGS.sideSystem,
+    cursor,
+    limit,
   );
-  const lastItem = items[items.length - 1];
-
-  return {
-    items,
-    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
-    hasMore,
-    totalCount: null,
-  };
 }
 
-// ── LAYER MEMBERSHIPS ───────────────────────────────────────────────
-
-export async function addLayerMembership(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  layerId: string,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<StructureMembershipResult> {
-  await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.layer;
-
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    AddStructureMembershipBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-
-  const membershipId = createId(cfg.idPrefix);
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const [entity] = await tx
-      .select({ id: layers.id })
-      .from(layers)
-      .where(and(eq(layers.id, layerId), eq(layers.systemId, systemId), eq(layers.archived, false)))
-      .limit(1);
-
-    if (!entity) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${cfg.entityName} not found`);
-    }
-
-    await verifyMemberExists(tx, parsed.memberId, systemId);
-
-    try {
-      const [row] = await tx
-        .insert(layerMemberships)
-        .values({
-          id: membershipId,
-          layerId,
-          systemId,
-          encryptedData: blob,
-          createdAt: timestamp,
-        })
-        .returning();
-
-      if (!row) throw new Error("INSERT returned no rows");
-
-      await audit(tx, {
-        eventType: cfg.addEventType,
-        actor: { kind: "account", id: auth.accountId },
-        detail: `Member ${parsed.memberId} added to ${cfg.entityName} ${layerId}`,
-        systemId,
-      });
-
-      return toMembershipResult(
-        row.id,
-        row.layerId,
-        row.systemId,
-        row.encryptedData,
-        row.createdAt,
-      );
-    } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "23505") {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Membership already exists");
-      }
-      throw error;
-    }
-  });
-}
-
-export async function removeLayerMembership(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  membershipId: string,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.layer;
-
-  await db.transaction(async (tx) => {
-    const deleted = await tx
-      .delete(layerMemberships)
-      .where(and(eq(layerMemberships.id, membershipId), eq(layerMemberships.systemId, systemId)))
-      .returning({ id: layerMemberships.id });
-
-    if (deleted.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Membership not found");
-    }
-
-    await audit(tx, {
-      eventType: cfg.removeEventType,
-      actor: { kind: "account", id: auth.accountId },
-      detail: `Membership ${membershipId} removed`,
-      systemId,
-    });
-  });
-}
-
-export async function listLayerMemberships(
+export function listLayerMemberships(
   db: PostgresJsDatabase,
   systemId: SystemId,
   layerId: string,
   auth: AuthContext,
   cursor?: PaginationCursor,
-  limit = DEFAULT_PAGE_LIMIT,
+  limit?: number,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
-  const cfg = ENTITY_CONFIGS.layer;
-
-  const [entity] = await db
-    .select({ id: layers.id })
-    .from(layers)
-    .where(and(eq(layers.id, layerId), eq(layers.systemId, systemId), eq(layers.archived, false)))
-    .limit(1);
-
-  if (!entity) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `${cfg.entityName} not found`);
-  }
-
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
-  const conditions = [
-    eq(layerMemberships.layerId, layerId),
-    eq(layerMemberships.systemId, systemId),
-  ];
-  if (cursor) conditions.push(gt(layerMemberships.id, cursor));
-
-  const rows = await db
-    .select()
-    .from(layerMemberships)
-    .where(and(...conditions))
-    .orderBy(layerMemberships.id)
-    .limit(effectiveLimit + 1);
-
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map((r) =>
-    toMembershipResult(r.id, r.layerId, r.systemId, r.encryptedData, r.createdAt),
-  );
-  const lastItem = items[items.length - 1];
-
-  return {
-    items,
-    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
-    hasMore,
-    totalCount: null,
-  };
+  return listMembershipsGeneric(db, systemId, layerId, auth, ENTITY_CONFIGS.layer, cursor, limit);
 }

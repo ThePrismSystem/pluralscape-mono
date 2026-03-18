@@ -65,15 +65,13 @@ describe("POST /systems/:id/custom-fronts/:customFrontId/archive", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with ok: true", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(archiveCustomFront).mockResolvedValueOnce(undefined);
 
     const app = createApp();
     const res = await app.request(ARCHIVE_URL, { method: "POST" });
 
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
-    expect(body.ok).toBe(true);
+    expect(res.status).toBe(204);
   });
 
   it("returns 404 when not found", async () => {

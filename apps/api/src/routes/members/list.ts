@@ -2,7 +2,7 @@ import { ID_PREFIXES, toCursor } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
-import { parseIdParam } from "../../lib/id-param.js";
+import { parseIdParam, requireParam } from "../../lib/id-param.js";
 import { listMembers } from "../../services/member.service.js";
 
 import { DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT } from "./members.constants.js";
@@ -13,7 +13,10 @@ export const listRoute = new Hono<AuthEnv>();
 
 listRoute.get("/", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("systemId") as string, ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
   const cursorParam = c.req.query("cursor");
   const limitParam = c.req.query("limit");
   const includeArchived = c.req.query("include_archived") === "true";

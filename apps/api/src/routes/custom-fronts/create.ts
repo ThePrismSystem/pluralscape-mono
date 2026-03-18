@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { HTTP_CREATED } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { parseIdParam } from "../../lib/id-param.js";
+import { parseIdParam, requireParam } from "../../lib/id-param.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { createCustomFront } from "../../services/custom-front.service.js";
@@ -17,7 +17,10 @@ createRoute.use("*", createCategoryRateLimiter("write"));
 
 createRoute.post("/", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("id") ?? "", ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
   const audit = createAuditWriter(c, auth);
   const body = await parseJsonBody(c);
 

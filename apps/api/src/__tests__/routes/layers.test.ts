@@ -228,11 +228,11 @@ describe("DELETE /systems/:id/layers/:layerId", () => {
   beforeEach(() => vi.mocked(deleteLayer).mockReset());
   afterEach(() => vi.restoreAllMocks());
 
-  it("returns 200 on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(deleteLayer).mockResolvedValueOnce(undefined);
     const app = createApp();
     const res = await app.request(`${BASE_URL}/${LYR_ID}`, { method: "DELETE" });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 });
 
@@ -240,11 +240,11 @@ describe("POST /systems/:id/layers/:layerId/archive", () => {
   beforeEach(() => vi.mocked(archiveLayer).mockReset());
   afterEach(() => vi.restoreAllMocks());
 
-  it("returns 200 on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(archiveLayer).mockResolvedValueOnce(undefined);
     const app = createApp();
     const res = await postJSON(app, `${BASE_URL}/${LYR_ID}/archive`, {});
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 });
 

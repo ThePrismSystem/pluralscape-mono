@@ -631,6 +631,8 @@ export {
   AUDIT_RETENTION,
   CLIENT_RETRY,
   KEY_ROTATION,
+  ROTATION_STATES,
+  ROTATION_ITEM_STATUSES,
 } from "./api-constants.js";
 
 // ── Runtime utilities ──────────────────────────────────────────────

@@ -5,7 +5,7 @@ import { HTTP_BAD_REQUEST, HTTP_CREATED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
-import { parseIdParam } from "../../lib/id-param.js";
+import { parseIdParam, requireParam } from "../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { duplicateMember } from "../../services/member.service.js";
 
@@ -24,7 +24,10 @@ duplicateRoute.post("/:memberId/duplicate", async (c) => {
   }
 
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("systemId") as string, ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
   const memberId = parseIdParam(c.req.param("memberId"), ID_PREFIXES.member);
   const audit = createAuditWriter(c, auth);
 

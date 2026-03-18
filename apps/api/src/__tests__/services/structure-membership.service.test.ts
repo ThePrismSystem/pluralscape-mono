@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
@@ -182,7 +183,7 @@ describe("addSubsystemMembership", () => {
     chain.limit
       .mockResolvedValueOnce([{ id: SUBSYSTEM_ID }]) // entity found
       .mockResolvedValueOnce([{ id: MEMBER_ID }]); // member found
-    const dbError = Object.assign(new Error("unique_violation"), { code: "23505" });
+    const dbError = Object.assign(new Error("unique_violation"), { code: PG_UNIQUE_VIOLATION });
     chain.returning.mockRejectedValueOnce(dbError);
 
     await expect(
@@ -299,7 +300,7 @@ describe("addSideSystemMembership", () => {
     chain.limit
       .mockResolvedValueOnce([{ id: SIDE_SYSTEM_ID }])
       .mockResolvedValueOnce([{ id: MEMBER_ID }]);
-    const dbError = Object.assign(new Error("unique_violation"), { code: "23505" });
+    const dbError = Object.assign(new Error("unique_violation"), { code: PG_UNIQUE_VIOLATION });
     chain.returning.mockRejectedValueOnce(dbError);
 
     await expect(
@@ -395,7 +396,7 @@ describe("addLayerMembership", () => {
     chain.limit
       .mockResolvedValueOnce([{ id: LAYER_ID }])
       .mockResolvedValueOnce([{ id: MEMBER_ID }]);
-    const dbError = Object.assign(new Error("unique_violation"), { code: "23505" });
+    const dbError = Object.assign(new Error("unique_violation"), { code: PG_UNIQUE_VIOLATION });
     chain.returning.mockRejectedValueOnce(dbError);
 
     await expect(

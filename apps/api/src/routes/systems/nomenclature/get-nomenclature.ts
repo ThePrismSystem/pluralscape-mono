@@ -11,7 +11,10 @@ export const getNomenclatureRoute = new Hono<AuthEnv>();
 
 getNomenclatureRoute.get("/", async (c) => {
   const auth = c.get("auth");
-  const systemId = parseIdParam(requireParam(c.req.param("id"), "id"), ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
 
   const db = await getDb();
   const result = await getNomenclatureSettings(db, systemId, auth);

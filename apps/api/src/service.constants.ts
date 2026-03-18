@@ -14,3 +14,6 @@ export const DEFAULT_PAGE_LIMIT = 25;
 
 /** Maximum page size for list endpoints. */
 export const MAX_PAGE_LIMIT = 100;
+
+/** Safety cap for ancestor walk cycle detection in hierarchical structures. */
+export const MAX_ANCESTOR_DEPTH = 50;

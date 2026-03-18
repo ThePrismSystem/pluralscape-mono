@@ -15,6 +15,7 @@ import {
 } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
+import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
@@ -35,6 +36,9 @@ import type { z } from "zod/v4";
 
 // ── Types ───────────────────────────────────────────────────────────
 
+type TransactionLike = Parameters<Parameters<PostgresJsDatabase["transaction"]>[0]>[0];
+type EntityTable = typeof subsystems | typeof sideSystems | typeof layers;
+
 export interface StructureLinkResult {
   readonly id: string;
   readonly entityAId: string;
@@ -42,6 +46,49 @@ export interface StructureLinkResult {
   readonly systemId: SystemId;
   readonly encryptedData: string | null;
   readonly createdAt: UnixMillis;
+}
+
+interface NormalizedLinkRow {
+  readonly id: string;
+  readonly entityAId: string;
+  readonly entityBId: string;
+  readonly systemId: string;
+  readonly encryptedData: EncryptedBlob | null;
+  readonly createdAt: number;
+}
+
+interface LinkEntityConfig {
+  readonly entityATable: EntityTable;
+  readonly entityBTable: EntityTable;
+  readonly entityAName: string;
+  readonly entityBName: string;
+  readonly schema: z.ZodType<Record<string, unknown>>;
+  readonly getEntityIds: (parsed: Record<string, unknown>) => {
+    entityAId: string;
+    entityBId: string;
+  };
+  readonly insert: (
+    tx: TransactionLike,
+    id: string,
+    entityAId: string,
+    entityBId: string,
+    systemId: SystemId,
+    blob: EncryptedBlob | null,
+    timestamp: number,
+  ) => Promise<NormalizedLinkRow | undefined>;
+  readonly remove: (
+    tx: TransactionLike,
+    linkId: string,
+    systemId: SystemId,
+  ) => Promise<{ id: string }[]>;
+  readonly query: (
+    db: PostgresJsDatabase,
+    systemId: SystemId,
+    cursor: PaginationCursor | undefined,
+    limit: number,
+    filterEntityAId?: string,
+    filterEntityBId?: string,
+  ) => Promise<NormalizedLinkRow[]>;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -74,8 +121,8 @@ function parseLinkBody<T>(
 }
 
 async function verifyNotArchived(
-  tx: Parameters<Parameters<PostgresJsDatabase["transaction"]>[0]>[0],
-  table: typeof subsystems | typeof sideSystems | typeof layers,
+  tx: TransactionLike,
+  table: EntityTable,
   id: string,
   systemId: SystemId,
   entityName: string,
@@ -91,191 +138,226 @@ async function verifyNotArchived(
   }
 }
 
-// ── SUBSYSTEM ↔ LAYER ──────────────────────────────────────────────
+function toLinkResult(row: NormalizedLinkRow): StructureLinkResult {
+  return {
+    id: row.id,
+    entityAId: row.entityAId,
+    entityBId: row.entityBId,
+    systemId: row.systemId as SystemId,
+    encryptedData: row.encryptedData ? encryptedBlobToBase64(row.encryptedData) : null,
+    createdAt: row.createdAt as UnixMillis,
+  };
+}
 
-export async function createSubsystemLayerLink(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<StructureLinkResult> {
-  await assertSystemOwnership(db, systemId, auth);
+// ── Normalizers ─────────────────────────────────────────────────────
 
-  const { parsed, blob } = parseLinkBody(params, CreateSubsystemLayerLinkBodySchema);
+function normalizeSubsystemLayer(r: typeof subsystemLayerLinks.$inferSelect): NormalizedLinkRow {
+  return {
+    id: r.id,
+    entityAId: r.subsystemId,
+    entityBId: r.layerId,
+    systemId: r.systemId,
+    encryptedData: r.encryptedData,
+    createdAt: r.createdAt,
+  };
+}
 
-  const linkId = createId(ID_PREFIXES.structureLink);
-  const timestamp = now();
+function normalizeSubsystemSideSystem(
+  r: typeof subsystemSideSystemLinks.$inferSelect,
+): NormalizedLinkRow {
+  return {
+    id: r.id,
+    entityAId: r.subsystemId,
+    entityBId: r.sideSystemId,
+    systemId: r.systemId,
+    encryptedData: r.encryptedData,
+    createdAt: r.createdAt,
+  };
+}
 
-  return db.transaction(async (tx) => {
-    await verifyNotArchived(tx, subsystems, parsed.subsystemId, systemId, "Subsystem");
-    await verifyNotArchived(tx, layers, parsed.layerId, systemId, "Layer");
+function normalizeSideSystemLayer(r: typeof sideSystemLayerLinks.$inferSelect): NormalizedLinkRow {
+  return {
+    id: r.id,
+    entityAId: r.sideSystemId,
+    entityBId: r.layerId,
+    systemId: r.systemId,
+    encryptedData: r.encryptedData,
+    createdAt: r.createdAt,
+  };
+}
 
-    try {
+// ── Entity configs ──────────────────────────────────────────────────
+
+const LINK_CONFIGS = {
+  subsystemLayer: {
+    entityATable: subsystems,
+    entityBTable: layers,
+    entityAName: "Subsystem",
+    entityBName: "Layer",
+    schema: CreateSubsystemLayerLinkBodySchema,
+    getEntityIds: (p) => ({ entityAId: p.subsystemId as string, entityBId: p.layerId as string }),
+    insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
       const [row] = await tx
         .insert(subsystemLayerLinks)
         .values({
-          id: linkId,
-          subsystemId: parsed.subsystemId,
-          layerId: parsed.layerId,
+          id,
+          subsystemId: entityAId,
+          layerId: entityBId,
           systemId,
           encryptedData: blob ?? null,
           createdAt: timestamp,
         })
         .returning();
-
-      if (!row) throw new Error("INSERT returned no rows");
-
-      await audit(tx, {
-        eventType: "structure-link.created",
-        actor: { kind: "account", id: auth.accountId },
-        detail: `Subsystem ${parsed.subsystemId} linked to layer ${parsed.layerId}`,
-        systemId,
-      });
-
-      return {
-        id: row.id,
-        entityAId: row.subsystemId,
-        entityBId: row.layerId,
-        systemId: row.systemId as SystemId,
-        encryptedData: row.encryptedData ? encryptedBlobToBase64(row.encryptedData) : null,
-        createdAt: row.createdAt as UnixMillis,
-      };
-    } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "23505") {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Link already exists");
-      }
-      throw error;
-    }
-  });
-}
-
-export async function deleteSubsystemLayerLink(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  linkId: string,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  await db.transaction(async (tx) => {
-    const deleted = await tx
-      .delete(subsystemLayerLinks)
-      .where(and(eq(subsystemLayerLinks.id, linkId), eq(subsystemLayerLinks.systemId, systemId)))
-      .returning({ id: subsystemLayerLinks.id });
-
-    if (deleted.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Link not found");
-    }
-
-    await audit(tx, {
-      eventType: "structure-link.deleted",
-      actor: { kind: "account", id: auth.accountId },
-      detail: `Structure link ${linkId} deleted`,
-      systemId,
-    });
-  });
-}
-
-export async function listSubsystemLayerLinks(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  auth: AuthContext,
-  cursor?: PaginationCursor,
-  limit = DEFAULT_PAGE_LIMIT,
-  filterSubsystemId?: string,
-  filterLayerId?: string,
-): Promise<PaginatedResult<StructureLinkResult>> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
-  const conditions = [eq(subsystemLayerLinks.systemId, systemId)];
-
-  if (filterSubsystemId) conditions.push(eq(subsystemLayerLinks.subsystemId, filterSubsystemId));
-  if (filterLayerId) conditions.push(eq(subsystemLayerLinks.layerId, filterLayerId));
-  if (cursor) conditions.push(gt(subsystemLayerLinks.id, cursor));
-
-  const rows = await db
-    .select()
-    .from(subsystemLayerLinks)
-    .where(and(...conditions))
-    .orderBy(subsystemLayerLinks.id)
-    .limit(effectiveLimit + 1);
-
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(
-    (r): StructureLinkResult => ({
-      id: r.id,
-      entityAId: r.subsystemId,
-      entityBId: r.layerId,
-      systemId: r.systemId as SystemId,
-      encryptedData: r.encryptedData ? encryptedBlobToBase64(r.encryptedData) : null,
-      createdAt: r.createdAt as UnixMillis,
+      return row ? normalizeSubsystemLayer(row) : undefined;
+    },
+    remove: (tx, linkId, systemId) =>
+      tx
+        .delete(subsystemLayerLinks)
+        .where(and(eq(subsystemLayerLinks.id, linkId), eq(subsystemLayerLinks.systemId, systemId)))
+        .returning({ id: subsystemLayerLinks.id }),
+    query: async (db, systemId, cursor, limit, filterA, filterB) => {
+      const conds = [eq(subsystemLayerLinks.systemId, systemId)];
+      if (filterA) conds.push(eq(subsystemLayerLinks.subsystemId, filterA));
+      if (filterB) conds.push(eq(subsystemLayerLinks.layerId, filterB));
+      if (cursor) conds.push(gt(subsystemLayerLinks.id, cursor));
+      const rows = await db
+        .select()
+        .from(subsystemLayerLinks)
+        .where(and(...conds))
+        .orderBy(subsystemLayerLinks.id)
+        .limit(limit);
+      return rows.map(normalizeSubsystemLayer);
+    },
+  },
+  subsystemSideSystem: {
+    entityATable: subsystems,
+    entityBTable: sideSystems,
+    entityAName: "Subsystem",
+    entityBName: "Side system",
+    schema: CreateSubsystemSideSystemLinkBodySchema,
+    getEntityIds: (p) => ({
+      entityAId: p.subsystemId as string,
+      entityBId: p.sideSystemId as string,
     }),
-  );
-  const lastItem = items[items.length - 1];
-
-  return {
-    items,
-    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
-    hasMore,
-    totalCount: null,
-  };
-}
-
-// ── SUBSYSTEM ↔ SIDE SYSTEM ────────────────────────────────────────
-
-export async function createSubsystemSideSystemLink(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<StructureLinkResult> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const { parsed, blob } = parseLinkBody(params, CreateSubsystemSideSystemLinkBodySchema);
-
-  const linkId = createId(ID_PREFIXES.structureLink);
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    await verifyNotArchived(tx, subsystems, parsed.subsystemId, systemId, "Subsystem");
-    await verifyNotArchived(tx, sideSystems, parsed.sideSystemId, systemId, "Side system");
-
-    try {
+    insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
       const [row] = await tx
         .insert(subsystemSideSystemLinks)
         .values({
-          id: linkId,
-          subsystemId: parsed.subsystemId,
-          sideSystemId: parsed.sideSystemId,
+          id,
+          subsystemId: entityAId,
+          sideSystemId: entityBId,
           systemId,
           encryptedData: blob ?? null,
           createdAt: timestamp,
         })
         .returning();
+      return row ? normalizeSubsystemSideSystem(row) : undefined;
+    },
+    remove: (tx, linkId, systemId) =>
+      tx
+        .delete(subsystemSideSystemLinks)
+        .where(
+          and(
+            eq(subsystemSideSystemLinks.id, linkId),
+            eq(subsystemSideSystemLinks.systemId, systemId),
+          ),
+        )
+        .returning({ id: subsystemSideSystemLinks.id }),
+    query: async (db, systemId, cursor, limit, filterA, filterB) => {
+      const conds = [eq(subsystemSideSystemLinks.systemId, systemId)];
+      if (filterA) conds.push(eq(subsystemSideSystemLinks.subsystemId, filterA));
+      if (filterB) conds.push(eq(subsystemSideSystemLinks.sideSystemId, filterB));
+      if (cursor) conds.push(gt(subsystemSideSystemLinks.id, cursor));
+      const rows = await db
+        .select()
+        .from(subsystemSideSystemLinks)
+        .where(and(...conds))
+        .orderBy(subsystemSideSystemLinks.id)
+        .limit(limit);
+      return rows.map(normalizeSubsystemSideSystem);
+    },
+  },
+  sideSystemLayer: {
+    entityATable: sideSystems,
+    entityBTable: layers,
+    entityAName: "Side system",
+    entityBName: "Layer",
+    schema: CreateSideSystemLayerLinkBodySchema,
+    getEntityIds: (p) => ({ entityAId: p.sideSystemId as string, entityBId: p.layerId as string }),
+    insert: async (tx, id, entityAId, entityBId, systemId, blob, timestamp) => {
+      const [row] = await tx
+        .insert(sideSystemLayerLinks)
+        .values({
+          id,
+          sideSystemId: entityAId,
+          layerId: entityBId,
+          systemId,
+          encryptedData: blob ?? null,
+          createdAt: timestamp,
+        })
+        .returning();
+      return row ? normalizeSideSystemLayer(row) : undefined;
+    },
+    remove: (tx, linkId, systemId) =>
+      tx
+        .delete(sideSystemLayerLinks)
+        .where(
+          and(eq(sideSystemLayerLinks.id, linkId), eq(sideSystemLayerLinks.systemId, systemId)),
+        )
+        .returning({ id: sideSystemLayerLinks.id }),
+    query: async (db, systemId, cursor, limit, filterA, filterB) => {
+      const conds = [eq(sideSystemLayerLinks.systemId, systemId)];
+      if (filterA) conds.push(eq(sideSystemLayerLinks.sideSystemId, filterA));
+      if (filterB) conds.push(eq(sideSystemLayerLinks.layerId, filterB));
+      if (cursor) conds.push(gt(sideSystemLayerLinks.id, cursor));
+      const rows = await db
+        .select()
+        .from(sideSystemLayerLinks)
+        .where(and(...conds))
+        .orderBy(sideSystemLayerLinks.id)
+        .limit(limit);
+      return rows.map(normalizeSideSystemLayer);
+    },
+  },
+} satisfies Record<string, LinkEntityConfig>;
+
+// ── Generic implementations ─────────────────────────────────────────
+
+async function createLinkGeneric(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+  cfg: LinkEntityConfig,
+): Promise<StructureLinkResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
+  const { parsed, blob } = parseLinkBody(params, cfg.schema);
+  const { entityAId, entityBId } = cfg.getEntityIds(parsed);
+
+  const linkId = createId(ID_PREFIXES.structureLink);
+  const timestamp = now();
+
+  return db.transaction(async (tx) => {
+    await verifyNotArchived(tx, cfg.entityATable, entityAId, systemId, cfg.entityAName);
+    await verifyNotArchived(tx, cfg.entityBTable, entityBId, systemId, cfg.entityBName);
+
+    try {
+      const row = await cfg.insert(tx, linkId, entityAId, entityBId, systemId, blob, timestamp);
 
       if (!row) throw new Error("INSERT returned no rows");
 
       await audit(tx, {
         eventType: "structure-link.created",
         actor: { kind: "account", id: auth.accountId },
-        detail: `Subsystem ${parsed.subsystemId} linked to side system ${parsed.sideSystemId}`,
+        detail: `${cfg.entityAName} ${entityAId} linked to ${cfg.entityBName.toLowerCase()} ${entityBId}`,
         systemId,
       });
 
-      return {
-        id: row.id,
-        entityAId: row.subsystemId,
-        entityBId: row.sideSystemId,
-        systemId: row.systemId as SystemId,
-        encryptedData: row.encryptedData ? encryptedBlobToBase64(row.encryptedData) : null,
-        createdAt: row.createdAt as UnixMillis,
-      };
+      return toLinkResult(row);
     } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "23505") {
+      if (error instanceof Error && "code" in error && error.code === PG_UNIQUE_VIOLATION) {
         throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Link already exists");
       }
       throw error;
@@ -283,25 +365,18 @@ export async function createSubsystemSideSystemLink(
   });
 }
 
-export async function deleteSubsystemSideSystemLink(
+async function deleteLinkGeneric(
   db: PostgresJsDatabase,
   systemId: SystemId,
   linkId: string,
   auth: AuthContext,
   audit: AuditWriter,
+  cfg: LinkEntityConfig,
 ): Promise<void> {
   await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
-    const deleted = await tx
-      .delete(subsystemSideSystemLinks)
-      .where(
-        and(
-          eq(subsystemSideSystemLinks.id, linkId),
-          eq(subsystemSideSystemLinks.systemId, systemId),
-        ),
-      )
-      .returning({ id: subsystemSideSystemLinks.id });
+    const deleted = await cfg.remove(tx, linkId, systemId);
 
     if (deleted.length === 0) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Link not found");
@@ -316,44 +391,30 @@ export async function deleteSubsystemSideSystemLink(
   });
 }
 
-export async function listSubsystemSideSystemLinks(
+async function listLinksGeneric(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
+  cfg: LinkEntityConfig,
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
-  filterSubsystemId?: string,
-  filterSideSystemId?: string,
+  filterEntityAId?: string,
+  filterEntityBId?: string,
 ): Promise<PaginatedResult<StructureLinkResult>> {
   await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
-  const conditions = [eq(subsystemSideSystemLinks.systemId, systemId)];
-
-  if (filterSubsystemId)
-    conditions.push(eq(subsystemSideSystemLinks.subsystemId, filterSubsystemId));
-  if (filterSideSystemId)
-    conditions.push(eq(subsystemSideSystemLinks.sideSystemId, filterSideSystemId));
-  if (cursor) conditions.push(gt(subsystemSideSystemLinks.id, cursor));
-
-  const rows = await db
-    .select()
-    .from(subsystemSideSystemLinks)
-    .where(and(...conditions))
-    .orderBy(subsystemSideSystemLinks.id)
-    .limit(effectiveLimit + 1);
+  const rows = await cfg.query(
+    db,
+    systemId,
+    cursor,
+    effectiveLimit + 1,
+    filterEntityAId,
+    filterEntityBId,
+  );
 
   const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(
-    (r): StructureLinkResult => ({
-      id: r.id,
-      entityAId: r.subsystemId,
-      entityBId: r.sideSystemId,
-      systemId: r.systemId as SystemId,
-      encryptedData: r.encryptedData ? encryptedBlobToBase64(r.encryptedData) : null,
-      createdAt: r.createdAt as UnixMillis,
-    }),
-  );
+  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toLinkResult);
   const lastItem = items[items.length - 1];
 
   return {
@@ -364,136 +425,127 @@ export async function listSubsystemSideSystemLinks(
   };
 }
 
-// ── SIDE SYSTEM ↔ LAYER ────────────────────────────────────────────
+// ── Public API ──────────────────────────────────────────────────────
 
-export async function createSideSystemLayerLink(
+export function createSubsystemLayerLink(
   db: PostgresJsDatabase,
   systemId: SystemId,
   params: unknown,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureLinkResult> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const { parsed, blob } = parseLinkBody(params, CreateSideSystemLayerLinkBodySchema);
-
-  const linkId = createId(ID_PREFIXES.structureLink);
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    await verifyNotArchived(tx, sideSystems, parsed.sideSystemId, systemId, "Side system");
-    await verifyNotArchived(tx, layers, parsed.layerId, systemId, "Layer");
-
-    try {
-      const [row] = await tx
-        .insert(sideSystemLayerLinks)
-        .values({
-          id: linkId,
-          sideSystemId: parsed.sideSystemId,
-          layerId: parsed.layerId,
-          systemId,
-          encryptedData: blob ?? null,
-          createdAt: timestamp,
-        })
-        .returning();
-
-      if (!row) throw new Error("INSERT returned no rows");
-
-      await audit(tx, {
-        eventType: "structure-link.created",
-        actor: { kind: "account", id: auth.accountId },
-        detail: `Side system ${parsed.sideSystemId} linked to layer ${parsed.layerId}`,
-        systemId,
-      });
-
-      return {
-        id: row.id,
-        entityAId: row.sideSystemId,
-        entityBId: row.layerId,
-        systemId: row.systemId as SystemId,
-        encryptedData: row.encryptedData ? encryptedBlobToBase64(row.encryptedData) : null,
-        createdAt: row.createdAt as UnixMillis,
-      };
-    } catch (error) {
-      if (error instanceof Error && "code" in error && error.code === "23505") {
-        throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Link already exists");
-      }
-      throw error;
-    }
-  });
+  return createLinkGeneric(db, systemId, params, auth, audit, LINK_CONFIGS.subsystemLayer);
 }
 
-export async function deleteSideSystemLayerLink(
+export function createSubsystemSideSystemLink(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<StructureLinkResult> {
+  return createLinkGeneric(db, systemId, params, auth, audit, LINK_CONFIGS.subsystemSideSystem);
+}
+
+export function createSideSystemLayerLink(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  params: unknown,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<StructureLinkResult> {
+  return createLinkGeneric(db, systemId, params, auth, audit, LINK_CONFIGS.sideSystemLayer);
+}
+
+export function deleteSubsystemLayerLink(
   db: PostgresJsDatabase,
   systemId: SystemId,
   linkId: string,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  await db.transaction(async (tx) => {
-    const deleted = await tx
-      .delete(sideSystemLayerLinks)
-      .where(and(eq(sideSystemLayerLinks.id, linkId), eq(sideSystemLayerLinks.systemId, systemId)))
-      .returning({ id: sideSystemLayerLinks.id });
-
-    if (deleted.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Link not found");
-    }
-
-    await audit(tx, {
-      eventType: "structure-link.deleted",
-      actor: { kind: "account", id: auth.accountId },
-      detail: `Structure link ${linkId} deleted`,
-      systemId,
-    });
-  });
+  return deleteLinkGeneric(db, systemId, linkId, auth, audit, LINK_CONFIGS.subsystemLayer);
 }
 
-export async function listSideSystemLayerLinks(
+export function deleteSubsystemSideSystemLink(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  linkId: string,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  return deleteLinkGeneric(db, systemId, linkId, auth, audit, LINK_CONFIGS.subsystemSideSystem);
+}
+
+export function deleteSideSystemLayerLink(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  linkId: string,
+  auth: AuthContext,
+  audit: AuditWriter,
+): Promise<void> {
+  return deleteLinkGeneric(db, systemId, linkId, auth, audit, LINK_CONFIGS.sideSystemLayer);
+}
+
+export function listSubsystemLayerLinks(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
   cursor?: PaginationCursor,
-  limit = DEFAULT_PAGE_LIMIT,
+  limit?: number,
+  filterSubsystemId?: string,
+  filterLayerId?: string,
+): Promise<PaginatedResult<StructureLinkResult>> {
+  return listLinksGeneric(
+    db,
+    systemId,
+    auth,
+    LINK_CONFIGS.subsystemLayer,
+    cursor,
+    limit,
+    filterSubsystemId,
+    filterLayerId,
+  );
+}
+
+export function listSubsystemSideSystemLinks(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+  cursor?: PaginationCursor,
+  limit?: number,
+  filterSubsystemId?: string,
+  filterSideSystemId?: string,
+): Promise<PaginatedResult<StructureLinkResult>> {
+  return listLinksGeneric(
+    db,
+    systemId,
+    auth,
+    LINK_CONFIGS.subsystemSideSystem,
+    cursor,
+    limit,
+    filterSubsystemId,
+    filterSideSystemId,
+  );
+}
+
+export function listSideSystemLayerLinks(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  auth: AuthContext,
+  cursor?: PaginationCursor,
+  limit?: number,
   filterSideSystemId?: string,
   filterLayerId?: string,
 ): Promise<PaginatedResult<StructureLinkResult>> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
-  const conditions = [eq(sideSystemLayerLinks.systemId, systemId)];
-
-  if (filterSideSystemId)
-    conditions.push(eq(sideSystemLayerLinks.sideSystemId, filterSideSystemId));
-  if (filterLayerId) conditions.push(eq(sideSystemLayerLinks.layerId, filterLayerId));
-  if (cursor) conditions.push(gt(sideSystemLayerLinks.id, cursor));
-
-  const rows = await db
-    .select()
-    .from(sideSystemLayerLinks)
-    .where(and(...conditions))
-    .orderBy(sideSystemLayerLinks.id)
-    .limit(effectiveLimit + 1);
-
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(
-    (r): StructureLinkResult => ({
-      id: r.id,
-      entityAId: r.sideSystemId,
-      entityBId: r.layerId,
-      systemId: r.systemId as SystemId,
-      encryptedData: r.encryptedData ? encryptedBlobToBase64(r.encryptedData) : null,
-      createdAt: r.createdAt as UnixMillis,
-    }),
+  return listLinksGeneric(
+    db,
+    systemId,
+    auth,
+    LINK_CONFIGS.sideSystemLayer,
+    cursor,
+    limit,
+    filterSideSystemId,
+    filterLayerId,
   );
-  const lastItem = items[items.length - 1];
-
-  return {
-    items,
-    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
-    hasMore,
-    totalCount: null,
-  };
 }

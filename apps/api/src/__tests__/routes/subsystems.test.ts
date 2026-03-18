@@ -240,11 +240,11 @@ describe("DELETE /systems/:id/subsystems/:subsystemId", () => {
   beforeEach(() => vi.mocked(deleteSubsystem).mockReset());
   afterEach(() => vi.restoreAllMocks());
 
-  it("returns 200 on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(deleteSubsystem).mockResolvedValueOnce(undefined);
     const app = createApp();
     const res = await app.request(`${BASE_URL}/${SUB_ID}`, { method: "DELETE" });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 });
 
@@ -252,11 +252,11 @@ describe("POST /systems/:id/subsystems/:subsystemId/archive", () => {
   beforeEach(() => vi.mocked(archiveSubsystem).mockReset());
   afterEach(() => vi.restoreAllMocks());
 
-  it("returns 200 on success", async () => {
+  it("returns 204 on success", async () => {
     vi.mocked(archiveSubsystem).mockResolvedValueOnce(undefined);
     const app = createApp();
     const res = await postJSON(app, `${BASE_URL}/${SUB_ID}/archive`, {});
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(204);
   });
 });
 

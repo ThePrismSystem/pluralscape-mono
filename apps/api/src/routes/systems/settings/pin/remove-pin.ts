@@ -24,7 +24,10 @@ removePinRoute.delete("/", async (c) => {
   }
 
   const auth = c.get("auth");
-  const systemId = parseIdParam(requireParam(c.req.param("id"), "id"), ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();

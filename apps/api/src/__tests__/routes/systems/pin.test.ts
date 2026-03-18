@@ -58,7 +58,7 @@ const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 function createApp(): Hono {
   const app = new Hono();
   app.use("*", requestIdMiddleware());
-  app.route("/:id/pin", pinRoutes);
+  app.route("/:systemId/pin", pinRoutes);
   app.onError(errorHandler);
   return app;
 }

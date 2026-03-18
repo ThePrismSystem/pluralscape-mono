@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
@@ -266,7 +267,7 @@ describe("createSubsystemLayerLink", () => {
       .mockResolvedValueOnce([{ id: SUBSYSTEM_ID }]) // subsystem exists
       .mockResolvedValueOnce([{ id: LAYER_ID }]); // layer exists
     chain.returning.mockRejectedValueOnce(
-      Object.assign(new Error("unique violation"), { code: "23505" }),
+      Object.assign(new Error("unique violation"), { code: PG_UNIQUE_VIOLATION }),
     );
 
     await expect(
@@ -590,7 +591,7 @@ describe("createSubsystemSideSystemLink duplicate", () => {
       .mockResolvedValueOnce([{ id: "sub_test" }])
       .mockResolvedValueOnce([{ id: "ss_test" }]);
     chain.returning.mockRejectedValueOnce(
-      Object.assign(new Error("unique_violation"), { code: "23505" }),
+      Object.assign(new Error("unique_violation"), { code: PG_UNIQUE_VIOLATION }),
     );
 
     await expect(
@@ -617,7 +618,7 @@ describe("createSideSystemLayerLink duplicate", () => {
       .mockResolvedValueOnce([{ id: "ss_test" }])
       .mockResolvedValueOnce([{ id: "lyr_test" }]);
     chain.returning.mockRejectedValueOnce(
-      Object.assign(new Error("unique_violation"), { code: "23505" }),
+      Object.assign(new Error("unique_violation"), { code: PG_UNIQUE_VIOLATION }),
     );
 
     await expect(

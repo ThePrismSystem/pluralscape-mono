@@ -5,7 +5,7 @@ import { HTTP_BAD_REQUEST } from "../../../http.constants.js";
 import { ApiHttpError } from "../../../lib/api-error.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
-import { parseIdParam } from "../../../lib/id-param.js";
+import { parseIdParam, requireParam } from "../../../lib/id-param.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { reorderMemberPhotos } from "../../../services/member-photo.service.js";
 
@@ -24,7 +24,10 @@ reorderRoute.put("/reorder", async (c) => {
   }
 
   const auth = c.get("auth");
-  const systemId = parseIdParam(c.req.param("systemId") as string, ID_PREFIXES.system);
+  const systemId = parseIdParam(
+    requireParam(c.req.param("systemId"), "systemId"),
+    ID_PREFIXES.system,
+  );
   const memberId = parseIdParam(c.req.param("memberId") as string, ID_PREFIXES.member);
   const audit = createAuditWriter(c, auth);
 

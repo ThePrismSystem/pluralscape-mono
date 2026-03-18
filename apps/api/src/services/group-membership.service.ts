@@ -3,6 +3,7 @@ import { now, toCursor } from "@pluralscape/types";
 import { AddGroupMemberBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
+import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
@@ -116,7 +117,7 @@ export async function addMember(
       return toMembershipResult(row);
     } catch (error) {
       // PostgreSQL unique_violation code
-      if (error instanceof Error && "code" in error && error.code === "23505") {
+      if (error instanceof Error && "code" in error && error.code === PG_UNIQUE_VIOLATION) {
         throw new ApiHttpError(HTTP_CONFLICT, "CONFLICT", "Already a member of this group");
       }
       throw error;
