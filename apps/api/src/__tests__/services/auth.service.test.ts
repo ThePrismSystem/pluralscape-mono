@@ -580,7 +580,7 @@ describe("auth service", () => {
   describe("revokeSession", () => {
     it("returns false when session is not found", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([]);
+      chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_999", "acct_123", mockAudit);
       expect(result).toBe(false);
@@ -588,9 +588,6 @@ describe("auth service", () => {
 
     it("returns false when session belongs to a different account", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([
-        { id: "sess_1", accountId: "acct_other", revoked: false },
-      ]);
       // UPDATE with accountId in WHERE matches zero rows
       chain.returning.mockResolvedValueOnce([]);
 
@@ -600,7 +597,6 @@ describe("auth service", () => {
 
     it("returns true and revokes session when actor owns it", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_123", revoked: false }]);
       chain.returning.mockResolvedValueOnce([{ id: "sess_1" }]);
 
       const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
@@ -610,10 +606,6 @@ describe("auth service", () => {
 
     it("returns false for cross-account revocation without modifying the session", async () => {
       const { db, chain } = mockDb();
-      // Session belongs to acct_other, but revocation is attempted by acct_attacker
-      chain.limit.mockResolvedValueOnce([
-        { id: "sess_target", accountId: "acct_other", revoked: false },
-      ]);
       // The UPDATE should match zero rows (accountId mismatch in WHERE clause)
       chain.returning.mockResolvedValueOnce([]);
 
@@ -625,7 +617,8 @@ describe("auth service", () => {
 
     it("returns false when session is already revoked", async () => {
       const { db, chain } = mockDb();
-      chain.limit.mockResolvedValueOnce([{ id: "sess_1", accountId: "acct_123", revoked: true }]);
+      // WHERE includes revoked = false, so already-revoked sessions match zero rows
+      chain.returning.mockResolvedValueOnce([]);
 
       const result = await revokeSession(db, "sess_1", "acct_123", mockAudit);
       expect(result).toBe(false);

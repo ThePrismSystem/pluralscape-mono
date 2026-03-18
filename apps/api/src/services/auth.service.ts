@@ -230,17 +230,17 @@ export async function loginAccount(
 
   const valid = verifyPassword(account.passwordHash, parsed.password);
   if (!valid) {
-    try {
-      await audit(db, {
-        eventType: "auth.login-failed",
-        actor: { kind: "account", id: account.id },
-        detail: "Invalid password",
-        accountId: account.id as AccountId,
-      });
-    } catch (auditError: unknown) {
-      // Audit failure must not change the authentication response (401 → 500)
+    // Fire-and-forget: audit entry is still written, but we don't block
+    // the response on it. This equalizes timing with the "not found" path
+    // (both return immediately after verifyPassword).
+    void audit(db, {
+      eventType: "auth.login-failed",
+      actor: { kind: "account", id: account.id },
+      detail: "Invalid password",
+      accountId: account.id as AccountId,
+    }).catch((auditError: unknown) => {
       console.error("[audit] Failed to write auth.login-failed:", auditError);
-    }
+    });
     return null;
   }
 
@@ -349,24 +349,20 @@ export async function revokeSession(
   actorAccountId: string,
   audit: AuditWriter,
 ): Promise<boolean> {
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).limit(1);
-
-  if (!session || session.revoked) {
-    return false;
-  }
-
   return db.transaction(async (tx) => {
     const updated = await tx
       .update(sessions)
       .set({ revoked: true })
-      .where(and(eq(sessions.id, sessionId), eq(sessions.accountId, actorAccountId)))
+      .where(
+        and(
+          eq(sessions.id, sessionId),
+          eq(sessions.accountId, actorAccountId),
+          eq(sessions.revoked, false),
+        ),
+      )
       .returning({ id: sessions.id });
 
     if (updated.length === 0) {
-      console.warn("[auth] Cross-account session revocation attempt", {
-        sessionId,
-        actorAccountId,
-      });
       return false;
     }
 
