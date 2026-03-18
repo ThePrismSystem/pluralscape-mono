@@ -3,10 +3,16 @@ import { describe, expect, it } from "vitest";
 import {
   ChangeEmailSchema,
   ChangePasswordSchema,
+  LoginCredentialsSchema,
+  PasswordResetViaRecoveryKeySchema,
   RegenerateRecoveryKeySchema,
   RegistrationInputSchema,
 } from "../auth.js";
-import { AUTH_MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH } from "../validation.constants.js";
+import {
+  AUTH_MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  MAX_RECOVERY_KEY_LENGTH,
+} from "../validation.constants.js";
 
 // ── RegistrationInputSchema ──────────────────────────────────────────
 
@@ -53,6 +59,52 @@ describe("RegistrationInputSchema", () => {
       email: "user@example.com",
       password: "a".repeat(MAX_PASSWORD_LENGTH),
       recoveryKeyBackupConfirmed: true,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ── LoginCredentialsSchema ────────────────────────────────────────────
+
+describe("LoginCredentialsSchema", () => {
+  it("parses valid input", () => {
+    const result = LoginCredentialsSchema.safeParse({
+      email: "user@example.com",
+      password: "anypassword",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects empty password", () => {
+    const result = LoginCredentialsSchema.safeParse({
+      email: "user@example.com",
+      password: "",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["password"]);
+    }
+  });
+
+  it("rejects password exceeding MAX_PASSWORD_LENGTH", () => {
+    const result = LoginCredentialsSchema.safeParse({
+      email: "user@example.com",
+      password: "a".repeat(MAX_PASSWORD_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["password"]);
+    }
+  });
+
+  it("accepts password at exactly MAX_PASSWORD_LENGTH", () => {
+    const result = LoginCredentialsSchema.safeParse({
+      email: "user@example.com",
+      password: "a".repeat(MAX_PASSWORD_LENGTH),
     });
     expect(result.success).toBe(true);
   });
@@ -302,6 +354,111 @@ describe("RegenerateRecoveryKeySchema", () => {
         currentPassword: "password123",
         confirmed: true,
       });
+      expect("admin" in result.data).toBe(false);
+    }
+  });
+});
+
+// ── PasswordResetViaRecoveryKeySchema ─────────────────────────────────
+
+describe("PasswordResetViaRecoveryKeySchema", () => {
+  const validInput = {
+    email: "user@example.com",
+    recoveryKey: "ABCD-EFGH-IJKL-MNOP",
+    newPassword: "newstrongpassword123",
+  };
+
+  it("parses valid input", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse(validInput);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid email", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({
+      ...validInput,
+      email: "not-an-email",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["email"]);
+    }
+  });
+
+  it("rejects empty recoveryKey", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({
+      ...validInput,
+      recoveryKey: "",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["recoveryKey"]);
+    }
+  });
+
+  it("rejects recoveryKey exceeding MAX_RECOVERY_KEY_LENGTH", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({
+      ...validInput,
+      recoveryKey: "a".repeat(MAX_RECOVERY_KEY_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["recoveryKey"]);
+    }
+  });
+
+  it("rejects newPassword shorter than AUTH_MIN_PASSWORD_LENGTH", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({
+      ...validInput,
+      newPassword: "short",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["newPassword"]);
+    }
+  });
+
+  it("rejects newPassword exceeding MAX_PASSWORD_LENGTH", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({
+      ...validInput,
+      newPassword: "a".repeat(MAX_PASSWORD_LENGTH + 1),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues[0];
+      expect(issue).toBeDefined();
+      expect(issue?.path).toEqual(["newPassword"]);
+    }
+  });
+
+  it("accepts newPassword at exactly MAX_PASSWORD_LENGTH", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({
+      ...validInput,
+      newPassword: "a".repeat(MAX_PASSWORD_LENGTH),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects missing fields", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it("strips unknown properties", () => {
+    const result = PasswordResetViaRecoveryKeySchema.safeParse({
+      ...validInput,
+      admin: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual(validInput);
       expect("admin" in result.data).toBe(false);
     }
   });

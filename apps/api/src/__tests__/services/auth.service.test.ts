@@ -32,6 +32,9 @@ function mockContext(headers: Record<string, string> = {}): Context {
 
 // ── Mock external dependencies ───────────────────────────────────────
 
+const mockVerifyPassword = vi.fn<(hash: string, password: string) => boolean>();
+mockVerifyPassword.mockImplementation((hash) => hash === "$argon2id$fake$valid");
+
 vi.mock("@pluralscape/crypto", () => ({
   GENERIC_HASH_BYTES_MAX: 64,
   getSodium: () => ({
@@ -40,7 +43,7 @@ vi.mock("@pluralscape/crypto", () => ({
     genericHash: () => new Uint8Array(32),
   }),
   hashPassword: () => "$argon2id$fake$hash",
-  verifyPassword: (hash: string) => hash === "$argon2id$fake$valid",
+  verifyPassword: (hash: string, password: string) => mockVerifyPassword(hash, password),
   generateSalt: () => new Uint8Array(16),
   derivePasswordKey: () => Promise.resolve(new Uint8Array(32)),
   generateMasterKey: () => new Uint8Array(32),
@@ -95,6 +98,7 @@ describe("auth service", () => {
   beforeEach(() => {
     mockNow.mockReturnValue(Date.now());
     mockAudit.mockClear();
+    mockVerifyPassword.mockClear();
   });
   // ── extractIpAddress ───────────────────────────────────────────────
 
@@ -479,6 +483,41 @@ describe("auth service", () => {
       await loginAccount(db, credentials, "web", mockAudit);
       expect(chain.insert).toHaveBeenCalled();
       expect(chain.values).toHaveBeenCalled();
+    });
+
+    it("calls audit on invalid password (fire-and-forget)", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+
+      const result = await loginAccount(db, credentials, "web", mockAudit);
+      expect(result).toBeNull();
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ eventType: "auth.login-failed" }),
+      );
+    });
+
+    it("returns null even when audit write fails", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValueOnce([
+        {
+          id: "acct_123",
+          emailHash: "hashed_test@example.com",
+          passwordHash: "$argon2id$fake$invalid",
+          accountType: "system",
+        },
+      ]);
+      mockAudit.mockRejectedValueOnce(new Error("audit DB down"));
+
+      const result = await loginAccount(db, credentials, "web", mockAudit);
+      expect(result).toBeNull();
     });
 
     it("throws on invalid email format", async () => {

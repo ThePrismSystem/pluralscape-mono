@@ -223,16 +223,18 @@ export async function loginAccount(
     .limit(1);
 
   if (!account) {
-    // Anti-timing: run verification against dummy hash to equalize timing
-    verifyPassword(DUMMY_ARGON2_HASH, parsed.password);
+    // Anti-enumeration: run verification against dummy hash to equalize timing
+    try {
+      verifyPassword(DUMMY_ARGON2_HASH, parsed.password);
+    } catch (err: unknown) {
+      console.error("[anti-enum] Unexpected verifyPassword error:", err);
+    }
     return null;
   }
 
   const valid = verifyPassword(account.passwordHash, parsed.password);
   if (!valid) {
-    // Fire-and-forget: audit entry is still written, but we don't block
-    // the response on it. This equalizes timing with the "not found" path
-    // (both return immediately after verifyPassword).
+    // Fire-and-forget: we don't block the response on audit writes for failed attempts.
     void audit(db, {
       eventType: "auth.login-failed",
       actor: { kind: "account", id: account.id },

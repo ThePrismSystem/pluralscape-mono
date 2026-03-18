@@ -9,8 +9,8 @@ import {
 export const LoginCredentialsSchema = z
   .object({
     email: z.email(),
-    // Minimum length ensures non-empty; strength rules enforced by auth service
-    password: z.string().min(1),
+    // Minimum length ensures non-empty; max prevents Argon2 DoS
+    password: z.string().min(1).max(MAX_PASSWORD_LENGTH),
   })
   .readonly();
 
