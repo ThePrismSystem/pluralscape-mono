@@ -23,7 +23,7 @@ Epics:
 - ~~Domain types (`packages/types`)~~ [COMPLETED] — 30+ domain type modules with Zod validators and branded IDs
 - ~~Database schema (`packages/db`)~~ [COMPLETED] — 40+ tables, dual-dialect (PG + SQLite), RLS, constraint closure, encryption contracts
 - ~~Database schema hardening~~ [COMPLETED] — 29 tasks: indexes, encryption, sync queue fixes, full-text search, varchar right-sizing
-- ~~Test framework setup~~ [COMPLETED] — Vitest workspace, coverage enforcement, test factories (2,603 tests across 152 files)
+- ~~Test framework setup~~ [COMPLETED] — Vitest workspace, coverage enforcement, test factories
 - ~~Launch feature types (L2-L10)~~ [COMPLETED] — non-system accounts, fronting snapshots, member duplication, outtrigger, multi-system verification, system duplication, lifecycle events, innerworld-move, system snapshots
 - ~~Entity archival~~ [COMPLETED] — archived/archived_at columns across all non-audit entity types with consistency checks and partial indexes
 - ~~RLS policy bootstrapping~~ [COMPLETED] — row-level security policies for all tenant-scoped tables
@@ -46,16 +46,20 @@ Goal: Authentication, identity management, core CRUD
 
 Epics:
 
-- Auth system (features.md section 14), including non-system account type (L2, ADR 021)
-- Member CRUD (features.md section 1), including member duplication (L4)
-- Groups and folders (features.md section 1)
-- Custom fronts (features.md section 1)
-- System settings (features.md section 12)
-- Initial setup wizard
-- System structure data model (features.md section 6)
-- Media upload pipeline (features.md section 16)
-- Per-category rate limit middleware wiring
-- Key rotation API endpoints
+- ~~Auth system~~ [COMPLETED] — registration, login, session management, recovery key backup/regeneration, password reset via recovery key, biometric token enrollment, session token hashing (ADR 013, ADR 021)
+- ~~Member CRUD~~ [COMPLETED] — full lifecycle (create, read, update, archive, restore, duplicate, permanent delete), member photos, custom field values, member-centric membership queries (L4)
+- ~~Groups and folders~~ [COMPLETED] — CRUD, hierarchical nesting, membership management, group copy, cycle detection
+- ~~Custom fronts~~ [COMPLETED] — CRUD with archive/restore
+- ~~System settings~~ [COMPLETED] — CRUD with encrypted data and PIN verification
+- ~~Initial setup wizard~~ [COMPLETED] — multi-step onboarding (profile, nomenclature, completion)
+- ~~System structure data model~~ [COMPLETED] — subsystems, side-systems, layers, relationships, structure links, structure memberships with generic CRUD extraction
+- ~~Media upload pipeline~~ [COMPLETED] — presigned upload/download URLs, blob confirmation, lifecycle management, orphan cleanup (ADR 009)
+- ~~Per-category rate limit middleware wiring~~ [COMPLETED] — read/write/auth/sensitive categories with Valkey-backed distributed store
+- ~~Key rotation API endpoints~~ [COMPLETED] — initiate, claim, complete-chunk, progress tracking (ADR 014)
+- ~~Innerworld CRUD~~ [COMPLETED] — regions, entities, canvas with archive/restore/delete
+- ~~Lifecycle events~~ [COMPLETED] — type-specific validation, cursor-based pagination
+- ~~Audit log~~ [COMPLETED] — query endpoint with resourceType filtering, PII cleanup scheduling
+- ~~API comprehensive audit remediation~~ [COMPLETED] — 36-issue audit across security, ownership, testing, and code quality; executed via 7 parallel worktree PRs
 
 ## Milestone 3: Sync and Real-Time
 
@@ -191,7 +195,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 ## Architecture Decision Records
 
-23 accepted ADRs cover the full stack:
+25 accepted ADRs cover the full stack:
 
 - [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
 - [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
@@ -210,6 +214,8 @@ These features are tracked but may be deferred past initial launch. Each has a d
 - [ADR 021: Non-System Account Model](../adr/021-non-system-accounts.md) — viewer accounts, account-level friend connections
 - [ADR 022: System Structure Snapshots](../adr/022-system-snapshots.md) — point-in-time structure captures, manual and scheduled triggers
 - [ADR 023: Zod-Type Alignment](../adr/023-zod-type-alignment.md) — strategy for keeping Zod validation schemas synchronized with TypeScript types
+- [ADR 024: Device Transfer Code Entropy](../adr/024-device-transfer-code-entropy.md) — entropy trade-off for user-typed device transfer codes
+- [ADR 025: Webhook Secret Storage](../adr/025-webhook-secret-storage.md) — T3 plaintext storage for webhook signing secrets
 
 ## Development Sequence Rationale
 

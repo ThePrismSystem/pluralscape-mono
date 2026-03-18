@@ -8,53 +8,50 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestone 1 (Data Layer) complete. Milestone 2 (API Core) starting.**
+**Active development — Milestones 0-1 complete, Milestone 2 (API Core) nearing completion.**
 
-Milestones 0 (infrastructure and governance) and 1 (data layer) are complete. Completed M1 epics:
+Milestones 0 (infrastructure), 1 (data layer), and the core of Milestone 2 (API) are complete. M2 completed epics:
 
-- Domain types (`@pluralscape/types`) — 30+ domain type modules with Zod validators, branded IDs, and API operational constants
-- Database schema (`@pluralscape/db`) — 40+ tables across PostgreSQL and SQLite dual-dialect, with RLS, constraint closure, and encryption contract hardening
-- Database schema hardening — 29 optimization tasks covering indexes, encryption, sync queue fixes, and full-text search
-- Test framework setup — Vitest workspace with coverage enforcement
-- Encryption primitives (`@pluralscape/crypto`) — master key derivation, symmetric encryption, identity keypairs, libsodium cross-platform bindings, blob encryption pipeline
-- Sync proof-of-concept (`@pluralscape/sync`) — encrypted CRDT relay with Automerge, document topology design
-- Blob storage (`@pluralscape/storage`) — S3-compatible adapter, filesystem adapter, quota management, lifecycle cleanup
-- Background jobs (`@pluralscape/queue`) — SQLite-backed job queue with retry policies, DLQ, and observability
-- i18n infrastructure (`@pluralscape/i18n`) — locale formatting, nomenclature term resolution, React provider
-- Validation (`@pluralscape/validation`) — shared Zod schemas with branded type predicates and contract tests
-- Launch feature types (L2-L10) — fronting snapshots, outtrigger, member duplication, lifecycle events, system snapshots
-- Entity archival — archived/archived_at columns across all non-audit entity types with consistency checks and partial indexes
-- RLS policy bootstrapping — row-level security policies for all tenant-scoped tables
-- SQLCipher encryption-at-rest — encrypted SQLite for self-hosted deployments
-- API foundation (`apps/api`) — Hono server with CORS, security headers, rate limiting, error handling middleware
-- API specification — concrete operational constants (rate limits, pagination, session timeouts, error codes) with importable TypeScript values
-- ServerSafe type boundary — compile-time enforcement preventing plaintext leaks in API responses
+- Auth system — registration, login, session management, recovery key backup/regeneration, password reset via recovery key, biometric token enrollment, session token hashing
+- Member CRUD — full lifecycle (create, read, update, archive, restore, duplicate, permanent delete), member photos, custom field values, member-centric membership queries
+- Groups and folders — CRUD, hierarchical nesting, membership management, group copy, cycle detection
+- Custom fronts — CRUD with archive/restore
+- System settings — CRUD with PIN verification
+- Initial setup wizard — multi-step onboarding flow
+- System structure — subsystems, side-systems, layers, relationships, structure links, structure memberships with generic CRUD extraction
+- Media upload pipeline — presigned upload/download URLs, blob confirmation, lifecycle management, orphan cleanup
+- Per-category rate limit middleware — read/write/auth/sensitive categories with Valkey-backed distributed store
+- Key rotation API — initiate, claim, complete-chunk, progress tracking
+- Innerworld CRUD — regions, entities, canvas with archive/restore/delete
+- Lifecycle events — type-specific validation, pagination
+- Audit log — query endpoint with resourceType filtering, PII cleanup scheduling
+- Comprehensive API audit remediation — 36 issues across security, ownership, testing, and code quality (7 parallel worktree PRs)
 
 See the full [milestone roadmap](docs/planning/milestones.md) and [feature specification](docs/planning/features.md).
 
 ## Test Suite
 
-2,603 tests across 152 test files — all passing.
+4,144 tests across 307 test files — all passing.
 
 | Metric     | Coverage |
 | ---------- | -------- |
-| Statements | 91.79%   |
-| Branches   | 81.67%   |
-| Functions  | 89.16%   |
-| Lines      | 91.91%   |
+| Statements | 94.16%   |
+| Branches   | 83.74%   |
+| Functions  | 93.52%   |
+| Lines      | 94.35%   |
 
 Coverage by package:
 
-| Package                | Statements | Notes                                                  |
-| ---------------------- | ---------- | ------------------------------------------------------ |
-| `@pluralscape/types`   | 100%       | Runtime validators and API constants fully covered     |
-| `@pluralscape/db`      | 100%       | Schema, helpers, RLS, and views                        |
-| `@pluralscape/crypto`  | 98.63%     | Full coverage across all crypto operations             |
-| `@pluralscape/sync`    | 95.98%     | Encrypted CRDT relay and session management            |
-| `@pluralscape/i18n`    | 95.20%     | Locale formatting, nomenclature, and React integration |
-| `@pluralscape/queue`   | ~95%       | Job queue, retry policies, DLQ, observability          |
-| `@pluralscape/storage` | ~93%       | Filesystem adapter, quota management, lifecycle        |
-| `@pluralscape/api`     | 94.82%     | Middleware stack (CORS, rate limiting, error handling) |
+| Package                | Statements | Notes                                                           |
+| ---------------------- | ---------- | --------------------------------------------------------------- |
+| `@pluralscape/types`   | 100%       | Runtime validators and API constants fully covered              |
+| `@pluralscape/db`      | 100%       | Schema, helpers, RLS, and views                                 |
+| `@pluralscape/crypto`  | 98.70%     | Full coverage across all crypto operations                      |
+| `@pluralscape/api`     | 94.29%     | 23 service modules, 80+ route handlers, middleware, auth, audit |
+| `@pluralscape/sync`    | 95.98%     | Encrypted CRDT relay and session management                     |
+| `@pluralscape/i18n`    | 95.20%     | Locale formatting, nomenclature, and React integration          |
+| `@pluralscape/queue`   | ~95%       | Job queue, retry policies, DLQ, observability                   |
+| `@pluralscape/storage` | ~93%       | Filesystem adapter, quota management, lifecycle                 |
 
 ```bash
 pnpm test              # Run all tests
@@ -86,6 +83,7 @@ packages/
   api-client/      tRPC + TanStack Query client bindings
   i18n/            Internationalization — locale formatting, nomenclature
   queue/           Background job queue — SQLite-backed with retry/DLQ
+  rotation-worker/ Key rotation worker — processes bucket key rotation chunks
   storage/         Blob storage — S3 + filesystem adapters, quota management
   validation/      Shared Zod validation schemas with contract tests
 
@@ -214,7 +212,7 @@ Domain prefixes: `ps-`, `api-`, `mobile-`, `db-`, `crypto-`, `sync-`, `types-`, 
 
 ## Architecture Decision Records
 
-Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 23 accepted ADRs cover the full stack from licensing through Zod-type alignment. See the [ADR template](docs/adr/000-template.md) for the format.
+Major technical decisions are documented as ADRs in [`docs/adr/`](docs/adr/). 25 accepted ADRs cover the full stack from licensing through Zod-type alignment. See the [ADR template](docs/adr/000-template.md) for the format.
 
 ## License
 
