@@ -443,16 +443,27 @@ export async function reorderGroups(
   }
 
   await db.transaction(async (tx) => {
-    for (const op of parsed.data.operations) {
-      const updated = await tx
-        .update(groups)
-        .set({ sortOrder: op.sortOrder })
-        .where(
-          and(eq(groups.id, op.groupId), eq(groups.systemId, systemId), eq(groups.archived, false)),
-        )
-        .returning({ id: groups.id });
+    const results = await Promise.all(
+      parsed.data.operations.map((op) =>
+        tx
+          .update(groups)
+          .set({ sortOrder: op.sortOrder })
+          .where(
+            and(
+              eq(groups.id, op.groupId),
+              eq(groups.systemId, systemId),
+              eq(groups.archived, false),
+            ),
+          )
+          .returning({ id: groups.id }),
+      ),
+    );
 
-      if (updated.length === 0) {
+    const ops = parsed.data.operations;
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
+      const op = ops[i];
+      if (result?.length === 0 && op) {
         throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `Group ${op.groupId} not found`);
       }
     }

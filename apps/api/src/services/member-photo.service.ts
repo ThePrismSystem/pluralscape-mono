@@ -258,20 +258,27 @@ export async function reorderMemberPhotos(
     }
 
     // Batch update sort orders
-    for (const item of parsed.data.order) {
-      const [updated] = await tx
-        .update(memberPhotos)
-        .set({ sortOrder: item.sortOrder, updatedAt: timestamp })
-        .where(
-          and(
-            eq(memberPhotos.id, item.id),
-            eq(memberPhotos.memberId, memberId),
-            eq(memberPhotos.systemId, systemId),
-          ),
-        )
-        .returning({ id: memberPhotos.id });
+    const updateResults = await Promise.all(
+      parsed.data.order.map((item) =>
+        tx
+          .update(memberPhotos)
+          .set({ sortOrder: item.sortOrder, updatedAt: timestamp })
+          .where(
+            and(
+              eq(memberPhotos.id, item.id),
+              eq(memberPhotos.memberId, memberId),
+              eq(memberPhotos.systemId, systemId),
+            ),
+          )
+          .returning({ id: memberPhotos.id }),
+      ),
+    );
 
-      if (!updated) {
+    const orderItems = parsed.data.order;
+    for (let i = 0; i < updateResults.length; i++) {
+      const result = updateResults[i];
+      const item = orderItems[i];
+      if (result && !result[0] && item) {
         throw new Error(`Failed to update sort order for photo ${item.id}`);
       }
     }
