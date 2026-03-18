@@ -7,7 +7,7 @@ import {
   subsystemSideSystemLinks,
   subsystems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CreateSideSystemLayerLinkBodySchema,
   CreateSubsystemLayerLinkBodySchema,
@@ -19,6 +19,7 @@ import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
@@ -418,16 +419,7 @@ async function listLinksGeneric<TParsed>(
     filterEntityBId,
   );
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toLinkResult);
-  const lastItem = items[items.length - 1];
-
-  return {
-    items,
-    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toLinkResult);
 }
 
 // ── Public API ──────────────────────────────────────────────────────

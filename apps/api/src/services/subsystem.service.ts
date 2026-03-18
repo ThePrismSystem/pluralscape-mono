@@ -4,7 +4,7 @@ import {
   subsystemSideSystemLinks,
   subsystems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { CreateSubsystemBodySchema, UpdateSubsystemBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -13,6 +13,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -176,17 +177,7 @@ export async function listSubsystems(
     .orderBy(subsystems.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toSubsystemResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toSubsystemResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────

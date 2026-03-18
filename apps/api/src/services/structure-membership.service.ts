@@ -7,7 +7,7 @@ import {
   subsystemMemberships,
   subsystems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { AddStructureMembershipBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
@@ -15,6 +15,7 @@ import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -364,16 +365,7 @@ async function listMembershipsGeneric(
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
   const rows = await cfg.query(db, entityId, systemId, cursor, effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
-  const lastItem = items[items.length - 1];
-
-  return {
-    items,
-    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toMembershipResult);
 }
 
 // ── Public API ──────────────────────────────────────────────────────

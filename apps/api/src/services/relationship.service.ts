@@ -1,5 +1,5 @@
 import { members, relationships } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CreateRelationshipBodySchema,
   UpdateRelationshipBodySchema,
@@ -10,6 +10,7 @@ import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -194,17 +195,7 @@ export async function listRelationships(
     .orderBy(relationships.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toRelationshipResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toRelationshipResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
