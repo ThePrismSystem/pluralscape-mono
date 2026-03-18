@@ -4,25 +4,16 @@ import {
   subsystemSideSystemLinks,
   subsystems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES } from "@pluralscape/types";
 import { CreateSubsystemBodySchema, UpdateSubsystemBodySchema } from "@pluralscape/validation";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
-import { assertOccUpdated } from "../lib/occ-update.js";
-import { buildPaginatedResult } from "../lib/pagination.js";
-import { assertSystemOwnership } from "../lib/system-ownership.js";
-import {
-  DEFAULT_PAGE_LIMIT,
-  MAX_ENCRYPTED_DATA_BYTES,
-  MAX_PAGE_LIMIT,
-} from "../service.constants.js";
 
-import type { AuditWriter } from "../lib/audit-writer.js";
+import { createHierarchyService, mapBaseFields } from "./hierarchy-service-factory.js";
+
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EncryptedBlob,
@@ -68,171 +59,103 @@ function toSubsystemResult(row: {
   archivedAt: number | null;
 }): SubsystemResult {
   return {
+    ...mapBaseFields(row),
     id: row.id as SubsystemId,
-    systemId: row.systemId as SystemId,
     parentSubsystemId: row.parentSubsystemId as SubsystemId | null,
     architectureType: row.architectureType,
     hasCore: row.hasCore,
     discoveryStatus: row.discoveryStatus,
-    encryptedData: encryptedBlobToBase64(row.encryptedData),
-    version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
-    archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
   };
 }
 
-// ── CREATE ──────────────────────────────────────────────────────────
+// ── Shared hierarchy service ────────────────────────────────────────
 
-export async function createSubsystem(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<SubsystemResult> {
-  assertSystemOwnership(systemId, auth);
+const subsystemHierarchy = createHierarchyService<
+  {
+    id: string;
+    systemId: string;
+    parentSubsystemId: string | null;
+    architectureType: unknown;
+    hasCore: boolean;
+    discoveryStatus: string | null;
+    encryptedData: EncryptedBlob;
+    version: number;
+    createdAt: number;
+    updatedAt: number;
+    archived: boolean;
+    archivedAt: number | null;
+  },
+  SubsystemId,
+  SubsystemResult
+>({
+  table: subsystems,
+  columns: {
+    id: subsystems.id,
+    systemId: subsystems.systemId,
+    parentId: subsystems.parentSubsystemId,
+    encryptedData: subsystems.encryptedData,
+    version: subsystems.version,
+    archived: subsystems.archived,
+    archivedAt: subsystems.archivedAt,
+    createdAt: subsystems.createdAt,
+    updatedAt: subsystems.updatedAt,
+  },
+  idPrefix: ID_PREFIXES.subsystem,
+  entityName: "Subsystem",
+  parentFieldName: "parentSubsystemId",
+  toResult: toSubsystemResult,
+  createSchema: CreateSubsystemBodySchema,
+  updateSchema: UpdateSubsystemBodySchema,
+  createInsertValues: (parsed) => ({
+    architectureType: parsed.architectureType,
+    hasCore: parsed.hasCore,
+    discoveryStatus: parsed.discoveryStatus,
+  }),
+  updateSetValues: (parsed) => ({
+    parentSubsystemId: parsed.parentSubsystemId,
+    architectureType: parsed.architectureType,
+    hasCore: parsed.hasCore,
+    discoveryStatus: parsed.discoveryStatus,
+  }),
+  dependentChecks: [
+    {
+      table: subsystems,
+      entityColumn: subsystems.parentSubsystemId,
+      systemColumn: subsystems.systemId,
+      label: "child subsystem(s)",
+      filterArchived: subsystems.archived,
+    },
+    {
+      table: subsystemMemberships,
+      entityColumn: subsystemMemberships.subsystemId,
+      systemColumn: subsystemMemberships.systemId,
+      label: "membership(s)",
+    },
+    {
+      table: subsystemLayerLinks,
+      entityColumn: subsystemLayerLinks.subsystemId,
+      systemColumn: subsystemLayerLinks.systemId,
+      label: "layer link(s)",
+    },
+    {
+      table: subsystemSideSystemLinks,
+      entityColumn: subsystemSideSystemLinks.subsystemId,
+      systemColumn: subsystemSideSystemLinks.systemId,
+      label: "side system link(s)",
+    },
+  ],
+  events: {
+    created: "subsystem.created",
+    updated: "subsystem.updated",
+    deleted: "subsystem.deleted",
+    archived: "subsystem.archived",
+    restored: "subsystem.restored",
+  },
+  beforeUpdate: async (tx, entityId, parsed, systemId) => {
+    const parentSubsystemId = parsed.parentSubsystemId as string | null;
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateSubsystemBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-
-  const subsystemId = createId(ID_PREFIXES.subsystem);
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    if (parsed.parentSubsystemId !== null) {
-      const [parent] = await tx
-        .select({ id: subsystems.id })
-        .from(subsystems)
-        .where(
-          and(
-            eq(subsystems.id, parsed.parentSubsystemId),
-            eq(subsystems.systemId, systemId),
-            eq(subsystems.archived, false),
-          ),
-        )
-        .limit(1);
-
-      if (!parent) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Parent subsystem not found");
-      }
-    }
-
-    const [row] = await tx
-      .insert(subsystems)
-      .values({
-        id: subsystemId,
-        systemId,
-        parentSubsystemId: parsed.parentSubsystemId,
-        architectureType: parsed.architectureType,
-        hasCore: parsed.hasCore,
-        discoveryStatus: parsed.discoveryStatus,
-        encryptedData: blob,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      })
-      .returning();
-
-    if (!row) {
-      throw new Error("Failed to create subsystem — INSERT returned no rows");
-    }
-
-    await audit(tx, {
-      eventType: "subsystem.created",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Subsystem created",
-      systemId,
-    });
-
-    return toSubsystemResult(row);
-  });
-}
-
-// ── LIST ────────────────────────────────────────────────────────────
-
-export async function listSubsystems(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  auth: AuthContext,
-  cursor?: PaginationCursor,
-  limit = DEFAULT_PAGE_LIMIT,
-): Promise<PaginatedResult<SubsystemResult>> {
-  assertSystemOwnership(systemId, auth);
-
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
-
-  const conditions = [eq(subsystems.systemId, systemId), eq(subsystems.archived, false)];
-
-  if (cursor) {
-    conditions.push(gt(subsystems.id, cursor));
-  }
-
-  const rows = await db
-    .select()
-    .from(subsystems)
-    .where(and(...conditions))
-    .orderBy(subsystems.id)
-    .limit(effectiveLimit + 1);
-
-  return buildPaginatedResult(rows, effectiveLimit, toSubsystemResult);
-}
-
-// ── GET ─────────────────────────────────────────────────────────────
-
-export async function getSubsystem(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  subsystemId: SubsystemId,
-  auth: AuthContext,
-): Promise<SubsystemResult> {
-  assertSystemOwnership(systemId, auth);
-
-  const [row] = await db
-    .select()
-    .from(subsystems)
-    .where(
-      and(
-        eq(subsystems.id, subsystemId),
-        eq(subsystems.systemId, systemId),
-        eq(subsystems.archived, false),
-      ),
-    )
-    .limit(1);
-
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Subsystem not found");
-  }
-
-  return toSubsystemResult(row);
-}
-
-// ── UPDATE ──────────────────────────────────────────────────────────
-
-export async function updateSubsystem(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  subsystemId: SubsystemId,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<SubsystemResult> {
-  assertSystemOwnership(systemId, auth);
-
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateSubsystemBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
     // Reject self-parenting
-    if (parsed.parentSubsystemId === subsystemId) {
+    if (parentSubsystemId === entityId) {
       throw new ApiHttpError(
         HTTP_BAD_REQUEST,
         "VALIDATION_ERROR",
@@ -241,7 +164,7 @@ export async function updateSubsystem(
     }
 
     // If parentSubsystemId is non-null, validate and check for cycles
-    if (parsed.parentSubsystemId !== null) {
+    if (parentSubsystemId !== null) {
       await detectAncestorCycle(
         async (id) => {
           const [row] = await tx
@@ -251,242 +174,32 @@ export async function updateSubsystem(
             .limit(1);
           return row?.parentSubsystemId;
         },
-        parsed.parentSubsystemId,
-        subsystemId,
+        parentSubsystemId,
+        entityId,
         "Subsystem",
       );
     }
+  },
+});
 
-    const updated = await tx
-      .update(subsystems)
-      .set({
-        parentSubsystemId: parsed.parentSubsystemId,
-        architectureType: parsed.architectureType,
-        hasCore: parsed.hasCore,
-        discoveryStatus: parsed.discoveryStatus,
-        encryptedData: blob,
-        updatedAt: timestamp,
-        version: sql`${subsystems.version} + 1`,
-      })
-      .where(
-        and(
-          eq(subsystems.id, subsystemId),
-          eq(subsystems.systemId, systemId),
-          eq(subsystems.version, parsed.version),
-          eq(subsystems.archived, false),
-        ),
-      )
-      .returning();
+// ── Delegated CRUD ──────────────────────────────────────────────────
 
-    const row = await assertOccUpdated(
-      updated,
-      async () => {
-        const [existing] = await tx
-          .select({ id: subsystems.id })
-          .from(subsystems)
-          .where(
-            and(
-              eq(subsystems.id, subsystemId),
-              eq(subsystems.systemId, systemId),
-              eq(subsystems.archived, false),
-            ),
-          )
-          .limit(1);
-        return existing;
-      },
-      "Subsystem",
-    );
+export const createSubsystem = subsystemHierarchy.create;
 
-    await audit(tx, {
-      eventType: "subsystem.updated",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Subsystem updated",
-      systemId,
-    });
-
-    return toSubsystemResult(row);
-  });
-}
-
-// ── DELETE ───────────────────────────────────────────────────────────
-
-export async function deleteSubsystem(
+export const listSubsystems: (
   db: PostgresJsDatabase,
   systemId: SystemId,
-  subsystemId: SubsystemId,
   auth: AuthContext,
-  audit: AuditWriter,
-): Promise<void> {
-  assertSystemOwnership(systemId, auth);
+  cursor?: PaginationCursor,
+  limit?: number,
+) => Promise<PaginatedResult<SubsystemResult>> = subsystemHierarchy.list;
 
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: subsystems.id })
-      .from(subsystems)
-      .where(
-        and(
-          eq(subsystems.id, subsystemId),
-          eq(subsystems.systemId, systemId),
-          eq(subsystems.archived, false),
-        ),
-      )
-      .limit(1);
+export const getSubsystem = subsystemHierarchy.get;
 
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Subsystem not found");
-    }
+export const updateSubsystem = subsystemHierarchy.update;
 
-    // Check all dependents in a single query using subselects
-    const [dependents] = await tx
-      .select({
-        children: sql<number>`(
-          SELECT count(*)
-          FROM ${subsystems}
-          WHERE ${subsystems.parentSubsystemId} = ${subsystemId}
-            AND ${subsystems.systemId} = ${systemId}
-            AND ${subsystems.archived} = false
-        )`.mapWith(Number),
-        memberships: sql<number>`(
-          SELECT count(*)
-          FROM ${subsystemMemberships}
-          WHERE ${subsystemMemberships.subsystemId} = ${subsystemId}
-            AND ${subsystemMemberships.systemId} = ${systemId}
-        )`.mapWith(Number),
-        layerLinks: sql<number>`(
-          SELECT count(*)
-          FROM ${subsystemLayerLinks}
-          WHERE ${subsystemLayerLinks.subsystemId} = ${subsystemId}
-            AND ${subsystemLayerLinks.systemId} = ${systemId}
-        )`.mapWith(Number),
-        sideSystemLinks: sql<number>`(
-          SELECT count(*)
-          FROM ${subsystemSideSystemLinks}
-          WHERE ${subsystemSideSystemLinks.subsystemId} = ${subsystemId}
-            AND ${subsystemSideSystemLinks.systemId} = ${systemId}
-        )`.mapWith(Number),
-      })
-      .from(sql`(SELECT 1) AS _`);
+export const deleteSubsystem = subsystemHierarchy.remove;
 
-    if (!dependents) {
-      throw new Error("Unexpected: dependent count query returned no rows");
-    }
+export const archiveSubsystem = subsystemHierarchy.archive;
 
-    const totalDependents =
-      dependents.children +
-      dependents.memberships +
-      dependents.layerLinks +
-      dependents.sideSystemLinks;
-
-    if (totalDependents > 0) {
-      throw new ApiHttpError(
-        HTTP_CONFLICT,
-        "HAS_DEPENDENTS",
-        `Subsystem has dependents. Remove all child subsystems, memberships, and links before deleting.`,
-      );
-    }
-
-    await audit(tx, {
-      eventType: "subsystem.deleted",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Subsystem deleted",
-      systemId,
-    });
-
-    await tx
-      .delete(subsystems)
-      .where(and(eq(subsystems.id, subsystemId), eq(subsystems.systemId, systemId)));
-  });
-}
-
-// ── ARCHIVE ─────────────────────────────────────────────────────────
-
-const SUBSYSTEM_LIFECYCLE = {
-  table: subsystems,
-  columns: subsystems,
-  entityName: "Subsystem",
-  archiveEvent: "subsystem.archived" as const,
-  restoreEvent: "subsystem.restored" as const,
-};
-
-export async function archiveSubsystem(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  subsystemId: SubsystemId,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<void> {
-  await archiveEntity(db, systemId, subsystemId, auth, audit, SUBSYSTEM_LIFECYCLE);
-}
-
-// ── RESTORE ─────────────────────────────────────────────────────────
-
-export async function restoreSubsystem(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  subsystemId: SubsystemId,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<SubsystemResult> {
-  assertSystemOwnership(systemId, auth);
-
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: subsystems.id, parentSubsystemId: subsystems.parentSubsystemId })
-      .from(subsystems)
-      .where(
-        and(
-          eq(subsystems.id, subsystemId),
-          eq(subsystems.systemId, systemId),
-          eq(subsystems.archived, true),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived subsystem not found");
-    }
-
-    // If parent is archived, promote to root
-    let newParentSubsystemId = existing.parentSubsystemId;
-    if (newParentSubsystemId !== null) {
-      const [parent] = await tx
-        .select({ archived: subsystems.archived })
-        .from(subsystems)
-        .where(and(eq(subsystems.id, newParentSubsystemId), eq(subsystems.systemId, systemId)))
-        .limit(1);
-
-      if (!parent || parent.archived) {
-        newParentSubsystemId = null;
-      }
-    }
-
-    const updated = await tx
-      .update(subsystems)
-      .set({
-        archived: false,
-        archivedAt: null,
-        parentSubsystemId: newParentSubsystemId,
-        updatedAt: timestamp,
-        version: sql`${subsystems.version} + 1`,
-      })
-      .where(and(eq(subsystems.id, subsystemId), eq(subsystems.systemId, systemId)))
-      .returning();
-
-    if (updated.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived subsystem not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
-
-    await audit(tx, {
-      eventType: "subsystem.restored",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Subsystem restored",
-      systemId,
-    });
-
-    return toSubsystemResult(row);
-  });
-}
+export const restoreSubsystem = subsystemHierarchy.restore;

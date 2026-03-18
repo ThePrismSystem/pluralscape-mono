@@ -7,21 +7,15 @@ import {
   ReorderGroupsBodySchema,
   UpdateGroupBodySchema,
 } from "@pluralscape/validation";
-import { and, count, eq, gt, max, sql } from "drizzle-orm";
+import { and, eq, max, sql } from "drizzle-orm";
 
-import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
-import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
-import {
-  DEFAULT_PAGE_LIMIT,
-  MAX_ENCRYPTED_DATA_BYTES,
-  MAX_PAGE_LIMIT,
-} from "../service.constants.js";
+
+import { createHierarchyService, mapBaseFields } from "./hierarchy-service-factory.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -65,271 +59,98 @@ function toGroupResult(row: {
   archivedAt: number | null;
 }): GroupResult {
   return {
+    ...mapBaseFields(row),
     id: row.id as GroupId,
-    systemId: row.systemId as SystemId,
     parentGroupId: row.parentGroupId as GroupId | null,
     sortOrder: row.sortOrder,
-    encryptedData: encryptedBlobToBase64(row.encryptedData),
-    version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
-    archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
   };
 }
 
-// ── CREATE ──────────────────────────────────────────────────────────
+// ── Shared hierarchy service ────────────────────────────────────────
 
-export async function createGroup(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<GroupResult> {
-  assertSystemOwnership(systemId, auth);
+const groupHierarchy = createHierarchyService<
+  {
+    id: string;
+    systemId: string;
+    parentGroupId: string | null;
+    sortOrder: number;
+    encryptedData: EncryptedBlob;
+    version: number;
+    createdAt: number;
+    updatedAt: number;
+    archived: boolean;
+    archivedAt: number | null;
+  },
+  GroupId,
+  GroupResult
+>({
+  table: groups,
+  columns: {
+    id: groups.id,
+    systemId: groups.systemId,
+    parentId: groups.parentGroupId,
+    encryptedData: groups.encryptedData,
+    version: groups.version,
+    archived: groups.archived,
+    archivedAt: groups.archivedAt,
+    createdAt: groups.createdAt,
+    updatedAt: groups.updatedAt,
+  },
+  idPrefix: ID_PREFIXES.group,
+  entityName: "Group",
+  parentFieldName: "parentGroupId",
+  toResult: toGroupResult,
+  createSchema: CreateGroupBodySchema,
+  updateSchema: UpdateGroupBodySchema,
+  createInsertValues: (parsed) => ({
+    sortOrder: parsed.sortOrder,
+  }),
+  updateSetValues: () => ({}),
+  dependentChecks: [
+    {
+      table: groups,
+      entityColumn: groups.parentGroupId,
+      systemColumn: groups.systemId,
+      label: "child group(s)",
+      filterArchived: groups.archived,
+    },
+    {
+      table: groupMemberships,
+      entityColumn: groupMemberships.groupId,
+      systemColumn: groupMemberships.systemId,
+      label: "member(s)",
+    },
+  ],
+  events: {
+    created: "group.created",
+    updated: "group.updated",
+    deleted: "group.deleted",
+    archived: "group.archived",
+    restored: "group.restored",
+  },
+});
 
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    CreateGroupBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
+// ── Delegated CRUD ──────────────────────────────────────────────────
 
-  const groupId = createId(ID_PREFIXES.group);
-  const timestamp = now();
+export const createGroup = groupHierarchy.create;
 
-  return db.transaction(async (tx) => {
-    // Validate parentGroupId exists in same system if non-null
-    if (parsed.parentGroupId !== null) {
-      const [parent] = await tx
-        .select({ id: groups.id })
-        .from(groups)
-        .where(
-          and(
-            eq(groups.id, parsed.parentGroupId),
-            eq(groups.systemId, systemId),
-            eq(groups.archived, false),
-          ),
-        )
-        .limit(1);
-
-      if (!parent) {
-        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Parent group not found");
-      }
-    }
-
-    const [row] = await tx
-      .insert(groups)
-      .values({
-        id: groupId,
-        systemId,
-        parentGroupId: parsed.parentGroupId,
-        sortOrder: parsed.sortOrder,
-        encryptedData: blob,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      })
-      .returning();
-
-    if (!row) {
-      throw new Error("Failed to create group — INSERT returned no rows");
-    }
-
-    await audit(tx, {
-      eventType: "group.created",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Group created",
-      systemId,
-    });
-
-    return toGroupResult(row);
-  });
-}
-
-// ── LIST ────────────────────────────────────────────────────────────
-
-export async function listGroups(
+export const listGroups: (
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
   cursor?: PaginationCursor,
-  limit = DEFAULT_PAGE_LIMIT,
-): Promise<PaginatedResult<GroupResult>> {
-  assertSystemOwnership(systemId, auth);
+  limit?: number,
+) => Promise<PaginatedResult<GroupResult>> = groupHierarchy.list;
 
-  const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
+export const getGroup = groupHierarchy.get;
 
-  const conditions = [eq(groups.systemId, systemId), eq(groups.archived, false)];
+export const updateGroup = groupHierarchy.update;
 
-  if (cursor) {
-    conditions.push(gt(groups.id, cursor));
-  }
+export const deleteGroup = groupHierarchy.remove;
 
-  const rows = await db
-    .select()
-    .from(groups)
-    .where(and(...conditions))
-    .orderBy(groups.id)
-    .limit(effectiveLimit + 1);
+export const archiveGroup = groupHierarchy.archive;
 
-  return buildPaginatedResult(rows, effectiveLimit, toGroupResult);
-}
-
-// ── GET ─────────────────────────────────────────────────────────────
-
-export async function getGroup(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  groupId: GroupId,
-  auth: AuthContext,
-): Promise<GroupResult> {
-  assertSystemOwnership(systemId, auth);
-
-  const [row] = await db
-    .select()
-    .from(groups)
-    .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
-    .limit(1);
-
-  if (!row) {
-    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
-  }
-
-  return toGroupResult(row);
-}
-
-// ── UPDATE ──────────────────────────────────────────────────────────
-
-export async function updateGroup(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  groupId: GroupId,
-  params: unknown,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<GroupResult> {
-  assertSystemOwnership(systemId, auth);
-
-  const { parsed, blob } = parseAndValidateBlob(
-    params,
-    UpdateGroupBodySchema,
-    MAX_ENCRYPTED_DATA_BYTES,
-  );
-
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const updated = await tx
-      .update(groups)
-      .set({
-        encryptedData: blob,
-        updatedAt: timestamp,
-        version: sql`${groups.version} + 1`,
-      })
-      .where(
-        and(
-          eq(groups.id, groupId),
-          eq(groups.systemId, systemId),
-          eq(groups.version, parsed.version),
-          eq(groups.archived, false),
-        ),
-      )
-      .returning();
-
-    const row = await assertOccUpdated(
-      updated,
-      async () => {
-        const [existing] = await tx
-          .select({ id: groups.id })
-          .from(groups)
-          .where(
-            and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)),
-          )
-          .limit(1);
-        return existing;
-      },
-      "Group",
-    );
-
-    await audit(tx, {
-      eventType: "group.updated",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Group updated",
-      systemId,
-    });
-
-    return toGroupResult(row);
-  });
-}
-
-// ── DELETE ───────────────────────────────────────────────────────────
-
-export async function deleteGroup(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  groupId: GroupId,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<void> {
-  assertSystemOwnership(systemId, auth);
-
-  await db.transaction(async (tx) => {
-    // Verify group exists
-    const [existing] = await tx
-      .select({ id: groups.id })
-      .from(groups)
-      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
-    }
-
-    // Check for child groups
-    const [childCount] = await tx
-      .select({ count: count() })
-      .from(groups)
-      .where(
-        and(
-          eq(groups.parentGroupId, groupId),
-          eq(groups.systemId, systemId),
-          eq(groups.archived, false),
-        ),
-      );
-
-    // Check for group memberships
-    const [membershipCount] = await tx
-      .select({ count: count() })
-      .from(groupMemberships)
-      .where(and(eq(groupMemberships.groupId, groupId), eq(groupMemberships.systemId, systemId)));
-
-    if (!childCount || !membershipCount) {
-      throw new Error("Unexpected: count query returned no rows");
-    }
-
-    const children = childCount.count;
-    const memberships = membershipCount.count;
-
-    if (children > 0 || memberships > 0) {
-      throw new ApiHttpError(
-        HTTP_CONFLICT,
-        "HAS_DEPENDENTS",
-        `Group has ${String(children)} child group(s) and ${String(memberships)} member(s). Remove all dependents before deleting.`,
-      );
-    }
-
-    // Audit before delete (FK satisfied since group still exists)
-    await audit(tx, {
-      eventType: "group.deleted",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Group deleted",
-      systemId,
-    });
-
-    // Hard delete
-    await tx.delete(groups).where(and(eq(groups.id, groupId), eq(groups.systemId, systemId)));
-  });
-}
+export const restoreGroup = groupHierarchy.restore;
 
 // ── MOVE ────────────────────────────────────────────────────────────
 
@@ -642,92 +463,5 @@ export async function reorderGroups(
       detail: `Reordered ${String(parsed.data.operations.length)} group(s)`,
       systemId,
     });
-  });
-}
-
-// ── ARCHIVE ─────────────────────────────────────────────────────────
-
-const GROUP_LIFECYCLE = {
-  table: groups,
-  columns: groups,
-  entityName: "Group",
-  archiveEvent: "group.archived" as const,
-  restoreEvent: "group.restored" as const,
-};
-
-export async function archiveGroup(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  groupId: GroupId,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<void> {
-  await archiveEntity(db, systemId, groupId, auth, audit, GROUP_LIFECYCLE);
-}
-
-// ── RESTORE ─────────────────────────────────────────────────────────
-
-export async function restoreGroup(
-  db: PostgresJsDatabase,
-  systemId: SystemId,
-  groupId: GroupId,
-  auth: AuthContext,
-  audit: AuditWriter,
-): Promise<GroupResult> {
-  assertSystemOwnership(systemId, auth);
-
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: groups.id, parentGroupId: groups.parentGroupId })
-      .from(groups)
-      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, true)))
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived group not found");
-    }
-
-    // If parent is archived, promote to root
-    let newParentGroupId = existing.parentGroupId;
-    if (newParentGroupId !== null) {
-      const [parent] = await tx
-        .select({ archived: groups.archived })
-        .from(groups)
-        .where(and(eq(groups.id, newParentGroupId), eq(groups.systemId, systemId)))
-        .limit(1);
-
-      if (!parent || parent.archived) {
-        newParentGroupId = null;
-      }
-    }
-
-    const updated = await tx
-      .update(groups)
-      .set({
-        archived: false,
-        archivedAt: null,
-        parentGroupId: newParentGroupId,
-        updatedAt: timestamp,
-        version: sql`${groups.version} + 1`,
-      })
-      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId)))
-      .returning();
-
-    if (updated.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived group not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
-
-    await audit(tx, {
-      eventType: "group.restored",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Group restored",
-      systemId,
-    });
-
-    return toGroupResult(row);
   });
 }

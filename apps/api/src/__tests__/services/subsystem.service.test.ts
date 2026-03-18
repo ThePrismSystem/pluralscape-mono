@@ -499,12 +499,16 @@ describe("deleteSubsystem", () => {
 
   it("deletes a subsystem with no dependents", async () => {
     const { db, chain } = mockDb();
-    // exists check: select().from().where().limit()
+    // exists check: select({id}).from(table).where(...).limit(1)
     chain.limit.mockResolvedValueOnce([{ id: SUBSYSTEM_ID }]);
-    // dependents check: select({subqueries}).from(sql) — from() is terminal
-    chain.from
-      .mockReturnValueOnce(chain) // existence check from() → chains to .where()
-      .mockResolvedValueOnce([{ children: 0, memberships: 0, layerLinks: 0, sideSystemLinks: 0 }]);
+    // dependents: 4 individual count queries (children, memberships, layerLinks, sideSystemLinks)
+    // Each does select({count}).from(dep.table).where(...) — where() is terminal
+    chain.where
+      .mockReturnValueOnce(chain) // existence check where() → chains to .limit()
+      .mockResolvedValueOnce([{ count: 0 }]) // child subsystems count
+      .mockResolvedValueOnce([{ count: 0 }]) // memberships count
+      .mockResolvedValueOnce([{ count: 0 }]) // layer links count
+      .mockResolvedValueOnce([{ count: 0 }]); // side system links count
 
     await deleteSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit);
 
@@ -517,12 +521,15 @@ describe("deleteSubsystem", () => {
 
   it("throws 409 when subsystem has dependents", async () => {
     const { db, chain } = mockDb();
-    // exists check: select().from().where().limit()
+    // exists check: select({id}).from(table).where(...).limit(1)
     chain.limit.mockResolvedValueOnce([{ id: SUBSYSTEM_ID }]);
-    // dependents check: select({subqueries}).from(sql) — from() is terminal
-    chain.from
-      .mockReturnValueOnce(chain) // existence check from() → chains to .where()
-      .mockResolvedValueOnce([{ children: 3, memberships: 0, layerLinks: 0, sideSystemLinks: 0 }]);
+    // dependents: first count query returns 3 children → 409 immediately
+    chain.where
+      .mockReturnValueOnce(chain) // existence check where() → chains to .limit()
+      .mockResolvedValueOnce([{ count: 3 }]) // child subsystems (non-zero → 409)
+      .mockResolvedValueOnce([{ count: 0 }]) // memberships
+      .mockResolvedValueOnce([{ count: 0 }]) // layer links
+      .mockResolvedValueOnce([{ count: 0 }]); // side system links
 
     await expect(deleteSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 409, code: "HAS_DEPENDENTS" }),
