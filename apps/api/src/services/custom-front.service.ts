@@ -5,9 +5,9 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -72,7 +72,7 @@ export async function createCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CustomFrontResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { blob } = parseAndValidateBlob(
     params,
@@ -119,7 +119,7 @@ export async function listCustomFronts(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<CustomFrontResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -157,7 +157,7 @@ export async function getCustomFront(
   customFrontId: CustomFrontId,
   auth: AuthContext,
 ): Promise<CustomFrontResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select()
@@ -188,7 +188,7 @@ export async function updateCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CustomFrontResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -255,7 +255,7 @@ export async function deleteCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -314,7 +314,7 @@ export async function archiveCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 
@@ -358,7 +358,7 @@ export async function restoreCustomFront(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CustomFrontResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const timestamp = now();
 

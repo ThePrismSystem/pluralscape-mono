@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { GroupId, MemberId, SystemId } from "@pluralscape/types";
@@ -9,8 +10,13 @@ vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../lib/system-ownership.js", () => ({
+  assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
+}));
+
 const { addMember, removeMember, listGroupMembers } =
   await import("../../services/group-membership.service.js");
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 const SYSTEM_ID = "sys_test-system" as SystemId;
 const GROUP_ID = "grp_test-group" as GroupId;
@@ -95,13 +101,13 @@ describe("addMember", () => {
     );
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
     await expect(
-      addMember(db, SYSTEM_ID, GROUP_ID, { memberId: MEMBER_ID }, otherAuth, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+      addMember(db, SYSTEM_ID, GROUP_ID, { memberId: MEMBER_ID }, AUTH, mockAudit),
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
 

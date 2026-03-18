@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeAuditLog } from "../../lib/audit-log.js";
 
 import type { WriteAuditLogParams } from "../../lib/audit-log.js";
+import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 vi.mock("@pluralscape/types", async (importOriginal) => {
@@ -27,8 +28,8 @@ function createMockDb(): { db: PostgresJsDatabase; valuesSpy: ReturnType<typeof 
 
 function baseParams(overrides?: Partial<WriteAuditLogParams>): WriteAuditLogParams {
   return {
-    accountId: "acc_test-account",
-    systemId: "sys_test-system",
+    accountId: "acc_test-account" as AccountId,
+    systemId: "sys_test-system" as SystemId,
     eventType: "auth.login",
     actor: { kind: "account", id: "acc_test-account" },
     ...overrides,
@@ -51,7 +52,10 @@ describe("writeAuditLog", () => {
 
   it("includes accountId and systemId", async () => {
     const { db, valuesSpy } = createMockDb();
-    await writeAuditLog(db, baseParams({ accountId: "acc_abc", systemId: "sys_xyz" }));
+    await writeAuditLog(
+      db,
+      baseParams({ accountId: "acc_abc" as AccountId, systemId: "sys_xyz" as SystemId }),
+    );
 
     const insertedRow = valuesSpy.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(insertedRow.accountId).toBe("acc_abc");

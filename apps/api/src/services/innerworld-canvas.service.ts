@@ -5,8 +5,8 @@ import { eq, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { MAX_ENCRYPTED_DATA_BYTES } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -49,7 +49,7 @@ export async function getCanvas(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<CanvasResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [row] = await db
     .select()
@@ -73,7 +73,7 @@ export async function upsertCanvas(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<CanvasResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,

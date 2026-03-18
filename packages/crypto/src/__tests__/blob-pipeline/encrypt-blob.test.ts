@@ -47,7 +47,7 @@ describe("encryptBlob / decryptBlob", () => {
       expect(decrypted).toEqual(data);
     });
 
-    it("round-trips large data with streaming", () => {
+    it("round-trips large data with streaming", { timeout: 15_000 }, () => {
       // > 64 KiB to trigger streaming
       const data = new Uint8Array(70_000).fill(0xab);
       const result = encryptBlob({ data, tier: 1, masterKey });

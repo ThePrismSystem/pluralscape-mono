@@ -2,6 +2,7 @@ import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SubsystemId, SystemId } from "@pluralscape/types";
@@ -27,6 +28,10 @@ vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../lib/system-ownership.js", () => ({
+  assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const {
@@ -38,6 +43,7 @@ const {
   archiveSubsystem,
   restoreSubsystem,
 } = await import("../../services/subsystem.service.js");
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -130,9 +136,9 @@ describe("createSubsystem", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
     await expect(
       createSubsystem(
@@ -145,10 +151,10 @@ describe("createSubsystem", () => {
           hasCore: false,
           discoveryStatus: null,
         },
-        otherAuth,
+        AUTH,
         mockAudit,
       ),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("throws 400 for invalid body", async () => {
@@ -200,12 +206,12 @@ describe("listSubsystems", () => {
     expect(result.items[0]?.id).toBe(SUBSYSTEM_ID);
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
-    await expect(listSubsystems(db, SYSTEM_ID, otherAuth)).rejects.toThrow(
-      expect.objectContaining({ status: 403, code: "FORBIDDEN" }),
+    await expect(listSubsystems(db, SYSTEM_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
 
@@ -253,12 +259,12 @@ describe("getSubsystem", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
-    await expect(getSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, otherAuth)).rejects.toThrow(
-      expect.objectContaining({ status: 403, code: "FORBIDDEN" }),
+    await expect(getSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
     );
   });
 });
@@ -297,9 +303,9 @@ describe("updateSubsystem", () => {
     );
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
     await expect(
       updateSubsystem(
@@ -314,10 +320,10 @@ describe("updateSubsystem", () => {
           discoveryStatus: null,
           version: 1,
         },
-        otherAuth,
+        AUTH,
         mockAudit,
       ),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("throws 400 for invalid body (missing version)", async () => {
@@ -533,13 +539,13 @@ describe("deleteSubsystem", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
-    await expect(
-      deleteSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, otherAuth, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+    await expect(deleteSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });
 
@@ -570,13 +576,13 @@ describe("archiveSubsystem", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
-    await expect(
-      archiveSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, otherAuth, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+    await expect(archiveSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });
 
@@ -643,12 +649,12 @@ describe("restoreSubsystem", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
-    await expect(
-      restoreSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, otherAuth, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+    await expect(restoreSubsystem(db, SYSTEM_ID, SUBSYSTEM_ID, AUTH, mockAudit)).rejects.toThrow(
+      expect.objectContaining({ status: 404, code: "NOT_FOUND" }),
+    );
   });
 });

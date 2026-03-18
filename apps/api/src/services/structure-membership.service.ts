@@ -13,8 +13,8 @@ import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
-import { assertSystemOwnership } from "../lib/assert-system-ownership.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -119,7 +119,7 @@ export async function addSubsystemMembership(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureMembershipResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.subsystem;
 
   const { parsed, blob } = parseAndValidateBlob(
@@ -194,7 +194,7 @@ export async function removeSubsystemMembership(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.subsystem;
 
   await db.transaction(async (tx) => {
@@ -226,7 +226,7 @@ export async function listSubsystemMemberships(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.subsystem;
 
   const [entity] = await db
@@ -283,7 +283,7 @@ export async function addSideSystemMembership(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureMembershipResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.sideSystem;
 
   const { parsed, blob } = parseAndValidateBlob(
@@ -358,7 +358,7 @@ export async function removeSideSystemMembership(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.sideSystem;
 
   await db.transaction(async (tx) => {
@@ -393,7 +393,7 @@ export async function listSideSystemMemberships(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.sideSystem;
 
   const [entity] = await db
@@ -450,7 +450,7 @@ export async function addLayerMembership(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<StructureMembershipResult> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.layer;
 
   const { parsed, blob } = parseAndValidateBlob(
@@ -519,7 +519,7 @@ export async function removeLayerMembership(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.layer;
 
   await db.transaction(async (tx) => {
@@ -549,7 +549,7 @@ export async function listLayerMemberships(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
-  assertSystemOwnership(auth, systemId);
+  await assertSystemOwnership(db, systemId, auth);
   const cfg = ENTITY_CONFIGS.layer;
 
   const [entity] = await db

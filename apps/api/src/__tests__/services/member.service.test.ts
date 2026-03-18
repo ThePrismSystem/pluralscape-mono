@@ -2,6 +2,7 @@ import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { MemberId, SystemId } from "@pluralscape/types";
@@ -136,14 +137,11 @@ describe("createMember", () => {
   });
 
   it("rejects cross-system access", async () => {
-    const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
-    );
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
     await expect(
       createMember(db, SYSTEM_ID, { encryptedData: VALID_BLOB_BASE64 }, AUTH, mockAudit),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 });
 

@@ -9,8 +9,8 @@ import { and, eq } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { validateEncryptedBlob } from "../lib/validate-encrypted-blob.js";
-import { verifySystemOwnership } from "../lib/verify-system-ownership.js";
 
 import { getRecoveryKeyStatus } from "./recovery-key.service.js";
 import { toSystemSettingsResult } from "./system-settings.service.js";
@@ -35,7 +35,7 @@ export async function getSetupStatus(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<SetupStatus> {
-  await verifySystemOwnership(db, systemId, auth);
+  await assertSystemOwnership(db, systemId, auth);
 
   const [nomenclatureRow, systemRow, settingsRow, recoveryStatus] = await Promise.all([
     db
@@ -86,12 +86,12 @@ export async function setupNomenclatureStep(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupStepResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
   const parsed = SetupNomenclatureStepBodySchema.safeParse(params);
   if (!parsed.success) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid nomenclature payload");
   }
-
-  await verifySystemOwnership(db, systemId, auth);
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
@@ -132,12 +132,12 @@ export async function setupProfileStep(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupStepResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
   const parsed = SetupProfileStepBodySchema.safeParse(params);
   if (!parsed.success) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid profile payload");
   }
-
-  await verifySystemOwnership(db, systemId, auth);
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
@@ -176,12 +176,12 @@ export async function setupComplete(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupCompleteResult> {
+  await assertSystemOwnership(db, systemId, auth);
+
   const parsed = SetupCompleteBodySchema.safeParse(params);
   if (!parsed.success) {
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid setup complete payload");
   }
-
-  await verifySystemOwnership(db, systemId, auth);
 
   // Guard: recovery key must exist
   const recoveryStatus = await getRecoveryKeyStatus(db, auth.accountId);

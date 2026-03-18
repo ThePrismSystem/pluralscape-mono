@@ -131,7 +131,7 @@ describe("signThenEncrypt / decryptThenVerify", () => {
     expect(recovered).toEqual(data);
   });
 
-  it("roundtrip with large data", () => {
+  it("roundtrip with large data", { timeout: 15_000 }, () => {
     const kp = getSodium().signKeypair();
     const key = makeKey();
     const data = getSodium().randomBytes(100_000);

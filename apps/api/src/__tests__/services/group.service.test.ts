@@ -2,6 +2,7 @@ import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { GroupId, SystemId } from "@pluralscape/types";
@@ -27,6 +28,10 @@ vi.mock("../../lib/audit-log.js", () => ({
   writeAuditLog: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../lib/system-ownership.js", () => ({
+  assertSystemOwnership: vi.fn().mockResolvedValue(undefined),
+}));
+
 // ── Import under test ────────────────────────────────────────────────
 
 const { InvalidInputError } = await import("@pluralscape/crypto");
@@ -42,6 +47,7 @@ const {
   archiveGroup,
   restoreGroup,
 } = await import("../../services/group.service.js");
+const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -120,19 +126,19 @@ describe("createGroup", () => {
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
-  it("throws 403 for system mismatch", async () => {
+  it("throws 404 for system ownership failure", async () => {
+    mockOwnershipFailure(vi.mocked(assertSystemOwnership));
     const { db } = mockDb();
-    const otherAuth: AuthContext = { ...AUTH, systemId: "sys_other" as SystemId };
 
     await expect(
       createGroup(
         db,
         SYSTEM_ID,
         { encryptedData: VALID_BLOB_BASE64, parentGroupId: null, sortOrder: 0 },
-        otherAuth,
+        AUTH,
         mockAudit,
       ),
-    ).rejects.toThrow(expect.objectContaining({ status: 403, code: "FORBIDDEN" }));
+    ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
   });
 
   it("throws 400 for invalid body", async () => {

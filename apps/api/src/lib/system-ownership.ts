@@ -7,14 +7,14 @@ import { ApiHttpError } from "./api-error.js";
 
 import type { AuthContext } from "./auth-context.js";
 import type { SystemId } from "@pluralscape/types";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /**
  * Verify that the given system is owned by the authenticated account and is not archived.
  * Throws 404 NOT_FOUND on miss (never 403, to avoid revealing existence).
  */
 export async function assertSystemOwnership(
-  db: PgDatabase<PgQueryResultHKT>,
+  db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<void> {
