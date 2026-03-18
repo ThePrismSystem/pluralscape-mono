@@ -1,0 +1,711 @@
+openapi: 3.1.0
+info:
+  title: Pluralscape API
+  version: 0.1.0
+  description: |
+    REST API for Pluralscape, a cross-platform plurality management application.
+
+    All sensitive data is end-to-end encrypted. The server is zero-knowledge —
+    it cannot read user content.
+
+    ## Encryption Model
+    Pluralscape uses **libsodium** with the following algorithms:
+    - **Symmetric encryption**: XChaCha20-Poly1305
+    - **Key exchange**: X25519
+    - **Key derivation**: Argon2id (for password-to-key derivation)
+
+    ### Encryption Tiers
+    Data is encrypted at one of three tiers:
+
+    | Tier | Name | Key Source | Use Case |
+    |------|------|-----------|----------|
+    | **T1** | Master-key encrypted | User's master key (derived from password via Argon2id) | Private data: member profiles, system settings, notes, journals |
+    | **T2** | Per-bucket encrypted | Symmetric key scoped to a Privacy Bucket | Shared data: content visible to specific friends via key grants |
+    | **T3** | Plaintext | None | Non-sensitive metadata: IDs, timestamps, structural relationships |
+
+    ### How `encryptedData` Fields Work
+    Most resource endpoints accept and return an `encryptedData` field. This is a
+    **base64-encoded ciphertext blob** produced client-side:
+
+    1. The client serializes the resource's sensitive fields (name, description, etc.)
+       into a JSON payload
+    2. The client encrypts that JSON with either the master key (T1) or a bucket key (T2)
+       using XChaCha20-Poly1305, producing `{ciphertext, nonce}`
+    3. The client base64-encodes the result and sends it as `encryptedData`
+    4. The server stores the blob **opaquely** — it never decrypts or inspects the contents
+    5. On read, the client decrypts the blob using the same key
+
+    The server enforces size limits on `encryptedData` but cannot validate its internal
+    structure. All validation of the decrypted content happens client-side.
+
+    ### Master Key and Recovery
+    - The user's **master key** is derived from their password using Argon2id
+    - The master key is stored encrypted on the server (encrypted with itself)
+    - A **recovery key** (generated at registration) can decrypt the master key if
+      the password is forgotten — this is the only recovery mechanism
+    - Changing a password re-wraps the master key; the underlying encryption keys remain stable
+
+    ### Privacy Buckets and Friend Sharing
+    - Each Privacy Bucket has its own symmetric key (T2 encryption)
+    - When a friend is granted access to a bucket, the bucket key is encrypted with the
+      friend's public key (X25519) and stored as a **key grant**
+    - Key rotation re-encrypts all items in a bucket with a new key (see Key Rotation endpoints)
+
+    ### Device Transfer
+    When adding a new device, the master key is securely transferred using an
+    ephemeral X25519 key exchange session (5-minute TTL).
+
+    ## Authentication
+    Most endpoints require a Bearer token obtained from `/auth/login` or `/auth/register`.
+    Pass it in the `Authorization` header: `Authorization: Bearer <sessionToken>`.
+    Session tokens are 32-byte hex-encoded values (64 characters).
+
+    ## Pagination
+    List endpoints use cursor-based pagination. Pass `cursor` (opaque string from a
+    previous response) and `limit` (default 25, max 100) as query parameters.
+    Responses include `nextCursor` (null when no more pages) and `hasMore`.
+
+    ## Rate Limiting
+    All endpoints are subject to per-IP rate limits. When exceeded, the API returns
+    `429 Too Many Requests` with a `Retry-After` header.
+
+    ## Error Envelope
+    All errors follow a consistent JSON structure (see `ErrorResponse` schema).
+
+    ## Client-Side Plaintext Schemas
+    Since the server is zero-knowledge, it cannot validate the contents of `encryptedData`
+    fields. The **Plaintext*** schemas in the components section document what the client
+    should serialize into JSON, then encrypt, before sending as `encryptedData`. These are
+    **client-enforced contracts** — the server stores the blob opaquely. See each resource
+    endpoint's description for which plaintext schema applies.
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  contact:
+    name: Pluralscape
+
+servers:
+  - url: http://localhost:3000
+    description: Local development
+
+tags:
+  - name: Health
+    description: Service health checks
+  - name: Auth
+    description: Authentication, sessions, and account recovery
+  - name: Account
+    description: Account management and audit log
+  - name: Systems
+    description: Plural system profiles
+  - name: System Settings
+    description: System settings, nomenclature, PIN, and setup
+  - name: Members
+    description: System members (headmates)
+  - name: Member Photos
+    description: Photos attached to members
+  - name: Member Fields
+    description: Custom field values on members
+  - name: Groups
+    description: Member groups and group memberships
+  - name: Custom Fronts
+    description: Abstract cognitive states logged like members
+  - name: Fields
+    description: Custom field definitions for a system
+  - name: Relationships
+    description: Relationships between members
+  - name: Subsystems
+    description: Subsystem structures within a system
+  - name: Side Systems
+    description: Side system structures
+  - name: Layers
+    description: Layer structures within a system
+  - name: Structure Links
+    description: Cross-structure links (subsystem-layer, subsystem-side-system, side-system-layer)
+  - name: Structure Memberships
+    description: Member assignments to subsystems, side systems, and layers
+  - name: Lifecycle Events
+    description: System lifecycle events (splits, fusions, etc.)
+  - name: Innerworld
+    description: Innerworld regions, entities, and canvas
+  - name: Blobs
+    description: Encrypted file upload and download
+  - name: Key Rotation
+    description: Privacy bucket key rotation
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Session token from login or registration
+
+  parameters:
+    SystemId:
+      name: systemId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^sys_
+      description: System ID (prefixed with `sys_`)
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^mem_
+      description: Member ID (prefixed with `mem_`)
+    GroupId:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^grp_
+      description: Group ID (prefixed with `grp_`)
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Opaque pagination cursor from a previous response
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+      description: Maximum number of items to return (default 25, max 100)
+
+  schemas:
+    # Common
+    ErrorResponse:
+      $ref: "./schemas/common.yaml#/ErrorResponse"
+    PaginationMeta:
+      $ref: "./schemas/common.yaml#/PaginationMeta"
+    EncryptedEntity:
+      $ref: "./schemas/common.yaml#/EncryptedEntity"
+    # Auth
+    LoginRequest:
+      $ref: "./schemas/auth.yaml#/LoginRequest"
+    LoginResponse:
+      $ref: "./schemas/auth.yaml#/LoginResponse"
+    RegistrationRequest:
+      $ref: "./schemas/auth.yaml#/RegistrationRequest"
+    RegistrationResponse:
+      $ref: "./schemas/auth.yaml#/RegistrationResponse"
+    PasswordResetViaRecoveryKeyRequest:
+      $ref: "./schemas/auth.yaml#/PasswordResetViaRecoveryKeyRequest"
+    PasswordResetResponse:
+      $ref: "./schemas/auth.yaml#/PasswordResetResponse"
+    BiometricTokenRequest:
+      $ref: "./schemas/auth.yaml#/BiometricTokenRequest"
+    SessionInfo:
+      $ref: "./schemas/auth.yaml#/SessionInfo"
+    SessionListResponse:
+      $ref: "./schemas/auth.yaml#/SessionListResponse"
+    RegenerateRecoveryKeyRequest:
+      $ref: "./schemas/auth.yaml#/RegenerateRecoveryKeyRequest"
+    RecoveryKeyStatusResponse:
+      $ref: "./schemas/auth.yaml#/RecoveryKeyStatusResponse"
+    RevokeAllResponse:
+      $ref: "./schemas/auth.yaml#/RevokeAllResponse"
+    # Account
+    AccountInfo:
+      $ref: "./schemas/account.yaml#/AccountInfo"
+    ChangeEmailRequest:
+      $ref: "./schemas/account.yaml#/ChangeEmailRequest"
+    ChangePasswordRequest:
+      $ref: "./schemas/account.yaml#/ChangePasswordRequest"
+    AuditLogQuery:
+      $ref: "./schemas/account.yaml#/AuditLogQuery"
+    AuditLogResponse:
+      $ref: "./schemas/account.yaml#/AuditLogResponse"
+    # Systems
+    SystemProfile:
+      $ref: "./schemas/systems.yaml#/SystemProfile"
+    UpdateSystemRequest:
+      $ref: "./schemas/systems.yaml#/UpdateSystemRequest"
+    # Members
+    CreateMemberRequest:
+      $ref: "./schemas/members.yaml#/CreateMemberRequest"
+    UpdateMemberRequest:
+      $ref: "./schemas/members.yaml#/UpdateMemberRequest"
+    DuplicateMemberRequest:
+      $ref: "./schemas/members.yaml#/DuplicateMemberRequest"
+    # Member Photos
+    CreateMemberPhotoRequest:
+      $ref: "./schemas/member-photos.yaml#/CreateMemberPhotoRequest"
+    ReorderPhotosRequest:
+      $ref: "./schemas/member-photos.yaml#/ReorderPhotosRequest"
+    # Fields
+    FieldType:
+      $ref: "./schemas/fields.yaml#/FieldType"
+    CreateFieldDefinitionRequest:
+      $ref: "./schemas/fields.yaml#/CreateFieldDefinitionRequest"
+    UpdateFieldDefinitionRequest:
+      $ref: "./schemas/fields.yaml#/UpdateFieldDefinitionRequest"
+    FieldDefinitionResponse:
+      $ref: "./schemas/fields.yaml#/FieldDefinitionResponse"
+    SetFieldValueRequest:
+      $ref: "./schemas/fields.yaml#/SetFieldValueRequest"
+    UpdateFieldValueRequest:
+      $ref: "./schemas/fields.yaml#/UpdateFieldValueRequest"
+    FieldValueResponse:
+      $ref: "./schemas/fields.yaml#/FieldValueResponse"
+    # Groups
+    GroupResponse:
+      $ref: "./schemas/groups.yaml#/GroupResponse"
+    CreateGroupRequest:
+      $ref: "./schemas/groups.yaml#/CreateGroupRequest"
+    UpdateGroupRequest:
+      $ref: "./schemas/groups.yaml#/UpdateGroupRequest"
+    MoveGroupRequest:
+      $ref: "./schemas/groups.yaml#/MoveGroupRequest"
+    CopyGroupRequest:
+      $ref: "./schemas/groups.yaml#/CopyGroupRequest"
+    ReorderGroupsRequest:
+      $ref: "./schemas/groups.yaml#/ReorderGroupsRequest"
+    AddGroupMemberRequest:
+      $ref: "./schemas/groups.yaml#/AddGroupMemberRequest"
+    GroupMembership:
+      $ref: "./schemas/groups.yaml#/GroupMembership"
+    # Custom Fronts
+    CreateCustomFrontRequest:
+      $ref: "./schemas/custom-fronts.yaml#/CreateCustomFrontRequest"
+    UpdateCustomFrontRequest:
+      $ref: "./schemas/custom-fronts.yaml#/UpdateCustomFrontRequest"
+    # Relationships
+    RelationshipType:
+      $ref: "./schemas/relationships.yaml#/RelationshipType"
+    CreateRelationshipRequest:
+      $ref: "./schemas/relationships.yaml#/CreateRelationshipRequest"
+    UpdateRelationshipRequest:
+      $ref: "./schemas/relationships.yaml#/UpdateRelationshipRequest"
+    RelationshipResponse:
+      $ref: "./schemas/relationships.yaml#/RelationshipResponse"
+    # Structures
+    KnownArchitectureType:
+      $ref: "./schemas/structures.yaml#/KnownArchitectureType"
+    ArchitectureType:
+      $ref: "./schemas/structures.yaml#/ArchitectureType"
+    DiscoveryStatus:
+      $ref: "./schemas/structures.yaml#/DiscoveryStatus"
+    CreateSubsystemRequest:
+      $ref: "./schemas/structures.yaml#/CreateSubsystemRequest"
+    UpdateSubsystemRequest:
+      $ref: "./schemas/structures.yaml#/UpdateSubsystemRequest"
+    SubsystemResponse:
+      $ref: "./schemas/structures.yaml#/SubsystemResponse"
+    CreateSideSystemRequest:
+      $ref: "./schemas/structures.yaml#/CreateSideSystemRequest"
+    UpdateSideSystemRequest:
+      $ref: "./schemas/structures.yaml#/UpdateSideSystemRequest"
+    CreateLayerRequest:
+      $ref: "./schemas/structures.yaml#/CreateLayerRequest"
+    UpdateLayerRequest:
+      $ref: "./schemas/structures.yaml#/UpdateLayerRequest"
+    LayerResponse:
+      $ref: "./schemas/structures.yaml#/LayerResponse"
+    AddStructureMembershipRequest:
+      $ref: "./schemas/structures.yaml#/AddStructureMembershipRequest"
+    CreateSubsystemLayerLinkRequest:
+      $ref: "./schemas/structures.yaml#/CreateSubsystemLayerLinkRequest"
+    CreateSubsystemSideSystemLinkRequest:
+      $ref: "./schemas/structures.yaml#/CreateSubsystemSideSystemLinkRequest"
+    CreateSideSystemLayerLinkRequest:
+      $ref: "./schemas/structures.yaml#/CreateSideSystemLayerLinkRequest"
+    StructureLinkResponse:
+      $ref: "./schemas/structures.yaml#/StructureLinkResponse"
+    # Lifecycle Events
+    LifecycleEventType:
+      $ref: "./schemas/lifecycle-events.yaml#/LifecycleEventType"
+    CreateLifecycleEventRequest:
+      $ref: "./schemas/lifecycle-events.yaml#/CreateLifecycleEventRequest"
+    LifecycleEventResponse:
+      $ref: "./schemas/lifecycle-events.yaml#/LifecycleEventResponse"
+    # Innerworld
+    CreateRegionRequest:
+      $ref: "./schemas/innerworld.yaml#/CreateRegionRequest"
+    UpdateRegionRequest:
+      $ref: "./schemas/innerworld.yaml#/UpdateRegionRequest"
+    RegionResponse:
+      $ref: "./schemas/innerworld.yaml#/RegionResponse"
+    CreateEntityRequest:
+      $ref: "./schemas/innerworld.yaml#/CreateEntityRequest"
+    UpdateEntityRequest:
+      $ref: "./schemas/innerworld.yaml#/UpdateEntityRequest"
+    EntityResponse:
+      $ref: "./schemas/innerworld.yaml#/EntityResponse"
+    UpdateCanvasRequest:
+      $ref: "./schemas/innerworld.yaml#/UpdateCanvasRequest"
+    CanvasResponse:
+      $ref: "./schemas/innerworld.yaml#/CanvasResponse"
+    # Blobs
+    BlobPurpose:
+      $ref: "./schemas/blobs.yaml#/BlobPurpose"
+    CreateUploadUrlRequest:
+      $ref: "./schemas/blobs.yaml#/CreateUploadUrlRequest"
+    UploadUrlResponse:
+      $ref: "./schemas/blobs.yaml#/UploadUrlResponse"
+    ConfirmUploadRequest:
+      $ref: "./schemas/blobs.yaml#/ConfirmUploadRequest"
+    BlobResponse:
+      $ref: "./schemas/blobs.yaml#/BlobResponse"
+    DownloadUrlResponse:
+      $ref: "./schemas/blobs.yaml#/DownloadUrlResponse"
+    # Key Rotation
+    RotationState:
+      $ref: "./schemas/key-rotation.yaml#/RotationState"
+    InitiateRotationRequest:
+      $ref: "./schemas/key-rotation.yaml#/InitiateRotationRequest"
+    RotationResponse:
+      $ref: "./schemas/key-rotation.yaml#/RotationResponse"
+    ClaimChunkRequest:
+      $ref: "./schemas/key-rotation.yaml#/ClaimChunkRequest"
+    ClaimChunkResponse:
+      $ref: "./schemas/key-rotation.yaml#/ClaimChunkResponse"
+    CompleteChunkRequest:
+      $ref: "./schemas/key-rotation.yaml#/CompleteChunkRequest"
+    CompleteChunkResponse:
+      $ref: "./schemas/key-rotation.yaml#/CompleteChunkResponse"
+    # Settings
+    UpdateSystemSettingsRequest:
+      $ref: "./schemas/settings.yaml#/UpdateSystemSettingsRequest"
+    UpdateNomenclatureRequest:
+      $ref: "./schemas/settings.yaml#/UpdateNomenclatureRequest"
+    PinRequest:
+      $ref: "./schemas/settings.yaml#/PinRequest"
+    PinVerifyResponse:
+      $ref: "./schemas/settings.yaml#/PinVerifyResponse"
+    SetupStepRequest:
+      $ref: "./schemas/settings.yaml#/SetupStepRequest"
+    SetupCompleteRequest:
+      $ref: "./schemas/settings.yaml#/SetupCompleteRequest"
+    # Plaintext (client-side encryption contracts)
+    PlaintextImageSource:
+      $ref: "./schemas/plaintext.yaml#/PlaintextImageSource"
+    PlaintextSaturationLevel:
+      $ref: "./schemas/plaintext.yaml#/PlaintextSaturationLevel"
+    PlaintextTag:
+      $ref: "./schemas/plaintext.yaml#/PlaintextTag"
+    PlaintextVisualProperties:
+      $ref: "./schemas/plaintext.yaml#/PlaintextVisualProperties"
+    PlaintextSystem:
+      $ref: "./schemas/plaintext.yaml#/PlaintextSystem"
+    PlaintextMember:
+      $ref: "./schemas/plaintext.yaml#/PlaintextMember"
+    PlaintextMemberPhoto:
+      $ref: "./schemas/plaintext.yaml#/PlaintextMemberPhoto"
+    PlaintextGroup:
+      $ref: "./schemas/plaintext.yaml#/PlaintextGroup"
+    PlaintextCustomFront:
+      $ref: "./schemas/plaintext.yaml#/PlaintextCustomFront"
+    PlaintextFieldDefinition:
+      $ref: "./schemas/plaintext.yaml#/PlaintextFieldDefinition"
+    PlaintextFieldValue:
+      $ref: "./schemas/plaintext.yaml#/PlaintextFieldValue"
+    PlaintextRelationship:
+      $ref: "./schemas/plaintext.yaml#/PlaintextRelationship"
+    PlaintextSubsystem:
+      $ref: "./schemas/plaintext.yaml#/PlaintextSubsystem"
+    PlaintextSideSystem:
+      $ref: "./schemas/plaintext.yaml#/PlaintextSideSystem"
+    PlaintextLayer:
+      $ref: "./schemas/plaintext.yaml#/PlaintextLayer"
+    PlaintextLifecycleEvent:
+      $ref: "./schemas/plaintext.yaml#/PlaintextLifecycleEvent"
+    PlaintextInnerworldRegion:
+      $ref: "./schemas/plaintext.yaml#/PlaintextInnerworldRegion"
+    PlaintextInnerworldEntity:
+      $ref: "./schemas/plaintext.yaml#/PlaintextInnerworldEntity"
+    PlaintextInnerworldCanvas:
+      $ref: "./schemas/plaintext.yaml#/PlaintextInnerworldCanvas"
+    PlaintextSystemSettings:
+      $ref: "./schemas/plaintext.yaml#/PlaintextSystemSettings"
+    PlaintextNomenclature:
+      $ref: "./schemas/plaintext.yaml#/PlaintextNomenclature"
+    PlaintextStructureMembership:
+      $ref: "./schemas/plaintext.yaml#/PlaintextStructureMembership"
+    PlaintextStructureLink:
+      $ref: "./schemas/plaintext.yaml#/PlaintextStructureLink"
+
+  responses:
+    NoContent:
+      description: Success with no response body
+    Unauthenticated:
+      description: Missing or invalid session token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Resource conflict (duplicate, version mismatch, or has dependents)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the rate limit resets
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+paths:
+  # Health
+  /:
+    $ref: "./paths/health.yaml#/~1"
+  /health:
+    $ref: "./paths/health.yaml#/~1health"
+  # Auth
+  /auth/register:
+    $ref: "./paths/auth.yaml#/~1auth~1register"
+  /auth/login:
+    $ref: "./paths/auth.yaml#/~1auth~1login"
+  /auth/password-reset/recovery-key:
+    $ref: "./paths/auth.yaml#/~1auth~1password-reset~1recovery-key"
+  /auth/biometric/enroll:
+    $ref: "./paths/auth.yaml#/~1auth~1biometric~1enroll"
+  /auth/biometric/verify:
+    $ref: "./paths/auth.yaml#/~1auth~1biometric~1verify"
+  /auth/sessions:
+    $ref: "./paths/auth.yaml#/~1auth~1sessions"
+  /auth/sessions/{id}:
+    $ref: "./paths/auth.yaml#/~1auth~1sessions~1%7Bid%7D"
+  /auth/logout:
+    $ref: "./paths/auth.yaml#/~1auth~1logout"
+  /auth/sessions/revoke-all:
+    $ref: "./paths/auth.yaml#/~1auth~1sessions~1revoke-all"
+  /auth/recovery-key/status:
+    $ref: "./paths/auth.yaml#/~1auth~1recovery-key~1status"
+  /auth/recovery-key/regenerate:
+    $ref: "./paths/auth.yaml#/~1auth~1recovery-key~1regenerate"
+  # Account
+  /account:
+    $ref: "./paths/account.yaml#/~1account"
+  /account/email:
+    $ref: "./paths/account.yaml#/~1account~1email"
+  /account/password:
+    $ref: "./paths/account.yaml#/~1account~1password"
+  /account/audit-log:
+    $ref: "./paths/account.yaml#/~1account~1audit-log"
+  # Systems
+  /systems:
+    $ref: "./paths/systems.yaml#/~1systems"
+  /systems/{systemId}:
+    $ref: "./paths/systems.yaml#/~1systems~1%7BsystemId%7D"
+  # Settings
+  /systems/{systemId}/settings:
+    $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1settings"
+  /systems/{systemId}/settings/pin:
+    $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1settings~1pin"
+  /systems/{systemId}/settings/pin/verify:
+    $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1settings~1pin~1verify"
+  /systems/{systemId}/nomenclature:
+    $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1nomenclature"
+  /systems/{systemId}/setup/status:
+    $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1setup~1status"
+  /systems/{systemId}/setup/nomenclature:
+    $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1setup~1nomenclature"
+  /systems/{systemId}/setup/profile:
+    $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1setup~1profile"
+  /systems/{systemId}/setup/complete:
+    $ref: "./paths/settings.yaml#/~1systems~1%7BsystemId%7D~1setup~1complete"
+  # Members
+  /systems/{systemId}/members:
+    $ref: "./paths/members.yaml#/~1systems~1%7BsystemId%7D~1members"
+  /systems/{systemId}/members/{memberId}:
+    $ref: "./paths/members.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D"
+  /systems/{systemId}/members/{memberId}/duplicate:
+    $ref: "./paths/members.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1duplicate"
+  /systems/{systemId}/members/{memberId}/archive:
+    $ref: "./paths/members.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1archive"
+  /systems/{systemId}/members/{memberId}/restore:
+    $ref: "./paths/members.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1restore"
+  /systems/{systemId}/members/{memberId}/memberships:
+    $ref: "./paths/members.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1memberships"
+  # Member Photos
+  /systems/{systemId}/members/{memberId}/photos:
+    $ref: "./paths/member-photos.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1photos"
+  /systems/{systemId}/members/{memberId}/photos/reorder:
+    $ref: "./paths/member-photos.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1photos~1reorder"
+  /systems/{systemId}/members/{memberId}/photos/{photoId}/archive:
+    $ref: "./paths/member-photos.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1photos~1%7BphotoId%7D~1archive"
+  /systems/{systemId}/members/{memberId}/photos/{photoId}/restore:
+    $ref: "./paths/member-photos.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1photos~1%7BphotoId%7D~1restore"
+  /systems/{systemId}/members/{memberId}/photos/{photoId}:
+    $ref: "./paths/member-photos.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1photos~1%7BphotoId%7D"
+  # Member Fields
+  /systems/{systemId}/members/{memberId}/fields:
+    $ref: "./paths/member-fields.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1fields"
+  /systems/{systemId}/members/{memberId}/fields/{fieldDefId}:
+    $ref: "./paths/member-fields.yaml#/~1systems~1%7BsystemId%7D~1members~1%7BmemberId%7D~1fields~1%7BfieldDefId%7D"
+  # Groups
+  /systems/{systemId}/groups:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups"
+  /systems/{systemId}/groups/tree:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1tree"
+  /systems/{systemId}/groups/reorder:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1reorder"
+  /systems/{systemId}/groups/{groupId}:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D"
+  /systems/{systemId}/groups/{groupId}/move:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1move"
+  /systems/{systemId}/groups/{groupId}/copy:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1copy"
+  /systems/{systemId}/groups/{groupId}/archive:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1archive"
+  /systems/{systemId}/groups/{groupId}/restore:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1restore"
+  /systems/{systemId}/groups/{groupId}/members:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1members"
+  /systems/{systemId}/groups/{groupId}/members/{memberId}:
+    $ref: "./paths/groups.yaml#/~1systems~1%7BsystemId%7D~1groups~1%7BgroupId%7D~1members~1%7BmemberId%7D"
+  # Custom Fronts
+  /systems/{systemId}/custom-fronts:
+    $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts"
+  /systems/{systemId}/custom-fronts/{customFrontId}:
+    $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D"
+  /systems/{systemId}/custom-fronts/{customFrontId}/archive:
+    $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D~1archive"
+  /systems/{systemId}/custom-fronts/{customFrontId}/restore:
+    $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D~1restore"
+  /systems/{systemId}/custom-fronts/{customFrontId}/delete:
+    $ref: "./paths/custom-fronts.yaml#/~1systems~1%7BsystemId%7D~1custom-fronts~1%7BcustomFrontId%7D~1delete"
+  # Field Definitions
+  /systems/{systemId}/fields:
+    $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields"
+  /systems/{systemId}/fields/{fieldId}:
+    $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields~1%7BfieldId%7D"
+  /systems/{systemId}/fields/{fieldId}/archive:
+    $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields~1%7BfieldId%7D~1archive"
+  /systems/{systemId}/fields/{fieldId}/restore:
+    $ref: "./paths/fields.yaml#/~1systems~1%7BsystemId%7D~1fields~1%7BfieldId%7D~1restore"
+  # Relationships
+  /systems/{systemId}/relationships:
+    $ref: "./paths/relationships.yaml#/~1systems~1%7BsystemId%7D~1relationships"
+  /systems/{systemId}/relationships/{relationshipId}:
+    $ref: "./paths/relationships.yaml#/~1systems~1%7BsystemId%7D~1relationships~1%7BrelationshipId%7D"
+  /systems/{systemId}/relationships/{relationshipId}/archive:
+    $ref: "./paths/relationships.yaml#/~1systems~1%7BsystemId%7D~1relationships~1%7BrelationshipId%7D~1archive"
+  /systems/{systemId}/relationships/{relationshipId}/restore:
+    $ref: "./paths/relationships.yaml#/~1systems~1%7BsystemId%7D~1relationships~1%7BrelationshipId%7D~1restore"
+  # Subsystems
+  /systems/{systemId}/subsystems:
+    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems"
+  /systems/{systemId}/subsystems/{subsystemId}:
+    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D"
+  /systems/{systemId}/subsystems/{subsystemId}/archive:
+    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D~1archive"
+  /systems/{systemId}/subsystems/{subsystemId}/restore:
+    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D~1restore"
+  /systems/{systemId}/subsystems/{subsystemId}/memberships:
+    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D~1memberships"
+  /systems/{systemId}/subsystems/{subsystemId}/memberships/{membershipId}:
+    $ref: "./paths/subsystems.yaml#/~1systems~1%7BsystemId%7D~1subsystems~1%7BsubsystemId%7D~1memberships~1%7BmembershipId%7D"
+  # Side Systems
+  /systems/{systemId}/side-systems:
+    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems"
+  /systems/{systemId}/side-systems/{sideSystemId}:
+    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D"
+  /systems/{systemId}/side-systems/{sideSystemId}/archive:
+    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D~1archive"
+  /systems/{systemId}/side-systems/{sideSystemId}/restore:
+    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D~1restore"
+  /systems/{systemId}/side-systems/{sideSystemId}/memberships:
+    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D~1memberships"
+  /systems/{systemId}/side-systems/{sideSystemId}/memberships/{membershipId}:
+    $ref: "./paths/side-systems.yaml#/~1systems~1%7BsystemId%7D~1side-systems~1%7BsideSystemId%7D~1memberships~1%7BmembershipId%7D"
+  # Layers
+  /systems/{systemId}/layers:
+    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers"
+  /systems/{systemId}/layers/{layerId}:
+    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D"
+  /systems/{systemId}/layers/{layerId}/archive:
+    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D~1archive"
+  /systems/{systemId}/layers/{layerId}/restore:
+    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D~1restore"
+  /systems/{systemId}/layers/{layerId}/memberships:
+    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D~1memberships"
+  /systems/{systemId}/layers/{layerId}/memberships/{membershipId}:
+    $ref: "./paths/layers.yaml#/~1systems~1%7BsystemId%7D~1layers~1%7BlayerId%7D~1memberships~1%7BmembershipId%7D"
+  # Structure Links
+  /systems/{systemId}/structure-links/subsystem-layer:
+    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1subsystem-layer"
+  /systems/{systemId}/structure-links/subsystem-layer/{linkId}:
+    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1subsystem-layer~1%7BlinkId%7D"
+  /systems/{systemId}/structure-links/subsystem-side-system:
+    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1subsystem-side-system"
+  /systems/{systemId}/structure-links/subsystem-side-system/{linkId}:
+    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1subsystem-side-system~1%7BlinkId%7D"
+  /systems/{systemId}/structure-links/side-system-layer:
+    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1side-system-layer"
+  /systems/{systemId}/structure-links/side-system-layer/{linkId}:
+    $ref: "./paths/structure-links.yaml#/~1systems~1%7BsystemId%7D~1structure-links~1side-system-layer~1%7BlinkId%7D"
+  # Lifecycle Events
+  /systems/{systemId}/lifecycle-events:
+    $ref: "./paths/lifecycle-events.yaml#/~1systems~1%7BsystemId%7D~1lifecycle-events"
+  /systems/{systemId}/lifecycle-events/{eventId}:
+    $ref: "./paths/lifecycle-events.yaml#/~1systems~1%7BsystemId%7D~1lifecycle-events~1%7BeventId%7D"
+  # Innerworld
+  /systems/{systemId}/innerworld/regions:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1regions"
+  /systems/{systemId}/innerworld/regions/{regionId}:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1regions~1%7BregionId%7D"
+  /systems/{systemId}/innerworld/regions/{regionId}/archive:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1regions~1%7BregionId%7D~1archive"
+  /systems/{systemId}/innerworld/regions/{regionId}/restore:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1regions~1%7BregionId%7D~1restore"
+  /systems/{systemId}/innerworld/entities:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1entities"
+  /systems/{systemId}/innerworld/entities/{entityId}:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1entities~1%7BentityId%7D"
+  /systems/{systemId}/innerworld/entities/{entityId}/archive:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1entities~1%7BentityId%7D~1archive"
+  /systems/{systemId}/innerworld/entities/{entityId}/restore:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1entities~1%7BentityId%7D~1restore"
+  /systems/{systemId}/innerworld/canvas:
+    $ref: "./paths/innerworld.yaml#/~1systems~1%7BsystemId%7D~1innerworld~1canvas"
+  # Blobs
+  /systems/{systemId}/blobs:
+    $ref: "./paths/blobs.yaml#/~1systems~1%7BsystemId%7D~1blobs"
+  /systems/{systemId}/blobs/upload-url:
+    $ref: "./paths/blobs.yaml#/~1systems~1%7BsystemId%7D~1blobs~1upload-url"
+  /systems/{systemId}/blobs/{blobId}/confirm:
+    $ref: "./paths/blobs.yaml#/~1systems~1%7BsystemId%7D~1blobs~1%7BblobId%7D~1confirm"
+  /systems/{systemId}/blobs/{blobId}/download-url:
+    $ref: "./paths/blobs.yaml#/~1systems~1%7BsystemId%7D~1blobs~1%7BblobId%7D~1download-url"
+  /systems/{systemId}/blobs/{blobId}:
+    $ref: "./paths/blobs.yaml#/~1systems~1%7BsystemId%7D~1blobs~1%7BblobId%7D"
+  # Key Rotation
+  /systems/{systemId}/buckets/{bucketId}/rotations:
+    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations"
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/progress:
+    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1progress"
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/claim:
+    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1claim"
+  /systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete-chunk:
+    $ref: "./paths/key-rotation.yaml#/~1systems~1%7BsystemId%7D~1buckets~1%7BbucketId%7D~1rotations~1%7BrotationId%7D~1complete-chunk"

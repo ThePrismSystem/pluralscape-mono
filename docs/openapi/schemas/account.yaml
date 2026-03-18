@@ -1,0 +1,78 @@
+AccountInfo:
+  type: object
+  required: [accountId, accountType, createdAt, updatedAt]
+  properties:
+    accountId:
+      type: string
+    accountType:
+      type: string
+      enum: [system, viewer]
+    systemId:
+      type: string
+      nullable: true
+    createdAt:
+      type: integer
+    updatedAt:
+      type: integer
+
+ChangeEmailRequest:
+  type: object
+  required: [email, currentPassword]
+  properties:
+    email:
+      type: string
+      format: email
+    currentPassword:
+      type: string
+      minLength: 1
+
+ChangePasswordRequest:
+  type: object
+  required: [currentPassword, newPassword]
+  properties:
+    currentPassword:
+      type: string
+      minLength: 1
+    newPassword:
+      type: string
+      minLength: 8
+      maxLength: 1024
+
+AuditLogQuery:
+  type: object
+  properties:
+    event_type:
+      type: string
+    resource_type:
+      type: string
+      pattern: ^[a-z][a-z0-9-]*$
+    from:
+      type: integer
+      minimum: 0
+      description: Start timestamp in milliseconds
+    to:
+      type: integer
+      minimum: 0
+      description: End timestamp in milliseconds
+    cursor:
+      type: string
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 25
+
+AuditLogResponse:
+  type: object
+  required: [events, hasMore]
+  properties:
+    events:
+      type: array
+      items:
+        type: object
+        description: Audit log entry
+    nextCursor:
+      type: string
+      nullable: true
+    hasMore:
+      type: boolean

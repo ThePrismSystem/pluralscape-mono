@@ -1,0 +1,168 @@
+/systems/{systemId}/members/{memberId}/photos:
+  get:
+    operationId: listMemberPhotos
+    tags: [Member Photos]
+    summary: List member photos
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "200":
+        description: Photo list
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [photos]
+              properties:
+                photos:
+                  type: array
+                  items:
+                    $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createMemberPhoto
+    tags: [Member Photos]
+    summary: Create a member photo
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/member-photos.yaml#/CreateMemberPhotoRequest"
+    responses:
+      "201":
+        description: Photo created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/photos/reorder:
+  post:
+    operationId: reorderMemberPhotos
+    tags: [Member Photos]
+    summary: Reorder member photos
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/member-photos.yaml#/ReorderPhotosRequest"
+    responses:
+      "200":
+        description: Photos reordered
+        content:
+          application/json:
+            schema:
+              type: object
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/photos/{photoId}/archive:
+  post:
+    operationId: archiveMemberPhoto
+    tags: [Member Photos]
+    summary: Archive a member photo
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: photoId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Photo archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/photos/{photoId}/restore:
+  post:
+    operationId: restoreMemberPhoto
+    tags: [Member Photos]
+    summary: Restore an archived member photo
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: photoId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Photo restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/photos/{photoId}:
+  delete:
+    operationId: deleteMemberPhoto
+    tags: [Member Photos]
+    summary: Delete a member photo
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: photoId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

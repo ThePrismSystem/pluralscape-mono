@@ -1,0 +1,201 @@
+/systems/{systemId}/custom-fronts:
+  get:
+    operationId: listCustomFronts
+    tags: [Custom Fronts]
+    summary: List custom fronts
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated custom front list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [customFronts]
+                  properties:
+                    customFronts:
+                      type: array
+                      items:
+                        $ref: "../schemas/common.yaml#/EncryptedEntity"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createCustomFront
+    tags: [Custom Fronts]
+    summary: Create a custom front
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/custom-fronts.yaml#/CreateCustomFrontRequest"
+    responses:
+      "201":
+        description: Custom front created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/custom-fronts/{customFrontId}:
+  get:
+    operationId: getCustomFront
+    tags: [Custom Fronts]
+    summary: Get a custom front
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Custom front details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateCustomFront
+    tags: [Custom Fronts]
+    summary: Update a custom front
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/custom-fronts.yaml#/UpdateCustomFrontRequest"
+    responses:
+      "200":
+        description: Custom front updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/custom-fronts/{customFrontId}/archive:
+  post:
+    operationId: archiveCustomFront
+    tags: [Custom Fronts]
+    summary: Archive a custom front
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Custom front archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/custom-fronts/{customFrontId}/restore:
+  post:
+    operationId: restoreCustomFront
+    tags: [Custom Fronts]
+    summary: Restore an archived custom front
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Custom front restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/custom-fronts/{customFrontId}/delete:
+  delete:
+    operationId: deleteCustomFront
+    tags: [Custom Fronts]
+    summary: Delete a custom front
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

@@ -1,0 +1,22 @@
+CreateCustomFrontRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextCustomFront (see ./plaintext.yaml#/PlaintextCustomFront)"
+
+UpdateCustomFrontRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextCustomFront (see ./plaintext.yaml#/PlaintextCustomFront)"
+    version:
+      type: integer
+      minimum: 1

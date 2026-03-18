@@ -1,0 +1,231 @@
+KnownArchitectureType:
+  type: string
+  enum: [orbital, spectrum, median, age-sliding, webbed, unknown, fluid]
+
+ArchitectureType:
+  oneOf:
+    - type: object
+      required: [kind, type]
+      properties:
+        kind:
+          type: string
+          const: known
+        type:
+          $ref: "#/KnownArchitectureType"
+    - type: object
+      required: [kind, value]
+      properties:
+        kind:
+          type: string
+          const: custom
+        value:
+          type: string
+          minLength: 1
+          maxLength: 100
+
+DiscoveryStatus:
+  type: string
+  enum: [fully-mapped, partially-mapped, unknown]
+
+CreateSubsystemRequest:
+  type: object
+  required: [encryptedData, hasCore]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextSubsystem (see ./plaintext.yaml#/PlaintextSubsystem)"
+    parentSubsystemId:
+      type: string
+      nullable: true
+    architectureType:
+      oneOf:
+        - $ref: "#/ArchitectureType"
+        - type: "null"
+    hasCore:
+      type: boolean
+    discoveryStatus:
+      oneOf:
+        - $ref: "#/DiscoveryStatus"
+        - type: "null"
+
+UpdateSubsystemRequest:
+  type: object
+  required: [encryptedData, hasCore, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextSubsystem (see ./plaintext.yaml#/PlaintextSubsystem)"
+    parentSubsystemId:
+      type: string
+      nullable: true
+    architectureType:
+      oneOf:
+        - $ref: "#/ArchitectureType"
+        - type: "null"
+    hasCore:
+      type: boolean
+    discoveryStatus:
+      oneOf:
+        - $ref: "#/DiscoveryStatus"
+        - type: "null"
+    version:
+      type: integer
+      minimum: 1
+
+SubsystemResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [hasCore]
+      properties:
+        parentSubsystemId:
+          type: string
+          nullable: true
+        architectureType:
+          oneOf:
+            - $ref: "#/ArchitectureType"
+            - type: "null"
+        hasCore:
+          type: boolean
+        discoveryStatus:
+          type: string
+          nullable: true
+
+CreateSideSystemRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextSideSystem (see ./plaintext.yaml#/PlaintextSideSystem)"
+
+UpdateSideSystemRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextSideSystem (see ./plaintext.yaml#/PlaintextSideSystem)"
+    version:
+      type: integer
+      minimum: 1
+
+CreateLayerRequest:
+  type: object
+  required: [encryptedData, sortOrder]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextLayer (see ./plaintext.yaml#/PlaintextLayer)"
+    sortOrder:
+      type: integer
+      minimum: 0
+
+UpdateLayerRequest:
+  type: object
+  required: [encryptedData, sortOrder, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextLayer (see ./plaintext.yaml#/PlaintextLayer)"
+    sortOrder:
+      type: integer
+      minimum: 0
+    version:
+      type: integer
+      minimum: 1
+
+LayerResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [sortOrder]
+      properties:
+        sortOrder:
+          type: integer
+
+AddStructureMembershipRequest:
+  type: object
+  required: [memberId, encryptedData]
+  properties:
+    memberId:
+      type: string
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextStructureMembership (see ./plaintext.yaml#/PlaintextStructureMembership)"
+
+CreateSubsystemLayerLinkRequest:
+  type: object
+  required: [subsystemId, layerId]
+  properties:
+    subsystemId:
+      type: string
+    layerId:
+      type: string
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)"
+
+CreateSubsystemSideSystemLinkRequest:
+  type: object
+  required: [subsystemId, sideSystemId]
+  properties:
+    subsystemId:
+      type: string
+    sideSystemId:
+      type: string
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)"
+
+CreateSideSystemLayerLinkRequest:
+  type: object
+  required: [sideSystemId, layerId]
+  properties:
+    sideSystemId:
+      type: string
+    layerId:
+      type: string
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "Optional T1-encrypted PlaintextStructureLink (see ./plaintext.yaml#/PlaintextStructureLink)"
+
+StructureLinkResponse:
+  type: object
+  required: [id, systemId, createdAt]
+  properties:
+    id:
+      type: string
+    systemId:
+      type: string
+    subsystemId:
+      type: string
+    sideSystemId:
+      type: string
+    layerId:
+      type: string
+    encryptedData:
+      type: string
+      nullable: true
+    createdAt:
+      type: integer

@@ -1,0 +1,733 @@
+# ══════════════════════════════════════════════════════════════════
+# CLIENT-SIDE PLAINTEXT SCHEMAS
+#
+# These schemas describe the JSON structures that clients should
+# serialize and encrypt BEFORE sending as `encryptedData`. The server
+# never sees these — they are client-enforced contracts only.
+#
+# Source of truth: packages/types/src/ in the monorepo.
+# ══════════════════════════════════════════════════════════════════
+
+# ── Shared sub-types ───────────────────────────────────────────────
+PlaintextImageSource:
+  description: |
+    How an image is referenced. Either a blob stored via the Blobs API
+    or an external URL.
+  oneOf:
+    - type: object
+      required: [kind, blobRef]
+      properties:
+        kind:
+          type: string
+          const: blob
+        blobRef:
+          type: string
+          description: BlobId from the Blobs API
+    - type: object
+      required: [kind, url]
+      properties:
+        kind:
+          type: string
+          const: external
+        url:
+          type: string
+          format: uri
+
+PlaintextSaturationLevel:
+  description: How elaborated a member is within the system.
+  oneOf:
+    - type: object
+      required: [kind, level]
+      properties:
+        kind:
+          type: string
+          const: known
+        level:
+          type: string
+          enum: [fragment, functional-fragment, partially-elaborated, highly-elaborated]
+    - type: object
+      required: [kind, value]
+      properties:
+        kind:
+          type: string
+          const: custom
+        value:
+          type: string
+
+PlaintextTag:
+  description: |
+    A tag for a member. Known tags have special semantics (e.g., "little"
+    triggers Littles Safe Mode). Custom tags are user-defined.
+  oneOf:
+    - type: object
+      required: [kind, tag]
+      properties:
+        kind:
+          type: string
+          const: known
+        tag:
+          type: string
+          enum:
+            - protector
+            - gatekeeper
+            - caretaker
+            - little
+            - age-slider
+            - trauma-holder
+            - host
+            - persecutor
+            - mediator
+            - anp
+            - memory-holder
+            - symptom-holder
+            - middle
+            - introject
+            - fictive
+            - factive
+            - non-human
+    - type: object
+      required: [kind, value]
+      properties:
+        kind:
+          type: string
+          const: custom
+        value:
+          type: string
+
+PlaintextVisualProperties:
+  description: Visual styling for innerworld entities.
+  type: object
+  properties:
+    color:
+      type: string
+      nullable: true
+      description: "Hex color string (e.g., #FF00AA)"
+    icon:
+      type: string
+      nullable: true
+    size:
+      type: number
+      nullable: true
+    opacity:
+      type: number
+      nullable: true
+      minimum: 0
+      maximum: 1
+    imageSource:
+      oneOf:
+        - $ref: "#/PlaintextImageSource"
+        - type: "null"
+    externalUrl:
+      type: string
+      format: uri
+      nullable: true
+
+# ── Resource plaintext schemas ─────────────────────────────────────
+
+PlaintextSystem:
+  description: |
+    **Encrypted into**: `encryptedData` on `POST /systems`, `PUT /systems/:id`
+
+    The system profile visible after client-side decryption.
+    Encryption tier: **T1** (master-key encrypted).
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+      description: Display name of the plural system
+    displayName:
+      type: string
+      nullable: true
+      description: Optional alternate display name
+    description:
+      type: string
+      nullable: true
+    avatarSource:
+      oneOf:
+        - $ref: "#/PlaintextImageSource"
+        - type: "null"
+
+PlaintextMember:
+  description: |
+    **Encrypted into**: `encryptedData` on member create/update endpoints.
+
+    A member (headmate) profile. Encryption tier: **T1** (master-key encrypted).
+  type: object
+  required: [name, pronouns, colors, tags]
+  properties:
+    name:
+      type: string
+    pronouns:
+      type: array
+      items:
+        type: string
+      description: "List of pronoun sets (e.g., ['she/her', 'they/them'])"
+    description:
+      type: string
+      nullable: true
+    avatarSource:
+      oneOf:
+        - $ref: "#/PlaintextImageSource"
+        - type: "null"
+    colors:
+      type: array
+      items:
+        type: string
+        description: "Hex color (e.g., #FF00AA)"
+      description: Member's associated colors (for UI theming)
+    saturationLevel:
+      $ref: "#/PlaintextSaturationLevel"
+    tags:
+      type: array
+      items:
+        $ref: "#/PlaintextTag"
+    suppressFriendFrontNotification:
+      type: boolean
+      description: When true, friends are not notified when this member starts fronting
+    boardMessageNotificationOnFront:
+      type: boolean
+      description: When true, a board message is posted when this member starts fronting
+
+PlaintextMemberPhoto:
+  description: |
+    **Encrypted into**: `encryptedData` on member photo create endpoints.
+
+    A photo entry in a member's gallery. Encryption tier: **T1**.
+  type: object
+  required: [imageSource, sortOrder]
+  properties:
+    imageSource:
+      $ref: "#/PlaintextImageSource"
+    sortOrder:
+      type: integer
+    caption:
+      type: string
+      nullable: true
+
+PlaintextGroup:
+  description: |
+    **Encrypted into**: `encryptedData` on group create/update endpoints.
+
+    A user-defined group for organizing members. Encryption tier: **T1**.
+  type: object
+  required: [name, sortOrder]
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+      nullable: true
+    imageSource:
+      oneOf:
+        - $ref: "#/PlaintextImageSource"
+        - type: "null"
+    color:
+      type: string
+      nullable: true
+      description: "Hex color (e.g., #FF00AA)"
+    emoji:
+      type: string
+      nullable: true
+
+PlaintextCustomFront:
+  description: |
+    **Encrypted into**: `encryptedData` on custom front create/update endpoints.
+
+    An abstract cognitive state logged like a member (e.g., "Dissociated", "Blurry").
+    Encryption tier: **T1**.
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+      nullable: true
+    color:
+      type: string
+      nullable: true
+      description: "Hex color"
+    emoji:
+      type: string
+      nullable: true
+
+PlaintextFieldDefinition:
+  description: |
+    **Encrypted into**: `encryptedData` on field definition create/update endpoints.
+
+    A user-defined custom field definition (name, description, options for
+    select/multi-select types). Encryption tier: **T1**.
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+      nullable: true
+    options:
+      type: array
+      items:
+        type: string
+      nullable: true
+      description: Valid options for select/multi-select field types. Null for other types.
+
+PlaintextFieldValue:
+  description: |
+    **Encrypted into**: `encryptedData` on field value set/update endpoints.
+
+    A typed value for a custom field on a member. The `fieldType` discriminant
+    determines the shape of `value`. Encryption tier: **T1**.
+  oneOf:
+    - type: object
+      required: [fieldType, value]
+      properties:
+        fieldType:
+          type: string
+          const: text
+        value:
+          type: string
+    - type: object
+      required: [fieldType, value]
+      properties:
+        fieldType:
+          type: string
+          const: number
+        value:
+          type: number
+    - type: object
+      required: [fieldType, value]
+      properties:
+        fieldType:
+          type: string
+          const: boolean
+        value:
+          type: boolean
+    - type: object
+      required: [fieldType, value]
+      properties:
+        fieldType:
+          type: string
+          const: date
+        value:
+          type: string
+          description: ISO 8601 date string
+    - type: object
+      required: [fieldType, value]
+      properties:
+        fieldType:
+          type: string
+          const: color
+        value:
+          type: string
+          description: "Hex color (e.g., #FF00AA)"
+    - type: object
+      required: [fieldType, value]
+      properties:
+        fieldType:
+          type: string
+          const: select
+        value:
+          type: string
+    - type: object
+      required: [fieldType, value]
+      properties:
+        fieldType:
+          type: string
+          const: multi-select
+        value:
+          type: array
+          items:
+            type: string
+    - type: object
+      required: [fieldType, value]
+      properties:
+        fieldType:
+          type: string
+          const: url
+        value:
+          type: string
+          format: uri
+
+PlaintextRelationship:
+  description: |
+    **Encrypted into**: `encryptedData` on relationship create/update endpoints.
+
+    Encrypted metadata for a relationship between two members.
+    Note: `sourceMemberId`, `targetMemberId`, `type`, and `bidirectional`
+    are sent as **separate plaintext fields** in the request body (not inside
+    `encryptedData`) because the server needs them for querying.
+    The `encryptedData` contains only the user-visible label and any
+    additional notes. Encryption tier: **T1**.
+  type: object
+  properties:
+    label:
+      type: string
+      nullable: true
+      description: User-defined label (meaningful when type is "custom")
+
+PlaintextSubsystem:
+  description: |
+    **Encrypted into**: `encryptedData` on subsystem create/update endpoints.
+
+    A nested structural group within the system. Note: `parentSubsystemId`,
+    `architectureType`, `hasCore`, and `discoveryStatus` are sent as separate
+    plaintext fields. Encryption tier: **T1**.
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+      nullable: true
+    color:
+      type: string
+      nullable: true
+    imageSource:
+      oneOf:
+        - $ref: "#/PlaintextImageSource"
+        - type: "null"
+    emoji:
+      type: string
+      nullable: true
+
+PlaintextSideSystem:
+  description: |
+    **Encrypted into**: `encryptedData` on side system create/update endpoints.
+
+    A parallel structural group alongside the main system. Encryption tier: **T1**.
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+      nullable: true
+    color:
+      type: string
+      nullable: true
+    imageSource:
+      oneOf:
+        - $ref: "#/PlaintextImageSource"
+        - type: "null"
+    emoji:
+      type: string
+      nullable: true
+
+PlaintextLayer:
+  description: |
+    **Encrypted into**: `encryptedData` on layer create/update endpoints.
+
+    A structural layer within the system. Encryption tier: **T1**.
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+      nullable: true
+    accessType:
+      type: string
+      enum: [open, gatekept]
+    gatekeeperMemberIds:
+      type: array
+      items:
+        type: string
+      description: Member IDs that act as gatekeepers (only for gatekept layers)
+    color:
+      type: string
+      nullable: true
+    imageSource:
+      oneOf:
+        - $ref: "#/PlaintextImageSource"
+        - type: "null"
+    emoji:
+      type: string
+      nullable: true
+
+PlaintextLifecycleEvent:
+  description: |
+    **Encrypted into**: `encryptedData` on lifecycle event create endpoint.
+
+    Encrypted details of a lifecycle event. Note: `eventType`, `occurredAt`,
+    and `plaintextMetadata` (member/structure/entity/region IDs) are sent
+    as separate plaintext fields because the server needs them for querying
+    and relationship tracking. Encryption tier: **T1**.
+  type: object
+  properties:
+    title:
+      type: string
+      nullable: true
+    description:
+      type: string
+      nullable: true
+    notes:
+      type: string
+      nullable: true
+
+PlaintextInnerworldRegion:
+  description: |
+    **Encrypted into**: `encryptedData` on innerworld region create/update endpoints.
+
+    A region within the system's innerworld. Encryption tier: **T1**.
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+    description:
+      type: string
+      nullable: true
+    visual:
+      $ref: "#/PlaintextVisualProperties"
+    boundaryData:
+      type: array
+      items:
+        type: object
+        required: [x, y]
+        properties:
+          x:
+            type: number
+          y:
+            type: number
+      description: Polygon boundary points for the region on the canvas
+    accessType:
+      type: string
+      enum: [open, gatekept]
+    gatekeeperMemberIds:
+      type: array
+      items:
+        type: string
+
+PlaintextInnerworldEntity:
+  description: |
+    **Encrypted into**: `encryptedData` on innerworld entity create/update endpoints.
+
+    An entity placed on the innerworld canvas. Discriminated on `entityType`.
+    Encryption tier: **T1**.
+  type: object
+  required: [entityType, positionX, positionY]
+  properties:
+    entityType:
+      type: string
+      enum: [member, landmark, subsystem, side-system, layer]
+    positionX:
+      type: number
+      description: X coordinate on the canvas
+    positionY:
+      type: number
+      description: Y coordinate on the canvas
+    visual:
+      $ref: "#/PlaintextVisualProperties"
+    name:
+      type: string
+      description: Display name (required for landmark entities)
+    description:
+      type: string
+      nullable: true
+      description: Description (landmark entities only)
+    linkedMemberId:
+      type: string
+      description: Member ID (member entities only)
+    linkedSubsystemId:
+      type: string
+      description: Subsystem ID (subsystem entities only)
+    linkedSideSystemId:
+      type: string
+      description: Side System ID (side-system entities only)
+    linkedLayerId:
+      type: string
+      description: Layer ID (layer entities only)
+
+PlaintextInnerworldCanvas:
+  description: |
+    **Encrypted into**: `encryptedData` on `PUT /systems/:systemId/innerworld/canvas`.
+
+    The viewport state for the innerworld canvas. Encryption tier: **T1**.
+  type: object
+  required: [viewportX, viewportY, zoom, dimensions]
+  properties:
+    viewportX:
+      type: number
+    viewportY:
+      type: number
+    zoom:
+      type: number
+    dimensions:
+      type: object
+      required: [width, height]
+      properties:
+        width:
+          type: number
+        height:
+          type: number
+
+PlaintextSystemSettings:
+  description: |
+    **Encrypted into**: `encryptedData` on `PUT /systems/:systemId/settings`.
+
+    System-wide settings. Note: `locale` and `biometricEnabled` are sent as
+    **separate plaintext fields** in the request body because the server needs
+    them for locale-aware operations and biometric state tracking.
+    Encryption tier: **T1**.
+  type: object
+  properties:
+    theme:
+      type: string
+      enum: [light, dark, high-contrast, system]
+    fontScale:
+      type: number
+    appLock:
+      type: object
+      properties:
+        pinEnabled:
+          type: boolean
+        biometricEnabled:
+          type: boolean
+        lockTimeout:
+          type: integer
+          description: Lock timeout in minutes (1-30)
+        backgroundGraceSeconds:
+          type: integer
+          description: Seconds to keep keys in memory after app backgrounds (0-300)
+    notifications:
+      type: object
+      properties:
+        pushEnabled:
+          type: boolean
+        emailEnabled:
+          type: boolean
+        switchReminders:
+          type: boolean
+        checkInReminders:
+          type: boolean
+    syncPreferences:
+      type: object
+      properties:
+        syncEnabled:
+          type: boolean
+        syncOnCellular:
+          type: boolean
+    privacyDefaults:
+      type: object
+      properties:
+        defaultBucketForNewContent:
+          type: string
+          nullable: true
+          description: BucketId
+        friendRequestPolicy:
+          type: string
+          enum: [open, code-only]
+    littlesSafeMode:
+      type: object
+      description: Simplified UI configuration for littles
+      properties:
+        enabled:
+          type: boolean
+        allowedContentIds:
+          type: array
+          items:
+            type: string
+        simplifiedUIFlags:
+          type: object
+          properties:
+            largeButtons:
+              type: boolean
+            iconDriven:
+              type: boolean
+            noDeletion:
+              type: boolean
+            noSettings:
+              type: boolean
+            noAnalytics:
+              type: boolean
+    saturationLevelsEnabled:
+      type: boolean
+    autoCaptureFrontingOnJournal:
+      type: boolean
+      description: Auto-capture fronting snapshot when creating a journal entry
+    snapshotSchedule:
+      type: string
+      enum: [daily, weekly, disabled]
+      description: |
+        Automatic snapshot schedule. Client-triggered — the client reads
+        this value and fires snapshots locally, preserving zero-knowledge.
+    onboardingComplete:
+      type: boolean
+
+PlaintextNomenclature:
+  description: |
+    **Encrypted into**: `encryptedData` on nomenclature update and setup endpoints.
+
+    Per-system terminology preferences — map of TermCategory to selected display term.
+    Encryption tier: **T1**.
+  type: object
+  properties:
+    collective:
+      type: string
+      description: "Term for the collective (default: 'System'). Presets: System, Collective, Household, Crew, Group"
+    individual:
+      type: string
+      description: "Term for individuals (default: 'Member'). Presets: Member, Alter, Headmate, Part, Insider, Facet, Aspect"
+    fronting:
+      type: string
+      description: "Term for fronting (default: 'Fronting'). Presets: Fronting, In front, Driving, Piloting"
+    switching:
+      type: string
+      description: "Term for switching (default: 'Switch'). Presets: Switch, Shift"
+    co-presence:
+      type: string
+      description: "Term for co-fronting (default: 'Co-fronting'). Presets: Co-fronting, Co-conscious, Co-driving"
+    internal-space:
+      type: string
+      description: "Term for the internal space (default: 'Headspace'). Presets: Headspace, Innerworld"
+    primary-fronter:
+      type: string
+      description: "Term for the host (default: 'Host'). Presets: Host, Primary fronter, Main fronter"
+    structure:
+      type: string
+      description: "Term for system structure (default: 'System Structure'). Presets: System Structure, Topology, Map"
+    dormancy:
+      type: string
+      description: "Term for dormancy (default: 'Dormancy'). Presets: Dormancy, Resting, Inactive"
+    body:
+      type: string
+      description: "Term for the body (default: 'Body'). Presets: Body, Physical form, Vessel"
+    amnesia:
+      type: string
+      description: "Term for amnesia (default: 'Amnesia'). Presets: Amnesia, Memory gap, Blackout"
+    saturation:
+      type: string
+      description: "Term for saturation level (default: 'Saturation'). Presets: Saturation, Elaboration, Completeness"
+
+PlaintextStructureMembership:
+  description: |
+    **Encrypted into**: `encryptedData` on structure membership add endpoints
+    (subsystem, side system, layer memberships).
+
+    Encrypted metadata for a member's assignment to a structural entity.
+    The `memberId` is sent as a separate plaintext field.
+    Encryption tier: **T1**.
+  type: object
+  properties:
+    notes:
+      type: string
+      nullable: true
+      description: Optional notes about this membership
+
+PlaintextStructureLink:
+  description: |
+    **Encrypted into**: `encryptedData` (optional) on structure link create endpoints.
+
+    Encrypted metadata for a cross-structure link (subsystem-layer,
+    subsystem-side-system, side-system-layer). The linked entity IDs are
+    sent as separate plaintext fields. Encryption tier: **T1**.
+  type: object
+  properties:
+    notes:
+      type: string
+      nullable: true

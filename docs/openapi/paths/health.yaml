@@ -1,0 +1,38 @@
+/:
+  get:
+    operationId: getRoot
+    tags: [Health]
+    summary: Service info
+    responses:
+      "200":
+        description: Service is running
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, service]
+              properties:
+                status:
+                  type: string
+                  example: ok
+                service:
+                  type: string
+                  example: pluralscape-api
+
+/health:
+  get:
+    operationId: getHealth
+    tags: [Health]
+    summary: Health check
+    responses:
+      "200":
+        description: Service is healthy
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  example: healthy

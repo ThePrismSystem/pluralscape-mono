@@ -1,0 +1,330 @@
+/auth/register:
+  post:
+    operationId: register
+    tags: [Auth]
+    summary: Register a new account
+    description: |
+      Creates a new account with email/password authentication.
+
+      **Crypto flow**: The server hashes the password with Argon2id to create
+      the account credential. The client derives the master encryption key from
+      the same password using Argon2id (with a different salt/context) and wraps
+      it for server-side storage. A recovery key is generated that can decrypt
+      the master key independently of the password.
+
+      The recovery key must be stored securely by the client — it is the **only**
+      way to recover the master encryption key if the password is forgotten.
+
+      Rate limit: 5 req/min (authHeavy)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/RegistrationRequest"
+    responses:
+      "201":
+        description: Account created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/RegistrationResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/login:
+  post:
+    operationId: login
+    tags: [Auth]
+    summary: Log in with email and password
+    description: |
+      Authenticates with email/password and returns a session token.
+
+      **Security**: Timing is equalized across success and failure paths to
+      prevent user-enumeration attacks. The password is verified against an
+      Argon2id hash. Password length is capped at 1024 bytes to prevent
+      Argon2 DoS on this unauthenticated endpoint.
+
+      Rate limit: 5 req/min (authHeavy)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/LoginRequest"
+    responses:
+      "200":
+        description: Login successful
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/LoginResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/password-reset/recovery-key:
+  post:
+    operationId: passwordResetViaRecoveryKey
+    tags: [Auth]
+    summary: Reset password using recovery key
+    description: |
+      Resets the account password using the recovery key.
+
+      **Crypto flow**: The recovery key decrypts the master encryption key,
+      which is then re-wrapped with the new password-derived key. A new
+      recovery key is generated (the old one is invalidated). All existing
+      encrypted data remains accessible because the underlying master key is
+      unchanged — only its wrapping changes.
+
+      Rate limit: 5 req/min (authHeavy)
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/PasswordResetViaRecoveryKeyRequest"
+    responses:
+      "200":
+        description: Password reset successful
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/PasswordResetResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/biometric/enroll:
+  post:
+    operationId: biometricEnroll
+    tags: [Auth]
+    summary: Enroll biometric authentication
+    description: |
+      Enrolls a biometric token for the authenticated account.
+
+      Rate limit: 5 req/min (authHeavy)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/BiometricTokenRequest"
+    responses:
+      "201":
+        description: Biometric enrolled
+        content:
+          application/json:
+            schema:
+              type: object
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/biometric/verify:
+  post:
+    operationId: biometricVerify
+    tags: [Auth]
+    summary: Verify biometric authentication
+    description: |
+      Verifies a biometric token against the enrolled credential.
+
+      Rate limit: 5 req/min (authHeavy)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/BiometricTokenRequest"
+    responses:
+      "200":
+        description: Verification result
+        content:
+          application/json:
+            schema:
+              type: object
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/sessions:
+  get:
+    operationId: listSessions
+    tags: [Auth]
+    summary: List active sessions
+    description: |
+      Returns all active sessions for the authenticated account.
+
+      Rate limit: 20 req/min (authLight)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Session list
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/SessionListResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/sessions/{id}:
+  delete:
+    operationId: revokeSession
+    tags: [Auth]
+    summary: Revoke a specific session
+    description: |
+      Revokes a session by ID. Cannot revoke the current session (use logout instead).
+
+      Rate limit: 20 req/min (authLight)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^sess_
+        description: Session ID to revoke
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/logout:
+  post:
+    operationId: logout
+    tags: [Auth]
+    summary: Log out (revoke current session)
+    description: |
+      Revokes the current session token.
+
+      Rate limit: 20 req/min (authLight)
+    security:
+      - bearerAuth: []
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/sessions/revoke-all:
+  post:
+    operationId: revokeAllSessions
+    tags: [Auth]
+    summary: Revoke all other sessions
+    description: |
+      Revokes all sessions except the current one.
+
+      Rate limit: 20 req/min (authLight)
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: All other sessions revoked
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/RevokeAllResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/recovery-key/status:
+  get:
+    operationId: getRecoveryKeyStatus
+    tags: [Auth]
+    summary: Get recovery key status
+    description: |
+      Returns whether a recovery key exists and when it was created.
+
+      Rate limit: 20 req/min (authLight)
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Recovery key status
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/auth.yaml#/RecoveryKeyStatusResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/auth/recovery-key/regenerate:
+  post:
+    operationId: regenerateRecoveryKey
+    tags: [Auth]
+    summary: Regenerate recovery key
+    description: |
+      Regenerates the recovery key. Requires current password and explicit confirmation.
+
+      **Crypto flow**: The current password verifies identity and decrypts the
+      master key. A new recovery key is generated and used to create a fresh
+      encrypted copy of the master key. The old recovery key and its encrypted
+      master key copy are permanently invalidated.
+
+      Rate limit: 5 req/min (authHeavy)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/auth.yaml#/RegenerateRecoveryKeyRequest"
+    responses:
+      "201":
+        description: New recovery key generated
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recoveryKey]
+              properties:
+                recoveryKey:
+                  type: string
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

@@ -1,0 +1,133 @@
+RotationState:
+  type: string
+  enum: [initiated, migrating, sealing, completed, failed]
+
+InitiateRotationRequest:
+  type: object
+  required: [wrappedNewKey, newKeyVersion, friendKeyGrants]
+  properties:
+    wrappedNewKey:
+      type: string
+      minLength: 1
+    newKeyVersion:
+      type: integer
+      minimum: 2
+    friendKeyGrants:
+      type: array
+      items:
+        type: object
+        required: [friendAccountId, encryptedKey]
+        properties:
+          friendAccountId:
+            type: string
+            minLength: 1
+          encryptedKey:
+            type: string
+            minLength: 1
+
+RotationResponse:
+  type: object
+  required:
+    [
+      id,
+      bucketId,
+      fromKeyVersion,
+      toKeyVersion,
+      state,
+      initiatedAt,
+      totalItems,
+      completedItems,
+      failedItems,
+    ]
+  properties:
+    id:
+      type: string
+    bucketId:
+      type: string
+    fromKeyVersion:
+      type: integer
+    toKeyVersion:
+      type: integer
+    state:
+      $ref: "#/RotationState"
+    initiatedAt:
+      type: integer
+    completedAt:
+      type: integer
+      nullable: true
+    totalItems:
+      type: integer
+    completedItems:
+      type: integer
+    failedItems:
+      type: integer
+
+ClaimChunkRequest:
+  type: object
+  properties:
+    chunkSize:
+      type: integer
+      minimum: 1
+      maximum: 200
+      default: 50
+
+ClaimChunkResponse:
+  type: object
+  required: [items, rotationState]
+  properties:
+    items:
+      type: array
+      items:
+        type: object
+        required: [id, rotationId, entityType, entityId, status]
+        properties:
+          id:
+            type: string
+          rotationId:
+            type: string
+          entityType:
+            type: string
+          entityId:
+            type: string
+          status:
+            type: string
+          claimedBy:
+            type: string
+            nullable: true
+          claimedAt:
+            type: integer
+            nullable: true
+          completedAt:
+            type: integer
+            nullable: true
+          attempts:
+            type: integer
+    rotationState:
+      $ref: "#/RotationState"
+
+CompleteChunkRequest:
+  type: object
+  required: [items]
+  properties:
+    items:
+      type: array
+      minItems: 1
+      items:
+        type: object
+        required: [itemId, status]
+        properties:
+          itemId:
+            type: string
+            minLength: 1
+          status:
+            type: string
+            enum: [completed, failed]
+
+CompleteChunkResponse:
+  type: object
+  required: [rotation, transitioned]
+  properties:
+    rotation:
+      $ref: "#/RotationResponse"
+    transitioned:
+      type: boolean

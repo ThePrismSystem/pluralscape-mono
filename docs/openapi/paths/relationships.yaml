@@ -1,0 +1,199 @@
+/systems/{systemId}/relationships:
+  get:
+    operationId: listRelationships
+    tags: [Relationships]
+    summary: List relationships
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated relationship list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [relationships]
+                  properties:
+                    relationships:
+                      type: array
+                      items:
+                        $ref: "../schemas/relationships.yaml#/RelationshipResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createRelationship
+    tags: [Relationships]
+    summary: Create a relationship
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/relationships.yaml#/CreateRelationshipRequest"
+    responses:
+      "201":
+        description: Relationship created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/relationships.yaml#/RelationshipResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/relationships/{relationshipId}:
+  get:
+    operationId: getRelationship
+    tags: [Relationships]
+    summary: Get a relationship
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: relationshipId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Relationship details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/relationships.yaml#/RelationshipResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateRelationship
+    tags: [Relationships]
+    summary: Update a relationship
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: relationshipId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/relationships.yaml#/UpdateRelationshipRequest"
+    responses:
+      "200":
+        description: Relationship updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/relationships.yaml#/RelationshipResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteRelationship
+    tags: [Relationships]
+    summary: Delete a relationship
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: relationshipId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/relationships/{relationshipId}/archive:
+  post:
+    operationId: archiveRelationship
+    tags: [Relationships]
+    summary: Archive a relationship
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: relationshipId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Relationship archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/relationships.yaml#/RelationshipResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/relationships/{relationshipId}/restore:
+  post:
+    operationId: restoreRelationship
+    tags: [Relationships]
+    summary: Restore an archived relationship
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: relationshipId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Relationship restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/relationships.yaml#/RelationshipResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

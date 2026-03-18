@@ -1,0 +1,93 @@
+ErrorResponse:
+  type: object
+  required: [error, requestId]
+  properties:
+    error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - INVALID_CURSOR
+            - INVALID_FRIEND_CODE
+            - UNAUTHENTICATED
+            - SESSION_EXPIRED
+            - KEY_VERSION_STALE
+            - FORBIDDEN
+            - SCOPE_INSUFFICIENT
+            - BUCKET_ACCESS_DENIED
+            - NOT_FOUND
+            - CONFLICT
+            - HAS_DEPENDENTS
+            - ROTATION_IN_PROGRESS
+            - FRIEND_CODE_EXPIRED
+            - BIOMETRIC_DISABLED
+            - INVALID_TOKEN
+            - INVALID_PIN
+            - PRECONDITION_FAILED
+            - BLOB_TOO_LARGE
+            - QUOTA_EXCEEDED
+            - RATE_LIMITED
+            - INTERNAL_ERROR
+            - SERVICE_UNAVAILABLE
+        message:
+          type: string
+        details:
+          description: Optional structured error details
+    requestId:
+      type: string
+      format: uuid
+
+PaginationMeta:
+  type: object
+  properties:
+    nextCursor:
+      type: string
+      nullable: true
+      description: Cursor for the next page, null if no more results
+    hasMore:
+      type: boolean
+    totalCount:
+      type: integer
+      nullable: true
+      description: Total count (may be null for performance)
+
+EncryptedEntity:
+  type: object
+  description: |
+    Base shape for most resources. The `encryptedData` field contains a
+    base64-encoded XChaCha20-Poly1305 ciphertext blob. The server stores it
+    opaquely and never inspects the contents. The client is responsible for
+    encrypting before write and decrypting after read using the appropriate
+    key (master key for T1, bucket key for T2). The `version` field is used
+    for optimistic concurrency control — updates must include the current version.
+  required: [id, systemId, encryptedData, version, createdAt, updatedAt]
+  properties:
+    id:
+      type: string
+    systemId:
+      type: string
+    encryptedData:
+      type: string
+      description: |
+        Base64-encoded ciphertext. Contains `{ciphertext, nonce, algorithm, keyVersion}`
+        serialized by the client. T1 (master-key) encrypted data has `keyVersion: null`.
+        T2 (bucket-encrypted) data includes the `keyVersion` and `bucketId`.
+    version:
+      type: integer
+      minimum: 1
+      description: Optimistic concurrency version. Must match current version on update.
+    createdAt:
+      type: integer
+      description: Unix timestamp in milliseconds
+    updatedAt:
+      type: integer
+      description: Unix timestamp in milliseconds
+    archived:
+      type: boolean
+      default: false
+    archivedAt:
+      type: integer
+      nullable: true

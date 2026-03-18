@@ -1,0 +1,243 @@
+/systems/{systemId}/members:
+  get:
+    operationId: listMembers
+    tags: [Members]
+    summary: List members
+    description: Rate limit 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated member list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [members]
+                  properties:
+                    members:
+                      type: array
+                      items:
+                        $ref: "../schemas/common.yaml#/EncryptedEntity"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createMember
+    tags: [Members]
+    summary: Create a member
+    description: Rate limit 60 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/members.yaml#/CreateMemberRequest"
+    responses:
+      "201":
+        description: Member created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}:
+  get:
+    operationId: getMember
+    tags: [Members]
+    summary: Get a member
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "200":
+        description: Member details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateMember
+    tags: [Members]
+    summary: Update a member
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/members.yaml#/UpdateMemberRequest"
+    responses:
+      "200":
+        description: Member updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteMember
+    tags: [Members]
+    summary: Delete a member
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/duplicate:
+  post:
+    operationId: duplicateMember
+    tags: [Members]
+    summary: Duplicate a member
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/members.yaml#/DuplicateMemberRequest"
+    responses:
+      "201":
+        description: Member duplicated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/archive:
+  post:
+    operationId: archiveMember
+    tags: [Members]
+    summary: Archive a member
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "200":
+        description: Member archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/restore:
+  post:
+    operationId: restoreMember
+    tags: [Members]
+    summary: Restore an archived member
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "200":
+        description: Member restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/memberships:
+  get:
+    operationId: getMemberMemberships
+    tags: [Members]
+    summary: List all group memberships for a member
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "200":
+        description: Membership list
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberships]
+              properties:
+                memberships:
+                  type: array
+                  items:
+                    $ref: "../schemas/groups.yaml#/GroupMembership"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

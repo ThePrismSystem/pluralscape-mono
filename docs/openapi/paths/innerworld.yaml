@@ -1,0 +1,451 @@
+/systems/{systemId}/innerworld/regions:
+  get:
+    operationId: listInnerworldRegions
+    tags: [Innerworld]
+    summary: List innerworld regions
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Region list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [regions]
+                  properties:
+                    regions:
+                      type: array
+                      items:
+                        $ref: "../schemas/innerworld.yaml#/RegionResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createInnerworldRegion
+    tags: [Innerworld]
+    summary: Create an innerworld region
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/CreateRegionRequest"
+    responses:
+      "201":
+        description: Region created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/regions/{regionId}:
+  get:
+    operationId: getInnerworldRegion
+    tags: [Innerworld]
+    summary: Get an innerworld region
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Region details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateInnerworldRegion
+    tags: [Innerworld]
+    summary: Update an innerworld region
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/UpdateRegionRequest"
+    responses:
+      "200":
+        description: Region updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteInnerworldRegion
+    tags: [Innerworld]
+    summary: Delete an innerworld region
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/regions/{regionId}/archive:
+  post:
+    operationId: archiveInnerworldRegion
+    tags: [Innerworld]
+    summary: Archive an innerworld region
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Region archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/regions/{regionId}/restore:
+  post:
+    operationId: restoreInnerworldRegion
+    tags: [Innerworld]
+    summary: Restore an archived innerworld region
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Region restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/entities:
+  get:
+    operationId: listInnerworldEntities
+    tags: [Innerworld]
+    summary: List innerworld entities
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Entity list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [entities]
+                  properties:
+                    entities:
+                      type: array
+                      items:
+                        $ref: "../schemas/innerworld.yaml#/EntityResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createInnerworldEntity
+    tags: [Innerworld]
+    summary: Create an innerworld entity
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/CreateEntityRequest"
+    responses:
+      "201":
+        description: Entity created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/entities/{entityId}:
+  get:
+    operationId: getInnerworldEntity
+    tags: [Innerworld]
+    summary: Get an innerworld entity
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Entity details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateInnerworldEntity
+    tags: [Innerworld]
+    summary: Update an innerworld entity
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/UpdateEntityRequest"
+    responses:
+      "200":
+        description: Entity updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteInnerworldEntity
+    tags: [Innerworld]
+    summary: Delete an innerworld entity
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/entities/{entityId}/archive:
+  post:
+    operationId: archiveInnerworldEntity
+    tags: [Innerworld]
+    summary: Archive an innerworld entity
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Entity archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/entities/{entityId}/restore:
+  post:
+    operationId: restoreInnerworldEntity
+    tags: [Innerworld]
+    summary: Restore an archived innerworld entity
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Entity restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/canvas:
+  get:
+    operationId: getInnerworldCanvas
+    tags: [Innerworld]
+    summary: Get the innerworld canvas
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: Canvas data
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/CanvasResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateInnerworldCanvas
+    tags: [Innerworld]
+    summary: Update the innerworld canvas
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/UpdateCanvasRequest"
+    responses:
+      "200":
+        description: Canvas updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/CanvasResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

@@ -1,0 +1,28 @@
+SystemProfile:
+  type: object
+  required: [id, version, createdAt, updatedAt]
+  properties:
+    id:
+      type: string
+    encryptedData:
+      type: string
+      nullable: true
+    version:
+      type: integer
+    createdAt:
+      type: integer
+    updatedAt:
+      type: integer
+
+UpdateSystemRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 131072
+      description: "T1-encrypted PlaintextSystem (see ./plaintext.yaml#/PlaintextSystem)"
+    version:
+      type: integer
+      minimum: 1

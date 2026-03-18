@@ -1,0 +1,154 @@
+LoginRequest:
+  type: object
+  required: [email, password]
+  properties:
+    email:
+      type: string
+      format: email
+    password:
+      type: string
+      minLength: 1
+      maxLength: 1024
+
+LoginResponse:
+  type: object
+  required: [sessionToken, accountId, accountType]
+  properties:
+    sessionToken:
+      type: string
+    accountId:
+      type: string
+    systemId:
+      type: string
+      nullable: true
+    accountType:
+      type: string
+      enum: [system, viewer]
+
+RegistrationRequest:
+  type: object
+  required: [email, password, recoveryKeyBackupConfirmed]
+  properties:
+    email:
+      type: string
+      format: email
+    password:
+      type: string
+      minLength: 8
+      maxLength: 1024
+    recoveryKeyBackupConfirmed:
+      type: boolean
+      const: true
+    accountType:
+      type: string
+      enum: [system, viewer]
+      default: system
+
+RegistrationResponse:
+  type: object
+  required: [sessionToken, recoveryKey, accountId, accountType]
+  properties:
+    sessionToken:
+      type: string
+    recoveryKey:
+      type: string
+    accountId:
+      type: string
+    accountType:
+      type: string
+      enum: [system, viewer]
+
+PasswordResetViaRecoveryKeyRequest:
+  type: object
+  required: [email, recoveryKey, newPassword]
+  properties:
+    email:
+      type: string
+      format: email
+    recoveryKey:
+      type: string
+      minLength: 1
+      maxLength: 200
+    newPassword:
+      type: string
+      minLength: 8
+      maxLength: 1024
+
+PasswordResetResponse:
+  type: object
+  required: [sessionToken, recoveryKey, accountId]
+  properties:
+    sessionToken:
+      type: string
+    recoveryKey:
+      type: string
+    accountId:
+      type: string
+
+BiometricTokenRequest:
+  type: object
+  required: [token]
+  properties:
+    token:
+      type: string
+      minLength: 1
+      maxLength: 4096
+
+SessionInfo:
+  type: object
+  required: [id, createdAt]
+  properties:
+    id:
+      type: string
+    createdAt:
+      type: integer
+      description: Unix timestamp in milliseconds
+    lastActive:
+      type: integer
+      nullable: true
+    expiresAt:
+      type: integer
+      nullable: true
+
+SessionListResponse:
+  type: object
+  required: [sessions, hasMore]
+  properties:
+    sessions:
+      type: array
+      items:
+        $ref: "#/SessionInfo"
+    nextCursor:
+      type: string
+      nullable: true
+    hasMore:
+      type: boolean
+
+RegenerateRecoveryKeyRequest:
+  type: object
+  required: [currentPassword, confirmed]
+  properties:
+    currentPassword:
+      type: string
+      minLength: 1
+    confirmed:
+      type: boolean
+      const: true
+
+RecoveryKeyStatusResponse:
+  type: object
+  properties:
+    hasRecoveryKey:
+      type: boolean
+    createdAt:
+      type: integer
+      nullable: true
+
+RevokeAllResponse:
+  type: object
+  required: [ok, revokedCount]
+  properties:
+    ok:
+      type: boolean
+    revokedCount:
+      type: integer

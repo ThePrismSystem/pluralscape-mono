@@ -1,0 +1,65 @@
+LifecycleEventType:
+  type: string
+  enum:
+    - split
+    - fusion
+    - merge
+    - unmerge
+    - dormancy-start
+    - dormancy-end
+    - discovery
+    - archival
+    - subsystem-formation
+    - form-change
+    - name-change
+    - structure-move
+    - innerworld-move
+
+CreateLifecycleEventRequest:
+  type: object
+  required: [eventType, occurredAt, encryptedData]
+  properties:
+    eventType:
+      $ref: "#/LifecycleEventType"
+    occurredAt:
+      type: integer
+      minimum: 0
+      description: Unix timestamp in milliseconds when the event occurred
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextLifecycleEvent (see ./plaintext.yaml#/PlaintextLifecycleEvent)"
+    plaintextMetadata:
+      type: object
+      properties:
+        memberIds:
+          type: array
+          items:
+            type: string
+        structureIds:
+          type: array
+          items:
+            type: string
+        entityIds:
+          type: array
+          items:
+            type: string
+        regionIds:
+          type: array
+          items:
+            type: string
+
+LifecycleEventResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [eventType, occurredAt]
+      properties:
+        eventType:
+          $ref: "#/LifecycleEventType"
+        occurredAt:
+          type: integer
+        plaintextMetadata:
+          type: object
+          nullable: true

@@ -1,0 +1,201 @@
+/systems/{systemId}/fields:
+  get:
+    operationId: listFieldDefinitions
+    tags: [Fields]
+    summary: List field definitions
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated field definition list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [fields]
+                  properties:
+                    fields:
+                      type: array
+                      items:
+                        $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createFieldDefinition
+    tags: [Fields]
+    summary: Create a field definition
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fields.yaml#/CreateFieldDefinitionRequest"
+    responses:
+      "201":
+        description: Field definition created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fields/{fieldId}:
+  get:
+    operationId: getFieldDefinition
+    tags: [Fields]
+    summary: Get a field definition
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Field definition
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateFieldDefinition
+    tags: [Fields]
+    summary: Update a field definition
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fields.yaml#/UpdateFieldDefinitionRequest"
+    responses:
+      "200":
+        description: Field definition updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteFieldDefinition
+    tags: [Fields]
+    summary: Delete a field definition
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fields/{fieldId}/archive:
+  post:
+    operationId: archiveFieldDefinition
+    tags: [Fields]
+    summary: Archive a field definition
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Field archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fields/{fieldId}/restore:
+  post:
+    operationId: restoreFieldDefinition
+    tags: [Fields]
+    summary: Restore an archived field definition
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Field restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

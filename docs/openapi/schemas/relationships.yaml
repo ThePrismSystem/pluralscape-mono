@@ -1,0 +1,65 @@
+RelationshipType:
+  type: string
+  enum:
+    - split-from
+    - fused-from
+    - sibling
+    - partner
+    - parent-child
+    - protector-of
+    - caretaker-of
+    - gatekeeper-of
+    - source
+    - custom
+
+CreateRelationshipRequest:
+  type: object
+  required: [sourceMemberId, targetMemberId, type, bidirectional, encryptedData]
+  properties:
+    sourceMemberId:
+      type: string
+    targetMemberId:
+      type: string
+    type:
+      $ref: "#/RelationshipType"
+    bidirectional:
+      type: boolean
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextRelationship (see ./plaintext.yaml#/PlaintextRelationship)"
+
+UpdateRelationshipRequest:
+  type: object
+  required: [type, bidirectional, encryptedData, version]
+  properties:
+    type:
+      $ref: "#/RelationshipType"
+    bidirectional:
+      type: boolean
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextRelationship (see ./plaintext.yaml#/PlaintextRelationship)"
+    version:
+      type: integer
+      minimum: 1
+
+RelationshipResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [sourceMemberId, targetMemberId, type, bidirectional]
+      properties:
+        sourceMemberId:
+          type: string
+          nullable: true
+        targetMemberId:
+          type: string
+          nullable: true
+        type:
+          $ref: "#/RelationshipType"
+        bidirectional:
+          type: boolean

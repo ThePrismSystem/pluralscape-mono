@@ -1,0 +1,84 @@
+BlobPurpose:
+  type: string
+  enum: [avatar, member-photo, journal-image, attachment, export, littles-safe-mode]
+
+CreateUploadUrlRequest:
+  type: object
+  required: [purpose, mimeType, sizeBytes, encryptionTier]
+  properties:
+    purpose:
+      $ref: "#/BlobPurpose"
+    mimeType:
+      type: string
+      minLength: 1
+      maxLength: 255
+    sizeBytes:
+      type: integer
+      minimum: 1
+      description: |
+        File size in bytes. Max depends on purpose:
+        avatar/littles-safe-mode = 5 MiB, member-photo/journal-image = 10 MiB,
+        attachment = 25 MiB, export = 500 MiB.
+    encryptionTier:
+      type: integer
+      enum: [1, 2]
+      description: "1 = master-key encrypted, 2 = per-bucket encrypted"
+
+UploadUrlResponse:
+  type: object
+  required: [blobId, uploadUrl, expiresAt]
+  properties:
+    blobId:
+      type: string
+    uploadUrl:
+      type: string
+      format: uri
+    expiresAt:
+      type: integer
+
+ConfirmUploadRequest:
+  type: object
+  required: [checksum]
+  properties:
+    checksum:
+      type: string
+      minLength: 64
+      maxLength: 64
+      description: SHA-256 hex digest of the uploaded file
+    thumbnailOfBlobId:
+      type: string
+
+BlobResponse:
+  type: object
+  required: [id, systemId, purpose, sizeBytes, checksum, uploadedAt]
+  properties:
+    id:
+      type: string
+    systemId:
+      type: string
+    purpose:
+      $ref: "#/BlobPurpose"
+    mimeType:
+      type: string
+      nullable: true
+    sizeBytes:
+      type: integer
+    checksum:
+      type: string
+    uploadedAt:
+      type: integer
+    thumbnailOfBlobId:
+      type: string
+      nullable: true
+
+DownloadUrlResponse:
+  type: object
+  required: [blobId, downloadUrl, expiresAt]
+  properties:
+    blobId:
+      type: string
+    downloadUrl:
+      type: string
+      format: uri
+    expiresAt:
+      type: integer

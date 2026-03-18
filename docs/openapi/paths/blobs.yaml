@@ -1,0 +1,192 @@
+/systems/{systemId}/blobs:
+  get:
+    operationId: listBlobs
+    tags: [Blobs]
+    summary: List blobs
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: purpose
+        in: query
+        schema:
+          $ref: "../schemas/blobs.yaml#/BlobPurpose"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated blob list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [blobs]
+                  properties:
+                    blobs:
+                      type: array
+                      items:
+                        $ref: "../schemas/blobs.yaml#/BlobResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/blobs/upload-url:
+  post:
+    operationId: createUploadUrl
+    tags: [Blobs]
+    summary: Request a presigned upload URL
+    description: |
+      Returns a presigned URL to upload an encrypted blob.
+
+      **Crypto flow**: The client encrypts the file locally before upload:
+      - **Tier 1** (`encryptionTier: 1`): encrypted with the master key.
+        Used for private content (avatars, journal images).
+      - **Tier 2** (`encryptionTier: 2`): encrypted with a Privacy Bucket key.
+        Used for content shared with friends.
+
+      The encrypted file is uploaded directly to S3-compatible storage via
+      the presigned URL. The server never sees the plaintext.
+      After upload, call the confirm endpoint with the file's SHA-256 checksum.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/blobs.yaml#/CreateUploadUrlRequest"
+    responses:
+      "201":
+        description: Upload URL generated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/blobs.yaml#/UploadUrlResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/blobs/{blobId}/confirm:
+  post:
+    operationId: confirmUpload
+    tags: [Blobs]
+    summary: Confirm a blob upload
+    description: |
+      Confirms that the blob was uploaded successfully.
+      The checksum must match the uploaded file's SHA-256 hash.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: blobId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/blobs.yaml#/ConfirmUploadRequest"
+    responses:
+      "201":
+        description: Upload confirmed
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/blobs.yaml#/BlobResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/blobs/{blobId}/download-url:
+  get:
+    operationId: getDownloadUrl
+    tags: [Blobs]
+    summary: Get a presigned download URL
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: blobId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Download URL
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/blobs.yaml#/DownloadUrlResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/blobs/{blobId}:
+  get:
+    operationId: getBlob
+    tags: [Blobs]
+    summary: Get blob metadata
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: blobId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Blob metadata
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/blobs.yaml#/BlobResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteBlob
+    tags: [Blobs]
+    summary: Delete a blob
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: blobId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

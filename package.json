@@ -19,12 +19,15 @@
     "clean": "turbo clean",
     "roadmap": "beans roadmap > docs/roadmap.md",
     "codeql": "bash scripts/codeql/analyze.sh",
+    "openapi:lint": "redocly lint docs/openapi/openapi.yaml --config docs/openapi/redocly.yaml",
+    "openapi:bundle": "redocly bundle docs/openapi/openapi.yaml --config docs/openapi/redocly.yaml -o docs/openapi.yaml",
     "prepare": "husky"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/prettier-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
+    "@redocly/cli": "^2.24.0",
     "@vitest/coverage-v8": "^4.1.0",
     "eslint": "^10.0.3",
     "husky": "^9.1.7",

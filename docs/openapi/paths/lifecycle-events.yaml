@@ -1,0 +1,88 @@
+/systems/{systemId}/lifecycle-events:
+  get:
+    operationId: listLifecycleEvents
+    tags: [Lifecycle Events]
+    summary: List lifecycle events
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated lifecycle event list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [events]
+                  properties:
+                    events:
+                      type: array
+                      items:
+                        $ref: "../schemas/lifecycle-events.yaml#/LifecycleEventResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createLifecycleEvent
+    tags: [Lifecycle Events]
+    summary: Record a lifecycle event
+    description: |
+      Records a system lifecycle event such as a split, fusion, merge,
+      dormancy change, discovery, or structural change.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/lifecycle-events.yaml#/CreateLifecycleEventRequest"
+    responses:
+      "201":
+        description: Lifecycle event created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/lifecycle-events.yaml#/LifecycleEventResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/lifecycle-events/{eventId}:
+  get:
+    operationId: getLifecycleEvent
+    tags: [Lifecycle Events]
+    summary: Get a lifecycle event
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: eventId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Lifecycle event details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/lifecycle-events.yaml#/LifecycleEventResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

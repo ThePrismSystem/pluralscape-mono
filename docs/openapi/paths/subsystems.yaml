@@ -1,0 +1,298 @@
+/systems/{systemId}/subsystems:
+  get:
+    operationId: listSubsystems
+    tags: [Subsystems]
+    summary: List subsystems
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated subsystem list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [subsystems]
+                  properties:
+                    subsystems:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/SubsystemResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createSubsystem
+    tags: [Subsystems]
+    summary: Create a subsystem
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/CreateSubsystemRequest"
+    responses:
+      "201":
+        description: Subsystem created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/SubsystemResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/subsystems/{subsystemId}:
+  get:
+    operationId: getSubsystem
+    tags: [Subsystems]
+    summary: Get a subsystem
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Subsystem details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/SubsystemResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateSubsystem
+    tags: [Subsystems]
+    summary: Update a subsystem
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/UpdateSubsystemRequest"
+    responses:
+      "200":
+        description: Subsystem updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/SubsystemResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteSubsystem
+    tags: [Subsystems]
+    summary: Delete a subsystem
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/subsystems/{subsystemId}/archive:
+  post:
+    operationId: archiveSubsystem
+    tags: [Subsystems]
+    summary: Archive a subsystem
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Subsystem archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/SubsystemResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/subsystems/{subsystemId}/restore:
+  post:
+    operationId: restoreSubsystem
+    tags: [Subsystems]
+    summary: Restore an archived subsystem
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Subsystem restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/SubsystemResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/subsystems/{subsystemId}/memberships:
+  get:
+    operationId: listSubsystemMemberships
+    tags: [Structure Memberships]
+    summary: List subsystem memberships
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Membership list
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memberships]
+              properties:
+                memberships:
+                  type: array
+                  items:
+                    type: object
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: addSubsystemMembership
+    tags: [Structure Memberships]
+    summary: Add a member to a subsystem
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/AddStructureMembershipRequest"
+    responses:
+      "201":
+        description: Membership created
+        content:
+          application/json:
+            schema:
+              type: object
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/subsystems/{subsystemId}/memberships/{membershipId}:
+  delete:
+    operationId: removeSubsystemMembership
+    tags: [Structure Memberships]
+    summary: Remove a membership from a subsystem
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: membershipId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

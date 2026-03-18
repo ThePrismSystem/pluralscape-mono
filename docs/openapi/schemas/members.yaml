@@ -1,0 +1,41 @@
+CreateMemberRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 131072
+      description: "T1-encrypted PlaintextMember (see ./plaintext.yaml#/PlaintextMember)"
+
+UpdateMemberRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 131072
+      description: "T1-encrypted PlaintextMember (see ./plaintext.yaml#/PlaintextMember)"
+    version:
+      type: integer
+      minimum: 1
+
+DuplicateMemberRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 131072
+      description: "T1-encrypted PlaintextMember for the new duplicate (see ./plaintext.yaml#/PlaintextMember)"
+    copyPhotos:
+      type: boolean
+      default: false
+    copyFields:
+      type: boolean
+      default: false
+    copyMemberships:
+      type: boolean
+      default: false

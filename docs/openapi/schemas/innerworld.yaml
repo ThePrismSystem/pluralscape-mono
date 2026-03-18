@@ -1,0 +1,99 @@
+CreateRegionRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldRegion (see ./plaintext.yaml#/PlaintextInnerworldRegion)"
+    parentRegionId:
+      type: string
+      nullable: true
+
+UpdateRegionRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldRegion (see ./plaintext.yaml#/PlaintextInnerworldRegion)"
+    version:
+      type: integer
+      minimum: 1
+
+RegionResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      properties:
+        parentRegionId:
+          type: string
+          nullable: true
+
+CreateEntityRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity)"
+    regionId:
+      type: string
+      nullable: true
+
+UpdateEntityRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity)"
+    version:
+      type: integer
+      minimum: 1
+
+EntityResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      properties:
+        regionId:
+          type: string
+          nullable: true
+
+UpdateCanvasRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldCanvas (see ./plaintext.yaml#/PlaintextInnerworldCanvas)"
+    version:
+      type: integer
+      minimum: 1
+
+CanvasResponse:
+  type: object
+  required: [id, systemId, encryptedData, version, createdAt, updatedAt]
+  properties:
+    id:
+      type: string
+    systemId:
+      type: string
+    encryptedData:
+      type: string
+    version:
+      type: integer
+    createdAt:
+      type: integer
+    updatedAt:
+      type: integer

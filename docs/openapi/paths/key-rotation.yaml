@@ -1,0 +1,166 @@
+/systems/{systemId}/buckets/{bucketId}/rotations:
+  post:
+    operationId: initiateKeyRotation
+    tags: [Key Rotation]
+    summary: Initiate a bucket key rotation
+    description: |
+      Starts a key rotation for a privacy bucket.
+
+      **Crypto flow**: Key rotation replaces the symmetric key for a Privacy Bucket.
+      The client generates a new XChaCha20-Poly1305 key, wraps it with the master
+      key (`wrappedNewKey`), and re-encrypts the bucket key for each friend using
+      their X25519 public key (`friendKeyGrants`). The server then tracks which
+      items need re-encryption. The client claims chunks of items, re-encrypts
+      each with the new key, and reports completion.
+
+      Rotation states: `initiated` -> `migrating` -> `sealing` -> `completed`.
+      If items fail after max attempts, the rotation transitions to `failed`.
+      Hard limit: 7 days before a rotation is force-expired.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/key-rotation.yaml#/InitiateRotationRequest"
+    responses:
+      "201":
+        description: Rotation initiated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/key-rotation.yaml#/RotationResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/progress:
+  get:
+    operationId: getRotationProgress
+    tags: [Key Rotation]
+    summary: Get rotation progress
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rotationId
+        in: path
+        required: true
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Rotation progress
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/key-rotation.yaml#/RotationResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/claim:
+  post:
+    operationId: claimRotationChunk
+    tags: [Key Rotation]
+    summary: Claim a chunk of items to re-encrypt
+    description: |
+      Claims a batch of items that need re-encryption as part of the key rotation.
+      The client re-encrypts these items with the new key and reports completion.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rotationId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/key-rotation.yaml#/ClaimChunkRequest"
+    responses:
+      "200":
+        description: Chunk claimed
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/key-rotation.yaml#/ClaimChunkResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/buckets/{bucketId}/rotations/{rotationId}/complete-chunk:
+  post:
+    operationId: completeRotationChunk
+    tags: [Key Rotation]
+    summary: Report chunk completion
+    description: |
+      Reports the completion status of previously claimed rotation items.
+      Each item is marked as completed or failed.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: bucketId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: rotationId
+        in: path
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/key-rotation.yaml#/CompleteChunkRequest"
+    responses:
+      "200":
+        description: Chunk completion reported
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/key-rotation.yaml#/CompleteChunkResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

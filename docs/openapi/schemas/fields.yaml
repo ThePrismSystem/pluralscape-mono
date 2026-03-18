@@ -1,0 +1,98 @@
+FieldType:
+  type: string
+  enum: [text, number, boolean, date, color, select, multi-select, url]
+
+CreateFieldDefinitionRequest:
+  type: object
+  required: [fieldType, encryptedData]
+  properties:
+    fieldType:
+      $ref: "#/FieldType"
+    required:
+      type: boolean
+      default: false
+    sortOrder:
+      type: integer
+      minimum: 0
+      default: 0
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 32768
+      description: "T1-encrypted PlaintextFieldDefinition (see ./plaintext.yaml#/PlaintextFieldDefinition)"
+
+UpdateFieldDefinitionRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    required:
+      type: boolean
+    sortOrder:
+      type: integer
+      minimum: 0
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 32768
+      description: "T1-encrypted PlaintextFieldDefinition (see ./plaintext.yaml#/PlaintextFieldDefinition)"
+    version:
+      type: integer
+      minimum: 1
+
+FieldDefinitionResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [fieldType, required, sortOrder]
+      properties:
+        fieldType:
+          $ref: "#/FieldType"
+        required:
+          type: boolean
+        sortOrder:
+          type: integer
+
+SetFieldValueRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 16384
+      description: "T1-encrypted PlaintextFieldValue (see ./plaintext.yaml#/PlaintextFieldValue)"
+
+UpdateFieldValueRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 16384
+      description: "T1-encrypted PlaintextFieldValue (see ./plaintext.yaml#/PlaintextFieldValue)"
+    version:
+      type: integer
+      minimum: 1
+
+FieldValueResponse:
+  type: object
+  required:
+    [id, fieldDefinitionId, memberId, systemId, encryptedData, version, createdAt, updatedAt]
+  properties:
+    id:
+      type: string
+    fieldDefinitionId:
+      type: string
+    memberId:
+      type: string
+    systemId:
+      type: string
+    encryptedData:
+      type: string
+    version:
+      type: integer
+    createdAt:
+      type: integer
+    updatedAt:
+      type: integer

@@ -1,0 +1,30 @@
+CreateMemberPhotoRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      minLength: 1
+      maxLength: 131072
+      description: "T1-encrypted PlaintextMemberPhoto (see ./plaintext.yaml#/PlaintextMemberPhoto)"
+    sortOrder:
+      type: integer
+      minimum: 0
+
+ReorderPhotosRequest:
+  type: object
+  required: [order]
+  properties:
+    order:
+      type: array
+      minItems: 1
+      maxItems: 50
+      items:
+        type: object
+        required: [id, sortOrder]
+        properties:
+          id:
+            type: string
+          sortOrder:
+            type: integer
+            minimum: 0
