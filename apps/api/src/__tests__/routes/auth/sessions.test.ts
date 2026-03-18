@@ -1,16 +1,17 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../middleware/request-id.js";
+import {
+  mockAuditWriterFactory,
+  mockDbFactory,
+  mockRateLimitFactory,
+} from "../../helpers/common-route-mocks.js";
+import { createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../lib/audit-writer.js", () => ({
-  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
-}));
+vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
 vi.mock("../../../services/auth.service.js", () => ({
   listSessions: vi.fn(),
@@ -19,17 +20,9 @@ vi.mock("../../../services/auth.service.js", () => ({
   revokeAllSessions: vi.fn(),
 }));
 
-vi.mock("../../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-}));
+vi.mock("../../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../../middleware/rate-limit.js", () => ({
-  createCategoryRateLimiter: vi
-    .fn()
-    .mockImplementation(() => async (_c: unknown, next: () => Promise<void>) => {
-      await next();
-    }),
-}));
+vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 vi.mock("../../../lib/session-auth.js", () => ({
   validateSession: vi.fn(),
@@ -66,13 +59,7 @@ const { sessionsRoute } = await import("../../../routes/auth/sessions.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/auth", sessionsRoute);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/auth", sessionsRoute);
 
 // ── Tests ────────────────────────────────────────────────────────
 

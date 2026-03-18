@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  mockAuditWriterFactory,
+  mockAuthFactory,
+  mockDbFactory,
+  mockRateLimitFactory,
+} from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
-import type { Context } from "hono";
-
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -12,30 +16,13 @@ vi.mock("../../../../services/innerworld-region.service.js", () => ({
   getRegion: vi.fn(),
 }));
 
-vi.mock("../../../../lib/audit-writer.js", () => ({
-  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
-}));
+vi.mock("../../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
-vi.mock("../../../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-}));
+vi.mock("../../../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../../../middleware/rate-limit.js", () => ({
-  createCategoryRateLimiter: vi
-    .fn()
-    .mockImplementation(() => async (_c: Context, next: () => Promise<void>) => {
-      await next();
-    }),
-}));
+vi.mock("../../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
-vi.mock("../../../../middleware/auth.js", () => ({
-  authMiddleware: vi
-    .fn()
-    .mockImplementation(() => async (c: Context, next: () => Promise<void>) => {
-      c.set("auth", MOCK_AUTH);
-      await next();
-    }),
-}));
+vi.mock("../../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 

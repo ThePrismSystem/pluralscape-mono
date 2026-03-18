@@ -1,50 +1,29 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../middleware/request-id.js";
+import {
+  mockAuditWriterFactory,
+  mockAuthFactory,
+  mockDbFactory,
+  mockRateLimitFactory,
+} from "../../helpers/common-route-mocks.js";
+import { createRouteApp, putJSON } from "../../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse, SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
-vi.mock("../../../lib/audit-writer.js", () => ({
-  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
-}));
+vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
 vi.mock("../../../services/nomenclature.service.js", () => ({
   getNomenclatureSettings: vi.fn(),
   updateNomenclatureSettings: vi.fn(),
 }));
 
-vi.mock("../../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-}));
+vi.mock("../../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../../middleware/rate-limit.js", () => ({
-  createCategoryRateLimiter: vi
-    .fn()
-    .mockImplementation(() => async (_c: unknown, next: () => Promise<void>) => {
-      await next();
-    }),
-}));
+vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
-vi.mock("../../../middleware/auth.js", () => ({
-  authMiddleware: vi
-    .fn()
-    .mockImplementation(
-      () => async (c: { set: (key: string, val: unknown) => void }, next: () => Promise<void>) => {
-        c.set("auth", {
-          accountId: "acct_test",
-          systemId: "sys_test",
-          sessionId: "sess_test",
-          accountType: "system",
-          ownedSystemIds: new Set(["sys_test"]),
-        });
-        await next();
-      },
-    ),
-}));
+vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
@@ -54,21 +33,7 @@ const { nomenclatureRoutes } = await import("../../../routes/systems/nomenclatur
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/:systemId/nomenclature", nomenclatureRoutes);
-  app.onError(errorHandler);
-  return app;
-}
-
-async function putJSON(app: Hono, path: string, body: unknown): Promise<Response> {
-  return await app.request(path, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
+const createApp = () => createRouteApp("/:systemId/nomenclature", nomenclatureRoutes);
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 

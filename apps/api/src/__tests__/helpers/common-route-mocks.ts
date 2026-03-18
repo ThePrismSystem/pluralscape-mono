@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-import { MOCK_AUTH } from "./route-test-setup.js";
+import { MOCK_ACCOUNT_ONLY_AUTH, MOCK_AUTH } from "./route-test-setup.js";
 
 import type { Context } from "hono";
 
@@ -37,4 +37,21 @@ export function mockAuthFactory(): { authMiddleware: ReturnType<typeof vi.fn> } 
         await next();
       }),
   };
+}
+
+/** Factory for vi.mock("…/auth.js") — sets MOCK_ACCOUNT_ONLY_AUTH (systemId: null). */
+export function mockAccountOnlyAuthFactory(): { authMiddleware: ReturnType<typeof vi.fn> } {
+  return {
+    authMiddleware: vi
+      .fn()
+      .mockImplementation(() => async (c: Context, next: () => Promise<void>) => {
+        c.set("auth", MOCK_ACCOUNT_ONLY_AUTH);
+        await next();
+      }),
+  };
+}
+
+/** Factory for vi.mock("…/system-ownership.js") — no-op ownership check. */
+export function mockSystemOwnershipFactory(): { assertSystemOwnership: ReturnType<typeof vi.fn> } {
+  return { assertSystemOwnership: vi.fn() };
 }

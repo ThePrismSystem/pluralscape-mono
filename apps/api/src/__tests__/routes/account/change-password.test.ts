@@ -1,8 +1,12 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../middleware/request-id.js";
+import {
+  mockAccountOnlyAuthFactory,
+  mockAuditWriterFactory,
+  mockDbFactory,
+  mockRateLimitFactory,
+} from "../../helpers/common-route-mocks.js";
+import { createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
@@ -22,39 +26,13 @@ vi.mock("../../../services/auth.service.js", () => ({
   },
 }));
 
-vi.mock("../../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-}));
+vi.mock("../../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../../lib/audit-writer.js", () => ({
-  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
-}));
+vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
-vi.mock("../../../middleware/rate-limit.js", () => ({
-  createCategoryRateLimiter: vi
-    .fn()
-    .mockImplementation(() => async (_c: unknown, next: () => Promise<void>) => {
-      await next();
-    }),
-}));
+vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
-vi.mock("../../../middleware/auth.js", () => ({
-  authMiddleware: vi
-    .fn()
-    .mockImplementation(
-      () =>
-        async (c: { set: (key: string, value: unknown) => void }, next: () => Promise<void>) => {
-          c.set("auth", {
-            accountId: "acct_test",
-            sessionId: "sess_current",
-            systemId: null,
-            accountType: "system",
-            ownedSystemIds: new Set(),
-          });
-          await next();
-        },
-    ),
-}));
+vi.mock("../../../middleware/auth.js", () => mockAccountOnlyAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
@@ -65,13 +43,7 @@ const { accountRoutes } = await import("../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/account", accountRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/account", accountRoutes);
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -128,7 +100,7 @@ describe("PUT /account/password", () => {
     expect(vi.mocked(changePassword)).toHaveBeenCalledWith(
       {},
       "acct_test",
-      "sess_current",
+      "sess_test",
       { currentPassword: "oldpass123", newPassword: "newpass123" },
       expect.any(Function),
     );

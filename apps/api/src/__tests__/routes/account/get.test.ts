@@ -1,8 +1,11 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../middleware/request-id.js";
+import {
+  mockAuthFactory,
+  mockDbFactory,
+  mockRateLimitFactory,
+} from "../../helpers/common-route-mocks.js";
+import { createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type {
   AccountId,
@@ -18,35 +21,11 @@ vi.mock("../../../services/account.service.js", () => ({
   getAccountInfo: vi.fn(),
 }));
 
-vi.mock("../../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-}));
+vi.mock("../../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../../middleware/rate-limit.js", () => ({
-  createCategoryRateLimiter: vi
-    .fn()
-    .mockImplementation(() => async (_c: unknown, next: () => Promise<void>) => {
-      await next();
-    }),
-}));
+vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
-vi.mock("../../../middleware/auth.js", () => ({
-  authMiddleware: vi
-    .fn()
-    .mockImplementation(
-      () =>
-        async (c: { set: (key: string, value: unknown) => void }, next: () => Promise<void>) => {
-          c.set("auth", {
-            accountId: "acct_test",
-            sessionId: "sess_current",
-            systemId: "sys_test",
-            accountType: "system",
-            ownedSystemIds: new Set(["sys_test"]),
-          });
-          await next();
-        },
-    ),
-}));
+vi.mock("../../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
@@ -55,13 +34,7 @@ const { accountRoutes } = await import("../../../routes/account/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/account", accountRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/account", accountRoutes);
 
 // ── Tests ────────────────────────────────────────────────────────
 
