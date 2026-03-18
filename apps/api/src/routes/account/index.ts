@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import { authMiddleware } from "../../middleware/auth.js";
 
+import { auditLogRoute } from "./audit-log.js";
 import { changeEmailRoute } from "./change-email.js";
 import { changePasswordRoute } from "./change-password.js";
 import { getRoute } from "./get.js";
@@ -16,3 +17,4 @@ accountRoutes.use("*", authMiddleware());
 accountRoutes.route("/", getRoute);
 accountRoutes.route("/email", changeEmailRoute);
 accountRoutes.route("/password", changePasswordRoute);
+accountRoutes.route("/audit-log", auditLogRoute);
