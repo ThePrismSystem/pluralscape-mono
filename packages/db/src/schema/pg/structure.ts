@@ -141,6 +141,7 @@ export const subsystemMemberships = pgTable(
   {
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
     subsystemId: varchar("subsystem_id", { length: ID_MAX_LENGTH }).notNull(),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -149,20 +150,25 @@ export const subsystemMemberships = pgTable(
   },
   (t) => [
     index("subsystem_memberships_subsystem_id_idx").on(t.subsystemId),
+    index("subsystem_memberships_member_id_idx").on(t.memberId),
     index("subsystem_memberships_system_id_idx").on(t.systemId),
     foreignKey({
       columns: [t.subsystemId, t.systemId],
       foreignColumns: [subsystems.id, subsystems.systemId],
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
+    }).onDelete("restrict"),
   ],
 );
 
-// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const sideSystemMemberships = pgTable(
   "side_system_memberships",
   {
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
     sideSystemId: varchar("side_system_id", { length: ID_MAX_LENGTH }).notNull(),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -171,20 +177,25 @@ export const sideSystemMemberships = pgTable(
   },
   (t) => [
     index("side_system_memberships_side_system_id_idx").on(t.sideSystemId),
+    index("side_system_memberships_member_id_idx").on(t.memberId),
     index("side_system_memberships_system_id_idx").on(t.systemId),
     foreignKey({
       columns: [t.sideSystemId, t.systemId],
       foreignColumns: [sideSystems.id, sideSystems.systemId],
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
+    }).onDelete("restrict"),
   ],
 );
 
-// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const layerMemberships = pgTable(
   "layer_memberships",
   {
     id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
     layerId: varchar("layer_id", { length: ID_MAX_LENGTH }).notNull(),
+    memberId: varchar("member_id", { length: ID_MAX_LENGTH }).notNull(),
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -193,10 +204,15 @@ export const layerMemberships = pgTable(
   },
   (t) => [
     index("layer_memberships_layer_id_idx").on(t.layerId),
+    index("layer_memberships_member_id_idx").on(t.memberId),
     index("layer_memberships_system_id_idx").on(t.systemId),
     foreignKey({
       columns: [t.layerId, t.systemId],
       foreignColumns: [layers.id, layers.systemId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
   ],
 );

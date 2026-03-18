@@ -653,9 +653,10 @@ export async function deleteMember(
   });
 }
 
-// ── ALL MEMBERSHIPS ──────────────────────────────────────────────────
+// ── MEMBER MEMBERSHIPS ──────────────────────────────────────────────
 
-export interface AllMemberMembershipsResult {
+/** Result of listing a member's memberships across all structure types. */
+export interface MemberMembershipsResult {
   readonly groups: ReadonlyArray<{
     readonly groupId: GroupId;
     readonly memberId: MemberId;
@@ -665,6 +666,7 @@ export interface AllMemberMembershipsResult {
   readonly subsystems: ReadonlyArray<{
     readonly id: string;
     readonly subsystemId: string;
+    readonly memberId: MemberId;
     readonly systemId: SystemId;
     readonly encryptedData: string;
     readonly createdAt: UnixMillis;
@@ -672,6 +674,7 @@ export interface AllMemberMembershipsResult {
   readonly sideSystems: ReadonlyArray<{
     readonly id: string;
     readonly sideSystemId: string;
+    readonly memberId: MemberId;
     readonly systemId: SystemId;
     readonly encryptedData: string;
     readonly createdAt: UnixMillis;
@@ -679,6 +682,7 @@ export interface AllMemberMembershipsResult {
   readonly layers: ReadonlyArray<{
     readonly id: string;
     readonly layerId: string;
+    readonly memberId: MemberId;
     readonly systemId: SystemId;
     readonly encryptedData: string;
     readonly createdAt: UnixMillis;
@@ -690,7 +694,7 @@ export async function listAllMemberMemberships(
   systemId: SystemId,
   memberId: MemberId,
   auth: AuthContext,
-): Promise<AllMemberMembershipsResult> {
+): Promise<MemberMembershipsResult> {
   assertSystemOwnership(systemId, auth);
 
   // Verify member exists
@@ -712,9 +716,28 @@ export async function listAllMemberMemberships(
       .select()
       .from(groupMemberships)
       .where(and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId))),
-    db.select().from(subsystemMemberships).where(eq(subsystemMemberships.systemId, systemId)),
-    db.select().from(sideSystemMemberships).where(eq(sideSystemMemberships.systemId, systemId)),
-    db.select().from(layerMemberships).where(eq(layerMemberships.systemId, systemId)),
+    db
+      .select()
+      .from(subsystemMemberships)
+      .where(
+        and(
+          eq(subsystemMemberships.memberId, memberId),
+          eq(subsystemMemberships.systemId, systemId),
+        ),
+      ),
+    db
+      .select()
+      .from(sideSystemMemberships)
+      .where(
+        and(
+          eq(sideSystemMemberships.memberId, memberId),
+          eq(sideSystemMemberships.systemId, systemId),
+        ),
+      ),
+    db
+      .select()
+      .from(layerMemberships)
+      .where(and(eq(layerMemberships.memberId, memberId), eq(layerMemberships.systemId, systemId))),
   ]);
 
   return {
@@ -727,6 +750,7 @@ export async function listAllMemberMemberships(
     subsystems: subsystemRows.map((r) => ({
       id: r.id,
       subsystemId: r.subsystemId,
+      memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
       encryptedData: encryptedBlobToBase64(r.encryptedData),
       createdAt: r.createdAt as UnixMillis,
@@ -734,6 +758,7 @@ export async function listAllMemberMemberships(
     sideSystems: sideSystemRows.map((r) => ({
       id: r.id,
       sideSystemId: r.sideSystemId,
+      memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
       encryptedData: encryptedBlobToBase64(r.encryptedData),
       createdAt: r.createdAt as UnixMillis,
@@ -741,6 +766,7 @@ export async function listAllMemberMemberships(
     layers: layerRows.map((r) => ({
       id: r.id,
       layerId: r.layerId,
+      memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
       encryptedData: encryptedBlobToBase64(r.encryptedData),
       createdAt: r.createdAt as UnixMillis,

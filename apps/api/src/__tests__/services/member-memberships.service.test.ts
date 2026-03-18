@@ -109,6 +109,7 @@ describe("listAllMemberMemberships", () => {
         {
           id: "smem_s1",
           subsystemId: "sub_s1",
+          memberId: MEMBER_ID,
           systemId: SYSTEM_ID,
           encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: 1000,
@@ -118,6 +119,7 @@ describe("listAllMemberMemberships", () => {
         {
           id: "ssmem_ss1",
           sideSystemId: "ss_ss1",
+          memberId: MEMBER_ID,
           systemId: SYSTEM_ID,
           encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: 1000,
@@ -127,6 +129,7 @@ describe("listAllMemberMemberships", () => {
         {
           id: "lmem_l1",
           layerId: "lay_l1",
+          memberId: MEMBER_ID,
           systemId: SYSTEM_ID,
           encryptedData: new Uint8Array([1, 2, 3]),
           createdAt: 1000,

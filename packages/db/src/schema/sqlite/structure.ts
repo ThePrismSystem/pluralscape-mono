@@ -134,6 +134,7 @@ export const subsystemMemberships = sqliteTable(
   {
     id: text("id").primaryKey(),
     subsystemId: text("subsystem_id").notNull(),
+    memberId: text("member_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -142,20 +143,25 @@ export const subsystemMemberships = sqliteTable(
   },
   (t) => [
     index("subsystem_memberships_subsystem_id_idx").on(t.subsystemId),
+    index("subsystem_memberships_member_id_idx").on(t.memberId),
     index("subsystem_memberships_system_id_idx").on(t.systemId),
     foreignKey({
       columns: [t.subsystemId, t.systemId],
       foreignColumns: [subsystems.id, subsystems.systemId],
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
+    }).onDelete("restrict"),
   ],
 );
 
-// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const sideSystemMemberships = sqliteTable(
   "side_system_memberships",
   {
     id: text("id").primaryKey(),
     sideSystemId: text("side_system_id").notNull(),
+    memberId: text("member_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -164,20 +170,25 @@ export const sideSystemMemberships = sqliteTable(
   },
   (t) => [
     index("side_system_memberships_side_system_id_idx").on(t.sideSystemId),
+    index("side_system_memberships_member_id_idx").on(t.memberId),
     index("side_system_memberships_system_id_idx").on(t.systemId),
     foreignKey({
       columns: [t.sideSystemId, t.systemId],
       foreignColumns: [sideSystems.id, sideSystems.systemId],
     }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
+    }).onDelete("restrict"),
   ],
 );
 
-// Member identity is inside encryptedData; uniqueness enforced at application layer
 export const layerMemberships = sqliteTable(
   "layer_memberships",
   {
     id: text("id").primaryKey(),
     layerId: text("layer_id").notNull(),
+    memberId: text("member_id").notNull(),
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
@@ -186,10 +197,15 @@ export const layerMemberships = sqliteTable(
   },
   (t) => [
     index("layer_memberships_layer_id_idx").on(t.layerId),
+    index("layer_memberships_member_id_idx").on(t.memberId),
     index("layer_memberships_system_id_idx").on(t.systemId),
     foreignKey({
       columns: [t.layerId, t.systemId],
       foreignColumns: [layers.id, layers.systemId],
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [t.memberId, t.systemId],
+      foreignColumns: [members.id, members.systemId],
     }).onDelete("restrict"),
   ],
 );

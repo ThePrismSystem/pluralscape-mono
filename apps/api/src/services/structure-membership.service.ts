@@ -65,6 +65,7 @@ interface MembershipEntityConfig {
     tx: TransactionLike,
     id: string,
     entityId: string,
+    memberId: string,
     systemId: SystemId,
     blob: EncryptedBlob,
     timestamp: number,
@@ -170,10 +171,17 @@ const ENTITY_CONFIGS = {
     addEventType: "subsystem-membership.added",
     removeEventType: "subsystem-membership.removed",
     entityTable: subsystems,
-    insert: async (tx, id, entityId, systemId, blob, timestamp) => {
+    insert: async (tx, id, entityId, memberId, systemId, blob, timestamp) => {
       const [row] = await tx
         .insert(subsystemMemberships)
-        .values({ id, subsystemId: entityId, systemId, encryptedData: blob, createdAt: timestamp })
+        .values({
+          id,
+          subsystemId: entityId,
+          memberId,
+          systemId,
+          encryptedData: blob,
+          createdAt: timestamp,
+        })
         .returning();
       return row ? normalizeSubsystem(row) : undefined;
     },
@@ -208,10 +216,17 @@ const ENTITY_CONFIGS = {
     addEventType: "side-system-membership.added",
     removeEventType: "side-system-membership.removed",
     entityTable: sideSystems,
-    insert: async (tx, id, entityId, systemId, blob, timestamp) => {
+    insert: async (tx, id, entityId, memberId, systemId, blob, timestamp) => {
       const [row] = await tx
         .insert(sideSystemMemberships)
-        .values({ id, sideSystemId: entityId, systemId, encryptedData: blob, createdAt: timestamp })
+        .values({
+          id,
+          sideSystemId: entityId,
+          memberId,
+          systemId,
+          encryptedData: blob,
+          createdAt: timestamp,
+        })
         .returning();
       return row ? normalizeSideSystem(row) : undefined;
     },
@@ -246,10 +261,17 @@ const ENTITY_CONFIGS = {
     addEventType: "layer-membership.added",
     removeEventType: "layer-membership.removed",
     entityTable: layers,
-    insert: async (tx, id, entityId, systemId, blob, timestamp) => {
+    insert: async (tx, id, entityId, memberId, systemId, blob, timestamp) => {
       const [row] = await tx
         .insert(layerMemberships)
-        .values({ id, layerId: entityId, systemId, encryptedData: blob, createdAt: timestamp })
+        .values({
+          id,
+          layerId: entityId,
+          memberId,
+          systemId,
+          encryptedData: blob,
+          createdAt: timestamp,
+        })
         .returning();
       return row ? normalizeLayer(row) : undefined;
     },
@@ -302,7 +324,15 @@ async function addMembershipGeneric(
     await verifyMemberExists(tx, parsed.memberId, systemId);
 
     try {
-      const row = await cfg.insert(tx, membershipId, entityId, systemId, blob, timestamp);
+      const row = await cfg.insert(
+        tx,
+        membershipId,
+        entityId,
+        parsed.memberId,
+        systemId,
+        blob,
+        timestamp,
+      );
 
       if (!row) throw new Error("INSERT returned no rows");
 

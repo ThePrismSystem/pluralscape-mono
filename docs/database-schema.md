@@ -231,22 +231,25 @@ erDiagram
     subsystem_memberships {
         varchar id PK
         varchar subsystem_id FK
+        varchar member_id FK
         varchar system_id FK
-        blob encrypted_data "T1 - member identity inside"
+        blob encrypted_data "T1"
     }
 
     side_system_memberships {
         varchar id PK
         varchar side_system_id FK
+        varchar member_id FK
         varchar system_id FK
-        blob encrypted_data "T1 - member identity inside"
+        blob encrypted_data "T1"
     }
 
     layer_memberships {
         varchar id PK
         varchar layer_id FK
+        varchar member_id FK
         varchar system_id FK
-        blob encrypted_data "T1 - member identity inside"
+        blob encrypted_data "T1"
     }
 
     subsystem_layer_links {
@@ -278,8 +281,11 @@ erDiagram
     systems ||--o{ side_systems : "has"
     systems ||--o{ layers : "has"
     subsystems ||--o{ subsystem_memberships : "contains"
+    members ||--o{ subsystem_memberships : "member"
     side_systems ||--o{ side_system_memberships : "contains"
+    members ||--o{ side_system_memberships : "member"
     layers ||--o{ layer_memberships : "contains"
+    members ||--o{ layer_memberships : "member"
     subsystems ||--o{ subsystem_layer_links : "linked to"
     layers ||--o{ subsystem_layer_links : "linked to"
     subsystems ||--o{ subsystem_side_system_links : "linked to"
