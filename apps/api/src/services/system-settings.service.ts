@@ -58,7 +58,7 @@ export async function getSystemSettings(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<SystemSettingsResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -87,7 +87,7 @@ export async function updateSystemSettings(
     throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "Invalid settings payload");
   }
 
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();

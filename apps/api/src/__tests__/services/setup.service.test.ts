@@ -82,6 +82,7 @@ const AUTH: AuthContext = {
   systemId: "sys_test" as AuthContext["systemId"],
   sessionId: "sess_test" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set(["sys_test" as SystemId]),
 };
 
 const SYSTEM_ID = "sys_test" as SystemId;

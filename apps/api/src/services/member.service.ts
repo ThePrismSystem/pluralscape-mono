@@ -11,7 +11,7 @@ import {
   polls,
   relationships,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CreateMemberBodySchema,
   DuplicateMemberBodySchema,
@@ -23,6 +23,7 @@ import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constan
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, validateEncryptedBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_MEMBER_LIMIT,
@@ -88,7 +89,7 @@ export async function createMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = CreateMemberBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -138,7 +139,7 @@ export async function listMembers(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<MemberResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const limit = Math.min(opts?.limit ?? DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT);
   const conditions = [eq(members.systemId, systemId)];
@@ -158,17 +159,7 @@ export async function listMembers(
     .orderBy(members.id)
     .limit(limit + 1);
 
-  const hasMore = rows.length > limit;
-  const items = (hasMore ? rows.slice(0, limit) : rows).map(toMemberResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, limit, toMemberResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -179,7 +170,7 @@ export async function getMember(
   memberId: MemberId,
   auth: AuthContext,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -206,7 +197,7 @@ export async function updateMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = UpdateMemberBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -274,7 +265,7 @@ export async function duplicateMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = DuplicateMemberBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -422,7 +413,7 @@ export async function archiveMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -474,7 +465,7 @@ export async function restoreMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   return db.transaction(async (tx) => {
     const [existing] = await tx
@@ -522,7 +513,7 @@ export async function deleteMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

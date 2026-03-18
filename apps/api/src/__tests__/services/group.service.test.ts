@@ -60,6 +60,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -573,7 +574,7 @@ describe("archiveGroup", () => {
 
   it("archives a group", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: GROUP_ID }]);
 
     await archiveGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
 

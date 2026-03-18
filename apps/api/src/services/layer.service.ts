@@ -4,14 +4,16 @@ import {
   sideSystemLayerLinks,
   subsystemLayerLinks,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { CreateLayerBodySchema, UpdateLayerBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -80,7 +82,7 @@ export async function createLayer(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<LayerResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -128,7 +130,7 @@ export async function listLayers(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<LayerResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -145,17 +147,7 @@ export async function listLayers(
     .orderBy(layers.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toLayerResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toLayerResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -166,7 +158,7 @@ export async function getLayer(
   layerId: LayerId,
   auth: AuthContext,
 ): Promise<LayerResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -191,7 +183,7 @@ export async function updateLayer(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<LayerResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -255,7 +247,7 @@ export async function deleteLayer(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -320,6 +312,14 @@ export async function deleteLayer(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const LAYER_LIFECYCLE = {
+  table: layers,
+  columns: layers,
+  entityName: "Layer",
+  archiveEvent: "layer.archived" as const,
+  restoreEvent: "layer.restored" as const,
+};
+
 export async function archiveLayer(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -327,33 +327,7 @@ export async function archiveLayer(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: layers.id })
-      .from(layers)
-      .where(and(eq(layers.id, layerId), eq(layers.systemId, systemId), eq(layers.archived, false)))
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Layer not found");
-    }
-
-    await tx
-      .update(layers)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(layers.id, layerId), eq(layers.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "layer.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Layer archived",
-      systemId,
-    });
-  });
+  await archiveEntity(db, systemId, layerId, auth, audit, LAYER_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -365,45 +339,7 @@ export async function restoreLayer(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<LayerResult> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: layers.id })
-      .from(layers)
-      .where(and(eq(layers.id, layerId), eq(layers.systemId, systemId), eq(layers.archived, true)))
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived layer not found");
-    }
-
-    const updated = await tx
-      .update(layers)
-      .set({
-        archived: false,
-        archivedAt: null,
-        updatedAt: timestamp,
-        version: sql`${layers.version} + 1`,
-      })
-      .where(and(eq(layers.id, layerId), eq(layers.systemId, systemId)))
-      .returning();
-
-    if (updated.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived layer not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
-
-    await audit(tx, {
-      eventType: "layer.restored",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Layer restored",
-      systemId,
-    });
-
-    return toLayerResult(row);
-  });
+  return restoreEntity(db, systemId, layerId, auth, audit, LAYER_LIFECYCLE, (row) =>
+    toLayerResult(row as typeof layers.$inferSelect),
+  );
 }

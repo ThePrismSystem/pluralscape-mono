@@ -100,7 +100,7 @@ export async function createMemberPhoto(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberPhotoResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
 
   const parsed = CreateMemberPhotoBodySchema.safeParse(params);
@@ -185,7 +185,7 @@ export async function listMemberPhotos(
   memberId: MemberId,
   auth: AuthContext,
 ): Promise<MemberPhotoResult[]> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
 
   const rows = await db
@@ -213,7 +213,7 @@ export async function reorderMemberPhotos(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberPhotoResult[]> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
 
   const parsed = ReorderPhotosBodySchema.safeParse(params);
@@ -310,7 +310,7 @@ export async function archiveMemberPhoto(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -362,7 +362,7 @@ export async function restoreMemberPhoto(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<MemberPhotoResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   return db.transaction(async (tx) => {
     const [existing] = await tx
@@ -421,7 +421,7 @@ export async function deleteMemberPhoto(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

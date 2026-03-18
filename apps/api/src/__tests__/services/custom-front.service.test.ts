@@ -56,6 +56,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -321,7 +322,7 @@ describe("archiveCustomFront", () => {
 
   it("archives a custom front", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: CF_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: CF_ID }]);
 
     await archiveCustomFront(db, SYSTEM_ID, CF_ID, AUTH, mockAudit);
 

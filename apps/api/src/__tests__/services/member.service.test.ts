@@ -57,6 +57,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -744,9 +745,9 @@ describe("deleteMember", () => {
 
   it("rejects cross-system access", async () => {
     const { ApiHttpError } = await import("../../lib/api-error.js");
-    vi.mocked(assertSystemOwnership).mockRejectedValueOnce(
-      new ApiHttpError(403, "FORBIDDEN", "System ownership check failed"),
-    );
+    vi.mocked(assertSystemOwnership).mockImplementationOnce(() => {
+      throw new ApiHttpError(403, "FORBIDDEN", "System ownership check failed");
+    });
     const { db } = mockDb();
 
     await expect(deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit)).rejects.toThrow(

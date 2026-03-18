@@ -55,6 +55,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -419,7 +420,7 @@ describe("archiveRelationship", () => {
   it("archives a relationship", async () => {
     const { db, chain } = mockDb();
     // Verify exists check
-    chain.limit.mockResolvedValueOnce([{ id: RELATIONSHIP_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: RELATIONSHIP_ID }]);
 
     await archiveRelationship(db, SYSTEM_ID, RELATIONSHIP_ID, AUTH, mockAudit);
 

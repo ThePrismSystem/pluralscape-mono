@@ -33,6 +33,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -189,7 +190,7 @@ describe("key-rotation service", () => {
 
       await initiateRotation(db, SYSTEM_ID, BUCKET_ID, VALID_INITIATE_PARAMS, AUTH, mockAudit);
 
-      expect(assertSystemOwnership).toHaveBeenCalledWith(db, SYSTEM_ID, AUTH);
+      expect(assertSystemOwnership).toHaveBeenCalledWith(SYSTEM_ID, AUTH);
     });
 
     it("inserts key grants when friendKeyGrants are provided", async () => {
@@ -352,7 +353,7 @@ describe("key-rotation service", () => {
 
       await claimRotationChunk(db, SYSTEM_ID, BUCKET_ID, ROTATION_ID, VALID_CLAIM_PARAMS, AUTH);
 
-      expect(assertSystemOwnership).toHaveBeenCalledWith(db, SYSTEM_ID, AUTH);
+      expect(assertSystemOwnership).toHaveBeenCalledWith(SYSTEM_ID, AUTH);
     });
   });
 
@@ -481,7 +482,7 @@ describe("key-rotation service", () => {
         ),
       ).rejects.toThrow();
 
-      expect(assertSystemOwnership).toHaveBeenCalledWith(db, SYSTEM_ID, AUTH);
+      expect(assertSystemOwnership).toHaveBeenCalledWith(SYSTEM_ID, AUTH);
     });
 
     it("always emits chunk_completed audit event", async () => {
@@ -573,7 +574,7 @@ describe("key-rotation service", () => {
 
       await getRotationProgress(db, SYSTEM_ID, BUCKET_ID, ROTATION_ID, AUTH);
 
-      expect(assertSystemOwnership).toHaveBeenCalledWith(db, SYSTEM_ID, AUTH);
+      expect(assertSystemOwnership).toHaveBeenCalledWith(SYSTEM_ID, AUTH);
     });
 
     it("maps all rotation fields correctly", async () => {

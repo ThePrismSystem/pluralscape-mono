@@ -7,7 +7,7 @@ import {
   subsystemMemberships,
   subsystems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { AddStructureMembershipBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
@@ -15,6 +15,7 @@ import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
 import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -285,7 +286,7 @@ async function addMembershipGeneric(
   audit: AuditWriter,
   cfg: MembershipEntityConfig,
 ): Promise<StructureMembershipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -330,7 +331,7 @@ async function removeMembershipGeneric(
   audit: AuditWriter,
   cfg: MembershipEntityConfig,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const deleted = await cfg.remove(tx, membershipId, systemId);
@@ -357,23 +358,14 @@ async function listMembershipsGeneric(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await verifyEntityExists(db, cfg.entityTable, entityId, systemId, cfg.entityName);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
   const rows = await cfg.query(db, entityId, systemId, cursor, effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toMembershipResult);
-  const lastItem = items[items.length - 1];
-
-  return {
-    items,
-    nextCursor: hasMore && lastItem ? toCursor(lastItem.id) : null,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toMembershipResult);
 }
 
 // ── Public API ──────────────────────────────────────────────────────

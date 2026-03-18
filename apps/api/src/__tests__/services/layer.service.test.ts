@@ -47,6 +47,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -272,7 +273,7 @@ describe("archiveLayer", () => {
 
   it("archives a layer", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: LAYER_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: LAYER_ID }]);
 
     await archiveLayer(db, SYSTEM_ID, LAYER_ID, AUTH, mockAudit);
 

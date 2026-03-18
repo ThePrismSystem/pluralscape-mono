@@ -19,7 +19,6 @@ import {
 } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
-
 import { hashEmail } from "../lib/email-hash.js";
 import {
   deserializeEncryptedPayload,

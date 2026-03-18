@@ -94,6 +94,7 @@ function makeValidResult(
       systemId: "sys_001" as AuthContext["systemId"],
       sessionId: "sess_00000000-0000-0000-0000-000000000001" as AuthContext["sessionId"],
       accountType: "system",
+      ownedSystemIds: new Set(["sys_001" as AuthContext["systemId"] & string]),
       ...authOverrides,
     },
     session: session as ValidateSessionResult extends { ok: true; session: infer S } ? S : never,
@@ -230,12 +231,14 @@ describe("authMiddleware", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { auth: AuthContext };
-    expect(body.auth).toEqual({
-      accountId: "acct_xyz",
-      systemId: "sys_001",
-      sessionId: "sess_00000000-0000-0000-0000-000000000001",
-      accountType: "system",
-    });
+    expect(body.auth).toEqual(
+      expect.objectContaining({
+        accountId: "acct_xyz",
+        systemId: "sys_001",
+        sessionId: "sess_00000000-0000-0000-0000-000000000001",
+        accountType: "system",
+      }),
+    );
   });
 
   it("updates lastActive when it is null", async () => {

@@ -1,12 +1,14 @@
 import { innerworldEntities, innerworldRegions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { CreateEntityBodySchema, UpdateEntityBodySchema } from "@pluralscape/validation";
 import { and, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity as archiveEntityGeneric } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -76,7 +78,7 @@ export async function createEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -148,7 +150,7 @@ export async function listEntities(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<EntityResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
@@ -173,17 +175,7 @@ export async function listEntities(
     .orderBy(innerworldEntities.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toEntityResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toEntityResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -194,7 +186,7 @@ export async function getEntity(
   entityId: InnerWorldEntityId,
   auth: AuthContext,
 ): Promise<EntityResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -225,7 +217,7 @@ export async function updateEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -285,6 +277,14 @@ export async function updateEntity(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const INNERWORLD_ENTITY_LIFECYCLE = {
+  table: innerworldEntities,
+  columns: innerworldEntities,
+  entityName: "Entity",
+  archiveEvent: "innerworld-entity.archived" as const,
+  restoreEvent: "innerworld-entity.restored" as const,
+};
+
 export async function archiveEntity(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -292,39 +292,7 @@ export async function archiveEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: innerworldEntities.id })
-      .from(innerworldEntities)
-      .where(
-        and(
-          eq(innerworldEntities.id, entityId),
-          eq(innerworldEntities.systemId, systemId),
-          eq(innerworldEntities.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Entity not found");
-    }
-
-    await tx
-      .update(innerworldEntities)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(innerworldEntities.id, entityId), eq(innerworldEntities.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "innerworld-entity.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Entity archived",
-      systemId,
-    });
-  });
+  await archiveEntityGeneric(db, systemId, entityId, auth, audit, INNERWORLD_ENTITY_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -336,7 +304,7 @@ export async function restoreEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<EntityResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 
@@ -409,7 +377,7 @@ export async function deleteEntity(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx

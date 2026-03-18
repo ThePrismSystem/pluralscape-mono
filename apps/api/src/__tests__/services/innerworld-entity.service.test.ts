@@ -57,6 +57,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -336,7 +337,7 @@ describe("archiveEntity", () => {
 
   it("archives an entity successfully", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: ENTITY_ID }]); // existence check
+    chain.returning.mockResolvedValueOnce([{ id: ENTITY_ID }]); // existence check
 
     await archiveEntity(db, SYSTEM_ID, ENTITY_ID, AUTH, mockAudit);
 

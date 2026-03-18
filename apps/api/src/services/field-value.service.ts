@@ -99,7 +99,7 @@ export async function setFieldValue(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldValueResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
   await assertFieldDefinitionActive(db, systemId, fieldDefId);
 
@@ -164,7 +164,7 @@ export async function listFieldValues(
   memberId: MemberId,
   auth: AuthContext,
 ): Promise<FieldValueResult[]> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
 
   const rows = await db
@@ -186,7 +186,7 @@ export async function updateFieldValue(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldValueResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
   await assertFieldDefinitionActive(db, systemId, fieldDefId);
 
@@ -258,7 +258,7 @@ export async function deleteFieldValue(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
   await assertMemberActive(db, systemId, memberId);
 
   await db.transaction(async (tx) => {

@@ -35,7 +35,7 @@ export async function getSetupStatus(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<SetupStatus> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [nomenclatureRow, systemRow, settingsRow, recoveryStatus] = await Promise.all([
     db
@@ -86,7 +86,7 @@ export async function setupNomenclatureStep(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupStepResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = SetupNomenclatureStepBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -132,7 +132,7 @@ export async function setupProfileStep(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupStepResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = SetupProfileStepBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -176,7 +176,7 @@ export async function setupComplete(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SetupCompleteResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = SetupCompleteBodySchema.safeParse(params);
   if (!parsed.success) {

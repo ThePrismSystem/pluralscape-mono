@@ -1,5 +1,5 @@
 import { groupMemberships, groups } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CopyGroupBodySchema,
   CreateGroupBodySchema,
@@ -12,8 +12,10 @@ import { and, count, eq, gt, max, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -85,7 +87,7 @@ export async function createGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -153,7 +155,7 @@ export async function listGroups(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -170,17 +172,7 @@ export async function listGroups(
     .orderBy(groups.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toGroupResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toGroupResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -191,7 +183,7 @@ export async function getGroup(
   groupId: GroupId,
   auth: AuthContext,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -216,7 +208,7 @@ export async function updateGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -279,7 +271,7 @@ export async function deleteGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     // Verify group exists
@@ -349,7 +341,7 @@ export async function moveGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = MoveGroupBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -458,7 +450,7 @@ export async function copyGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = CopyGroupBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -579,7 +571,7 @@ export async function getGroupTree(
   systemId: SystemId,
   auth: AuthContext,
 ): Promise<GroupResultTree[]> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const rows = await db
     .select()
@@ -622,7 +614,7 @@ export async function reorderGroups(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = ReorderGroupsBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -655,6 +647,14 @@ export async function reorderGroups(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const GROUP_LIFECYCLE = {
+  table: groups,
+  columns: groups,
+  entityName: "Group",
+  archiveEvent: "group.archived" as const,
+  restoreEvent: "group.restored" as const,
+};
+
 export async function archiveGroup(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -662,33 +662,7 @@ export async function archiveGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: groups.id })
-      .from(groups)
-      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId), eq(groups.archived, false)))
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Group not found");
-    }
-
-    await tx
-      .update(groups)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(groups.id, groupId), eq(groups.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "group.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Group archived",
-      systemId,
-    });
-  });
+  await archiveEntity(db, systemId, groupId, auth, audit, GROUP_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -700,7 +674,7 @@ export async function restoreGroup(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 

@@ -1,5 +1,5 @@
 import { innerworldEntities, innerworldRegions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { CreateRegionBodySchema, UpdateRegionBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, inArray, sql } from "drizzle-orm";
 
@@ -7,6 +7,7 @@ import { HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -75,7 +76,7 @@ export async function createRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RegionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -146,7 +147,7 @@ export async function listRegions(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<RegionResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(opts?.limit ?? DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
@@ -167,17 +168,7 @@ export async function listRegions(
     .orderBy(innerworldRegions.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toRegionResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toRegionResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -188,7 +179,7 @@ export async function getRegion(
   regionId: InnerWorldRegionId,
   auth: AuthContext,
 ): Promise<RegionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -219,7 +210,7 @@ export async function updateRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RegionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -286,7 +277,7 @@ export async function archiveRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 
@@ -371,7 +362,7 @@ export async function restoreRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RegionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 
@@ -449,7 +440,7 @@ export async function deleteRegion(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     // Verify region exists

@@ -1,5 +1,5 @@
 import { members, relationships } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CreateRelationshipBodySchema,
   UpdateRelationshipBodySchema,
@@ -9,7 +9,9 @@ import { and, eq, gt, or, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -87,7 +89,7 @@ export async function createRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -167,7 +169,7 @@ export async function listRelationships(
   limit = DEFAULT_PAGE_LIMIT,
   memberId?: string,
 ): Promise<PaginatedResult<RelationshipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -194,17 +196,7 @@ export async function listRelationships(
     .orderBy(relationships.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toRelationshipResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toRelationshipResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -215,7 +207,7 @@ export async function getRelationship(
   relationshipId: RelationshipId,
   auth: AuthContext,
 ): Promise<RelationshipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -246,7 +238,7 @@ export async function updateRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -315,7 +307,7 @@ export async function deleteRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     // Verify relationship exists
@@ -352,6 +344,14 @@ export async function deleteRelationship(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const RELATIONSHIP_LIFECYCLE = {
+  table: relationships,
+  columns: relationships,
+  entityName: "Relationship",
+  archiveEvent: "relationship.archived" as const,
+  restoreEvent: "relationship.restored" as const,
+};
+
 export async function archiveRelationship(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -359,39 +359,7 @@ export async function archiveRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: relationships.id })
-      .from(relationships)
-      .where(
-        and(
-          eq(relationships.id, relationshipId),
-          eq(relationships.systemId, systemId),
-          eq(relationships.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Relationship not found");
-    }
-
-    await tx
-      .update(relationships)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(relationships.id, relationshipId), eq(relationships.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "relationship.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Relationship archived",
-      systemId,
-    });
-  });
+  await archiveEntity(db, systemId, relationshipId, auth, audit, RELATIONSHIP_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -403,51 +371,7 @@ export async function restoreRelationship(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<RelationshipResult> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: relationships.id })
-      .from(relationships)
-      .where(
-        and(
-          eq(relationships.id, relationshipId),
-          eq(relationships.systemId, systemId),
-          eq(relationships.archived, true),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived relationship not found");
-    }
-
-    const updated = await tx
-      .update(relationships)
-      .set({
-        archived: false,
-        archivedAt: null,
-        updatedAt: timestamp,
-        version: sql`${relationships.version} + 1`,
-      })
-      .where(and(eq(relationships.id, relationshipId), eq(relationships.systemId, systemId)))
-      .returning();
-
-    if (updated.length === 0) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived relationship not found");
-    }
-
-    const [row] = updated as [(typeof updated)[number], ...typeof updated];
-
-    await audit(tx, {
-      eventType: "relationship.restored",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Relationship restored",
-      systemId,
-    });
-
-    return toRelationshipResult(row);
-  });
+  return restoreEntity(db, systemId, relationshipId, auth, audit, RELATIONSHIP_LIFECYCLE, (row) =>
+    toRelationshipResult(row as typeof relationships.$inferSelect),
+  );
 }

@@ -1,8 +1,12 @@
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../middleware/request-id.js";
+import {
+  mockAuditWriterFactory,
+  mockDbFactory,
+  mockRateLimitFactory,
+} from "../../helpers/common-route-mocks.js";
+import { createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { AccountId, ApiErrorResponse, SessionId } from "@pluralscape/types";
 
@@ -12,9 +16,7 @@ vi.mock("../../../lib/request-meta.js", () => ({
   extractPlatform: vi.fn().mockReturnValue("web"),
 }));
 
-vi.mock("../../../lib/audit-writer.js", () => ({
-  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
-}));
+vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
 vi.mock("../../../services/recovery-key.service.js", () => ({
   resetPasswordWithRecoveryKey: vi.fn(),
@@ -29,17 +31,9 @@ vi.mock("../../../services/recovery-key.service.js", () => ({
   },
 }));
 
-vi.mock("../../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-}));
+vi.mock("../../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../../middleware/rate-limit.js", () => ({
-  createCategoryRateLimiter: vi
-    .fn()
-    .mockImplementation(() => async (_c: unknown, next: () => Promise<void>) => {
-      await next();
-    }),
-}));
+vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
@@ -53,13 +47,7 @@ const { passwordResetRoute } = await import("../../../routes/auth/password-reset
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/password-reset", passwordResetRoute);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/password-reset", passwordResetRoute);
 
 async function postJSON(app: Hono, body: unknown): Promise<Response> {
   return await app.request("/password-reset/recovery-key", {

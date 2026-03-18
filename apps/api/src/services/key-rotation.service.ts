@@ -80,7 +80,7 @@ export async function initiateRotation(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<BucketKeyRotation> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = InitiateRotationBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -215,7 +215,7 @@ export async function claimRotationChunk(
   params: unknown,
   auth: AuthContext,
 ): Promise<ChunkClaimResponse> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = ClaimChunkBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -336,7 +336,7 @@ export async function completeRotationChunk(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<ChunkCompletionResponse> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = CompleteChunkBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -538,7 +538,7 @@ export async function getRotationProgress(
   rotationId: BucketKeyRotationId,
   auth: AuthContext,
 ): Promise<BucketKeyRotation> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [rotation] = await db
     .select()

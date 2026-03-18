@@ -56,7 +56,7 @@ export async function addMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<GroupMembershipResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = AddGroupMemberBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -135,7 +135,7 @@ export async function removeMember(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const deleted = await tx
@@ -172,7 +172,7 @@ export async function listGroupMembers(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupMembershipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   // Verify group exists
   const [group] = await db
@@ -226,7 +226,7 @@ export async function listMemberGroupMemberships(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupMembershipResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   // Verify member exists
   const [member] = await db

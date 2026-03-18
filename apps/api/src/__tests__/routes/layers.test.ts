@@ -1,12 +1,14 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../middleware/request-id.js";
+import {
+  mockAuditWriterFactory,
+  mockAuthFactory,
+  mockDbFactory,
+  mockRateLimitFactory,
+} from "../helpers/common-route-mocks.js";
+import { MOCK_AUTH, createRouteApp, postJSON, putJSON } from "../helpers/route-test-setup.js";
 
-import type { AuthContext } from "../../lib/auth-context.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
-import type { Context } from "hono";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -20,37 +22,13 @@ vi.mock("../../services/layer.service.js", () => ({
   restoreLayer: vi.fn(),
 }));
 
-vi.mock("../../lib/audit-writer.js", () => ({
-  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
-}));
+vi.mock("../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
-vi.mock("../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-}));
+vi.mock("../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../middleware/rate-limit.js", () => ({
-  createCategoryRateLimiter: vi
-    .fn()
-    .mockImplementation(() => async (_c: Context, next: () => Promise<void>) => {
-      await next();
-    }),
-}));
+vi.mock("../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-};
-
-vi.mock("../../middleware/auth.js", () => ({
-  authMiddleware: vi
-    .fn()
-    .mockImplementation(() => async (c: Context, next: () => Promise<void>) => {
-      c.set("auth", MOCK_AUTH);
-      await next();
-    }),
-}));
+vi.mock("../../middleware/auth.js", () => mockAuthFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
@@ -63,31 +41,9 @@ const { systemRoutes } = await import("../../routes/systems/index.js");
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const LYR_ID = "lyr_550e8400-e29b-41d4-a716-446655440001";
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/systems", systemRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const BASE_URL = `/systems/${SYS_ID}/layers`;
-
-async function postJSON(app: Hono, path: string, body: unknown): Promise<Response> {
-  return app.request(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-async function putJSON(app: Hono, path: string, body: unknown): Promise<Response> {
-  return app.request(path, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
 
 const MOCK_LAYER = {
   id: LYR_ID as never,

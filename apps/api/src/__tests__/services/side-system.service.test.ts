@@ -54,6 +54,7 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 const mockAudit = vi.fn().mockResolvedValue(undefined);
@@ -270,7 +271,7 @@ describe("archiveSideSystem", () => {
 
   it("archives a side system", async () => {
     const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: SIDE_SYSTEM_ID }]);
+    chain.returning.mockResolvedValueOnce([{ id: SIDE_SYSTEM_ID }]);
 
     await archiveSideSystem(db, SYSTEM_ID, SIDE_SYSTEM_ID, AUTH, mockAudit);
 

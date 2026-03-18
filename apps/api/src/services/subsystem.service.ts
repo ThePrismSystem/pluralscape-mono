@@ -4,15 +4,17 @@ import {
   subsystemSideSystemLinks,
   subsystems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { CreateSubsystemBodySchema, UpdateSubsystemBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
+import { archiveEntity } from "../lib/entity-lifecycle.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import {
   DEFAULT_PAGE_LIMIT,
@@ -90,7 +92,7 @@ export async function createSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SubsystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -159,7 +161,7 @@ export async function listSubsystems(
   cursor?: PaginationCursor,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<SubsystemResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);
 
@@ -176,17 +178,7 @@ export async function listSubsystems(
     .orderBy(subsystems.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toSubsystemResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toSubsystemResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -197,7 +189,7 @@ export async function getSubsystem(
   subsystemId: SubsystemId,
   auth: AuthContext,
 ): Promise<SubsystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -228,7 +220,7 @@ export async function updateSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SubsystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const { parsed, blob } = parseAndValidateBlob(
     params,
@@ -325,7 +317,7 @@ export async function deleteSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -418,6 +410,14 @@ export async function deleteSubsystem(
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
+const SUBSYSTEM_LIFECYCLE = {
+  table: subsystems,
+  columns: subsystems,
+  entityName: "Subsystem",
+  archiveEvent: "subsystem.archived" as const,
+  restoreEvent: "subsystem.restored" as const,
+};
+
 export async function archiveSubsystem(
   db: PostgresJsDatabase,
   systemId: SystemId,
@@ -425,39 +425,7 @@ export async function archiveSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
-
-  const timestamp = now();
-
-  await db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ id: subsystems.id })
-      .from(subsystems)
-      .where(
-        and(
-          eq(subsystems.id, subsystemId),
-          eq(subsystems.systemId, systemId),
-          eq(subsystems.archived, false),
-        ),
-      )
-      .limit(1);
-
-    if (!existing) {
-      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Subsystem not found");
-    }
-
-    await tx
-      .update(subsystems)
-      .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
-      .where(and(eq(subsystems.id, subsystemId), eq(subsystems.systemId, systemId)));
-
-    await audit(tx, {
-      eventType: "subsystem.archived",
-      actor: { kind: "account", id: auth.accountId },
-      detail: "Subsystem archived",
-      systemId,
-    });
-  });
+  await archiveEntity(db, systemId, subsystemId, auth, audit, SUBSYSTEM_LIFECYCLE);
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -469,7 +437,7 @@ export async function restoreSubsystem(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<SubsystemResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const timestamp = now();
 

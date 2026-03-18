@@ -1,20 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { mockDb } from "../helpers/mock-db.js";
+import { describe, expect, it } from "vitest";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { SystemId } from "@pluralscape/types";
-
-// ── Mocks ────────────────────────────────────────────────────────────
-
-vi.mock("@pluralscape/db/pg", () => ({
-  systems: { id: "id", accountId: "accountId", archived: "archived" },
-}));
-
-vi.mock("drizzle-orm", () => ({
-  and: vi.fn((...args: unknown[]) => ({ type: "and", args })),
-  eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
-}));
 
 // ── Import under test ────────────────────────────────────────────────
 
@@ -29,60 +16,42 @@ const AUTH: AuthContext = {
   systemId: SYSTEM_ID,
   sessionId: "sess_test-session" as AuthContext["sessionId"],
   accountType: "system",
+  ownedSystemIds: new Set([SYSTEM_ID]),
 };
 
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe("assertSystemOwnership", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("does not throw when system is in ownedSystemIds", () => {
+    expect(() => {
+      assertSystemOwnership(SYSTEM_ID, AUTH);
+    }).not.toThrow();
   });
 
-  it("resolves when system is owned by the authenticated account", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([{ id: SYSTEM_ID }]);
-
-    await expect(assertSystemOwnership(db, SYSTEM_ID, AUTH)).resolves.toBeUndefined();
+  it("throws 404 when system is not in ownedSystemIds", () => {
+    expect(() => {
+      assertSystemOwnership("sys_not-owned" as SystemId, AUTH);
+    }).toThrow(
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "System not found",
+      }),
+    );
   });
 
-  it("throws 404 when system does not belong to this account", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
-
-    await expect(assertSystemOwnership(db, SYSTEM_ID, AUTH)).rejects.toMatchObject({
-      status: 404,
-      code: "NOT_FOUND",
-      message: "System not found",
-    });
-  });
-
-  it("throws 404 for archived system (filtered by archived=false)", async () => {
-    const { db, chain } = mockDb();
-    // The query filters archived=false, so an archived system returns no rows
-    chain.limit.mockResolvedValueOnce([]);
-
-    const archivedAuth: AuthContext = {
+  it("throws 404 when ownedSystemIds is empty", () => {
+    const emptyAuth: AuthContext = {
       ...AUTH,
-      systemId: "sys_archived" as SystemId,
+      ownedSystemIds: new Set(),
     };
-
-    await expect(
-      assertSystemOwnership(db, "sys_archived" as SystemId, archivedAuth),
-    ).rejects.toMatchObject({
-      status: 404,
-      code: "NOT_FOUND",
-    });
-  });
-
-  it("throws 404 for nonexistent system", async () => {
-    const { db, chain } = mockDb();
-    chain.limit.mockResolvedValueOnce([]);
-
-    await expect(
-      assertSystemOwnership(db, "sys_does-not-exist" as SystemId, AUTH),
-    ).rejects.toMatchObject({
-      status: 404,
-      code: "NOT_FOUND",
-    });
+    expect(() => {
+      assertSystemOwnership(SYSTEM_ID, emptyAuth);
+    }).toThrow(
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+      }),
+    );
   });
 });

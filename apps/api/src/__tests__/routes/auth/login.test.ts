@@ -1,8 +1,11 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../middleware/request-id.js";
+import {
+  mockAuditWriterFactory,
+  mockDbFactory,
+  mockRateLimitFactory,
+} from "../../helpers/common-route-mocks.js";
+import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
@@ -12,25 +15,15 @@ vi.mock("../../../lib/request-meta.js", () => ({
   extractPlatform: vi.fn().mockReturnValue("web"),
 }));
 
-vi.mock("../../../lib/audit-writer.js", () => ({
-  createAuditWriter: vi.fn().mockReturnValue(vi.fn()),
-}));
+vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
 vi.mock("../../../services/auth.service.js", () => ({
   loginAccount: vi.fn(),
 }));
 
-vi.mock("../../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
-}));
+vi.mock("../../../lib/db.js", () => mockDbFactory());
 
-vi.mock("../../../middleware/rate-limit.js", () => ({
-  createCategoryRateLimiter: vi
-    .fn()
-    .mockImplementation(() => async (_c: unknown, next: () => Promise<void>) => {
-      await next();
-    }),
-}));
+vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 
 // ── Imports after mocks ──────────────────────────────────────────
 
@@ -40,21 +33,7 @@ const { loginRoute } = await import("../../../routes/auth/login.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/login", loginRoute);
-  app.onError(errorHandler);
-  return app;
-}
-
-async function postJSON(app: Hono, path: string, body: unknown): Promise<Response> {
-  return await app.request(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
+const createApp = () => createRouteApp("/login", loginRoute);
 
 const VALID_CREDENTIALS = {
   email: "test@example.com",

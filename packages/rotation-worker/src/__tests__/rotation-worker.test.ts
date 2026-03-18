@@ -523,7 +523,9 @@ describe("RotationWorker", () => {
     apiClient.claimChunk.mockImplementation(
       () =>
         new Promise<ChunkClaimResponse>((resolve) => {
-          resolveChunk = () => { resolve({ items: [], rotationState: "migrating" }); };
+          resolveChunk = () => {
+            resolve({ items: [], rotationState: "migrating" });
+          };
         }),
     );
 
@@ -553,7 +555,9 @@ describe("RotationWorker", () => {
       .mockImplementationOnce(
         () =>
           new Promise<ChunkClaimResponse>((resolve) => {
-            firstResolve = () => { resolve({ items: [], rotationState: "migrating" }); };
+            firstResolve = () => {
+              resolve({ items: [], rotationState: "migrating" });
+            };
           }),
       )
       .mockResolvedValue({ items: [], rotationState: "migrating" });

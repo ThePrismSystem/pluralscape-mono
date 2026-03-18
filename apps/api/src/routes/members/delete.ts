@@ -1,6 +1,7 @@
 import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
+import { HTTP_NO_CONTENT } from "../../http.constants.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
@@ -21,5 +22,5 @@ deleteRoute.delete("/:memberId", async (c) => {
 
   const db = await getDb();
   await deleteMember(db, systemId, memberId, auth, audit);
-  return c.json({ ok: true });
+  return c.body(null, HTTP_NO_CONTENT);
 });

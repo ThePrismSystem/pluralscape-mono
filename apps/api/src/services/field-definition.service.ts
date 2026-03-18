@@ -1,6 +1,6 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { fieldBucketVisibility, fieldDefinitions, fieldValues } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
   CreateFieldDefinitionBodySchema,
   UpdateFieldDefinitionBodySchema,
@@ -10,6 +10,7 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../routes/fields/fields.constants.js";
 
@@ -112,7 +113,7 @@ export async function createFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldDefinitionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = CreateFieldDefinitionBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -179,7 +180,7 @@ export async function listFieldDefinitions(
     includeArchived?: boolean;
   },
 ): Promise<PaginatedResult<FieldDefinitionResult>> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const limit = Math.min(opts?.limit ?? DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT);
   const conditions = [eq(fieldDefinitions.systemId, systemId)];
@@ -199,17 +200,7 @@ export async function listFieldDefinitions(
     .orderBy(fieldDefinitions.id)
     .limit(limit + 1);
 
-  const hasMore = rows.length > limit;
-  const items = (hasMore ? rows.slice(0, limit) : rows).map(toFieldDefinitionResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, limit, toFieldDefinitionResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -220,7 +211,7 @@ export async function getFieldDefinition(
   fieldId: FieldDefinitionId,
   auth: AuthContext,
 ): Promise<FieldDefinitionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const [row] = await db
     .select()
@@ -251,7 +242,7 @@ export async function updateFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldDefinitionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   const parsed = UpdateFieldDefinitionBodySchema.safeParse(params);
   if (!parsed.success) {
@@ -329,7 +320,7 @@ export async function archiveFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
@@ -373,7 +364,7 @@ export async function restoreFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FieldDefinitionResult> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   return db.transaction(async (tx) => {
     const [existing] = await tx
@@ -424,7 +415,7 @@ export async function deleteFieldDefinition(
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await assertSystemOwnership(db, systemId, auth);
+  assertSystemOwnership(systemId, auth);
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
