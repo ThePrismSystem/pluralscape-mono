@@ -51,4 +51,45 @@ describe("OrphanBlobQueryImpl", () => {
 
     expect(result).toEqual([]);
   });
+
+  it("computes cutoff from Date.now minus olderThanMs", async () => {
+    const now = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+
+    const { db, chain } = mockDb();
+    chain.where.mockResolvedValueOnce([]);
+
+    const customMs = 7_200_000; // 2 hours
+    const query = new OrphanBlobQueryImpl(db);
+    await query.findOrphanedKeys(SYSTEM_ID, customMs);
+
+    expect(chain.where).toHaveBeenCalledWith(
+      and(
+        eq(blobMetadata.systemId, SYSTEM_ID),
+        isNull(blobMetadata.uploadedAt),
+        lt(blobMetadata.createdAt, now - customMs),
+        eq(blobMetadata.archived, false),
+      ),
+    );
+  });
+
+  it("returns a single orphan key", async () => {
+    const { db, chain } = mockDb();
+    chain.where.mockResolvedValueOnce([{ storageKey: "sk_only-one" }]);
+
+    const query = new OrphanBlobQueryImpl(db);
+    const result = await query.findOrphanedKeys(SYSTEM_ID, ONE_HOUR_MS);
+
+    expect(result).toEqual(["sk_only-one"]);
+  });
+
+  it("propagates database errors", async () => {
+    const { db, chain } = mockDb();
+    chain.where.mockRejectedValueOnce(new Error("database unavailable"));
+
+    const query = new OrphanBlobQueryImpl(db);
+    await expect(query.findOrphanedKeys(SYSTEM_ID, ONE_HOUR_MS)).rejects.toThrow(
+      "database unavailable",
+    );
+  });
 });

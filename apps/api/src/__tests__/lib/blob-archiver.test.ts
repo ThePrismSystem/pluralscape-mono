@@ -36,4 +36,25 @@ describe("BlobArchiverImpl", () => {
       and(eq(blobMetadata.storageKey, storageKey), eq(blobMetadata.archived, false)),
     );
   });
+
+  it("is idempotent — succeeds when no rows match (already archived)", async () => {
+    const { db, chain } = mockDb();
+    // where() resolving to undefined simulates zero rows updated
+    chain.where.mockResolvedValueOnce(undefined);
+
+    const archiver = new BlobArchiverImpl(db);
+    await expect(
+      archiver.archiveByStorageKey("sk_already-archived" as StorageKey),
+    ).resolves.toBeUndefined();
+  });
+
+  it("propagates database errors", async () => {
+    const { db, chain } = mockDb();
+    chain.where.mockRejectedValueOnce(new Error("connection lost"));
+
+    const archiver = new BlobArchiverImpl(db);
+    await expect(archiver.archiveByStorageKey("sk_fail" as StorageKey)).rejects.toThrow(
+      "connection lost",
+    );
+  });
 });
