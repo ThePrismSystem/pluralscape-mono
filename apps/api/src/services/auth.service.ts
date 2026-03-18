@@ -16,12 +16,12 @@ import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
 import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
-import { PG_UNIQUE_VIOLATION } from "../db.constants.js";
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
 import { getIdleTimeout } from "../lib/session-auth.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
+import { isUniqueViolation } from "../lib/unique-violation.js";
 import {
   ANTI_ENUM_TARGET_MS,
   DEFAULT_SESSION_LIMIT,
@@ -438,11 +438,8 @@ class ValidationError extends Error {
 export { ValidationError };
 
 export function isDuplicateEmailError(error: unknown): boolean {
-  if (error instanceof Error && "code" in error && "constraint_name" in error) {
-    const pgErr = error as { code: string; constraint_name: string };
-    return (
-      pgErr.code === PG_UNIQUE_VIOLATION && pgErr.constraint_name === "accounts_email_hash_idx"
-    );
+  if (isUniqueViolation(error) && "constraint_name" in error) {
+    return (error as { constraint_name: string }).constraint_name === "accounts_email_hash_idx";
   }
   return false;
 }
