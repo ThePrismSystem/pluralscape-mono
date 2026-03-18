@@ -5,7 +5,7 @@ import { AUDIT_LOG_IP_MAX_LENGTH, AUDIT_LOG_UA_MAX_LENGTH } from "./audit-log.co
 
 import type { DbAuditActor } from "@pluralscape/db";
 import type { AuditEventType } from "@pluralscape/types";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Parameters for writing an audit log entry. */
 export interface WriteAuditLogParams {
@@ -23,7 +23,7 @@ export interface WriteAuditLogParams {
  * Accepts a Drizzle PG database client for transaction support.
  */
 export async function writeAuditLog(
-  db: PgDatabase<PgQueryResultHKT>,
+  db: PostgresJsDatabase,
   params: WriteAuditLogParams,
 ): Promise<void> {
   const timestamp = now();

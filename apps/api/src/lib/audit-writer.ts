@@ -4,7 +4,7 @@ import { extractRequestMeta } from "./request-meta.js";
 import type { AuthContext } from "./auth-context.js";
 import type { DbAuditActor } from "@pluralscape/db";
 import type { AccountId, AuditEventType, SystemId } from "@pluralscape/types";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Context } from "hono";
 
 /** Parameters for an audit write via the factory-created writer. */
@@ -20,7 +20,7 @@ export interface AuditWriteParams {
 
 /** A pre-bound audit log writer that captures request metadata at creation time. */
 export type AuditWriter = (
-  db: PgDatabase<PgQueryResultHKT>,
+  db: PostgresJsDatabase,
   params: AuditWriteParams,
 ) => Promise<void>;
 
@@ -39,7 +39,7 @@ export type AuditWriter = (
 export function createAuditWriter(c: Context, auth?: AuthContext | null): AuditWriter {
   const requestMeta = extractRequestMeta(c);
 
-  return async (db: PgDatabase<PgQueryResultHKT>, params: AuditWriteParams): Promise<void> => {
+  return async (db: PostgresJsDatabase, params: AuditWriteParams): Promise<void> => {
     await writeAuditLog(db, {
       accountId: params.accountId ?? auth?.accountId ?? null,
       systemId: params.systemId ?? auth?.systemId ?? null,
