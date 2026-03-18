@@ -19,8 +19,9 @@ deleteRoute.delete("/:fieldId", async (c) => {
   const systemId = parseIdParam(c.req.param("systemId") as string, ID_PREFIXES.system);
   const fieldId = parseIdParam(c.req.param("fieldId"), ID_PREFIXES.fieldDefinition);
   const audit = createAuditWriter(c, auth);
+  const force = c.req.query("force") === "true";
 
   const db = await getDb();
-  await deleteFieldDefinition(db, systemId, fieldId, auth, audit);
+  await deleteFieldDefinition(db, systemId, fieldId, auth, audit, { force });
   return c.body(null, HTTP_NO_CONTENT);
 });

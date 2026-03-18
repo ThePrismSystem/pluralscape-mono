@@ -5,11 +5,14 @@ import {
   frontingComments,
   frontingSessions,
   groupMemberships,
+  layerMemberships,
   members,
   memberPhotos,
   notes,
   polls,
   relationships,
+  sideSystemMemberships,
+  subsystemMemberships,
 } from "@pluralscape/db/pg";
 import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import {
@@ -35,6 +38,7 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EncryptedBlob,
+  GroupId,
   MemberId,
   PaginatedResult,
   PaginationCursor,
@@ -647,4 +651,99 @@ export async function deleteMember(
 
     await tx.delete(members).where(and(eq(members.id, memberId), eq(members.systemId, systemId)));
   });
+}
+
+// ── ALL MEMBERSHIPS ──────────────────────────────────────────────────
+
+export interface AllMemberMembershipsResult {
+  readonly groups: ReadonlyArray<{
+    readonly groupId: GroupId;
+    readonly memberId: MemberId;
+    readonly systemId: SystemId;
+    readonly createdAt: UnixMillis;
+  }>;
+  readonly subsystems: ReadonlyArray<{
+    readonly id: string;
+    readonly subsystemId: string;
+    readonly systemId: SystemId;
+    readonly encryptedData: string;
+    readonly createdAt: UnixMillis;
+  }>;
+  readonly sideSystems: ReadonlyArray<{
+    readonly id: string;
+    readonly sideSystemId: string;
+    readonly systemId: SystemId;
+    readonly encryptedData: string;
+    readonly createdAt: UnixMillis;
+  }>;
+  readonly layers: ReadonlyArray<{
+    readonly id: string;
+    readonly layerId: string;
+    readonly systemId: SystemId;
+    readonly encryptedData: string;
+    readonly createdAt: UnixMillis;
+  }>;
+}
+
+export async function listAllMemberMemberships(
+  db: PostgresJsDatabase,
+  systemId: SystemId,
+  memberId: MemberId,
+  auth: AuthContext,
+): Promise<AllMemberMembershipsResult> {
+  assertSystemOwnership(systemId, auth);
+
+  // Verify member exists
+  const [member] = await db
+    .select({ id: members.id })
+    .from(members)
+    .where(
+      and(eq(members.id, memberId), eq(members.systemId, systemId), eq(members.archived, false)),
+    )
+    .limit(1);
+
+  if (!member) {
+    throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Member not found");
+  }
+
+  // Query all structure types in parallel
+  const [groupRows, subsystemRows, sideSystemRows, layerRows] = await Promise.all([
+    db
+      .select()
+      .from(groupMemberships)
+      .where(and(eq(groupMemberships.memberId, memberId), eq(groupMemberships.systemId, systemId))),
+    db.select().from(subsystemMemberships).where(eq(subsystemMemberships.systemId, systemId)),
+    db.select().from(sideSystemMemberships).where(eq(sideSystemMemberships.systemId, systemId)),
+    db.select().from(layerMemberships).where(eq(layerMemberships.systemId, systemId)),
+  ]);
+
+  return {
+    groups: groupRows.map((r) => ({
+      groupId: r.groupId as GroupId,
+      memberId: r.memberId as MemberId,
+      systemId: r.systemId as SystemId,
+      createdAt: r.createdAt as UnixMillis,
+    })),
+    subsystems: subsystemRows.map((r) => ({
+      id: r.id,
+      subsystemId: r.subsystemId,
+      systemId: r.systemId as SystemId,
+      encryptedData: encryptedBlobToBase64(r.encryptedData),
+      createdAt: r.createdAt as UnixMillis,
+    })),
+    sideSystems: sideSystemRows.map((r) => ({
+      id: r.id,
+      sideSystemId: r.sideSystemId,
+      systemId: r.systemId as SystemId,
+      encryptedData: encryptedBlobToBase64(r.encryptedData),
+      createdAt: r.createdAt as UnixMillis,
+    })),
+    layers: layerRows.map((r) => ({
+      id: r.id,
+      layerId: r.layerId,
+      systemId: r.systemId as SystemId,
+      encryptedData: encryptedBlobToBase64(r.encryptedData),
+      createdAt: r.createdAt as UnixMillis,
+    })),
+  };
 }
