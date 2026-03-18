@@ -1,0 +1,213 @@
+/systems/{systemId}/fields:
+  get:
+    operationId: listFieldDefinitions
+    tags: [Fields]
+    summary: List field definitions
+    description: Returns a paginated list of custom field definitions for the given system. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated field definition list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [fields]
+                  properties:
+                    fields:
+                      type: array
+                      items:
+                        $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createFieldDefinition
+    tags: [Fields]
+    summary: Create a field definition
+    description: Creates a new custom field definition for the given system. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fields.yaml#/CreateFieldDefinitionRequest"
+    responses:
+      "201":
+        description: Field definition created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fields/{fieldId}:
+  get:
+    operationId: getFieldDefinition
+    tags: [Fields]
+    summary: Get a field definition
+    description: Returns details for a single custom field definition by ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Field definition
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateFieldDefinition
+    tags: [Fields]
+    summary: Update a field definition
+    description: Updates an existing custom field definition. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fields.yaml#/UpdateFieldDefinitionRequest"
+    responses:
+      "200":
+        description: Field definition updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteFieldDefinition
+    tags: [Fields]
+    summary: Delete a field definition
+    description: Permanently deletes a custom field definition. Returns 409 if the field has values on any members. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fields/{fieldId}/archive:
+  post:
+    operationId: archiveFieldDefinition
+    tags: [Fields]
+    summary: Archive a field definition
+    description: Marks a custom field definition as archived. Archived fields are hidden from default views but existing values are preserved. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Field archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fields/{fieldId}/restore:
+  post:
+    operationId: restoreFieldDefinition
+    tags: [Fields]
+    summary: Restore an archived field definition
+    description: Removes the archived flag from a custom field definition, making it visible in default views again. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: fieldId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Field restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldDefinitionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

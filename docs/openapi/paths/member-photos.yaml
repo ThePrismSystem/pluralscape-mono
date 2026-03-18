@@ -1,0 +1,180 @@
+/systems/{systemId}/members/{memberId}/photos:
+  get:
+    operationId: listMemberPhotos
+    tags: [Member Photos]
+    summary: List member photos
+    description: Returns all photos associated with a member. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "200":
+        description: Photo list
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [photos]
+              properties:
+                photos:
+                  type: array
+                  items:
+                    $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createMemberPhoto
+    tags: [Member Photos]
+    summary: Create a member photo
+    description: Attaches a new encrypted photo record to a member. The blob must be uploaded separately via the blobs API. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/member-photos.yaml#/CreateMemberPhotoRequest"
+    responses:
+      "201":
+        description: Photo created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/photos/reorder:
+  post:
+    operationId: reorderMemberPhotos
+    tags: [Member Photos]
+    summary: Reorder member photos
+    description: Updates the display order of a member's photos. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/member-photos.yaml#/ReorderPhotosRequest"
+    responses:
+      "200":
+        description: Photos reordered
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ok:
+                  type: boolean
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/photos/{photoId}/archive:
+  post:
+    operationId: archiveMemberPhoto
+    tags: [Member Photos]
+    summary: Archive a member photo
+    description: Marks a member photo as archived. Archived photos are hidden from default views but not deleted. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: photoId
+        in: path
+        required: true
+        description: Photo ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Photo archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/photos/{photoId}/restore:
+  post:
+    operationId: restoreMemberPhoto
+    tags: [Member Photos]
+    summary: Restore an archived member photo
+    description: Removes the archived flag from a member photo, making it visible in default views again. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: photoId
+        in: path
+        required: true
+        description: Photo ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Photo restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/photos/{photoId}:
+  delete:
+    operationId: deleteMemberPhoto
+    tags: [Member Photos]
+    summary: Delete a member photo
+    description: Permanently deletes a member photo record. The associated blob must be deleted separately. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: photoId
+        in: path
+        required: true
+        description: Photo ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

@@ -1,0 +1,477 @@
+/systems/{systemId}/innerworld/regions:
+  get:
+    operationId: listInnerworldRegions
+    tags: [Innerworld]
+    summary: List innerworld regions
+    description: Returns a paginated list of innerworld regions for the given system. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Region list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [regions]
+                  properties:
+                    regions:
+                      type: array
+                      items:
+                        $ref: "../schemas/innerworld.yaml#/RegionResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createInnerworldRegion
+    tags: [Innerworld]
+    summary: Create an innerworld region
+    description: Creates a new region within the system's innerworld. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/CreateRegionRequest"
+    responses:
+      "201":
+        description: Region created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/regions/{regionId}:
+  get:
+    operationId: getInnerworldRegion
+    tags: [Innerworld]
+    summary: Get an innerworld region
+    description: Returns details for a single innerworld region by ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        description: Region ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Region details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateInnerworldRegion
+    tags: [Innerworld]
+    summary: Update an innerworld region
+    description: Updates the encrypted payload or metadata for an innerworld region. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        description: Region ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/UpdateRegionRequest"
+    responses:
+      "200":
+        description: Region updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteInnerworldRegion
+    tags: [Innerworld]
+    summary: Delete an innerworld region
+    description: Permanently deletes an innerworld region. Returns 409 if the region has dependents. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        description: Region ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/regions/{regionId}/archive:
+  post:
+    operationId: archiveInnerworldRegion
+    tags: [Innerworld]
+    summary: Archive an innerworld region
+    description: Marks an innerworld region as archived. Archived regions are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        description: Region ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Region archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/regions/{regionId}/restore:
+  post:
+    operationId: restoreInnerworldRegion
+    tags: [Innerworld]
+    summary: Restore an archived innerworld region
+    description: Removes the archived flag from an innerworld region, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: regionId
+        in: path
+        required: true
+        description: Region ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Region restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/RegionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/entities:
+  get:
+    operationId: listInnerworldEntities
+    tags: [Innerworld]
+    summary: List innerworld entities
+    description: Returns a paginated list of innerworld entities for the given system. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Entity list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [entities]
+                  properties:
+                    entities:
+                      type: array
+                      items:
+                        $ref: "../schemas/innerworld.yaml#/EntityResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createInnerworldEntity
+    tags: [Innerworld]
+    summary: Create an innerworld entity
+    description: Creates a new entity within the system's innerworld. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/CreateEntityRequest"
+    responses:
+      "201":
+        description: Entity created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/entities/{entityId}:
+  get:
+    operationId: getInnerworldEntity
+    tags: [Innerworld]
+    summary: Get an innerworld entity
+    description: Returns details for a single innerworld entity by ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        description: Entity ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Entity details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateInnerworldEntity
+    tags: [Innerworld]
+    summary: Update an innerworld entity
+    description: Updates the encrypted payload or metadata for an innerworld entity. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        description: Entity ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/UpdateEntityRequest"
+    responses:
+      "200":
+        description: Entity updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteInnerworldEntity
+    tags: [Innerworld]
+    summary: Delete an innerworld entity
+    description: Permanently deletes an innerworld entity. Returns 409 if the entity has dependents. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        description: Entity ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/entities/{entityId}/archive:
+  post:
+    operationId: archiveInnerworldEntity
+    tags: [Innerworld]
+    summary: Archive an innerworld entity
+    description: Marks an innerworld entity as archived. Archived entities are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        description: Entity ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Entity archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/entities/{entityId}/restore:
+  post:
+    operationId: restoreInnerworldEntity
+    tags: [Innerworld]
+    summary: Restore an archived innerworld entity
+    description: Removes the archived flag from an innerworld entity, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: entityId
+        in: path
+        required: true
+        description: Entity ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Entity restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/EntityResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/innerworld/canvas:
+  get:
+    operationId: getInnerworldCanvas
+    tags: [Innerworld]
+    summary: Get the innerworld canvas
+    description: Returns the canvas layout data for the system's innerworld, including region and entity positions. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: Canvas data
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/CanvasResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateInnerworldCanvas
+    tags: [Innerworld]
+    summary: Update the innerworld canvas
+    description: Updates the canvas layout data for the system's innerworld. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/innerworld.yaml#/UpdateCanvasRequest"
+    responses:
+      "200":
+        description: Canvas updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/innerworld.yaml#/CanvasResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

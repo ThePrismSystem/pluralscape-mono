@@ -1,0 +1,461 @@
+/systems/{systemId}/groups:
+  get:
+    operationId: listGroups
+    tags: [Groups]
+    summary: List groups
+    description: |
+      Returns a paginated flat list of all groups belonging to the specified system.
+      For a hierarchical view, use the `/tree` endpoint.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated group list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [groups]
+                  properties:
+                    groups:
+                      type: array
+                      items:
+                        $ref: "../schemas/groups.yaml#/GroupResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createGroup
+    tags: [Groups]
+    summary: Create a group
+    description: |
+      Creates a new group within the specified system. Groups can be nested
+      hierarchically via a `parentId` in the request body.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/groups.yaml#/CreateGroupRequest"
+    responses:
+      "201":
+        description: Group created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/groups.yaml#/GroupResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/tree:
+  get:
+    operationId: getGroupTree
+    tags: [Groups]
+    summary: Get hierarchical group tree
+    description: |
+      Returns all groups as a nested tree structure. Each node contains its
+      direct children recursively. Useful for rendering a full hierarchy
+      without making multiple paginated requests.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: Hierarchical tree of all groups
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../schemas/groups.yaml#/GroupTreeNode"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/reorder:
+  post:
+    operationId: reorderGroups
+    tags: [Groups]
+    summary: Batch reorder groups
+    description: |
+      Updates the sort order of multiple groups in a single request. Accepts
+      an ordered array of group IDs and applies the new ordering atomically.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/groups.yaml#/ReorderGroupsRequest"
+    responses:
+      "200":
+        description: Groups reordered
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ok]
+              properties:
+                ok:
+                  type: boolean
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/{groupId}:
+  get:
+    operationId: getGroup
+    tags: [Groups]
+    summary: Get a group
+    description: |
+      Returns details for a single group by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+    responses:
+      "200":
+        description: Group details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/groups.yaml#/GroupResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateGroup
+    tags: [Groups]
+    summary: Update a group
+    description: |
+      Updates the metadata for an existing group. Returns 409 if the provided
+      version conflicts with the server's current version.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/groups.yaml#/UpdateGroupRequest"
+    responses:
+      "200":
+        description: Group updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/groups.yaml#/GroupResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteGroup
+    tags: [Groups]
+    summary: Delete a group
+    description: |
+      Permanently deletes a group. Returns 409 if the group has members or
+      child groups that must be removed first. This action is irreversible.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/{groupId}/move:
+  post:
+    operationId: moveGroup
+    tags: [Groups]
+    summary: Move a group to a new parent
+    description: |
+      Reparents a group by changing its `parentId`. Pass `null` as the parent
+      to move the group to the root level. Returns 409 if moving would create
+      a cycle in the hierarchy.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/groups.yaml#/MoveGroupRequest"
+    responses:
+      "200":
+        description: Group moved
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/groups.yaml#/GroupResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/{groupId}/copy:
+  post:
+    operationId: copyGroup
+    tags: [Groups]
+    summary: Copy a group
+    description: |
+      Creates a deep copy of a group, including its members and optionally
+      its child groups. The copy is placed at the same hierarchy level as
+      the original unless a `targetParentId` is specified in the request.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/groups.yaml#/CopyGroupRequest"
+    responses:
+      "201":
+        description: Group copied
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/groups.yaml#/GroupResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/{groupId}/archive:
+  post:
+    operationId: archiveGroup
+    tags: [Groups]
+    summary: Archive a group
+    description: |
+      Marks a group as archived. Archived groups are hidden from default list
+      responses but remain accessible. Archival is always permitted regardless
+      of members or child groups.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+    responses:
+      "200":
+        description: Group archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/groups.yaml#/GroupResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/{groupId}/restore:
+  post:
+    operationId: restoreGroup
+    tags: [Groups]
+    summary: Restore an archived group
+    description: |
+      Removes the archived flag from a group, making it visible in default
+      list responses again.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+    responses:
+      "200":
+        description: Group restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/groups.yaml#/GroupResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/{groupId}/members:
+  get:
+    operationId: listGroupMembers
+    tags: [Groups]
+    summary: List members in a group
+    description: |
+      Returns a paginated list of all members belonging to the specified group,
+      including their membership metadata (role, sort order).
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Group member list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [members]
+                  properties:
+                    members:
+                      type: array
+                      items:
+                        $ref: "../schemas/groups.yaml#/GroupMembership"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: addGroupMember
+    tags: [Groups]
+    summary: Add a member to a group
+    description: |
+      Adds an existing member to the specified group. Returns 409 if the
+      member is already in the group.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/groups.yaml#/AddGroupMemberRequest"
+    responses:
+      "201":
+        description: Member added to group
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/groups.yaml#/GroupMembership"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/groups/{groupId}/members/{memberId}:
+  delete:
+    operationId: removeGroupMember
+    tags: [Groups]
+    summary: Remove a member from a group
+    description: |
+      Removes a member from the specified group. The member itself is not
+      deleted — only the group membership record is removed.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/GroupId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

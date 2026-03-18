@@ -1,0 +1,129 @@
+/systems/{systemId}/members/{memberId}/fields:
+  get:
+    operationId: listMemberFieldValues
+    tags: [Member Fields]
+    summary: List field values for a member
+    description: Returns all custom field values set on the given member. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+    responses:
+      "200":
+        description: Field value list
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields]
+              properties:
+                fields:
+                  type: array
+                  items:
+                    $ref: "../schemas/fields.yaml#/FieldValueResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/members/{memberId}/fields/{fieldDefId}:
+  post:
+    operationId: setFieldValue
+    tags: [Member Fields]
+    summary: Set a field value on a member
+    description: Creates a new field value for the given field definition on a member. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: fieldDefId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fields.yaml#/SetFieldValueRequest"
+    responses:
+      "201":
+        description: Field value set
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldValueResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateFieldValue
+    tags: [Member Fields]
+    summary: Update a field value on a member
+    description: Updates an existing field value for the given field definition on a member. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: fieldDefId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fields.yaml#/UpdateFieldValueRequest"
+    responses:
+      "200":
+        description: Field value updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fields.yaml#/FieldValueResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteFieldValue
+    tags: [Member Fields]
+    summary: Delete a field value from a member
+    description: Removes a field value for the given field definition from a member. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/MemberId"
+      - name: fieldDefId
+        in: path
+        required: true
+        description: Field Definition ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

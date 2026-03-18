@@ -1,0 +1,293 @@
+/systems/{systemId}/structure-links/subsystem-layer:
+  get:
+    operationId: listSubsystemLayerLinks
+    tags: [Structure Links]
+    summary: List subsystem-layer links
+    description: Returns a paginated list of links between subsystems and layers. Optionally filter by subsystem or layer ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: query
+        description: Filter by Subsystem ID
+        schema:
+          type: string
+      - name: layerId
+        in: query
+        description: Filter by Layer ID
+        schema:
+          type: string
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Link list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [links]
+                  properties:
+                    links:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/StructureLinkResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createSubsystemLayerLink
+    tags: [Structure Links]
+    summary: Link a subsystem to a layer
+    description: Creates a structural link between a subsystem and a layer. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/CreateSubsystemLayerLinkRequest"
+    responses:
+      "201":
+        description: Link created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureLinkResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/structure-links/subsystem-layer/{linkId}:
+  delete:
+    operationId: deleteSubsystemLayerLink
+    tags: [Structure Links]
+    summary: Delete a subsystem-layer link
+    description: Permanently removes a structural link between a subsystem and a layer. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: linkId
+        in: path
+        required: true
+        description: Link ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/structure-links/subsystem-side-system:
+  get:
+    operationId: listSubsystemSideSystemLinks
+    tags: [Structure Links]
+    summary: List subsystem-side-system links
+    description: Returns a paginated list of links between subsystems and side systems. Optionally filter by subsystem or side system ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: subsystemId
+        in: query
+        description: Filter by Subsystem ID
+        schema:
+          type: string
+      - name: sideSystemId
+        in: query
+        description: Filter by Side System ID
+        schema:
+          type: string
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Link list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [links]
+                  properties:
+                    links:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/StructureLinkResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createSubsystemSideSystemLink
+    tags: [Structure Links]
+    summary: Link a subsystem to a side system
+    description: Creates a structural link between a subsystem and a side system. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/CreateSubsystemSideSystemLinkRequest"
+    responses:
+      "201":
+        description: Link created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureLinkResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/structure-links/subsystem-side-system/{linkId}:
+  delete:
+    operationId: deleteSubsystemSideSystemLink
+    tags: [Structure Links]
+    summary: Delete a subsystem-side-system link
+    description: Permanently removes a structural link between a subsystem and a side system. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: linkId
+        in: path
+        required: true
+        description: Link ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/structure-links/side-system-layer:
+  get:
+    operationId: listSideSystemLayerLinks
+    tags: [Structure Links]
+    summary: List side-system-layer links
+    description: Returns a paginated list of links between side systems and layers. Optionally filter by side system or layer ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sideSystemId
+        in: query
+        description: Filter by Side System ID
+        schema:
+          type: string
+      - name: layerId
+        in: query
+        description: Filter by Layer ID
+        schema:
+          type: string
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Link list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [links]
+                  properties:
+                    links:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/StructureLinkResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createSideSystemLayerLink
+    tags: [Structure Links]
+    summary: Link a side system to a layer
+    description: Creates a structural link between a side system and a layer. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/CreateSideSystemLayerLinkRequest"
+    responses:
+      "201":
+        description: Link created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureLinkResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/structure-links/side-system-layer/{linkId}:
+  delete:
+    operationId: deleteSideSystemLayerLink
+    tags: [Structure Links]
+    summary: Delete a side-system-layer link
+    description: Permanently removes a structural link between a side system and a layer. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: linkId
+        in: path
+        required: true
+        description: Link ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

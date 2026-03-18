@@ -1,0 +1,115 @@
+FieldType:
+  type: string
+  enum: [text, number, boolean, date, color, select, multi-select, url]
+  description: The data type of a custom field
+  example: text
+
+CreateFieldDefinitionRequest:
+  type: object
+  required: [fieldType, encryptedData]
+  properties:
+    fieldType:
+      $ref: "#/FieldType"
+    required:
+      type: boolean
+      default: false
+      description: Whether members must have a value for this field
+    sortOrder:
+      type: integer
+      minimum: 0
+      default: 0
+      description: Display order among field definitions
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 32768
+      description: "T1-encrypted PlaintextFieldDefinition (see ./plaintext.yaml#/PlaintextFieldDefinition)"
+
+UpdateFieldDefinitionRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    required:
+      type: boolean
+    sortOrder:
+      type: integer
+      minimum: 0
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 32768
+      description: "T1-encrypted PlaintextFieldDefinition (see ./plaintext.yaml#/PlaintextFieldDefinition)"
+    version:
+      type: integer
+      minimum: 1
+
+FieldDefinitionResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [fieldType, required, sortOrder]
+      properties:
+        fieldType:
+          $ref: "#/FieldType"
+        required:
+          type: boolean
+          description: Whether members must have a value for this field
+        sortOrder:
+          type: integer
+          description: Display order among field definitions
+
+SetFieldValueRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 16384
+      description: "T1-encrypted PlaintextFieldValue (see ./plaintext.yaml#/PlaintextFieldValue)"
+
+UpdateFieldValueRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 16384
+      description: "T1-encrypted PlaintextFieldValue (see ./plaintext.yaml#/PlaintextFieldValue)"
+    version:
+      type: integer
+      minimum: 1
+
+FieldValueResponse:
+  type: object
+  required:
+    [id, fieldDefinitionId, memberId, systemId, encryptedData, version, createdAt, updatedAt]
+  properties:
+    id:
+      type: string
+    fieldDefinitionId:
+      type: string
+      description: ID of the field definition this value belongs to
+    memberId:
+      type: string
+      description: ID of the member this value is set on
+    systemId:
+      type: string
+    encryptedData:
+      type: string
+      contentEncoding: base64
+    version:
+      type: integer
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+    updatedAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds

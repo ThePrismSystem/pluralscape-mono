@@ -1,0 +1,49 @@
+MemberResponse:
+  description: A member (headmate) within a system. Extends EncryptedEntity with the server-visible `archived` field.
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+
+CreateMemberRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 131072
+      description: "T1-encrypted PlaintextMember (see ./plaintext.yaml#/PlaintextMember)"
+
+UpdateMemberRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 131072
+      description: "T1-encrypted PlaintextMember (see ./plaintext.yaml#/PlaintextMember)"
+    version:
+      type: integer
+      minimum: 1
+
+DuplicateMemberRequest:
+  type: object
+  required: [encryptedData, copyPhotos, copyFields, copyMemberships]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 131072
+      description: "T1-encrypted PlaintextMember for the new duplicate (see ./plaintext.yaml#/PlaintextMember)"
+    copyPhotos:
+      type: boolean
+      description: Whether to copy the source member's photos to the duplicate
+    copyFields:
+      type: boolean
+      description: Whether to copy the source member's custom field values to the duplicate
+    copyMemberships:
+      type: boolean
+      description: Whether to copy the source member's group memberships to the duplicate

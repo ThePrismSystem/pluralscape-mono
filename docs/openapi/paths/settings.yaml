@@ -1,0 +1,307 @@
+/systems/{systemId}/settings:
+  get:
+    operationId: getSystemSettings
+    tags: [System Settings]
+    summary: Get system settings
+    description: Returns the encrypted settings payload for the given system. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: System settings
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateSystemSettings
+    tags: [System Settings]
+    summary: Update system settings
+    description: Replaces the encrypted settings payload for the given system. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/settings.yaml#/UpdateSystemSettingsRequest"
+    responses:
+      "200":
+        description: Settings updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/settings/pin:
+  post:
+    operationId: setPin
+    tags: [System Settings]
+    summary: Set system PIN
+    description: Sets or replaces the system's PIN lock. Rate limit 5 req/min (authHeavy).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/settings.yaml#/PinRequest"
+    responses:
+      "201":
+        description: PIN set
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ok:
+                  type: boolean
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: removePin
+    tags: [System Settings]
+    summary: Remove system PIN
+    description: Removes the system's PIN lock. Requires the current PIN in the request body. Rate limit 5 req/min (authHeavy).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/settings.yaml#/PinRequest"
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/settings/pin/verify:
+  post:
+    operationId: verifyPin
+    tags: [System Settings]
+    summary: Verify system PIN
+    description: Checks whether the provided PIN matches the system's stored PIN hash. Rate limit 5 req/min (authHeavy).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/settings.yaml#/PinRequest"
+    responses:
+      "200":
+        description: PIN verification result
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/settings.yaml#/PinVerifyResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/nomenclature:
+  get:
+    operationId: getNomenclature
+    tags: [System Settings]
+    summary: Get system nomenclature
+    description: Returns the encrypted nomenclature payload for the given system. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: Nomenclature data
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateNomenclature
+    tags: [System Settings]
+    summary: Update system nomenclature
+    description: Replaces the encrypted nomenclature payload for the given system. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/settings.yaml#/UpdateNomenclatureRequest"
+    responses:
+      "200":
+        description: Nomenclature updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/common.yaml#/EncryptedEntity"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/setup/status:
+  get:
+    operationId: getSetupStatus
+    tags: [System Settings]
+    summary: Get setup wizard status
+    description: Returns the current completion status of the system setup wizard, indicating which steps have been completed. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: Setup status
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/settings.yaml#/SetupStatusResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/setup/nomenclature:
+  post:
+    operationId: setupNomenclatureStep
+    tags: [System Settings]
+    summary: Submit nomenclature setup step
+    description: Completes the nomenclature step of the system setup wizard by saving the system's preferred terminology. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/settings.yaml#/SetupStepRequest"
+    responses:
+      "201":
+        description: Step completed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ok:
+                  type: boolean
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/setup/profile:
+  post:
+    operationId: setupProfileStep
+    tags: [System Settings]
+    summary: Submit profile setup step
+    description: Completes the profile step of the system setup wizard by saving the system's initial profile data. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/settings.yaml#/SetupStepRequest"
+    responses:
+      "201":
+        description: Step completed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ok:
+                  type: boolean
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/setup/complete:
+  post:
+    operationId: completeSetup
+    tags: [System Settings]
+    summary: Complete system setup
+    description: Finalizes the system setup wizard, marking the system as fully configured. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/settings.yaml#/SetupCompleteRequest"
+    responses:
+      "201":
+        description: Setup completed
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ok:
+                  type: boolean
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

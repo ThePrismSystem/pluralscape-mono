@@ -1,0 +1,149 @@
+/account:
+  get:
+    operationId: getAccount
+    tags: [Account]
+    summary: Get account info
+    description: |
+      Returns the authenticated account's details.
+
+      Rate limit: 20 req/min (authLight)
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Account info
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/account.yaml#/AccountInfo"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/email:
+  put:
+    operationId: changeEmail
+    tags: [Account]
+    summary: Change account email
+    description: |
+      Changes the account email. Requires current password for verification.
+
+      Rate limit: 5 req/min (authHeavy)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/ChangeEmailRequest"
+    responses:
+      "200":
+        description: Email updated
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/password:
+  put:
+    operationId: changePassword
+    tags: [Account]
+    summary: Change account password
+    description: |
+      Changes the account password. Requires current password for verification.
+
+      Rate limit: 5 req/min (authHeavy)
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/account.yaml#/ChangePasswordRequest"
+    responses:
+      "200":
+        description: Password updated
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ok]
+              properties:
+                ok:
+                  type: boolean
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/account/audit-log:
+  get:
+    operationId: getAuditLog
+    tags: [Account]
+    summary: Query account audit log
+    description: |
+      Returns audit log entries for the authenticated account.
+      Supports filtering by event type, resource type, and time range.
+
+      Rate limit: 30 req/min (auditQuery)
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: eventType
+        in: query
+        schema:
+          type: string
+        description: Filter by event type (e.g., "member.created", "session.revoked")
+      - name: resourceType
+        in: query
+        schema:
+          type: string
+          pattern: ^[a-z][a-z0-9-]*$
+        description: Filter by resource type (e.g., "member", "group", "session")
+      - name: from
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+        description: Start of time range as Unix timestamp in milliseconds (inclusive)
+      - name: to
+        in: query
+        schema:
+          type: integer
+          minimum: 0
+        description: End of time range as Unix timestamp in milliseconds (inclusive)
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Audit log entries
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/account.yaml#/AuditLogResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

@@ -1,0 +1,95 @@
+CreateRegionRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldRegion (see ./plaintext.yaml#/PlaintextInnerworldRegion)"
+    parentRegionId:
+      type: string
+      nullable: true
+      description: ID of the parent region for nesting
+
+UpdateRegionRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldRegion (see ./plaintext.yaml#/PlaintextInnerworldRegion)"
+    version:
+      type: integer
+      minimum: 1
+
+RegionResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      properties:
+        parentRegionId:
+          type: string
+          nullable: true
+          description: ID of the parent region, null for top-level regions
+
+CreateEntityRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity)"
+    regionId:
+      type: string
+      nullable: true
+      description: ID of the region this entity belongs to
+
+UpdateEntityRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldEntity (see ./plaintext.yaml#/PlaintextInnerworldEntity)"
+    version:
+      type: integer
+      minimum: 1
+
+EntityResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      properties:
+        regionId:
+          type: string
+          nullable: true
+          description: ID of the region this entity belongs to
+
+UpdateCanvasRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted PlaintextInnerworldCanvas (see ./plaintext.yaml#/PlaintextInnerworldCanvas)"
+    version:
+      type: integer
+      minimum: 1
+
+CanvasResponse:
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"

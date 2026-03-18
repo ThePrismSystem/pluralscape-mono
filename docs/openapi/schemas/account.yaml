@@ -1,0 +1,127 @@
+AccountInfo:
+  type: object
+  required: [accountId, accountType, createdAt, updatedAt]
+  properties:
+    accountId:
+      type: string
+      description: Unique account identifier
+      example: "acc_abc123"
+    accountType:
+      type: string
+      enum: [system, viewer]
+      description: Account type — system accounts own a plural system, viewer accounts have read-only access
+    systemId:
+      type: string
+      nullable: true
+      description: Associated system ID (null for viewer accounts without a system)
+      example: "sys_abc123"
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+      example: 1710000000000
+    updatedAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+      example: 1710000000000
+
+ChangeEmailRequest:
+  type: object
+  required: [email, currentPassword]
+  properties:
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+    currentPassword:
+      type: string
+      minLength: 1
+
+ChangePasswordRequest:
+  type: object
+  required: [currentPassword, newPassword]
+  properties:
+    currentPassword:
+      type: string
+      minLength: 1
+    newPassword:
+      type: string
+      minLength: 8
+      maxLength: 1024
+
+AuditLogQuery:
+  type: object
+  properties:
+    eventType:
+      type: string
+      description: Filter by event type
+    resourceType:
+      type: string
+      pattern: ^[a-z][a-z0-9-]*$
+      description: Filter by resource type
+    from:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Start timestamp in milliseconds
+    to:
+      type: integer
+      format: int64
+      minimum: 0
+      description: End timestamp in milliseconds
+    cursor:
+      type: string
+    limit:
+      type: integer
+      minimum: 1
+      maximum: 100
+      default: 25
+
+AuditLogEntry:
+  type: object
+  required: [id, eventType, timestamp, resourceType]
+  properties:
+    id:
+      type: string
+      description: Unique audit log entry identifier
+    eventType:
+      type: string
+      description: "Type of event (e.g., login, member.create, settings.update)"
+    timestamp:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds when the event occurred
+    resourceType:
+      type: string
+      description: "Type of resource affected (e.g., member, group, session)"
+    resourceId:
+      type: string
+      nullable: true
+      description: ID of the affected resource
+    actor:
+      type: string
+      nullable: true
+      description: Account ID of the actor
+    ipAddress:
+      type: string
+      nullable: true
+      description: IP address of the request
+    userAgent:
+      type: string
+      nullable: true
+      description: User-Agent header from the request
+
+AuditLogResponse:
+  type: object
+  required: [events, hasMore]
+  properties:
+    events:
+      type: array
+      items:
+        $ref: "#/AuditLogEntry"
+    nextCursor:
+      type: string
+      nullable: true
+    hasMore:
+      type: boolean

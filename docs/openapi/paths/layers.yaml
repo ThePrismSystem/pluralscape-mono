@@ -1,0 +1,319 @@
+/systems/{systemId}/layers:
+  get:
+    operationId: listLayers
+    tags: [Layers]
+    summary: List layers
+    description: Returns a paginated list of layers for the given system. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated layer list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [layers]
+                  properties:
+                    layers:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/LayerResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createLayer
+    tags: [Layers]
+    summary: Create a layer
+    description: Creates a new layer within the given system. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/CreateLayerRequest"
+    responses:
+      "201":
+        description: Layer created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/LayerResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/layers/{layerId}:
+  get:
+    operationId: getLayer
+    tags: [Layers]
+    summary: Get a layer
+    description: Returns details for a single layer by ID. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: layerId
+        in: path
+        required: true
+        description: Layer ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Layer details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/LayerResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateLayer
+    tags: [Layers]
+    summary: Update a layer
+    description: Updates the encrypted payload or metadata for a layer. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: layerId
+        in: path
+        required: true
+        description: Layer ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/UpdateLayerRequest"
+    responses:
+      "200":
+        description: Layer updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/LayerResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteLayer
+    tags: [Layers]
+    summary: Delete a layer
+    description: Permanently deletes a layer. Returns 409 if the layer has dependents. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: layerId
+        in: path
+        required: true
+        description: Layer ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/layers/{layerId}/archive:
+  post:
+    operationId: archiveLayer
+    tags: [Layers]
+    summary: Archive a layer
+    description: Marks a layer as archived. Archived layers are hidden from default list views but not deleted. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: layerId
+        in: path
+        required: true
+        description: Layer ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Layer archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/LayerResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/layers/{layerId}/restore:
+  post:
+    operationId: restoreLayer
+    tags: [Layers]
+    summary: Restore an archived layer
+    description: Removes the archived flag from a layer, making it visible in default list views again. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: layerId
+        in: path
+        required: true
+        description: Layer ID
+        schema:
+          type: string
+    responses:
+      "200":
+        description: Layer restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/LayerResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/layers/{layerId}/memberships:
+  get:
+    operationId: listLayerMemberships
+    tags: [Structure Memberships]
+    summary: List layer memberships
+    description: Returns a paginated list of member memberships for the given layer. Rate limit 60 req/min (readDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: layerId
+        in: path
+        required: true
+        description: Layer ID
+        schema:
+          type: string
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Membership list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [memberships]
+                  properties:
+                    memberships:
+                      type: array
+                      items:
+                        $ref: "../schemas/structures.yaml#/StructureMembershipResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: addLayerMembership
+    tags: [Structure Memberships]
+    summary: Add a member to a layer
+    description: Creates a membership record associating a member with this layer. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: layerId
+        in: path
+        required: true
+        description: Layer ID
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/structures.yaml#/AddStructureMembershipRequest"
+    responses:
+      "201":
+        description: Membership created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/structures.yaml#/StructureMembershipResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/layers/{layerId}/memberships/{membershipId}:
+  delete:
+    operationId: removeLayerMembership
+    tags: [Structure Memberships]
+    summary: Remove a membership from a layer
+    description: Removes a member's membership from the given layer. Rate limit 30 req/min (writeDefault).
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: layerId
+        in: path
+        required: true
+        description: Layer ID
+        schema:
+          type: string
+      - name: membershipId
+        in: path
+        required: true
+        description: Membership ID
+        schema:
+          type: string
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

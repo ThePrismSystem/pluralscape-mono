@@ -1,0 +1,10 @@
+apis:
+  main:
+    root: openapi.yaml
+
+rules:
+  no-unresolved-refs: error
+  no-unused-components: warn
+  operation-operationId: error
+  no-path-trailing-slash: error
+  path-segment-plural: off

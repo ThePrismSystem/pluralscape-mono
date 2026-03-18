@@ -1,0 +1,248 @@
+/systems/{systemId}/custom-fronts:
+  get:
+    operationId: listCustomFronts
+    tags: [Custom Fronts]
+    summary: List custom fronts
+    description: |
+      Returns a paginated list of all custom fronts for the specified system.
+      Custom fronts are abstract cognitive states (e.g., "Dissociated", "Blurry")
+      that can be logged like members without representing a distinct headmate.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+    responses:
+      "200":
+        description: Paginated custom front list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [customFronts]
+                  properties:
+                    customFronts:
+                      type: array
+                      items:
+                        $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createCustomFront
+    tags: [Custom Fronts]
+    summary: Create a custom front
+    description: |
+      Creates a new custom front within the specified system. Custom fronts
+      behave like members in the fronting log but do not represent individual
+      headmates.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/custom-fronts.yaml#/CreateCustomFrontRequest"
+    responses:
+      "201":
+        description: Custom front created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/custom-fronts/{customFrontId}:
+  get:
+    operationId: getCustomFront
+    tags: [Custom Fronts]
+    summary: Get a custom front
+    description: |
+      Returns the encrypted entity for a single custom front by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        description: Custom front ID
+        schema:
+          type: string
+          pattern: ^cf_
+    responses:
+      "200":
+        description: Custom front details
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateCustomFront
+    tags: [Custom Fronts]
+    summary: Update a custom front
+    description: |
+      Updates the encrypted payload for an existing custom front. Returns 409
+      if the provided version conflicts with the server's current version.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        description: Custom front ID
+        schema:
+          type: string
+          pattern: ^cf_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/custom-fronts.yaml#/UpdateCustomFrontRequest"
+    responses:
+      "200":
+        description: Custom front updated
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/custom-fronts/{customFrontId}/archive:
+  post:
+    operationId: archiveCustomFront
+    tags: [Custom Fronts]
+    summary: Archive a custom front
+    description: |
+      Marks a custom front as archived. Archived custom fronts are hidden from
+      default list responses but remain accessible. Archival is always permitted
+      regardless of dependents.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        description: Custom front ID
+        schema:
+          type: string
+          pattern: ^cf_
+    responses:
+      "200":
+        description: Custom front archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/custom-fronts/{customFrontId}/restore:
+  post:
+    operationId: restoreCustomFront
+    tags: [Custom Fronts]
+    summary: Restore an archived custom front
+    description: |
+      Removes the archived flag from a custom front, making it visible in
+      default list responses again.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        description: Custom front ID
+        schema:
+          type: string
+          pattern: ^cf_
+    responses:
+      "200":
+        description: Custom front restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/custom-fronts.yaml#/CustomFrontResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/custom-fronts/{customFrontId}/delete:
+  delete:
+    operationId: deleteCustomFront
+    tags: [Custom Fronts]
+    summary: Delete a custom front
+    description: |
+      Permanently deletes a custom front. This path uses the `/delete` suffix
+      to match the actual API implementation path. This action is irreversible.
+
+      Rate limit: 30 req/min (writeDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: customFrontId
+        in: path
+        required: true
+        description: Custom front ID
+        schema:
+          type: string
+          pattern: ^cf_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"

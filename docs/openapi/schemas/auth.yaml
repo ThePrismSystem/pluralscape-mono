@@ -1,0 +1,193 @@
+LoginRequest:
+  type: object
+  required: [email, password]
+  properties:
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+    password:
+      type: string
+      minLength: 1
+      maxLength: 1024
+
+LoginResponse:
+  type: object
+  required: [sessionToken, accountId, accountType]
+  properties:
+    sessionToken:
+      type: string
+      description: 32-byte hex-encoded session token (64 characters)
+      example: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+    accountId:
+      type: string
+      example: "acc_abc123"
+    systemId:
+      type: string
+      nullable: true
+      example: "sys_abc123"
+    accountType:
+      type: string
+      enum: [system, viewer]
+
+RegistrationRequest:
+  type: object
+  required: [email, password, recoveryKeyBackupConfirmed]
+  properties:
+    email:
+      type: string
+      format: email
+    password:
+      type: string
+      minLength: 8
+      maxLength: 1024
+    recoveryKeyBackupConfirmed:
+      type: boolean
+      const: true
+    accountType:
+      type: string
+      enum: [system, viewer]
+      default: system
+
+RegistrationResponse:
+  type: object
+  required: [sessionToken, recoveryKey, accountId, accountType]
+  properties:
+    sessionToken:
+      type: string
+      description: 32-byte hex-encoded session token
+    recoveryKey:
+      type: string
+      description: Recovery key for master key recovery — must be stored securely by the client
+    accountId:
+      type: string
+    accountType:
+      type: string
+      enum: [system, viewer]
+
+PasswordResetViaRecoveryKeyRequest:
+  type: object
+  required: [email, recoveryKey, newPassword]
+  properties:
+    email:
+      type: string
+      format: email
+    recoveryKey:
+      type: string
+      minLength: 1
+      maxLength: 200
+    newPassword:
+      type: string
+      minLength: 8
+      maxLength: 1024
+
+PasswordResetResponse:
+  type: object
+  required: [sessionToken, recoveryKey, accountId]
+  properties:
+    sessionToken:
+      type: string
+    recoveryKey:
+      type: string
+      description: New recovery key (old one is invalidated)
+    accountId:
+      type: string
+
+BiometricTokenRequest:
+  type: object
+  required: [token]
+  properties:
+    token:
+      type: string
+      minLength: 1
+      maxLength: 4096
+      description: Platform-specific biometric token
+
+BiometricEnrollResponse:
+  type: object
+  required: [enrolled]
+  properties:
+    enrolled:
+      type: boolean
+      description: Whether biometric enrollment succeeded
+
+BiometricVerifyResponse:
+  type: object
+  required: [valid, sessionToken]
+  properties:
+    valid:
+      type: boolean
+      description: Whether the biometric verification succeeded
+    sessionToken:
+      type: string
+      nullable: true
+      description: New session token if verification succeeded, null otherwise
+
+SessionInfo:
+  type: object
+  required: [id, createdAt]
+  properties:
+    id:
+      type: string
+      description: Session identifier
+      example: "sess_abc123"
+    createdAt:
+      type: integer
+      format: int64
+      description: Unix timestamp in milliseconds
+    lastActive:
+      type: integer
+      format: int64
+      nullable: true
+      description: Unix timestamp in milliseconds of last activity
+    expiresAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: Unix timestamp in milliseconds when the session expires
+
+SessionListResponse:
+  type: object
+  required: [sessions, hasMore]
+  properties:
+    sessions:
+      type: array
+      items:
+        $ref: "#/SessionInfo"
+    nextCursor:
+      type: string
+      nullable: true
+    hasMore:
+      type: boolean
+
+RegenerateRecoveryKeyRequest:
+  type: object
+  required: [currentPassword, confirmed]
+  properties:
+    currentPassword:
+      type: string
+      minLength: 1
+    confirmed:
+      type: boolean
+      const: true
+
+RecoveryKeyStatusResponse:
+  type: object
+  properties:
+    hasRecoveryKey:
+      type: boolean
+    createdAt:
+      type: integer
+      format: int64
+      nullable: true
+      description: Unix timestamp in milliseconds when the recovery key was created
+
+RevokeAllResponse:
+  type: object
+  required: [ok, revokedCount]
+  properties:
+    ok:
+      type: boolean
+    revokedCount:
+      type: integer
+      description: Number of sessions revoked
