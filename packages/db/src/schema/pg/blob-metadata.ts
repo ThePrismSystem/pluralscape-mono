@@ -37,8 +37,10 @@ export const blobMetadata = pgTable(
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH }),
     purpose: varchar("purpose", { length: ENUM_MAX_LENGTH }).notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: varchar("thumbnail_of_blob_id", { length: ID_MAX_LENGTH }),
-    checksum: varchar("checksum", { length: 255 }).notNull(),
-    uploadedAt: pgTimestamp("uploaded_at").notNull(),
+    checksum: varchar("checksum", { length: 255 }),
+    createdAt: pgTimestamp("created_at").notNull(),
+    uploadedAt: pgTimestamp("uploaded_at"),
+    expiresAt: pgTimestamp("expires_at"),
     ...archivable(),
   },
   (t) => [
@@ -61,7 +63,14 @@ export const blobMetadata = pgTable(
       sql`${t.sizeBytes} <= ${sql.raw(String(MAX_BLOB_SIZE_BYTES))}`,
     ),
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
-    check("blob_metadata_checksum_length_check", sql`length(${t.checksum}) = 64`),
+    check(
+      "blob_metadata_checksum_length_check",
+      sql`${t.checksum} IS NULL OR length(${t.checksum}) = 64`,
+    ),
+    check(
+      "blob_metadata_pending_consistency_check",
+      sql`(${t.checksum} IS NULL) = (${t.uploadedAt} IS NULL)`,
+    ),
     archivableConsistencyCheckFor("blob_metadata", t.archived, t.archivedAt),
   ],
 );

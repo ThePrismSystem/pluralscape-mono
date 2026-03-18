@@ -37,8 +37,10 @@ export const blobMetadata = sqliteTable(
     bucketId: text("bucket_id"),
     purpose: text("purpose").notNull().$type<BlobPurpose>(),
     thumbnailOfBlobId: text("thumbnail_of_blob_id"),
-    checksum: text("checksum").notNull(),
-    uploadedAt: sqliteTimestamp("uploaded_at").notNull(),
+    checksum: text("checksum"),
+    createdAt: sqliteTimestamp("created_at").notNull(),
+    uploadedAt: sqliteTimestamp("uploaded_at"),
+    expiresAt: sqliteTimestamp("expires_at"),
     ...archivable(),
   },
   (t) => [
@@ -61,7 +63,14 @@ export const blobMetadata = sqliteTable(
       sql`${t.sizeBytes} <= ${sql.raw(String(MAX_BLOB_SIZE_BYTES))}`,
     ),
     check("blob_metadata_encryption_tier_check", sql`${t.encryptionTier} IN (1, 2)`),
-    check("blob_metadata_checksum_length_check", sql`length(${t.checksum}) = 64`),
+    check(
+      "blob_metadata_checksum_length_check",
+      sql`${t.checksum} IS NULL OR length(${t.checksum}) = 64`,
+    ),
+    check(
+      "blob_metadata_pending_consistency_check",
+      sql`(${t.checksum} IS NULL) = (${t.uploadedAt} IS NULL)`,
+    ),
     archivableConsistencyCheckFor("blob_metadata", t.archived, t.archivedAt),
   ],
 );

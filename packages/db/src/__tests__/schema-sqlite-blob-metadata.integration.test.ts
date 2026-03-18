@@ -58,6 +58,7 @@ describe("SQLite blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "avatar",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       })
       .run();
@@ -87,6 +88,7 @@ describe("SQLite blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "attachment",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       })
       .run();
@@ -102,6 +104,7 @@ describe("SQLite blob_metadata schema", () => {
           encryptionTier: 1,
           purpose: "attachment",
           checksum: "a".repeat(64),
+          createdAt: now,
           uploadedAt: now,
         })
         .run(),
@@ -123,6 +126,7 @@ describe("SQLite blob_metadata schema", () => {
         encryptionTier: 2,
         purpose: "member-photo",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       })
       .run();
@@ -159,6 +163,7 @@ describe("SQLite blob_metadata schema", () => {
         purpose: "attachment",
         checksum: "a".repeat(64),
         bucketId,
+        createdAt: now,
         uploadedAt: now,
       })
       .run();
@@ -209,6 +214,7 @@ describe("SQLite blob_metadata schema", () => {
           encryptionTier: 1,
           purpose: "avatar",
           checksum: "a".repeat(64),
+          createdAt: now,
           uploadedAt: now,
         })
         .run(),
@@ -225,6 +231,7 @@ describe("SQLite blob_metadata schema", () => {
           encryptionTier: 1,
           purpose: "avatar",
           checksum: "a".repeat(64),
+          createdAt: now,
           uploadedAt: now,
         })
         .run(),
@@ -307,6 +314,7 @@ describe("SQLite blob_metadata schema", () => {
           encryptionTier: 1,
           purpose: "avatar",
           checksum: "a".repeat(63),
+          createdAt: now,
           uploadedAt: now,
         })
         .run(),
@@ -323,6 +331,7 @@ describe("SQLite blob_metadata schema", () => {
           encryptionTier: 1,
           purpose: "avatar",
           checksum: "a".repeat(65),
+          createdAt: now,
           uploadedAt: now,
         })
         .run(),
@@ -392,6 +401,7 @@ describe("SQLite blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "avatar",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       })
       .run();
@@ -416,6 +426,7 @@ describe("SQLite blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "avatar",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
         archived: true,
         archivedAt: now,
@@ -491,6 +502,7 @@ describe("SQLite blob_metadata schema", () => {
         encryptionTier: 1,
         purpose: "avatar",
         checksum: "a".repeat(64),
+        createdAt: now,
         uploadedAt: now,
       })
       .run();

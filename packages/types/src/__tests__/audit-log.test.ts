@@ -120,6 +120,21 @@ describe("AuditEventType", () => {
         case "layer-membership.removed":
         case "structure-link.created":
         case "structure-link.deleted":
+        case "innerworld-region.created":
+        case "innerworld-region.updated":
+        case "innerworld-region.archived":
+        case "innerworld-region.restored":
+        case "innerworld-region.deleted":
+        case "innerworld-entity.created":
+        case "innerworld-entity.updated":
+        case "innerworld-entity.archived":
+        case "innerworld-entity.restored":
+        case "innerworld-entity.deleted":
+        case "innerworld-canvas.created":
+        case "innerworld-canvas.updated":
+        case "blob.upload-requested":
+        case "blob.confirmed":
+        case "blob.archived":
           return type;
         default: {
           const _exhaustive: never = type;

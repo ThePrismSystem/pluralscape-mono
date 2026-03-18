@@ -18,6 +18,7 @@
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/db": "workspace:*",
     "@pluralscape/queue": "workspace:^",
+    "@pluralscape/storage": "workspace:*",
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@pluralscape/validation": "workspace:*",

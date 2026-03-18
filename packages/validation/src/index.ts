@@ -62,6 +62,14 @@ export {
   CreateSideSystemLayerLinkBodySchema,
 } from "./structure-junction.js";
 export {
+  CreateRegionBodySchema,
+  UpdateRegionBodySchema,
+  CreateEntityBodySchema,
+  UpdateEntityBodySchema,
+  UpdateCanvasBodySchema,
+} from "./innerworld.js";
+export { CreateUploadUrlBodySchema, ConfirmUploadBodySchema } from "./blob.js";
+export {
   AUTH_MIN_PASSWORD_LENGTH,
   MAX_ENCRYPTED_DATA_SIZE,
   MAX_REORDER_OPERATIONS,
