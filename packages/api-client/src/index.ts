@@ -1,2 +1,2 @@
-// @pluralscape/api-client — tRPC client wrapper
+// placeholder: tRPC client implementation deferred to Milestone 8
 export {};

@@ -590,24 +590,32 @@ export function createHierarchyService<
   ): Promise<void> {
     if (dependentChecks.length === 0) return;
 
+    const results = await Promise.all(
+      dependentChecks.map((dep) => {
+        const conditions = [eq(dep.entityColumn, entityId), eq(dep.systemColumn, systemId)];
+
+        if (dep.filterArchived) {
+          conditions.push(eq(dep.filterArchived, false));
+        }
+
+        return tx
+          .select({ count: count() })
+          .from(dep.table)
+          .where(and(...conditions));
+      }),
+    );
+
     const counts: { label: string; count: number }[] = [];
-
-    for (const dep of dependentChecks) {
-      const conditions = [eq(dep.entityColumn, entityId), eq(dep.systemColumn, systemId)];
-
-      if (dep.filterArchived) {
-        conditions.push(eq(dep.filterArchived, false));
+    for (let i = 0; i < results.length; i++) {
+      const rows = results[i];
+      const dep = dependentChecks[i];
+      if (!rows || !dep) {
+        throw new Error("Unexpected: results/dependentChecks length mismatch");
       }
-
-      const [result] = await tx
-        .select({ count: count() })
-        .from(dep.table)
-        .where(and(...conditions));
-
+      const [result] = rows;
       if (!result) {
         throw new Error("Unexpected: count query returned no rows");
       }
-
       if (result.count > 0) {
         counts.push({ label: dep.label, count: result.count });
       }

@@ -1,4 +1,4 @@
-import { AUDIT_RETENTION } from "@pluralscape/types";
+import { AUDIT_RETENTION, MS_PER_DAY } from "@pluralscape/types";
 import { AuditLogQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
@@ -10,7 +10,6 @@ import { queryAuditLog } from "../../services/audit-log-query.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 
-const MS_PER_DAY = 86_400_000;
 const MAX_RANGE_MS = AUDIT_RETENTION.maxQueryRangeDays * MS_PER_DAY;
 const DEFAULT_RANGE_MS = MAX_RANGE_MS;
 

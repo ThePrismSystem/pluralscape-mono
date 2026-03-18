@@ -381,6 +381,37 @@ describe("deleteGroup", () => {
       }),
     );
   });
+
+  it("runs dependent checks in parallel via Promise.all", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
+
+    // Track that both dependent check queries are initiated before either resolves.
+    // With sequential execution, the second call would only happen after the first resolves.
+    let pendingCount = 0;
+    let maxConcurrent = 0;
+
+    const createDeferredQuery = (): Promise<{ count: number }[]> => {
+      pendingCount++;
+      maxConcurrent = Math.max(maxConcurrent, pendingCount);
+      return Promise.resolve().then(() => {
+        pendingCount--;
+        return [{ count: 0 }];
+      });
+    };
+
+    chain.where
+      .mockReturnValueOnce(chain) // existence → .limit()
+      .mockReturnValueOnce(createDeferredQuery())
+      .mockReturnValueOnce(createDeferredQuery());
+
+    await deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
+
+    // Both queries were in-flight concurrently (proves Promise.all dispatch)
+    expect(maxConcurrent).toBe(2);
+    // Both select calls happened (child groups + memberships)
+    expect(chain.select).toHaveBeenCalledTimes(3); // 1 existence + 2 dependent checks
+  });
 });
 
 describe("moveGroup", () => {

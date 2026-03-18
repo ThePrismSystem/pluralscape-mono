@@ -16,7 +16,8 @@ const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 const MS_PER_MINUTE = SECONDS_PER_MINUTE * MS_PER_SECOND;
 const MS_PER_HOUR = MINUTES_PER_HOUR * MS_PER_MINUTE;
-const MS_PER_DAY = HOURS_PER_DAY * MS_PER_HOUR;
+/** Number of milliseconds in one day (24 * 60 * 60 * 1000). */
+export const MS_PER_DAY = HOURS_PER_DAY * MS_PER_HOUR;
 
 // ── Named duration/size constants ────────────────────────────────────
 // Pre-computed to avoid magic-number lint warnings.
