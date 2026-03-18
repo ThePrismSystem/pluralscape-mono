@@ -278,8 +278,12 @@ export async function reorderMemberPhotos(
     for (let i = 0; i < updateResults.length; i++) {
       const result = updateResults[i];
       const item = orderItems[i];
-      if (result && !result[0] && item) {
-        throw new Error(`Failed to update sort order for photo ${item.id}`);
+      if ((!result || result.length === 0) && item) {
+        throw new ApiHttpError(
+          HTTP_NOT_FOUND,
+          "NOT_FOUND",
+          `Failed to update sort order for photo ${item.id}`,
+        );
       }
     }
 

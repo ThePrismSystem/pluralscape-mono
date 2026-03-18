@@ -521,6 +521,8 @@ describe("reorderGroups", () => {
 
   it("reorders groups successfully", async () => {
     const { db, chain } = mockDb();
+    // Pre-flight existence check
+    chain.where.mockResolvedValueOnce([{ id: GROUP_ID }]);
     chain.returning.mockResolvedValue([{ id: GROUP_ID }]);
 
     await reorderGroups(
@@ -544,7 +546,8 @@ describe("reorderGroups", () => {
 
   it("throws 404 when group in operation not found", async () => {
     const { db, chain } = mockDb();
-    chain.returning.mockResolvedValueOnce([]);
+    // Pre-flight returns no matching groups
+    chain.where.mockResolvedValueOnce([]);
 
     await expect(
       reorderGroups(
@@ -555,6 +558,33 @@ describe("reorderGroups", () => {
         mockAudit,
       ),
     ).rejects.toThrow(expect.objectContaining({ status: 404, code: "NOT_FOUND" }));
+  });
+
+  it("throws 404 when one group in a multi-op batch does not exist", async () => {
+    const { db, chain } = mockDb();
+    // Pre-flight query returns only one of the two groups
+    chain.where.mockResolvedValueOnce([{ id: GROUP_ID }]);
+
+    await expect(
+      reorderGroups(
+        db,
+        SYSTEM_ID,
+        {
+          operations: [
+            { groupId: GROUP_ID, sortOrder: 1 },
+            { groupId: "grp_nonexistent", sortOrder: 2 },
+          ],
+        },
+        AUTH,
+        mockAudit,
+      ),
+    ).rejects.toThrow(
+      expect.objectContaining({
+        status: 404,
+        code: "NOT_FOUND",
+        message: "Group grp_nonexistent not found",
+      }),
+    );
   });
 
   it("throws 400 for invalid body", async () => {

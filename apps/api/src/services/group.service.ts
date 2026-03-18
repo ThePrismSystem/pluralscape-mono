@@ -443,6 +443,19 @@ export async function reorderGroups(
   }
 
   await db.transaction(async (tx) => {
+    // Pre-flight: verify all target groups exist and are active
+    const groupIds = parsed.data.operations.map((op) => op.groupId);
+    const existing = await tx
+      .select({ id: groups.id })
+      .from(groups)
+      .where(and(eq(groups.systemId, systemId), eq(groups.archived, false)));
+    const existingIds = new Set(existing.map((g) => g.id));
+    for (const gid of groupIds) {
+      if (!existingIds.has(gid)) {
+        throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `Group ${gid} not found`);
+      }
+    }
+
     const results = await Promise.all(
       parsed.data.operations.map((op) =>
         tx
@@ -463,7 +476,7 @@ export async function reorderGroups(
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
       const op = ops[i];
-      if (result?.length === 0 && op) {
+      if ((!result || result.length === 0) && op) {
         throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", `Group ${op.groupId} not found`);
       }
     }
