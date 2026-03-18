@@ -5,6 +5,7 @@ import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
+import { layerMembershipRoutes } from "./memberships/index.js";
 import { restoreRoute } from "./restore.js";
 import { updateRoute } from "./update.js";
 
@@ -20,3 +21,6 @@ layerRoutes.route("/", deleteRoute);
 layerRoutes.route("/", createRoute);
 layerRoutes.route("/", archiveRoute);
 layerRoutes.route("/", restoreRoute);
+
+// Sub-resource routes
+layerRoutes.route("/:layerId/memberships", layerMembershipRoutes);

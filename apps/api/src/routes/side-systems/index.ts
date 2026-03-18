@@ -5,6 +5,7 @@ import { createRoute } from "./create.js";
 import { deleteRoute } from "./delete.js";
 import { getRoute } from "./get.js";
 import { listRoute } from "./list.js";
+import { sideSystemMembershipRoutes } from "./memberships/index.js";
 import { restoreRoute } from "./restore.js";
 import { updateRoute } from "./update.js";
 
@@ -20,3 +21,6 @@ sideSystemRoutes.route("/", deleteRoute);
 sideSystemRoutes.route("/", createRoute);
 sideSystemRoutes.route("/", archiveRoute);
 sideSystemRoutes.route("/", restoreRoute);
+
+// Sub-resource routes
+sideSystemRoutes.route("/:sideSystemId/memberships", sideSystemMembershipRoutes);
