@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mock parentPort ────────────────────────────────────────────────────
 const mockPostMessage = vi.fn();
@@ -42,6 +42,10 @@ beforeEach(() => {
   mockVerifyPin.mockClear();
   mockHashPin.mockReturnValue("hashed-value");
   mockVerifyPin.mockReturnValue(true);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 // ── Tests ──────────────────────────────────────────────────────────────

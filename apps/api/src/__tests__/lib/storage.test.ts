@@ -79,7 +79,9 @@ describe("storage", () => {
       const service = getQuotaService(db);
 
       expect(service).toBeDefined();
-      expect(typeof service.checkQuota).toBe("function");
+      expect(service).toHaveProperty("checkQuota");
+      expect(service).toHaveProperty("getUsage");
+      expect(service).toHaveProperty("assertQuota");
     });
   });
 });

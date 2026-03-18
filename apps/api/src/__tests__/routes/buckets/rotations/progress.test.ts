@@ -1,12 +1,10 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../../middleware/request-id.js";
+import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { AuthContext } from "../../../../lib/auth-context.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 import type { Context } from "hono";
+
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -33,13 +31,6 @@ vi.mock("../../../../middleware/rate-limit.js", () => ({
     }),
 }));
 
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-};
-
 vi.mock("../../../../middleware/auth.js", () => ({
   authMiddleware: vi
     .fn()
@@ -56,13 +47,7 @@ const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/systems", systemRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const BUCKET_ID = "bkt_660e8400-e29b-41d4-a716-446655440000";
@@ -95,15 +80,18 @@ describe("GET /systems/:id/buckets/:bucketId/rotations/:rotationId", () => {
   it("returns 200 with rotation progress", async () => {
     vi.mocked(getRotationProgress).mockResolvedValueOnce(MOCK_ROTATION);
 
-    const app = createApp();
-    const res = await app.request(PROGRESS_URL);
+    const res = await createApp().request(PROGRESS_URL);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof MOCK_ROTATION;
     expect(body.id).toBe(ROTATION_ID);
+    expect(body.bucketId).toBe(BUCKET_ID);
     expect(body.state).toBe("migrating");
     expect(body.completedItems).toBe(6);
     expect(body.totalItems).toBe(10);
+    expect(body.failedItems).toBe(0);
+    expect(body.fromKeyVersion).toBe(1);
+    expect(body.toKeyVersion).toBe(2);
   });
 
   it("returns 404 when rotation not found", async () => {
@@ -112,8 +100,7 @@ describe("GET /systems/:id/buckets/:bucketId/rotations/:rotationId", () => {
       new ApiHttpError(404, "NOT_FOUND", "Rotation not found"),
     );
 
-    const app = createApp();
-    const res = await app.request(PROGRESS_URL);
+    const res = await createApp().request(PROGRESS_URL);
 
     expect(res.status).toBe(404);
     const body = (await res.json()) as ApiErrorResponse;
@@ -121,8 +108,9 @@ describe("GET /systems/:id/buckets/:bucketId/rotations/:rotationId", () => {
   });
 
   it("returns 400 for invalid rotationId param format", async () => {
-    const app = createApp();
-    const res = await app.request(`/systems/${SYS_ID}/buckets/${BUCKET_ID}/rotations/not-valid`);
+    const res = await createApp().request(
+      `/systems/${SYS_ID}/buckets/${BUCKET_ID}/rotations/not-valid`,
+    );
 
     expect(res.status).toBe(400);
   });
@@ -130,8 +118,7 @@ describe("GET /systems/:id/buckets/:bucketId/rotations/:rotationId", () => {
   it("calls service without audit writer", async () => {
     vi.mocked(getRotationProgress).mockResolvedValueOnce(MOCK_ROTATION);
 
-    const app = createApp();
-    await app.request(PROGRESS_URL);
+    await createApp().request(PROGRESS_URL);
 
     expect(getRotationProgress).toHaveBeenCalledWith(
       expect.anything(), // db

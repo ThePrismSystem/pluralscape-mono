@@ -1,12 +1,10 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../../middleware/request-id.js";
+import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { AuthContext } from "../../../../lib/auth-context.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 import type { Context } from "hono";
+
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -33,13 +31,6 @@ vi.mock("../../../../middleware/rate-limit.js", () => ({
     }),
 }));
 
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-};
-
 vi.mock("../../../../middleware/auth.js", () => ({
   authMiddleware: vi
     .fn()
@@ -56,13 +47,7 @@ const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/systems", systemRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const SYS_ID = "sys_550e8400-e29b-41d4-a716-446655440000";
 const BUCKET_ID = "bkt_660e8400-e29b-41d4-a716-446655440000";
@@ -101,8 +86,7 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/claim", () =
   it("returns 200 with claimed items and rotation state", async () => {
     vi.mocked(claimRotationChunk).mockResolvedValueOnce(MOCK_CLAIM_RESPONSE);
 
-    const app = createApp();
-    const res = await app.request(CLAIM_URL, {
+    const res = await createApp().request(CLAIM_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(VALID_BODY),
@@ -112,16 +96,33 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/claim", () =
     const body = (await res.json()) as typeof MOCK_CLAIM_RESPONSE;
     expect(body.items).toHaveLength(1);
     expect(body.rotationState).toBe("migrating");
+    expect((body.items[0] as Record<string, unknown>).id).toBe(
+      "bri_880e8400-e29b-41d4-a716-446655440000",
+    );
+    expect((body.items[0] as Record<string, unknown>).status).toBe("claimed");
+    expect((body.items[0] as Record<string, unknown>).entityType).toBe("content_tag");
   });
 
   it("returns 400 for malformed JSON body", async () => {
-    const app = createApp();
-    const res = await app.request(CLAIM_URL, {
+    const res = await createApp().request(CLAIM_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "not valid json{{{",
     });
 
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for empty object body", async () => {
+    const { ApiHttpError } = await import("../../../../lib/api-error.js");
+    vi.mocked(claimRotationChunk).mockRejectedValueOnce(
+      new ApiHttpError(400, "VALIDATION_ERROR", "Missing required fields"),
+    );
+    const res = await createApp().request(CLAIM_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
     expect(res.status).toBe(400);
   });
 
@@ -131,8 +132,7 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/claim", () =
       new ApiHttpError(404, "NOT_FOUND", "Rotation not found"),
     );
 
-    const app = createApp();
-    const res = await app.request(CLAIM_URL, {
+    const res = await createApp().request(CLAIM_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(VALID_BODY),
@@ -144,8 +144,7 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/claim", () =
   });
 
   it("returns 400 for invalid rotationId param format", async () => {
-    const app = createApp();
-    const res = await app.request(
+    const res = await createApp().request(
       `/systems/${SYS_ID}/buckets/${BUCKET_ID}/rotations/not-valid/claim`,
       {
         method: "POST",
@@ -160,8 +159,7 @@ describe("POST /systems/:id/buckets/:bucketId/rotations/:rotationId/claim", () =
   it("does not use audit writer", async () => {
     vi.mocked(claimRotationChunk).mockResolvedValueOnce(MOCK_CLAIM_RESPONSE);
 
-    const app = createApp();
-    await app.request(CLAIM_URL, {
+    await createApp().request(CLAIM_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(VALID_BODY),

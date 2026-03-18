@@ -1,10 +1,7 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../middleware/request-id.js";
+import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { AuthContext } from "../../../lib/auth-context.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 import type { Context } from "hono";
 
@@ -39,13 +36,6 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
     }),
 }));
 
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-};
-
 vi.mock("../../../middleware/auth.js", () => ({
   authMiddleware: vi
     .fn()
@@ -62,13 +52,7 @@ const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/systems", systemRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const BLOB_ID = "blob_660e8400-e29b-41d4-a716-446655440000";
 const BASE_URL =
@@ -106,6 +90,9 @@ describe("GET /systems/:systemId/blobs/:blobId", () => {
     expect(body.id).toBe(BLOB_ID);
     expect(body.purpose).toBe("avatar");
     expect(body.sizeBytes).toBe(1024);
+    expect(body.mimeType).toBe("image/png");
+    expect(body.checksum).toBe("abc123");
+    expect(body.uploadedAt).toBe(1700000000000);
   });
 
   it("returns 404 when blob not found", async () => {

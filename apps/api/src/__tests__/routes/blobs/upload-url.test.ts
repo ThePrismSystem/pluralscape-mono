@@ -1,10 +1,7 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../middleware/request-id.js";
+import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { AuthContext } from "../../../lib/auth-context.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 import type { Context } from "hono";
 
@@ -39,13 +36,6 @@ vi.mock("../../../middleware/rate-limit.js", () => ({
     }),
 }));
 
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-};
-
 vi.mock("../../../middleware/auth.js", () => ({
   authMiddleware: vi
     .fn()
@@ -62,13 +52,7 @@ const { systemRoutes } = await import("../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/systems", systemRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/blobs/upload-url";
 
@@ -109,6 +93,7 @@ describe("POST /systems/:systemId/blobs/upload-url", () => {
     const body = (await res.json()) as typeof MOCK_UPLOAD_RESULT;
     expect(body.blobId).toBe("blob_660e8400-e29b-41d4-a716-446655440000");
     expect(body.uploadUrl).toBe("https://storage.example.com/presigned-upload");
+    expect(body.expiresAt).toBe(1700000000000);
   });
 
   it("returns 400 for malformed JSON body", async () => {
@@ -119,6 +104,19 @@ describe("POST /systems/:systemId/blobs/upload-url", () => {
       body: "not valid json{{{",
     });
 
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for empty object body", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(createUploadUrl).mockRejectedValueOnce(
+      new ApiHttpError(400, "VALIDATION_ERROR", "Missing required fields"),
+    );
+    const res = await createApp().request(BASE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
     expect(res.status).toBe(400);
   });
 

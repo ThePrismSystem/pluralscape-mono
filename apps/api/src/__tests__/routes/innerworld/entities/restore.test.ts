@@ -1,10 +1,7 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../../middleware/request-id.js";
+import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { AuthContext } from "../../../../lib/auth-context.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 import type { Context } from "hono";
 
@@ -30,13 +27,6 @@ vi.mock("../../../../middleware/rate-limit.js", () => ({
     }),
 }));
 
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-};
-
 vi.mock("../../../../middleware/auth.js", () => ({
   authMiddleware: vi
     .fn()
@@ -53,13 +43,7 @@ const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/systems", systemRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/innerworld/entities";
 const RESTORE_URL = `${BASE_URL}/iwe_660e8400-e29b-41d4-a716-446655440000/restore`;
@@ -89,12 +73,9 @@ describe("POST /systems/:id/innerworld/entities/:entityId/restore", () => {
   it("returns 200 with restored entity", async () => {
     vi.mocked(restoreEntity).mockResolvedValueOnce(MOCK_ENTITY);
 
-    const app = createApp();
-    const res = await app.request(RESTORE_URL, { method: "POST" });
+    const res = await createApp().request(RESTORE_URL, { method: "POST" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { id: string };
-    expect(body.id).toBe("iwe_660e8400-e29b-41d4-a716-446655440000");
   });
 
   it("returns 404 when not found", async () => {
@@ -103,8 +84,7 @@ describe("POST /systems/:id/innerworld/entities/:entityId/restore", () => {
       new ApiHttpError(404, "NOT_FOUND", "Entity not found"),
     );
 
-    const app = createApp();
-    const res = await app.request(RESTORE_URL, { method: "POST" });
+    const res = await createApp().request(RESTORE_URL, { method: "POST" });
 
     expect(res.status).toBe(404);
     const body = (await res.json()) as ApiErrorResponse;

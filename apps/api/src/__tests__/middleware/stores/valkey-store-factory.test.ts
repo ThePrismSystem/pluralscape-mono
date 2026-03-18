@@ -11,11 +11,12 @@ describe("createValkeyStore", () => {
   });
 
   it("returns ValkeyRateLimitStore when connection succeeds", async () => {
-    const fakeClient = { eval: vi.fn() };
+    const fakeClient = { eval: vi.fn(), ping: vi.fn().mockResolvedValue("PONG") };
 
     vi.doMock("ioredis", () => ({
       default: class FakeRedis {
         eval = fakeClient.eval;
+        ping = fakeClient.ping;
       },
     }));
 

@@ -195,8 +195,11 @@ describe("pwhash-offload", () => {
       resolveDispatch(worker, sentMsg, "h");
       await p2;
 
-      // Suppress unhandled rejection from the orphaned first promise.
-      promise.catch(() => {});
+      // Shutdown clears the pending map without rejecting — the promise
+      // will never settle. Suppress the unhandled-rejection warning.
+      void promise.catch(() => {
+        /* intentionally orphaned by shutdown */
+      });
     });
   });
 

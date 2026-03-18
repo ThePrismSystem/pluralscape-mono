@@ -1,11 +1,9 @@
-import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { errorHandler } from "../../../../middleware/error-handler.js";
-import { requestIdMiddleware } from "../../../../middleware/request-id.js";
+import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
-import type { AuthContext } from "../../../../lib/auth-context.js";
 import type { Context } from "hono";
+
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -29,13 +27,6 @@ vi.mock("../../../../middleware/rate-limit.js", () => ({
     }),
 }));
 
-const MOCK_AUTH: AuthContext = {
-  accountId: "acct_test" as AuthContext["accountId"],
-  systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as AuthContext["systemId"],
-  sessionId: "sess_test" as AuthContext["sessionId"],
-  accountType: "system",
-};
-
 vi.mock("../../../../middleware/auth.js", () => ({
   authMiddleware: vi
     .fn()
@@ -52,13 +43,7 @@ const { systemRoutes } = await import("../../../../routes/systems/index.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function createApp(): Hono {
-  const app = new Hono();
-  app.use("*", requestIdMiddleware());
-  app.route("/systems", systemRoutes);
-  app.onError(errorHandler);
-  return app;
-}
+const createApp = () => createRouteApp("/systems", systemRoutes);
 
 const BASE_URL = "/systems/sys_550e8400-e29b-41d4-a716-446655440000/innerworld/entities";
 
@@ -90,8 +75,7 @@ describe("GET /systems/:id/innerworld/entities", () => {
     const page = { items: [MOCK_ENTITY], nextCursor: null, hasMore: false, totalCount: 1 };
     vi.mocked(listEntities).mockResolvedValueOnce(page);
 
-    const app = createApp();
-    const res = await app.request(BASE_URL);
+    const res = await createApp().request(BASE_URL);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof page;
@@ -99,24 +83,25 @@ describe("GET /systems/:id/innerworld/entities", () => {
     expect((body.items[0] as Record<string, unknown>).id).toBe(
       "iwe_660e8400-e29b-41d4-a716-446655440000",
     );
+    expect(body.hasMore).toBe(false);
+    expect(body.totalCount).toBe(1);
   });
 
   it("returns 200 with empty list", async () => {
     vi.mocked(listEntities).mockResolvedValueOnce(EMPTY_PAGE);
 
-    const app = createApp();
-    const res = await app.request(BASE_URL);
+    const res = await createApp().request(BASE_URL);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof EMPTY_PAGE;
     expect(body.items).toEqual([]);
+    expect(body.hasMore).toBe(false);
   });
 
   it("respects query params (cursor, limit, regionId, includeArchived)", async () => {
     vi.mocked(listEntities).mockResolvedValueOnce(EMPTY_PAGE);
 
-    const app = createApp();
-    const res = await app.request(
+    const res = await createApp().request(
       `${BASE_URL}?cursor=abc&limit=5&regionId=iwr_770e8400-e29b-41d4-a716-446655440000&includeArchived=true`,
     );
 

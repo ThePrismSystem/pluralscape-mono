@@ -1,3 +1,6 @@
+
+import { blobMetadata } from "@pluralscape/db/pg";
+import { and, eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BlobArchiverImpl } from "../../lib/blob-archiver.js";
@@ -18,31 +21,20 @@ describe("BlobArchiverImpl", () => {
     vi.restoreAllMocks();
   });
 
-  it("sets archived flag via update...set...where chain", async () => {
+  it("sets archived flag via update...set...where chain with correct predicates", async () => {
     const { db, chain } = mockDb();
-    // update().set().where() — where is terminal
     chain.where.mockResolvedValueOnce(undefined);
 
+    const storageKey = "sk_test-key" as StorageKey;
     const archiver = new BlobArchiverImpl(db);
-    await archiver.archiveByStorageKey("sk_test-key" as StorageKey);
+    await archiver.archiveByStorageKey(storageKey);
 
-    expect(chain.update).toHaveBeenCalledOnce();
+    expect(chain.update).toHaveBeenCalledWith(blobMetadata);
     expect(chain.set).toHaveBeenCalledWith(
       expect.objectContaining({ archived: true, archivedAt: 1_700_000_000_000 }),
     );
-    expect(chain.where).toHaveBeenCalledOnce();
-  });
-
-  it("is idempotent: already-archived blob succeeds without error", async () => {
-    const { db, chain } = mockDb();
-    // When already archived, the WHERE clause (archived=false) matches no rows,
-    // but the update still resolves without error
-    chain.where.mockResolvedValueOnce(undefined);
-
-    const archiver = new BlobArchiverImpl(db);
-
-    await expect(
-      archiver.archiveByStorageKey("sk_already-archived" as StorageKey),
-    ).resolves.toBeUndefined();
+    expect(chain.where).toHaveBeenCalledWith(
+      and(eq(blobMetadata.storageKey, storageKey), eq(blobMetadata.archived, false)),
+    );
   });
 });

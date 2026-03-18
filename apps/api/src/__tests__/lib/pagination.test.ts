@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parsePaginationLimit } from "../../lib/pagination.js";
 
 describe("parsePaginationLimit", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   const DEFAULT = 25;
   const MAX = 100;
 
