@@ -64,7 +64,7 @@ describe("POST /:id/pin", () => {
     const res = await postJSON(app, `/${SYS_ID}/pin`, { pin: "1234" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { success: boolean } };
+    const body = (await res.json()) as { data: { success: true } };
     expect(body.data.success).toBe(true);
   });
 
@@ -110,7 +110,7 @@ describe("DELETE /:id/pin", () => {
     const res = await deleteJSON(app, `/${SYS_ID}/pin`, { pin: "1234" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { success: boolean } };
+    const body = (await res.json()) as { data: { success: true } };
     expect(body.data.success).toBe(true);
   });
 

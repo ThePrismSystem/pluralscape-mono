@@ -37,7 +37,7 @@ describe("Result", () => {
 describe("ApiResponse", () => {
   it("discriminates success and error responses", () => {
     function handleResponse(resp: ApiResponse<{ id: string }>): void {
-      if (resp.data) {
+      if (resp.data !== undefined) {
         expectTypeOf(resp.data).toEqualTypeOf<{ id: string }>();
       } else {
         expectTypeOf(resp.error).toExtend<ApiError>();
@@ -55,6 +55,13 @@ describe("ApiResponse", () => {
       error: { code: "INTERNAL_ERROR", message: "fail" },
       requestId: "550e8400-e29b-41d4-a716-446655440000",
     });
+  });
+
+  it("rejects both data and error present", () => {
+    assertType<ApiResponse<string>>(
+      // @ts-expect-error cannot have both data and error
+      { data: "ok", error: { code: "INTERNAL_ERROR", message: "fail" }, requestId: "abc" },
+    );
   });
 });
 

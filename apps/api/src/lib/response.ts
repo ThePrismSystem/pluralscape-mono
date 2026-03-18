@@ -7,13 +7,13 @@ export function wrapResult<T>(data: T): { readonly data: T } {
 
 /** Wrap a mutation confirmation in the standard { data: { success: true, ...details } } envelope. */
 export function wrapAction(): { readonly data: ActionResult };
-export function wrapAction<T extends Record<string, unknown>>(
+export function wrapAction<T extends Record<string, unknown> & { success?: never }>(
   details: T,
 ): { readonly data: ActionResult & T };
-export function wrapAction<T extends Record<string, unknown>>(
+export function wrapAction<T extends Record<string, unknown> & { success?: never }>(
   details?: T,
 ): { readonly data: ActionResult & T } | { readonly data: ActionResult } {
-  if (details) {
+  if (details !== undefined) {
     return { data: { success: true, ...details } };
   }
   return { data: { success: true } };

@@ -61,7 +61,7 @@
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
 /systems/{systemId}/members/{memberId}/photos/reorder:
-  post:
+  put:
     operationId: reorderMemberPhotos
     tags: [Member Photos]
     summary: Reorder member photos

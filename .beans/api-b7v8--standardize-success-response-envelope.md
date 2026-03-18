@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-18T20:09:08Z
-updated_at: 2026-03-18T20:12:57Z
+updated_at: 2026-03-18T23:15:11Z
 parent: api-mzn0
 ---
 
@@ -25,3 +25,18 @@ Standardize success response shapes with { data: T } envelope. Fix pagination du
 - [x] Update OpenAPI spec response schemas
 - [x] Update all affected route tests for new envelope shape
 - [x] Verify: pnpm typecheck && pnpm lint && pnpm vitest run --project api
+
+## PR Review Fixes
+
+- [x] Fix ApiResponse truthiness narrowing: `resp.data` → `resp.data !== undefined`
+- [x] Add `{ success?: never }` constraint to wrapAction overloads
+- [x] Change wrapAction guard from `if (details)` to `if (details !== undefined)`
+- [x] Fix OpenAPI setPin status code: 201 → 200
+- [x] Fix OpenAPI photo reorder HTTP method: post → put
+- [x] Add negative type test: ApiResponse rejects both data and error
+- [x] Add edge-case tests: wrapAction({}), wrapResult(undefined)
+- [x] Add type-level tests for wrapAction overload inference
+- [x] Fix route test type casts: success: boolean → success: true
+- [x] Migrate setup wizard routes to data envelope (status, nomenclature, profile, complete)
+- [x] Update setup route tests for data envelope assertions
+- [x] Update OpenAPI spec for setup routes (status, nomenclature, profile, complete)

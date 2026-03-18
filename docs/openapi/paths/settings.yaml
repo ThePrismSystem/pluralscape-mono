@@ -65,7 +65,7 @@
           schema:
             $ref: "../schemas/settings.yaml#/PinRequest"
     responses:
-      "201":
+      "200":
         description: PIN set
         content:
           application/json:
@@ -220,7 +220,11 @@
         content:
           application/json:
             schema:
-              $ref: "../schemas/settings.yaml#/SetupStatusResponse"
+              type: object
+              required: [data]
+              properties:
+                data:
+                  $ref: "../schemas/settings.yaml#/SetupStatusResponse"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "429":
@@ -243,15 +247,21 @@
           schema:
             $ref: "../schemas/settings.yaml#/SetupStepRequest"
     responses:
-      "201":
+      "200":
         description: Step completed
         content:
           application/json:
             schema:
               type: object
+              required: [data]
               properties:
-                ok:
-                  type: boolean
+                data:
+                  type: object
+                  required: [success]
+                  properties:
+                    success:
+                      type: boolean
+                      const: true
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -276,15 +286,21 @@
           schema:
             $ref: "../schemas/settings.yaml#/SetupStepRequest"
     responses:
-      "201":
+      "200":
         description: Step completed
         content:
           application/json:
             schema:
               type: object
+              required: [data]
               properties:
-                ok:
-                  type: boolean
+                data:
+                  type: object
+                  required: [success]
+                  properties:
+                    success:
+                      type: boolean
+                      const: true
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":
@@ -309,15 +325,16 @@
           schema:
             $ref: "../schemas/settings.yaml#/SetupCompleteRequest"
     responses:
-      "201":
+      "200":
         description: Setup completed
         content:
           application/json:
             schema:
               type: object
+              required: [data]
               properties:
-                ok:
-                  type: boolean
+                data:
+                  $ref: "../schemas/common.yaml#/EncryptedEntity"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":

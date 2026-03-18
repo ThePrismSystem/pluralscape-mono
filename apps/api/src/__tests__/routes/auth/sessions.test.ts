@@ -240,7 +240,7 @@ describe("sessions route", () => {
 
       expect(res.status).toBe(200);
       const body = (await res.json()) as {
-        data: { success: boolean; revokedCount: number };
+        data: { success: true; revokedCount: number };
       };
       expect(body.data.success).toBe(true);
       expect(body.data.revokedCount).toBe(3);
