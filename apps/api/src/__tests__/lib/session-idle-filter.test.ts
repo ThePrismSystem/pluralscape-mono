@@ -114,10 +114,10 @@ describe("buildIdleTimeoutFilter", () => {
     expect(params).toContain(mobileThreshold);
   });
 
-  it("uses ::bigint cast in TTL duration expression", () => {
+  it("uses bigint cast in TTL duration expression", () => {
     const result = buildIdleTimeoutFilter(1_000_000);
     const strings = collectStringChunks(result.queryChunks);
     const joined = strings.join("");
-    expect(joined).toContain("::bigint");
+    expect(joined).toContain("AS bigint");
   });
 });
