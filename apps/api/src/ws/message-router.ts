@@ -7,6 +7,7 @@
 import { EncryptedRelay } from "@pluralscape/sync";
 
 import { handleAuthenticate } from "./auth-handler.js";
+import { broadcastDocumentUpdate } from "./broadcast.js";
 import { handleDocumentLoad } from "./handlers/document-load.js";
 import { handleFetchChanges, handleFetchSnapshot } from "./handlers/fetch.js";
 import { handleManifestRequest } from "./handlers/manifest.js";
@@ -287,9 +288,22 @@ export async function routeMessage(
       break;
     }
     case "SubmitChangeRequest": {
+      const msg = validated as { docId: string; change: Record<string, unknown> };
       const response = handleSubmitChange(validated as never, relay);
       send(state, response);
-      // Broadcast to subscribers implemented in Task 5 (api-z706)
+
+      // Broadcast DocumentUpdate to all subscribers except submitter
+      broadcastDocumentUpdate(
+        {
+          type: "DocumentUpdate",
+          correlationId: null,
+          docId: msg.docId,
+          changes: [{ ...msg.change, documentId: msg.docId, seq: response.assignedSeq } as never],
+        },
+        state.connectionId,
+        manager,
+        log,
+      );
       break;
     }
     case "SubmitSnapshotRequest": {
