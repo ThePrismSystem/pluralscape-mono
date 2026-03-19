@@ -1,11 +1,11 @@
 ---
 # api-e16z
 title: Close auth timing side-channels and harden auth routes
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-03-18T20:09:00Z
-updated_at: 2026-03-18T20:50:34Z
+updated_at: 2026-03-19T00:44:54Z
 parent: api-mzn0
 ---
 

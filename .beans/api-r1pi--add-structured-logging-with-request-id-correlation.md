@@ -1,11 +1,11 @@
 ---
 # api-r1pi
 title: Add structured logging with request ID correlation
-status: in-progress
+status: completed
 type: task
 priority: high
 created_at: 2026-03-18T20:09:01Z
-updated_at: 2026-03-18T20:12:39Z
+updated_at: 2026-03-19T00:44:54Z
 parent: api-mzn0
 ---
 

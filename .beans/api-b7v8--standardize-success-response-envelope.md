@@ -1,11 +1,11 @@
 ---
 # api-b7v8
 title: Standardize success response envelope
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T20:09:08Z
-updated_at: 2026-03-18T23:15:11Z
+updated_at: 2026-03-19T00:44:54Z
 parent: api-mzn0
 ---
 

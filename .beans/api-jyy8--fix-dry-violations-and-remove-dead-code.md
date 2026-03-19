@@ -1,11 +1,11 @@
 ---
 # api-jyy8
 title: Fix DRY violations and remove dead code
-status: in-progress
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T20:09:13Z
-updated_at: 2026-03-18T20:13:21Z
+updated_at: 2026-03-19T00:44:54Z
 parent: api-mzn0
 ---
 
