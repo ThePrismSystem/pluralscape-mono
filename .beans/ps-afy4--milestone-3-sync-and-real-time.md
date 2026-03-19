@@ -19,7 +19,7 @@ Sync implementation, WebSocket transport, offline resilience
 - E2E tests passing for WebSocket, sync, SSE, and device transfer flows
 - Sync convergence validated across two concurrent clients with offline/online transitions
 
-## Design Artifacts (M1)
+## Design Artifacts
 
 - `packages/sync/docs/protocol-messages.md` — Wire protocol, message types, authentication flow
 - `packages/sync/docs/document-topology.md` — Document ID model, time-split partitioning

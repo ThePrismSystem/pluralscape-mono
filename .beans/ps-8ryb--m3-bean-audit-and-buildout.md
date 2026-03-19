@@ -21,7 +21,7 @@ Audit and expand all M3 beans: expand milestone body, enrich epic descriptions, 
 - [x] Create child tasks for sync-p1uq (Conflict resolution, 4 tasks)
 - [x] Create child tasks for sync-hji0 (Offline queue, 5 tasks)
 - [x] Create child tasks for api-n8wk (SSE fallback, 5 tasks)
-- [x] Create child tasks for crypto-og5h (Multi-device key transfer, 6 tasks)
+- [x] Create child tasks for crypto-og5h (Multi-device key transfer, 7 tasks including reparented api-955n)
 - [x] Reparent api-955n from api-765x to crypto-og5h
 - [x] Expand all 26 api-765x task bodies with acceptance criteria
 - [x] Assign priorities to api-765x tasks

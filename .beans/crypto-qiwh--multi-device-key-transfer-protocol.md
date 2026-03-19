@@ -9,6 +9,8 @@ updated_at: 2026-03-15T07:53:48Z
 parent: crypto-89v7
 blocked_by:
   - crypto-l3hj
+blocking:
+  - crypto-og5h
 ---
 
 Design and implement the multi-device key transfer protocol for transferring MasterKey between devices.

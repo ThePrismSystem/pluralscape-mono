@@ -1,6 +1,6 @@
 ---
 # api-1u9m
-title: Add startup warning when XFF detected without TRUST_PROXY
+title: Add warning when XFF detected without TRUST_PROXY
 status: todo
 type: task
 priority: low
@@ -9,7 +9,7 @@ updated_at: 2026-03-19T11:39:43Z
 parent: api-765x
 ---
 
-L6: Log a warning at startup if X-Forwarded-For headers are detected but TRUST_PROXY is not configured.
+L6: Log a warning on the first request containing X-Forwarded-For headers when TRUST_PROXY is not configured.
 
 ## Acceptance Criteria
 

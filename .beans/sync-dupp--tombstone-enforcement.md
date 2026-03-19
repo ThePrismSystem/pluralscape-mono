@@ -16,3 +16,4 @@ Ensure archived entity tombstone flag wins over concurrent edits from other clie
 - Unit test per entity type: archive on client A, edit on client B → archive wins after merge
 - Tombstone flag propagates correctly through snapshot roundtrip (compact → restore → flag preserved)
 - Tombstone applied even when edit has later Automerge timestamp (application-level rule overrides CRDT)
+- Integration test: tombstone survives relay submit/fetch roundtrip (compact → relay → restore → flag preserved)

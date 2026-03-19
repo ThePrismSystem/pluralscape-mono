@@ -16,5 +16,5 @@ Push notification to source device via Valkey pub/sub + WebSocket when transfer 
 - Source device receives push notification within 1s of approval
 - Notification includes transfer session ID (not key material — key material only on target)
 - Works across server instances via Valkey pub/sub
-- Source device not connected → notification stored for delivery on reconnect (or dropped if SSE fallback handles it)
+- Source device not connected → notification persisted in pending_notifications table, delivered on next WebSocket or SSE connect
 - Integration test: complete transfer → verify source device receives notification
