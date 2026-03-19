@@ -41,7 +41,7 @@ export function broadcastDocumentUpdate(
       docId: update.docId,
       error: formatError(err),
     });
-    return { delivered: 0, failed: 0, total: subscribers.size };
+    return { delivered: 0, failed: subscribers.size, total: subscribers.size };
   }
 
   let delivered = 0;
@@ -56,10 +56,11 @@ export function broadcastDocumentUpdate(
     try {
       state.ws.send(serialized);
       delivered++;
-    } catch {
+    } catch (err) {
       log.warn("Failed to deliver DocumentUpdate", {
         connectionId,
         docId: update.docId,
+        error: formatError(err),
       });
       deadConnections.push(connectionId);
     }

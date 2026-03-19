@@ -14,6 +14,7 @@ import { PROFILE_TYPES } from "./connection-state.js";
 import { base64urlToBytes } from "./serialization.js";
 import { WS_MAX_SUBSCRIBE_DOCUMENTS } from "./ws.constants.js";
 
+import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 import type { ClientMessage } from "@pluralscape/sync";
 import type { ZodType } from "zod";
 
@@ -39,7 +40,8 @@ const nonceBytes = z
   .transform(base64urlToBytes)
   .refine((buf) => buf.length === AEAD_NONCE_BYTES, {
     message: `Nonce must be ${String(AEAD_NONCE_BYTES)} bytes`,
-  });
+  })
+  .transform((buf): AeadNonce => buf as AeadNonce);
 
 /** Base64url → Uint8Array with byte-length refinement for signature (64 bytes). */
 const signatureBytes = z
@@ -49,7 +51,8 @@ const signatureBytes = z
   .transform(base64urlToBytes)
   .refine((buf) => buf.length === SIGN_BYTES, {
     message: `Signature must be ${String(SIGN_BYTES)} bytes`,
-  });
+  })
+  .transform((buf): Signature => buf as Signature);
 
 /** Base64url → Uint8Array with byte-length refinement for sign public key (32 bytes). */
 const signPublicKeyBytes = z
@@ -59,7 +62,8 @@ const signPublicKeyBytes = z
   .transform(base64urlToBytes)
   .refine((buf) => buf.length === SIGN_PUBLIC_KEY_BYTES, {
     message: `Author public key must be ${String(SIGN_PUBLIC_KEY_BYTES)} bytes`,
-  });
+  })
+  .transform((buf): SignPublicKey => buf as SignPublicKey);
 
 /** Encrypted change envelope without seq (server assigns). */
 const changeWithoutSeq = z.object({

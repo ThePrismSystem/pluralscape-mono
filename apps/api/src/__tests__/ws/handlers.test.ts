@@ -86,7 +86,7 @@ function createAuthenticatedState(
   manager: ConnectionManager,
   connId: string,
   auth: AuthContext,
-  systemId: string,
+  systemId: SystemId,
 ): SyncConnectionState {
   manager.reserveUnauthSlot();
   manager.register(connId, mockWs() as never, Date.now());
@@ -147,7 +147,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId);
+    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
     // Submit a change so catchup has data
     relay.submit(mockChangeWithoutSeq(docId));
@@ -176,7 +176,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId);
+    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
     relay.submitSnapshot(mockSnapshot(docId, 1));
     relay.submit(mockChangeWithoutSeq(docId));
@@ -201,7 +201,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId);
+    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
     // Submit and then subscribe with the current seq
     const seq = relay.submit(mockChangeWithoutSeq(docId));
@@ -224,7 +224,7 @@ describe("handleSubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId);
+    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
     const message: SubscribeRequest = {
       type: "SubscribeRequest",
@@ -235,6 +235,35 @@ describe("handleSubscribeRequest", () => {
     handleSubscribeRequest(message, state, manager, relay);
 
     expect(manager.getSubscribers(docId).has(connId)).toBe(true);
+  });
+
+  it("skips catchup for documents beyond subscription cap", () => {
+    manager = new ConnectionManager();
+    const relay = new EncryptedRelay();
+    const connId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
+    const auth = mockAuth();
+    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+
+    // Fill subscription cap (WS_MAX_SUBSCRIPTIONS_PER_CONNECTION defaults to 500)
+    for (let i = 0; i < 500; i++) {
+      manager.addSubscription(connId, `doc-fill-${String(i)}`);
+    }
+
+    // Now subscribe to one more doc that has data
+    const extraDocId = crypto.randomUUID();
+    relay.submit(mockChangeWithoutSeq(extraDocId));
+
+    const message: SubscribeRequest = {
+      type: "SubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      documents: [{ docId: extraDocId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
+    };
+
+    const result = handleSubscribeRequest(message, state, manager, relay);
+
+    // The excess doc should NOT be in catchup since subscription cap was reached
+    expect(result.catchup).toHaveLength(0);
   });
 });
 
@@ -252,7 +281,7 @@ describe("handleUnsubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId);
+    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
     // Subscribe first
     const subMsg: SubscribeRequest = {
@@ -280,7 +309,7 @@ describe("handleUnsubscribeRequest", () => {
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
-    const state = createAuthenticatedState(manager, connId, auth, systemId);
+    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
     const message: UnsubscribeRequest = {
       type: "UnsubscribeRequest",

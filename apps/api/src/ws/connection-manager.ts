@@ -10,6 +10,7 @@ import type {
 } from "./connection-state.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { AppLogger } from "../lib/logger.js";
+import type { SystemId } from "@pluralscape/types";
 import type { WSContext } from "hono/ws";
 
 /**
@@ -56,7 +57,7 @@ export class ConnectionManager {
   authenticate(
     connectionId: string,
     auth: AuthContext,
-    systemId: string,
+    systemId: SystemId,
     profileType: ProfileType,
   ): boolean {
     const state = this.connections.get(connectionId);

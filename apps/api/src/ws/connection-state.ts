@@ -1,5 +1,6 @@
 import type { SlidingWindowCounter } from "./sliding-window-counter.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { SystemId } from "@pluralscape/types";
 import type { WSContext } from "hono/ws";
 
 /** Valid replication profile types (single source of truth). */
@@ -32,7 +33,7 @@ export interface AwaitingAuthState extends ConnectionBase {
 export interface AuthenticatedState extends ConnectionBase {
   readonly phase: "authenticated";
   readonly auth: AuthContext;
-  readonly systemId: string;
+  readonly systemId: SystemId;
   readonly profileType: ProfileType;
 }
 

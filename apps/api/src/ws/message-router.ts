@@ -34,7 +34,8 @@ import type { ConnectionManager } from "./connection-manager.js";
 import type { AuthenticatedState, SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
-import type { ServerMessage, SubmitChangeRequest, SubmitSnapshotRequest } from "@pluralscape/sync";
+import type { ServerMessage } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
 import type { ZodType } from "zod";
 
 // ── DI Context ───────────────────────────────────────────────────────
@@ -50,7 +51,7 @@ export interface RouterContext {
    * first write. The real protection is that eviction cleanup
    * (removeSubscriptionsForDoc) prevents cross-system broadcast leaks.
    */
-  readonly documentOwnership: Map<string, string>;
+  readonly documentOwnership: Map<string, SystemId>;
   readonly manager: ConnectionManager;
 }
 
@@ -59,7 +60,7 @@ export function createRouterContext(
   maxDocuments: number,
   manager: ConnectionManager,
 ): RouterContext {
-  const documentOwnership = new Map<string, string>();
+  const documentOwnership = new Map<string, SystemId>();
   const relay = new EncryptedRelay({
     maxDocuments,
     onEvict: (docId) => {
@@ -70,10 +71,19 @@ export function createRouterContext(
   return { relay, documentOwnership, manager };
 }
 
-// ── Type guard ───────────────────────────────────────────────────────
+// ── Type guards ──────────────────────────────────────────────────────
 
 function isClientMessageType(type: string): type is ClientMessageType {
   return Object.hasOwn(CLIENT_MESSAGE_SCHEMAS, type);
+}
+
+function hasStringType(v: unknown): v is { type: string } {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "type" in v &&
+    typeof (v as Record<string, unknown>)["type"] === "string"
+  );
 }
 
 // ── Send helpers ────────────────────────────────────────────────────
@@ -143,11 +153,11 @@ function parseMessage<T>(
 /** Check document access (inline — single caller). Returns false and sends PERMISSION_DENIED on failure. */
 function checkAccess(
   docId: string,
-  systemId: string,
+  systemId: SystemId,
   correlationId: string | null,
   state: SyncConnectionState,
   log: AppLogger,
-  ownership: Map<string, string>,
+  ownership: Map<string, SystemId>,
 ): boolean {
   const owner = ownership.get(docId);
   if (owner !== undefined && owner !== systemId) {
@@ -167,7 +177,7 @@ function dispatchWithAccess<T extends { docId: string; correlationId: string | n
   state: AuthenticatedState,
   messageType: string,
   log: AppLogger,
-  ownership: Map<string, string>,
+  ownership: Map<string, SystemId>,
   handler: (msg: T) => ServerMessage,
 ): void {
   const msg = parseMessage(schema, parsed, state, messageType, log);
@@ -188,10 +198,11 @@ function dispatchWithAccess<T extends { docId: string; correlationId: string | n
 export async function routeMessage(
   raw: string,
   state: SyncConnectionState,
-  manager: ConnectionManager,
   log: AppLogger,
   ctx: RouterContext,
 ): Promise<void> {
+  const { relay, documentOwnership, manager } = ctx;
+
   // 1. Parse JSON
   let parsed: unknown;
   try {
@@ -206,27 +217,18 @@ export async function routeMessage(
     return;
   }
 
-  // 2. Extract type
-  if (typeof parsed !== "object" || parsed === null || !("type" in parsed)) {
+  // 2. Extract and validate type
+  if (!hasStringType(parsed)) {
     sendErrorAndClose(
       state,
-      makeSyncError("MALFORMED_MESSAGE", "Missing message type", null),
+      makeSyncError("MALFORMED_MESSAGE", "Missing or invalid message type", null),
       WS_CLOSE_POLICY_VIOLATION,
       log,
     );
     return;
   }
 
-  const messageType = (parsed as { type: unknown }).type;
-  if (typeof messageType !== "string") {
-    sendErrorAndClose(
-      state,
-      makeSyncError("MALFORMED_MESSAGE", "Message type must be a string", null),
-      WS_CLOSE_POLICY_VIOLATION,
-      log,
-    );
-    return;
-  }
+  const messageType = parsed.type;
 
   // 3. Phase: awaiting-auth — only AuthenticateRequest allowed
   if (state.phase === "awaiting-auth") {
@@ -314,7 +316,6 @@ export async function routeMessage(
   }
 
   // 6. Validate and dispatch using helpers
-  const { relay, documentOwnership } = ctx;
   switch (messageType) {
     case "ManifestRequest": {
       const msg = parseMessage(
@@ -356,13 +357,11 @@ export async function routeMessage(
         }
         // Denied docs get a PERMISSION_DENIED sent by checkAccess; continue with rest
       }
-      if (permitted.length > 0) {
-        send(
-          state,
-          handleSubscribeRequest({ ...msg, documents: permitted }, state, manager, relay),
-          log,
-        );
-      }
+      send(
+        state,
+        handleSubscribeRequest({ ...msg, documents: permitted }, state, manager, relay),
+        log,
+      );
       break;
     }
     case "UnsubscribeRequest": {
@@ -408,7 +407,7 @@ export async function routeMessage(
         state,
         messageType,
         log,
-      ) as SubmitChangeRequest | null;
+      );
       if (!msg) return;
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
@@ -455,12 +454,30 @@ export async function routeMessage(
         state,
         messageType,
         log,
-      ) as SubmitSnapshotRequest | null;
+      );
       if (!msg) return;
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
-      send(state, handleSubmitSnapshot(msg, relay), log);
-      documentOwnership.set(msg.docId, state.systemId);
+      try {
+        send(state, handleSubmitSnapshot(msg, relay), log);
+        documentOwnership.set(msg.docId, state.systemId);
+      } catch (err) {
+        log.error("handleSubmitSnapshot threw", {
+          connectionId: state.connectionId,
+          docId: msg.docId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError(
+            "INTERNAL_ERROR",
+            "Failed to process snapshot",
+            msg.correlationId,
+            msg.docId,
+          ),
+          log,
+        );
+      }
       break;
     }
     case "DocumentLoadRequest": {

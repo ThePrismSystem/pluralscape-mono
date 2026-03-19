@@ -51,7 +51,10 @@ export function handleSubscribeRequest(
   const catchup = [];
 
   for (const entry of message.documents) {
-    manager.addSubscription(state.connectionId, entry.docId);
+    if (!manager.addSubscription(state.connectionId, entry.docId)) {
+      // Subscription cap reached — skip this document silently
+      continue;
+    }
 
     const changes = relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq);
     const snapshot = relay.getLatestSnapshot(entry.docId);

@@ -175,8 +175,9 @@ describe("ValkeyPubSub", () => {
     it("registers handler and subscribes to Valkey channel", async () => {
       await pubsub.connect("redis://localhost:6379", mockFactory());
 
-      await pubsub.subscribe("ps:sync:doc-1", vi.fn());
+      const result = await pubsub.subscribe("ps:sync:doc-1", vi.fn());
 
+      expect(result).toBe("subscribed");
       expect(sub().subscribeMock).toHaveBeenCalledWith("ps:sync:doc-1");
     });
 
@@ -213,14 +214,16 @@ describe("ValkeyPubSub", () => {
     });
 
     it("tracks channels when not connected", async () => {
-      await pubsub.subscribe("ps:sync:doc-1", vi.fn());
+      const result = await pubsub.subscribe("ps:sync:doc-1", vi.fn());
+      expect(result).toBe("deferred");
     });
 
     it("does not add channel to activeChannels on subscribe failure", async () => {
       await pubsub.connect("redis://localhost:6379", mockFactory());
       sub().subscribeMock.mockRejectedValueOnce(new Error("subscribe failed"));
 
-      await pubsub.subscribe("ps:sync:fail-channel", vi.fn());
+      const result = await pubsub.subscribe("ps:sync:fail-channel", vi.fn());
+      expect(result).toBe("failed");
 
       // A second subscribe attempt should try again (channel was not tracked)
       sub().subscribeMock.mockResolvedValue(undefined);

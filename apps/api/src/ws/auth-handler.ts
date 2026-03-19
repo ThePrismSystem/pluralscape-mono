@@ -2,7 +2,7 @@ import { getDb } from "../lib/db.js";
 import { validateSession } from "../lib/session-auth.js";
 
 import { WS_CLOSE_POLICY_VIOLATION, WS_MAX_CONNECTIONS_PER_ACCOUNT } from "./ws.constants.js";
-import { formatError, makeSyncError } from "./ws.utils.js";
+import { brandedSetHas, formatError, makeSyncError } from "./ws.utils.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
@@ -80,9 +80,7 @@ export async function handleAuthenticate(
   }
 
   // 3. System ownership check
-  // The `as SystemId` cast is safe: Set.has() membership validates the value
-  // belongs to the ownedSystemIds set, which only contains valid SystemId values.
-  if (!auth.ownedSystemIds.has(message.systemId as SystemId)) {
+  if (!brandedSetHas(auth.ownedSystemIds, message.systemId)) {
     return {
       ok: false,
       error: makeSyncError("PERMISSION_DENIED", "System not owned by this account", correlationId),
@@ -90,11 +88,11 @@ export async function handleAuthenticate(
     };
   }
 
-  // 4. Success — promote connection
+  // 4. Success — promote connection (cast safe: ownedSystemIds membership validated above)
   const authenticated = manager.authenticate(
     state.connectionId,
     auth,
-    message.systemId,
+    message.systemId as SystemId,
     message.profileType,
   );
 

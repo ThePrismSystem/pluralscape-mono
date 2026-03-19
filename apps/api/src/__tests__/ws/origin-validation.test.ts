@@ -48,4 +48,10 @@ describe("isAllowedOrigin", () => {
     delete process.env["ALLOWED_ORIGINS"];
     expect(isAllowedOrigin("https://app.example.com")).toBe(false);
   });
+
+  it("trims whitespace from ALLOWED_ORIGINS entries", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ALLOWED_ORIGINS", "https://a.com, https://b.com , https://c.com");
+    expect(isAllowedOrigin("https://b.com")).toBe(true);
+  });
 });

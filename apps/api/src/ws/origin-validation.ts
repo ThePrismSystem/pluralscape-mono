@@ -24,6 +24,6 @@ export function isAllowedOrigin(origin: string | undefined): boolean {
     return true;
   }
 
-  const allowed = process.env["ALLOWED_ORIGINS"]?.split(",") ?? [];
+  const allowed = process.env["ALLOWED_ORIGINS"]?.split(",").map((s) => s.trim()) ?? [];
   return allowed.includes(origin);
 }

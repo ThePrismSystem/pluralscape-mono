@@ -67,7 +67,7 @@ describe("SlidingWindowCounter", () => {
     counter.check(11_500, windowMs, 100);
 
     // windowStart should be 0 + 10000 = 10000, not 11500
-    expect(counter.windowStart).toBe(10_000);
+    expect(counter.snapshot().windowStart).toBe(10_000);
   });
 
   it("handles multiple window rotations in large time gap", () => {
@@ -79,7 +79,7 @@ describe("SlidingWindowCounter", () => {
     counter.check(35_000, windowMs, 100);
 
     // Should have fully reset
-    expect(counter.count).toBe(1);
-    expect(counter.previousCount).toBe(0);
+    expect(counter.snapshot().count).toBe(1);
+    expect(counter.snapshot().previousCount).toBe(0);
   });
 });

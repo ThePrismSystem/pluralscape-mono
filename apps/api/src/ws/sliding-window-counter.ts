@@ -7,9 +7,25 @@
 
 /** Mutable rate limiting state for a single window type (mutation or read). */
 export class SlidingWindowCounter {
-  count = 0;
-  previousCount = 0;
-  windowStart = 0;
+  private count = 0;
+  private previousCount = 0;
+  private windowStart = 0;
+
+  /** Set internal state for test setup. */
+  seed(count: number, previousCount: number, windowStart: number): void {
+    this.count = count;
+    this.previousCount = previousCount;
+    this.windowStart = windowStart;
+  }
+
+  /** Read-only snapshot of internal state for test assertions. */
+  snapshot(): {
+    readonly count: number;
+    readonly previousCount: number;
+    readonly windowStart: number;
+  } {
+    return { count: this.count, previousCount: this.previousCount, windowStart: this.windowStart };
+  }
 
   /**
    * Record a request and check whether the effective count exceeds the limit.

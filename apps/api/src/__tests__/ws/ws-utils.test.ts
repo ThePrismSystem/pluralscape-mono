@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { formatError, makeSyncError } from "../../ws/ws.utils.js";
+import { brandedSetHas, formatError, makeSyncError } from "../../ws/ws.utils.js";
 
 describe("formatError", () => {
-  it("returns message from Error instances", () => {
-    expect(formatError(new Error("oops"))).toBe("oops");
+  it("returns stack trace from Error instances when available", () => {
+    const err = new Error("oops");
+    const result = formatError(err);
+    expect(result).toContain("oops");
+    expect(result).toContain("Error:");
+  });
+
+  it("returns message when stack is undefined", () => {
+    const err = new Error("no-stack");
+    err.stack = undefined;
+    expect(formatError(err)).toBe("no-stack");
   });
 
   it("returns string representation of non-Error values", () => {
@@ -12,6 +21,20 @@ describe("formatError", () => {
     expect(formatError(42)).toBe("42");
     expect(formatError(null)).toBe("null");
     expect(formatError(undefined)).toBe("undefined");
+  });
+});
+
+describe("brandedSetHas", () => {
+  it("returns true when value is in the set", () => {
+    type Brand = "alpha" | "beta";
+    const set: ReadonlySet<Brand> = new Set<Brand>(["alpha", "beta"]);
+    expect(brandedSetHas(set, "alpha")).toBe(true);
+  });
+
+  it("returns false when value is not in the set", () => {
+    type Brand = "alpha" | "beta";
+    const set: ReadonlySet<Brand> = new Set<Brand>(["alpha", "beta"]);
+    expect(brandedSetHas(set, "gamma")).toBe(false);
   });
 });
 

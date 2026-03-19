@@ -109,7 +109,7 @@ describe("message-router", () => {
 
   describe("awaiting-auth phase", () => {
     it("accepts AuthenticateRequest as first message", async () => {
-      await routeMessage(authRequest(), state, manager, log, ctx);
+      await routeMessage(authRequest(), state, log, ctx);
 
       // authenticate() creates a new object — check the manager's copy
       expect(manager.get("conn-1")?.phase).toBe("authenticated");
@@ -121,7 +121,6 @@ describe("message-router", () => {
       await routeMessage(
         JSON.stringify({ type: "ManifestRequest", correlationId: null, systemId: "sys_test" }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -132,7 +131,7 @@ describe("message-router", () => {
     });
 
     it("rejects invalid JSON", async () => {
-      await routeMessage("not json {{{", state, manager, log, ctx);
+      await routeMessage("not json {{{", state, log, ctx);
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
@@ -140,7 +139,7 @@ describe("message-router", () => {
     });
 
     it("rejects missing type field", async () => {
-      await routeMessage(JSON.stringify({ correlationId: null }), state, manager, log, ctx);
+      await routeMessage(JSON.stringify({ correlationId: null }), state, log, ctx);
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
@@ -158,7 +157,6 @@ describe("message-router", () => {
           profileType: "owner-full",
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -171,7 +169,7 @@ describe("message-router", () => {
 
   describe("authenticated phase", () => {
     beforeEach(async () => {
-      await routeMessage(authRequest(), state, manager, log, ctx);
+      await routeMessage(authRequest(), state, log, ctx);
       // Re-fetch state — authenticate() creates a new object in the map
       const refreshed = manager.get("conn-1");
       if (!refreshed) throw new Error("State not found after auth");
@@ -187,7 +185,6 @@ describe("message-router", () => {
           systemId: "sys_test",
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -200,7 +197,6 @@ describe("message-router", () => {
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -218,7 +214,6 @@ describe("message-router", () => {
           sinceSeq: 0,
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -235,7 +230,6 @@ describe("message-router", () => {
           documents: [{ docId: "doc-1", lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -249,7 +243,6 @@ describe("message-router", () => {
       await routeMessage(
         JSON.stringify({ type: "UnsubscribeRequest", correlationId: null, docId: "doc-1" }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -267,7 +260,6 @@ describe("message-router", () => {
           persist: false,
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -286,7 +278,6 @@ describe("message-router", () => {
       await routeMessage(
         JSON.stringify({ type: "UnknownType", correlationId: null }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -297,7 +288,7 @@ describe("message-router", () => {
     });
 
     it("rejects second AuthenticateRequest", async () => {
-      await routeMessage(authRequest(), state, manager, log, ctx);
+      await routeMessage(authRequest(), state, log, ctx);
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
@@ -313,7 +304,6 @@ describe("message-router", () => {
           sinceSeq: "not-a-number",
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -331,7 +321,6 @@ describe("message-router", () => {
           systemId: "sys_other",
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -342,7 +331,7 @@ describe("message-router", () => {
     });
 
     it("SubscribeRequest permits some docs and denies others", async () => {
-      ctx.documentOwnership.set("doc-owned-by-other", "sys_other");
+      ctx.documentOwnership.set("doc-owned-by-other", "sys_other" as SystemId);
 
       await routeMessage(
         JSON.stringify({
@@ -354,7 +343,6 @@ describe("message-router", () => {
           ],
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -371,7 +359,6 @@ describe("message-router", () => {
       await routeMessage(
         JSON.stringify({ type: "<script>alert(1)</script>", correlationId: null }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -384,7 +371,7 @@ describe("message-router", () => {
 
   describe("rate limiting", () => {
     beforeEach(async () => {
-      await routeMessage(authRequest(), state, manager, log, ctx);
+      await routeMessage(authRequest(), state, log, ctx);
       const refreshed = manager.get("conn-1");
       if (!refreshed) throw new Error("State not found after auth");
       state = refreshed;
@@ -393,13 +380,11 @@ describe("message-router", () => {
 
     it("returns RATE_LIMITED when read limit exceeded", async () => {
       // Exhaust the read rate limit (200 per window)
-      state.readWindow.count = 200;
-      state.readWindow.windowStart = Date.now();
+      state.readWindow.seed(200, 0, Date.now());
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -416,20 +401,18 @@ describe("message-router", () => {
       const strikeStateInit = strikeManager.register("conn-strike", ws as never, Date.now());
       const strikeCtx = createRouterContext(1000, strikeManager);
       // Authenticate first
-      await routeMessage(authRequest(), strikeStateInit, strikeManager, log, strikeCtx);
+      await routeMessage(authRequest(), strikeStateInit, log, strikeCtx);
       const strikeState = strikeManager.get("conn-strike");
       if (!strikeState) throw new Error("State not found after auth");
       sent.length = 0;
 
       // Simulate many rate limit violations
-      strikeState.readWindow.count = 200;
-      strikeState.readWindow.windowStart = Date.now();
+      strikeState.readWindow.seed(200, 0, Date.now());
       strikeState.rateLimitStrikes = 9; // One more will hit the max (10)
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
         strikeState,
-        strikeManager,
         log,
         strikeCtx,
       );
@@ -444,7 +427,6 @@ describe("message-router", () => {
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -454,8 +436,7 @@ describe("message-router", () => {
     });
 
     it("returns RATE_LIMITED when mutation limit exceeded", async () => {
-      state.mutationWindow.count = 100;
-      state.mutationWindow.windowStart = Date.now();
+      state.mutationWindow.seed(100, 0, Date.now());
 
       const change = makeChangePayload("doc-mut");
       await routeMessage(
@@ -466,7 +447,6 @@ describe("message-router", () => {
           change,
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -479,19 +459,17 @@ describe("message-router", () => {
     it("preserves window offset on rotation", async () => {
       // Set the window start to a known past time
       const pastTime = Date.now() - 15_000; // 15s ago, more than one 10s window
-      state.readWindow.count = 5;
-      state.readWindow.windowStart = pastTime;
+      state.readWindow.seed(5, 0, pastTime);
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
         state,
-        manager,
         log,
         ctx,
       );
 
       // After rotation, windowStart should be offset-corrected, not set to now
-      expect(state.readWindow.windowStart).toBeGreaterThan(pastTime);
+      expect(state.readWindow.snapshot().windowStart).toBeGreaterThan(pastTime);
     });
   });
 
@@ -516,7 +494,7 @@ describe("message-router", () => {
       const brokenCtx = createRouterContext(1000, brokenManager);
 
       // Authenticate first (this send will also fail but we need the state)
-      await routeMessage(authRequest(), brokenState, brokenManager, warnLog, brokenCtx);
+      await routeMessage(authRequest(), brokenState, warnLog, brokenCtx);
 
       // The send failure should have been logged
       expect(warnFn).toHaveBeenCalledWith(
@@ -532,7 +510,7 @@ describe("message-router", () => {
 
   describe("prototype pollution prevention", () => {
     beforeEach(async () => {
-      await routeMessage(authRequest(), state, manager, log, ctx);
+      await routeMessage(authRequest(), state, log, ctx);
       const refreshed = manager.get("conn-1");
       if (!refreshed) throw new Error("State not found after auth");
       state = refreshed;
@@ -540,13 +518,7 @@ describe("message-router", () => {
     });
 
     it("rejects inherited prototype property as message type", async () => {
-      await routeMessage(
-        JSON.stringify({ type: "valueOf", correlationId: null }),
-        state,
-        manager,
-        log,
-        ctx,
-      );
+      await routeMessage(JSON.stringify({ type: "valueOf", correlationId: null }), state, log, ctx);
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
@@ -557,7 +529,6 @@ describe("message-router", () => {
       await routeMessage(
         JSON.stringify({ type: "constructor", correlationId: null }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -570,7 +541,7 @@ describe("message-router", () => {
 
   describe("document access control", () => {
     beforeEach(async () => {
-      await routeMessage(authRequest(), state, manager, log, ctx);
+      await routeMessage(authRequest(), state, log, ctx);
       const refreshed = manager.get("conn-1");
       if (!refreshed) throw new Error("State not found after auth");
       state = refreshed;
@@ -587,7 +558,6 @@ describe("message-router", () => {
           change,
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -598,7 +568,7 @@ describe("message-router", () => {
     });
 
     it("rejects submit to doc owned by another system", async () => {
-      ctx.documentOwnership.set("doc-acl-2", "sys_other");
+      ctx.documentOwnership.set("doc-acl-2", "sys_other" as SystemId);
 
       const change = makeChangePayload("doc-acl-2");
       await routeMessage(
@@ -609,7 +579,6 @@ describe("message-router", () => {
           change,
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -620,12 +589,11 @@ describe("message-router", () => {
     });
 
     it("rejects read on doc owned by another system", async () => {
-      ctx.documentOwnership.set("doc-acl-3", "sys_other");
+      ctx.documentOwnership.set("doc-acl-3", "sys_other" as SystemId);
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-acl-3" }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -636,12 +604,11 @@ describe("message-router", () => {
     });
 
     it("allows read on doc owned by same system", async () => {
-      ctx.documentOwnership.set("doc-acl-4", "sys_test");
+      ctx.documentOwnership.set("doc-acl-4", "sys_test" as SystemId);
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-acl-4" }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -654,7 +621,6 @@ describe("message-router", () => {
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-unowned" }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -664,7 +630,7 @@ describe("message-router", () => {
     });
 
     it("rejects DocumentLoadRequest on doc owned by another system", async () => {
-      ctx.documentOwnership.set("doc-acl-5", "sys_other");
+      ctx.documentOwnership.set("doc-acl-5", "sys_other" as SystemId);
 
       await routeMessage(
         JSON.stringify({
@@ -674,7 +640,6 @@ describe("message-router", () => {
           persist: false,
         }),
         state,
-        manager,
         log,
         ctx,
       );
@@ -701,7 +666,7 @@ describe("message-router", () => {
           accountType: "system",
           ownedSystemIds: new Set(["sys_test" as SystemId]),
         },
-        "sys_test",
+        "sys_test" as SystemId,
         "owner-full",
       );
       const brokenState = brokenManager.get("conn-broken");
@@ -721,7 +686,7 @@ describe("message-router", () => {
           accountType: "system",
           ownedSystemIds: new Set(["sys_test" as SystemId]),
         },
-        "sys_test",
+        "sys_test" as SystemId,
         "owner-full",
       );
       brokenManager.addSubscription("conn-sub", "doc-bc");
@@ -735,7 +700,6 @@ describe("message-router", () => {
           change,
         }),
         brokenState,
-        brokenManager,
         log,
         brokenCtx,
       );
@@ -743,6 +707,75 @@ describe("message-router", () => {
       // Subscriber should NOT have received broadcast since send to submitter failed
       expect(subWs.send).not.toHaveBeenCalled();
       brokenManager.closeAll(1001, "test cleanup");
+    });
+
+    it("sends INTERNAL_ERROR when handleSubmitSnapshot throws unexpected error", async () => {
+      // Submit a valid snapshot to establish a doc, then re-submit to trigger version conflict
+      // which is handled. But we need an *unexpected* error. Use a broken relay.
+      const brokenRelay = {
+        submit: vi.fn(),
+        submitSnapshot: vi.fn(() => {
+          throw new Error("unexpected relay failure");
+        }),
+        getEnvelopesSince: vi.fn().mockReturnValue([]),
+        getLatestSnapshot: vi.fn().mockReturnValue(null),
+      };
+      const brokenCtx: RouterContext = {
+        relay: brokenRelay as never,
+        documentOwnership: new Map<string, SystemId>(),
+        manager,
+      };
+
+      const snapshot = {
+        ciphertext: base64urlOfLength(32, 1),
+        nonce: base64urlOfLength(24, 2),
+        signature: base64urlOfLength(64, 3),
+        authorPublicKey: base64urlOfLength(32, 4),
+        documentId: "doc-snap-err",
+        snapshotVersion: 1,
+      };
+
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitSnapshotRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          docId: "doc-snap-err",
+          snapshot,
+        }),
+        state,
+        log,
+        brokenCtx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INTERNAL_ERROR");
+      expect(resp["message"]).toBe("Failed to process snapshot");
+    });
+
+    it("sends empty SubscribeResponse when all documents are denied", async () => {
+      ctx.documentOwnership.set("doc-denied-1", "sys_other" as SystemId);
+      ctx.documentOwnership.set("doc-denied-2", "sys_other" as SystemId);
+
+      await routeMessage(
+        JSON.stringify({
+          type: "SubscribeRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          documents: [
+            { docId: "doc-denied-1", lastSyncedSeq: 0, lastSnapshotVersion: 0 },
+            { docId: "doc-denied-2", lastSyncedSeq: 0, lastSnapshotVersion: 0 },
+          ],
+        }),
+        state,
+        log,
+        ctx,
+      );
+
+      const responses = sent.map((s) => JSON.parse(s) as Record<string, unknown>);
+      const subscribeResp = responses.find((r) => r["type"] === "SubscribeResponse");
+      expect(subscribeResp).toBeDefined();
+      expect(subscribeResp?.["correlationId"]).toBe("550e8400-e29b-41d4-a716-446655440000");
+      expect(subscribeResp?.["catchup"]).toEqual([]);
     });
   });
 });

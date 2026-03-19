@@ -6,9 +6,14 @@
  */
 import type { SyncError } from "@pluralscape/sync";
 
-/** Format an unknown error to a string message. */
+/** Format an unknown error to a loggable string (includes stack trace when available). */
 export function formatError(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+  return err instanceof Error ? (err.stack ?? err.message) : String(err);
+}
+
+/** Type-safe branded Set membership check (single-location cast). */
+export function brandedSetHas<T extends string>(set: ReadonlySet<T>, value: string): boolean {
+  return set.has(value as T);
 }
 
 /** Construct a SyncError with common defaults. */

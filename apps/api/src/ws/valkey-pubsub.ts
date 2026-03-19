@@ -162,8 +162,11 @@ export class ValkeyPubSub {
     }
   }
 
-  /** Subscribe to a channel with a handler. */
-  async subscribe(channel: string, handler: (message: string) => void): Promise<void> {
+  /** Subscribe to a channel with a handler. Returns the outcome. */
+  async subscribe(
+    channel: string,
+    handler: (message: string) => void,
+  ): Promise<"subscribed" | "deferred" | "failed"> {
     let channelHandlers = this.handlers.get(channel);
     if (!channelHandlers) {
       channelHandlers = new Set();
@@ -186,13 +189,16 @@ export class ValkeyPubSub {
             channel,
             error: formatError(err),
           });
-          return;
+          return "failed";
         }
       } else {
         // No subscriber — track for reconnect
         this.activeChannels.add(channel);
+        return "deferred";
       }
     }
+
+    return "subscribed";
   }
 
   /** Unsubscribe from a channel. Removes the handler; unsubscribes from Valkey when no handlers remain. */

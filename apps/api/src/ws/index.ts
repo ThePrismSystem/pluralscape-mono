@@ -18,6 +18,7 @@ import { upgradeWebSocket, websocket } from "./bun-adapter.js";
 import { ConnectionManager } from "./connection-manager.js";
 import { createRouterContext, routeMessage } from "./message-router.js";
 import { isAllowedOrigin } from "./origin-validation.js";
+import { serializeServerMessage } from "./serialization.js";
 import {
   WS_AUTH_TIMEOUT_MS,
   WS_CLOSE_POLICY_VIOLATION,
@@ -26,7 +27,7 @@ import {
   WS_SUBPROTOCOL,
   WS_UPGRADE_SAFETY_TIMEOUT_MS,
 } from "./ws.constants.js";
-import { formatError } from "./ws.utils.js";
+import { formatError, makeSyncError } from "./ws.utils.js";
 
 import type { AppLogger } from "../lib/logger.js";
 
@@ -117,6 +118,8 @@ syncWsApp.get(
                 error: formatError(err),
               });
             }
+            // Ensure cleanup even if ws.close() throws and onClose never fires
+            connectionManager.remove(connectionId);
           }
         }, WS_AUTH_TIMEOUT_MS);
 
@@ -133,17 +136,24 @@ syncWsApp.get(
         // V1 protocol is text-framed JSON — reject binary frames
         if (typeof evt.data !== "string") {
           log.warn("WebSocket received non-string message", { connectionId });
+          try {
+            state.ws.send(
+              serializeServerMessage(
+                makeSyncError("MALFORMED_MESSAGE", "Binary frames are not supported", null),
+              ),
+            );
+          } catch {
+            // Best-effort; connection may be broken
+          }
           return;
         }
 
-        void routeMessage(evt.data, state, connectionManager, log, routerCtx).catch(
-          (err: unknown) => {
-            log.error("Unhandled error in routeMessage", {
-              connectionId,
-              error: formatError(err),
-            });
-          },
-        );
+        void routeMessage(evt.data, state, log, routerCtx).catch((err: unknown) => {
+          log.error("Unhandled error in routeMessage", {
+            connectionId,
+            error: formatError(err),
+          });
+        });
       },
 
       onClose() {
