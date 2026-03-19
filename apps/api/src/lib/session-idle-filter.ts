@@ -18,8 +18,8 @@ import type { SQL } from "drizzle-orm";
  * - pgTimestamp columns store timestamptz but map to/from UnixMillis in TypeScript.
  *   Drizzle's gte() applies the custom type's toDriver conversion (UnixMillis → ISO string),
  *   producing valid `timestamptz >= timestamptz` comparisons that can use indexes.
- * - TTL matching uses EXTRACT(EPOCH FROM interval) * 1000 to convert PG interval to ms
- *   before comparing to integer parameters.
+ * - TTL matching uses CAST(EXTRACT(EPOCH FROM interval) * 1000 AS bigint) to convert
+ *   PG interval to ms as an integer before comparing to integer parameters.
  */
 export function buildIdleTimeoutFilter(currentTimeMs: number): SQL {
   const conditions: SQL[] = [];
@@ -29,7 +29,7 @@ export function buildIdleTimeoutFilter(currentTimeMs: number): SQL {
   conditions.push(isNull(sessions.expiresAt));
 
   for (const config of Object.values(SESSION_TIMEOUTS)) {
-    const ttlMatchExpr = sql`EXTRACT(EPOCH FROM (${sessions.expiresAt} - ${sessions.createdAt})) * 1000 = ${config.absoluteTtlMs}`;
+    const ttlMatchExpr = sql`CAST(EXTRACT(EPOCH FROM (${sessions.expiresAt} - ${sessions.createdAt})) * 1000 AS bigint) = ${config.absoluteTtlMs}`;
 
     if (config.idleTimeoutMs === null) {
       // No idle timeout for this session type — match by absoluteTtl
@@ -49,7 +49,7 @@ export function buildIdleTimeoutFilter(currentTimeMs: number): SQL {
   const knownTtls = Object.values(SESSION_TIMEOUTS).map((c) => c.absoluteTtlMs);
   const unknownTtlCondition = and(
     not(isNull(sessions.expiresAt)),
-    sql`EXTRACT(EPOCH FROM (${sessions.expiresAt} - ${sessions.createdAt})) * 1000 NOT IN (${sql.join(
+    sql`CAST(EXTRACT(EPOCH FROM (${sessions.expiresAt} - ${sessions.createdAt})) * 1000 AS bigint) NOT IN (${sql.join(
       knownTtls.map((t) => sql`${t}`),
       sql`, `,
     )})`,

@@ -8,6 +8,13 @@
       "when": 1773900695960,
       "tag": "0000_black_harrier",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773902371250,
+      "tag": "0001_slippery_red_skull",
+      "breakpoints": true
     }
   ]
 }
