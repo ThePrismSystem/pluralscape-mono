@@ -1,5 +1,9 @@
 import { ID_PREFIXES, toCursor } from "@pluralscape/types";
-import { StructureLinkQuerySchema } from "@pluralscape/validation";
+import {
+  SideSystemLayerQuerySchema,
+  SubsystemLayerQuerySchema,
+  SubsystemSideSystemQuerySchema,
+} from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { HTTP_CREATED, HTTP_NO_CONTENT } from "../../http.constants.js";
@@ -61,7 +65,7 @@ slList.get("/subsystem-layer", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const { subsystemId, layerId } = StructureLinkQuerySchema.parse({
+  const { subsystemId, layerId } = SubsystemLayerQuerySchema.parse({
     subsystemId: c.req.query("subsystemId"),
     layerId: c.req.query("layerId"),
   });
@@ -114,7 +118,7 @@ ssList.get("/subsystem-side-system", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const { subsystemId, sideSystemId } = StructureLinkQuerySchema.parse({
+  const { subsystemId, sideSystemId } = SubsystemSideSystemQuerySchema.parse({
     subsystemId: c.req.query("subsystemId"),
     sideSystemId: c.req.query("sideSystemId"),
   });
@@ -167,7 +171,7 @@ sslList.get("/side-system-layer", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const { sideSystemId, layerId } = StructureLinkQuerySchema.parse({
+  const { sideSystemId, layerId } = SideSystemLayerQuerySchema.parse({
     sideSystemId: c.req.query("sideSystemId"),
     layerId: c.req.query("layerId"),
   });

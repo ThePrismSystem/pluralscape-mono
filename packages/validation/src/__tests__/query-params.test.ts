@@ -6,7 +6,9 @@ import {
   InnerWorldEntityQuerySchema,
   LifecycleEventQuerySchema,
   RelationshipQuerySchema,
-  StructureLinkQuerySchema,
+  SideSystemLayerQuerySchema,
+  SubsystemLayerQuerySchema,
+  SubsystemSideSystemQuerySchema,
 } from "../query-params.js";
 
 // ── booleanQueryParam ────────────────────────────────────────────
@@ -53,6 +55,21 @@ describe("booleanQueryParam", () => {
 
   it("rejects number", () => {
     const result = booleanQueryParam.safeParse(1);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects 'True' (case-sensitive)", () => {
+    const result = booleanQueryParam.safeParse("True");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects 'FALSE' (case-sensitive)", () => {
+    const result = booleanQueryParam.safeParse("FALSE");
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects null", () => {
+    const result = booleanQueryParam.safeParse(null);
     expect(result.success).toBe(false);
   });
 });
@@ -159,6 +176,11 @@ describe("RelationshipQuerySchema", () => {
     const result = RelationshipQuerySchema.safeParse({ memberId: "random-string" });
     expect(result.success).toBe(false);
   });
+
+  it("rejects 'null' string value for memberId", () => {
+    const result = RelationshipQuerySchema.safeParse({ memberId: "null" });
+    expect(result.success).toBe(false);
+  });
 });
 
 // ── InnerWorldEntityQuerySchema ──────────────────────────────────
@@ -205,15 +227,14 @@ describe("InnerWorldEntityQuerySchema", () => {
   });
 });
 
-// ── StructureLinkQuerySchema ─────────────────────────────────────
+// ── SubsystemLayerQuerySchema ──────────────────────────────────
 
-describe("StructureLinkQuerySchema", () => {
+describe("SubsystemLayerQuerySchema", () => {
   const VALID_SUBSYSTEM_ID = "sub_550e8400-e29b-41d4-a716-446655440000";
   const VALID_LAYER_ID = "lyr_550e8400-e29b-41d4-a716-446655440000";
-  const VALID_SIDE_SYSTEM_ID = "ss_550e8400-e29b-41d4-a716-446655440000";
 
   it("accepts valid subsystemId and layerId", () => {
-    const result = StructureLinkQuerySchema.safeParse({
+    const result = SubsystemLayerQuerySchema.safeParse({
       subsystemId: VALID_SUBSYSTEM_ID,
       layerId: VALID_LAYER_ID,
     });
@@ -224,49 +245,140 @@ describe("StructureLinkQuerySchema", () => {
     }
   });
 
-  it("accepts valid sideSystemId", () => {
-    const result = StructureLinkQuerySchema.safeParse({
-      sideSystemId: VALID_SIDE_SYSTEM_ID,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.sideSystemId).toBe(VALID_SIDE_SYSTEM_ID);
-    }
-  });
-
   it("accepts all fields omitted", () => {
-    const result = StructureLinkQuerySchema.safeParse({});
+    const result = SubsystemLayerQuerySchema.safeParse({});
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.subsystemId).toBeUndefined();
       expect(result.data.layerId).toBeUndefined();
-      expect(result.data.sideSystemId).toBeUndefined();
     }
   });
 
   it("rejects subsystemId with wrong prefix", () => {
-    const result = StructureLinkQuerySchema.safeParse({
+    const result = SubsystemLayerQuerySchema.safeParse({
       subsystemId: "mem_550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects layerId with wrong prefix", () => {
-    const result = StructureLinkQuerySchema.safeParse({
+    const result = SubsystemLayerQuerySchema.safeParse({
       layerId: "mem_550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(false);
   });
 
+  it("rejects subsystemId with malformed UUID", () => {
+    const result = SubsystemLayerQuerySchema.safeParse({ subsystemId: "sub_bad" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects layerId with malformed UUID", () => {
+    const result = SubsystemLayerQuerySchema.safeParse({ layerId: "lyr_bad" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ── SubsystemSideSystemQuerySchema ─────────────────────────────
+
+describe("SubsystemSideSystemQuerySchema", () => {
+  const VALID_SUBSYSTEM_ID = "sub_550e8400-e29b-41d4-a716-446655440000";
+  const VALID_SIDE_SYSTEM_ID = "ss_550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid subsystemId and sideSystemId", () => {
+    const result = SubsystemSideSystemQuerySchema.safeParse({
+      subsystemId: VALID_SUBSYSTEM_ID,
+      sideSystemId: VALID_SIDE_SYSTEM_ID,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.subsystemId).toBe(VALID_SUBSYSTEM_ID);
+      expect(result.data.sideSystemId).toBe(VALID_SIDE_SYSTEM_ID);
+    }
+  });
+
+  it("accepts all fields omitted", () => {
+    const result = SubsystemSideSystemQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.subsystemId).toBeUndefined();
+      expect(result.data.sideSystemId).toBeUndefined();
+    }
+  });
+
+  it("rejects subsystemId with wrong prefix", () => {
+    const result = SubsystemSideSystemQuerySchema.safeParse({
+      subsystemId: "mem_550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects sideSystemId with wrong prefix", () => {
-    const result = StructureLinkQuerySchema.safeParse({
+    const result = SubsystemSideSystemQuerySchema.safeParse({
       sideSystemId: "mem_550e8400-e29b-41d4-a716-446655440000",
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects subsystemId with malformed UUID", () => {
-    const result = StructureLinkQuerySchema.safeParse({ subsystemId: "sub_bad" });
+    const result = SubsystemSideSystemQuerySchema.safeParse({ subsystemId: "sub_bad" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects sideSystemId with malformed UUID", () => {
+    const result = SubsystemSideSystemQuerySchema.safeParse({ sideSystemId: "ss_bad" });
+    expect(result.success).toBe(false);
+  });
+});
+
+// ── SideSystemLayerQuerySchema ─────────────────────────────────
+
+describe("SideSystemLayerQuerySchema", () => {
+  const VALID_SIDE_SYSTEM_ID = "ss_550e8400-e29b-41d4-a716-446655440000";
+  const VALID_LAYER_ID = "lyr_550e8400-e29b-41d4-a716-446655440000";
+
+  it("accepts valid sideSystemId and layerId", () => {
+    const result = SideSystemLayerQuerySchema.safeParse({
+      sideSystemId: VALID_SIDE_SYSTEM_ID,
+      layerId: VALID_LAYER_ID,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.sideSystemId).toBe(VALID_SIDE_SYSTEM_ID);
+      expect(result.data.layerId).toBe(VALID_LAYER_ID);
+    }
+  });
+
+  it("accepts all fields omitted", () => {
+    const result = SideSystemLayerQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.sideSystemId).toBeUndefined();
+      expect(result.data.layerId).toBeUndefined();
+    }
+  });
+
+  it("rejects sideSystemId with wrong prefix", () => {
+    const result = SideSystemLayerQuerySchema.safeParse({
+      sideSystemId: "mem_550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects layerId with wrong prefix", () => {
+    const result = SideSystemLayerQuerySchema.safeParse({
+      layerId: "mem_550e8400-e29b-41d4-a716-446655440000",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects sideSystemId with malformed UUID", () => {
+    const result = SideSystemLayerQuerySchema.safeParse({ sideSystemId: "ss_bad" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects layerId with malformed UUID", () => {
+    const result = SideSystemLayerQuerySchema.safeParse({ layerId: "lyr_bad" });
     expect(result.success).toBe(false);
   });
 });

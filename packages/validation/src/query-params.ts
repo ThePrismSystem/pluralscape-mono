@@ -1,7 +1,8 @@
 import { z } from "zod/v4";
 
-import type { LIFECYCLE_EVENT_TYPES } from "./lifecycle-event.js";
-import type { Brand } from "@pluralscape/types";
+import { LIFECYCLE_EVENT_TYPES } from "./lifecycle-event.js";
+
+import type { Brand, IdPrefixBrandMap } from "@pluralscape/types";
 
 // ── Boolean query param ─────────────────────────────────────────
 
@@ -20,18 +21,18 @@ export const booleanQueryParam = z
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
- * Creates a Zod schema for an optional branded ID query parameter.
+ * Creates a Zod schema for a branded ID query parameter.
  * Validates that the value starts with the expected prefix followed by a valid UUID.
  * Uses z.custom to produce the correct branded output type (same approach as brandedString).
+ * Chain `.optional()` at the call site if the parameter is optional.
  */
-function brandedIdQueryParam<B extends string>(
-  prefix: string,
-): z.ZodType<Brand<string, B> | undefined> {
-  return z.custom<Brand<string, B> | undefined>((val) => {
-    if (val === undefined || val === null) return true;
+function brandedIdQueryParam<P extends keyof IdPrefixBrandMap>(
+  prefix: P,
+): z.ZodType<Brand<string, IdPrefixBrandMap[P]>> {
+  return z.custom<Brand<string, IdPrefixBrandMap[P]>>((val) => {
     if (typeof val !== "string") return false;
     return val.startsWith(prefix) && UUID_REGEX.test(val.slice(prefix.length));
-  });
+  }, `Expected a valid ${prefix}<uuid> identifier`);
 }
 
 // ── Lifecycle event query schema ────────────────────────────────
@@ -41,23 +42,7 @@ function brandedIdQueryParam<B extends string>(
  * Validates eventType against the known lifecycle event type enum.
  */
 export const LifecycleEventQuerySchema = z.object({
-  eventType: z
-    .enum([
-      "split",
-      "fusion",
-      "merge",
-      "unmerge",
-      "dormancy-start",
-      "dormancy-end",
-      "discovery",
-      "archival",
-      "subsystem-formation",
-      "form-change",
-      "name-change",
-      "structure-move",
-      "innerworld-move",
-    ] satisfies readonly (typeof LIFECYCLE_EVENT_TYPES)[number][])
-    .optional(),
+  eventType: z.enum(LIFECYCLE_EVENT_TYPES).optional(),
 });
 
 // ── Relationship query schema ───────────────────────────────────
@@ -67,7 +52,7 @@ export const LifecycleEventQuerySchema = z.object({
  * Validates memberId with branded ID prefix check.
  */
 export const RelationshipQuerySchema = z.object({
-  memberId: brandedIdQueryParam<"MemberId">("mem_"),
+  memberId: brandedIdQueryParam("mem_").optional(),
 });
 
 // ── Inner world entity query schema ─────────────────────────────
@@ -77,20 +62,34 @@ export const RelationshipQuerySchema = z.object({
  * Validates regionId with branded ID prefix check and includeArchived boolean.
  */
 export const InnerWorldEntityQuerySchema = z.object({
-  regionId: brandedIdQueryParam<"InnerWorldRegionId">("iwr_"),
+  regionId: brandedIdQueryParam("iwr_").optional(),
   includeArchived: booleanQueryParam,
 });
 
-// ── Structure link query schema ─────────────────────────────────
+// ── Structure link query schemas ────────────────────────────────
 
 /**
- * Query parameters for structure link list endpoints.
- * Validates subsystemId, layerId, and sideSystemId with branded ID prefix checks.
+ * Query parameters for the subsystem ↔ layer link list endpoint.
  */
-export const StructureLinkQuerySchema = z.object({
-  subsystemId: brandedIdQueryParam<"SubsystemId">("sub_"),
-  layerId: brandedIdQueryParam<"LayerId">("lyr_"),
-  sideSystemId: brandedIdQueryParam<"SideSystemId">("ss_"),
+export const SubsystemLayerQuerySchema = z.object({
+  subsystemId: brandedIdQueryParam("sub_").optional(),
+  layerId: brandedIdQueryParam("lyr_").optional(),
+});
+
+/**
+ * Query parameters for the subsystem ↔ side system link list endpoint.
+ */
+export const SubsystemSideSystemQuerySchema = z.object({
+  subsystemId: brandedIdQueryParam("sub_").optional(),
+  sideSystemId: brandedIdQueryParam("ss_").optional(),
+});
+
+/**
+ * Query parameters for the side system ↔ layer link list endpoint.
+ */
+export const SideSystemLayerQuerySchema = z.object({
+  sideSystemId: brandedIdQueryParam("ss_").optional(),
+  layerId: brandedIdQueryParam("lyr_").optional(),
 });
 
 // ── Include-archived query schema ───────────────────────────────

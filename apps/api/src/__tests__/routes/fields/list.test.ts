@@ -109,11 +109,11 @@ describe("GET /systems/:systemId/fields", () => {
     expect(body.hasMore).toBe(true);
   });
 
-  it("forwards systemId, auth, cursor, limit, and include_archived to service", async () => {
+  it("forwards systemId, auth, cursor, limit, and includeArchived to service", async () => {
     vi.mocked(listFieldDefinitions).mockResolvedValueOnce(EMPTY_PAGE);
 
     const app = createApp();
-    await app.request(`/systems/${SYS_ID}/fields?cursor=fld_abc&limit=10&include_archived=true`);
+    await app.request(`/systems/${SYS_ID}/fields?cursor=fld_abc&limit=10&includeArchived=true`);
 
     expect(vi.mocked(listFieldDefinitions)).toHaveBeenCalledWith(
       expect.anything(),
@@ -155,11 +155,11 @@ describe("GET /systems/:systemId/fields", () => {
     expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
 
-  it("returns 400 for invalid include_archived value", async () => {
+  it("returns 400 for invalid includeArchived value", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const app = createApp();
-    const res = await app.request(`/systems/${SYS_ID}/fields?include_archived=yes`);
+    const res = await app.request(`/systems/${SYS_ID}/fields?includeArchived=yes`);
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as ApiErrorResponse;

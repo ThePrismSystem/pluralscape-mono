@@ -82,7 +82,9 @@ export {
   InnerWorldEntityQuerySchema,
   LifecycleEventQuerySchema,
   RelationshipQuerySchema,
-  StructureLinkQuerySchema,
+  SideSystemLayerQuerySchema,
+  SubsystemLayerQuerySchema,
+  SubsystemSideSystemQuerySchema,
 } from "./query-params.js";
 export {
   AUTH_MIN_PASSWORD_LENGTH,

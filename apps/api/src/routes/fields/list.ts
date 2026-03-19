@@ -21,7 +21,7 @@ listRoute.get("/", async (c) => {
   const cursorParam = c.req.query("cursor");
   const limitParam = c.req.query("limit");
   const { includeArchived } = IncludeArchivedQuerySchema.parse({
-    includeArchived: c.req.query("include_archived"),
+    includeArchived: c.req.query("includeArchived"),
   });
   const limit = parsePaginationLimit(limitParam, DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT);
 

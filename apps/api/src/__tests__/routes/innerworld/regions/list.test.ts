@@ -96,6 +96,19 @@ describe("GET /systems/:id/innerworld/regions", () => {
     expect(vi.mocked(listRegions)).toHaveBeenCalledOnce();
   });
 
+  it("forwards includeArchived=true to service", async () => {
+    vi.mocked(listRegions).mockResolvedValueOnce(EMPTY_PAGE);
+
+    await createApp().request(`${BASE_URL}?includeArchived=true`);
+
+    expect(vi.mocked(listRegions)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      MOCK_AUTH,
+      expect.objectContaining({ includeArchived: true }),
+    );
+  });
+
   it("returns 400 for invalid includeArchived value", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
