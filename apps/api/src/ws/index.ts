@@ -16,11 +16,12 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 
 import { upgradeWebSocket, websocket } from "./bun-adapter.js";
 import { ConnectionManager } from "./connection-manager.js";
-import { routeMessage } from "./message-router.js";
+import { createRouterContext, routeMessage } from "./message-router.js";
 import {
   WS_AUTH_TIMEOUT_MS,
   WS_CLOSE_POLICY_VIOLATION,
   WS_MAX_UNAUTHED_CONNECTIONS,
+  WS_RELAY_MAX_DOCUMENTS,
   WS_SUBPROTOCOL,
 } from "./ws.constants.js";
 
@@ -29,6 +30,7 @@ import type { AppLogger } from "../lib/logger.js";
 // ── Singleton connection manager ────────────────────────────────────
 
 export const connectionManager = new ConnectionManager();
+const routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS);
 
 // ── Public API for shutdown ─────────────────────────────────────────
 
@@ -134,12 +136,14 @@ syncWsApp.get(
           return;
         }
 
-        void routeMessage(evt.data, state, connectionManager, log).catch((err: unknown) => {
-          log.error("Unhandled error in routeMessage", {
-            connectionId,
-            error: err instanceof Error ? err.message : String(err),
-          });
-        });
+        void routeMessage(evt.data, state, connectionManager, log, routerCtx).catch(
+          (err: unknown) => {
+            log.error("Unhandled error in routeMessage", {
+              connectionId,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          },
+        );
       },
 
       onClose() {

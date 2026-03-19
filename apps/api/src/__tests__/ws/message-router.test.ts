@@ -3,11 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
-import { routeMessage, _testDocumentOwnership } from "../../ws/message-router.js";
+import { createRouterContext, routeMessage } from "../../ws/message-router.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { SyncConnectionState } from "../../ws/connection-state.js";
+import type { RouterContext } from "../../ws/message-router.js";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 // ── Mocks ───────────────────────────────────────────────────────────
@@ -75,23 +76,25 @@ function authRequest(): string {
 describe("message-router", () => {
   let manager: ConnectionManager;
   let state: SyncConnectionState;
+  let ctx: RouterContext;
   const log = mockLog();
 
   beforeEach(() => {
     manager = new ConnectionManager();
     manager.reserveUnauthSlot();
     state = manager.register("conn-1", mockWs() as never, Date.now());
+    ctx = createRouterContext(1000);
     sent.length = 0;
   });
 
   afterEach(() => {
     manager.closeAll(1001, "test cleanup");
-    _testDocumentOwnership.clear();
+    ctx.documentOwnership.clear();
   });
 
   describe("awaiting-auth phase", () => {
     it("accepts AuthenticateRequest as first message", async () => {
-      await routeMessage(authRequest(), state, manager, log);
+      await routeMessage(authRequest(), state, manager, log, ctx);
 
       // authenticate() creates a new object — check the manager's copy
       expect(manager.get("conn-1")?.phase).toBe("authenticated");
@@ -105,6 +108,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -113,7 +117,7 @@ describe("message-router", () => {
     });
 
     it("rejects invalid JSON", async () => {
-      await routeMessage("not json {{{", state, manager, log);
+      await routeMessage("not json {{{", state, manager, log, ctx);
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
@@ -121,7 +125,7 @@ describe("message-router", () => {
     });
 
     it("rejects missing type field", async () => {
-      await routeMessage(JSON.stringify({ correlationId: null }), state, manager, log);
+      await routeMessage(JSON.stringify({ correlationId: null }), state, manager, log, ctx);
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
@@ -141,6 +145,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -151,7 +156,7 @@ describe("message-router", () => {
 
   describe("authenticated phase", () => {
     beforeEach(async () => {
-      await routeMessage(authRequest(), state, manager, log);
+      await routeMessage(authRequest(), state, manager, log, ctx);
       // Re-fetch state — authenticate() creates a new object in the map
       const refreshed = manager.get("conn-1");
       if (!refreshed) throw new Error("State not found after auth");
@@ -169,6 +174,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -181,6 +187,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -198,6 +205,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -214,6 +222,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -227,6 +236,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       // UnsubscribeRequest produces no response
@@ -244,6 +254,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       // DocumentLoadRequest produces two responses
@@ -262,6 +273,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -270,7 +282,7 @@ describe("message-router", () => {
     });
 
     it("rejects second AuthenticateRequest", async () => {
-      await routeMessage(authRequest(), state, manager, log);
+      await routeMessage(authRequest(), state, manager, log, ctx);
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
@@ -288,6 +300,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -317,14 +330,14 @@ describe("message-router", () => {
         rateLimitStrikes: 0,
         authTimeoutHandle: null,
       };
-      await routeMessage(authRequest(), closingState, manager, log);
+      await routeMessage(authRequest(), closingState, manager, log, ctx);
       expect(sent).toHaveLength(0);
     });
   });
 
   describe("rate limiting", () => {
     beforeEach(async () => {
-      await routeMessage(authRequest(), state, manager, log);
+      await routeMessage(authRequest(), state, manager, log, ctx);
       const refreshed = manager.get("conn-1");
       if (!refreshed) throw new Error("State not found after auth");
       state = refreshed;
@@ -341,6 +354,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -354,7 +368,7 @@ describe("message-router", () => {
       strikeManager.reserveUnauthSlot();
       const strikeStateInit = strikeManager.register("conn-strike", ws as never, Date.now());
       // Authenticate first
-      await routeMessage(authRequest(), strikeStateInit, strikeManager, log);
+      await routeMessage(authRequest(), strikeStateInit, strikeManager, log, ctx);
       const strikeState = strikeManager.get("conn-strike");
       if (!strikeState) throw new Error("State not found after auth");
       sent.length = 0;
@@ -369,6 +383,7 @@ describe("message-router", () => {
         strikeState,
         strikeManager,
         log,
+        ctx,
       );
 
       expect(ws.close).toHaveBeenCalled();
@@ -383,6 +398,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       expect(state.rateLimitStrikes).toBe(0);
@@ -409,7 +425,7 @@ describe("message-router", () => {
       const brokenState = brokenManager.register("conn-broken", brokenWs as never, Date.now());
 
       // Authenticate first (this send will also fail but we need the state)
-      await routeMessage(authRequest(), brokenState, brokenManager, warnLog);
+      await routeMessage(authRequest(), brokenState, brokenManager, warnLog, ctx);
 
       // The send failure should have been logged
       expect(warnFn).toHaveBeenCalledWith(
@@ -425,7 +441,7 @@ describe("message-router", () => {
 
   describe("prototype pollution prevention", () => {
     beforeEach(async () => {
-      await routeMessage(authRequest(), state, manager, log);
+      await routeMessage(authRequest(), state, manager, log, ctx);
       const refreshed = manager.get("conn-1");
       if (!refreshed) throw new Error("State not found after auth");
       state = refreshed;
@@ -438,6 +454,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -452,6 +469,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -462,7 +480,7 @@ describe("message-router", () => {
 
   describe("document access control", () => {
     beforeEach(async () => {
-      await routeMessage(authRequest(), state, manager, log);
+      await routeMessage(authRequest(), state, manager, log, ctx);
       const refreshed = manager.get("conn-1");
       if (!refreshed) throw new Error("State not found after auth");
       state = refreshed;
@@ -487,15 +505,16 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("ChangeAccepted");
-      expect(_testDocumentOwnership.get("doc-acl-1")).toBe("sys_test");
+      expect(ctx.documentOwnership.get("doc-acl-1")).toBe("sys_test");
     });
 
     it("rejects submit to doc owned by another system", async () => {
-      _testDocumentOwnership.set("doc-acl-2", "sys_other");
+      ctx.documentOwnership.set("doc-acl-2", "sys_other");
 
       const change = {
         ciphertext: Buffer.from("test").toString("base64url"),
@@ -514,6 +533,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -522,13 +542,14 @@ describe("message-router", () => {
     });
 
     it("rejects read on doc owned by another system", async () => {
-      _testDocumentOwnership.set("doc-acl-3", "sys_other");
+      ctx.documentOwnership.set("doc-acl-3", "sys_other");
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-acl-3" }),
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -537,13 +558,14 @@ describe("message-router", () => {
     });
 
     it("allows read on doc owned by same system", async () => {
-      _testDocumentOwnership.set("doc-acl-4", "sys_test");
+      ctx.documentOwnership.set("doc-acl-4", "sys_test");
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-acl-4" }),
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -556,6 +578,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();
@@ -563,7 +586,7 @@ describe("message-router", () => {
     });
 
     it("rejects DocumentLoadRequest on doc owned by another system", async () => {
-      _testDocumentOwnership.set("doc-acl-5", "sys_other");
+      ctx.documentOwnership.set("doc-acl-5", "sys_other");
 
       await routeMessage(
         JSON.stringify({
@@ -575,6 +598,7 @@ describe("message-router", () => {
         state,
         manager,
         log,
+        ctx,
       );
 
       const resp = lastResponse();

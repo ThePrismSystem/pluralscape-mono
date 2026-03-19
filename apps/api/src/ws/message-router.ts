@@ -27,11 +27,10 @@ import {
   WS_RATE_LIMIT_STRIKE_MAX,
   WS_READ_RATE_LIMIT,
   WS_READ_RATE_WINDOW_MS,
-  WS_RELAY_MAX_DOCUMENTS,
 } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
-import type { SyncConnectionState } from "./connection-state.js";
+import type { AuthenticatedState, SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
 import type {
@@ -40,29 +39,43 @@ import type {
   SubmitSnapshotRequest,
   SyncError,
 } from "@pluralscape/sync";
-import type { ZodError } from "zod";
+import type { ZodType } from "zod";
 
-// ── Singleton relay (Phase 1: in-memory) ────────────────────────────
+// ── DI Context ───────────────────────────────────────────────────────
 
-const relay = new EncryptedRelay({
-  maxDocuments: WS_RELAY_MAX_DOCUMENTS,
-  onEvict: (docId) => {
-    documentOwnership.delete(docId);
-  },
-});
+/** Dependencies injected into the router (testable without module singletons). */
+export interface RouterContext {
+  readonly relay: EncryptedRelay;
+  readonly documentOwnership: Map<string, string>;
+}
 
-// ── Document ownership (Phase 1: in-memory ACL) ────────────────────
+/** Create a RouterContext with linked relay eviction → ownership cleanup. */
+export function createRouterContext(maxDocuments: number): RouterContext {
+  const documentOwnership = new Map<string, string>();
+  const relay = new EncryptedRelay({
+    maxDocuments,
+    onEvict: (docId) => {
+      documentOwnership.delete(docId);
+    },
+  });
+  return { relay, documentOwnership };
+}
 
-/**
- * Maps docId → systemId of the first writer. Used to enforce that only
- * the owning system can read or write a document. Unowned documents
- * (never written to) are accessible to any authenticated connection.
- */
-const documentOwnership = new Map<string, string>();
+// ── Type guard ───────────────────────────────────────────────────────
+
+function isClientMessageType(type: string): type is ClientMessageType {
+  return Object.hasOwn(CLIENT_MESSAGE_SCHEMAS, type);
+}
+
+// ── Document access ──────────────────────────────────────────────────
 
 /** Check whether systemId is allowed to access docId. */
-function checkDocumentAccess(docId: string, systemId: string): boolean {
-  const owner = documentOwnership.get(docId);
+function checkDocumentAccess(
+  docId: string,
+  systemId: string,
+  ownership: Map<string, string>,
+): boolean {
+  const owner = ownership.get(docId);
   return owner === undefined || owner === systemId;
 }
 
@@ -102,7 +115,7 @@ function sendErrorAndClose(
 function sendValidationError(
   state: SyncConnectionState,
   messageType: string,
-  zodError: ZodError,
+  zodError: { issues: Array<{ message?: string }> },
   log: AppLogger,
 ): void {
   const detail = zodError.issues[0]?.message ?? "Validation failed";
@@ -119,26 +132,102 @@ function sendValidationError(
   );
 }
 
-// ── Rate limiting ───────────────────────────────────────────────────
+// ── Dispatch helpers ─────────────────────────────────────────────────
 
-function checkRateLimit(state: SyncConnectionState, isMutation: boolean): boolean {
+/** Parse a message with a Zod schema. Returns null and sends error on failure. */
+function parseMessage<T>(
+  schema: ZodType<T>,
+  parsed: unknown,
+  state: SyncConnectionState,
+  messageType: string,
+  log: AppLogger,
+): T | null {
+  const result = schema.safeParse(parsed);
+  if (!result.success) {
+    sendValidationError(state, messageType, result.error, log);
+    return null;
+  }
+  return result.data;
+}
+
+/** Check document access. Returns false and sends PERMISSION_DENIED on failure. */
+function checkAccess(
+  docId: string,
+  systemId: string,
+  correlationId: string | null,
+  state: SyncConnectionState,
+  log: AppLogger,
+  ownership: Map<string, string>,
+): boolean {
+  if (!checkDocumentAccess(docId, systemId, ownership)) {
+    send(
+      state,
+      {
+        type: "SyncError",
+        correlationId,
+        code: "PERMISSION_DENIED",
+        message: "Access denied",
+        docId,
+      },
+      log,
+    );
+    return false;
+  }
+  return true;
+}
+
+// ── Sliding window rate limiting ─────────────────────────────────────
+
+function checkRateLimit(state: AuthenticatedState, isMutation: boolean): boolean {
   const now = Date.now();
+  const windowMs = isMutation ? WS_MUTATION_RATE_WINDOW_MS : WS_READ_RATE_WINDOW_MS;
+  const limit = isMutation ? WS_MUTATION_RATE_LIMIT : WS_READ_RATE_LIMIT;
+
+  let count: number;
+  let prevCount: number;
+  let windowStart: number;
 
   if (isMutation) {
-    if (now - state.mutationWindowStart > WS_MUTATION_RATE_WINDOW_MS) {
-      state.mutationCount = 0;
-      state.mutationWindowStart = now;
-    }
-    state.mutationCount++;
-    return state.mutationCount <= WS_MUTATION_RATE_LIMIT;
+    count = state.mutationCount;
+    prevCount = state.mutationPreviousCount;
+    windowStart = state.mutationWindowStart;
+  } else {
+    count = state.readCount;
+    prevCount = state.readPreviousCount;
+    windowStart = state.readWindowStart;
   }
 
-  if (now - state.readWindowStart > WS_READ_RATE_WINDOW_MS) {
-    state.readCount = 0;
-    state.readWindowStart = now;
+  const doubleWindow = 2;
+  if (now - windowStart >= doubleWindow * windowMs) {
+    // Both windows expired
+    prevCount = 0;
+    count = 0;
+    windowStart = now;
+  } else if (now - windowStart >= windowMs) {
+    // Current window expired — rotate
+    prevCount = count;
+    count = 0;
+    windowStart = now;
   }
-  state.readCount++;
-  return state.readCount <= WS_READ_RATE_LIMIT;
+  count++;
+
+  // Interpolate: weight previous window by overlap fraction
+  const elapsed = now - windowStart;
+  const weight = Math.max(0, 1 - elapsed / windowMs);
+  const effectiveCount = prevCount * weight + count;
+
+  // Write back
+  if (isMutation) {
+    state.mutationCount = count;
+    state.mutationPreviousCount = prevCount;
+    state.mutationWindowStart = windowStart;
+  } else {
+    state.readCount = count;
+    state.readPreviousCount = prevCount;
+    state.readWindowStart = windowStart;
+  }
+
+  return effectiveCount <= limit;
 }
 
 // ── Router ──────────────────────────────────────────────────────────
@@ -156,6 +245,7 @@ export async function routeMessage(
   state: SyncConnectionState,
   manager: ConnectionManager,
   log: AppLogger,
+  ctx: RouterContext,
 ): Promise<void> {
   // Phase: closing — discard silently
   if (state.phase === "closing") return;
@@ -269,7 +359,7 @@ export async function routeMessage(
   // awaiting-auth returns above). state.systemId and state.auth are guaranteed non-null.
 
   // 4. Phase: authenticated — validate type is known
-  if (!Object.hasOwn(CLIENT_MESSAGE_SCHEMAS, messageType)) {
+  if (!isClientMessageType(messageType)) {
     send(
       state,
       {
@@ -300,8 +390,8 @@ export async function routeMessage(
     return;
   }
 
-  // 5. Rate limit check (safe cast: Object.hasOwn guard proves messageType is a valid key)
-  const isMutation = MUTATION_MESSAGE_TYPES.has(messageType as ClientMessageType);
+  // 5. Rate limit check
+  const isMutation = MUTATION_MESSAGE_TYPES.has(messageType);
   if (!checkRateLimit(state, isMutation)) {
     state.rateLimitStrikes++;
     send(
@@ -330,131 +420,101 @@ export async function routeMessage(
   }
   state.rateLimitStrikes = 0;
 
-  // 6. Validate and dispatch — each branch validates with its specific schema,
-  // giving TypeScript perfect type inference without `as never` casts.
-  // Safe cast: Object.hasOwn guard above proves messageType is a valid key.
-  const typedMessageType = messageType as ClientMessageType;
-  switch (typedMessageType) {
+  // 6. Validate and dispatch using helpers
+  const { relay, documentOwnership } = ctx;
+  switch (messageType) {
     case "ManifestRequest": {
-      const result = CLIENT_MESSAGE_SCHEMAS.ManifestRequest.safeParse(parsed);
-      if (!result.success) {
-        sendValidationError(state, messageType, result.error, log);
-        return;
-      }
-      const response = handleManifestRequest(result.data);
-      send(state, response, log);
+      const msg = parseMessage(
+        CLIENT_MESSAGE_SCHEMAS.ManifestRequest,
+        parsed,
+        state,
+        messageType,
+        log,
+      );
+      if (!msg) return;
+      send(state, handleManifestRequest(msg), log);
       break;
     }
     case "SubscribeRequest": {
-      const result = CLIENT_MESSAGE_SCHEMAS.SubscribeRequest.safeParse(parsed);
-      if (!result.success) {
-        sendValidationError(state, messageType, result.error, log);
-        return;
-      }
-      for (const entry of result.data.documents) {
-        if (!checkDocumentAccess(entry.docId, state.systemId)) {
-          send(
+      const msg = parseMessage(
+        CLIENT_MESSAGE_SCHEMAS.SubscribeRequest,
+        parsed,
+        state,
+        messageType,
+        log,
+      );
+      if (!msg) return;
+      for (const entry of msg.documents) {
+        if (
+          !checkAccess(
+            entry.docId,
+            state.systemId,
+            msg.correlationId,
             state,
-            {
-              type: "SyncError",
-              correlationId: result.data.correlationId,
-              code: "PERMISSION_DENIED",
-              message: "Access denied",
-              docId: entry.docId,
-            },
             log,
-          );
+            documentOwnership,
+          )
+        )
           return;
-        }
       }
-      const response = handleSubscribeRequest(result.data, state, manager, relay);
-      send(state, response, log);
+      send(state, handleSubscribeRequest(msg, state, manager, relay), log);
       break;
     }
     case "UnsubscribeRequest": {
-      const result = CLIENT_MESSAGE_SCHEMAS.UnsubscribeRequest.safeParse(parsed);
-      if (!result.success) {
-        sendValidationError(state, messageType, result.error, log);
-        return;
-      }
-      handleUnsubscribeRequest(result.data, state, manager);
+      const msg = parseMessage(
+        CLIENT_MESSAGE_SCHEMAS.UnsubscribeRequest,
+        parsed,
+        state,
+        messageType,
+        log,
+      );
+      if (!msg) return;
+      handleUnsubscribeRequest(msg, state, manager);
       break;
     }
     case "FetchSnapshotRequest": {
-      const result = CLIENT_MESSAGE_SCHEMAS.FetchSnapshotRequest.safeParse(parsed);
-      if (!result.success) {
-        sendValidationError(state, messageType, result.error, log);
+      const msg = parseMessage(
+        CLIENT_MESSAGE_SCHEMAS.FetchSnapshotRequest,
+        parsed,
+        state,
+        messageType,
+        log,
+      );
+      if (!msg) return;
+      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
-      }
-      if (!checkDocumentAccess(result.data.docId, state.systemId)) {
-        send(
-          state,
-          {
-            type: "SyncError",
-            correlationId: result.data.correlationId,
-            code: "PERMISSION_DENIED",
-            message: "Access denied",
-            docId: result.data.docId,
-          },
-          log,
-        );
-        return;
-      }
-      const response = handleFetchSnapshot(result.data, relay);
-      send(state, response, log);
+      send(state, handleFetchSnapshot(msg, relay), log);
       break;
     }
     case "FetchChangesRequest": {
-      const result = CLIENT_MESSAGE_SCHEMAS.FetchChangesRequest.safeParse(parsed);
-      if (!result.success) {
-        sendValidationError(state, messageType, result.error, log);
+      const msg = parseMessage(
+        CLIENT_MESSAGE_SCHEMAS.FetchChangesRequest,
+        parsed,
+        state,
+        messageType,
+        log,
+      );
+      if (!msg) return;
+      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
-      }
-      if (!checkDocumentAccess(result.data.docId, state.systemId)) {
-        send(
-          state,
-          {
-            type: "SyncError",
-            correlationId: result.data.correlationId,
-            code: "PERMISSION_DENIED",
-            message: "Access denied",
-            docId: result.data.docId,
-          },
-          log,
-        );
-        return;
-      }
-      const response = handleFetchChanges(result.data, relay);
-      send(state, response, log);
+      send(state, handleFetchChanges(msg, relay), log);
       break;
     }
     case "SubmitChangeRequest": {
-      const result = CLIENT_MESSAGE_SCHEMAS.SubmitChangeRequest.safeParse(parsed);
-      if (!result.success) {
-        sendValidationError(state, messageType, result.error, log);
-        return;
-      }
       // Boundary cast: Zod outputs plain Uint8Array, protocol types use branded crypto types
-      const msg = result.data as SubmitChangeRequest;
-      if (!checkDocumentAccess(msg.docId, state.systemId)) {
-        send(
-          state,
-          {
-            type: "SyncError",
-            correlationId: msg.correlationId,
-            code: "PERMISSION_DENIED",
-            message: "Access denied",
-            docId: msg.docId,
-          },
-          log,
-        );
+      const msg = parseMessage(
+        CLIENT_MESSAGE_SCHEMAS.SubmitChangeRequest,
+        parsed,
+        state,
+        messageType,
+        log,
+      ) as SubmitChangeRequest | null;
+      if (!msg) return;
+      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
-      }
       const { response, sequencedEnvelope } = handleSubmitChange(msg, relay);
       send(state, response, log);
       documentOwnership.set(msg.docId, state.systemId);
-
-      // Broadcast DocumentUpdate to all subscribers except submitter
       broadcastDocumentUpdate(
         {
           type: "DocumentUpdate",
@@ -469,70 +529,41 @@ export async function routeMessage(
       break;
     }
     case "SubmitSnapshotRequest": {
-      const result = CLIENT_MESSAGE_SCHEMAS.SubmitSnapshotRequest.safeParse(parsed);
-      if (!result.success) {
-        sendValidationError(state, messageType, result.error, log);
-        return;
-      }
       // Boundary cast: Zod outputs plain Uint8Array, protocol types use branded crypto types
-      const msg = result.data as SubmitSnapshotRequest;
-      if (!checkDocumentAccess(msg.docId, state.systemId)) {
-        send(
-          state,
-          {
-            type: "SyncError",
-            correlationId: msg.correlationId,
-            code: "PERMISSION_DENIED",
-            message: "Access denied",
-            docId: msg.docId,
-          },
-          log,
-        );
+      const msg = parseMessage(
+        CLIENT_MESSAGE_SCHEMAS.SubmitSnapshotRequest,
+        parsed,
+        state,
+        messageType,
+        log,
+      ) as SubmitSnapshotRequest | null;
+      if (!msg) return;
+      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
-      }
-      const response = handleSubmitSnapshot(msg, relay);
-      send(state, response, log);
+      send(state, handleSubmitSnapshot(msg, relay), log);
       documentOwnership.set(msg.docId, state.systemId);
       break;
     }
     case "DocumentLoadRequest": {
-      const result = CLIENT_MESSAGE_SCHEMAS.DocumentLoadRequest.safeParse(parsed);
-      if (!result.success) {
-        sendValidationError(state, messageType, result.error, log);
+      const msg = parseMessage(
+        CLIENT_MESSAGE_SCHEMAS.DocumentLoadRequest,
+        parsed,
+        state,
+        messageType,
+        log,
+      );
+      if (!msg) return;
+      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
-      }
-      if (!checkDocumentAccess(result.data.docId, state.systemId)) {
-        send(
-          state,
-          {
-            type: "SyncError",
-            correlationId: result.data.correlationId,
-            code: "PERMISSION_DENIED",
-            message: "Access denied",
-            docId: result.data.docId,
-          },
-          log,
-        );
-        return;
-      }
-      const [snapshotResp, changesResp] = handleDocumentLoad(result.data, relay);
+      const [snapshotResp, changesResp] = handleDocumentLoad(msg, relay);
       send(state, snapshotResp, log);
       send(state, changesResp, log);
       break;
     }
-    case "AuthenticateRequest": {
-      // Already handled above — this satisfies exhaustive switch
-      break;
-    }
     default: {
       // Compile-time enforcement: all ClientMessageType values handled
-      const _exhaustive: never = typedMessageType;
+      const _exhaustive: never = messageType;
       void _exhaustive;
     }
   }
 }
-
-// ── Exports for testing ─────────────────────────────────────────────
-
-export { relay as _testRelay };
-export { documentOwnership as _testDocumentOwnership };
