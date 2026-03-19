@@ -9,7 +9,7 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { BlobResult } from "../../../services/blob.service.js";
-import type { PaginatedResult } from "@pluralscape/types";
+import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -171,11 +171,11 @@ describe("GET /systems/:systemId/blobs", () => {
     );
   });
 
-  it("passes include_archived=true to service", async () => {
+  it("passes includeArchived=true to service", async () => {
     vi.mocked(listBlobs).mockResolvedValueOnce(EMPTY_PAGE);
 
     const app = createApp();
-    await app.request(`/systems/${SYS_ID}/blobs?include_archived=true`);
+    await app.request(`/systems/${SYS_ID}/blobs?includeArchived=true`);
 
     expect(vi.mocked(listBlobs)).toHaveBeenCalledWith(
       expect.anything(),
@@ -185,6 +185,17 @@ describe("GET /systems/:systemId/blobs", () => {
         includeArchived: true,
       }),
     );
+  });
+
+  it("returns 400 for invalid includeArchived value", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/blobs?includeArchived=yes`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("re-throws unexpected errors as 500", async () => {

@@ -8,6 +8,8 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
+import type { ApiErrorResponse } from "@pluralscape/types";
+
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/innerworld-entity.service.js", () => ({
@@ -94,6 +96,38 @@ describe("GET /systems/:id/innerworld/entities", () => {
 
     expect(res.status).toBe(200);
     expect(vi.mocked(listEntities)).toHaveBeenCalledOnce();
+  });
+
+  it("returns 400 for regionId with wrong prefix", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const res = await createApp().request(
+      `${BASE_URL}?regionId=mem_550e8400-e29b-41d4-a716-446655440000`,
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for regionId with malformed UUID", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const res = await createApp().request(`${BASE_URL}?regionId=iwr_not-a-uuid`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for invalid includeArchived value", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const res = await createApp().request(`${BASE_URL}?includeArchived=yes`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("applies the readDefault rate limit category", () => {

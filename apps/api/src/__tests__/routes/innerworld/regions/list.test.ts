@@ -8,6 +8,8 @@ import {
 } from "../../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../../helpers/route-test-setup.js";
 
+import type { ApiErrorResponse } from "@pluralscape/types";
+
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../../services/innerworld-region.service.js", () => ({
@@ -92,6 +94,29 @@ describe("GET /systems/:id/innerworld/regions", () => {
 
     expect(res.status).toBe(200);
     expect(vi.mocked(listRegions)).toHaveBeenCalledOnce();
+  });
+
+  it("forwards includeArchived=true to service", async () => {
+    vi.mocked(listRegions).mockResolvedValueOnce(EMPTY_PAGE);
+
+    await createApp().request(`${BASE_URL}?includeArchived=true`);
+
+    expect(vi.mocked(listRegions)).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(String),
+      MOCK_AUTH,
+      expect.objectContaining({ includeArchived: true }),
+    );
+  });
+
+  it("returns 400 for invalid includeArchived value", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const res = await createApp().request(`${BASE_URL}?includeArchived=yes`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("applies the readDefault rate limit category", () => {

@@ -11,7 +11,7 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { FieldDefinitionResult } from "../../../services/field-definition.service.js";
-import type { PaginatedResult } from "@pluralscape/types";
+import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -109,11 +109,11 @@ describe("GET /systems/:systemId/fields", () => {
     expect(body.hasMore).toBe(true);
   });
 
-  it("forwards systemId, auth, cursor, limit, and include_archived to service", async () => {
+  it("forwards systemId, auth, cursor, limit, and includeArchived to service", async () => {
     vi.mocked(listFieldDefinitions).mockResolvedValueOnce(EMPTY_PAGE);
 
     const app = createApp();
-    await app.request(`/systems/${SYS_ID}/fields?cursor=fld_abc&limit=10&include_archived=true`);
+    await app.request(`/systems/${SYS_ID}/fields?cursor=fld_abc&limit=10&includeArchived=true`);
 
     expect(vi.mocked(listFieldDefinitions)).toHaveBeenCalledWith(
       expect.anything(),
@@ -153,6 +153,17 @@ describe("GET /systems/:systemId/fields", () => {
 
   it("applies the readDefault rate limit category", () => {
     expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
+  });
+
+  it("returns 400 for invalid includeArchived value", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/fields?includeArchived=yes`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
   it("re-throws unexpected errors as 500", async () => {

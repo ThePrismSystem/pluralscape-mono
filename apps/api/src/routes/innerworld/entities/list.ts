@@ -1,4 +1,5 @@
 import { ID_PREFIXES, toCursor } from "@pluralscape/types";
+import { InnerWorldEntityQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
@@ -10,7 +11,6 @@ import { listEntities } from "../../../services/innerworld-entity.service.js";
 import { DEFAULT_ENTITY_LIMIT, MAX_ENTITY_LIMIT } from "./entities.constants.js";
 
 import type { AuthEnv } from "../../../lib/auth-context.js";
-import type { InnerWorldRegionId } from "@pluralscape/types";
 
 export const listRoute = new Hono<AuthEnv>();
 
@@ -20,8 +20,10 @@ listRoute.get("/", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_ENTITY_LIMIT, MAX_ENTITY_LIMIT);
-  const regionId = c.req.query("regionId") as InnerWorldRegionId | undefined;
-  const includeArchived = c.req.query("includeArchived") === "true";
+  const { regionId, includeArchived } = InnerWorldEntityQuerySchema.parse({
+    regionId: c.req.query("regionId"),
+    includeArchived: c.req.query("includeArchived"),
+  });
 
   const db = await getDb();
   const result = await listEntities(db, systemId, auth, {

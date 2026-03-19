@@ -1,4 +1,5 @@
 import { ID_PREFIXES, toCursor } from "@pluralscape/types";
+import { RelationshipQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
@@ -18,7 +19,9 @@ listRoute.get("/", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
-  const memberId = c.req.query("memberId");
+  const { memberId } = RelationshipQuerySchema.parse({
+    memberId: c.req.query("memberId"),
+  });
 
   const db = await getDb();
   const result = await listRelationships(

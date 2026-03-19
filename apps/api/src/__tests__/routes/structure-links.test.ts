@@ -6,7 +6,7 @@ import {
   mockDbFactory,
   mockRateLimitFactory,
 } from "../helpers/common-route-mocks.js";
-import { createRouteApp, postJSON } from "../helpers/route-test-setup.js";
+import { MOCK_AUTH, createRouteApp, postJSON } from "../helpers/route-test-setup.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
@@ -116,6 +116,43 @@ describe("GET /systems/:id/structure-links/subsystem-layer", () => {
     expect(body.items).toHaveLength(1);
   });
 
+  it("forwards valid subsystemId and layerId to service", async () => {
+    const subsystemId = "sub_550e8400-e29b-41d4-a716-446655440002";
+    const layerId = "lyr_550e8400-e29b-41d4-a716-446655440002";
+    vi.mocked(listSubsystemLayerLinks).mockResolvedValueOnce(MOCK_PAGINATED);
+    const app = createApp();
+    await app.request(`${BASE_URL}/subsystem-layer?subsystemId=${subsystemId}&layerId=${layerId}`);
+    expect(vi.mocked(listSubsystemLayerLinks)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      MOCK_AUTH,
+      undefined,
+      expect.any(Number),
+      subsystemId,
+      layerId,
+    );
+  });
+
+  it("returns 400 for subsystemId with wrong prefix", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const app = createApp();
+    const res = await app.request(
+      `${BASE_URL}/subsystem-layer?subsystemId=mem_550e8400-e29b-41d4-a716-446655440000`,
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for layerId with malformed UUID", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const app = createApp();
+    const res = await app.request(`${BASE_URL}/subsystem-layer?layerId=lyr_not-a-uuid`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("applies the readDefault rate limit category", () => {
     expect(vi.mocked(createCategoryRateLimiter)).toHaveBeenCalledWith("readDefault");
   });
@@ -175,6 +212,36 @@ describe("GET /systems/:id/structure-links/subsystem-side-system", () => {
     const body = (await res.json()) as { items: unknown[] };
     expect(body.items).toHaveLength(1);
   });
+
+  it("forwards valid subsystemId and sideSystemId to service", async () => {
+    const subsystemId = "sub_550e8400-e29b-41d4-a716-446655440002";
+    const sideSystemId = "ss_550e8400-e29b-41d4-a716-446655440002";
+    vi.mocked(listSubsystemSideSystemLinks).mockResolvedValueOnce(MOCK_PAGINATED);
+    const app = createApp();
+    await app.request(
+      `${BASE_URL}/subsystem-side-system?subsystemId=${subsystemId}&sideSystemId=${sideSystemId}`,
+    );
+    expect(vi.mocked(listSubsystemSideSystemLinks)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      MOCK_AUTH,
+      undefined,
+      expect.any(Number),
+      subsystemId,
+      sideSystemId,
+    );
+  });
+
+  it("returns 400 for sideSystemId with wrong prefix", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const app = createApp();
+    const res = await app.request(
+      `${BASE_URL}/subsystem-side-system?sideSystemId=mem_550e8400-e29b-41d4-a716-446655440000`,
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
 });
 
 describe("DELETE /systems/:id/structure-links/subsystem-side-system/:linkId", () => {
@@ -230,6 +297,34 @@ describe("GET /systems/:id/structure-links/side-system-layer", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: unknown[] };
     expect(body.items).toHaveLength(1);
+  });
+
+  it("forwards valid sideSystemId and layerId to service", async () => {
+    const sideSystemId = "ss_550e8400-e29b-41d4-a716-446655440002";
+    const layerId = "lyr_550e8400-e29b-41d4-a716-446655440002";
+    vi.mocked(listSideSystemLayerLinks).mockResolvedValueOnce(MOCK_PAGINATED);
+    const app = createApp();
+    await app.request(
+      `${BASE_URL}/side-system-layer?sideSystemId=${sideSystemId}&layerId=${layerId}`,
+    );
+    expect(vi.mocked(listSideSystemLayerLinks)).toHaveBeenCalledWith(
+      expect.anything(),
+      SYS_ID,
+      MOCK_AUTH,
+      undefined,
+      expect.any(Number),
+      sideSystemId,
+      layerId,
+    );
+  });
+
+  it("returns 400 for sideSystemId with malformed UUID", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const app = createApp();
+    const res = await app.request(`${BASE_URL}/side-system-layer?sideSystemId=ss_bad-uuid`);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 });
 
