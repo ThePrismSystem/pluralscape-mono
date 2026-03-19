@@ -3,8 +3,9 @@
 title: "API hardening: audit 013 findings"
 status: todo
 type: epic
+priority: normal
 created_at: 2026-03-18T15:57:18Z
-updated_at: 2026-03-18T15:57:18Z
+updated_at: 2026-03-19T11:39:43Z
 parent: ps-afy4
 ---
 

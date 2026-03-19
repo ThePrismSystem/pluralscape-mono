@@ -3,9 +3,20 @@
 title: Query result caching for system settings and field definitions
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-18T15:57:46Z
-updated_at: 2026-03-18T15:57:46Z
+updated_at: 2026-03-19T11:39:42Z
 parent: api-765x
 ---
 
 M16: Cache frequently-read, rarely-written data (system settings, field definitions) to reduce DB load.
+
+## Acceptance Criteria
+
+- System settings cached per-system with configurable TTL
+- Field definitions cached per-system with configurable TTL
+- Second read within TTL hits cache (no DB query)
+- Write to cached entity invalidates cache immediately
+- TTL expiry causes next read to fetch from DB
+- Cache keys scoped by systemId (no cross-system leakage)
+- Integration tests: read → cache hit → write → cache miss → read from DB

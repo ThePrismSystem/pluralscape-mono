@@ -6,6 +6,8 @@ type: milestone
 priority: normal
 created_at: 2026-03-08T12:15:46Z
 updated_at: 2026-03-16T07:15:38Z
+blocking:
+  - ps-afy4
 ---
 
 Domain types, database schema, encryption primitives, sync protocol design, i18n foundation
