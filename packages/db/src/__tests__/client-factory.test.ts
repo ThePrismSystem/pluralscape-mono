@@ -3,9 +3,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import Database from "better-sqlite3-multiple-ciphers";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createDatabase, createDatabaseFromEnv } from "../client/factory.js";
+import {
+  PG_POOL_CONNECT_TIMEOUT_SECONDS,
+  PG_POOL_IDLE_TIMEOUT_SECONDS,
+  PG_POOL_MAX_CONNECTIONS,
+  PG_POOL_MAX_LIFETIME_SECONDS,
+} from "../helpers/db.constants.js";
+
+import type { PgPoolOptions } from "../client/factory.js";
 
 describe("createDatabase", () => {
   it("returns a SQLite client when given sqlite config", async () => {
@@ -27,6 +35,75 @@ describe("createDatabase", () => {
       db.exec(`INSERT INTO child (id, parent_id) VALUES (1, 999)`);
     }).toThrow(/FOREIGN KEY constraint failed/);
     db.close();
+  });
+});
+
+describe("PG pool configuration", () => {
+  const capturedOptions: Record<string, unknown>[] = [];
+  const mockSql = { end: vi.fn().mockResolvedValue(undefined) };
+
+  beforeEach(() => {
+    vi.resetModules();
+    capturedOptions.length = 0;
+    vi.doMock("postgres", () => ({
+      default: (_connStr: string, opts?: Record<string, unknown>) => {
+        if (opts) capturedOptions.push(opts);
+        return mockSql;
+      },
+    }));
+    vi.doMock("drizzle-orm/postgres-js", () => ({
+      drizzle: () => ({}),
+    }));
+  });
+
+  afterEach(() => {
+    vi.doUnmock("postgres");
+    vi.doUnmock("drizzle-orm/postgres-js");
+  });
+
+  it("forwards custom pool options to postgres()", async () => {
+    const { createDatabase: create } = await import("../client/factory.js");
+    const pool: PgPoolOptions = {
+      max: 5,
+      idleTimeoutSeconds: 30,
+      connectTimeoutSeconds: 15,
+      maxLifetimeSeconds: 900,
+    };
+    const client = await create({
+      dialect: "pg",
+      connectionString: "postgres://localhost/test",
+      pool,
+    });
+    expect(client.dialect).toBe("pg");
+    expect(capturedOptions).toHaveLength(1);
+    expect(capturedOptions[0]).toMatchObject({
+      max: 5,
+      idle_timeout: 30,
+      connect_timeout: 15,
+      max_lifetime: 900,
+    });
+  });
+
+  it("uses default pool options when pool is omitted", async () => {
+    const { createDatabase: create } = await import("../client/factory.js");
+    await create({ dialect: "pg", connectionString: "postgres://localhost/test" });
+    expect(capturedOptions).toHaveLength(1);
+    expect(capturedOptions[0]).toMatchObject({
+      max: PG_POOL_MAX_CONNECTIONS,
+      idle_timeout: PG_POOL_IDLE_TIMEOUT_SECONDS,
+      connect_timeout: PG_POOL_CONNECT_TIMEOUT_SECONDS,
+      max_lifetime: PG_POOL_MAX_LIFETIME_SECONDS,
+    });
+  });
+
+  it("returns rawClient with end method on PG clients", async () => {
+    const { createDatabase: create } = await import("../client/factory.js");
+    const client = await create({
+      dialect: "pg" as const,
+      connectionString: "postgres://localhost/test",
+    });
+    expect(client.dialect).toBe("pg");
+    expect(typeof client.rawClient.end).toBe("function");
   });
 });
 

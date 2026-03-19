@@ -36,6 +36,13 @@
       "when": 1773842391199,
       "tag": "0004_broad_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773891915628,
+      "tag": "0005_first_power_man",
+      "breakpoints": true
     }
   ]
 }

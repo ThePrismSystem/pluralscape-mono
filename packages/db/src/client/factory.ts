@@ -1,4 +1,10 @@
 import { getDialect } from "../dialect.js";
+import {
+  PG_POOL_CONNECT_TIMEOUT_SECONDS,
+  PG_POOL_IDLE_TIMEOUT_SECONDS,
+  PG_POOL_MAX_CONNECTIONS,
+  PG_POOL_MAX_LIFETIME_SECONDS,
+} from "../helpers/db.constants.js";
 
 import type { DatabaseClient, PgDatabaseClient, SqliteDatabaseClient } from "./types.js";
 
@@ -8,10 +14,19 @@ const HEX_KEY_RE = /^[0-9a-fA-F]+$/;
 /** AES-256 requires exactly 32 bytes = 64 hex characters. */
 const REQUIRED_HEX_KEY_LENGTH = 64;
 
+/** Pool tuning options for postgres.js connections. */
+export interface PgPoolOptions {
+  readonly max?: number;
+  readonly idleTimeoutSeconds?: number;
+  readonly connectTimeoutSeconds?: number;
+  readonly maxLifetimeSeconds?: number;
+}
+
 /** Configuration for creating a PG database client. */
 export interface PgConfig {
   readonly dialect: "pg";
   readonly connectionString: string;
+  readonly pool?: PgPoolOptions;
 }
 
 /** Configuration for creating a SQLite database client. */
@@ -37,8 +52,14 @@ export async function createDatabase(config: DatabaseConfig): Promise<DatabaseCl
     case "pg": {
       const postgres = (await import("postgres")).default;
       const { drizzle } = await import("drizzle-orm/postgres-js");
-      const client = postgres(config.connectionString);
-      return { dialect: "pg", db: drizzle(client) };
+      const pool = config.pool;
+      const client = postgres(config.connectionString, {
+        max: pool?.max ?? PG_POOL_MAX_CONNECTIONS,
+        idle_timeout: pool?.idleTimeoutSeconds ?? PG_POOL_IDLE_TIMEOUT_SECONDS,
+        connect_timeout: pool?.connectTimeoutSeconds ?? PG_POOL_CONNECT_TIMEOUT_SECONDS,
+        max_lifetime: pool?.maxLifetimeSeconds ?? PG_POOL_MAX_LIFETIME_SECONDS,
+      });
+      return { dialect: "pg", db: drizzle(client), rawClient: client };
     }
     case "sqlite": {
       // Validate key format before opening the database to avoid resource leaks.

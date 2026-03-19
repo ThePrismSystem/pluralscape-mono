@@ -1,0 +1,1 @@
+CREATE INDEX "sessions_ttl_duration_ms_idx" ON "sessions" USING btree ((EXTRACT(EPOCH FROM ("expires_at" - "created_at")) * 1000));

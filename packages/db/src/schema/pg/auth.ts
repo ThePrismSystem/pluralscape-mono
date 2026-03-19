@@ -76,6 +76,10 @@ export const sessions = pgTable(
     index("sessions_expires_at_idx")
       .on(t.expiresAt)
       .where(sql`${t.expiresAt} IS NOT NULL`),
+    index("sessions_ttl_duration_ms_idx").using(
+      "btree",
+      sql`(EXTRACT(EPOCH FROM (${t.expiresAt} - ${t.createdAt})) * 1000)`,
+    ),
     check(
       "sessions_expires_at_check",
       sql`${t.expiresAt} IS NULL OR ${t.expiresAt} > ${t.createdAt}`,

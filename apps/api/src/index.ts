@@ -6,8 +6,10 @@ import { bodyLimit } from "hono/body-limit";
 
 import { HTTP_CONTENT_TOO_LARGE } from "./http.constants.js";
 import { ApiHttpError } from "./lib/api-error.js";
+import { getRawClient } from "./lib/db.js";
 import { logger } from "./lib/logger.js";
 import { initStorageAdapter } from "./lib/storage.js";
+import { accessLogMiddleware } from "./middleware/access-log.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { BODY_SIZE_LIMIT_BYTES } from "./middleware/middleware.constants.js";
@@ -18,13 +20,14 @@ import { createValkeyStore } from "./middleware/stores/valkey-store.js";
 import { accountRoutes } from "./routes/account/index.js";
 import { authRoutes } from "./routes/auth/index.js";
 import { systemRoutes } from "./routes/systems/index.js";
-import { DEFAULT_PORT } from "./server.constants.js";
+import { DEFAULT_PORT, SHUTDOWN_TIMEOUT_SECONDS } from "./server.constants.js";
 
 const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
 
 export const app = new Hono();
 
 app.use("*", requestIdMiddleware());
+app.use("*", accessLogMiddleware());
 app.use("*", createSecureHeaders());
 app.use("*", createCorsMiddleware());
 app.use(
@@ -54,6 +57,17 @@ app.get("/health", (c) => {
 app.route("/account", accountRoutes);
 app.route("/auth", authRoutes);
 app.route("/systems", systemRoutes);
+
+/**
+ * Gracefully shuts down the server and drains the connection pool.
+ * Exported for testability — does NOT call process.exit().
+ */
+export async function shutdown(server: { stop(): Promise<void> | void } | null): Promise<void> {
+  logger.info("Shutting down");
+  if (server) await server.stop();
+  const raw = getRawClient();
+  if (raw) await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
+}
 
 async function start(): Promise<void> {
   await initSodium();
@@ -92,14 +106,27 @@ async function start(): Promise<void> {
     }
   }
 
+  let httpServer: { stop(): Promise<void> | void } | null = null;
+
   if (typeof Bun !== "undefined") {
-    Bun.serve({
+    httpServer = Bun.serve({
       port,
       fetch: app.fetch,
     });
 
     logger.info("Pluralscape API listening", { port });
   }
+
+  const handleShutdown = (): void => {
+    shutdown(httpServer)
+      .then(() => process.exit(0))
+      .catch((err: unknown) => {
+        logger.error("Shutdown failed", err instanceof Error ? { err } : { error: String(err) });
+        process.exit(1);
+      });
+  };
+  process.on("SIGTERM", handleShutdown);
+  process.on("SIGINT", handleShutdown);
 }
 
 void start();

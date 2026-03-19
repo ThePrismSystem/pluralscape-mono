@@ -19,7 +19,7 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
-import { getIdleTimeout } from "../lib/session-auth.js";
+import { buildIdleTimeoutFilter } from "../lib/session-idle-filter.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { isUniqueViolation } from "../lib/unique-violation.js";
 import {
@@ -27,7 +27,6 @@ import {
   DEFAULT_SESSION_LIMIT,
   DUMMY_ARGON2_HASH,
   EMAIL_SALT_BYTES,
-  MAX_SESSIONS_FETCH_LIMIT,
   MAX_SESSION_LIMIT,
   RECOVERY_KEY_GROUP_COUNT,
   RECOVERY_KEY_GROUP_SIZE,
@@ -331,11 +330,15 @@ export async function listSessions(
   const currentTime = now();
   const notExpired = or(isNull(sessions.expiresAt), gt(sessions.expiresAt, currentTime));
 
-  const baseConditions = and(
+  const conditions = [
     eq(sessions.accountId, accountId),
     eq(sessions.revoked, false),
     notExpired,
-  );
+    buildIdleTimeoutFilter(currentTime),
+  ];
+  if (cursor) {
+    conditions.push(gt(sessions.id, cursor));
+  }
 
   const rows = await db
     .select({
@@ -345,22 +348,12 @@ export async function listSessions(
       expiresAt: sessions.expiresAt,
     })
     .from(sessions)
-    .where(baseConditions)
+    .where(and(...conditions))
     .orderBy(sessions.id)
-    .limit(MAX_SESSIONS_FETCH_LIMIT);
+    .limit(effectiveLimit + 1);
 
-  // Post-filter: remove idle-timed-out sessions
-  const activeRows = rows.filter((row) => {
-    if (row.lastActive === null) return true;
-    const idleTimeout = getIdleTimeout(row);
-    if (idleTimeout === null) return true;
-    return currentTime - row.lastActive <= idleTimeout;
-  });
-
-  // Apply cursor + pagination in memory
-  const afterCursor = cursor ? activeRows.filter((r) => r.id > cursor) : activeRows;
-  const result = afterCursor.slice(0, effectiveLimit);
-  const hasMore = afterCursor.length > effectiveLimit;
+  const hasMore = rows.length > effectiveLimit;
+  const result = hasMore ? rows.slice(0, effectiveLimit) : rows;
   const nextCursor = hasMore ? (result[result.length - 1]?.id ?? null) : null;
 
   return { sessions: result, nextCursor };

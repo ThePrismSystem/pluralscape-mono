@@ -597,8 +597,9 @@ describe("auth service", () => {
       expect(result.nextCursor).toBeNull();
     });
 
-    it("returns nextCursor when there are more rows than the limit", async () => {
+    it("returns nextCursor when limit+1 rows are returned", async () => {
       const { db, chain } = mockDb();
+      // With limit=2, the query fetches limit+1=3 rows; the 3rd triggers hasMore
       const rows = [
         { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
@@ -611,35 +612,38 @@ describe("auth service", () => {
       expect(result.nextCursor).toBe("sess_2");
     });
 
-    it("paginates in memory using cursor", async () => {
+    it("passes cursor as SQL condition (not in-memory filtering)", async () => {
       const { db, chain } = mockDb();
+      // With cursor, SQL does the filtering — mock returns only post-cursor rows
       const rows = [
-        { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 3000 },
         { id: "sess_2", createdAt: 1100, lastActive: 2100, expiresAt: 3100 },
         { id: "sess_3", createdAt: 1200, lastActive: 2200, expiresAt: 3200 },
       ];
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await listSessions(db, "acct_123", "sess_1", 2);
+      const result = await listSessions(db, "acct_123", "sess_1", 25);
       expect(result.sessions).toHaveLength(2);
       expect(result.sessions[0]?.id).toBe("sess_2");
       expect(result.sessions[1]?.id).toBe("sess_3");
       expect(result.nextCursor).toBeNull();
+      // where() was called (SQL-level filtering)
+      expect(chain.where).toHaveBeenCalled();
     });
 
-    it("filters out idle-timed-out sessions", async () => {
+    it("all mock-returned rows appear in output (no JS-level idle filtering)", async () => {
       const { db, chain } = mockDb();
       const fixedTime = 700_000_000;
       mockNow.mockReturnValue(fixedTime);
-      // Session with very stale lastActive — idle timeout will exclude it
+      // Even with stale lastActive, rows from DB are included —
+      // idle filtering is now in SQL, not post-fetch JS
       const rows = [{ id: "sess_1", createdAt: 0, lastActive: 1, expiresAt: 2_592_000_000 }];
       chain.limit.mockResolvedValueOnce(rows);
 
       const result = await listSessions(db, "acct_123");
-      expect(result.sessions).toHaveLength(0);
+      expect(result.sessions).toHaveLength(1);
     });
 
-    it("includes sessions within idle window", async () => {
+    it("includes sessions returned by database without post-filtering", async () => {
       const { db, chain } = mockDb();
       const fixedTime = 1_000_000;
       mockNow.mockReturnValue(fixedTime);
