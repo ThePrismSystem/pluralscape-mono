@@ -20,9 +20,9 @@ export class EncryptedRelay {
   private readonly documents = new Map<string, EncryptedChangeEnvelope[]>();
   private readonly snapshots = new Map<string, EncryptedSnapshotEnvelope>();
   private readonly lastAccess = new Map<string, number>();
+  private readonly seqCounters = new Map<string, number>();
   private readonly maxDocuments: number;
   private readonly onEvict?: (documentId: string) => void;
-  private nextSeq = 1;
 
   constructor(options?: RelayOptions) {
     this.maxDocuments = options?.maxDocuments ?? Infinity;
@@ -30,8 +30,10 @@ export class EncryptedRelay {
   }
 
   submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): number {
-    this.evictIfNeeded();
-    const seq = this.nextSeq++;
+    this.evictIfNeeded(envelope.documentId);
+    const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
+    const seq = currentSeq + 1;
+    this.seqCounters.set(envelope.documentId, seq);
     const withSeq: EncryptedChangeEnvelope = { ...envelope, seq };
 
     let docEnvelopes = this.documents.get(envelope.documentId);
@@ -55,7 +57,7 @@ export class EncryptedRelay {
   }
 
   submitSnapshot(envelope: EncryptedSnapshotEnvelope): void {
-    this.evictIfNeeded();
+    this.evictIfNeeded(envelope.documentId);
     const existing = this.snapshots.get(envelope.documentId);
     if (existing && existing.snapshotVersion >= envelope.snapshotVersion) {
       throw new Error(
@@ -90,13 +92,14 @@ export class EncryptedRelay {
     this.lastAccess.set(documentId, Date.now());
   }
 
-  /** Evict the least-recently-accessed document if at capacity. */
-  private evictIfNeeded(): void {
-    if (this.documents.size < this.maxDocuments) return;
+  /** Evict the least-recently-accessed document if at capacity, skipping the incoming doc. */
+  private evictIfNeeded(incomingDocId?: string): void {
+    if (this.lastAccess.size < this.maxDocuments) return;
 
     let oldestId: string | null = null;
     let oldestTime = Infinity;
     for (const [docId, time] of this.lastAccess) {
+      if (docId === incomingDocId) continue;
       if (time < oldestTime) {
         oldestTime = time;
         oldestId = docId;
@@ -107,6 +110,7 @@ export class EncryptedRelay {
       this.documents.delete(oldestId);
       this.snapshots.delete(oldestId);
       this.lastAccess.delete(oldestId);
+      this.seqCounters.delete(oldestId);
       this.onEvict?.(oldestId);
     }
   }
