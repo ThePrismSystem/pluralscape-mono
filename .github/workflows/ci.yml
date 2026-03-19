@@ -162,5 +162,4 @@ jobs:
       - name: Run E2E tests
         env:
           E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/pluralscape_e2e
-          EMAIL_HASH_PEPPER: ${{ secrets.E2E_EMAIL_HASH_PEPPER }}
         run: pnpm test:e2e
