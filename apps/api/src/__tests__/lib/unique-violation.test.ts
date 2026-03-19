@@ -39,6 +39,24 @@ describe("isUniqueViolation", () => {
     wrapper.cause = pgError;
     expect(isUniqueViolation(wrapper)).toBe(false);
   });
+
+  it("returns true when the unique violation is deeply nested in cause chain", () => {
+    const pgError = Object.assign(new Error("unique_violation"), { code: PG_UNIQUE_VIOLATION });
+    const mid = new Error("middleware error");
+    mid.cause = pgError;
+    const outer = new Error("outer wrapper");
+    outer.cause = mid;
+    expect(isUniqueViolation(outer)).toBe(true);
+  });
+
+  it("returns false when no cause in the chain has the unique violation code", () => {
+    const inner = Object.assign(new Error("other"), { code: "23503" });
+    const mid = new Error("middleware");
+    mid.cause = inner;
+    const outer = new Error("outer");
+    outer.cause = mid;
+    expect(isUniqueViolation(outer)).toBe(false);
+  });
 });
 
 describe("throwOnUniqueViolation", () => {
