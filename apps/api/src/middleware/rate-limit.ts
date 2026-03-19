@@ -47,6 +47,9 @@ function getClientKey(c: Context): string {
  * When TRUST_PROXY is unset, all requests share a single global bucket
  * to avoid X-Forwarded-For spoofing. Set TRUST_PROXY=1 behind a reverse proxy.
  */
+/** When true, rate limiting is disabled. Set by E2E test harness only. */
+const RATE_LIMIT_DISABLED = process.env["DISABLE_RATE_LIMIT"] === "1";
+
 export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandler {
   const { limit, windowMs, keyPrefix } = options;
   const explicitStore = options.store;
@@ -55,6 +58,7 @@ export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandle
   const fallbackStore = new MemoryRateLimitStore();
 
   return async (c, next) => {
+    if (RATE_LIMIT_DISABLED) return next();
     const store = explicitStore ?? sharedStore ?? fallbackStore;
     const clientKey = getClientKey(c);
     const key = keyPrefix ? `${keyPrefix}:${clientKey}` : clientKey;

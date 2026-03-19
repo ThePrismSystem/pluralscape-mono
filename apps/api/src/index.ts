@@ -66,6 +66,11 @@ export async function shutdown(server: { stop(): Promise<void> | void } | null):
 }
 
 async function start(): Promise<void> {
+  // Fail-fast: DISABLE_RATE_LIMIT is a test-only escape hatch. Refuse to start in production with it set.
+  if (process.env["DISABLE_RATE_LIMIT"] === "1" && process.env["NODE_ENV"] !== "test") {
+    throw new Error("DISABLE_RATE_LIMIT=1 is only allowed when NODE_ENV=test. Refusing to start.");
+  }
+
   await initSodium();
 
   // Initialize blob storage: prefer S3 if configured, fall back to filesystem

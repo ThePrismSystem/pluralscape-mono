@@ -450,10 +450,16 @@ class ValidationError extends Error {
 export { ValidationError };
 
 export function isDuplicateEmailError(error: unknown): boolean {
-  if (isUniqueViolation(error) && "constraint_name" in error) {
-    return (error as { constraint_name: string }).constraint_name === "accounts_email_hash_idx";
-  }
-  return false;
+  if (!isUniqueViolation(error)) return false;
+  // constraint_name may be on the error itself (raw driver) or on .cause (DrizzleQueryError wrapper)
+  const targets = [error, error instanceof Error ? error.cause : undefined].filter(Boolean);
+  return targets.some(
+    (e) =>
+      typeof e === "object" &&
+      e !== null &&
+      "constraint_name" in e &&
+      (e as { constraint_name: string }).constraint_name === "accounts_email_hash_idx",
+  );
 }
 
 /** Generate a fake recovery key that looks like a real one for anti-enumeration. */

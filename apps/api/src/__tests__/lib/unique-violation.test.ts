@@ -25,6 +25,20 @@ describe("isUniqueViolation", () => {
     expect(isUniqueViolation(undefined)).toBe(false);
     expect(isUniqueViolation({ code: PG_UNIQUE_VIOLATION })).toBe(false);
   });
+
+  it("returns true when the unique violation code is on the cause (DrizzleQueryError)", () => {
+    const pgError = Object.assign(new Error("unique_violation"), { code: PG_UNIQUE_VIOLATION });
+    const wrapper = new Error("Failed query: INSERT INTO ...");
+    wrapper.cause = pgError;
+    expect(isUniqueViolation(wrapper)).toBe(true);
+  });
+
+  it("returns false when the cause has a different code", () => {
+    const pgError = Object.assign(new Error("foreign_key_violation"), { code: "23503" });
+    const wrapper = new Error("Failed query");
+    wrapper.cause = pgError;
+    expect(isUniqueViolation(wrapper)).toBe(false);
+  });
 });
 
 describe("throwOnUniqueViolation", () => {

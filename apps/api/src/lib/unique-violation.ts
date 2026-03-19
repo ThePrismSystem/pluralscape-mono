@@ -6,11 +6,15 @@ import { ApiHttpError } from "./api-error.js";
 /**
  * Returns true when `error` is a PostgreSQL unique-constraint violation.
  *
- * Checks for the `code` property set to `"23505"` on Error instances,
- * matching the shape produced by the postgres.js driver.
+ * Checks for `code === "23505"` on the error itself or its `.cause`,
+ * since Drizzle ORM wraps driver errors in `DrizzleQueryError` with
+ * the original `PostgresError` stored in `.cause`.
  */
 export function isUniqueViolation(error: unknown): error is Error & { code: string } {
-  return error instanceof Error && "code" in error && error.code === PG_UNIQUE_VIOLATION;
+  if (!(error instanceof Error)) return false;
+  if ("code" in error && error.code === PG_UNIQUE_VIOLATION) return true;
+  const cause: unknown = error.cause;
+  return cause instanceof Error && "code" in cause && cause.code === PG_UNIQUE_VIOLATION;
 }
 
 /**
