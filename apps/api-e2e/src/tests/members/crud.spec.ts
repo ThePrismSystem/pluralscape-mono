@@ -31,77 +31,87 @@ test.describe("Members CRUD", () => {
     await ensureCryptoReady();
   });
 
-  test("create, read with encryption round-trip, update, archive, restore, delete", async ({
+  test("member lifecycle: create, read, update, archive, restore, delete", async ({
     request,
     authHeaders,
   }) => {
     const systemId = await getSystemId(request, authHeaders);
     const membersUrl = `/v1/systems/${systemId}/members`;
+    let memberId: string;
+    let memberVersion: number;
 
-    // Create with encrypted data
-    const encryptedData = encryptForApi(MEMBER_PROFILE);
-    const createRes = await request.post(membersUrl, {
-      headers: authHeaders,
-      data: { encryptedData },
+    await test.step("create with encrypted data", async () => {
+      const encryptedData = encryptForApi(MEMBER_PROFILE);
+      const createRes = await request.post(membersUrl, {
+        headers: authHeaders,
+        data: { encryptedData },
+      });
+      expect(createRes.status()).toBe(201);
+      const member = await createRes.json();
+      expect(member).toHaveProperty("id");
+      memberId = member.id as string;
     });
-    expect(createRes.status()).toBe(201);
-    const member = await createRes.json();
-    expect(member).toHaveProperty("id");
-    const memberId = member.id as string;
 
-    // Get and verify encryption round-trip
-    const getRes = await request.get(`${membersUrl}/${memberId}`, { headers: authHeaders });
-    expect(getRes.status()).toBe(200);
-    const fetched = await getRes.json();
-    expect(fetched.id).toBe(memberId);
+    await test.step("read and verify encryption round-trip", async () => {
+      const getRes = await request.get(`${membersUrl}/${memberId}`, { headers: authHeaders });
+      expect(getRes.status()).toBe(200);
+      const fetched = await getRes.json();
+      expect(fetched.id).toBe(memberId);
 
-    const decrypted = decryptFromApi(fetched.encryptedData as string);
-    expect(decrypted).toEqual(MEMBER_PROFILE);
-
-    // List
-    const listRes = await request.get(membersUrl, { headers: authHeaders });
-    expect(listRes.status()).toBe(200);
-    const listed = await listRes.json();
-    expect(listed.items.length).toBeGreaterThanOrEqual(1);
-
-    // Update with new encrypted data
-    const updatedEncryptedData = encryptForApi(UPDATED_PROFILE);
-    const updateRes = await request.put(`${membersUrl}/${memberId}`, {
-      headers: authHeaders,
-      data: {
-        encryptedData: updatedEncryptedData,
-        version: fetched.version as number,
-      },
+      const decrypted = decryptFromApi(fetched.encryptedData as string);
+      expect(decrypted).toEqual(MEMBER_PROFILE);
+      memberVersion = fetched.version as number;
     });
-    expect(updateRes.status()).toBe(200);
 
-    // Verify updated data decrypts correctly
-    const updatedGet = await request.get(`${membersUrl}/${memberId}`, { headers: authHeaders });
-    const updatedMember = await updatedGet.json();
-    const decryptedUpdate = decryptFromApi(updatedMember.encryptedData as string);
-    expect(decryptedUpdate).toEqual(UPDATED_PROFILE);
-
-    // Archive
-    const archiveRes = await request.post(`${membersUrl}/${memberId}/archive`, {
-      headers: authHeaders,
+    await test.step("list includes created member", async () => {
+      const listRes = await request.get(membersUrl, { headers: authHeaders });
+      expect(listRes.status()).toBe(200);
+      const listed = await listRes.json();
+      expect(listed.items.length).toBeGreaterThanOrEqual(1);
     });
-    expect(archiveRes.status()).toBe(204);
 
-    // Restore
-    const restoreRes = await request.post(`${membersUrl}/${memberId}/restore`, {
-      headers: authHeaders,
+    await test.step("update with new encrypted data", async () => {
+      const updatedEncryptedData = encryptForApi(UPDATED_PROFILE);
+      const updateRes = await request.put(`${membersUrl}/${memberId}`, {
+        headers: authHeaders,
+        data: {
+          encryptedData: updatedEncryptedData,
+          version: memberVersion,
+        },
+      });
+      expect(updateRes.status()).toBe(200);
+
+      const updatedGet = await request.get(`${membersUrl}/${memberId}`, { headers: authHeaders });
+      const updatedMember = await updatedGet.json();
+      const decryptedUpdate = decryptFromApi(updatedMember.encryptedData as string);
+      expect(decryptedUpdate).toEqual(UPDATED_PROFILE);
     });
-    expect(restoreRes.status()).toBe(200);
 
-    // Delete
-    const deleteRes = await request.delete(`${membersUrl}/${memberId}`, {
-      headers: authHeaders,
+    await test.step("archive", async () => {
+      const archiveRes = await request.post(`${membersUrl}/${memberId}/archive`, {
+        headers: authHeaders,
+      });
+      expect(archiveRes.status()).toBe(204);
     });
-    expect(deleteRes.status()).toBe(204);
 
-    // Verify deleted
-    const deletedGet = await request.get(`${membersUrl}/${memberId}`, { headers: authHeaders });
-    expect(deletedGet.status()).toBe(404);
+    await test.step("restore", async () => {
+      const restoreRes = await request.post(`${membersUrl}/${memberId}/restore`, {
+        headers: authHeaders,
+      });
+      expect(restoreRes.status()).toBe(200);
+    });
+
+    await test.step("delete", async () => {
+      const deleteRes = await request.delete(`${membersUrl}/${memberId}`, {
+        headers: authHeaders,
+      });
+      expect(deleteRes.status()).toBe(204);
+    });
+
+    await test.step("verify deleted returns 404", async () => {
+      const deletedGet = await request.get(`${membersUrl}/${memberId}`, { headers: authHeaders });
+      expect(deletedGet.status()).toBe(404);
+    });
   });
 
   test("cross-system member access returns 404", async ({ request, authHeaders }) => {
