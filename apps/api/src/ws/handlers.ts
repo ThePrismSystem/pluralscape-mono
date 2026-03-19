@@ -4,6 +4,8 @@
  * All handlers for the authenticated phase of the sync protocol, consolidated
  * into a single module for import simplicity.
  */
+import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
+
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type { EncryptedRelay } from "@pluralscape/sync";
@@ -148,7 +150,7 @@ export function handleSubmitSnapshot(
   relay: EncryptedRelay,
 ): SnapshotAccepted | SyncError {
   try {
-    relay.submitSnapshot(message.snapshot);
+    relay.submitSnapshot({ ...message.snapshot, documentId: message.docId });
     return {
       type: "SnapshotAccepted",
       correlationId: message.correlationId,
@@ -156,7 +158,7 @@ export function handleSubmitSnapshot(
       snapshotVersion: message.snapshot.snapshotVersion,
     };
   } catch (err) {
-    if (err instanceof Error && err.message.includes("is not newer than current version")) {
+    if (err instanceof Error && err.message.includes(SNAPSHOT_VERSION_CONFLICT_MESSAGE)) {
       return {
         type: "SyncError",
         correlationId: message.correlationId,
