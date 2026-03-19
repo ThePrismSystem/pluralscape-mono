@@ -80,46 +80,17 @@ describe("accessLogMiddleware", () => {
     );
   });
 
-  it("captures correct HTTP method for POST", async () => {
+  it.each([
+    { method: "POST", path: "/submit", status: 201 },
+    { method: "PUT", path: "/update", status: 200 },
+    { method: "DELETE", path: "/remove", status: 200 },
+  ])("captures correct HTTP method for $method", async ({ method, path, status }) => {
     const app = createApp();
-    await app.request("/submit", { method: "POST" });
+    await app.request(path, { method });
 
     expect(mockLogInfo).toHaveBeenCalledWith(
       "HTTP request",
-      expect.objectContaining({
-        requestId: expect.any(String),
-        method: "POST",
-        path: "/submit",
-        status: 201,
-      }),
-    );
-  });
-
-  it("captures correct HTTP method for PUT", async () => {
-    const app = createApp();
-    await app.request("/update", { method: "PUT" });
-
-    expect(mockLogInfo).toHaveBeenCalledWith(
-      "HTTP request",
-      expect.objectContaining({
-        requestId: expect.any(String),
-        method: "PUT",
-        path: "/update",
-      }),
-    );
-  });
-
-  it("captures correct HTTP method for DELETE", async () => {
-    const app = createApp();
-    await app.request("/remove", { method: "DELETE" });
-
-    expect(mockLogInfo).toHaveBeenCalledWith(
-      "HTTP request",
-      expect.objectContaining({
-        requestId: expect.any(String),
-        method: "DELETE",
-        path: "/remove",
-      }),
+      expect.objectContaining({ method, path, status }),
     );
   });
 
@@ -132,18 +103,6 @@ describe("accessLogMiddleware", () => {
     const data = call[1] as Record<string, unknown>;
     expect(typeof data["duration"]).toBe("number");
     expect(data["duration"]).toBeGreaterThanOrEqual(0);
-  });
-
-  it("uses context logger (not root logger)", async () => {
-    // The mock replaces getContextLogger, so if mockLogInfo is called,
-    // it went through getContextLogger (our mock returns it)
-    const app = createApp();
-    await app.request("/ok");
-
-    expect(mockLogInfo).toHaveBeenCalledWith(
-      "HTTP request",
-      expect.objectContaining({ method: "GET" }),
-    );
   });
 
   it("logs even when no error handler is registered and the handler throws", async () => {

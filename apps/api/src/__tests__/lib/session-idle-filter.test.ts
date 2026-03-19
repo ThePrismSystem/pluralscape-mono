@@ -3,54 +3,45 @@ import { describe, expect, it } from "vitest";
 
 import { buildIdleTimeoutFilter } from "../../lib/session-idle-filter.js";
 
-/**
- * Recursively collects all parameter values from a drizzle SQL queryChunks tree.
- * Handles both raw values (from sql template literals) and Param objects (from Drizzle operators like gte).
- */
-function collectParams(chunks: readonly unknown[]): unknown[] {
-  const params: unknown[] = [];
+interface ChunkVisitor {
+  onParam?: (value: unknown) => void;
+  onString?: (value: string) => void;
+}
+
+function walkChunks(chunks: readonly unknown[], visitor: ChunkVisitor): void {
   for (const chunk of chunks) {
-    if (chunk && typeof chunk === "object") {
+    if (typeof chunk === "string") {
+      visitor.onString?.(chunk);
+    } else if (chunk && typeof chunk === "object") {
       if ("queryChunks" in chunk) {
-        params.push(...collectParams((chunk as { queryChunks: readonly unknown[] }).queryChunks));
-      } else if ("value" in chunk) {
+        walkChunks((chunk as { queryChunks: readonly unknown[] }).queryChunks, visitor);
+      }
+      if ("value" in chunk) {
         const val = (chunk as { value: unknown }).value;
-        // StringChunk has value: string[] — skip those
-        // Param has value: T (number, string, etc.) — extract
-        if (!Array.isArray(val)) {
-          params.push(val);
+        if (Array.isArray(val)) {
+          for (const v of val) {
+            if (typeof v === "string") visitor.onString?.(v);
+          }
+        } else {
+          visitor.onParam?.(val);
         }
       }
     } else {
-      params.push(chunk);
+      // Raw value (number, boolean, etc.) — treat as param
+      visitor.onParam?.(chunk);
     }
   }
+}
+
+function collectParams(chunks: readonly unknown[]): unknown[] {
+  const params: unknown[] = [];
+  walkChunks(chunks, { onParam: (v) => params.push(v) });
   return params;
 }
 
-/**
- * Recursively collects all SQL string fragments from a drizzle SQL queryChunks tree.
- * Handles StringChunk objects (value: string[]) and nested SQL objects.
- */
 function collectStringChunks(chunks: readonly unknown[]): string[] {
   const strings: string[] = [];
-  for (const chunk of chunks) {
-    if (typeof chunk === "string") {
-      strings.push(chunk);
-    } else if (chunk && typeof chunk === "object") {
-      if ("queryChunks" in chunk) {
-        strings.push(
-          ...collectStringChunks((chunk as { queryChunks: readonly unknown[] }).queryChunks),
-        );
-      }
-      if ("value" in chunk && Array.isArray((chunk as { value: unknown }).value)) {
-        // StringChunk: value is string[]
-        for (const v of (chunk as { value: string[] }).value) {
-          if (typeof v === "string") strings.push(v);
-        }
-      }
-    }
-  }
+  walkChunks(chunks, { onString: (v) => strings.push(v) });
   return strings;
 }
 
@@ -121,5 +112,12 @@ describe("buildIdleTimeoutFilter", () => {
     // Mobile session: idleTimeoutMs = 30 days
     const mobileThreshold = currentTimeMs - SESSION_TIMEOUTS.mobile.idleTimeoutMs;
     expect(params).toContain(mobileThreshold);
+  });
+
+  it("uses ::bigint cast in TTL duration expression", () => {
+    const result = buildIdleTimeoutFilter(1_000_000);
+    const strings = collectStringChunks(result.queryChunks);
+    const joined = strings.join("");
+    expect(joined).toContain("::bigint");
   });
 });
