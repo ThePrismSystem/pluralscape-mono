@@ -123,6 +123,9 @@ importers:
       '@pluralscape/crypto':
         specifier: workspace:*
         version: link:../../packages/crypto
+      '@pluralscape/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig

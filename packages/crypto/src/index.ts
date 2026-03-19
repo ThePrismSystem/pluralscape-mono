@@ -195,6 +195,14 @@ export { wrapNativeMemzero } from "./adapter/native-memzero.js";
 // ── Key lifecycle manager ───────────────────────────────────────────
 export { MobileKeyLifecycleManager, SECURITY_PRESETS } from "./key-lifecycle.js";
 
+// ── Validation ─────────────────────────────────────────────────────────
+export {
+  assertAeadNonce,
+  assertBufferLength,
+  assertSignature,
+  assertSignPublicKey,
+} from "./validation.js";
+
 // ── Key grants (Privacy Bucket sharing) ──────────────────────────────
 export type {
   CreateKeyGrantParams,

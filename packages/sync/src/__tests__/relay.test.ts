@@ -1,5 +1,5 @@
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { encryptChange, encryptSnapshot } from "../encrypted-sync.js";
 import { EncryptedRelay } from "../relay.js";
@@ -78,7 +78,7 @@ describe("EncryptedRelay", () => {
     expect(storedCiphertext).not.toEqual(change);
   });
 
-  it("2.4 — assigns monotonically increasing seq numbers", () => {
+  it("2.4 — assigns per-document monotonically increasing seq numbers", () => {
     const seqs: number[] = [];
     for (let i = 0; i < 5; i++) {
       const envelope = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
@@ -90,6 +90,18 @@ describe("EncryptedRelay", () => {
       expect(prev).toBeDefined();
       expect(seqs[i]).toBeGreaterThan(prev ?? 0);
     }
+  });
+
+  it("2.4b — different documents have independent seq counters", () => {
+    const c1 = encryptChange(sodium.randomBytes(16), "doc-alpha", keys, sodium);
+    const c2 = encryptChange(sodium.randomBytes(16), "doc-beta", keys, sodium);
+
+    const seqA = relay.submit(c1);
+    const seqB = relay.submit(c2);
+
+    // Both start at 1 since they are independent documents
+    expect(seqA).toBe(1);
+    expect(seqB).toBe(1);
   });
 
   it("2.5 — stores and returns snapshots", () => {
@@ -116,5 +128,159 @@ describe("EncryptedRelay", () => {
 
     // No snapshot for unknown doc
     expect(relay.getLatestSnapshot("doc-unknown")).toBeNull();
+  });
+
+  describe("LRU eviction", () => {
+    it("evicts oldest doc when limit exceeded", () => {
+      const evicted: string[] = [];
+      const limitedRelay = new EncryptedRelay({
+        maxDocuments: 2,
+        onEvict: (docId) => {
+          evicted.push(docId);
+        },
+      });
+
+      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      const c3 = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+
+      limitedRelay.submit(c1);
+      limitedRelay.submit(c2);
+      // At capacity — next submit should evict doc-a (oldest)
+      limitedRelay.submit(c3);
+
+      expect(evicted).toEqual(["doc-a"]);
+      expect(limitedRelay.getEnvelopesSince("doc-a", 0)).toHaveLength(0);
+      expect(limitedRelay.getEnvelopesSince("doc-b", 0)).toHaveLength(1);
+      expect(limitedRelay.getEnvelopesSince("doc-c", 0)).toHaveLength(1);
+    });
+
+    it("calls onEvict callback on eviction", () => {
+      const onEvict = vi.fn();
+      const limitedRelay = new EncryptedRelay({ maxDocuments: 1, onEvict });
+
+      const c1 = encryptChange(sodium.randomBytes(16), "doc-x", keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), "doc-y", keys, sodium);
+
+      limitedRelay.submit(c1);
+      limitedRelay.submit(c2);
+
+      expect(onEvict).toHaveBeenCalledWith("doc-x");
+    });
+
+    it("touch updates access time for LRU ordering", () => {
+      let now = 1000;
+      vi.spyOn(Date, "now").mockImplementation(() => now);
+
+      const evicted: string[] = [];
+      const limitedRelay = new EncryptedRelay({
+        maxDocuments: 2,
+        onEvict: (docId) => {
+          evicted.push(docId);
+        },
+      });
+
+      const c1 = encryptChange(sodium.randomBytes(16), "doc-old", keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), "doc-new", keys, sodium);
+
+      limitedRelay.submit(c1);
+      now = 2000;
+      limitedRelay.submit(c2);
+
+      // Touch doc-old to make it more recent than doc-new
+      now = 3000;
+      limitedRelay.getEnvelopesSince("doc-old", 0);
+
+      // Now add doc-c — should evict doc-new (less recently accessed)
+      now = 4000;
+      const c3 = encryptChange(sodium.randomBytes(16), "doc-third", keys, sodium);
+      limitedRelay.submit(c3);
+
+      expect(evicted).toEqual(["doc-new"]);
+
+      vi.restoreAllMocks();
+    });
+
+    it("does not evict when under limit", () => {
+      const onEvict = vi.fn();
+      const limitedRelay = new EncryptedRelay({ maxDocuments: 10, onEvict });
+
+      const c1 = encryptChange(sodium.randomBytes(16), "doc-1", keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), "doc-2", keys, sodium);
+
+      limitedRelay.submit(c1);
+      limitedRelay.submit(c2);
+
+      expect(onEvict).not.toHaveBeenCalled();
+    });
+
+    it("does not self-evict the incoming document", () => {
+      const evicted: string[] = [];
+      const limitedRelay = new EncryptedRelay({
+        maxDocuments: 2,
+        onEvict: (docId) => {
+          evicted.push(docId);
+        },
+      });
+
+      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      limitedRelay.submit(c1);
+      limitedRelay.submit(c2);
+
+      // Submit again to doc-a — doc-a is already tracked, so no eviction needed
+      const c3 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      limitedRelay.submit(c3);
+
+      expect(evicted).toEqual([]);
+      expect(limitedRelay.getEnvelopesSince("doc-a", 0)).toHaveLength(2);
+    });
+
+    it("evicts oldest non-incoming doc when new doc arrives at capacity", () => {
+      let now = 1000;
+      vi.spyOn(Date, "now").mockImplementation(() => now);
+
+      const evicted: string[] = [];
+      const limitedRelay = new EncryptedRelay({
+        maxDocuments: 2,
+        onEvict: (docId) => {
+          evicted.push(docId);
+        },
+      });
+
+      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+
+      limitedRelay.submit(c1);
+      now = 2000;
+      limitedRelay.submit(c2);
+
+      // Submit to new doc-c — doc-a (oldest) should be evicted, not doc-c
+      now = 3000;
+      const c3 = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      limitedRelay.submit(c3);
+
+      expect(evicted).toEqual(["doc-a"]);
+      expect(limitedRelay.getEnvelopesSince("doc-c", 0)).toHaveLength(1);
+
+      vi.restoreAllMocks();
+    });
+
+    it("cleans up seq counters on eviction", () => {
+      const limitedRelay = new EncryptedRelay({ maxDocuments: 1 });
+
+      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      limitedRelay.submit(c1);
+      expect(limitedRelay.getEnvelopesSince("doc-a", 0)[0]?.seq).toBe(1);
+
+      // Evict doc-a by submitting to doc-b
+      const c2 = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      limitedRelay.submit(c2);
+
+      // Re-create doc-a — seq should restart at 1
+      const c3 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      limitedRelay.submit(c3);
+      expect(limitedRelay.getEnvelopesSince("doc-a", 0)[0]?.seq).toBe(1);
+    });
   });
 });
