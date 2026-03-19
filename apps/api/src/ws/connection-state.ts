@@ -21,5 +21,6 @@ export interface SyncConnectionState {
   mutationWindowStart: number;
   readCount: number;
   readWindowStart: number;
+  rateLimitStrikes: number;
   authTimeoutHandle: ReturnType<typeof setTimeout> | null;
 }

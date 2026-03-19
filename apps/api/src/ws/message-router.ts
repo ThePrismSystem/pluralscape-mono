@@ -19,8 +19,10 @@ import {
   WS_CLOSE_POLICY_VIOLATION,
   WS_MUTATION_RATE_LIMIT,
   WS_MUTATION_RATE_WINDOW_MS,
+  WS_RATE_LIMIT_STRIKE_MAX,
   WS_READ_RATE_LIMIT,
   WS_READ_RATE_WINDOW_MS,
+  WS_RELAY_MAX_DOCUMENTS,
 } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
@@ -37,7 +39,12 @@ import type { ZodError } from "zod";
 
 // ── Singleton relay (Phase 1: in-memory) ────────────────────────────
 
-const relay = new EncryptedRelay();
+const relay = new EncryptedRelay({
+  maxDocuments: WS_RELAY_MAX_DOCUMENTS,
+  onEvict: (docId) => {
+    documentOwnership.delete(docId);
+  },
+});
 
 // ── Document ownership (Phase 1: in-memory ACL) ────────────────────
 
@@ -300,6 +307,7 @@ export async function routeMessage(
   // 5. Rate limit check (safe cast: Object.hasOwn guard proves messageType is a valid key)
   const isMutation = MUTATION_MESSAGE_TYPES.has(messageType as ClientMessageType);
   if (!checkRateLimit(state, isMutation)) {
+    state.rateLimitStrikes++;
     send(
       state,
       {
@@ -311,8 +319,20 @@ export async function routeMessage(
       },
       log,
     );
+    if (state.rateLimitStrikes >= WS_RATE_LIMIT_STRIKE_MAX) {
+      log.warn("Closing connection after repeated rate limit violations", {
+        connectionId: state.connectionId,
+        strikes: state.rateLimitStrikes,
+      });
+      try {
+        state.ws.close(WS_CLOSE_POLICY_VIOLATION, "Rate limit exceeded");
+      } catch {
+        // Already closed
+      }
+    }
     return;
   }
+  state.rateLimitStrikes = 0;
 
   // 6. Validate and dispatch — each branch validates with its specific schema,
   // giving TypeScript perfect type inference without `as never` casts.

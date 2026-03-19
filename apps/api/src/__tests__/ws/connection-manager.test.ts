@@ -35,6 +35,7 @@ describe("ConnectionManager", () => {
       expect(state.connectionId).toBe("conn-1");
       expect(state.phase).toBe("awaiting-auth");
       expect(state.auth).toBeNull();
+      expect(state.rateLimitStrikes).toBe(0);
       expect(manager.activeCount).toBe(1);
       expect(manager.unauthenticatedCount).toBe(1);
     });

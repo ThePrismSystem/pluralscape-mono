@@ -120,6 +120,25 @@ describe("broadcastDocumentUpdate", () => {
     expect(ws2.send).toHaveBeenCalledOnce();
   });
 
+  it("removes dead connection on send failure", () => {
+    const ws1 = mockWs();
+    ws1.send.mockImplementation(() => {
+      throw new Error("broken pipe");
+    });
+    manager.register("conn-dead", ws1 as never, Date.now());
+    manager.authenticate("conn-dead", mockAuth(), "sys_test", "owner-full");
+    manager.addSubscription("conn-dead", "doc-1");
+
+    manager.register("conn-sub", mockWs() as never, Date.now());
+    manager.authenticate("conn-sub", mockAuth(), "sys_test", "owner-full");
+    manager.addSubscription("conn-sub", "doc-1");
+
+    broadcastDocumentUpdate(makeUpdate(), "conn-sub", manager, log);
+
+    // Dead connection should have been removed from the manager
+    expect(manager.get("conn-dead")).toBeUndefined();
+  });
+
   it("sends only to subscribers of the specific document", () => {
     const ws1 = mockWs();
     const ws2 = mockWs();

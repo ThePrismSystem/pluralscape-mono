@@ -27,6 +27,7 @@ export class ConnectionManager {
       mutationWindowStart: 0,
       readCount: 0,
       readWindowStart: 0,
+      rateLimitStrikes: 0,
       authTimeoutHandle: null,
     };
     this.connections.set(connectionId, state);

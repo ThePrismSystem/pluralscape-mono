@@ -34,6 +34,7 @@ export function broadcastDocumentUpdate(
 
   const serialized = serializeMessage(update);
   let delivered = 0;
+  const deadConnections: string[] = [];
 
   for (const connectionId of subscribers) {
     if (connectionId === excludeConnectionId) continue;
@@ -49,7 +50,13 @@ export function broadcastDocumentUpdate(
         connectionId,
         docId: update.docId,
       });
+      deadConnections.push(connectionId);
     }
+  }
+
+  // Remove dead connections after iteration to avoid mutating the Set during loop
+  for (const connectionId of deadConnections) {
+    manager.remove(connectionId);
   }
 
   if (delivered > 0) {

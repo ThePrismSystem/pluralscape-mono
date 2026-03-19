@@ -10,6 +10,8 @@
  */
 import { logger } from "../lib/logger.js";
 
+import { WS_VALKEY_CONNECT_TIMEOUT_MS } from "./ws.constants.js";
+
 /** Minimal ioredis-compatible interface for pub/sub operations. */
 export interface PubSubClient {
   subscribe(channel: string): Promise<unknown>;
@@ -62,10 +64,12 @@ export class ValkeyPubSub {
       this.subscriber = createClient(url, {
         maxRetriesPerRequest: null,
         lazyConnect: false,
+        connectTimeout: WS_VALKEY_CONNECT_TIMEOUT_MS,
       });
       this.publisher = createClient(url, {
         maxRetriesPerRequest: null,
         lazyConnect: false,
+        connectTimeout: WS_VALKEY_CONNECT_TIMEOUT_MS,
       });
 
       // Prevent unhandled 'error' events from crashing the process
@@ -219,8 +223,13 @@ export class ValkeyPubSub {
     return this.serverId;
   }
 
-  /** Whether Valkey is connected. */
+  /** Whether Valkey is connected and ready. */
   get connected(): boolean {
-    return this.subscriber !== null && this.publisher !== null;
+    return (
+      this.subscriber !== null &&
+      this.publisher !== null &&
+      this.subscriber.status === "ready" &&
+      this.publisher.status === "ready"
+    );
   }
 }

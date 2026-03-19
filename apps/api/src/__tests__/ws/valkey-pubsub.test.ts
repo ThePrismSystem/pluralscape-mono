@@ -106,6 +106,31 @@ describe("ValkeyPubSub", () => {
       }).not.toThrow();
     });
 
+    it("connected returns false when status is not ready", async () => {
+      const notReadyFactory: PubSubClientFactory = (): PubSubClient => {
+        const { client } = createMockRedis();
+        Object.defineProperty(client, "status", { value: "connecting", writable: true });
+        return client;
+      };
+
+      await pubsub.connect("redis://localhost:6379", notReadyFactory);
+      expect(pubsub.connected).toBe(false);
+    });
+
+    it("passes connectTimeout to factory options", async () => {
+      const receivedOpts: Record<string, unknown>[] = [];
+      const captureFactory: PubSubClientFactory = (_url, opts): PubSubClient => {
+        receivedOpts.push(opts);
+        const { client } = createMockRedis();
+        return client;
+      };
+
+      await pubsub.connect("redis://localhost:6379", captureFactory);
+      expect(receivedOpts).toHaveLength(2);
+      expect(receivedOpts[0]).toHaveProperty("connectTimeout");
+      expect(receivedOpts[1]).toHaveProperty("connectTimeout");
+    });
+
     it("returns false on connection failure", async () => {
       const failFactory: PubSubClientFactory = () => {
         throw new Error("ECONNREFUSED");

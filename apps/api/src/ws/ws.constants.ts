@@ -50,3 +50,12 @@ export const WS_CLOSE_GOING_AWAY = 1001;
 
 /** WebSocket close code 1008: policy violation (RFC 6455). */
 export const WS_CLOSE_POLICY_VIOLATION = 1008;
+
+/** Timeout in milliseconds for Valkey connection attempts. */
+export const WS_VALKEY_CONNECT_TIMEOUT_MS = 5_000;
+
+/** Maximum number of documents tracked in the in-memory relay before LRU eviction. */
+export const WS_RELAY_MAX_DOCUMENTS = 1_000;
+
+/** Number of consecutive rate limit strikes before closing the connection. */
+export const WS_RATE_LIMIT_STRIKE_MAX = 10;

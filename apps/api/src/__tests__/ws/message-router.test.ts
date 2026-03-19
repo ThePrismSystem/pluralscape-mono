@@ -320,6 +320,43 @@ describe("message-router", () => {
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("RATE_LIMITED");
     });
+
+    it("closes connection after repeated rate limit strikes", async () => {
+      const ws = mockWs();
+      const strikeManager = new ConnectionManager();
+      const strikeState = strikeManager.register("conn-strike", ws as never, Date.now());
+      // Authenticate first
+      await routeMessage(authRequest(), strikeState, strikeManager, log);
+      sent.length = 0;
+
+      // Simulate many rate limit violations
+      strikeState.readCount = 200;
+      strikeState.readWindowStart = Date.now();
+      strikeState.rateLimitStrikes = 9; // One more will hit the max (10)
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
+        strikeState,
+        strikeManager,
+        log,
+      );
+
+      expect(ws.close).toHaveBeenCalled();
+      strikeManager.closeAll(1001, "test cleanup");
+    });
+
+    it("resets strikes on successful message", async () => {
+      state.rateLimitStrikes = 5;
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
+        state,
+        manager,
+        log,
+      );
+
+      expect(state.rateLimitStrikes).toBe(0);
+    });
   });
 
   describe("send error logging", () => {
