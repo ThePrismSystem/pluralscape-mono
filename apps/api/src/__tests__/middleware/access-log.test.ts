@@ -116,7 +116,7 @@ describe("accessLogMiddleware", () => {
     await app.request("/ok");
 
     const call = mockLogInfo.mock.calls.find((c: unknown[]) => c[0] === "HTTP request");
-    expect(call).toBeDefined();
+    if (!call) throw new Error("Expected HTTP request log call");
     const data = call[1] as Record<string, unknown>;
     expect(typeof data["duration"]).toBe("number");
     expect(data["duration"]).toBeGreaterThanOrEqual(0);
