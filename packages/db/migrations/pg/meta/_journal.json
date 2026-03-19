@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1773790529112,
-      "tag": "0000_greedy_triathlon",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1773811434354,
-      "tag": "0001_massive_norrin_radd",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1773820527471,
-      "tag": "0002_woozy_boomerang",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1773825777278,
-      "tag": "0003_jazzy_avengers",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1773842391199,
-      "tag": "0004_broad_thunderbolt_ross",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1773891915628,
-      "tag": "0005_first_power_man",
+      "when": 1773900695960,
+      "tag": "0000_black_harrier",
       "breakpoints": true
     }
   ]
