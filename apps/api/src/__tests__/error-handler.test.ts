@@ -8,6 +8,27 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
+const { mockLogError, mockLogWarn, mockLogInfo, mockLogDebug } = vi.hoisted(() => ({
+  mockLogError: vi.fn(),
+  mockLogWarn: vi.fn(),
+  mockLogInfo: vi.fn(),
+  mockLogDebug: vi.fn(),
+}));
+
+vi.mock("../lib/logger.js", () => {
+  const instance = {
+    info: mockLogInfo,
+    warn: mockLogWarn,
+    error: mockLogError,
+    debug: mockLogDebug,
+  };
+  return {
+    logger: instance,
+    createRequestLogger: () => instance,
+    getContextLogger: () => instance,
+  };
+});
+
 describe("errorHandler", () => {
   const originalEnv = process.env["NODE_ENV"];
 
@@ -18,6 +39,10 @@ describe("errorHandler", () => {
       process.env["NODE_ENV"] = originalEnv;
     }
     vi.restoreAllMocks();
+    mockLogError.mockClear();
+    mockLogWarn.mockClear();
+    mockLogInfo.mockClear();
+    mockLogDebug.mockClear();
   });
 
   function createApp(): Hono {
@@ -52,7 +77,6 @@ describe("errorHandler", () => {
 
   it("returns structured error with code, message, requestId for unhandled errors", async () => {
     const app = createApp();
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;
@@ -63,7 +87,6 @@ describe("errorHandler", () => {
 
   it("returns INTERNAL_ERROR code for unknown errors", async () => {
     const app = createApp();
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
@@ -72,7 +95,6 @@ describe("errorHandler", () => {
   it("includes error message in development for unknown errors", async () => {
     process.env["NODE_ENV"] = "development";
     const app = createApp();
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.message).toBe("Something broke");
@@ -81,7 +103,6 @@ describe("errorHandler", () => {
   it("returns generic error message in production for unknown errors", async () => {
     process.env["NODE_ENV"] = "production";
     const app = createApp();
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.message).toBe("Internal Server Error");
@@ -99,7 +120,6 @@ describe("errorHandler", () => {
   it("never exposes stack traces", async () => {
     process.env["NODE_ENV"] = "development";
     const app = createApp();
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
     const text = await res.clone().text();
     expect(text).not.toContain("at ");
@@ -149,7 +169,6 @@ describe("errorHandler", () => {
   it("masks message and strips details for 5xx in production", async () => {
     process.env["NODE_ENV"] = "production";
     const app = createApp();
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/server-error");
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;
@@ -217,7 +236,6 @@ describe("errorHandler", () => {
   it("ApiHttpError 5xx is masked in production", async () => {
     process.env["NODE_ENV"] = "production";
     const app = createApp();
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/api-error-5xx");
     expect(res.status).toBe(502);
     const body = (await res.json()) as ApiErrorResponse;
@@ -226,25 +244,65 @@ describe("errorHandler", () => {
     expect(body.error.details).toBeUndefined();
   });
 
-  it("logs unhandled errors via console.error", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it("logs unhandled errors via structured logger with err object", async () => {
     const app = createApp();
     await app.request("/fail");
-    expect(spy).toHaveBeenCalledWith("[api] Unhandled error:", expect.any(Error));
+    expect(mockLogError).toHaveBeenCalledWith(
+      "Unhandled error",
+      expect.objectContaining({ err: expect.any(Error) }),
+    );
   });
 
-  it("does not log HTTPException 4xx errors", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it("logs HTTPException 403 at info level for security audit", async () => {
     const app = createApp();
     await app.request("/forbidden");
-    expect(spy).not.toHaveBeenCalled();
+    expect(mockLogError).not.toHaveBeenCalled();
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      "Auth rejection",
+      expect.objectContaining({ status: 403, message: "Forbidden" }),
+    );
   });
 
-  it("logs HTTPException 5xx errors", async () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  it("logs HTTPException 404 at debug level", async () => {
+    const app = createApp();
+    await app.request("/not-found");
+    expect(mockLogError).not.toHaveBeenCalled();
+    expect(mockLogDebug).toHaveBeenCalledWith(
+      "Client error",
+      expect.objectContaining({ status: 404, message: "Not Found" }),
+    );
+  });
+
+  it("logs HTTPException 5xx errors via structured logger", async () => {
     const app = createApp();
     await app.request("/server-error");
-    expect(spy).toHaveBeenCalledWith("[api] Unhandled error:", expect.any(HTTPException));
+    expect(mockLogError).toHaveBeenCalledWith(
+      "Unhandled error",
+      expect.objectContaining({ status: 500, err: expect.any(HTTPException) }),
+    );
+  });
+
+  it("logs 401 ApiHttpError at info level for security audit", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.onError(errorHandler);
+    app.get("/unauth", () => {
+      throw new ApiHttpError(401, "UNAUTHENTICATED", "Not authenticated");
+    });
+    await app.request("/unauth");
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      "Auth rejection",
+      expect.objectContaining({ status: 401, code: "UNAUTHENTICATED" }),
+    );
+  });
+
+  it("logs 422 ApiHttpError at debug level", async () => {
+    const app = createApp();
+    await app.request("/api-error");
+    expect(mockLogDebug).toHaveBeenCalledWith(
+      "Client error",
+      expect.objectContaining({ status: 422, code: "VALIDATION_ERROR" }),
+    );
   });
 
   it("generates a requestId even without request-id middleware", async () => {
@@ -253,7 +311,6 @@ describe("errorHandler", () => {
     app.get("/fail", () => {
       throw new Error("no middleware");
     });
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.requestId).toBeTruthy();
@@ -262,10 +319,28 @@ describe("errorHandler", () => {
 
   it("X-Request-Id header matches body requestId", async () => {
     const app = createApp();
-    vi.spyOn(console, "error").mockImplementation(() => undefined);
     const res = await app.request("/fail");
     const body = (await res.json()) as ApiErrorResponse;
     const headerValue = res.headers.get("x-request-id");
     expect(headerValue).toBe(body.requestId);
+  });
+
+  it("logs ZodError via structured logger warn with context", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.onError(errorHandler);
+    app.get("/zod-fail", () => {
+      const err = new Error("Validation failed");
+      err.name = "ZodError";
+      throw err;
+    });
+    await app.request("/zod-fail");
+    expect(mockLogWarn).toHaveBeenCalledWith(
+      "ZodError in request",
+      expect.objectContaining({
+        requestId: expect.any(String),
+        err: expect.any(Error),
+      }),
+    );
   });
 });

@@ -6,6 +6,7 @@ import { bodyLimit } from "hono/body-limit";
 
 import { HTTP_CONTENT_TOO_LARGE } from "./http.constants.js";
 import { ApiHttpError } from "./lib/api-error.js";
+import { logger } from "./lib/logger.js";
 import { initStorageAdapter } from "./lib/storage.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
@@ -72,7 +73,10 @@ async function start(): Promise<void> {
     try {
       await adapter.exists("__healthcheck__" as import("@pluralscape/types").StorageKey);
     } catch (error) {
-      console.warn("S3 blob storage probe failed — check credentials and bucket config:", error);
+      logger.warn(
+        "S3 blob storage probe failed — check credentials and bucket config",
+        error instanceof Error ? { err: error } : { error: String(error) },
+      );
     }
   } else {
     const storageRoot = process.env["BLOB_STORAGE_PATH"] ?? "./data/blobs";
@@ -94,7 +98,7 @@ async function start(): Promise<void> {
       fetch: app.fetch,
     });
 
-    console.info(`Pluralscape API listening on port ${String(port)}`);
+    logger.info("Pluralscape API listening", { port });
   }
 }
 

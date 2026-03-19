@@ -13,6 +13,7 @@ import {
   revokeSession,
 } from "../../services/auth.service.js";
 import { mockDb } from "../helpers/mock-db.js";
+import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { Context } from "hono";
 
@@ -92,6 +93,8 @@ vi.mock("@pluralscape/types", async (importOriginal) => {
 
 // ── Tests ────────────────────────────────────────────────────────────
 
+const { logger: mockLogger, methods: logMethods } = createMockLogger();
+
 describe("auth service", () => {
   const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -99,6 +102,10 @@ describe("auth service", () => {
     mockNow.mockReturnValue(Date.now());
     mockAudit.mockClear();
     mockVerifyPassword.mockClear();
+    logMethods.error.mockClear();
+    logMethods.warn.mockClear();
+    logMethods.info.mockClear();
+    logMethods.debug.mockClear();
   });
   // ── extractIpAddress ───────────────────────────────────────────────
 
@@ -408,7 +415,7 @@ describe("auth service", () => {
       // limit() resolves to [] by default (no account found)
       chain.limit.mockResolvedValue([]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
     });
 
@@ -416,7 +423,7 @@ describe("auth service", () => {
       const { db, chain } = mockDb();
       chain.limit.mockResolvedValue([]);
 
-      await loginAccount(db, credentials, "web", mockAudit);
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(mockAudit).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
@@ -432,14 +439,12 @@ describe("auth service", () => {
       chain.limit.mockResolvedValue([]);
       const auditError = new Error("audit DB down");
       mockAudit.mockRejectedValueOnce(auditError);
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
       await vi.waitFor(() => {
-        expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect(logMethods.error).toHaveBeenCalledWith(
           "[audit] Failed to write auth.login-failed:",
-          auditError,
+          { err: auditError },
         );
       });
     });
@@ -456,7 +461,7 @@ describe("auth service", () => {
         },
       ]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
     });
 
@@ -475,7 +480,7 @@ describe("auth service", () => {
         // Second limit() call: system lookup
         .mockResolvedValueOnce([{ id: "sys_456" }]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
       expect(result).not.toBeNull();
       expect(result?.accountId).toBe("acct_123");
@@ -495,7 +500,7 @@ describe("auth service", () => {
         },
       ]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
 
       expect(result).not.toBeNull();
       expect(result?.systemId).toBeNull();
@@ -512,7 +517,7 @@ describe("auth service", () => {
         },
       ]);
 
-      await loginAccount(db, credentials, "web", mockAudit);
+      await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(chain.insert).toHaveBeenCalled();
       expect(chain.values).toHaveBeenCalled();
     });
@@ -528,7 +533,7 @@ describe("auth service", () => {
         },
       ]);
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
       expect(mockAudit).toHaveBeenCalledWith(
         expect.anything(),
@@ -548,14 +553,21 @@ describe("auth service", () => {
       ]);
       mockAudit.mockRejectedValueOnce(new Error("audit DB down"));
 
-      const result = await loginAccount(db, credentials, "web", mockAudit);
+      const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
+
+      // Wait for fire-and-forget promise to settle
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(logMethods.error).toHaveBeenCalledWith(
+        "Failed to write auth.login-failed audit event",
+        expect.objectContaining({ err: expect.any(Error) }),
+      );
     });
 
     it("throws on invalid email format", async () => {
       const { db } = mockDb();
       await expect(
-        loginAccount(db, { email: "bad", password: "test" }, "web", mockAudit),
+        loginAccount(db, { email: "bad", password: "test" }, "web", mockAudit, mockLogger),
       ).rejects.toThrow();
     });
   });

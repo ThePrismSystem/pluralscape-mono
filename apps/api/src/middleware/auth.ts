@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { getDb } from "../lib/db.js";
+import { getContextLogger } from "../lib/logger.js";
 import { validateSession } from "../lib/session-auth.js";
 
 import { SESSION_TOKEN_PATTERN } from "./middleware.constants.js";
@@ -21,6 +22,7 @@ import type { MiddlewareHandler } from "hono";
  */
 export function authMiddleware(): MiddlewareHandler<AuthEnv> {
   return async (c, next) => {
+    const log = getContextLogger(c);
     const authHeader = c.req.header("authorization");
     if (!authHeader) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Authorization header required");
@@ -60,7 +62,10 @@ export function authMiddleware(): MiddlewareHandler<AuthEnv> {
         .where(eq(sessions.id, result.session.id))
         .then(() => {})
         .catch((err: unknown) => {
-          console.error("[auth] Failed to update session lastActive:", err);
+          log.error(
+            "Failed to update session lastActive",
+            err instanceof Error ? { err } : { error: String(err) },
+          );
         });
     }
 

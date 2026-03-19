@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
+import { createMockLogger } from "../helpers/mock-logger.js";
 
 import type { AccountId } from "@pluralscape/types";
 
@@ -73,6 +74,8 @@ const {
 
 // ── Tests ────────────────────────────────────────────────────────────
 
+const { logger: mockLogger, methods: logMethods } = createMockLogger();
+
 describe("recovery-key service", () => {
   const mockAudit = vi.fn().mockResolvedValue(undefined);
 
@@ -81,6 +84,10 @@ describe("recovery-key service", () => {
     mockMemzero.mockClear();
     mockVerifyPassword.mockClear();
     mockAudit.mockClear();
+    logMethods.error.mockClear();
+    logMethods.warn.mockClear();
+    logMethods.info.mockClear();
+    logMethods.debug.mockClear();
   });
 
   // ── getRecoveryKeyStatus ──────────────────────────────────────────
@@ -368,7 +375,13 @@ describe("recovery-key service", () => {
       // Recovery key revocation returns success
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      const result = await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+      const result = await resetPasswordWithRecoveryKey(
+        db,
+        validResetParams,
+        "web",
+        mockAudit,
+        mockLogger,
+      );
 
       expect(result).not.toBeNull();
       const r = result as NonNullable<typeof result>;
@@ -382,7 +395,13 @@ describe("recovery-key service", () => {
       // No account found
       chain.limit.mockResolvedValueOnce([]);
 
-      const result = await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+      const result = await resetPasswordWithRecoveryKey(
+        db,
+        validResetParams,
+        "web",
+        mockAudit,
+        mockLogger,
+      );
 
       expect(result).toBeNull();
     });
@@ -402,7 +421,7 @@ describe("recovery-key service", () => {
       chain.limit.mockResolvedValueOnce([]);
 
       await expect(
-        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit),
+        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger),
       ).rejects.toThrow(NoActiveRecoveryKeyError);
 
       // verifyPassword should have been called with DUMMY_ARGON2_HASH for timing equalization
@@ -416,7 +435,7 @@ describe("recovery-key service", () => {
       const { db } = mockDb();
 
       await expect(
-        resetPasswordWithRecoveryKey(db, { email: "bad" }, "web", mockAudit),
+        resetPasswordWithRecoveryKey(db, { email: "bad" }, "web", mockAudit, mockLogger),
       ).rejects.toThrow(expect.objectContaining({ name: "ZodError" }));
     });
 
@@ -433,7 +452,7 @@ describe("recovery-key service", () => {
       chain.limit.mockResolvedValueOnce([{ id: "rk_old", encryptedMasterKey: new Uint8Array(72) }]);
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
 
       expect(chain.transaction).toHaveBeenCalledOnce();
     });
@@ -452,7 +471,7 @@ describe("recovery-key service", () => {
       // Recovery key revocation returns success
       chain.returning.mockResolvedValueOnce([{ id: "rk_old" }]);
 
-      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit);
+      await resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger);
 
       // masterKey, newSalt, wrappedMasterKeyBytes, newRecoveryBackupBytes,
       // newRecoveryKey.ciphertext, newRecoveryKey.nonce
@@ -474,7 +493,7 @@ describe("recovery-key service", () => {
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(
-        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit),
+        resetPasswordWithRecoveryKey(db, validResetParams, "web", mockAudit, mockLogger),
       ).rejects.toThrow("Recovery key not found during revocation");
 
       // Crypto material still zeroed despite transaction failure

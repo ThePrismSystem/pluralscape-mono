@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const mockLogWarn = vi.fn();
+
 describe("createValkeyStore", () => {
   beforeEach(() => {
     vi.resetModules();
+    mockLogWarn.mockClear();
   });
 
   afterEach(() => {
@@ -20,6 +23,15 @@ describe("createValkeyStore", () => {
       },
     }));
 
+    vi.doMock("../../../lib/logger.js", () => ({
+      logger: {
+        info: vi.fn(),
+        warn: mockLogWarn,
+        error: vi.fn(),
+        debug: vi.fn(),
+      },
+    }));
+
     const { createValkeyStore, ValkeyRateLimitStore } =
       await import("../../../middleware/stores/valkey-store.js");
 
@@ -33,16 +45,23 @@ describe("createValkeyStore", () => {
       throw new Error("Cannot find module 'ioredis'");
     });
 
-    const { createValkeyStore } = await import("../../../middleware/stores/valkey-store.js");
+    vi.doMock("../../../lib/logger.js", () => ({
+      logger: {
+        info: vi.fn(),
+        warn: mockLogWarn,
+        error: vi.fn(),
+        debug: vi.fn(),
+      },
+    }));
 
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { createValkeyStore } = await import("../../../middleware/stores/valkey-store.js");
 
     const result = await createValkeyStore("redis://localhost:6379");
 
     expect(result).toBeNull();
-    expect(warnSpy).toHaveBeenCalledWith(
+    expect(mockLogWarn).toHaveBeenCalledWith(
       expect.stringContaining("Failed to connect to Valkey"),
-      expect.any(Error),
+      expect.objectContaining({ err: expect.any(Error) }),
     );
   });
 });

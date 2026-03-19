@@ -1,3 +1,4 @@
+import type { AppLogger } from "./logger.js";
 import type { AccountId, AccountType, SessionId, SystemId } from "@pluralscape/types";
 
 /** Authenticated request context attached to Hono context by auth middleware. */
@@ -15,6 +16,7 @@ export interface AuthContext {
 export interface AuthEnv {
   Variables: {
     requestId: string;
+    log: AppLogger;
     auth: AuthContext;
   };
 }

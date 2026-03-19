@@ -36,6 +36,7 @@ import {
 import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
+import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { AccountId, AccountType, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -214,6 +215,7 @@ export async function loginAccount(
   credentials: unknown,
   platform: ClientPlatform,
   audit: AuditWriter,
+  log: AppLogger,
 ): Promise<LoginResult | null> {
   const parsed = LoginCredentialsSchema.parse(credentials);
   const emailHash = hashEmail(parsed.email);
@@ -229,7 +231,10 @@ export async function loginAccount(
     try {
       verifyPassword(DUMMY_ARGON2_HASH, parsed.password);
     } catch (err: unknown) {
-      console.error("[anti-enum] Unexpected verifyPassword error:", err);
+      log.error(
+        "Unexpected verifyPassword error during anti-enumeration",
+        err instanceof Error ? { err } : { error: String(err) },
+      );
     }
     // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
     // Uses a zeroed account ID since no real account exists for this email.
@@ -238,7 +243,9 @@ export async function loginAccount(
       actor: { kind: "account", id: ANTI_ENUM_SENTINEL_ACCOUNT_ID },
       detail: "Account not found",
     }).catch((auditError: unknown) => {
-      console.error("[audit] Failed to write auth.login-failed:", auditError);
+      log.error("[audit] Failed to write auth.login-failed:", {
+        err: auditError instanceof Error ? auditError : { message: String(auditError) },
+      });
     });
     return null;
   }
@@ -252,7 +259,10 @@ export async function loginAccount(
       detail: "Invalid password",
       accountId: account.id as AccountId,
     }).catch((auditError: unknown) => {
-      console.error("[audit] Failed to write auth.login-failed:", auditError);
+      log.error(
+        "Failed to write auth.login-failed audit event",
+        auditError instanceof Error ? { err: auditError } : { error: String(auditError) },
+      );
     });
     return null;
   }

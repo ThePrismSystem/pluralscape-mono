@@ -4,6 +4,7 @@ import { HTTP_UNAUTHORIZED } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
+import { getContextLogger } from "../../lib/logger.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
@@ -23,10 +24,11 @@ passwordResetRoute.post("/recovery-key", async (c) => {
 
   const platform = extractPlatform(c);
   const audit = createAuditWriter(c);
+  const log = getContextLogger(c);
   const db = await getDb();
 
   try {
-    const result = await resetPasswordWithRecoveryKey(db, body, platform, audit);
+    const result = await resetPasswordWithRecoveryKey(db, body, platform, audit, log);
     if (!result) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", "Invalid email or recovery key");
     }

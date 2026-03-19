@@ -1,6 +1,8 @@
 import { blobMetadata } from "@pluralscape/db/pg";
 import { and, eq, inArray, lt } from "drizzle-orm";
 
+import { logger } from "../lib/logger.js";
+
 import { BLOB_S3_CLEANUP_BATCH_SIZE, BLOB_S3_CLEANUP_GRACE_PERIOD_MS } from "./jobs.constants.js";
 
 import type { JobHandler } from "@pluralscape/queue";
@@ -43,8 +45,10 @@ export function createBlobS3CleanupHandler(
         deletedIds.push(row.id);
       } catch (error) {
         // Skip and continue — the blob metadata stays and will be retried next run
-        const message = error instanceof Error ? error.message : "unknown error";
-        console.warn(`[blob-cleanup] Failed to delete S3 object for blob ${row.id}: ${message}`);
+        logger.warn("Failed to delete S3 object for blob", {
+          blobId: row.id,
+          ...(error instanceof Error ? { err: error } : { error: String(error) }),
+        });
       }
       await ctx.heartbeat.heartbeat();
     }
