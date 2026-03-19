@@ -28,17 +28,13 @@ import {
   WS_READ_RATE_LIMIT,
   WS_READ_RATE_WINDOW_MS,
 } from "./ws.constants.js";
+import { formatError, makeSyncError } from "./ws.utils.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { AuthenticatedState, SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
-import type {
-  ServerMessage,
-  SubmitChangeRequest,
-  SubmitSnapshotRequest,
-  SyncError,
-} from "@pluralscape/sync";
+import type { ServerMessage, SubmitChangeRequest, SubmitSnapshotRequest } from "@pluralscape/sync";
 import type { ZodType } from "zod";
 
 // ── DI Context ───────────────────────────────────────────────────────
@@ -46,37 +42,38 @@ import type { ZodType } from "zod";
 /** Dependencies injected into the router (testable without module singletons). */
 export interface RouterContext {
   readonly relay: EncryptedRelay;
+  /**
+   * TOFU (Trust On First Use) document ownership.
+   *
+   * Safe because: the relay is ephemeral (in-memory, lost on restart), all data
+   * is E2E encrypted (server is zero-knowledge), and ownership only binds on
+   * first write. The real protection is that eviction cleanup
+   * (removeSubscriptionsForDoc) prevents cross-system broadcast leaks.
+   */
   readonly documentOwnership: Map<string, string>;
+  readonly manager: ConnectionManager;
 }
 
-/** Create a RouterContext with linked relay eviction → ownership cleanup. */
-export function createRouterContext(maxDocuments: number): RouterContext {
+/** Create a RouterContext with linked relay eviction → ownership + subscription cleanup. */
+export function createRouterContext(
+  maxDocuments: number,
+  manager: ConnectionManager,
+): RouterContext {
   const documentOwnership = new Map<string, string>();
   const relay = new EncryptedRelay({
     maxDocuments,
     onEvict: (docId) => {
       documentOwnership.delete(docId);
+      manager.removeSubscriptionsForDoc(docId);
     },
   });
-  return { relay, documentOwnership };
+  return { relay, documentOwnership, manager };
 }
 
 // ── Type guard ───────────────────────────────────────────────────────
 
 function isClientMessageType(type: string): type is ClientMessageType {
   return Object.hasOwn(CLIENT_MESSAGE_SCHEMAS, type);
-}
-
-// ── Document access ──────────────────────────────────────────────────
-
-/** Check whether systemId is allowed to access docId. */
-function checkDocumentAccess(
-  docId: string,
-  systemId: string,
-  ownership: Map<string, string>,
-): boolean {
-  const owner = ownership.get(docId);
-  return owner === undefined || owner === systemId;
 }
 
 // ── Send helpers ────────────────────────────────────────────────────
@@ -90,7 +87,7 @@ function send(state: SyncConnectionState, msg: ServerMessage, log: AppLogger): b
     log.warn("WebSocket send failed", {
       connectionId: state.connectionId,
       messageType: msg.type,
-      error: err instanceof Error ? err.message : String(err),
+      error: formatError(err),
     });
     return false;
   }
@@ -99,7 +96,7 @@ function send(state: SyncConnectionState, msg: ServerMessage, log: AppLogger): b
 /** Send a SyncError and close the connection. */
 function sendErrorAndClose(
   state: SyncConnectionState,
-  error: SyncError,
+  error: ServerMessage & { type: "SyncError" },
   closeCode: number,
   log: AppLogger,
 ): void {
@@ -107,7 +104,9 @@ function sendErrorAndClose(
   try {
     state.ws.close(closeCode, error.message);
   } catch {
-    // Already closed
+    log.debug("WebSocket already closed during sendErrorAndClose", {
+      connectionId: state.connectionId,
+    });
   }
 }
 
@@ -118,18 +117,9 @@ function sendValidationError(
   zodError: { issues: Array<{ message?: string }> },
   log: AppLogger,
 ): void {
-  const detail = zodError.issues[0]?.message ?? "Validation failed";
-  send(
-    state,
-    {
-      type: "SyncError",
-      correlationId: null,
-      code: "MALFORMED_MESSAGE",
-      message: `Invalid ${messageType}: ${detail}`,
-      docId: null,
-    },
-    log,
-  );
+  // Log full Zod detail server-side, send sanitized message to client
+  log.debug("Message validation failed", { messageType, issues: zodError.issues });
+  send(state, makeSyncError("MALFORMED_MESSAGE", `Invalid ${messageType}`, null), log);
 }
 
 // ── Dispatch helpers ─────────────────────────────────────────────────
@@ -150,7 +140,7 @@ function parseMessage<T>(
   return result.data;
 }
 
-/** Check document access. Returns false and sends PERMISSION_DENIED on failure. */
+/** Check document access (inline — single caller). Returns false and sends PERMISSION_DENIED on failure. */
 function checkAccess(
   docId: string,
   systemId: string,
@@ -159,75 +149,31 @@ function checkAccess(
   log: AppLogger,
   ownership: Map<string, string>,
 ): boolean {
-  if (!checkDocumentAccess(docId, systemId, ownership)) {
-    send(
-      state,
-      {
-        type: "SyncError",
-        correlationId,
-        code: "PERMISSION_DENIED",
-        message: "Access denied",
-        docId,
-      },
-      log,
-    );
+  const owner = ownership.get(docId);
+  if (owner !== undefined && owner !== systemId) {
+    send(state, makeSyncError("PERMISSION_DENIED", "Access denied", correlationId, docId), log);
     return false;
   }
   return true;
 }
 
-// ── Sliding window rate limiting ─────────────────────────────────────
-
-function checkRateLimit(state: AuthenticatedState, isMutation: boolean): boolean {
-  const now = Date.now();
-  const windowMs = isMutation ? WS_MUTATION_RATE_WINDOW_MS : WS_READ_RATE_WINDOW_MS;
-  const limit = isMutation ? WS_MUTATION_RATE_LIMIT : WS_READ_RATE_LIMIT;
-
-  let count: number;
-  let prevCount: number;
-  let windowStart: number;
-
-  if (isMutation) {
-    count = state.mutationCount;
-    prevCount = state.mutationPreviousCount;
-    windowStart = state.mutationWindowStart;
-  } else {
-    count = state.readCount;
-    prevCount = state.readPreviousCount;
-    windowStart = state.readWindowStart;
-  }
-
-  const doubleWindow = 2;
-  if (now - windowStart >= doubleWindow * windowMs) {
-    // Both windows expired
-    prevCount = 0;
-    count = 0;
-    windowStart = now;
-  } else if (now - windowStart >= windowMs) {
-    // Current window expired — rotate
-    prevCount = count;
-    count = 0;
-    windowStart = now;
-  }
-  count++;
-
-  // Interpolate: weight previous window by overlap fraction
-  const elapsed = now - windowStart;
-  const weight = Math.max(0, 1 - elapsed / windowMs);
-  const effectiveCount = prevCount * weight + count;
-
-  // Write back
-  if (isMutation) {
-    state.mutationCount = count;
-    state.mutationPreviousCount = prevCount;
-    state.mutationWindowStart = windowStart;
-  } else {
-    state.readCount = count;
-    state.readPreviousCount = prevCount;
-    state.readWindowStart = windowStart;
-  }
-
-  return effectiveCount <= limit;
+/**
+ * Parse → access check → dispatch helper for single-doc read operations.
+ * Reduces duplication in FetchSnapshot and FetchChanges cases.
+ */
+function dispatchWithAccess<T extends { docId: string; correlationId: string | null }>(
+  schema: ZodType<T>,
+  parsed: unknown,
+  state: AuthenticatedState,
+  messageType: string,
+  log: AppLogger,
+  ownership: Map<string, string>,
+  handler: (msg: T) => ServerMessage,
+): void {
+  const msg = parseMessage(schema, parsed, state, messageType, log);
+  if (!msg) return;
+  if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, ownership)) return;
+  send(state, handler(msg), log);
 }
 
 // ── Router ──────────────────────────────────────────────────────────
@@ -238,7 +184,6 @@ function checkRateLimit(state: AuthenticatedState, isMutation: boolean): boolean
  * Phases:
  * - `awaiting-auth`: only AuthenticateRequest accepted
  * - `authenticated`: all 8 remaining message types accepted
- * - `closing`: silently discarded
  */
 export async function routeMessage(
   raw: string,
@@ -247,9 +192,6 @@ export async function routeMessage(
   log: AppLogger,
   ctx: RouterContext,
 ): Promise<void> {
-  // Phase: closing — discard silently
-  if (state.phase === "closing") return;
-
   // 1. Parse JSON
   let parsed: unknown;
   try {
@@ -257,13 +199,7 @@ export async function routeMessage(
   } catch {
     sendErrorAndClose(
       state,
-      {
-        type: "SyncError",
-        correlationId: null,
-        code: "MALFORMED_MESSAGE",
-        message: "Invalid JSON",
-        docId: null,
-      },
+      makeSyncError("MALFORMED_MESSAGE", "Invalid JSON", null),
       WS_CLOSE_POLICY_VIOLATION,
       log,
     );
@@ -274,13 +210,7 @@ export async function routeMessage(
   if (typeof parsed !== "object" || parsed === null || !("type" in parsed)) {
     sendErrorAndClose(
       state,
-      {
-        type: "SyncError",
-        correlationId: null,
-        code: "MALFORMED_MESSAGE",
-        message: "Missing message type",
-        docId: null,
-      },
+      makeSyncError("MALFORMED_MESSAGE", "Missing message type", null),
       WS_CLOSE_POLICY_VIOLATION,
       log,
     );
@@ -291,13 +221,7 @@ export async function routeMessage(
   if (typeof messageType !== "string") {
     sendErrorAndClose(
       state,
-      {
-        type: "SyncError",
-        correlationId: null,
-        code: "MALFORMED_MESSAGE",
-        message: "Message type must be a string",
-        docId: null,
-      },
+      makeSyncError("MALFORMED_MESSAGE", "Message type must be a string", null),
       WS_CLOSE_POLICY_VIOLATION,
       log,
     );
@@ -309,13 +233,7 @@ export async function routeMessage(
     if (messageType !== "AuthenticateRequest") {
       sendErrorAndClose(
         state,
-        {
-          type: "SyncError",
-          correlationId: null,
-          code: "AUTH_FAILED",
-          message: "Must authenticate first",
-          docId: null,
-        },
+        makeSyncError("AUTH_FAILED", "Must authenticate first", null),
         WS_CLOSE_POLICY_VIOLATION,
         log,
       );
@@ -326,23 +244,17 @@ export async function routeMessage(
     const schema = CLIENT_MESSAGE_SCHEMAS.AuthenticateRequest;
     const result = schema.safeParse(parsed);
     if (!result.success) {
-      const detail = result.error.issues[0]?.message ?? "Validation failed";
+      log.debug("AuthenticateRequest validation failed", { issues: result.error.issues });
       sendErrorAndClose(
         state,
-        {
-          type: "SyncError",
-          correlationId: null,
-          code: "MALFORMED_MESSAGE",
-          message: `Invalid AuthenticateRequest: ${detail}`,
-          docId: null,
-        },
+        makeSyncError("MALFORMED_MESSAGE", "Invalid AuthenticateRequest", null),
         WS_CLOSE_POLICY_VIOLATION,
         log,
       );
       return;
     }
 
-    const authResult = await handleAuthenticate(result.data, state, manager);
+    const authResult = await handleAuthenticate(result.data, state, manager, log);
     if (authResult.ok) {
       send(state, authResult.response, log);
       log.info("WebSocket authenticated", {
@@ -355,56 +267,32 @@ export async function routeMessage(
     return;
   }
 
-  // At this point, TS narrows state to AuthenticatedState (closing returns above,
-  // awaiting-auth returns above). state.systemId and state.auth are guaranteed non-null.
+  // At this point, TS narrows state to AuthenticatedState (awaiting-auth returns above).
+  // state.systemId and state.auth are guaranteed non-null.
 
   // 4. Phase: authenticated — validate type is known
   if (!isClientMessageType(messageType)) {
-    send(
-      state,
-      {
-        type: "SyncError",
-        correlationId: null,
-        code: "MALFORMED_MESSAGE",
-        message: `Unknown message type: ${messageType}`,
-        docId: null,
-      },
-      log,
-    );
+    // Don't echo user input in error message (S13)
+    send(state, makeSyncError("MALFORMED_MESSAGE", "Unknown message type", null), log);
     return;
   }
 
   // AuthenticateRequest is not valid after authentication
   if (messageType === "AuthenticateRequest") {
-    send(
-      state,
-      {
-        type: "SyncError",
-        correlationId: null,
-        code: "MALFORMED_MESSAGE",
-        message: "Already authenticated",
-        docId: null,
-      },
-      log,
-    );
+    send(state, makeSyncError("MALFORMED_MESSAGE", "Already authenticated", null), log);
     return;
   }
 
   // 5. Rate limit check
   const isMutation = MUTATION_MESSAGE_TYPES.has(messageType);
-  if (!checkRateLimit(state, isMutation)) {
+  const now = Date.now();
+  const windowMs = isMutation ? WS_MUTATION_RATE_WINDOW_MS : WS_READ_RATE_WINDOW_MS;
+  const limit = isMutation ? WS_MUTATION_RATE_LIMIT : WS_READ_RATE_LIMIT;
+  const counter = isMutation ? state.mutationWindow : state.readWindow;
+
+  if (!counter.check(now, windowMs, limit)) {
     state.rateLimitStrikes++;
-    send(
-      state,
-      {
-        type: "SyncError",
-        correlationId: null,
-        code: "RATE_LIMITED",
-        message: "Too many messages",
-        docId: null,
-      },
-      log,
-    );
+    send(state, makeSyncError("RATE_LIMITED", "Too many messages", null), log);
     if (state.rateLimitStrikes >= WS_RATE_LIMIT_STRIKE_MAX) {
       log.warn("Closing connection after repeated rate limit violations", {
         connectionId: state.connectionId,
@@ -413,12 +301,17 @@ export async function routeMessage(
       try {
         state.ws.close(WS_CLOSE_POLICY_VIOLATION, "Rate limit exceeded");
       } catch {
-        // Already closed
+        log.debug("WebSocket already closed during rate limit enforcement", {
+          connectionId: state.connectionId,
+        });
       }
     }
     return;
   }
-  state.rateLimitStrikes = 0;
+  // Decay strikes by 1 on successful message instead of resetting to 0
+  if (state.rateLimitStrikes > 0) {
+    state.rateLimitStrikes--;
+  }
 
   // 6. Validate and dispatch using helpers
   const { relay, documentOwnership } = ctx;
@@ -432,6 +325,15 @@ export async function routeMessage(
         log,
       );
       if (!msg) return;
+      // C3: Verify systemId matches the authenticated connection
+      if (msg.systemId !== state.systemId) {
+        send(
+          state,
+          makeSyncError("PERMISSION_DENIED", "System ID mismatch", msg.correlationId),
+          log,
+        );
+        return;
+      }
       send(state, handleManifestRequest(msg), log);
       break;
     }
@@ -444,20 +346,23 @@ export async function routeMessage(
         log,
       );
       if (!msg) return;
+      // I17: Check each doc individually; subscribe permitted ones, deny denied ones
+      const permitted: typeof msg.documents = [];
       for (const entry of msg.documents) {
         if (
-          !checkAccess(
-            entry.docId,
-            state.systemId,
-            msg.correlationId,
-            state,
-            log,
-            documentOwnership,
-          )
-        )
-          return;
+          checkAccess(entry.docId, state.systemId, msg.correlationId, state, log, documentOwnership)
+        ) {
+          permitted.push(entry);
+        }
+        // Denied docs get a PERMISSION_DENIED sent by checkAccess; continue with rest
       }
-      send(state, handleSubscribeRequest(msg, state, manager, relay), log);
+      if (permitted.length > 0) {
+        send(
+          state,
+          handleSubscribeRequest({ ...msg, documents: permitted }, state, manager, relay),
+          log,
+        );
+      }
       break;
     }
     case "UnsubscribeRequest": {
@@ -473,35 +378,30 @@ export async function routeMessage(
       break;
     }
     case "FetchSnapshotRequest": {
-      const msg = parseMessage(
+      dispatchWithAccess(
         CLIENT_MESSAGE_SCHEMAS.FetchSnapshotRequest,
         parsed,
         state,
         messageType,
         log,
+        documentOwnership,
+        (msg) => handleFetchSnapshot(msg, relay),
       );
-      if (!msg) return;
-      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
-        return;
-      send(state, handleFetchSnapshot(msg, relay), log);
       break;
     }
     case "FetchChangesRequest": {
-      const msg = parseMessage(
+      dispatchWithAccess(
         CLIENT_MESSAGE_SCHEMAS.FetchChangesRequest,
         parsed,
         state,
         messageType,
         log,
+        documentOwnership,
+        (msg) => handleFetchChanges(msg, relay),
       );
-      if (!msg) return;
-      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
-        return;
-      send(state, handleFetchChanges(msg, relay), log);
       break;
     }
     case "SubmitChangeRequest": {
-      // Boundary cast: Zod outputs plain Uint8Array, protocol types use branded crypto types
       const msg = parseMessage(
         CLIENT_MESSAGE_SCHEMAS.SubmitChangeRequest,
         parsed,
@@ -512,8 +412,28 @@ export async function routeMessage(
       if (!msg) return;
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
-      const { response, sequencedEnvelope } = handleSubmitChange(msg, relay);
-      send(state, response, log);
+      // I15: Wrap handler in try/catch to send SyncError on unexpected failure
+      let response;
+      let sequencedEnvelope;
+      try {
+        const result = handleSubmitChange(msg, relay);
+        response = result.response;
+        sequencedEnvelope = result.sequencedEnvelope;
+      } catch (err) {
+        log.error("handleSubmitChange threw", {
+          connectionId: state.connectionId,
+          docId: msg.docId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError("INTERNAL_ERROR", "Failed to process change", msg.correlationId, msg.docId),
+          log,
+        );
+        return;
+      }
+      // I7: Check send succeeded before broadcasting
+      if (!send(state, response, log)) return;
       documentOwnership.set(msg.docId, state.systemId);
       broadcastDocumentUpdate(
         {
@@ -529,7 +449,6 @@ export async function routeMessage(
       break;
     }
     case "SubmitSnapshotRequest": {
-      // Boundary cast: Zod outputs plain Uint8Array, protocol types use branded crypto types
       const msg = parseMessage(
         CLIENT_MESSAGE_SCHEMAS.SubmitSnapshotRequest,
         parsed,
@@ -556,7 +475,8 @@ export async function routeMessage(
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
       const [snapshotResp, changesResp] = handleDocumentLoad(msg, relay);
-      send(state, snapshotResp, log);
+      // I10: Check first send succeeded before sending second
+      if (!send(state, snapshotResp, log)) return;
       send(state, changesResp, log);
       break;
     }

@@ -2,9 +2,11 @@ import { getDb } from "../lib/db.js";
 import { validateSession } from "../lib/session-auth.js";
 
 import { WS_CLOSE_POLICY_VIOLATION, WS_MAX_CONNECTIONS_PER_ACCOUNT } from "./ws.constants.js";
+import { formatError, makeSyncError } from "./ws.utils.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
+import type { AppLogger } from "../lib/logger.js";
 import type { AuthenticateRequest, AuthenticateResponse, SyncError } from "@pluralscape/sync";
 import type { SystemId } from "@pluralscape/types";
 
@@ -28,56 +30,62 @@ export async function handleAuthenticate(
   message: AuthenticateRequest,
   state: SyncConnectionState,
   manager: ConnectionManager,
+  log: AppLogger,
 ): Promise<AuthResult> {
   const { correlationId } = message;
 
-  // 1. Validate session token
-  const db = await getDb();
-  const result = await validateSession(db, message.sessionToken);
+  // 1. Validate session token (wrapped to catch infrastructure errors)
+  let auth;
+  try {
+    const db = await getDb();
+    const result = await validateSession(db, message.sessionToken);
 
-  if (!result.ok) {
-    const code = result.error === "SESSION_EXPIRED" ? "AUTH_EXPIRED" : "AUTH_FAILED";
+    if (!result.ok) {
+      const code = result.error === "SESSION_EXPIRED" ? "AUTH_EXPIRED" : "AUTH_FAILED";
+      return {
+        ok: false,
+        error: makeSyncError(
+          code,
+          code === "AUTH_EXPIRED" ? "Session has expired" : "Invalid session token",
+          correlationId,
+        ),
+        closeCode: WS_CLOSE_POLICY_VIOLATION,
+      };
+    }
+
+    auth = result.auth;
+  } catch (err) {
+    log.error("Auth infrastructure error", {
+      connectionId: state.connectionId,
+      error: formatError(err),
+    });
     return {
       ok: false,
-      error: {
-        type: "SyncError",
-        correlationId,
-        code,
-        message: code === "AUTH_EXPIRED" ? "Session has expired" : "Invalid session token",
-        docId: null,
-      },
+      error: makeSyncError("AUTH_FAILED", "Authentication service unavailable", correlationId),
       closeCode: WS_CLOSE_POLICY_VIOLATION,
     };
   }
-
-  const { auth } = result;
 
   // 2. Per-account connection limit
   if (manager.getAccountConnectionCount(auth.accountId) >= WS_MAX_CONNECTIONS_PER_ACCOUNT) {
     return {
       ok: false,
-      error: {
-        type: "SyncError",
+      error: makeSyncError(
+        "RATE_LIMITED",
+        "Too many concurrent connections for this account",
         correlationId,
-        code: "RATE_LIMITED",
-        message: "Too many concurrent connections for this account",
-        docId: null,
-      },
+      ),
       closeCode: WS_CLOSE_POLICY_VIOLATION,
     };
   }
 
   // 3. System ownership check
+  // The `as SystemId` cast is safe: Set.has() membership validates the value
+  // belongs to the ownedSystemIds set, which only contains valid SystemId values.
   if (!auth.ownedSystemIds.has(message.systemId as SystemId)) {
     return {
       ok: false,
-      error: {
-        type: "SyncError",
-        correlationId,
-        code: "PERMISSION_DENIED",
-        message: "System not owned by this account",
-        docId: null,
-      },
+      error: makeSyncError("PERMISSION_DENIED", "System not owned by this account", correlationId),
       closeCode: WS_CLOSE_POLICY_VIOLATION,
     };
   }
@@ -93,13 +101,7 @@ export async function handleAuthenticate(
   if (!authenticated) {
     return {
       ok: false,
-      error: {
-        type: "SyncError",
-        correlationId,
-        code: "AUTH_FAILED",
-        message: "Connection no longer exists",
-        docId: null,
-      },
+      error: makeSyncError("AUTH_FAILED", "Connection no longer exists", correlationId),
       closeCode: WS_CLOSE_POLICY_VIOLATION,
     };
   }

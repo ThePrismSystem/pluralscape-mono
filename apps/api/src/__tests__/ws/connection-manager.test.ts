@@ -164,9 +164,35 @@ describe("ConnectionManager", () => {
       expect(manager.unauthenticatedCount).toBe(0);
     });
 
+    it("releaseUnauthSlot never goes negative", () => {
+      manager = new ConnectionManager();
+      expect(manager.unauthenticatedCount).toBe(0);
+
+      manager.releaseUnauthSlot();
+      expect(manager.unauthenticatedCount).toBe(0);
+
+      manager.releaseUnauthSlot();
+      expect(manager.unauthenticatedCount).toBe(0);
+    });
+
     it("register does not increment unauthenticatedCount", () => {
       manager = new ConnectionManager();
       manager.register("conn-1", mockWs() as never, Date.now());
+      expect(manager.unauthenticatedCount).toBe(0);
+    });
+  });
+
+  describe("authenticate phase guard", () => {
+    it("only decrements unauthCount when transitioning from awaiting-auth", () => {
+      manager = new ConnectionManager();
+      manager.reserveUnauthSlot();
+      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.authenticate("conn-1", mockAuth(), "sys_test", "owner-full");
+      expect(manager.unauthenticatedCount).toBe(0);
+
+      // Second authenticate call on already-authenticated connection should not go negative
+      const result = manager.authenticate("conn-1", mockAuth(), "sys_test", "owner-full");
+      expect(result).toBe(false);
       expect(manager.unauthenticatedCount).toBe(0);
     });
   });
@@ -211,6 +237,58 @@ describe("ConnectionManager", () => {
     it("getSubscribers returns empty set for unknown doc", () => {
       manager = new ConnectionManager();
       expect(manager.getSubscribers("unknown-doc").size).toBe(0);
+    });
+
+    it("addSubscription returns false at subscription cap", () => {
+      manager = new ConnectionManager();
+      manager.register("conn-1", mockWs() as never, Date.now());
+
+      // Fill to cap (500)
+      for (let i = 0; i < 500; i++) {
+        expect(manager.addSubscription("conn-1", `doc-${String(i)}`)).toBe(true);
+      }
+
+      // 501st should be rejected
+      expect(manager.addSubscription("conn-1", "doc-over-limit")).toBe(false);
+      expect(manager.getSubscribers("doc-over-limit").size).toBe(0);
+    });
+
+    it("addSubscription allows re-subscribing to existing doc at cap", () => {
+      manager = new ConnectionManager();
+      manager.register("conn-1", mockWs() as never, Date.now());
+
+      for (let i = 0; i < 500; i++) {
+        manager.addSubscription("conn-1", `doc-${String(i)}`);
+      }
+
+      // Re-subscribing to existing doc should succeed (idempotent)
+      expect(manager.addSubscription("conn-1", "doc-0")).toBe(true);
+    });
+
+    it("removeSubscriptionsForDoc clears all connections for a doc", () => {
+      manager = new ConnectionManager();
+      manager.register("conn-1", mockWs() as never, Date.now());
+      manager.register("conn-2", mockWs() as never, Date.now());
+      manager.addSubscription("conn-1", "doc-evicted");
+      manager.addSubscription("conn-2", "doc-evicted");
+      manager.addSubscription("conn-1", "doc-kept");
+
+      manager.removeSubscriptionsForDoc("doc-evicted");
+
+      expect(manager.getSubscribers("doc-evicted").size).toBe(0);
+      // Other subscriptions unaffected
+      expect(manager.getSubscribers("doc-kept").has("conn-1")).toBe(true);
+      // Connection's subscribedDocs should no longer contain evicted doc
+      const state = manager.get("conn-1");
+      expect(state?.subscribedDocs.has("doc-evicted")).toBe(false);
+      expect(state?.subscribedDocs.has("doc-kept")).toBe(true);
+    });
+
+    it("removeSubscriptionsForDoc is safe for unknown doc", () => {
+      manager = new ConnectionManager();
+      expect(() => {
+        manager.removeSubscriptionsForDoc("does-not-exist");
+      }).not.toThrow();
     });
 
     it("returns only connections subscribed to a specific doc", () => {

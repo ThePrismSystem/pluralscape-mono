@@ -1,3 +1,7 @@
+import { SlidingWindowCounter } from "./sliding-window-counter.js";
+import { WS_MAX_SUBSCRIPTIONS_PER_CONNECTION } from "./ws.constants.js";
+import { formatError } from "./ws.utils.js";
+
 import type {
   AuthenticatedState,
   AwaitingAuthState,
@@ -25,7 +29,7 @@ export class ConnectionManager {
 
   /** Release a reserved unauthenticated slot (if onOpen never fires). */
   releaseUnauthSlot(): void {
-    this.unauthCount--;
+    this.unauthCount = Math.max(0, this.unauthCount - 1);
   }
 
   /** Register a new unauthenticated connection. Does not increment unauthCount (caller pre-reserves). */
@@ -39,12 +43,8 @@ export class ConnectionManager {
       systemId: null,
       profileType: null,
       subscribedDocs: new Set(),
-      mutationCount: 0,
-      mutationWindowStart: 0,
-      mutationPreviousCount: 0,
-      readCount: 0,
-      readWindowStart: 0,
-      readPreviousCount: 0,
+      mutationWindow: new SlidingWindowCounter(),
+      readWindow: new SlidingWindowCounter(),
       rateLimitStrikes: 0,
       authTimeoutHandle: null,
     };
@@ -62,48 +62,56 @@ export class ConnectionManager {
     const state = this.connections.get(connectionId);
     if (!state) return false;
 
-    // Clear auth timeout inside authenticate
-    if (state.authTimeoutHandle !== null) {
-      clearTimeout(state.authTimeoutHandle);
+    // Only decrement unauthCount when transitioning from awaiting-auth
+    if (state.phase === "awaiting-auth") {
+      // Clear auth timeout inside authenticate
+      if (state.authTimeoutHandle !== null) {
+        clearTimeout(state.authTimeoutHandle);
+      }
+
+      // Create a new AuthenticatedState (can't mutate readonly discriminant)
+      const authenticated: AuthenticatedState = {
+        connectionId: state.connectionId,
+        ws: state.ws,
+        connectedAt: state.connectedAt,
+        phase: "authenticated",
+        auth,
+        systemId,
+        profileType,
+        subscribedDocs: state.subscribedDocs,
+        mutationWindow: state.mutationWindow,
+        readWindow: state.readWindow,
+        rateLimitStrikes: state.rateLimitStrikes,
+        authTimeoutHandle: null,
+      };
+      this.connections.set(connectionId, authenticated);
+      this.unauthCount = Math.max(0, this.unauthCount - 1);
+
+      // Update account index
+      let accountSet = this.accountIndex.get(auth.accountId);
+      if (!accountSet) {
+        accountSet = new Set();
+        this.accountIndex.set(auth.accountId, accountSet);
+      }
+      accountSet.add(connectionId);
+
+      return true;
     }
 
-    // Create a new AuthenticatedState (can't mutate readonly discriminant)
-    const authenticated: AuthenticatedState = {
-      connectionId: state.connectionId,
-      ws: state.ws,
-      connectedAt: state.connectedAt,
-      phase: "authenticated",
-      auth,
-      systemId,
-      profileType,
-      subscribedDocs: state.subscribedDocs,
-      mutationCount: state.mutationCount,
-      mutationWindowStart: state.mutationWindowStart,
-      mutationPreviousCount: state.mutationPreviousCount,
-      readCount: state.readCount,
-      readWindowStart: state.readWindowStart,
-      readPreviousCount: state.readPreviousCount,
-      rateLimitStrikes: state.rateLimitStrikes,
-      authTimeoutHandle: null,
-    };
-    this.connections.set(connectionId, authenticated);
-    this.unauthCount--;
-
-    // Update account index
-    let accountSet = this.accountIndex.get(auth.accountId);
-    if (!accountSet) {
-      accountSet = new Set();
-      this.accountIndex.set(auth.accountId, accountSet);
-    }
-    accountSet.add(connectionId);
-
-    return true;
+    return false;
   }
 
-  /** Add a document subscription for a connection. */
-  addSubscription(connectionId: string, docId: string): void {
+  /** Add a document subscription for a connection. Returns false if at subscription cap. */
+  addSubscription(connectionId: string, docId: string): boolean {
     const state = this.connections.get(connectionId);
-    if (!state) return;
+    if (!state) return false;
+
+    if (
+      !state.subscribedDocs.has(docId) &&
+      state.subscribedDocs.size >= WS_MAX_SUBSCRIPTIONS_PER_CONNECTION
+    ) {
+      return false;
+    }
 
     state.subscribedDocs.add(docId);
 
@@ -113,6 +121,7 @@ export class ConnectionManager {
       this.docIndex.set(docId, docSet);
     }
     docSet.add(connectionId);
+    return true;
   }
 
   /** Remove a document subscription for a connection. */
@@ -131,6 +140,20 @@ export class ConnectionManager {
     }
   }
 
+  /** Remove all subscriptions for a document across all connections. */
+  removeSubscriptionsForDoc(docId: string): void {
+    const docSet = this.docIndex.get(docId);
+    if (!docSet) return;
+
+    for (const connectionId of docSet) {
+      const state = this.connections.get(connectionId);
+      if (state) {
+        state.subscribedDocs.delete(docId);
+      }
+    }
+    this.docIndex.delete(docId);
+  }
+
   /** Remove a connection and clean up all indexes. */
   remove(connectionId: string): void {
     const state = this.connections.get(connectionId);
@@ -143,7 +166,7 @@ export class ConnectionManager {
 
     // Decrement unauth counter if not yet authenticated
     if (state.phase === "awaiting-auth") {
-      this.unauthCount--;
+      this.unauthCount = Math.max(0, this.unauthCount - 1);
     }
 
     // Remove from account index
@@ -207,7 +230,7 @@ export class ConnectionManager {
       } catch (err) {
         log?.debug("Failed to close WebSocket during closeAll", {
           connectionId: state.connectionId,
-          error: err instanceof Error ? err.message : String(err),
+          error: formatError(err),
         });
       }
     }

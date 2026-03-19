@@ -1,21 +1,21 @@
+import type { SlidingWindowCounter } from "./sliding-window-counter.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { WSContext } from "hono/ws";
 
+/** Valid replication profile types (single source of truth). */
+export const PROFILE_TYPES = ["owner-full", "owner-lite", "friend"] as const;
+
 /** Replication profile types from the sync protocol. */
-export type ProfileType = "owner-full" | "owner-lite" | "friend";
+export type ProfileType = (typeof PROFILE_TYPES)[number];
 
 /** Shared fields across all connection phases. */
 interface ConnectionBase {
   readonly connectionId: string;
   readonly ws: WSContext;
   readonly connectedAt: number;
-  subscribedDocs: Set<string>;
-  mutationCount: number;
-  mutationWindowStart: number;
-  mutationPreviousCount: number;
-  readCount: number;
-  readWindowStart: number;
-  readPreviousCount: number;
+  readonly subscribedDocs: Set<string>;
+  readonly mutationWindow: SlidingWindowCounter;
+  readonly readWindow: SlidingWindowCounter;
   rateLimitStrikes: number;
   authTimeoutHandle: ReturnType<typeof setTimeout> | null;
 }
@@ -36,16 +36,8 @@ export interface AuthenticatedState extends ConnectionBase {
   readonly profileType: ProfileType;
 }
 
-/** Connection in the process of closing. */
-export interface ClosingState extends ConnectionBase {
-  readonly phase: "closing";
-  readonly auth: AuthContext | null;
-  readonly systemId: string | null;
-  readonly profileType: ProfileType | null;
-}
-
 /** Discriminated union of all connection phases. */
-export type SyncConnectionState = AwaitingAuthState | AuthenticatedState | ClosingState;
+export type SyncConnectionState = AwaitingAuthState | AuthenticatedState;
 
 /** Connection lifecycle phases (derived from the union). */
 export type ConnectionPhase = SyncConnectionState["phase"];

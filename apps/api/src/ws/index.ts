@@ -17,20 +17,23 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 import { upgradeWebSocket, websocket } from "./bun-adapter.js";
 import { ConnectionManager } from "./connection-manager.js";
 import { createRouterContext, routeMessage } from "./message-router.js";
+import { isAllowedOrigin } from "./origin-validation.js";
 import {
   WS_AUTH_TIMEOUT_MS,
   WS_CLOSE_POLICY_VIOLATION,
   WS_MAX_UNAUTHED_CONNECTIONS,
   WS_RELAY_MAX_DOCUMENTS,
   WS_SUBPROTOCOL,
+  WS_UPGRADE_SAFETY_TIMEOUT_MS,
 } from "./ws.constants.js";
+import { formatError } from "./ws.utils.js";
 
 import type { AppLogger } from "../lib/logger.js";
 
 // ── Singleton connection manager ────────────────────────────────────
 
 export const connectionManager = new ConnectionManager();
-const routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS);
+const routerCtx = createRouterContext(WS_RELAY_MAX_DOCUMENTS, connectionManager);
 
 // ── Public API for shutdown ─────────────────────────────────────────
 
@@ -46,22 +49,6 @@ export function closeAllConnections(
 /** Number of active WebSocket connections. */
 export function getActiveConnectionCount(): number {
   return connectionManager.activeCount;
-}
-
-// ── Allowed origins ─────────────────────────────────────────────────
-
-function isAllowedOrigin(origin: string | undefined): boolean {
-  if (process.env["NODE_ENV"] === "test" || process.env["NODE_ENV"] === "development") {
-    return true;
-  }
-
-  if (!origin) {
-    // Non-browser clients (native apps, CLI tools) don't send Origin
-    return true;
-  }
-
-  const allowed = process.env["ALLOWED_ORIGINS"]?.split(",") ?? [];
-  return allowed.includes(origin);
 }
 
 // ── Hono sub-app ────────────────────────────────────────────────────
@@ -101,11 +88,21 @@ syncWsApp.get(
 
     const connectionId = uuidv7();
     let opened = false;
+
+    // I6: Safety timeout — release unauth slot if onOpen never fires
+    const upgradeTimeout = setTimeout(() => {
+      if (!opened) {
+        log.warn("WebSocket upgrade timeout — onOpen never fired", { connectionId });
+        connectionManager.releaseUnauthSlot();
+      }
+    }, WS_UPGRADE_SAFETY_TIMEOUT_MS);
+
     log.info("WebSocket upgrade accepted", { connectionId });
 
     return {
       onOpen(_, ws) {
         opened = true;
+        clearTimeout(upgradeTimeout);
         const state = connectionManager.register(connectionId, ws, Date.now());
 
         // Auth timeout — connection must authenticate within WS_AUTH_TIMEOUT_MS
@@ -114,8 +111,11 @@ syncWsApp.get(
             log.warn("WebSocket auth timeout", { connectionId });
             try {
               ws.close(WS_CLOSE_POLICY_VIOLATION, "Authentication timeout");
-            } catch {
-              // Already closed
+            } catch (err) {
+              log.debug("Failed to close on auth timeout", {
+                connectionId,
+                error: formatError(err),
+              });
             }
           }
         }, WS_AUTH_TIMEOUT_MS);
@@ -140,13 +140,14 @@ syncWsApp.get(
           (err: unknown) => {
             log.error("Unhandled error in routeMessage", {
               connectionId,
-              error: err instanceof Error ? err.message : String(err),
+              error: formatError(err),
             });
           },
         );
       },
 
       onClose() {
+        clearTimeout(upgradeTimeout);
         if (!opened) {
           // onOpen never fired — release reserved slot
           connectionManager.releaseUnauthSlot();

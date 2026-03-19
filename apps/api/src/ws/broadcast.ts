@@ -6,10 +6,18 @@
  */
 import { serializeServerMessage } from "./serialization.js";
 import { WS_CLOSE_UNEXPECTED } from "./ws.constants.js";
+import { formatError } from "./ws.utils.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { DocumentUpdate } from "@pluralscape/sync";
+
+/** Result of a broadcast operation. */
+export interface BroadcastResult {
+  readonly delivered: number;
+  readonly failed: number;
+  readonly total: number;
+}
 
 /**
  * Broadcast a DocumentUpdate to all subscribers of a document,
@@ -20,11 +28,22 @@ export function broadcastDocumentUpdate(
   excludeConnectionId: string,
   manager: ConnectionManager,
   log: AppLogger,
-): void {
+): BroadcastResult {
   const subscribers = manager.getSubscribers(update.docId);
-  if (subscribers.size === 0) return;
+  if (subscribers.size === 0) return { delivered: 0, failed: 0, total: 0 };
 
-  const serialized = serializeServerMessage(update);
+  // C2: Wrap serialization in try/catch — log and return early on failure
+  let serialized: string;
+  try {
+    serialized = serializeServerMessage(update);
+  } catch (err) {
+    log.error("Failed to serialize DocumentUpdate for broadcast", {
+      docId: update.docId,
+      error: formatError(err),
+    });
+    return { delivered: 0, failed: 0, total: subscribers.size };
+  }
+
   let delivered = 0;
   const deadConnections: string[] = [];
 
@@ -55,7 +74,7 @@ export function broadcastDocumentUpdate(
       } catch (closeErr) {
         log.debug("Failed to close dead WebSocket", {
           connectionId,
-          error: closeErr instanceof Error ? closeErr.message : String(closeErr),
+          error: formatError(closeErr),
         });
       }
     }
@@ -70,4 +89,6 @@ export function broadcastDocumentUpdate(
       excluded: excludeConnectionId,
     });
   }
+
+  return { delivered, failed: deadConnections.length, total: subscribers.size };
 }

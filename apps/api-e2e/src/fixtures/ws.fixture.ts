@@ -8,9 +8,26 @@ import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 
 import type { ClientMessage, ServerMessage } from "@pluralscape/sync";
 
+/** Byte lengths for crypto fields in wire format test data. */
+const CIPHERTEXT_TEST_BYTES = 64;
+const NONCE_BYTES = 24;
+const SIGNATURE_BYTES = 64;
+const PUBLIC_KEY_BYTES = 32;
+
+/** Distinct fill byte values so each field is distinguishable in tests. */
+const FILL_CIPHERTEXT = 1;
+const FILL_NONCE = 2;
+const FILL_SIGNATURE = 3;
+const FILL_PUBLIC_KEY = 4;
+
 const E2E_PORT = 10_099;
 const WS_URL = `ws://localhost:${String(E2E_PORT)}/v1/sync/ws`;
 const DEFAULT_TIMEOUT_MS = 5_000;
+
+/** Generate a base64url string that decodes to exactly `n` bytes of the given fill value. */
+function base64urlOfLength(n: number, fill = 0): string {
+  return Buffer.from(new Uint8Array(n).fill(fill)).toString("base64url");
+}
 
 /** Thin wrapper around WebSocket with typed sync protocol methods. */
 export class SyncWsClient {
@@ -134,6 +151,26 @@ export class SyncWsClient {
         correlationId: null,
         docId,
         change,
+      }),
+    );
+    return this.waitForMessage(null);
+  }
+
+  /** Send SubmitSnapshotRequest (wire format with base64url strings) and wait for response. */
+  async submitSnapshot(docId: string, snapshotVersion: number): Promise<ServerMessage> {
+    this.sendRaw(
+      JSON.stringify({
+        type: "SubmitSnapshotRequest",
+        correlationId: null,
+        docId,
+        snapshot: {
+          ciphertext: base64urlOfLength(CIPHERTEXT_TEST_BYTES, FILL_CIPHERTEXT),
+          nonce: base64urlOfLength(NONCE_BYTES, FILL_NONCE),
+          signature: base64urlOfLength(SIGNATURE_BYTES, FILL_SIGNATURE),
+          authorPublicKey: base64urlOfLength(PUBLIC_KEY_BYTES, FILL_PUBLIC_KEY),
+          documentId: docId,
+          snapshotVersion,
+        },
       }),
     );
     return this.waitForMessage(null);

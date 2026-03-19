@@ -7,7 +7,12 @@
 import { test, expect } from "../../fixtures/auth.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
-import type { SubscribeResponse, SyncError } from "@pluralscape/sync";
+import type { SnapshotAccepted, SubscribeResponse, SyncError } from "@pluralscape/sync";
+
+/** Generate a base64url string that decodes to exactly `n` bytes. */
+function base64urlOfLength(n: number, fill = 0): string {
+  return Buffer.from(new Uint8Array(n).fill(fill)).toString("base64url");
+}
 
 test.describe("WebSocket sync server", () => {
   test("authenticates successfully with valid session token", async ({
@@ -97,12 +102,12 @@ test.describe("WebSocket sync server", () => {
 
       await ws2.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
-      // ws1 submits a change
+      // ws1 submits a change with correct byte lengths
       const change = {
-        ciphertext: Buffer.from("encrypted-data").toString("base64url"),
-        nonce: Buffer.from("nonce-value-24bytes!!!!").toString("base64url"),
-        signature: Buffer.from("sig-value-64bytes" + "x".repeat(46)).toString("base64url"),
-        authorPublicKey: Buffer.from("pub-key-32bytes" + "x".repeat(17)).toString("base64url"),
+        ciphertext: base64urlOfLength(32, 1),
+        nonce: base64urlOfLength(24, 2),
+        signature: base64urlOfLength(64, 3),
+        authorPublicKey: base64urlOfLength(32, 4),
         documentId: docId,
       };
       const accepted = await ws1.submitChange(docId, change);
@@ -161,6 +166,60 @@ test.describe("WebSocket sync server", () => {
       const response = await ws.waitForMessage(null);
       expect(response.type).toBe("SyncError");
       expect((response as SyncError).code).toBe("MALFORMED_MESSAGE");
+    } finally {
+      ws.close();
+    }
+  });
+
+  test("auth timeout closes connection after ~10s without authentication", async () => {
+    const ws = new SyncWsClient();
+    await ws.connect();
+
+    try {
+      // Don't authenticate — just wait for the connection to be closed
+      // Auth timeout is 10s, so we wait up to 15s
+      const start = Date.now();
+      await new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+          if (Date.now() - start > 15_000) {
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 500);
+      });
+
+      const elapsed = Date.now() - start;
+      // Should have been closed within ~10-12 seconds
+      expect(elapsed).toBeGreaterThan(8_000);
+      expect(elapsed).toBeLessThan(15_000);
+    } finally {
+      ws.close();
+    }
+  });
+
+  test("snapshot submit flow", async ({ registeredAccount, request }) => {
+    const listRes = await request.get("/v1/systems", {
+      headers: { Authorization: `Bearer ${registeredAccount.sessionToken}` },
+    });
+    const body = (await listRes.json()) as { items: Array<{ id: string }> };
+    const systemId = body.items[0]?.id ?? "";
+
+    const ws = new SyncWsClient();
+    await ws.connect();
+
+    try {
+      await ws.authenticate(registeredAccount.sessionToken, systemId);
+
+      const docId = `e2e-snap-${crypto.randomUUID()}`;
+      const response = await ws.submitSnapshot(docId, 1);
+
+      expect(response.type).toBe("SnapshotAccepted");
+      expect((response as SnapshotAccepted).docId).toBe(docId);
+      expect((response as SnapshotAccepted).snapshotVersion).toBe(1);
     } finally {
       ws.close();
     }

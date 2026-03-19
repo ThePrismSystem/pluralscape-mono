@@ -10,6 +10,11 @@ import {
   subscribeRequestSchema,
 } from "../../ws/message-schemas.js";
 
+/** Generate a base64url string that decodes to exactly `n` bytes. */
+function base64urlOfLength(n: number): string {
+  return Buffer.from(new Uint8Array(n)).toString("base64url");
+}
+
 describe("message-schemas", () => {
   describe("AuthenticateRequest", () => {
     it("accepts valid request", () => {
@@ -122,18 +127,16 @@ describe("message-schemas", () => {
   });
 
   describe("SubmitChangeRequest", () => {
-    const validBase64url = Buffer.from("test-data").toString("base64url");
-
-    it("accepts valid request with base64url binary fields", () => {
+    it("accepts valid request with correct byte lengths", () => {
       const result = submitChangeRequestSchema.safeParse({
         type: "SubmitChangeRequest",
         correlationId: null,
         docId: "fronting-sys_test",
         change: {
-          ciphertext: validBase64url,
-          nonce: validBase64url,
-          signature: validBase64url,
-          authorPublicKey: validBase64url,
+          ciphertext: base64urlOfLength(32),
+          nonce: base64urlOfLength(24),
+          signature: base64urlOfLength(64),
+          authorPublicKey: base64urlOfLength(32),
           documentId: "fronting-sys_test",
         },
       });
@@ -150,9 +153,73 @@ describe("message-schemas", () => {
         docId: "fronting-sys_test",
         change: {
           ciphertext: "",
-          nonce: validBase64url,
-          signature: validBase64url,
-          authorPublicKey: validBase64url,
+          nonce: base64urlOfLength(24),
+          signature: base64urlOfLength(64),
+          authorPublicKey: base64urlOfLength(32),
+          documentId: "fronting-sys_test",
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects invalid base64url characters", () => {
+      const result = submitChangeRequestSchema.safeParse({
+        type: "SubmitChangeRequest",
+        correlationId: null,
+        docId: "fronting-sys_test",
+        change: {
+          ciphertext: "valid-data",
+          nonce: "invalid+chars/here=", // standard base64, not base64url
+          signature: base64urlOfLength(64),
+          authorPublicKey: base64urlOfLength(32),
+          documentId: "fronting-sys_test",
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects wrong nonce byte length", () => {
+      const result = submitChangeRequestSchema.safeParse({
+        type: "SubmitChangeRequest",
+        correlationId: null,
+        docId: "fronting-sys_test",
+        change: {
+          ciphertext: base64urlOfLength(32),
+          nonce: base64urlOfLength(16), // 16 bytes, should be 24
+          signature: base64urlOfLength(64),
+          authorPublicKey: base64urlOfLength(32),
+          documentId: "fronting-sys_test",
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects wrong signature byte length", () => {
+      const result = submitChangeRequestSchema.safeParse({
+        type: "SubmitChangeRequest",
+        correlationId: null,
+        docId: "fronting-sys_test",
+        change: {
+          ciphertext: base64urlOfLength(32),
+          nonce: base64urlOfLength(24),
+          signature: base64urlOfLength(32), // 32 bytes, should be 64
+          authorPublicKey: base64urlOfLength(32),
+          documentId: "fronting-sys_test",
+        },
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects wrong authorPublicKey byte length", () => {
+      const result = submitChangeRequestSchema.safeParse({
+        type: "SubmitChangeRequest",
+        correlationId: null,
+        docId: "fronting-sys_test",
+        change: {
+          ciphertext: base64urlOfLength(32),
+          nonce: base64urlOfLength(24),
+          signature: base64urlOfLength(64),
+          authorPublicKey: base64urlOfLength(16), // 16 bytes, should be 32
           documentId: "fronting-sys_test",
         },
       });

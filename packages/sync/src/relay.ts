@@ -19,7 +19,11 @@ export interface RelayOptions {
 export class EncryptedRelay {
   private readonly documents = new Map<string, EncryptedChangeEnvelope[]>();
   private readonly snapshots = new Map<string, EncryptedSnapshotEnvelope>();
-  private readonly lastAccess = new Map<string, number>();
+  /**
+   * LRU tracking via Map insertion order. Most-recently-used entries are at the end.
+   * touch() deletes and re-inserts to move to end; eviction takes the first key (oldest).
+   */
+  private readonly accessOrder = new Map<string, true>();
   private readonly seqCounters = new Map<string, number>();
   private readonly maxDocuments: number;
   private readonly onEvict?: (documentId: string) => void;
@@ -47,13 +51,27 @@ export class EncryptedRelay {
     return seq;
   }
 
+  /** Return envelopes since a given seq using binary search + slice (O(log n)). */
   getEnvelopesSince(documentId: string, sinceSeq: number): readonly EncryptedChangeEnvelope[] {
     const docEnvelopes = this.documents.get(documentId);
     if (!docEnvelopes) {
       return [];
     }
     this.touch(documentId);
-    return docEnvelopes.filter((e) => e.seq > sinceSeq);
+
+    // Binary search for the first envelope with seq > sinceSeq
+    let low = 0;
+    let high = docEnvelopes.length;
+    while (low < high) {
+      const mid = (low + high) >>> 1;
+      const envelope = docEnvelopes[mid];
+      if (envelope && envelope.seq <= sinceSeq) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    return docEnvelopes.slice(low);
   }
 
   submitSnapshot(envelope: EncryptedSnapshotEnvelope): void {
@@ -87,29 +105,32 @@ export class EncryptedRelay {
     };
   }
 
-  /** Update the last-access timestamp for LRU tracking. */
+  /** Move documentId to end of insertion order (most-recently-used). O(1). */
   private touch(documentId: string): void {
-    this.lastAccess.set(documentId, Date.now());
+    this.accessOrder.delete(documentId);
+    this.accessOrder.set(documentId, true);
   }
 
   /** Evict the least-recently-accessed document if at capacity, skipping the incoming doc. */
   private evictIfNeeded(incomingDocId?: string): void {
-    if (this.lastAccess.size < this.maxDocuments) return;
+    if (this.accessOrder.size < this.maxDocuments) return;
 
+    // If the incoming doc is already tracked, no eviction needed
+    if (incomingDocId && this.accessOrder.has(incomingDocId)) return;
+
+    // First key in Map is the oldest (LRU). O(1).
     let oldestId: string | null = null;
-    let oldestTime = Infinity;
-    for (const [docId, time] of this.lastAccess) {
-      if (docId === incomingDocId) continue;
-      if (time < oldestTime) {
-        oldestTime = time;
+    for (const [docId] of this.accessOrder) {
+      if (docId !== incomingDocId) {
         oldestId = docId;
+        break;
       }
     }
 
     if (oldestId !== null) {
       this.documents.delete(oldestId);
       this.snapshots.delete(oldestId);
-      this.lastAccess.delete(oldestId);
+      this.accessOrder.delete(oldestId);
       this.seqCounters.delete(oldestId);
       this.onEvict?.(oldestId);
     }

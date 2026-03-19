@@ -65,3 +65,9 @@ export const WS_RATE_LIMIT_STRIKE_MAX = 10;
 
 /** Maximum number of documents in a single SubscribeRequest. */
 export const WS_MAX_SUBSCRIBE_DOCUMENTS = 100;
+
+/** Maximum document subscriptions per connection (prevents unbounded memory growth). */
+export const WS_MAX_SUBSCRIPTIONS_PER_CONNECTION = 500;
+
+/** Safety timeout (ms) to release unauth slot if onOpen never fires after upgrade. */
+export const WS_UPGRADE_SAFETY_TIMEOUT_MS = 5_000;

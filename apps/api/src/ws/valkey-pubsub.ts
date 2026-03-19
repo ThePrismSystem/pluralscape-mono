@@ -11,6 +11,7 @@
 import { logger } from "../lib/logger.js";
 
 import { WS_VALKEY_CONNECT_TIMEOUT_MS } from "./ws.constants.js";
+import { formatError } from "./ws.utils.js";
 
 /** Minimal ioredis-compatible interface for pub/sub operations. */
 export interface PubSubClient {
@@ -74,14 +75,10 @@ export class ValkeyPubSub {
 
       // Prevent unhandled 'error' events from crashing the process
       this.subscriber.on("error", (err: unknown) => {
-        logger.warn("Valkey subscriber error", {
-          error: err instanceof Error ? err.message : String(err),
-        });
+        logger.warn("Valkey subscriber error", { error: formatError(err) });
       });
       this.publisher.on("error", (err: unknown) => {
-        logger.warn("Valkey publisher error", {
-          error: err instanceof Error ? err.message : String(err),
-        });
+        logger.warn("Valkey publisher error", { error: formatError(err) });
       });
 
       // Wire up message delivery
@@ -95,7 +92,7 @@ export class ValkeyPubSub {
           } catch (err) {
             logger.error("Valkey pub/sub handler error", {
               channel,
-              error: err instanceof Error ? err.message : String(err),
+              error: formatError(err),
             });
           }
         }
@@ -112,23 +109,29 @@ export class ValkeyPubSub {
             channels.map(async (channel) => {
               await this.subscriber?.subscribe(channel);
             }),
-          ).then((results) => {
-            let succeeded = 0;
-            let failed = 0;
-            for (const result of results) {
-              if (result.status === "fulfilled") {
-                succeeded++;
-              } else {
-                failed++;
-                // Do NOT delete from activeChannels — next reconnect will retry
-                logger.warn("Valkey resubscribe failed for channel", {
-                  error:
-                    result.reason instanceof Error ? result.reason.message : String(result.reason),
-                });
+          )
+            .then((results) => {
+              let succeeded = 0;
+              let failed = 0;
+              for (const result of results) {
+                if (result.status === "fulfilled") {
+                  succeeded++;
+                } else {
+                  failed++;
+                  // Do NOT delete from activeChannels — next reconnect will retry
+                  logger.warn("Valkey resubscribe failed for channel", {
+                    error: formatError(result.reason),
+                  });
+                }
               }
-            }
-            logger.info("Valkey resubscription complete", { succeeded, failed });
-          });
+              logger.info("Valkey resubscription complete", { succeeded, failed });
+            })
+            // I9: Catch errors from the .then() handler itself
+            .catch((err: unknown) => {
+              logger.error("Valkey resubscription processing error", {
+                error: formatError(err),
+              });
+            });
         }
       });
 
@@ -136,7 +139,7 @@ export class ValkeyPubSub {
       return true;
     } catch (err) {
       logger.warn("Failed to connect Valkey pub/sub, using local-only delivery", {
-        error: err instanceof Error ? err.message : String(err),
+        error: formatError(err),
       });
       this.subscriber = null;
       this.publisher = null;
@@ -153,7 +156,7 @@ export class ValkeyPubSub {
     } catch (err) {
       logger.warn("Valkey publish failed", {
         channel,
-        error: err instanceof Error ? err.message : String(err),
+        error: formatError(err),
       });
       return false;
     }
@@ -174,9 +177,14 @@ export class ValkeyPubSub {
           await this.subscriber.subscribe(channel);
           this.activeChannels.add(channel);
         } catch (err) {
+          // I8: Remove the handler we just added on subscribe failure
+          channelHandlers.delete(handler);
+          if (channelHandlers.size === 0) {
+            this.handlers.delete(channel);
+          }
           logger.warn("Valkey subscribe failed", {
             channel,
-            error: err instanceof Error ? err.message : String(err),
+            error: formatError(err),
           });
           return;
         }
@@ -207,7 +215,7 @@ export class ValkeyPubSub {
         } catch (err) {
           logger.warn("Valkey unsubscribe failed", {
             channel,
-            error: err instanceof Error ? err.message : String(err),
+            error: formatError(err),
           });
         }
       }
@@ -222,14 +230,14 @@ export class ValkeyPubSub {
       if (this.subscriber) await this.subscriber.disconnect();
     } catch (err) {
       logger.debug("Valkey subscriber already disconnected", {
-        error: err instanceof Error ? err.message : String(err),
+        error: formatError(err),
       });
     }
     try {
       if (this.publisher) await this.publisher.disconnect();
     } catch (err) {
       logger.debug("Valkey publisher already disconnected", {
-        error: err instanceof Error ? err.message : String(err),
+        error: formatError(err),
       });
     }
     this.subscriber = null;

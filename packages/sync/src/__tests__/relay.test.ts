@@ -228,11 +228,11 @@ describe("EncryptedRelay", () => {
       limitedRelay.submit(c1);
       limitedRelay.submit(c2);
 
-      // Submit again to doc-a — should NOT evict doc-a, should evict doc-b
+      // Submit again to doc-a — doc-a is already tracked, so no eviction needed
       const c3 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
       limitedRelay.submit(c3);
 
-      expect(evicted).toEqual(["doc-b"]);
+      expect(evicted).toEqual([]);
       expect(limitedRelay.getEnvelopesSince("doc-a", 0)).toHaveLength(2);
     });
 

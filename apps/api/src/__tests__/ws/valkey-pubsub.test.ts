@@ -229,6 +229,19 @@ describe("ValkeyPubSub", () => {
       // Should have attempted subscribe twice (once failed, once succeeded)
       expect(sub().subscribeMock).toHaveBeenCalledTimes(2);
     });
+
+    it("removes handler on subscribe failure so messages are not delivered", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+      sub().subscribeMock.mockRejectedValueOnce(new Error("subscribe failed"));
+
+      const handler = vi.fn();
+      await pubsub.subscribe("ps:sync:fail-channel", handler);
+
+      // Even if a message somehow arrives, handler should not be called
+      // because it was removed after subscribe failure
+      sub().emit("message", "ps:sync:fail-channel", "test");
+      expect(handler).not.toHaveBeenCalled();
+    });
   });
 
   describe("unsubscribe", () => {

@@ -60,6 +60,21 @@ function lastResponse(): Record<string, unknown> {
   return JSON.parse(last) as Record<string, unknown>;
 }
 
+/** Generate a base64url string that decodes to exactly `n` bytes. */
+function base64urlOfLength(n: number, fill = 0): string {
+  return Buffer.from(new Uint8Array(n).fill(fill)).toString("base64url");
+}
+
+function makeChangePayload(docId: string): Record<string, string> {
+  return {
+    ciphertext: base64urlOfLength(32, 1),
+    nonce: base64urlOfLength(24, 2), // AEAD_NONCE_BYTES = 24
+    signature: base64urlOfLength(64, 3), // SIGN_BYTES = 64
+    authorPublicKey: base64urlOfLength(32, 4), // SIGN_PUBLIC_KEY_BYTES = 32
+    documentId: docId,
+  };
+}
+
 function authRequest(): string {
   return JSON.stringify({
     type: "AuthenticateRequest",
@@ -83,7 +98,7 @@ describe("message-router", () => {
     manager = new ConnectionManager();
     manager.reserveUnauthSlot();
     state = manager.register("conn-1", mockWs() as never, Date.now());
-    ctx = createRouterContext(1000);
+    ctx = createRouterContext(1000, manager);
     sent.length = 0;
   });
 
@@ -307,31 +322,63 @@ describe("message-router", () => {
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("MALFORMED_MESSAGE");
     });
-  });
 
-  describe("closing phase", () => {
-    it("silently discards messages in closing phase", async () => {
-      // Create a state object in the closing phase
-      const closingState: SyncConnectionState = {
-        connectionId: state.connectionId,
-        ws: state.ws,
-        connectedAt: state.connectedAt,
-        phase: "closing",
-        auth: null,
-        systemId: null,
-        profileType: null,
-        subscribedDocs: new Set(),
-        mutationCount: 0,
-        mutationWindowStart: 0,
-        mutationPreviousCount: 0,
-        readCount: 0,
-        readWindowStart: 0,
-        readPreviousCount: 0,
-        rateLimitStrikes: 0,
-        authTimeoutHandle: null,
-      };
-      await routeMessage(authRequest(), closingState, manager, log, ctx);
-      expect(sent).toHaveLength(0);
+    it("ManifestRequest rejects wrong systemId", async () => {
+      await routeMessage(
+        JSON.stringify({
+          type: "ManifestRequest",
+          correlationId: null,
+          systemId: "sys_other",
+        }),
+        state,
+        manager,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("PERMISSION_DENIED");
+    });
+
+    it("SubscribeRequest permits some docs and denies others", async () => {
+      ctx.documentOwnership.set("doc-owned-by-other", "sys_other");
+
+      await routeMessage(
+        JSON.stringify({
+          type: "SubscribeRequest",
+          correlationId: null,
+          documents: [
+            { docId: "doc-ok", lastSyncedSeq: 0, lastSnapshotVersion: 0 },
+            { docId: "doc-owned-by-other", lastSyncedSeq: 0, lastSnapshotVersion: 0 },
+          ],
+        }),
+        state,
+        manager,
+        log,
+        ctx,
+      );
+
+      // Should get PERMISSION_DENIED for the denied doc and SubscribeResponse for permitted
+      const responses = sent.map((s) => JSON.parse(s) as Record<string, unknown>);
+      const denied = responses.find((r) => r["code"] === "PERMISSION_DENIED");
+      const subscribed = responses.find((r) => r["type"] === "SubscribeResponse");
+      expect(denied).toBeDefined();
+      expect(subscribed).toBeDefined();
+    });
+
+    it("does not echo user input in unknown message type error", async () => {
+      await routeMessage(
+        JSON.stringify({ type: "<script>alert(1)</script>", correlationId: null }),
+        state,
+        manager,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["message"]).toBe("Unknown message type");
+      expect(String(resp["message"])).not.toContain("<script>");
     });
   });
 
@@ -346,8 +393,8 @@ describe("message-router", () => {
 
     it("returns RATE_LIMITED when read limit exceeded", async () => {
       // Exhaust the read rate limit (200 per window)
-      state.readCount = 200;
-      state.readWindowStart = Date.now();
+      state.readWindow.count = 200;
+      state.readWindow.windowStart = Date.now();
 
       await routeMessage(
         JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
@@ -367,15 +414,16 @@ describe("message-router", () => {
       const strikeManager = new ConnectionManager();
       strikeManager.reserveUnauthSlot();
       const strikeStateInit = strikeManager.register("conn-strike", ws as never, Date.now());
+      const strikeCtx = createRouterContext(1000, strikeManager);
       // Authenticate first
-      await routeMessage(authRequest(), strikeStateInit, strikeManager, log, ctx);
+      await routeMessage(authRequest(), strikeStateInit, strikeManager, log, strikeCtx);
       const strikeState = strikeManager.get("conn-strike");
       if (!strikeState) throw new Error("State not found after auth");
       sent.length = 0;
 
       // Simulate many rate limit violations
-      strikeState.readCount = 200;
-      strikeState.readWindowStart = Date.now();
+      strikeState.readWindow.count = 200;
+      strikeState.readWindow.windowStart = Date.now();
       strikeState.rateLimitStrikes = 9; // One more will hit the max (10)
 
       await routeMessage(
@@ -383,14 +431,14 @@ describe("message-router", () => {
         strikeState,
         strikeManager,
         log,
-        ctx,
+        strikeCtx,
       );
 
       expect(ws.close).toHaveBeenCalled();
       strikeManager.closeAll(1001, "test cleanup");
     });
 
-    it("resets strikes on successful message", async () => {
+    it("decays strikes by 1 on successful message", async () => {
       state.rateLimitStrikes = 5;
 
       await routeMessage(
@@ -401,20 +449,15 @@ describe("message-router", () => {
         ctx,
       );
 
-      expect(state.rateLimitStrikes).toBe(0);
+      // Decays by 1, not reset to 0
+      expect(state.rateLimitStrikes).toBe(4);
     });
 
     it("returns RATE_LIMITED when mutation limit exceeded", async () => {
-      state.mutationCount = 100;
-      state.mutationWindowStart = Date.now();
+      state.mutationWindow.count = 100;
+      state.mutationWindow.windowStart = Date.now();
 
-      const change = {
-        ciphertext: Buffer.from("test").toString("base64url"),
-        nonce: Buffer.from("nonce123456789012345678").toString("base64url"),
-        signature: Buffer.from("sig".repeat(22)).toString("base64url"),
-        authorPublicKey: Buffer.from("key".repeat(11)).toString("base64url"),
-        documentId: "doc-mut",
-      };
+      const change = makeChangePayload("doc-mut");
       await routeMessage(
         JSON.stringify({
           type: "SubmitChangeRequest",
@@ -431,6 +474,24 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("RATE_LIMITED");
+    });
+
+    it("preserves window offset on rotation", async () => {
+      // Set the window start to a known past time
+      const pastTime = Date.now() - 15_000; // 15s ago, more than one 10s window
+      state.readWindow.count = 5;
+      state.readWindow.windowStart = pastTime;
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-1" }),
+        state,
+        manager,
+        log,
+        ctx,
+      );
+
+      // After rotation, windowStart should be offset-corrected, not set to now
+      expect(state.readWindow.windowStart).toBeGreaterThan(pastTime);
     });
   });
 
@@ -452,9 +513,10 @@ describe("message-router", () => {
       const brokenManager = new ConnectionManager();
       brokenManager.reserveUnauthSlot();
       const brokenState = brokenManager.register("conn-broken", brokenWs as never, Date.now());
+      const brokenCtx = createRouterContext(1000, brokenManager);
 
       // Authenticate first (this send will also fail but we need the state)
-      await routeMessage(authRequest(), brokenState, brokenManager, warnLog, ctx);
+      await routeMessage(authRequest(), brokenState, brokenManager, warnLog, brokenCtx);
 
       // The send failure should have been logged
       expect(warnFn).toHaveBeenCalledWith(
@@ -489,7 +551,6 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("MALFORMED_MESSAGE");
-      expect(resp["message"]).toContain("Unknown message type");
     });
 
     it("rejects constructor as message type", async () => {
@@ -517,13 +578,7 @@ describe("message-router", () => {
     });
 
     it("allows first submit to any docId (creates ownership)", async () => {
-      const change = {
-        ciphertext: Buffer.from("test").toString("base64url"),
-        nonce: Buffer.from("nonce123456789012345678").toString("base64url"),
-        signature: Buffer.from("sig".repeat(22)).toString("base64url"),
-        authorPublicKey: Buffer.from("key".repeat(11)).toString("base64url"),
-        documentId: "doc-acl-1",
-      };
+      const change = makeChangePayload("doc-acl-1");
       await routeMessage(
         JSON.stringify({
           type: "SubmitChangeRequest",
@@ -545,13 +600,7 @@ describe("message-router", () => {
     it("rejects submit to doc owned by another system", async () => {
       ctx.documentOwnership.set("doc-acl-2", "sys_other");
 
-      const change = {
-        ciphertext: Buffer.from("test").toString("base64url"),
-        nonce: Buffer.from("nonce123456789012345678").toString("base64url"),
-        signature: Buffer.from("sig".repeat(22)).toString("base64url"),
-        authorPublicKey: Buffer.from("key".repeat(11)).toString("base64url"),
-        documentId: "doc-acl-2",
-      };
+      const change = makeChangePayload("doc-acl-2");
       await routeMessage(
         JSON.stringify({
           type: "SubmitChangeRequest",
@@ -633,6 +682,67 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("PERMISSION_DENIED");
+    });
+
+    it("SubmitChangeRequest skips broadcast on send failure", async () => {
+      const brokenWs = mockWs();
+      brokenWs.send.mockImplementation(() => {
+        throw new Error("broken pipe");
+      });
+      const brokenManager = new ConnectionManager();
+      brokenManager.reserveUnauthSlot();
+      brokenManager.register("conn-broken", brokenWs as never, Date.now());
+      brokenManager.authenticate(
+        "conn-broken",
+        {
+          accountId: "acct_test" as AccountId,
+          systemId: "sys_test" as SystemId,
+          sessionId: "sess_test" as SessionId,
+          accountType: "system",
+          ownedSystemIds: new Set(["sys_test" as SystemId]),
+        },
+        "sys_test",
+        "owner-full",
+      );
+      const brokenState = brokenManager.get("conn-broken");
+      if (!brokenState) throw new Error("State not found");
+      const brokenCtx = createRouterContext(1000, brokenManager);
+
+      // Set up another subscriber to verify broadcast doesn't happen
+      brokenManager.reserveUnauthSlot();
+      const subWs = mockWs();
+      brokenManager.register("conn-sub", subWs as never, Date.now());
+      brokenManager.authenticate(
+        "conn-sub",
+        {
+          accountId: "acct_test" as AccountId,
+          systemId: "sys_test" as SystemId,
+          sessionId: "sess_test" as SessionId,
+          accountType: "system",
+          ownedSystemIds: new Set(["sys_test" as SystemId]),
+        },
+        "sys_test",
+        "owner-full",
+      );
+      brokenManager.addSubscription("conn-sub", "doc-bc");
+
+      const change = makeChangePayload("doc-bc");
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitChangeRequest",
+          correlationId: null,
+          docId: "doc-bc",
+          change,
+        }),
+        brokenState,
+        brokenManager,
+        log,
+        brokenCtx,
+      );
+
+      // Subscriber should NOT have received broadcast since send to submitter failed
+      expect(subWs.send).not.toHaveBeenCalled();
+      brokenManager.closeAll(1001, "test cleanup");
     });
   });
 });

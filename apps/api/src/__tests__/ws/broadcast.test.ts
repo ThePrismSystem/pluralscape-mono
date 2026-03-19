@@ -142,6 +142,41 @@ describe("broadcastDocumentUpdate", () => {
     expect(manager.get("conn-dead")).toBeUndefined();
   });
 
+  it("returns BroadcastResult with delivered/failed/total counts", () => {
+    const ws1 = mockWs();
+    const ws2 = mockWs();
+    manager.register("conn-1", ws1 as never, Date.now());
+    manager.register("conn-2", ws2 as never, Date.now());
+    manager.authenticate("conn-1", mockAuth(), "sys_test", "owner-full");
+    manager.authenticate("conn-2", mockAuth(), "sys_test", "owner-full");
+    manager.addSubscription("conn-1", "doc-1");
+    manager.addSubscription("conn-2", "doc-1");
+
+    const result = broadcastDocumentUpdate(makeUpdate(), "nobody", manager, log);
+
+    expect(result.delivered).toBe(2);
+    expect(result.failed).toBe(0);
+    expect(result.total).toBe(2);
+  });
+
+  it("returns early on serialization failure", () => {
+    const ws1 = mockWs();
+    manager.register("conn-1", ws1 as never, Date.now());
+    manager.authenticate("conn-1", mockAuth(), "sys_test", "owner-full");
+    manager.addSubscription("conn-1", "doc-1");
+
+    // Create an update with a circular reference to trigger serialization failure
+    const badUpdate = makeUpdate();
+    const circular: Record<string, unknown> = {};
+    circular["self"] = circular;
+    Object.assign(badUpdate, { changes: [circular] });
+
+    const result = broadcastDocumentUpdate(badUpdate, "nobody", manager, log);
+
+    expect(result.delivered).toBe(0);
+    expect(ws1.send).not.toHaveBeenCalled();
+  });
+
   it("sends only to subscribers of the specific document", () => {
     const ws1 = mockWs();
     const ws2 = mockWs();

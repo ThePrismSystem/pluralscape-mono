@@ -4,35 +4,78 @@
  * These validate the JSON wire format and transform Base64url-encoded
  * binary fields to Uint8Array on parse.
  */
+import { AEAD_NONCE_BYTES, SIGN_BYTES, SIGN_PUBLIC_KEY_BYTES } from "@pluralscape/crypto";
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 import { z } from "zod";
 
 import { SESSION_TOKEN_PATTERN } from "../middleware/middleware.constants.js";
 
+import { PROFILE_TYPES } from "./connection-state.js";
 import { base64urlToBytes } from "./serialization.js";
 import { WS_MAX_SUBSCRIBE_DOCUMENTS } from "./ws.constants.js";
+
+import type { ClientMessage } from "@pluralscape/sync";
+import type { ZodType } from "zod";
 
 // ── Shared schemas ──────────────────────────────────────────────────
 
 const correlationId = z.uuid().nullable();
 const docId = z.string().min(1);
-const base64urlBytes = z.string().min(1).transform(base64urlToBytes);
+
+/** Pattern for valid base64url characters (RFC 4648 §5). */
+const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+const base64urlBytes = z
+  .string()
+  .min(1)
+  .regex(BASE64URL_PATTERN, "Invalid base64url encoding")
+  .transform(base64urlToBytes);
+
+/** Base64url → Uint8Array with byte-length refinement for AEAD nonce (24 bytes). */
+const nonceBytes = z
+  .string()
+  .min(1)
+  .regex(BASE64URL_PATTERN, "Invalid base64url encoding")
+  .transform(base64urlToBytes)
+  .refine((buf) => buf.length === AEAD_NONCE_BYTES, {
+    message: `Nonce must be ${String(AEAD_NONCE_BYTES)} bytes`,
+  });
+
+/** Base64url → Uint8Array with byte-length refinement for signature (64 bytes). */
+const signatureBytes = z
+  .string()
+  .min(1)
+  .regex(BASE64URL_PATTERN, "Invalid base64url encoding")
+  .transform(base64urlToBytes)
+  .refine((buf) => buf.length === SIGN_BYTES, {
+    message: `Signature must be ${String(SIGN_BYTES)} bytes`,
+  });
+
+/** Base64url → Uint8Array with byte-length refinement for sign public key (32 bytes). */
+const signPublicKeyBytes = z
+  .string()
+  .min(1)
+  .regex(BASE64URL_PATTERN, "Invalid base64url encoding")
+  .transform(base64urlToBytes)
+  .refine((buf) => buf.length === SIGN_PUBLIC_KEY_BYTES, {
+    message: `Author public key must be ${String(SIGN_PUBLIC_KEY_BYTES)} bytes`,
+  });
 
 /** Encrypted change envelope without seq (server assigns). */
 const changeWithoutSeq = z.object({
   ciphertext: base64urlBytes,
-  nonce: base64urlBytes,
-  signature: base64urlBytes,
-  authorPublicKey: base64urlBytes,
+  nonce: nonceBytes,
+  signature: signatureBytes,
+  authorPublicKey: signPublicKeyBytes,
   documentId: z.string().min(1),
 });
 
 /** Full encrypted snapshot envelope. */
 const snapshotEnvelope = z.object({
   ciphertext: base64urlBytes,
-  nonce: base64urlBytes,
-  signature: base64urlBytes,
-  authorPublicKey: base64urlBytes,
+  nonce: nonceBytes,
+  signature: signatureBytes,
+  authorPublicKey: signPublicKeyBytes,
   documentId: z.string().min(1),
   snapshotVersion: z.number().int().positive(),
 });
@@ -52,7 +95,7 @@ export const authenticateRequestSchema = z.object({
   protocolVersion: z.literal(SYNC_PROTOCOL_VERSION),
   sessionToken: z.string().regex(SESSION_TOKEN_PATTERN),
   systemId: z.string().min(1),
-  profileType: z.enum(["owner-full", "owner-lite", "friend"]),
+  profileType: z.enum(PROFILE_TYPES),
 });
 
 export const manifestRequestSchema = z.object({
@@ -120,7 +163,7 @@ export const CLIENT_MESSAGE_SCHEMAS = {
   SubmitChangeRequest: submitChangeRequestSchema,
   SubmitSnapshotRequest: submitSnapshotRequestSchema,
   DocumentLoadRequest: documentLoadRequestSchema,
-} as const;
+} as const satisfies Record<ClientMessage["type"], ZodType>;
 
 /** All valid client message type strings. */
 export type ClientMessageType = keyof typeof CLIENT_MESSAGE_SCHEMAS;
