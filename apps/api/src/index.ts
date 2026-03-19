@@ -23,10 +23,20 @@ import {
   SERVER_STOP_TIMEOUT_SECONDS,
   SHUTDOWN_TIMEOUT_SECONDS,
 } from "./server.constants.js";
+import { closeAllConnections, syncWsApp, websocket } from "./ws/index.js";
+import {
+  WS_CLOSE_GOING_AWAY,
+  WS_IDLE_TIMEOUT_SECONDS,
+  WS_MAX_MESSAGE_BYTES,
+} from "./ws/ws.constants.js";
 
 const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
 
 export const app = new Hono();
+
+// Mount WebSocket route BEFORE global middleware to avoid header mutation
+// conflicts with CORS/secureHeaders on upgrade responses (see plan D4).
+app.route("/v1/sync", syncWsApp);
 
 app.use("*", requestIdMiddleware());
 app.use("*", accessLogMiddleware());
@@ -69,6 +79,10 @@ const MS_PER_SECOND = 1_000;
  */
 export async function shutdown(server: { stop(): Promise<void> | void } | null): Promise<void> {
   logger.info("Shutting down");
+
+  // Phase 1: Close all WebSocket connections gracefully
+  closeAllConnections(WS_CLOSE_GOING_AWAY, "Server shutting down");
+
   if (server) {
     await Promise.race([
       Promise.resolve(server.stop()),
@@ -136,6 +150,12 @@ async function start(): Promise<void> {
     httpServer = Bun.serve({
       port,
       fetch: app.fetch,
+      websocket: {
+        ...websocket,
+        maxPayloadLength: WS_MAX_MESSAGE_BYTES,
+        idleTimeout: WS_IDLE_TIMEOUT_SECONDS,
+        sendPings: true,
+      },
     });
 
     logger.info("Pluralscape API listening", { port });

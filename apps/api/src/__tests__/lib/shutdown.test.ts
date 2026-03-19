@@ -4,6 +4,12 @@ import { SERVER_STOP_TIMEOUT_SECONDS } from "../../server.constants.js";
 
 import type { Closeable } from "@pluralscape/db";
 
+// Mock the Bun-specific WebSocket adapter (not available in Node.js/Vitest)
+vi.mock("../../ws/bun-adapter.js", () => ({
+  upgradeWebSocket: vi.fn(() => vi.fn()),
+  websocket: { open: vi.fn(), close: vi.fn(), message: vi.fn() },
+}));
+
 const { mockGetRawClient, mockLogInfo, mockLogWarn, mockLogError } = vi.hoisted(() => ({
   mockGetRawClient: vi.fn<() => Closeable | null>(),
   mockLogInfo: vi.fn(),

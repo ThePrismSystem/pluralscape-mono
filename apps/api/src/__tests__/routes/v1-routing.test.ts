@@ -1,4 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Mock the Bun-specific WebSocket adapter (not available in Node.js/Vitest)
+vi.mock("../../ws/bun-adapter.js", () => ({
+  upgradeWebSocket: vi.fn(() => vi.fn()),
+  websocket: { open: vi.fn(), close: vi.fn(), message: vi.fn() },
+}));
 
 import { app } from "../../index.js";
 
