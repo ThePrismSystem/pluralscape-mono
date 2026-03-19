@@ -1,0 +1,646 @@
+import { EncryptedRelay } from "@pluralscape/sync";
+import { describe, expect, it, vi, afterEach } from "vitest";
+
+import { ConnectionManager } from "../../ws/connection-manager.js";
+import {
+  handleManifestRequest,
+  handleSubscribeRequest,
+  handleUnsubscribeRequest,
+  handleFetchSnapshot,
+  handleFetchChanges,
+  handleSubmitChange,
+  handleSubmitSnapshot,
+  handleDocumentLoad,
+} from "../../ws/handlers.js";
+
+import type { AuthContext } from "../../lib/auth-context.js";
+import type { SyncConnectionState } from "../../ws/connection-state.js";
+import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
+import type {
+  DocumentLoadRequest,
+  EncryptedChangeEnvelope,
+  EncryptedSnapshotEnvelope,
+  FetchChangesRequest,
+  FetchSnapshotRequest,
+  ManifestRequest,
+  SubmitChangeRequest,
+  SubmitSnapshotRequest,
+  SubscribeRequest,
+  UnsubscribeRequest,
+} from "@pluralscape/sync";
+import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
+
+// ── Test helpers ──────────────────────────────────────────────────────
+
+function nonce(fill: number): AeadNonce {
+  const bytes: unknown = new Uint8Array(24).fill(fill);
+  return bytes as AeadNonce;
+}
+
+function pubkey(fill: number): SignPublicKey {
+  const bytes: unknown = new Uint8Array(32).fill(fill);
+  return bytes as SignPublicKey;
+}
+
+function sig(fill: number): Signature {
+  const bytes: unknown = new Uint8Array(64).fill(fill);
+  return bytes as Signature;
+}
+
+function mockChangeWithoutSeq(docId: string): Omit<EncryptedChangeEnvelope, "seq"> {
+  return {
+    ciphertext: new Uint8Array([1, 2, 3]),
+    nonce: nonce(4),
+    signature: sig(7),
+    authorPublicKey: pubkey(10),
+    documentId: docId,
+  };
+}
+
+function mockSnapshot(docId: string, version: number): EncryptedSnapshotEnvelope {
+  return {
+    ciphertext: new Uint8Array([1, 2, 3]),
+    nonce: nonce(4),
+    signature: sig(7),
+    authorPublicKey: pubkey(10),
+    documentId: docId,
+    snapshotVersion: version,
+  };
+}
+
+function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
+  return { close: vi.fn(), send: vi.fn() };
+}
+
+function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContext {
+  return {
+    accountId,
+    systemId: crypto.randomUUID() as SystemId,
+    sessionId: crypto.randomUUID() as SessionId,
+    accountType: "system",
+    ownedSystemIds: new Set(),
+  };
+}
+
+function createAuthenticatedState(
+  manager: ConnectionManager,
+  connId: string,
+  auth: AuthContext,
+  systemId: string,
+): SyncConnectionState {
+  manager.reserveUnauthSlot();
+  manager.register(connId, mockWs() as never, Date.now());
+  manager.authenticate(connId, auth, systemId, "owner-full");
+  const state = manager.get(connId);
+  if (!state) {
+    throw new Error(`Connection ${connId} not found after registration`);
+  }
+  return state;
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────
+
+describe("handleManifestRequest", () => {
+  it("returns a ManifestResponse with an empty document list", () => {
+    const systemId = crypto.randomUUID();
+    const correlationId = crypto.randomUUID();
+    const message: ManifestRequest = {
+      type: "ManifestRequest",
+      correlationId,
+      systemId,
+    };
+
+    const result = handleManifestRequest(message);
+
+    expect(result).toEqual({
+      type: "ManifestResponse",
+      correlationId,
+      manifest: { documents: [], systemId },
+    });
+  });
+
+  it("echoes the correlationId from the request", () => {
+    const correlationId = crypto.randomUUID();
+    const message: ManifestRequest = {
+      type: "ManifestRequest",
+      correlationId,
+      systemId: crypto.randomUUID(),
+    };
+
+    const result = handleManifestRequest(message);
+
+    expect(result.correlationId).toBe(correlationId);
+  });
+});
+
+describe("handleSubscribeRequest", () => {
+  let manager: ConnectionManager;
+
+  afterEach(() => {
+    manager.closeAll(1001, "test cleanup");
+  });
+
+  it("registers subscriptions and returns catchup with changes", () => {
+    manager = new ConnectionManager();
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const connId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
+    const auth = mockAuth();
+    const state = createAuthenticatedState(manager, connId, auth, systemId);
+
+    // Submit a change so catchup has data
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const correlationId = crypto.randomUUID();
+    const message: SubscribeRequest = {
+      type: "SubscribeRequest",
+      correlationId,
+      documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
+    };
+
+    const result = handleSubscribeRequest(message, state, manager, relay);
+
+    expect(result.type).toBe("SubscribeResponse");
+    expect(result.correlationId).toBe(correlationId);
+    expect(result.catchup).toHaveLength(1);
+    expect(result.catchup[0]?.docId).toBe(docId);
+    expect(result.catchup[0]?.changes).toHaveLength(1);
+    expect(result.catchup[0]?.snapshot).toBeNull();
+  });
+
+  it("includes newer snapshot in catchup when available", () => {
+    manager = new ConnectionManager();
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const connId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
+    const auth = mockAuth();
+    const state = createAuthenticatedState(manager, connId, auth, systemId);
+
+    relay.submitSnapshot(mockSnapshot(docId, 1));
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const message: SubscribeRequest = {
+      type: "SubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
+    };
+
+    const result = handleSubscribeRequest(message, state, manager, relay);
+
+    expect(result.catchup).toHaveLength(1);
+    expect(result.catchup[0]?.snapshot).not.toBeNull();
+    expect(result.catchup[0]?.snapshot?.snapshotVersion).toBe(1);
+  });
+
+  it("omits catchup entry when client is already current", () => {
+    manager = new ConnectionManager();
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const connId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
+    const auth = mockAuth();
+    const state = createAuthenticatedState(manager, connId, auth, systemId);
+
+    // Submit and then subscribe with the current seq
+    const seq = relay.submit(mockChangeWithoutSeq(docId));
+
+    const message: SubscribeRequest = {
+      type: "SubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      documents: [{ docId, lastSyncedSeq: seq, lastSnapshotVersion: 0 }],
+    };
+
+    const result = handleSubscribeRequest(message, state, manager, relay);
+
+    expect(result.catchup).toHaveLength(0);
+  });
+
+  it("adds subscription to connection manager", () => {
+    manager = new ConnectionManager();
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const connId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
+    const auth = mockAuth();
+    const state = createAuthenticatedState(manager, connId, auth, systemId);
+
+    const message: SubscribeRequest = {
+      type: "SubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
+    };
+
+    handleSubscribeRequest(message, state, manager, relay);
+
+    expect(manager.getSubscribers(docId).has(connId)).toBe(true);
+  });
+});
+
+describe("handleUnsubscribeRequest", () => {
+  let manager: ConnectionManager;
+
+  afterEach(() => {
+    manager.closeAll(1001, "test cleanup");
+  });
+
+  it("removes subscription from connection manager", () => {
+    manager = new ConnectionManager();
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const connId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
+    const auth = mockAuth();
+    const state = createAuthenticatedState(manager, connId, auth, systemId);
+
+    // Subscribe first
+    const subMsg: SubscribeRequest = {
+      type: "SubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
+    };
+    handleSubscribeRequest(subMsg, state, manager, relay);
+    expect(manager.getSubscribers(docId).has(connId)).toBe(true);
+
+    // Now unsubscribe
+    const unsubMsg: UnsubscribeRequest = {
+      type: "UnsubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+    };
+    handleUnsubscribeRequest(unsubMsg, state, manager);
+
+    expect(manager.getSubscribers(docId).has(connId)).toBe(false);
+  });
+
+  it("is idempotent when unsubscribing from a non-subscribed document", () => {
+    manager = new ConnectionManager();
+    const docId = crypto.randomUUID();
+    const connId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
+    const auth = mockAuth();
+    const state = createAuthenticatedState(manager, connId, auth, systemId);
+
+    const message: UnsubscribeRequest = {
+      type: "UnsubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+    };
+
+    expect(() => {
+      handleUnsubscribeRequest(message, state, manager);
+    }).not.toThrow();
+  });
+});
+
+describe("handleFetchSnapshot", () => {
+  it("returns the latest snapshot from the relay", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const correlationId = crypto.randomUUID();
+
+    relay.submitSnapshot(mockSnapshot(docId, 1));
+
+    const message: FetchSnapshotRequest = {
+      type: "FetchSnapshotRequest",
+      correlationId,
+      docId,
+    };
+
+    const result = handleFetchSnapshot(message, relay);
+
+    expect(result.type).toBe("SnapshotResponse");
+    expect(result.correlationId).toBe(correlationId);
+    expect(result.docId).toBe(docId);
+    expect(result.snapshot).not.toBeNull();
+    expect(result.snapshot?.snapshotVersion).toBe(1);
+  });
+
+  it("returns null snapshot when no snapshot exists", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    const message: FetchSnapshotRequest = {
+      type: "FetchSnapshotRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+    };
+
+    const result = handleFetchSnapshot(message, relay);
+
+    expect(result.snapshot).toBeNull();
+  });
+});
+
+describe("handleFetchChanges", () => {
+  it("returns changes since the given seq", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const correlationId = crypto.randomUUID();
+
+    relay.submit(mockChangeWithoutSeq(docId));
+    relay.submit(mockChangeWithoutSeq(docId));
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const message: FetchChangesRequest = {
+      type: "FetchChangesRequest",
+      correlationId,
+      docId,
+      sinceSeq: 1,
+    };
+
+    const result = handleFetchChanges(message, relay);
+
+    expect(result.type).toBe("ChangesResponse");
+    expect(result.correlationId).toBe(correlationId);
+    expect(result.docId).toBe(docId);
+    expect(result.changes).toHaveLength(2);
+    expect(result.changes[0]?.seq).toBe(2);
+    expect(result.changes[1]?.seq).toBe(3);
+  });
+
+  it("returns empty array when no changes exist after sinceSeq", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const message: FetchChangesRequest = {
+      type: "FetchChangesRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      sinceSeq: 1,
+    };
+
+    const result = handleFetchChanges(message, relay);
+
+    expect(result.changes).toHaveLength(0);
+  });
+
+  it("returns empty array for unknown document", () => {
+    const relay = new EncryptedRelay();
+
+    const message: FetchChangesRequest = {
+      type: "FetchChangesRequest",
+      correlationId: crypto.randomUUID(),
+      docId: crypto.randomUUID(),
+      sinceSeq: 0,
+    };
+
+    const result = handleFetchChanges(message, relay);
+
+    expect(result.changes).toHaveLength(0);
+  });
+});
+
+describe("handleSubmitChange", () => {
+  it("assigns a seq and returns ChangeAccepted with the sequenced envelope", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const correlationId = crypto.randomUUID();
+
+    const message: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId,
+      docId,
+      change: mockChangeWithoutSeq(docId),
+    };
+
+    const { response, sequencedEnvelope } = handleSubmitChange(message, relay);
+
+    expect(response.type).toBe("ChangeAccepted");
+    expect(response.correlationId).toBe(correlationId);
+    expect(response.docId).toBe(docId);
+    expect(response.assignedSeq).toBe(1);
+    expect(sequencedEnvelope.seq).toBe(1);
+    expect(sequencedEnvelope.documentId).toBe(docId);
+  });
+
+  it("assigns monotonically increasing seq values", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    const msg1: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      change: mockChangeWithoutSeq(docId),
+    };
+    const msg2: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      change: mockChangeWithoutSeq(docId),
+    };
+
+    const result1 = handleSubmitChange(msg1, relay);
+    const result2 = handleSubmitChange(msg2, relay);
+
+    expect(result1.response.assignedSeq).toBe(1);
+    expect(result2.response.assignedSeq).toBe(2);
+  });
+
+  it("overrides documentId in the change with the request docId", () => {
+    const relay = new EncryptedRelay();
+    const requestDocId = crypto.randomUUID();
+    const differentDocId = crypto.randomUUID();
+
+    const changeWithDifferentDoc = mockChangeWithoutSeq(differentDocId);
+
+    const message: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId: crypto.randomUUID(),
+      docId: requestDocId,
+      change: changeWithDifferentDoc,
+    };
+
+    const { response, sequencedEnvelope } = handleSubmitChange(message, relay);
+
+    expect(response.docId).toBe(requestDocId);
+    expect(sequencedEnvelope.documentId).toBe(requestDocId);
+
+    // Verify the relay stored it under the request docId
+    const stored = relay.getEnvelopesSince(requestDocId, 0);
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.documentId).toBe(requestDocId);
+  });
+});
+
+describe("handleSubmitSnapshot", () => {
+  it("returns SnapshotAccepted for a valid snapshot", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const correlationId = crypto.randomUUID();
+
+    const message: SubmitSnapshotRequest = {
+      type: "SubmitSnapshotRequest",
+      correlationId,
+      docId,
+      snapshot: mockSnapshot(docId, 1),
+    };
+
+    const result = handleSubmitSnapshot(message, relay);
+
+    expect(result.type).toBe("SnapshotAccepted");
+    expect(result.correlationId).toBe(correlationId);
+    if (result.type === "SnapshotAccepted") {
+      expect(result.docId).toBe(docId);
+      expect(result.snapshotVersion).toBe(1);
+    }
+  });
+
+  it("returns SyncError with VERSION_CONFLICT when snapshot version is not newer", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    // Submit version 2 first
+    relay.submitSnapshot(mockSnapshot(docId, 2));
+
+    const message: SubmitSnapshotRequest = {
+      type: "SubmitSnapshotRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      snapshot: mockSnapshot(docId, 1),
+    };
+
+    const result = handleSubmitSnapshot(message, relay);
+
+    expect(result.type).toBe("SyncError");
+    if (result.type === "SyncError") {
+      expect(result.code).toBe("VERSION_CONFLICT");
+      expect(result.docId).toBe(docId);
+    }
+  });
+
+  it("returns SyncError when submitting the same version", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    relay.submitSnapshot(mockSnapshot(docId, 1));
+
+    const message: SubmitSnapshotRequest = {
+      type: "SubmitSnapshotRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      snapshot: mockSnapshot(docId, 1),
+    };
+
+    const result = handleSubmitSnapshot(message, relay);
+
+    expect(result.type).toBe("SyncError");
+  });
+
+  it("overrides documentId in the snapshot with the request docId", () => {
+    const relay = new EncryptedRelay();
+    const requestDocId = crypto.randomUUID();
+    const differentDocId = crypto.randomUUID();
+
+    const message: SubmitSnapshotRequest = {
+      type: "SubmitSnapshotRequest",
+      correlationId: crypto.randomUUID(),
+      docId: requestDocId,
+      snapshot: mockSnapshot(differentDocId, 1),
+    };
+
+    const result = handleSubmitSnapshot(message, relay);
+
+    expect(result.type).toBe("SnapshotAccepted");
+
+    // Verify the relay stored it under the request docId
+    const stored = relay.getLatestSnapshot(requestDocId);
+    expect(stored).not.toBeNull();
+    expect(stored?.documentId).toBe(requestDocId);
+  });
+});
+
+describe("handleDocumentLoad", () => {
+  it("returns both snapshot and changes for the requested document", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const correlationId = crypto.randomUUID();
+
+    relay.submitSnapshot(mockSnapshot(docId, 1));
+    relay.submit(mockChangeWithoutSeq(docId));
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const message: DocumentLoadRequest = {
+      type: "DocumentLoadRequest",
+      correlationId,
+      docId,
+      persist: false,
+    };
+
+    const [snapshotResponse, changesResponse] = handleDocumentLoad(message, relay);
+
+    expect(snapshotResponse.type).toBe("SnapshotResponse");
+    expect(snapshotResponse.correlationId).toBe(correlationId);
+    expect(snapshotResponse.docId).toBe(docId);
+    expect(snapshotResponse.snapshot).not.toBeNull();
+    expect(snapshotResponse.snapshot?.snapshotVersion).toBe(1);
+
+    expect(changesResponse.type).toBe("ChangesResponse");
+    expect(changesResponse.correlationId).toBe(correlationId);
+    expect(changesResponse.docId).toBe(docId);
+    expect(changesResponse.changes).toHaveLength(2);
+  });
+
+  it("returns null snapshot when none exists", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const message: DocumentLoadRequest = {
+      type: "DocumentLoadRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      persist: true,
+    };
+
+    const [snapshotResponse, changesResponse] = handleDocumentLoad(message, relay);
+
+    expect(snapshotResponse.snapshot).toBeNull();
+    expect(changesResponse.changes).toHaveLength(1);
+  });
+
+  it("returns empty changes and null snapshot for unknown document", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    const message: DocumentLoadRequest = {
+      type: "DocumentLoadRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      persist: false,
+    };
+
+    const [snapshotResponse, changesResponse] = handleDocumentLoad(message, relay);
+
+    expect(snapshotResponse.snapshot).toBeNull();
+    expect(changesResponse.changes).toHaveLength(0);
+  });
+
+  it("returns all changes from seq 0", () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    relay.submit(mockChangeWithoutSeq(docId));
+    relay.submit(mockChangeWithoutSeq(docId));
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const message: DocumentLoadRequest = {
+      type: "DocumentLoadRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      persist: false,
+    };
+
+    const [, changesResponse] = handleDocumentLoad(message, relay);
+
+    expect(changesResponse.changes).toHaveLength(3);
+    expect(changesResponse.changes[0]?.seq).toBe(1);
+    expect(changesResponse.changes[1]?.seq).toBe(2);
+    expect(changesResponse.changes[2]?.seq).toBe(3);
+  });
+});

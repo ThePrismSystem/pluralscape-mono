@@ -403,6 +403,35 @@ describe("message-router", () => {
 
       expect(state.rateLimitStrikes).toBe(0);
     });
+
+    it("returns RATE_LIMITED when mutation limit exceeded", async () => {
+      state.mutationCount = 100;
+      state.mutationWindowStart = Date.now();
+
+      const change = {
+        ciphertext: Buffer.from("test").toString("base64url"),
+        nonce: Buffer.from("nonce123456789012345678").toString("base64url"),
+        signature: Buffer.from("sig".repeat(22)).toString("base64url"),
+        authorPublicKey: Buffer.from("key".repeat(11)).toString("base64url"),
+        documentId: "doc-mut",
+      };
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitChangeRequest",
+          correlationId: null,
+          docId: "doc-mut",
+          change,
+        }),
+        state,
+        manager,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("RATE_LIMITED");
+    });
   });
 
   describe("send error logging", () => {

@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: high
 created_at: 2026-03-19T20:36:41Z
-updated_at: 2026-03-19T21:15:51Z
+updated_at: 2026-03-19T21:25:02Z
 parent: api-fh4u
 ---
 
@@ -19,5 +19,5 @@ Fix all 25 issues from multi-model PR review (Claude, Gemini, CodeQL): 3 critica
 - [x] Commit 4: fix(api): improve resource management and connection lifecycle
 - [x] Commit 5: fix(api): harden Valkey pub/sub error handling
 - [x] Commit 6: refactor(api): add DI context, type guard, sliding window rate limiter, and dispatch helpers
-- [ ] Commit 7: test(api): add handlers and serialization tests, fix fixture values
+- [x] Commit 7: test(api): add handlers and serialization tests, fix fixture values
 - [ ] Commit 8: test(api): expand E2E WebSocket coverage

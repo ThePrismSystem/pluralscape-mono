@@ -79,6 +79,34 @@ describe("message-schemas", () => {
       });
       expect(result.success).toBe(false);
     });
+
+    it("accepts 100 documents (at the limit)", () => {
+      const documents = Array.from({ length: 100 }, (_, i) => ({
+        docId: `doc-${String(i)}`,
+        lastSyncedSeq: 0,
+        lastSnapshotVersion: 0,
+      }));
+      const result = subscribeRequestSchema.safeParse({
+        type: "SubscribeRequest",
+        correlationId: null,
+        documents,
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects 101 documents (over the limit)", () => {
+      const documents = Array.from({ length: 101 }, (_, i) => ({
+        docId: `doc-${String(i)}`,
+        lastSyncedSeq: 0,
+        lastSnapshotVersion: 0,
+      }));
+      const result = subscribeRequestSchema.safeParse({
+        type: "SubscribeRequest",
+        correlationId: null,
+        documents,
+      });
+      expect(result.success).toBe(false);
+    });
   });
 
   describe("FetchChangesRequest", () => {
