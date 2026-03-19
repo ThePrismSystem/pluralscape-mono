@@ -8,13 +8,18 @@ import { EncryptedRelay } from "@pluralscape/sync";
 
 import { handleAuthenticate } from "./auth-handler.js";
 import { broadcastDocumentUpdate } from "./broadcast.js";
-import { handleDocumentLoad } from "./handlers/document-load.js";
-import { handleFetchChanges, handleFetchSnapshot } from "./handlers/fetch.js";
-import { handleManifestRequest } from "./handlers/manifest.js";
-import { handleSubmitChange, handleSubmitSnapshot } from "./handlers/submit.js";
-import { handleSubscribeRequest, handleUnsubscribeRequest } from "./handlers/subscribe.js";
+import {
+  handleDocumentLoad,
+  handleFetchChanges,
+  handleFetchSnapshot,
+  handleManifestRequest,
+  handleSubmitChange,
+  handleSubmitSnapshot,
+  handleSubscribeRequest,
+  handleUnsubscribeRequest,
+} from "./handlers.js";
 import { CLIENT_MESSAGE_SCHEMAS, MUTATION_MESSAGE_TYPES } from "./message-schemas.js";
-import { bytesToBase64url } from "./serialization.js";
+import { serializeServerMessage } from "./serialization.js";
 import {
   WS_CLOSE_POLICY_VIOLATION,
   WS_MUTATION_RATE_LIMIT,
@@ -61,24 +66,12 @@ function checkDocumentAccess(docId: string, systemId: string): boolean {
   return owner === undefined || owner === systemId;
 }
 
-// ── Response serialization ──────────────────────────────────────────
-
-/**
- * Serialize a ServerMessage to JSON, converting Uint8Array fields to Base64url.
- */
-function serializeResponse(msg: ServerMessage): string {
-  return JSON.stringify(msg, (_key, value: unknown) => {
-    if (value instanceof Uint8Array) {
-      return bytesToBase64url(value);
-    }
-    return value;
-  });
-}
+// ── Send helpers ────────────────────────────────────────────────────
 
 /** Send a ServerMessage to a connection. Returns false if send failed. */
 function send(state: SyncConnectionState, msg: ServerMessage, log: AppLogger): boolean {
   try {
-    state.ws.send(serializeResponse(msg));
+    state.ws.send(serializeServerMessage(msg));
     return true;
   } catch (err) {
     log.warn("WebSocket send failed", {
@@ -454,7 +447,7 @@ export async function routeMessage(
         );
         return;
       }
-      const response = handleSubmitChange(msg, relay);
+      const { response, sequencedEnvelope } = handleSubmitChange(msg, relay);
       send(state, response, log);
       documentOwnership.set(msg.docId, state.systemId ?? "");
 
@@ -464,7 +457,7 @@ export async function routeMessage(
           type: "DocumentUpdate",
           correlationId: null,
           docId: msg.docId,
-          changes: [{ ...msg.change, documentId: msg.docId, seq: response.assignedSeq }],
+          changes: [sequencedEnvelope],
         },
         state.connectionId,
         manager,

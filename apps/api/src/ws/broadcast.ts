@@ -4,20 +4,11 @@
  * Local delivery only in Phase 1. Valkey pub/sub fan-out for
  * cross-instance delivery is added in Task 6 (api-5801).
  */
-import { bytesToBase64url } from "./serialization.js";
+import { serializeServerMessage } from "./serialization.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { AppLogger } from "../lib/logger.js";
-import type { DocumentUpdate, ServerMessage } from "@pluralscape/sync";
-
-function serializeMessage(msg: ServerMessage): string {
-  return JSON.stringify(msg, (_key, value: unknown) => {
-    if (value instanceof Uint8Array) {
-      return bytesToBase64url(value);
-    }
-    return value;
-  });
-}
+import type { DocumentUpdate } from "@pluralscape/sync";
 
 /**
  * Broadcast a DocumentUpdate to all subscribers of a document,
@@ -32,7 +23,7 @@ export function broadcastDocumentUpdate(
   const subscribers = manager.getSubscribers(update.docId);
   if (subscribers.size === 0) return;
 
-  const serialized = serializeMessage(update);
+  const serialized = serializeServerMessage(update);
   let delivered = 0;
   const deadConnections: string[] = [];
 
