@@ -51,6 +51,9 @@ export const WS_CLOSE_GOING_AWAY = 1001;
 /** WebSocket close code 1008: policy violation (RFC 6455). */
 export const WS_CLOSE_POLICY_VIOLATION = 1008;
 
+/** WebSocket close code 1011: unexpected condition (RFC 6455). */
+export const WS_CLOSE_UNEXPECTED = 1011;
+
 /** Timeout in milliseconds for Valkey connection attempts. */
 export const WS_VALKEY_CONNECT_TIMEOUT_MS = 5_000;
 

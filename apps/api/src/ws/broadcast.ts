@@ -5,6 +5,7 @@
  * cross-instance delivery is added in Task 6 (api-5801).
  */
 import { serializeServerMessage } from "./serialization.js";
+import { WS_CLOSE_UNEXPECTED } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { AppLogger } from "../lib/logger.js";
@@ -45,8 +46,19 @@ export function broadcastDocumentUpdate(
     }
   }
 
-  // Remove dead connections after iteration to avoid mutating the Set during loop
+  // Close and remove dead connections after iteration to avoid mutating the Set during loop
   for (const connectionId of deadConnections) {
+    const state = manager.get(connectionId);
+    if (state) {
+      try {
+        state.ws.close(WS_CLOSE_UNEXPECTED, "Send failed");
+      } catch (closeErr) {
+        log.debug("Failed to close dead WebSocket", {
+          connectionId,
+          error: closeErr instanceof Error ? closeErr.message : String(closeErr),
+        });
+      }
+    }
     manager.remove(connectionId);
   }
 
