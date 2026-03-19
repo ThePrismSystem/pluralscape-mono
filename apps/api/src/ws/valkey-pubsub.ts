@@ -68,6 +68,18 @@ export class ValkeyPubSub {
         lazyConnect: false,
       });
 
+      // Prevent unhandled 'error' events from crashing the process
+      this.subscriber.on("error", (err: unknown) => {
+        logger.warn("Valkey subscriber error", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+      this.publisher.on("error", (err: unknown) => {
+        logger.warn("Valkey publisher error", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+
       // Wire up message delivery
       this.subscriber.on("message", (channel: unknown, message: unknown) => {
         if (typeof channel !== "string" || typeof message !== "string") return;
@@ -91,8 +103,19 @@ export class ValkeyPubSub {
           logger.info("Valkey subscriber reconnected, resubscribing", {
             channels: this.activeChannels.size,
           });
-          for (const channel of this.activeChannels) {
-            void this.subscriber?.subscribe(channel);
+          for (const channel of [...this.activeChannels]) {
+            void (async () => {
+              try {
+                await this.subscriber?.subscribe(channel);
+              } catch (err) {
+                logger.warn("Valkey resubscribe failed, removing channel", {
+                  channel,
+                  error: err instanceof Error ? err.message : String(err),
+                });
+                this.activeChannels.delete(channel);
+                this.handlers.delete(channel);
+              }
+            })();
           }
         }
       });

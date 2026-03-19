@@ -62,18 +62,29 @@ function serializeResponse(msg: ServerMessage): string {
   });
 }
 
-/** Send a ServerMessage to a connection. */
-function send(state: SyncConnectionState, msg: ServerMessage): void {
+/** Send a ServerMessage to a connection. Returns false if send failed. */
+function send(state: SyncConnectionState, msg: ServerMessage, log: AppLogger): boolean {
   try {
     state.ws.send(serializeResponse(msg));
-  } catch {
-    // Connection may have closed between check and send
+    return true;
+  } catch (err) {
+    log.warn("WebSocket send failed", {
+      connectionId: state.connectionId,
+      messageType: msg.type,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return false;
   }
 }
 
 /** Send a SyncError and close the connection. */
-function sendErrorAndClose(state: SyncConnectionState, error: SyncError, closeCode: number): void {
-  send(state, error);
+function sendErrorAndClose(
+  state: SyncConnectionState,
+  error: SyncError,
+  closeCode: number,
+  log: AppLogger,
+): void {
+  send(state, error, log);
   try {
     state.ws.close(closeCode, error.message);
   } catch {
@@ -137,6 +148,7 @@ export async function routeMessage(
         docId: null,
       },
       WS_CLOSE_POLICY_VIOLATION,
+      log,
     );
     return;
   }
@@ -153,6 +165,7 @@ export async function routeMessage(
         docId: null,
       },
       WS_CLOSE_POLICY_VIOLATION,
+      log,
     );
     return;
   }
@@ -169,6 +182,7 @@ export async function routeMessage(
         docId: null,
       },
       WS_CLOSE_POLICY_VIOLATION,
+      log,
     );
     return;
   }
@@ -186,6 +200,7 @@ export async function routeMessage(
           docId: null,
         },
         WS_CLOSE_POLICY_VIOLATION,
+        log,
       );
       return;
     }
@@ -205,57 +220,70 @@ export async function routeMessage(
           docId: null,
         },
         WS_CLOSE_POLICY_VIOLATION,
+        log,
       );
       return;
     }
 
     const authResult = await handleAuthenticate(result.data as never, state, manager);
     if (authResult.ok) {
-      send(state, authResult.response);
+      send(state, authResult.response, log);
       log.info("WebSocket authenticated", {
         connectionId: state.connectionId,
         accountId: state.auth?.accountId,
       });
     } else {
-      sendErrorAndClose(state, authResult.error, authResult.closeCode);
+      sendErrorAndClose(state, authResult.error, authResult.closeCode, log);
     }
     return;
   }
 
   // 4. Phase: authenticated — validate type is known
   if (!Object.hasOwn(CLIENT_MESSAGE_SCHEMAS, messageType)) {
-    send(state, {
-      type: "SyncError",
-      correlationId: null,
-      code: "MALFORMED_MESSAGE",
-      message: `Unknown message type: ${messageType}`,
-      docId: null,
-    });
+    send(
+      state,
+      {
+        type: "SyncError",
+        correlationId: null,
+        code: "MALFORMED_MESSAGE",
+        message: `Unknown message type: ${messageType}`,
+        docId: null,
+      },
+      log,
+    );
     return;
   }
 
   // AuthenticateRequest is not valid after authentication
   if (messageType === "AuthenticateRequest") {
-    send(state, {
-      type: "SyncError",
-      correlationId: null,
-      code: "MALFORMED_MESSAGE",
-      message: "Already authenticated",
-      docId: null,
-    });
+    send(
+      state,
+      {
+        type: "SyncError",
+        correlationId: null,
+        code: "MALFORMED_MESSAGE",
+        message: "Already authenticated",
+        docId: null,
+      },
+      log,
+    );
     return;
   }
 
   // 5. Rate limit check
   const isMutation = MUTATION_MESSAGE_TYPES.has(messageType);
   if (!checkRateLimit(state, isMutation)) {
-    send(state, {
-      type: "SyncError",
-      correlationId: null,
-      code: "RATE_LIMITED",
-      message: "Too many messages",
-      docId: null,
-    });
+    send(
+      state,
+      {
+        type: "SyncError",
+        correlationId: null,
+        code: "RATE_LIMITED",
+        message: "Too many messages",
+        docId: null,
+      },
+      log,
+    );
     return;
   }
 
@@ -265,13 +293,17 @@ export async function routeMessage(
   const result = schema.safeParse(parsed);
   if (!result.success) {
     const detail = result.error.issues[0]?.message ?? "Validation failed";
-    send(state, {
-      type: "SyncError",
-      correlationId: null,
-      code: "MALFORMED_MESSAGE",
-      message: `Invalid ${messageType}: ${detail}`,
-      docId: null,
-    });
+    send(
+      state,
+      {
+        type: "SyncError",
+        correlationId: null,
+        code: "MALFORMED_MESSAGE",
+        message: `Invalid ${messageType}: ${detail}`,
+        docId: null,
+      },
+      log,
+    );
     return;
   }
 
@@ -280,25 +312,29 @@ export async function routeMessage(
   switch (typedKey) {
     case "ManifestRequest": {
       const response = handleManifestRequest(validated as never);
-      send(state, response);
+      send(state, response, log);
       break;
     }
     case "SubscribeRequest": {
       const msg = validated as { documents: ReadonlyArray<{ docId: string }> };
       for (const entry of msg.documents) {
         if (!checkDocumentAccess(entry.docId, state.systemId ?? "")) {
-          send(state, {
-            type: "SyncError",
-            correlationId: (validated as { correlationId: string | null }).correlationId,
-            code: "PERMISSION_DENIED",
-            message: "Access denied",
-            docId: entry.docId,
-          });
+          send(
+            state,
+            {
+              type: "SyncError",
+              correlationId: (validated as { correlationId: string | null }).correlationId,
+              code: "PERMISSION_DENIED",
+              message: "Access denied",
+              docId: entry.docId,
+            },
+            log,
+          );
           return;
         }
       }
       const response = handleSubscribeRequest(validated as never, state, manager, relay);
-      send(state, response);
+      send(state, response, log);
       break;
     }
     case "UnsubscribeRequest": {
@@ -308,33 +344,41 @@ export async function routeMessage(
     case "FetchSnapshotRequest": {
       const msg = validated as { docId: string; correlationId: string | null };
       if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
-        send(state, {
-          type: "SyncError",
-          correlationId: msg.correlationId,
-          code: "PERMISSION_DENIED",
-          message: "Access denied",
-          docId: msg.docId,
-        });
+        send(
+          state,
+          {
+            type: "SyncError",
+            correlationId: msg.correlationId,
+            code: "PERMISSION_DENIED",
+            message: "Access denied",
+            docId: msg.docId,
+          },
+          log,
+        );
         return;
       }
       const response = handleFetchSnapshot(validated as never, relay);
-      send(state, response);
+      send(state, response, log);
       break;
     }
     case "FetchChangesRequest": {
       const msg = validated as { docId: string; correlationId: string | null };
       if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
-        send(state, {
-          type: "SyncError",
-          correlationId: msg.correlationId,
-          code: "PERMISSION_DENIED",
-          message: "Access denied",
-          docId: msg.docId,
-        });
+        send(
+          state,
+          {
+            type: "SyncError",
+            correlationId: msg.correlationId,
+            code: "PERMISSION_DENIED",
+            message: "Access denied",
+            docId: msg.docId,
+          },
+          log,
+        );
         return;
       }
       const response = handleFetchChanges(validated as never, relay);
-      send(state, response);
+      send(state, response, log);
       break;
     }
     case "SubmitChangeRequest": {
@@ -344,17 +388,21 @@ export async function routeMessage(
         change: Record<string, unknown>;
       };
       if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
-        send(state, {
-          type: "SyncError",
-          correlationId: msg.correlationId,
-          code: "PERMISSION_DENIED",
-          message: "Access denied",
-          docId: msg.docId,
-        });
+        send(
+          state,
+          {
+            type: "SyncError",
+            correlationId: msg.correlationId,
+            code: "PERMISSION_DENIED",
+            message: "Access denied",
+            docId: msg.docId,
+          },
+          log,
+        );
         return;
       }
       const response = handleSubmitChange(validated as never, relay);
-      send(state, response);
+      send(state, response, log);
       documentOwnership.set(msg.docId, state.systemId ?? "");
 
       // Broadcast DocumentUpdate to all subscribers except submitter
@@ -374,35 +422,43 @@ export async function routeMessage(
     case "SubmitSnapshotRequest": {
       const msg = validated as { docId: string; correlationId: string | null };
       if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
-        send(state, {
-          type: "SyncError",
-          correlationId: msg.correlationId,
-          code: "PERMISSION_DENIED",
-          message: "Access denied",
-          docId: msg.docId,
-        });
+        send(
+          state,
+          {
+            type: "SyncError",
+            correlationId: msg.correlationId,
+            code: "PERMISSION_DENIED",
+            message: "Access denied",
+            docId: msg.docId,
+          },
+          log,
+        );
         return;
       }
       const response = handleSubmitSnapshot(validated as never, relay);
-      send(state, response);
+      send(state, response, log);
       documentOwnership.set(msg.docId, state.systemId ?? "");
       break;
     }
     case "DocumentLoadRequest": {
       const msg = validated as { docId: string; correlationId: string | null };
       if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
-        send(state, {
-          type: "SyncError",
-          correlationId: msg.correlationId,
-          code: "PERMISSION_DENIED",
-          message: "Access denied",
-          docId: msg.docId,
-        });
+        send(
+          state,
+          {
+            type: "SyncError",
+            correlationId: msg.correlationId,
+            code: "PERMISSION_DENIED",
+            message: "Access denied",
+            docId: msg.docId,
+          },
+          log,
+        );
         return;
       }
       const [snapshotResp, changesResp] = handleDocumentLoad(validated as never, relay);
-      send(state, snapshotResp);
-      send(state, changesResp);
+      send(state, snapshotResp, log);
+      send(state, changesResp, log);
       break;
     }
     case "AuthenticateRequest": {

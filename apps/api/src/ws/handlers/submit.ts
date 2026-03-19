@@ -38,13 +38,16 @@ export function handleSubmitSnapshot(
       docId: message.docId,
       snapshotVersion: message.snapshot.snapshotVersion,
     };
-  } catch {
-    return {
-      type: "SyncError",
-      correlationId: message.correlationId,
-      code: "VERSION_CONFLICT",
-      message: "Snapshot version is not newer than current version",
-      docId: message.docId,
-    };
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("is not newer than current version")) {
+      return {
+        type: "SyncError",
+        correlationId: message.correlationId,
+        code: "VERSION_CONFLICT",
+        message: "Snapshot version is not newer than current version",
+        docId: message.docId,
+      };
+    }
+    throw err;
   }
 }

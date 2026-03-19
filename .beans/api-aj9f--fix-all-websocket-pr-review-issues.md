@@ -5,7 +5,7 @@ status: in-progress
 type: task
 priority: normal
 created_at: 2026-03-19T19:27:11Z
-updated_at: 2026-03-19T19:27:19Z
+updated_at: 2026-03-19T19:32:15Z
 parent: api-fh4u
 ---
 
@@ -13,7 +13,7 @@ Fix all 18 issues from multi-model PR review: 4 critical (prototype pollution, m
 
 ## Checklist
 
-- [ ] Commit 1: fix(api): prevent prototype pollution and add document access control
+- [x] Commit 1: fix(api): prevent prototype pollution and add document access control
 - [ ] Commit 2: fix(api): improve error handling across WebSocket subsystem
 - [ ] Commit 3: refactor(api): eliminate as-never casts and fix type annotations
 - [ ] Commit 4: fix(api): improve resource management and connection lifecycle

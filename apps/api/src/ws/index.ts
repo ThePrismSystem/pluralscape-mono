@@ -123,7 +123,12 @@ syncWsApp.get(
           return;
         }
 
-        void routeMessage(evt.data, state, connectionManager, log);
+        void routeMessage(evt.data, state, connectionManager, log).catch((err: unknown) => {
+          log.error("Unhandled error in routeMessage", {
+            connectionId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
       },
 
       onClose() {

@@ -93,6 +93,19 @@ describe("ValkeyPubSub", () => {
       expect(mocks).toHaveLength(2);
     });
 
+    it("registers error listeners on both clients", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+
+      // Both subscriber and publisher should have had .on("error") called
+      // Verify by emitting error events — they should not throw
+      expect(() => {
+        sub().emit("error", new Error("test subscriber error"));
+      }).not.toThrow();
+      expect(() => {
+        pub().emit("error", new Error("test publisher error"));
+      }).not.toThrow();
+    });
+
     it("returns false on connection failure", async () => {
       const failFactory: PubSubClientFactory = () => {
         throw new Error("ECONNREFUSED");
@@ -200,6 +213,29 @@ describe("ValkeyPubSub", () => {
   });
 
   describe("reconnection", () => {
+    it("removes channel on resubscribe failure", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+      const s = sub();
+      const handler = vi.fn();
+
+      await pubsub.subscribe("ps:sync:doc-fail", handler);
+      s.subscribeMock.mockClear();
+
+      // Make resubscribe fail
+      s.subscribeMock.mockRejectedValueOnce(new Error("resubscribe failed"));
+      s.emit("ready");
+
+      // Wait for async resubscribe to settle
+      await new Promise((resolve) => {
+        setTimeout(resolve, 10);
+      });
+
+      // The failed channel's handler should have been removed
+      // Verify by emitting a message — handler should NOT be called
+      s.emit("message", "ps:sync:doc-fail", "test");
+      expect(handler).not.toHaveBeenCalled();
+    });
+
     it("resubscribes to all active channels on ready event", async () => {
       await pubsub.connect("redis://localhost:6379", mockFactory());
       const s = sub();

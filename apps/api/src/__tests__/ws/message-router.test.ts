@@ -322,6 +322,39 @@ describe("message-router", () => {
     });
   });
 
+  describe("send error logging", () => {
+    it("logs warning when send fails", async () => {
+      // Set up an authenticated connection with a broken ws.send
+      const brokenWs = mockWs();
+      brokenWs.send.mockImplementation(() => {
+        throw new Error("broken pipe");
+      });
+      const warnFn = vi.fn();
+      const warnLog: AppLogger = {
+        [APP_LOGGER_BRAND]: true as const,
+        info: vi.fn(),
+        warn: warnFn,
+        error: vi.fn(),
+        debug: vi.fn(),
+      };
+      const brokenManager = new ConnectionManager();
+      const brokenState = brokenManager.register("conn-broken", brokenWs as never, Date.now());
+
+      // Authenticate first (this send will also fail but we need the state)
+      await routeMessage(authRequest(), brokenState, brokenManager, warnLog);
+
+      // The send failure should have been logged
+      expect(warnFn).toHaveBeenCalledWith(
+        "WebSocket send failed",
+        expect.objectContaining({
+          connectionId: "conn-broken",
+        }),
+      );
+
+      brokenManager.closeAll(1001, "test cleanup");
+    });
+  });
+
   describe("prototype pollution prevention", () => {
     beforeEach(async () => {
       await routeMessage(authRequest(), state, manager, log);
