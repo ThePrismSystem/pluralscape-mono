@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
-import { routeMessage } from "../../ws/message-router.js";
+import { routeMessage, _testDocumentOwnership } from "../../ws/message-router.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
@@ -85,6 +85,7 @@ describe("message-router", () => {
 
   afterEach(() => {
     manager.closeAll(1001, "test cleanup");
+    _testDocumentOwnership.clear();
   });
 
   describe("awaiting-auth phase", () => {
@@ -318,6 +319,160 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("RATE_LIMITED");
+    });
+  });
+
+  describe("prototype pollution prevention", () => {
+    beforeEach(async () => {
+      await routeMessage(authRequest(), state, manager, log);
+      sent.length = 0;
+    });
+
+    it("rejects inherited prototype property as message type", async () => {
+      await routeMessage(
+        JSON.stringify({ type: "valueOf", correlationId: null }),
+        state,
+        manager,
+        log,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("MALFORMED_MESSAGE");
+      expect(resp["message"]).toContain("Unknown message type");
+    });
+
+    it("rejects constructor as message type", async () => {
+      await routeMessage(
+        JSON.stringify({ type: "constructor", correlationId: null }),
+        state,
+        manager,
+        log,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("MALFORMED_MESSAGE");
+    });
+  });
+
+  describe("document access control", () => {
+    beforeEach(async () => {
+      await routeMessage(authRequest(), state, manager, log);
+      sent.length = 0;
+    });
+
+    it("allows first submit to any docId (creates ownership)", async () => {
+      const change = {
+        ciphertext: Buffer.from("test").toString("base64url"),
+        nonce: Buffer.from("nonce123456789012345678").toString("base64url"),
+        signature: Buffer.from("sig".repeat(22)).toString("base64url"),
+        authorPublicKey: Buffer.from("key".repeat(11)).toString("base64url"),
+        documentId: "doc-acl-1",
+      };
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitChangeRequest",
+          correlationId: null,
+          docId: "doc-acl-1",
+          change,
+        }),
+        state,
+        manager,
+        log,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("ChangeAccepted");
+      expect(_testDocumentOwnership.get("doc-acl-1")).toBe("sys_test");
+    });
+
+    it("rejects submit to doc owned by another system", async () => {
+      _testDocumentOwnership.set("doc-acl-2", "sys_other");
+
+      const change = {
+        ciphertext: Buffer.from("test").toString("base64url"),
+        nonce: Buffer.from("nonce123456789012345678").toString("base64url"),
+        signature: Buffer.from("sig".repeat(22)).toString("base64url"),
+        authorPublicKey: Buffer.from("key".repeat(11)).toString("base64url"),
+        documentId: "doc-acl-2",
+      };
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitChangeRequest",
+          correlationId: null,
+          docId: "doc-acl-2",
+          change,
+        }),
+        state,
+        manager,
+        log,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("PERMISSION_DENIED");
+    });
+
+    it("rejects read on doc owned by another system", async () => {
+      _testDocumentOwnership.set("doc-acl-3", "sys_other");
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-acl-3" }),
+        state,
+        manager,
+        log,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("PERMISSION_DENIED");
+    });
+
+    it("allows read on doc owned by same system", async () => {
+      _testDocumentOwnership.set("doc-acl-4", "sys_test");
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-acl-4" }),
+        state,
+        manager,
+        log,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SnapshotResponse");
+    });
+
+    it("allows read on unowned doc", async () => {
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-unowned" }),
+        state,
+        manager,
+        log,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SnapshotResponse");
+    });
+
+    it("rejects DocumentLoadRequest on doc owned by another system", async () => {
+      _testDocumentOwnership.set("doc-acl-5", "sys_other");
+
+      await routeMessage(
+        JSON.stringify({
+          type: "DocumentLoadRequest",
+          correlationId: null,
+          docId: "doc-acl-5",
+          persist: false,
+        }),
+        state,
+        manager,
+        log,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("PERMISSION_DENIED");
     });
   });
 });

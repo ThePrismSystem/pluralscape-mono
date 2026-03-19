@@ -33,6 +33,21 @@ import type { ServerMessage, SyncError } from "@pluralscape/sync";
 
 const relay = new EncryptedRelay();
 
+// ── Document ownership (Phase 1: in-memory ACL) ────────────────────
+
+/**
+ * Maps docId → systemId of the first writer. Used to enforce that only
+ * the owning system can read or write a document. Unowned documents
+ * (never written to) are accessible to any authenticated connection.
+ */
+const documentOwnership = new Map<string, string>();
+
+/** Check whether systemId is allowed to access docId. */
+function checkDocumentAccess(docId: string, systemId: string): boolean {
+  const owner = documentOwnership.get(docId);
+  return owner === undefined || owner === systemId;
+}
+
 // ── Response serialization ──────────────────────────────────────────
 
 /**
@@ -208,7 +223,7 @@ export async function routeMessage(
   }
 
   // 4. Phase: authenticated — validate type is known
-  if (!(messageType in CLIENT_MESSAGE_SCHEMAS)) {
+  if (!Object.hasOwn(CLIENT_MESSAGE_SCHEMAS, messageType)) {
     send(state, {
       type: "SyncError",
       correlationId: null,
@@ -269,6 +284,19 @@ export async function routeMessage(
       break;
     }
     case "SubscribeRequest": {
+      const msg = validated as { documents: ReadonlyArray<{ docId: string }> };
+      for (const entry of msg.documents) {
+        if (!checkDocumentAccess(entry.docId, state.systemId ?? "")) {
+          send(state, {
+            type: "SyncError",
+            correlationId: (validated as { correlationId: string | null }).correlationId,
+            code: "PERMISSION_DENIED",
+            message: "Access denied",
+            docId: entry.docId,
+          });
+          return;
+        }
+      }
       const response = handleSubscribeRequest(validated as never, state, manager, relay);
       send(state, response);
       break;
@@ -278,19 +306,56 @@ export async function routeMessage(
       break;
     }
     case "FetchSnapshotRequest": {
+      const msg = validated as { docId: string; correlationId: string | null };
+      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+        send(state, {
+          type: "SyncError",
+          correlationId: msg.correlationId,
+          code: "PERMISSION_DENIED",
+          message: "Access denied",
+          docId: msg.docId,
+        });
+        return;
+      }
       const response = handleFetchSnapshot(validated as never, relay);
       send(state, response);
       break;
     }
     case "FetchChangesRequest": {
+      const msg = validated as { docId: string; correlationId: string | null };
+      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+        send(state, {
+          type: "SyncError",
+          correlationId: msg.correlationId,
+          code: "PERMISSION_DENIED",
+          message: "Access denied",
+          docId: msg.docId,
+        });
+        return;
+      }
       const response = handleFetchChanges(validated as never, relay);
       send(state, response);
       break;
     }
     case "SubmitChangeRequest": {
-      const msg = validated as { docId: string; change: Record<string, unknown> };
+      const msg = validated as {
+        docId: string;
+        correlationId: string | null;
+        change: Record<string, unknown>;
+      };
+      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+        send(state, {
+          type: "SyncError",
+          correlationId: msg.correlationId,
+          code: "PERMISSION_DENIED",
+          message: "Access denied",
+          docId: msg.docId,
+        });
+        return;
+      }
       const response = handleSubmitChange(validated as never, relay);
       send(state, response);
+      documentOwnership.set(msg.docId, state.systemId ?? "");
 
       // Broadcast DocumentUpdate to all subscribers except submitter
       broadcastDocumentUpdate(
@@ -307,11 +372,34 @@ export async function routeMessage(
       break;
     }
     case "SubmitSnapshotRequest": {
+      const msg = validated as { docId: string; correlationId: string | null };
+      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+        send(state, {
+          type: "SyncError",
+          correlationId: msg.correlationId,
+          code: "PERMISSION_DENIED",
+          message: "Access denied",
+          docId: msg.docId,
+        });
+        return;
+      }
       const response = handleSubmitSnapshot(validated as never, relay);
       send(state, response);
+      documentOwnership.set(msg.docId, state.systemId ?? "");
       break;
     }
     case "DocumentLoadRequest": {
+      const msg = validated as { docId: string; correlationId: string | null };
+      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+        send(state, {
+          type: "SyncError",
+          correlationId: msg.correlationId,
+          code: "PERMISSION_DENIED",
+          message: "Access denied",
+          docId: msg.docId,
+        });
+        return;
+      }
       const [snapshotResp, changesResp] = handleDocumentLoad(validated as never, relay);
       send(state, snapshotResp);
       send(state, changesResp);
@@ -332,3 +420,4 @@ export async function routeMessage(
 // ── Exports for testing ─────────────────────────────────────────────
 
 export { relay as _testRelay };
+export { documentOwnership as _testDocumentOwnership };
