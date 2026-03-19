@@ -9,6 +9,7 @@ import { ApiHttpError } from "./lib/api-error.js";
 import { getRawClient } from "./lib/db.js";
 import { logger } from "./lib/logger.js";
 import { initStorageAdapter } from "./lib/storage.js";
+import { accessLogMiddleware } from "./middleware/access-log.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { BODY_SIZE_LIMIT_BYTES } from "./middleware/middleware.constants.js";
@@ -26,6 +27,7 @@ const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
 export const app = new Hono();
 
 app.use("*", requestIdMiddleware());
+app.use("*", accessLogMiddleware());
 app.use("*", createSecureHeaders());
 app.use("*", createCorsMiddleware());
 app.use(
