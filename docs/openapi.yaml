@@ -84,7 +84,7 @@ info:
   contact:
     name: Pluralscape
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:3000/v1
     description: Local development
 security:
   - bearerAuth: []
@@ -878,15 +878,23 @@ paths:
             schema:
               $ref: "#/components/schemas/PinRequest"
       responses:
-        "201":
+        "200":
           description: PIN set
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
-                  ok:
-                    type: boolean
+                  data:
+                    type: object
+                    required:
+                      - success
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -910,8 +918,23 @@ paths:
             schema:
               $ref: "#/components/schemas/PinRequest"
       responses:
-        "204":
-          $ref: "#/components/responses/NoContent"
+        "200":
+          description: PIN removed
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - success
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1016,7 +1039,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SetupStatusResponse"
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SetupStatusResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -1039,15 +1067,23 @@ paths:
             schema:
               $ref: "#/components/schemas/SetupStepRequest"
       responses:
-        "201":
+        "200":
           description: Step completed
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
-                  ok:
-                    type: boolean
+                  data:
+                    type: object
+                    required:
+                      - success
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1072,15 +1108,23 @@ paths:
             schema:
               $ref: "#/components/schemas/SetupStepRequest"
       responses:
-        "201":
+        "200":
           description: Step completed
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
-                  ok:
-                    type: boolean
+                  data:
+                    type: object
+                    required:
+                      - success
+                    properties:
+                      success:
+                        type: boolean
+                        const: true
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1105,15 +1149,17 @@ paths:
             schema:
               $ref: "#/components/schemas/SetupCompleteRequest"
       responses:
-        "201":
+        "200":
           description: Setup completed
           content:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
-                  ok:
-                    type: boolean
+                  data:
+                    $ref: "#/components/schemas/EncryptedEntity"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1443,12 +1489,17 @@ paths:
               schema:
                 type: object
                 required:
-                  - photos
+                  - data
                 properties:
-                  photos:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/EncryptedEntity"
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/EncryptedEntity"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -1484,7 +1535,7 @@ paths:
         "429":
           $ref: "#/components/responses/RateLimited"
   /systems/{systemId}/members/{memberId}/photos/reorder:
-    post:
+    put:
       operationId: reorderMemberPhotos
       tags:
         - Member Photos
@@ -1508,9 +1559,18 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - data
                 properties:
-                  ok:
-                    type: boolean
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/EncryptedEntity"
         "400":
           $ref: "#/components/responses/ValidationError"
         "401":
@@ -1626,12 +1686,17 @@ paths:
               schema:
                 type: object
                 required:
-                  - fields
+                  - data
                 properties:
-                  fields:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/FieldValueResponse"
+                  data:
+                    type: object
+                    required:
+                      - items
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/FieldValueResponse"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "429":
@@ -5546,14 +5611,20 @@ components:
     RevokeAllResponse:
       type: object
       required:
-        - ok
-        - revokedCount
+        - data
       properties:
-        ok:
-          type: boolean
-        revokedCount:
-          type: integer
-          description: Number of sessions revoked
+        data:
+          type: object
+          required:
+            - success
+            - revokedCount
+          properties:
+            success:
+              type: boolean
+              const: true
+            revokedCount:
+              type: integer
+              description: Number of sessions revoked
     AccountInfo:
       type: object
       required:
