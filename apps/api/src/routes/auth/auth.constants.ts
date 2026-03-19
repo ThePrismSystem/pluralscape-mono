@@ -41,9 +41,6 @@ export const DEFAULT_SESSION_LIMIT = 25;
 /** Maximum page size for session listing. */
 export const MAX_SESSION_LIMIT = 100;
 
-/** Safety ceiling for session fetch queries (10x MAX_SESSION_LIMIT). */
-export const MAX_SESSIONS_FETCH_LIMIT = 1_000;
-
 /** Number of groups in a fake recovery key. */
 export const RECOVERY_KEY_GROUP_COUNT = 13;
 
