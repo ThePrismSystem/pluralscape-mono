@@ -62,7 +62,7 @@ export const importJobs = sqliteTable(
     ),
     check(
       "import_jobs_error_log_length_check",
-      sql`${t.errorLog} IS NULL OR json_array_length(${t.errorLog}) <= ${MAX_ERROR_LOG_ENTRIES}`,
+      sql`${t.errorLog} IS NULL OR json_array_length(${t.errorLog}) <= ${sql.raw(String(MAX_ERROR_LOG_ENTRIES))}`,
     ),
   ],
 );

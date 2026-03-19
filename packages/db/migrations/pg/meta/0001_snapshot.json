@@ -1,6 +1,6 @@
 {
-  "id": "4e41148a-3cfc-4935-866c-f53b0bb2d824",
-  "prevId": "9ca0f270-4a34-4609-9b79-04bc0dc5be88",
+  "id": "89034039-5646-467c-80fd-3f0b7e26debb",
+  "prevId": "194ead27-21c5-48fe-95d3-613c06bb1372",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -114,7 +114,7 @@
       "checkConstraints": {
         "account_purge_requests_status_check": {
           "name": "account_purge_requests_status_check",
-          "value": "\"account_purge_requests\".\"status\" IS NULL OR \"account_purge_requests\".\"status\" IN ($1, $2, $3, $4, $5)"
+          "value": "\"account_purge_requests\".\"status\" IS NULL OR \"account_purge_requests\".\"status\" IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled')"
         }
       },
       "isRLSEnabled": false
@@ -210,7 +210,7 @@
       "checkConstraints": {
         "accounts_account_type_check": {
           "name": "accounts_account_type_check",
-          "value": "\"accounts\".\"account_type\" IS NULL OR \"accounts\".\"account_type\" IN ($1, $2)"
+          "value": "\"accounts\".\"account_type\" IS NULL OR \"accounts\".\"account_type\" IN ('system', 'viewer')"
         },
         "accounts_version_check": {
           "name": "accounts_version_check",
@@ -535,7 +535,7 @@
       "checkConstraints": {
         "api_keys_key_type_check": {
           "name": "api_keys_key_type_check",
-          "value": "\"api_keys\".\"key_type\" IS NULL OR \"api_keys\".\"key_type\" IN ($1, $2)"
+          "value": "\"api_keys\".\"key_type\" IS NULL OR \"api_keys\".\"key_type\" IN ('metadata', 'crypto')"
         },
         "api_keys_key_material_check": {
           "name": "api_keys_key_material_check",
@@ -726,7 +726,7 @@
       "checkConstraints": {
         "audit_log_event_type_check": {
           "name": "audit_log_event_type_check",
-          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49, $50, $51, $52, $53, $54, $55, $56, $57, $58, $59, $60, $61, $62, $63, $64, $65, $66, $67, $68, $69, $70, $71, $72, $73, $74, $75, $76, $77, $78, $79, $80, $81, $82, $83, $84, $85, $86, $87, $88, $89, $90, $91, $92, $93, $94, $95, $96, $97, $98, $99, $100, $101, $102, $103, $104, $105, $106, $107, $108)"
+          "value": "\"audit_log\".\"event_type\" IS NULL OR \"audit_log\".\"event_type\" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'subsystem.created', 'subsystem.updated', 'subsystem.archived', 'subsystem.restored', 'subsystem.deleted', 'side-system.created', 'side-system.updated', 'side-system.archived', 'side-system.restored', 'side-system.deleted', 'layer.created', 'layer.updated', 'layer.archived', 'layer.restored', 'layer.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'subsystem-membership.added', 'subsystem-membership.removed', 'side-system-membership.added', 'side-system-membership.removed', 'layer-membership.added', 'layer-membership.removed', 'structure-link.created', 'structure-link.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived')"
         },
         "audit_log_detail_length_check": {
           "name": "audit_log_detail_length_check",
@@ -810,7 +810,7 @@
       "checkConstraints": {
         "auth_keys_key_type_check": {
           "name": "auth_keys_key_type_check",
-          "value": "\"auth_keys\".\"key_type\" IS NULL OR \"auth_keys\".\"key_type\" IN ($1, $2)"
+          "value": "\"auth_keys\".\"key_type\" IS NULL OR \"auth_keys\".\"key_type\" IN ('encryption', 'signing')"
         }
       },
       "isRLSEnabled": false
@@ -1089,7 +1089,7 @@
       "checkConstraints": {
         "blob_metadata_purpose_check": {
           "name": "blob_metadata_purpose_check",
-          "value": "\"blob_metadata\".\"purpose\" IS NULL OR \"blob_metadata\".\"purpose\" IN ($1, $2, $3, $4, $5, $6)"
+          "value": "\"blob_metadata\".\"purpose\" IS NULL OR \"blob_metadata\".\"purpose\" IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')"
         },
         "blob_metadata_size_bytes_check": {
           "name": "blob_metadata_size_bytes_check",
@@ -1331,7 +1331,7 @@
       "checkConstraints": {
         "bucket_content_tags_entity_type_check": {
           "name": "bucket_content_tags_entity_type_check",
-          "value": "\"bucket_content_tags\".\"entity_type\" IS NULL OR \"bucket_content_tags\".\"entity_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)"
+          "value": "\"bucket_content_tags\".\"entity_type\" IS NULL OR \"bucket_content_tags\".\"entity_type\" IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment')"
         }
       },
       "isRLSEnabled": false
@@ -1474,7 +1474,7 @@
       "checkConstraints": {
         "bucket_key_rotations_state_check": {
           "name": "bucket_key_rotations_state_check",
-          "value": "\"bucket_key_rotations\".\"state\" IS NULL OR \"bucket_key_rotations\".\"state\" IN ($1, $2, $3, $4, $5)"
+          "value": "\"bucket_key_rotations\".\"state\" IS NULL OR \"bucket_key_rotations\".\"state\" IN ('initiated', 'migrating', 'sealing', 'completed', 'failed')"
         },
         "bucket_key_rotations_version_check": {
           "name": "bucket_key_rotations_version_check",
@@ -1639,7 +1639,7 @@
       "checkConstraints": {
         "bucket_rotation_items_status_check": {
           "name": "bucket_rotation_items_status_check",
-          "value": "\"bucket_rotation_items\".\"status\" IS NULL OR \"bucket_rotation_items\".\"status\" IN ($1, $2, $3, $4)"
+          "value": "\"bucket_rotation_items\".\"status\" IS NULL OR \"bucket_rotation_items\".\"status\" IN ('pending', 'claimed', 'completed', 'failed')"
         }
       },
       "isRLSEnabled": false
@@ -1882,7 +1882,7 @@
       "checkConstraints": {
         "channels_type_check": {
           "name": "channels_type_check",
-          "value": "\"channels\".\"type\" IS NULL OR \"channels\".\"type\" IN ($1, $2)"
+          "value": "\"channels\".\"type\" IS NULL OR \"channels\".\"type\" IN ('category', 'channel')"
         },
         "channels_sort_order_check": {
           "name": "channels_sort_order_check",
@@ -2317,7 +2317,7 @@
       "checkConstraints": {
         "device_tokens_platform_check": {
           "name": "device_tokens_platform_check",
-          "value": "\"device_tokens\".\"platform\" IS NULL OR \"device_tokens\".\"platform\" IN ($1, $2, $3)"
+          "value": "\"device_tokens\".\"platform\" IS NULL OR \"device_tokens\".\"platform\" IN ('ios', 'android', 'web')"
         }
       },
       "isRLSEnabled": false
@@ -2455,7 +2455,7 @@
       "checkConstraints": {
         "device_transfer_requests_status_check": {
           "name": "device_transfer_requests_status_check",
-          "value": "\"device_transfer_requests\".\"status\" IS NULL OR \"device_transfer_requests\".\"status\" IN ($1, $2, $3)"
+          "value": "\"device_transfer_requests\".\"status\" IS NULL OR \"device_transfer_requests\".\"status\" IN ('pending', 'approved', 'expired')"
         },
         "device_transfer_requests_expires_at_check": {
           "name": "device_transfer_requests_expires_at_check",
@@ -2595,11 +2595,11 @@
       "checkConstraints": {
         "export_requests_format_check": {
           "name": "export_requests_format_check",
-          "value": "\"export_requests\".\"format\" IS NULL OR \"export_requests\".\"format\" IN ($1, $2)"
+          "value": "\"export_requests\".\"format\" IS NULL OR \"export_requests\".\"format\" IN ('json', 'csv')"
         },
         "export_requests_status_check": {
           "name": "export_requests_status_check",
-          "value": "\"export_requests\".\"status\" IS NULL OR \"export_requests\".\"status\" IN ($1, $2, $3, $4)"
+          "value": "\"export_requests\".\"status\" IS NULL OR \"export_requests\".\"status\" IN ('pending', 'processing', 'completed', 'failed')"
         }
       },
       "isRLSEnabled": false
@@ -2820,7 +2820,7 @@
       "checkConstraints": {
         "field_definitions_field_type_check": {
           "name": "field_definitions_field_type_check",
-          "value": "\"field_definitions\".\"field_type\" IS NULL OR \"field_definitions\".\"field_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8)"
+          "value": "\"field_definitions\".\"field_type\" IS NULL OR \"field_definitions\".\"field_type\" IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')"
         },
         "field_definitions_version_check": {
           "name": "field_definitions_version_check",
@@ -3393,7 +3393,7 @@
       "checkConstraints": {
         "friend_connections_status_check": {
           "name": "friend_connections_status_check",
-          "value": "\"friend_connections\".\"status\" IS NULL OR \"friend_connections\".\"status\" IN ($1, $2, $3, $4)"
+          "value": "\"friend_connections\".\"status\" IS NULL OR \"friend_connections\".\"status\" IN ('pending', 'accepted', 'blocked', 'removed')"
         },
         "friend_connections_no_self_check": {
           "name": "friend_connections_no_self_check",
@@ -3764,7 +3764,7 @@
       "checkConstraints": {
         "fronting_reports_format_check": {
           "name": "fronting_reports_format_check",
-          "value": "\"fronting_reports\".\"format\" IS NULL OR \"fronting_reports\".\"format\" IN ($1, $2)"
+          "value": "\"fronting_reports\".\"format\" IS NULL OR \"fronting_reports\".\"format\" IN ('html', 'pdf')"
         }
       },
       "isRLSEnabled": false
@@ -4046,7 +4046,7 @@
         },
         "fronting_sessions_fronting_type_check": {
           "name": "fronting_sessions_fronting_type_check",
-          "value": "\"fronting_sessions\".\"fronting_type\" IS NULL OR \"fronting_sessions\".\"fronting_type\" IN ($1, $2)"
+          "value": "\"fronting_sessions\".\"fronting_type\" IS NULL OR \"fronting_sessions\".\"fronting_type\" IN ('fronting', 'co-conscious')"
         },
         "fronting_sessions_version_check": {
           "name": "fronting_sessions_version_check",
@@ -4450,11 +4450,11 @@
       "checkConstraints": {
         "import_jobs_source_check": {
           "name": "import_jobs_source_check",
-          "value": "\"import_jobs\".\"source\" IS NULL OR \"import_jobs\".\"source\" IN ($1, $2, $3)"
+          "value": "\"import_jobs\".\"source\" IS NULL OR \"import_jobs\".\"source\" IN ('simply-plural', 'pluralkit', 'pluralscape')"
         },
         "import_jobs_status_check": {
           "name": "import_jobs_status_check",
-          "value": "\"import_jobs\".\"status\" IS NULL OR \"import_jobs\".\"status\" IN ($1, $2, $3, $4, $5)"
+          "value": "\"import_jobs\".\"status\" IS NULL OR \"import_jobs\".\"status\" IN ('pending', 'validating', 'importing', 'completed', 'failed')"
         },
         "import_jobs_progress_percent_check": {
           "name": "import_jobs_progress_percent_check",
@@ -4466,7 +4466,7 @@
         },
         "import_jobs_error_log_length_check": {
           "name": "import_jobs_error_log_length_check",
-          "value": "\"import_jobs\".\"error_log\" IS NULL OR jsonb_array_length(\"import_jobs\".\"error_log\") <= $1"
+          "value": "\"import_jobs\".\"error_log\" IS NULL OR jsonb_array_length(\"import_jobs\".\"error_log\") <= 1000"
         }
       },
       "isRLSEnabled": false
@@ -5124,6 +5124,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "member_id": {
+          "name": "member_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "system_id": {
           "name": "system_id",
           "type": "varchar(50)",
@@ -5149,6 +5155,21 @@
           "columns": [
             {
               "expression": "layer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "layer_memberships_member_id_idx": {
+          "name": "layer_memberships_member_id_idx",
+          "columns": [
+            {
+              "expression": "member_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5190,6 +5211,15 @@
           "tableFrom": "layer_memberships",
           "tableTo": "layers",
           "columnsFrom": ["layer_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "layer_memberships_member_id_system_id_members_id_system_id_fk": {
+          "name": "layer_memberships_member_id_system_id_members_id_system_id_fk",
+          "tableFrom": "layer_memberships",
+          "tableTo": "members",
+          "columnsFrom": ["member_id", "system_id"],
           "columnsTo": ["id", "system_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
@@ -5356,6 +5386,12 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": true
+        },
+        "plaintext_metadata": {
+          "name": "plaintext_metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -5419,7 +5455,7 @@
       "checkConstraints": {
         "lifecycle_events_event_type_check": {
           "name": "lifecycle_events_event_type_check",
-          "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
+          "value": "\"lifecycle_events\".\"event_type\" IS NULL OR \"lifecycle_events\".\"event_type\" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move')"
         }
       },
       "isRLSEnabled": false
@@ -6181,7 +6217,7 @@
       "checkConstraints": {
         "notification_configs_event_type_check": {
           "name": "notification_configs_event_type_check",
-          "value": "\"notification_configs\".\"event_type\" IS NULL OR \"notification_configs\".\"event_type\" IN ($1, $2, $3, $4, $5, $6)"
+          "value": "\"notification_configs\".\"event_type\" IS NULL OR \"notification_configs\".\"event_type\" IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert')"
         },
         "notification_configs_archived_consistency_check": {
           "name": "notification_configs_archived_consistency_check",
@@ -6297,7 +6333,7 @@
       "checkConstraints": {
         "pk_bridge_configs_sync_direction_check": {
           "name": "pk_bridge_configs_sync_direction_check",
-          "value": "\"pk_bridge_configs\".\"sync_direction\" IS NULL OR \"pk_bridge_configs\".\"sync_direction\" IN ($1, $2, $3)"
+          "value": "\"pk_bridge_configs\".\"sync_direction\" IS NULL OR \"pk_bridge_configs\".\"sync_direction\" IN ('ps-to-pk', 'pk-to-ps', 'bidirectional')"
         },
         "pk_bridge_configs_version_check": {
           "name": "pk_bridge_configs_version_check",
@@ -6613,11 +6649,11 @@
       "checkConstraints": {
         "polls_status_check": {
           "name": "polls_status_check",
-          "value": "\"polls\".\"status\" IS NULL OR \"polls\".\"status\" IN ($1, $2)"
+          "value": "\"polls\".\"status\" IS NULL OR \"polls\".\"status\" IN ('open', 'closed')"
         },
         "polls_kind_check": {
           "name": "polls_kind_check",
-          "value": "\"polls\".\"kind\" IS NULL OR \"polls\".\"kind\" IN ($1, $2)"
+          "value": "\"polls\".\"kind\" IS NULL OR \"polls\".\"kind\" IN ('standard', 'custom')"
         },
         "polls_max_votes_check": {
           "name": "polls_max_votes_check",
@@ -6857,7 +6893,7 @@
       "checkConstraints": {
         "relationships_type_check": {
           "name": "relationships_type_check",
-          "value": "\"relationships\".\"type\" IS NULL OR \"relationships\".\"type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+          "value": "\"relationships\".\"type\" IS NULL OR \"relationships\".\"type\" IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')"
         },
         "relationships_version_check": {
           "name": "relationships_version_check",
@@ -6980,6 +7016,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "encrypted_data": {
           "name": "encrypted_data",
           "type": "bytea",
@@ -7028,6 +7070,21 @@
           "method": "btree",
           "with": {}
         },
+        "sessions_token_hash_idx": {
+          "name": "sessions_token_hash_idx",
+          "columns": [
+            {
+              "expression": "token_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "sessions_revoked_last_active_idx": {
           "name": "sessions_revoked_last_active_idx",
           "columns": [
@@ -7061,6 +7118,21 @@
           ],
           "isUnique": false,
           "where": "\"sessions\".\"expires_at\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sessions_ttl_duration_ms_idx": {
+          "name": "sessions_ttl_duration_ms_idx",
+          "columns": [
+            {
+              "expression": "(CAST(EXTRACT(EPOCH FROM (\"expires_at\" - \"created_at\")) * 1000 AS bigint))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -7218,6 +7290,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "member_id": {
+          "name": "member_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "system_id": {
           "name": "system_id",
           "type": "varchar(50)",
@@ -7243,6 +7321,21 @@
           "columns": [
             {
               "expression": "side_system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "side_system_memberships_member_id_idx": {
+          "name": "side_system_memberships_member_id_idx",
+          "columns": [
+            {
+              "expression": "member_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7284,6 +7377,15 @@
           "tableFrom": "side_system_memberships",
           "tableTo": "side_systems",
           "columnsFrom": ["side_system_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "side_system_memberships_member_id_system_id_members_id_system_id_fk": {
+          "name": "side_system_memberships_member_id_system_id_members_id_system_id_fk",
+          "tableFrom": "side_system_memberships",
+          "tableTo": "members",
+          "columnsFrom": ["member_id", "system_id"],
           "columnsTo": ["id", "system_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
@@ -7535,6 +7637,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "member_id": {
+          "name": "member_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "system_id": {
           "name": "system_id",
           "type": "varchar(50)",
@@ -7560,6 +7668,21 @@
           "columns": [
             {
               "expression": "subsystem_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "subsystem_memberships_member_id_idx": {
+          "name": "subsystem_memberships_member_id_idx",
+          "columns": [
+            {
+              "expression": "member_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7601,6 +7724,15 @@
           "tableFrom": "subsystem_memberships",
           "tableTo": "subsystems",
           "columnsFrom": ["subsystem_id", "system_id"],
+          "columnsTo": ["id", "system_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "subsystem_memberships_member_id_system_id_members_id_system_id_fk": {
+          "name": "subsystem_memberships_member_id_system_id_members_id_system_id_fk",
+          "tableFrom": "subsystem_memberships",
+          "tableTo": "members",
+          "columnsFrom": ["member_id", "system_id"],
           "columnsTo": ["id", "system_id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
@@ -7861,7 +7993,7 @@
       "checkConstraints": {
         "subsystems_discovery_status_check": {
           "name": "subsystems_discovery_status_check",
-          "value": "\"subsystems\".\"discovery_status\" IS NULL OR \"subsystems\".\"discovery_status\" IN ($1, $2, $3)"
+          "value": "\"subsystems\".\"discovery_status\" IS NULL OR \"subsystems\".\"discovery_status\" IN ('fully-mapped', 'partially-mapped', 'unknown')"
         },
         "subsystems_version_check": {
           "name": "subsystems_version_check",
@@ -8119,7 +8251,7 @@
       "checkConstraints": {
         "sync_conflicts_resolution_check": {
           "name": "sync_conflicts_resolution_check",
-          "value": "\"sync_conflicts\".\"resolution\" IS NULL OR \"sync_conflicts\".\"resolution\" IN ($1, $2, $3)"
+          "value": "\"sync_conflicts\".\"resolution\" IS NULL OR \"sync_conflicts\".\"resolution\" IN ('local', 'remote', 'merged')"
         },
         "sync_conflicts_resolution_resolved_at_check": {
           "name": "sync_conflicts_resolution_resolved_at_check",
@@ -8232,7 +8364,7 @@
         },
         "sync_documents_automerge_heads_size_check": {
           "name": "sync_documents_automerge_heads_size_check",
-          "value": "\"sync_documents\".\"automerge_heads\" IS NULL OR octet_length(\"sync_documents\".\"automerge_heads\") <= $1"
+          "value": "\"sync_documents\".\"automerge_heads\" IS NULL OR octet_length(\"sync_documents\".\"automerge_heads\") <= 16384"
         }
       },
       "isRLSEnabled": false
@@ -8416,7 +8548,7 @@
       "checkConstraints": {
         "sync_queue_operation_check": {
           "name": "sync_queue_operation_check",
-          "value": "\"sync_queue\".\"operation\" IS NULL OR \"sync_queue\".\"operation\" IN ($1, $2, $3)"
+          "value": "\"sync_queue\".\"operation\" IS NULL OR \"sync_queue\".\"operation\" IN ('create', 'update', 'delete')"
         }
       },
       "isRLSEnabled": false
@@ -8590,7 +8722,7 @@
       "checkConstraints": {
         "system_snapshots_snapshot_trigger_check": {
           "name": "system_snapshots_snapshot_trigger_check",
-          "value": "\"system_snapshots\".\"snapshot_trigger\" IS NULL OR \"system_snapshots\".\"snapshot_trigger\" IN ($1, $2, $3)"
+          "value": "\"system_snapshots\".\"snapshot_trigger\" IS NULL OR \"system_snapshots\".\"snapshot_trigger\" IN ('manual', 'scheduled-daily', 'scheduled-weekly')"
         }
       },
       "isRLSEnabled": false
@@ -9190,11 +9322,11 @@
       "checkConstraints": {
         "webhook_deliveries_event_type_check": {
           "name": "webhook_deliveries_event_type_check",
-          "value": "\"webhook_deliveries\".\"event_type\" IS NULL OR \"webhook_deliveries\".\"event_type\" IN ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)"
+          "value": "\"webhook_deliveries\".\"event_type\" IS NULL OR \"webhook_deliveries\".\"event_type\" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')"
         },
         "webhook_deliveries_status_check": {
           "name": "webhook_deliveries_status_check",
-          "value": "\"webhook_deliveries\".\"status\" IS NULL OR \"webhook_deliveries\".\"status\" IN ($1, $2, $3)"
+          "value": "\"webhook_deliveries\".\"status\" IS NULL OR \"webhook_deliveries\".\"status\" IN ('pending', 'success', 'failed')"
         },
         "webhook_deliveries_attempt_count_check": {
           "name": "webhook_deliveries_attempt_count_check",

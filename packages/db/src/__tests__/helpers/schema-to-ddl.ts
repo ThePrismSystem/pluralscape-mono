@@ -23,8 +23,11 @@ function renderSQL(sqlObj: SQL): string {
 function escapeDefault(value: unknown): string {
   if (value === null || value === undefined) return "NULL";
   if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (typeof value === "string") return `'${value}'`;
-  return `'${JSON.stringify(value)}'`;
+  if (typeof value === "object" && "inlineParams" in value) {
+    return renderSQL(value as SQL);
+  }
+  const str = typeof value === "string" ? value : JSON.stringify(value);
+  return `'${str.replaceAll("'", "''")}'`;
 }
 
 /** Extract the Drizzle table name from a FK reference's foreignTable. */
@@ -70,6 +73,7 @@ export function pgTableToCreateDDL(table: PgTable): string {
     foreignTable: string;
     foreignColumns: string[];
     onDelete: string;
+    onUpdate: string;
   }> = [];
 
   for (const fk of config.foreignKeys) {
@@ -78,6 +82,7 @@ export function pgTableToCreateDDL(table: PgTable): string {
     const fCols = ref.foreignColumns.map((c) => c.name);
     const fTable = getTableName(ref.foreignTable);
     const onDelete = fk.onDelete ?? "no action";
+    const onUpdate = fk.onUpdate ?? "no action";
 
     const firstCol = cols[0];
     const firstFCol = fCols[0];
@@ -87,10 +92,18 @@ export function pgTableToCreateDDL(table: PgTable): string {
       const existingLine = lines[colIdx];
       if (colIdx !== -1 && existingLine !== undefined) {
         const deleteClause = onDelete !== "no action" ? ` ON DELETE ${onDelete.toUpperCase()}` : "";
-        lines[colIdx] = `${existingLine} REFERENCES "${fTable}"("${firstFCol}")${deleteClause}`;
+        const updateClause = onUpdate !== "no action" ? ` ON UPDATE ${onUpdate.toUpperCase()}` : "";
+        lines[colIdx] =
+          `${existingLine} REFERENCES "${fTable}"("${firstFCol}")${deleteClause}${updateClause}`;
       }
     } else {
-      multiColFks.push({ columns: cols, foreignTable: fTable, foreignColumns: fCols, onDelete });
+      multiColFks.push({
+        columns: cols,
+        foreignTable: fTable,
+        foreignColumns: fCols,
+        onDelete,
+        onUpdate,
+      });
     }
   }
 
@@ -100,6 +113,7 @@ export function pgTableToCreateDDL(table: PgTable): string {
     const fCols = fk.foreignColumns.map((c) => `"${c}"`).join(", ");
     let line = `FOREIGN KEY (${cols}) REFERENCES "${fk.foreignTable}"(${fCols})`;
     if (fk.onDelete !== "no action") line += ` ON DELETE ${fk.onDelete.toUpperCase()}`;
+    if (fk.onUpdate !== "no action") line += ` ON UPDATE ${fk.onUpdate.toUpperCase()}`;
     lines.push(line);
   }
 

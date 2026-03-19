@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Closeable } from "@pluralscape/db";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -7,20 +7,16 @@ const { mockCreateDatabaseFromEnv } = vi.hoisted(() => ({
   mockCreateDatabaseFromEnv: vi.fn(),
 }));
 
-vi.mock("@pluralscape/db", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@pluralscape/db")>();
-  return {
-    ...original,
-    createDatabaseFromEnv: mockCreateDatabaseFromEnv,
-  };
-});
+vi.mock("@pluralscape/db", () => ({
+  createDatabaseFromEnv: mockCreateDatabaseFromEnv,
+}));
 
-// Dynamic import after mocks are set up
-const { getDb, getRawClient, setDbForTesting, _resetDbForTesting } =
+const { _resetDbForTesting, getDb, getRawClient, setDbForTesting } =
   await import("../../lib/db.js");
 
 afterEach(() => {
   _resetDbForTesting();
+  vi.restoreAllMocks();
   mockCreateDatabaseFromEnv.mockReset();
 });
 
@@ -41,44 +37,54 @@ describe("getRawClient", () => {
     expect(getRawClient()).toBe(mockRawClient);
   });
 
-  it("returns null when setDbForTesting is called without rawClient", () => {
+  it("returns a no-op closeable when setDbForTesting is called without rawClient", () => {
     setDbForTesting({} as PostgresJsDatabase);
-    expect(getRawClient()).toBeNull();
+    const client = getRawClient();
+    expect(client).not.toBeNull();
   });
 });
 
 describe("getDb", () => {
-  it("concurrent calls deduplicate (factory called once)", async () => {
-    const mockDb = {} as PostgresJsDatabase;
-    const mockRawClient: Closeable = { end: vi.fn() };
+  const mockDb = {} as PostgresJsDatabase;
+  const mockRawClient: Closeable = { end: vi.fn().mockResolvedValue(undefined) };
+
+  beforeEach(() => {
     mockCreateDatabaseFromEnv.mockResolvedValue({
-      dialect: "pg",
+      dialect: "pg" as const,
       db: mockDb,
       rawClient: mockRawClient,
     });
+  });
 
-    const [db1, db2] = await Promise.all([getDb(), getDb()]);
-
-    expect(db1).toBe(mockDb);
-    expect(db2).toBe(mockDb);
+  it("returns the same promise when called concurrently", async () => {
+    const p1 = getDb();
+    const p2 = getDb();
+    expect(p1).toBe(p2);
+    const [r1, r2] = await Promise.all([p1, p2]);
+    expect(r1).toBe(r2);
     expect(mockCreateDatabaseFromEnv).toHaveBeenCalledOnce();
   });
 
-  it("after failure, pendingInit is reset and retry succeeds", async () => {
-    mockCreateDatabaseFromEnv.mockRejectedValueOnce(new Error("connect failed"));
+  it("returns cached db on subsequent calls", async () => {
+    await getDb();
+    const db = await getDb();
+    expect(db).toBe(mockDb);
+    expect(mockCreateDatabaseFromEnv).toHaveBeenCalledOnce();
+  });
+
+  it("retries after a failure", async () => {
+    mockCreateDatabaseFromEnv
+      .mockRejectedValueOnce(new Error("connect failed"))
+      .mockResolvedValueOnce({ dialect: "pg", db: mockDb, rawClient: mockRawClient });
 
     await expect(getDb()).rejects.toThrow("connect failed");
-
-    const mockDb = {} as PostgresJsDatabase;
-    const mockRawClient: Closeable = { end: vi.fn() };
-    mockCreateDatabaseFromEnv.mockResolvedValue({
-      dialect: "pg",
-      db: mockDb,
-      rawClient: mockRawClient,
-    });
-
     const db = await getDb();
     expect(db).toBe(mockDb);
     expect(mockCreateDatabaseFromEnv).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws when dialect is not pg", async () => {
+    mockCreateDatabaseFromEnv.mockResolvedValueOnce({ dialect: "sqlite", db: {} });
+    await expect(getDb()).rejects.toThrow("API requires PostgreSQL");
   });
 });

@@ -18,7 +18,11 @@ import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createSecureHeaders } from "./middleware/secure-headers.js";
 import { createValkeyStore } from "./middleware/stores/valkey-store.js";
 import { v1Routes } from "./routes/v1.js";
-import { DEFAULT_PORT, SHUTDOWN_TIMEOUT_SECONDS } from "./server.constants.js";
+import {
+  DEFAULT_PORT,
+  SERVER_STOP_TIMEOUT_SECONDS,
+  SHUTDOWN_TIMEOUT_SECONDS,
+} from "./server.constants.js";
 
 const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
 
@@ -54,21 +58,42 @@ app.get("/health", (c) => {
 
 app.route("/v1", v1Routes);
 
+const MS_PER_SECOND = 1_000;
+
 /**
  * Gracefully shuts down the server and drains the connection pool.
  * Exported for testability — does NOT call process.exit().
+ *
+ * server.stop() is raced against a timeout — if it hangs, shutdown
+ * logs a warning and continues to drain the DB pool regardless.
  */
 export async function shutdown(server: { stop(): Promise<void> | void } | null): Promise<void> {
   logger.info("Shutting down");
-  try {
-    if (server) await server.stop();
-  } finally {
-    const raw = getRawClient();
-    if (raw) await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
+  if (server) {
+    await Promise.race([
+      Promise.resolve(server.stop()),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error("server.stop() timed out"));
+        }, SERVER_STOP_TIMEOUT_SECONDS * MS_PER_SECOND);
+      }),
+    ]).catch((err: unknown) => {
+      logger.warn(
+        "server.stop() error during shutdown",
+        err instanceof Error ? { err } : { error: String(err) },
+      );
+    });
   }
+  const raw = getRawClient();
+  if (raw) await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
 }
 
 async function start(): Promise<void> {
+  // Fail-fast: DISABLE_RATE_LIMIT is a test-only escape hatch. Refuse to start in production with it set.
+  if (process.env["DISABLE_RATE_LIMIT"] === "1" && process.env["NODE_ENV"] !== "test") {
+    throw new Error("DISABLE_RATE_LIMIT=1 is only allowed when NODE_ENV=test. Refusing to start.");
+  }
+
   await initSodium();
 
   // Initialize blob storage: prefer S3 if configured, fall back to filesystem
@@ -116,10 +141,10 @@ async function start(): Promise<void> {
     logger.info("Pluralscape API listening", { port });
   }
 
-  let shuttingDown = false;
+  let shutdownInProgress = false;
   const handleShutdown = (): void => {
-    if (shuttingDown) return;
-    shuttingDown = true;
+    if (shutdownInProgress) return;
+    shutdownInProgress = true;
     shutdown(httpServer)
       .then(() => process.exit(0))
       .catch((err: unknown) => {

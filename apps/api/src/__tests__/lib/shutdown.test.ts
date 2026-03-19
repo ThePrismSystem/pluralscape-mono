@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { SERVER_STOP_TIMEOUT_SECONDS } from "../../server.constants.js";
+
 import type { Closeable } from "@pluralscape/db";
 
-const { mockGetRawClient, mockLogInfo, mockLogError } = vi.hoisted(() => ({
+const { mockGetRawClient, mockLogInfo, mockLogWarn, mockLogError } = vi.hoisted(() => ({
   mockGetRawClient: vi.fn<() => Closeable | null>(),
   mockLogInfo: vi.fn(),
+  mockLogWarn: vi.fn(),
   mockLogError: vi.fn(),
 }));
 
@@ -15,7 +18,7 @@ vi.mock("../../lib/db.js", () => ({
 vi.mock("../../lib/logger.js", () => ({
   logger: {
     info: mockLogInfo,
-    warn: vi.fn(),
+    warn: mockLogWarn,
     error: mockLogError,
     debug: vi.fn(),
   },
@@ -25,8 +28,10 @@ vi.mock("../../lib/logger.js", () => ({
 const { shutdown } = await import("../../index.js");
 
 afterEach(() => {
+  vi.restoreAllMocks();
   mockGetRawClient.mockReset();
   mockLogInfo.mockReset();
+  mockLogWarn.mockReset();
   mockLogError.mockReset();
 });
 
@@ -73,24 +78,35 @@ describe("shutdown", () => {
     expect(mockStop).toHaveBeenCalledOnce();
   });
 
-  it("handles both null server and null rawClient", async () => {
-    mockGetRawClient.mockReturnValue(null);
-
-    await shutdown(null);
-
-    expect(mockLogInfo).toHaveBeenCalledWith("Shutting down");
-  });
-
-  it("still drains pool when server.stop() throws", async () => {
+  it("logs warning and continues draining when server.stop() rejects", async () => {
     const mockEnd = vi.fn().mockResolvedValue(undefined);
-    const mockRawClient: Closeable = { end: mockEnd };
-    mockGetRawClient.mockReturnValue(mockRawClient);
     const mockServer = {
       stop: vi.fn().mockRejectedValue(new Error("stop failed")),
     };
+    const mockRawClient: Closeable = { end: mockEnd };
+    mockGetRawClient.mockReturnValue(mockRawClient);
 
-    await expect(shutdown(mockServer)).rejects.toThrow("stop failed");
-    expect(mockEnd).toHaveBeenCalledWith({ timeout: expect.any(Number) });
+    await shutdown(mockServer);
+
+    expect(mockLogWarn).toHaveBeenCalledOnce();
+    expect(mockEnd).toHaveBeenCalledOnce();
+  });
+
+  it("continues to drain pool when server.stop() times out", async () => {
+    vi.useFakeTimers();
+    const mockStop = vi.fn().mockReturnValue(new Promise<void>(() => {})); // never resolves
+    const mockEnd = vi.fn().mockResolvedValue(undefined);
+    const mockServer = { stop: mockStop };
+    const mockRawClient: Closeable = { end: mockEnd };
+    mockGetRawClient.mockReturnValue(mockRawClient);
+
+    const promise = shutdown(mockServer);
+    await vi.advanceTimersByTimeAsync(SERVER_STOP_TIMEOUT_SECONDS * 1_000);
+    await promise;
+
+    expect(mockLogWarn).toHaveBeenCalledOnce();
+    expect(mockEnd).toHaveBeenCalledOnce();
+    vi.useRealTimers();
   });
 
   it("propagates errors from raw.end()", async () => {

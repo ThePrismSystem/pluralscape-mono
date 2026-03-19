@@ -48,7 +48,7 @@ export const syncDocuments = pgTable(
     versionCheckFor("sync_documents", t.version),
     check(
       "sync_documents_automerge_heads_size_check",
-      sql`${t.automergeHeads} IS NULL OR octet_length(${t.automergeHeads}) <= ${MAX_AUTOMERGE_HEADS_BYTES}`,
+      sql`${t.automergeHeads} IS NULL OR octet_length(${t.automergeHeads}) <= ${sql.raw(String(MAX_AUTOMERGE_HEADS_BYTES))}`,
     ),
   ],
 );

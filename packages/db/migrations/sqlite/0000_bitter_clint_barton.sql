@@ -9,7 +9,7 @@ CREATE TABLE `account_purge_requests` (
 	`completed_at` integer,
 	`cancelled_at` integer,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "account_purge_requests_status_check" CHECK("account_purge_requests"."status" IS NULL OR "account_purge_requests"."status" IN (?, ?, ?, ?, ?))
+	CONSTRAINT "account_purge_requests_status_check" CHECK("account_purge_requests"."status" IS NULL OR "account_purge_requests"."status" IN ('pending', 'confirmed', 'processing', 'completed', 'cancelled'))
 );
 --> statement-breakpoint
 CREATE INDEX `account_purge_requests_account_id_idx` ON `account_purge_requests` (`account_id`);--> statement-breakpoint
@@ -25,7 +25,7 @@ CREATE TABLE `accounts` (
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	`version` integer DEFAULT 1 NOT NULL,
-	CONSTRAINT "accounts_account_type_check" CHECK("accounts"."account_type" IS NULL OR "accounts"."account_type" IN (?, ?)),
+	CONSTRAINT "accounts_account_type_check" CHECK("accounts"."account_type" IS NULL OR "accounts"."account_type" IN ('system', 'viewer')),
 	CONSTRAINT "accounts_version_check" CHECK("accounts"."version" >= 1)
 );
 --> statement-breakpoint
@@ -62,7 +62,7 @@ CREATE TABLE `api_keys` (
 	`scoped_bucket_ids` text,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "api_keys_key_type_check" CHECK("api_keys"."key_type" IS NULL OR "api_keys"."key_type" IN (?, ?)),
+	CONSTRAINT "api_keys_key_type_check" CHECK("api_keys"."key_type" IS NULL OR "api_keys"."key_type" IN ('metadata', 'crypto')),
 	CONSTRAINT "api_keys_key_material_check" CHECK(("api_keys"."key_type" = 'crypto' AND "api_keys"."encrypted_key_material" IS NOT NULL) OR ("api_keys"."key_type" = 'metadata' AND "api_keys"."encrypted_key_material" IS NULL))
 );
 --> statement-breakpoint
@@ -84,7 +84,7 @@ CREATE TABLE `audit_log` (
 	PRIMARY KEY(`id`, `timestamp`),
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE set null,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE set null,
-	CONSTRAINT "audit_log_event_type_check" CHECK("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
+	CONSTRAINT "audit_log_event_type_check" CHECK("audit_log"."event_type" IS NULL OR "audit_log"."event_type" IN ('auth.register', 'auth.login', 'auth.login-failed', 'auth.logout', 'auth.password-changed', 'auth.recovery-key-used', 'auth.key-created', 'auth.key-revoked', 'data.export', 'data.import', 'data.purge', 'settings.changed', 'member.created', 'member.archived', 'member.deleted', 'sharing.granted', 'sharing.revoked', 'bucket.key_rotation.initiated', 'bucket.key_rotation.chunk_completed', 'bucket.key_rotation.completed', 'bucket.key_rotation.failed', 'device.security.jailbreak_warning_shown', 'auth.password-reset-via-recovery', 'auth.recovery-key-regenerated', 'auth.device-transfer-initiated', 'auth.device-transfer-completed', 'auth.email-changed', 'system.created', 'system.profile-updated', 'system.deleted', 'group.created', 'group.updated', 'group.archived', 'group.restored', 'group.moved', 'group-membership.added', 'group-membership.removed', 'custom-front.created', 'custom-front.updated', 'custom-front.archived', 'custom-front.restored', 'group.deleted', 'custom-front.deleted', 'auth.biometric-enrolled', 'auth.biometric-verified', 'settings.pin-set', 'settings.pin-removed', 'settings.pin-verified', 'settings.nomenclature-updated', 'setup.step-completed', 'setup.completed', 'member.updated', 'member.duplicated', 'member.restored', 'member-photo.created', 'member-photo.archived', 'member-photo.restored', 'member-photo.reordered', 'field-definition.created', 'field-definition.updated', 'field-definition.archived', 'field-definition.restored', 'field-value.set', 'field-value.updated', 'field-value.deleted', 'subsystem.created', 'subsystem.updated', 'subsystem.archived', 'subsystem.restored', 'subsystem.deleted', 'side-system.created', 'side-system.updated', 'side-system.archived', 'side-system.restored', 'side-system.deleted', 'layer.created', 'layer.updated', 'layer.archived', 'layer.restored', 'layer.deleted', 'relationship.created', 'relationship.updated', 'relationship.archived', 'relationship.restored', 'relationship.deleted', 'lifecycle-event.created', 'subsystem-membership.added', 'subsystem-membership.removed', 'side-system-membership.added', 'side-system-membership.removed', 'layer-membership.added', 'layer-membership.removed', 'structure-link.created', 'structure-link.deleted', 'innerworld-region.created', 'innerworld-region.updated', 'innerworld-region.archived', 'innerworld-region.restored', 'innerworld-region.deleted', 'innerworld-entity.created', 'innerworld-entity.updated', 'innerworld-entity.archived', 'innerworld-entity.restored', 'innerworld-entity.deleted', 'innerworld-canvas.created', 'innerworld-canvas.updated', 'blob.upload-requested', 'blob.confirmed', 'blob.archived')),
 	CONSTRAINT "audit_log_detail_length_check" CHECK("audit_log"."detail" IS NULL OR length("audit_log"."detail") <= 2048)
 );
 --> statement-breakpoint
@@ -101,7 +101,7 @@ CREATE TABLE `auth_keys` (
 	`key_type` text NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "auth_keys_key_type_check" CHECK("auth_keys"."key_type" IS NULL OR "auth_keys"."key_type" IN (?, ?))
+	CONSTRAINT "auth_keys_key_type_check" CHECK("auth_keys"."key_type" IS NULL OR "auth_keys"."key_type" IN ('encryption', 'signing'))
 );
 --> statement-breakpoint
 CREATE INDEX `auth_keys_account_id_idx` ON `auth_keys` (`account_id`);--> statement-breakpoint
@@ -115,18 +115,21 @@ CREATE TABLE `blob_metadata` (
 	`bucket_id` text,
 	`purpose` text NOT NULL,
 	`thumbnail_of_blob_id` text,
-	`checksum` text NOT NULL,
-	`uploaded_at` integer NOT NULL,
+	`checksum` text,
+	`created_at` integer NOT NULL,
+	`uploaded_at` integer,
+	`expires_at` integer,
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`thumbnail_of_blob_id`) REFERENCES `blob_metadata`(`id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "blob_metadata_purpose_check" CHECK("blob_metadata"."purpose" IS NULL OR "blob_metadata"."purpose" IN (?, ?, ?, ?, ?, ?)),
+	CONSTRAINT "blob_metadata_purpose_check" CHECK("blob_metadata"."purpose" IS NULL OR "blob_metadata"."purpose" IN ('avatar', 'member-photo', 'journal-image', 'attachment', 'export', 'littles-safe-mode')),
 	CONSTRAINT "blob_metadata_size_bytes_check" CHECK("blob_metadata"."size_bytes" > 0),
 	CONSTRAINT "blob_metadata_size_bytes_max_check" CHECK("blob_metadata"."size_bytes" <= 10737418240),
 	CONSTRAINT "blob_metadata_encryption_tier_check" CHECK("blob_metadata"."encryption_tier" IN (1, 2)),
-	CONSTRAINT "blob_metadata_checksum_length_check" CHECK(length("blob_metadata"."checksum") = 64),
+	CONSTRAINT "blob_metadata_checksum_length_check" CHECK("blob_metadata"."checksum" IS NULL OR length("blob_metadata"."checksum") = 64),
+	CONSTRAINT "blob_metadata_pending_consistency_check" CHECK(("blob_metadata"."checksum" IS NULL) = ("blob_metadata"."uploaded_at" IS NULL)),
 	CONSTRAINT "blob_metadata_archived_consistency_check" CHECK(("blob_metadata"."archived" = true) = ("blob_metadata"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -160,7 +163,7 @@ CREATE TABLE `bucket_content_tags` (
 	PRIMARY KEY(`entity_type`, `entity_id`, `bucket_id`),
 	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "bucket_content_tags_entity_type_check" CHECK("bucket_content_tags"."entity_type" IS NULL OR "bucket_content_tags"."entity_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?))
+	CONSTRAINT "bucket_content_tags_entity_type_check" CHECK("bucket_content_tags"."entity_type" IS NULL OR "bucket_content_tags"."entity_type" IN ('member', 'group', 'channel', 'message', 'note', 'poll', 'relationship', 'subsystem', 'side-system', 'layer', 'journal-entry', 'wiki-page', 'custom-front', 'fronting-session', 'board-message', 'acknowledgement', 'innerworld-entity', 'innerworld-region', 'field-definition', 'field-value', 'member-photo', 'fronting-comment'))
 );
 --> statement-breakpoint
 CREATE INDEX `bucket_content_tags_bucket_id_idx` ON `bucket_content_tags` (`bucket_id`);--> statement-breakpoint
@@ -179,7 +182,7 @@ CREATE TABLE `bucket_key_rotations` (
 	`failed_items` integer DEFAULT 0 NOT NULL,
 	FOREIGN KEY (`bucket_id`) REFERENCES `buckets`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "bucket_key_rotations_state_check" CHECK("bucket_key_rotations"."state" IS NULL OR "bucket_key_rotations"."state" IN (?, ?, ?, ?, ?)),
+	CONSTRAINT "bucket_key_rotations_state_check" CHECK("bucket_key_rotations"."state" IS NULL OR "bucket_key_rotations"."state" IN ('initiated', 'migrating', 'sealing', 'completed', 'failed')),
 	CONSTRAINT "bucket_key_rotations_version_check" CHECK("bucket_key_rotations"."to_key_version" > "bucket_key_rotations"."from_key_version"),
 	CONSTRAINT "bucket_key_rotations_items_check" CHECK("bucket_key_rotations"."completed_items" + "bucket_key_rotations"."failed_items" <= "bucket_key_rotations"."total_items")
 );
@@ -199,7 +202,7 @@ CREATE TABLE `bucket_rotation_items` (
 	`attempts` integer DEFAULT 0 NOT NULL,
 	FOREIGN KEY (`rotation_id`) REFERENCES `bucket_key_rotations`(`id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "bucket_rotation_items_status_check" CHECK("bucket_rotation_items"."status" IS NULL OR "bucket_rotation_items"."status" IN (?, ?, ?, ?))
+	CONSTRAINT "bucket_rotation_items_status_check" CHECK("bucket_rotation_items"."status" IS NULL OR "bucket_rotation_items"."status" IN ('pending', 'claimed', 'completed', 'failed'))
 );
 --> statement-breakpoint
 CREATE INDEX `bucket_rotation_items_rotation_status_idx` ON `bucket_rotation_items` (`rotation_id`,`status`);--> statement-breakpoint
@@ -235,7 +238,7 @@ CREATE TABLE `channels` (
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`parent_id`,`system_id`) REFERENCES `channels`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "channels_type_check" CHECK("channels"."type" IS NULL OR "channels"."type" IN (?, ?)),
+	CONSTRAINT "channels_type_check" CHECK("channels"."type" IS NULL OR "channels"."type" IN ('category', 'channel')),
 	CONSTRAINT "channels_sort_order_check" CHECK("channels"."sort_order" >= 0),
 	CONSTRAINT "channels_version_check" CHECK("channels"."version" >= 1),
 	CONSTRAINT "channels_archived_consistency_check" CHECK(("channels"."archived" = true) = ("channels"."archived_at" IS NOT NULL))
@@ -290,7 +293,7 @@ CREATE TABLE `device_tokens` (
 	`revoked_at` integer,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "device_tokens_platform_check" CHECK("device_tokens"."platform" IS NULL OR "device_tokens"."platform" IN (?, ?, ?))
+	CONSTRAINT "device_tokens_platform_check" CHECK("device_tokens"."platform" IS NULL OR "device_tokens"."platform" IN ('ios', 'android', 'web'))
 );
 --> statement-breakpoint
 CREATE INDEX `device_tokens_account_id_idx` ON `device_tokens` (`account_id`);--> statement-breakpoint
@@ -309,7 +312,7 @@ CREATE TABLE `device_transfer_requests` (
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`source_session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`target_session_id`) REFERENCES `sessions`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "device_transfer_requests_status_check" CHECK("device_transfer_requests"."status" IS NULL OR "device_transfer_requests"."status" IN (?, ?, ?)),
+	CONSTRAINT "device_transfer_requests_status_check" CHECK("device_transfer_requests"."status" IS NULL OR "device_transfer_requests"."status" IN ('pending', 'approved', 'expired')),
 	CONSTRAINT "device_transfer_requests_expires_at_check" CHECK("device_transfer_requests"."expires_at" > "device_transfer_requests"."created_at"),
 	CONSTRAINT "device_transfer_requests_key_material_check" CHECK("device_transfer_requests"."status" != 'approved' OR "device_transfer_requests"."encrypted_key_material" IS NOT NULL)
 );
@@ -329,8 +332,8 @@ CREATE TABLE `export_requests` (
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`blob_id`) REFERENCES `blob_metadata`(`id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "export_requests_format_check" CHECK("export_requests"."format" IS NULL OR "export_requests"."format" IN (?, ?)),
-	CONSTRAINT "export_requests_status_check" CHECK("export_requests"."status" IS NULL OR "export_requests"."status" IN (?, ?, ?, ?))
+	CONSTRAINT "export_requests_format_check" CHECK("export_requests"."format" IS NULL OR "export_requests"."format" IN ('json', 'csv')),
+	CONSTRAINT "export_requests_status_check" CHECK("export_requests"."status" IS NULL OR "export_requests"."status" IN ('pending', 'processing', 'completed', 'failed'))
 );
 --> statement-breakpoint
 CREATE INDEX `export_requests_account_id_idx` ON `export_requests` (`account_id`);--> statement-breakpoint
@@ -360,7 +363,7 @@ CREATE TABLE `field_definitions` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "field_definitions_field_type_check" CHECK("field_definitions"."field_type" IS NULL OR "field_definitions"."field_type" IN (?, ?, ?, ?, ?, ?, ?, ?)),
+	CONSTRAINT "field_definitions_field_type_check" CHECK("field_definitions"."field_type" IS NULL OR "field_definitions"."field_type" IN ('text', 'number', 'boolean', 'date', 'color', 'select', 'multi-select', 'url')),
 	CONSTRAINT "field_definitions_version_check" CHECK("field_definitions"."version" >= 1),
 	CONSTRAINT "field_definitions_archived_consistency_check" CHECK(("field_definitions"."archived" = true) = ("field_definitions"."archived_at" IS NOT NULL))
 );
@@ -426,7 +429,7 @@ CREATE TABLE `friend_connections` (
 	`archived_at` integer,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`friend_account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "friend_connections_status_check" CHECK("friend_connections"."status" IS NULL OR "friend_connections"."status" IN (?, ?, ?, ?)),
+	CONSTRAINT "friend_connections_status_check" CHECK("friend_connections"."status" IS NULL OR "friend_connections"."status" IN ('pending', 'accepted', 'blocked', 'removed')),
 	CONSTRAINT "friend_connections_no_self_check" CHECK("friend_connections"."account_id" != "friend_connections"."friend_account_id"),
 	CONSTRAINT "friend_connections_version_check" CHECK("friend_connections"."version" >= 1),
 	CONSTRAINT "friend_connections_archived_consistency_check" CHECK(("friend_connections"."archived" = true) = ("friend_connections"."archived_at" IS NOT NULL))
@@ -479,7 +482,7 @@ CREATE TABLE `fronting_reports` (
 	`format` text NOT NULL,
 	`generated_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "fronting_reports_format_check" CHECK("fronting_reports"."format" IS NULL OR "fronting_reports"."format" IN (?, ?))
+	CONSTRAINT "fronting_reports_format_check" CHECK("fronting_reports"."format" IS NULL OR "fronting_reports"."format" IN ('html', 'pdf'))
 );
 --> statement-breakpoint
 CREATE INDEX `fronting_reports_system_id_idx` ON `fronting_reports` (`system_id`);--> statement-breakpoint
@@ -502,7 +505,7 @@ CREATE TABLE `fronting_sessions` (
 	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`custom_front_id`) REFERENCES `custom_fronts`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "fronting_sessions_end_time_check" CHECK("fronting_sessions"."end_time" IS NULL OR "fronting_sessions"."end_time" > "fronting_sessions"."start_time"),
-	CONSTRAINT "fronting_sessions_fronting_type_check" CHECK("fronting_sessions"."fronting_type" IS NULL OR "fronting_sessions"."fronting_type" IN (?, ?)),
+	CONSTRAINT "fronting_sessions_fronting_type_check" CHECK("fronting_sessions"."fronting_type" IS NULL OR "fronting_sessions"."fronting_type" IN ('fronting', 'co-conscious')),
 	CONSTRAINT "fronting_sessions_version_check" CHECK("fronting_sessions"."version" >= 1),
 	CONSTRAINT "fronting_sessions_archived_consistency_check" CHECK(("fronting_sessions"."archived" = true) = ("fronting_sessions"."archived_at" IS NOT NULL)),
 	CONSTRAINT "fronting_sessions_subject_check" CHECK("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL)
@@ -564,11 +567,11 @@ CREATE TABLE `import_jobs` (
 	`completed_at` integer,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "import_jobs_source_check" CHECK("import_jobs"."source" IS NULL OR "import_jobs"."source" IN (?, ?, ?)),
-	CONSTRAINT "import_jobs_status_check" CHECK("import_jobs"."status" IS NULL OR "import_jobs"."status" IN (?, ?, ?, ?, ?)),
+	CONSTRAINT "import_jobs_source_check" CHECK("import_jobs"."source" IS NULL OR "import_jobs"."source" IN ('simply-plural', 'pluralkit', 'pluralscape')),
+	CONSTRAINT "import_jobs_status_check" CHECK("import_jobs"."status" IS NULL OR "import_jobs"."status" IN ('pending', 'validating', 'importing', 'completed', 'failed')),
 	CONSTRAINT "import_jobs_progress_percent_check" CHECK("import_jobs"."progress_percent" >= 0 AND "import_jobs"."progress_percent" <= 100),
 	CONSTRAINT "import_jobs_chunks_check" CHECK("import_jobs"."chunks_total" IS NULL OR "import_jobs"."chunks_completed" <= "import_jobs"."chunks_total"),
-	CONSTRAINT "import_jobs_error_log_length_check" CHECK("import_jobs"."error_log" IS NULL OR json_array_length("import_jobs"."error_log") <= ?)
+	CONSTRAINT "import_jobs_error_log_length_check" CHECK("import_jobs"."error_log" IS NULL OR json_array_length("import_jobs"."error_log") <= 1000)
 );
 --> statement-breakpoint
 CREATE INDEX `import_jobs_account_id_status_idx` ON `import_jobs` (`account_id`,`status`);--> statement-breakpoint
@@ -639,8 +642,8 @@ CREATE TABLE `jobs` (
 	`scheduled_for` integer,
 	`priority` integer DEFAULT 0 NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "jobs_status_check" CHECK("jobs"."status" IS NULL OR "jobs"."status" IN (?, ?, ?, ?, ?)),
-	CONSTRAINT "jobs_type_check" CHECK("jobs"."type" IS NULL OR "jobs"."type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
+	CONSTRAINT "jobs_status_check" CHECK("jobs"."status" IS NULL OR "jobs"."status" IN ('pending', 'running', 'completed', 'cancelled', 'dead-letter')),
+	CONSTRAINT "jobs_type_check" CHECK("jobs"."type" IS NULL OR "jobs"."type" IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate', 'sync-queue-cleanup', 'audit-log-cleanup', 'partition-maintenance')),
 	CONSTRAINT "jobs_attempts_max_check" CHECK("jobs"."attempts" <= "jobs"."max_attempts"),
 	CONSTRAINT "jobs_timeout_ms_check" CHECK("jobs"."timeout_ms" > 0)
 );
@@ -692,14 +695,17 @@ CREATE UNIQUE INDEX `key_grants_bucket_friend_version_uniq` ON `key_grants` (`bu
 CREATE TABLE `layer_memberships` (
 	`id` text PRIMARY KEY NOT NULL,
 	`layer_id` text NOT NULL,
+	`member_id` text NOT NULL,
 	`system_id` text NOT NULL,
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
+	FOREIGN KEY (`layer_id`,`system_id`) REFERENCES `layers`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `layer_memberships_layer_id_idx` ON `layer_memberships` (`layer_id`);--> statement-breakpoint
+CREATE INDEX `layer_memberships_member_id_idx` ON `layer_memberships` (`member_id`);--> statement-breakpoint
 CREATE INDEX `layer_memberships_system_id_idx` ON `layer_memberships` (`system_id`);--> statement-breakpoint
 CREATE TABLE `layers` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -725,8 +731,9 @@ CREATE TABLE `lifecycle_events` (
 	`occurred_at` integer NOT NULL,
 	`recorded_at` integer NOT NULL,
 	`encrypted_data` blob NOT NULL,
+	`plaintext_metadata` text,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "lifecycle_events_event_type_check" CHECK("lifecycle_events"."event_type" IS NULL OR "lifecycle_events"."event_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?))
+	CONSTRAINT "lifecycle_events_event_type_check" CHECK("lifecycle_events"."event_type" IS NULL OR "lifecycle_events"."event_type" IN ('split', 'fusion', 'merge', 'unmerge', 'dormancy-start', 'dormancy-end', 'discovery', 'archival', 'subsystem-formation', 'form-change', 'name-change', 'structure-move', 'innerworld-move'))
 );
 --> statement-breakpoint
 CREATE INDEX `lifecycle_events_system_occurred_idx` ON `lifecycle_events` (`system_id`,`occurred_at`);--> statement-breakpoint
@@ -831,7 +838,7 @@ CREATE TABLE `notification_configs` (
 	`archived` integer DEFAULT false NOT NULL,
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "notification_configs_event_type_check" CHECK("notification_configs"."event_type" IS NULL OR "notification_configs"."event_type" IN (?, ?, ?, ?, ?, ?)),
+	CONSTRAINT "notification_configs_event_type_check" CHECK("notification_configs"."event_type" IS NULL OR "notification_configs"."event_type" IN ('switch-reminder', 'check-in-due', 'acknowledgement-requested', 'message-received', 'sync-conflict', 'friend-switch-alert')),
 	CONSTRAINT "notification_configs_archived_consistency_check" CHECK(("notification_configs"."archived" = true) = ("notification_configs"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
@@ -849,7 +856,7 @@ CREATE TABLE `pk_bridge_configs` (
 	`updated_at` integer NOT NULL,
 	`version` integer DEFAULT 1 NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "pk_bridge_configs_sync_direction_check" CHECK("pk_bridge_configs"."sync_direction" IS NULL OR "pk_bridge_configs"."sync_direction" IN (?, ?, ?)),
+	CONSTRAINT "pk_bridge_configs_sync_direction_check" CHECK("pk_bridge_configs"."sync_direction" IS NULL OR "pk_bridge_configs"."sync_direction" IN ('ps-to-pk', 'pk-to-ps', 'bidirectional')),
 	CONSTRAINT "pk_bridge_configs_version_check" CHECK("pk_bridge_configs"."version" >= 1)
 );
 --> statement-breakpoint
@@ -893,8 +900,8 @@ CREATE TABLE `polls` (
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`created_by_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "polls_status_check" CHECK("polls"."status" IS NULL OR "polls"."status" IN (?, ?)),
-	CONSTRAINT "polls_kind_check" CHECK("polls"."kind" IS NULL OR "polls"."kind" IN (?, ?)),
+	CONSTRAINT "polls_status_check" CHECK("polls"."status" IS NULL OR "polls"."status" IN ('open', 'closed')),
+	CONSTRAINT "polls_kind_check" CHECK("polls"."kind" IS NULL OR "polls"."kind" IN ('standard', 'custom')),
 	CONSTRAINT "polls_max_votes_check" CHECK("polls"."max_votes_per_member" >= 1),
 	CONSTRAINT "polls_version_check" CHECK("polls"."version" >= 1),
 	CONSTRAINT "polls_archived_consistency_check" CHECK(("polls"."archived" = true) = ("polls"."archived_at" IS NOT NULL))
@@ -929,7 +936,7 @@ CREATE TABLE `relationships` (
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`source_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`target_member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "relationships_type_check" CHECK("relationships"."type" IS NULL OR "relationships"."type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
+	CONSTRAINT "relationships_type_check" CHECK("relationships"."type" IS NULL OR "relationships"."type" IN ('split-from', 'fused-from', 'sibling', 'partner', 'parent-child', 'protector-of', 'caretaker-of', 'gatekeeper-of', 'source', 'custom')),
 	CONSTRAINT "relationships_version_check" CHECK("relationships"."version" >= 1),
 	CONSTRAINT "relationships_archived_consistency_check" CHECK(("relationships"."archived" = true) = ("relationships"."archived_at" IS NOT NULL))
 );
@@ -951,6 +958,7 @@ CREATE INDEX `safe_mode_content_system_sort_idx` ON `safe_mode_content` (`system
 CREATE TABLE `sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
+	`token_hash` text NOT NULL,
 	`encrypted_data` blob,
 	`created_at` integer NOT NULL,
 	`last_active` integer,
@@ -961,6 +969,7 @@ CREATE TABLE `sessions` (
 );
 --> statement-breakpoint
 CREATE INDEX `sessions_account_id_idx` ON `sessions` (`account_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `sessions_token_hash_idx` ON `sessions` (`token_hash`);--> statement-breakpoint
 CREATE INDEX `sessions_revoked_last_active_idx` ON `sessions` (`revoked`,`last_active`);--> statement-breakpoint
 CREATE INDEX `sessions_expires_at_idx` ON `sessions` (`expires_at`) WHERE "sessions"."expires_at" IS NOT NULL;--> statement-breakpoint
 CREATE TABLE `side_system_layer_links` (
@@ -981,14 +990,17 @@ CREATE UNIQUE INDEX `side_system_layer_links_uniq` ON `side_system_layer_links` 
 CREATE TABLE `side_system_memberships` (
 	`id` text PRIMARY KEY NOT NULL,
 	`side_system_id` text NOT NULL,
+	`member_id` text NOT NULL,
 	`system_id` text NOT NULL,
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
+	FOREIGN KEY (`side_system_id`,`system_id`) REFERENCES `side_systems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `side_system_memberships_side_system_id_idx` ON `side_system_memberships` (`side_system_id`);--> statement-breakpoint
+CREATE INDEX `side_system_memberships_member_id_idx` ON `side_system_memberships` (`member_id`);--> statement-breakpoint
 CREATE INDEX `side_system_memberships_system_id_idx` ON `side_system_memberships` (`system_id`);--> statement-breakpoint
 CREATE TABLE `side_systems` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -1024,14 +1036,17 @@ CREATE UNIQUE INDEX `subsystem_layer_links_uniq` ON `subsystem_layer_links` (`su
 CREATE TABLE `subsystem_memberships` (
 	`id` text PRIMARY KEY NOT NULL,
 	`subsystem_id` text NOT NULL,
+	`member_id` text NOT NULL,
 	`system_id` text NOT NULL,
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
+	FOREIGN KEY (`subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
 );
 --> statement-breakpoint
 CREATE INDEX `subsystem_memberships_subsystem_id_idx` ON `subsystem_memberships` (`subsystem_id`);--> statement-breakpoint
+CREATE INDEX `subsystem_memberships_member_id_idx` ON `subsystem_memberships` (`member_id`);--> statement-breakpoint
 CREATE INDEX `subsystem_memberships_system_id_idx` ON `subsystem_memberships` (`system_id`);--> statement-breakpoint
 CREATE TABLE `subsystem_side_system_links` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -1063,7 +1078,7 @@ CREATE TABLE `subsystems` (
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`parent_subsystem_id`,`system_id`) REFERENCES `subsystems`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "subsystems_discovery_status_check" CHECK("subsystems"."discovery_status" IS NULL OR "subsystems"."discovery_status" IN (?, ?, ?)),
+	CONSTRAINT "subsystems_discovery_status_check" CHECK("subsystems"."discovery_status" IS NULL OR "subsystems"."discovery_status" IN ('fully-mapped', 'partially-mapped', 'unknown')),
 	CONSTRAINT "subsystems_version_check" CHECK("subsystems"."version" >= 1),
 	CONSTRAINT "subsystems_archived_consistency_check" CHECK(("subsystems"."archived" = true) = ("subsystems"."archived_at" IS NOT NULL))
 );
@@ -1099,7 +1114,7 @@ CREATE TABLE `sync_conflicts` (
 	`resolved_at` integer,
 	`details` text,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "sync_conflicts_resolution_check" CHECK("sync_conflicts"."resolution" IS NULL OR "sync_conflicts"."resolution" IN (?, ?, ?)),
+	CONSTRAINT "sync_conflicts_resolution_check" CHECK("sync_conflicts"."resolution" IS NULL OR "sync_conflicts"."resolution" IN ('local', 'remote', 'merged')),
 	CONSTRAINT "sync_conflicts_resolution_resolved_at_check" CHECK(("sync_conflicts"."resolution" IS NULL) = ("sync_conflicts"."resolved_at" IS NULL))
 );
 --> statement-breakpoint
@@ -1115,7 +1130,7 @@ CREATE TABLE `sync_documents` (
 	`last_synced_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "sync_documents_version_check" CHECK("sync_documents"."version" >= 1),
-	CONSTRAINT "sync_documents_automerge_heads_size_check" CHECK("sync_documents"."automerge_heads" IS NULL OR length("sync_documents"."automerge_heads") <= ?)
+	CONSTRAINT "sync_documents_automerge_heads_size_check" CHECK("sync_documents"."automerge_heads" IS NULL OR length("sync_documents"."automerge_heads") <= 16384)
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `sync_documents_system_id_entity_type_entity_id_idx` ON `sync_documents` (`system_id`,`entity_type`,`entity_id`);--> statement-breakpoint
@@ -1130,7 +1145,7 @@ CREATE TABLE `sync_queue` (
 	`created_at` integer NOT NULL,
 	`synced_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "sync_queue_operation_check" CHECK("sync_queue"."operation" IS NULL OR "sync_queue"."operation" IN (?, ?, ?))
+	CONSTRAINT "sync_queue_operation_check" CHECK("sync_queue"."operation" IS NULL OR "sync_queue"."operation" IN ('create', 'update', 'delete'))
 );
 --> statement-breakpoint
 CREATE INDEX `sync_queue_system_id_synced_at_idx` ON `sync_queue` (`system_id`,`synced_at`);--> statement-breakpoint
@@ -1161,7 +1176,7 @@ CREATE TABLE `system_snapshots` (
 	`encrypted_data` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "system_snapshots_snapshot_trigger_check" CHECK("system_snapshots"."snapshot_trigger" IS NULL OR "system_snapshots"."snapshot_trigger" IN (?, ?, ?))
+	CONSTRAINT "system_snapshots_snapshot_trigger_check" CHECK("system_snapshots"."snapshot_trigger" IS NULL OR "system_snapshots"."snapshot_trigger" IN ('manual', 'scheduled-daily', 'scheduled-weekly'))
 );
 --> statement-breakpoint
 CREATE INDEX `system_snapshots_system_created_idx` ON `system_snapshots` (`system_id`,`created_at`);--> statement-breakpoint
@@ -1254,8 +1269,8 @@ CREATE TABLE `webhook_deliveries` (
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`webhook_id`,`system_id`) REFERENCES `webhook_configs`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "webhook_deliveries_event_type_check" CHECK("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)),
-	CONSTRAINT "webhook_deliveries_status_check" CHECK("webhook_deliveries"."status" IS NULL OR "webhook_deliveries"."status" IN (?, ?, ?)),
+	CONSTRAINT "webhook_deliveries_event_type_check" CHECK("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+	CONSTRAINT "webhook_deliveries_status_check" CHECK("webhook_deliveries"."status" IS NULL OR "webhook_deliveries"."status" IN ('pending', 'success', 'failed')),
 	CONSTRAINT "webhook_deliveries_attempt_count_check" CHECK("webhook_deliveries"."attempt_count" >= 0),
 	CONSTRAINT "webhook_deliveries_http_status_check" CHECK("webhook_deliveries"."http_status" IS NULL OR ("webhook_deliveries"."http_status" >= 100 AND "webhook_deliveries"."http_status" <= 599)),
 	CONSTRAINT "webhook_deliveries_archived_consistency_check" CHECK(("webhook_deliveries"."archived" = true) = ("webhook_deliveries"."archived_at" IS NOT NULL))

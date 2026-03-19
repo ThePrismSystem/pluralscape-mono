@@ -30,6 +30,7 @@ function createApp(): Hono {
   const app = new Hono();
   app.use("*", requestIdMiddleware());
   app.use("*", accessLogMiddleware());
+  app.get("/health", (c) => c.json({ status: "healthy" }));
   app.get("/ok", (c) => c.json({ status: "ok" }));
   app.post("/submit", (c) => c.json({ created: true }, 201));
   app.put("/update", (c) => c.json({ updated: true }));
@@ -42,6 +43,12 @@ function createApp(): Hono {
 }
 
 describe("accessLogMiddleware", () => {
+  it("does not log health check requests", async () => {
+    const app = createApp();
+    await app.request("/health");
+    expect(mockLogInfo).not.toHaveBeenCalled();
+  });
+
   it("logs a successful 200 request with method, path, status, requestId, and duration", async () => {
     const app = createApp();
     await app.request("/ok");

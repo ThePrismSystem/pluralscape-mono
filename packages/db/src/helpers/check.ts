@@ -4,8 +4,15 @@ import type { AnyColumn } from "drizzle-orm";
 
 /**
  * Generate a CHECK constraint SQL fragment from a column and an array of allowed values.
- * Values are inlined via sql`${v}` which Drizzle renders as string literals in DDL context,
- * not bind parameters. Verified by integration tests that reject invalid enum values.
+ *
+ * Values are inlined as SQL literals via `sql.raw()` so they appear as
+ * `'value1', 'value2'` in the generated DDL — not as bind parameters (`$1, $2`).
+ * Bind parameters are invalid in DDL context (CREATE TABLE … CHECK …) and cause
+ * Postgres error 42P02 ("there is no parameter $1").
+ *
+ * Safety: enum values come from compile-time `as const` arrays in our codebase
+ * (e.g. `ACCOUNT_TYPES`), not user input. The escaping below handles the only
+ * realistic edge case (embedded single quotes).
  *
  * The `IS NULL` branch is intentional: nullable enum columns must pass the CHECK
  * when the value is NULL. For `notNull()` columns the branch is a no-op — presence
@@ -15,8 +22,9 @@ export function enumCheck(column: AnyColumn, values: readonly string[]): SQL {
   if (values.length === 0) {
     throw new Error("enumCheck requires at least one value");
   }
-  const params = values.map((v) => sql`${v}`);
-  return sql`${column} IS NULL OR ${column} IN (${sql.join(params, sql`, `)})`;
+  // Inline as SQL string literals: escape single quotes by doubling them
+  const literals = values.map((v) => sql.raw(`'${v.replaceAll("'", "''")}'`));
+  return sql`${column} IS NULL OR ${column} IN (${sql.join(literals, sql`, `)})`;
 }
 
 /** CHECK constraint: version >= 1. Pair with `versioned()` helper columns. */

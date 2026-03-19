@@ -85,6 +85,14 @@ describe("buildIdleTimeoutFilter", () => {
     }
   });
 
+  it("uses CAST(... AS bigint) for TTL expressions", () => {
+    const result = buildIdleTimeoutFilter(1_000_000);
+    const strings = collectStringChunks(result.queryChunks);
+    const joined = strings.join("");
+    expect(joined).toContain("CAST");
+    expect(joined).toContain("bigint");
+  });
+
   it("includes a NOT IN condition for unknown-TTL sessions", () => {
     const result = buildIdleTimeoutFilter(1_000_000);
     const strings = collectStringChunks(result.queryChunks);

@@ -1,6 +1,6 @@
 ---
 # ps-0bi6
-title: 'Fix PR #189 review findings'
+title: "Fix PR #189 review findings"
 status: completed
 type: task
 priority: normal
@@ -9,7 +9,6 @@ updated_at: 2026-03-19T05:54:36Z
 ---
 
 Address all review findings from PR #189: 4 bug fixes, 5 test gaps, and 6 simplifications
-
 
 ## Summary of Changes
 

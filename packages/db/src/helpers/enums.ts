@@ -170,6 +170,7 @@ export const AUDIT_EVENT_TYPES = [
   "settings.changed",
   "member.created",
   "member.archived",
+  "member.deleted",
   "sharing.granted",
   "sharing.revoked",
   "bucket.key_rotation.initiated",

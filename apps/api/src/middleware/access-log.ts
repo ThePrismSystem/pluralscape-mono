@@ -5,6 +5,7 @@ import type { MiddlewareHandler } from "hono";
 /** Logs every HTTP request with method, path, status, and duration. */
 export function accessLogMiddleware(): MiddlewareHandler {
   return async (c, next) => {
+    if (c.req.path === "/health") return next();
     const start = Date.now();
     try {
       await next();

@@ -3,14 +3,26 @@ import { HTTP_CONFLICT } from "../http.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 
+/** Maximum depth to walk error cause chains (prevents infinite loops). */
+const MAX_CAUSE_DEPTH = 10;
+
 /**
  * Returns true when `error` is a PostgreSQL unique-constraint violation.
  *
- * Checks for the `code` property set to `"23505"` on Error instances,
- * matching the shape produced by the postgres.js driver.
+ * Walks the full `.cause` chain (up to MAX_CAUSE_DEPTH) looking for
+ * `code === "23505"`, since Drizzle ORM may wrap driver errors in
+ * multiple layers of `DrizzleQueryError`.
  */
 export function isUniqueViolation(error: unknown): error is Error & { code: string } {
-  return error instanceof Error && "code" in error && error.code === PG_UNIQUE_VIOLATION;
+  if (!(error instanceof Error)) return false;
+  let current: unknown = error;
+  let depth = 0;
+  while (current instanceof Error && depth < MAX_CAUSE_DEPTH) {
+    if ("code" in current && current.code === PG_UNIQUE_VIOLATION) return true;
+    current = current.cause;
+    depth++;
+  }
+  return false;
 }
 
 /**
