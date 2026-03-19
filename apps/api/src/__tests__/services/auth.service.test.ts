@@ -412,6 +412,38 @@ describe("auth service", () => {
       expect(result).toBeNull();
     });
 
+    it("writes fire-and-forget audit event when account is not found", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+
+      await loginAccount(db, credentials, "web", mockAudit);
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          eventType: "auth.login-failed",
+          actor: { kind: "account", id: "acct_00000000-0000-0000-0000-000000000000" },
+          detail: "Account not found",
+        }),
+      );
+    });
+
+    it("returns null even when email-not-found audit write fails", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([]);
+      const auditError = new Error("audit DB down");
+      mockAudit.mockRejectedValueOnce(auditError);
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      const result = await loginAccount(db, credentials, "web", mockAudit);
+      expect(result).toBeNull();
+      await vi.waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalledWith(
+          "[audit] Failed to write auth.login-failed:",
+          auditError,
+        );
+      });
+    });
+
     it("returns null when password is invalid", async () => {
       const { db, chain } = mockDb();
       // First call to limit() returns an account; verifyPassword will check against this hash

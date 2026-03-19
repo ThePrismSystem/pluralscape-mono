@@ -33,6 +33,8 @@ import {
   RECOVERY_KEY_GROUP_SIZE,
 } from "../routes/auth/auth.constants.js";
 
+import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
+
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { AccountId, AccountType, SystemId } from "@pluralscape/types";
@@ -229,6 +231,15 @@ export async function loginAccount(
     } catch (err: unknown) {
       console.error("[anti-enum] Unexpected verifyPassword error:", err);
     }
+    // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
+    // Uses a zeroed account ID since no real account exists for this email.
+    void audit(db, {
+      eventType: "auth.login-failed",
+      actor: { kind: "account", id: ANTI_ENUM_SENTINEL_ACCOUNT_ID },
+      detail: "Account not found",
+    }).catch((auditError: unknown) => {
+      console.error("[audit] Failed to write auth.login-failed:", auditError);
+    });
     return null;
   }
 

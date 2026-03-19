@@ -120,9 +120,11 @@ describe("POST /password-reset/recovery-key", () => {
     expect(body.error.code).toBe("UNAUTHENTICATED");
   });
 
-  it("returns 400 for invalid input", async () => {
+  it("returns 400 for ZodError (via global handler)", async () => {
     const zodError = new Error("Validation failed");
     Object.defineProperty(zodError, "name", { value: "ZodError" });
+    // Suppress global error handler console.warn in test output
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
     vi.mocked(resetPasswordWithRecoveryKey).mockRejectedValueOnce(zodError);
 
     const app = createApp();

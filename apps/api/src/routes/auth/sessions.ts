@@ -23,10 +23,8 @@ export const sessionsRoute = new Hono<AuthEnv>();
 
 sessionsRoute.use("*", createCategoryRateLimiter("authLight"));
 
-// Apply auth middleware to all session management endpoints
-sessionsRoute.use("/sessions", authMiddleware());
-sessionsRoute.use("/sessions/*", authMiddleware());
-sessionsRoute.use("/logout", authMiddleware());
+// All routes in this router require authentication
+sessionsRoute.use("*", authMiddleware());
 
 // GET /auth/sessions — list active sessions for the current account
 sessionsRoute.get("/sessions", async (c) => {
