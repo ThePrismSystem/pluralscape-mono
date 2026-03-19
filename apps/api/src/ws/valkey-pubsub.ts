@@ -104,23 +104,31 @@ export class ValkeyPubSub {
       // Auto-resubscribe on reconnect (Valkey drops subscriptions on disconnect)
       this.subscriber.on("ready", () => {
         if (this.activeChannels.size > 0) {
+          const channels = [...this.activeChannels];
           logger.info("Valkey subscriber reconnected, resubscribing", {
-            channels: this.activeChannels.size,
+            channels: channels.length,
           });
-          for (const channel of [...this.activeChannels]) {
-            void (async () => {
-              try {
-                await this.subscriber?.subscribe(channel);
-              } catch (err) {
-                logger.warn("Valkey resubscribe failed, removing channel", {
-                  channel,
-                  error: err instanceof Error ? err.message : String(err),
+          void Promise.allSettled(
+            channels.map(async (channel) => {
+              await this.subscriber?.subscribe(channel);
+            }),
+          ).then((results) => {
+            let succeeded = 0;
+            let failed = 0;
+            for (const result of results) {
+              if (result.status === "fulfilled") {
+                succeeded++;
+              } else {
+                failed++;
+                // Do NOT delete from activeChannels — next reconnect will retry
+                logger.warn("Valkey resubscribe failed for channel", {
+                  error:
+                    result.reason instanceof Error ? result.reason.message : String(result.reason),
                 });
-                this.activeChannels.delete(channel);
-                this.handlers.delete(channel);
               }
-            })();
-          }
+            }
+            logger.info("Valkey resubscription complete", { succeeded, failed });
+          });
         }
       });
 
@@ -136,16 +144,18 @@ export class ValkeyPubSub {
     }
   }
 
-  /** Publish a message to a channel. */
-  async publish(channel: string, message: string): Promise<void> {
-    if (!this.publisher) return;
+  /** Publish a message to a channel. Returns false if no publisher or publish failed. */
+  async publish(channel: string, message: string): Promise<boolean> {
+    if (!this.publisher) return false;
     try {
       await this.publisher.publish(channel, message);
+      return true;
     } catch (err) {
       logger.warn("Valkey publish failed", {
         channel,
         error: err instanceof Error ? err.message : String(err),
       });
+      return false;
     }
   }
 
@@ -159,16 +169,20 @@ export class ValkeyPubSub {
     channelHandlers.add(handler);
 
     if (!this.activeChannels.has(channel)) {
-      this.activeChannels.add(channel);
       if (this.subscriber) {
         try {
           await this.subscriber.subscribe(channel);
+          this.activeChannels.add(channel);
         } catch (err) {
           logger.warn("Valkey subscribe failed", {
             channel,
             error: err instanceof Error ? err.message : String(err),
           });
+          return;
         }
+      } else {
+        // No subscriber — track for reconnect
+        this.activeChannels.add(channel);
       }
     }
   }
@@ -206,13 +220,17 @@ export class ValkeyPubSub {
     this.activeChannels.clear();
     try {
       if (this.subscriber) await this.subscriber.disconnect();
-    } catch {
-      // Already disconnected
+    } catch (err) {
+      logger.debug("Valkey subscriber already disconnected", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
     try {
       if (this.publisher) await this.publisher.disconnect();
-    } catch {
-      // Already disconnected
+    } catch (err) {
+      logger.debug("Valkey publisher already disconnected", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
     this.subscriber = null;
     this.publisher = null;

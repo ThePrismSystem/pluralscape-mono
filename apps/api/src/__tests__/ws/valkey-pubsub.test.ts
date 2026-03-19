@@ -151,15 +151,23 @@ describe("ValkeyPubSub", () => {
       expect(pub().publishMock).toHaveBeenCalledWith("ps:sync:doc-1", '{"type":"DocumentUpdate"}');
     });
 
-    it("is a no-op when not connected", async () => {
-      await pubsub.publish("ps:sync:doc-1", "test");
+    it("returns true on successful publish", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+      const result = await pubsub.publish("ps:sync:doc-1", "test");
+      expect(result).toBe(true);
     });
 
-    it("does not throw on publish failure", async () => {
+    it("returns false when not connected", async () => {
+      const result = await pubsub.publish("ps:sync:doc-1", "test");
+      expect(result).toBe(false);
+    });
+
+    it("returns false on publish failure", async () => {
       await pubsub.connect("redis://localhost:6379", mockFactory());
       pub().publishMock.mockRejectedValueOnce(new Error("network error"));
 
-      await pubsub.publish("ps:sync:doc-1", "test");
+      const result = await pubsub.publish("ps:sync:doc-1", "test");
+      expect(result).toBe(false);
     });
   });
 
@@ -207,6 +215,20 @@ describe("ValkeyPubSub", () => {
     it("tracks channels when not connected", async () => {
       await pubsub.subscribe("ps:sync:doc-1", vi.fn());
     });
+
+    it("does not add channel to activeChannels on subscribe failure", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+      sub().subscribeMock.mockRejectedValueOnce(new Error("subscribe failed"));
+
+      await pubsub.subscribe("ps:sync:fail-channel", vi.fn());
+
+      // A second subscribe attempt should try again (channel was not tracked)
+      sub().subscribeMock.mockResolvedValue(undefined);
+      await pubsub.subscribe("ps:sync:fail-channel", vi.fn());
+
+      // Should have attempted subscribe twice (once failed, once succeeded)
+      expect(sub().subscribeMock).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe("unsubscribe", () => {
@@ -238,7 +260,7 @@ describe("ValkeyPubSub", () => {
   });
 
   describe("reconnection", () => {
-    it("removes channel on resubscribe failure", async () => {
+    it("keeps channel in activeChannels on resubscribe failure for retry", async () => {
       await pubsub.connect("redis://localhost:6379", mockFactory());
       const s = sub();
       const handler = vi.fn();
@@ -251,14 +273,19 @@ describe("ValkeyPubSub", () => {
       s.emit("ready");
 
       // Wait for async resubscribe to settle
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10);
+      await vi.waitFor(() => {
+        expect(s.subscribeMock).toHaveBeenCalled();
       });
 
-      // The failed channel's handler should have been removed
-      // Verify by emitting a message — handler should NOT be called
-      s.emit("message", "ps:sync:doc-fail", "test");
-      expect(handler).not.toHaveBeenCalled();
+      // Channel stays in activeChannels for next reconnect retry.
+      // Handler is still registered — messages from a successful re-sub should arrive.
+      s.subscribeMock.mockClear();
+      s.subscribeMock.mockResolvedValue(undefined);
+      s.emit("ready");
+
+      await vi.waitFor(() => {
+        expect(s.subscribeMock).toHaveBeenCalledWith("ps:sync:doc-fail");
+      });
     });
 
     it("resubscribes to all active channels on ready event", async () => {
