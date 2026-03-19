@@ -257,13 +257,16 @@ export async function routeMessage(
       send(state, authResult.response, log);
       log.info("WebSocket authenticated", {
         connectionId: state.connectionId,
-        accountId: state.auth?.accountId,
+        syncSessionId: authResult.response.syncSessionId,
       });
     } else {
       sendErrorAndClose(state, authResult.error, authResult.closeCode, log);
     }
     return;
   }
+
+  // At this point, TS narrows state to AuthenticatedState (closing returns above,
+  // awaiting-auth returns above). state.systemId and state.auth are guaranteed non-null.
 
   // 4. Phase: authenticated — validate type is known
   if (!Object.hasOwn(CLIENT_MESSAGE_SCHEMAS, messageType)) {
@@ -349,7 +352,7 @@ export async function routeMessage(
         return;
       }
       for (const entry of result.data.documents) {
-        if (!checkDocumentAccess(entry.docId, state.systemId ?? "")) {
+        if (!checkDocumentAccess(entry.docId, state.systemId)) {
           send(
             state,
             {
@@ -383,7 +386,7 @@ export async function routeMessage(
         sendValidationError(state, messageType, result.error, log);
         return;
       }
-      if (!checkDocumentAccess(result.data.docId, state.systemId ?? "")) {
+      if (!checkDocumentAccess(result.data.docId, state.systemId)) {
         send(
           state,
           {
@@ -407,7 +410,7 @@ export async function routeMessage(
         sendValidationError(state, messageType, result.error, log);
         return;
       }
-      if (!checkDocumentAccess(result.data.docId, state.systemId ?? "")) {
+      if (!checkDocumentAccess(result.data.docId, state.systemId)) {
         send(
           state,
           {
@@ -433,7 +436,7 @@ export async function routeMessage(
       }
       // Boundary cast: Zod outputs plain Uint8Array, protocol types use branded crypto types
       const msg = result.data as SubmitChangeRequest;
-      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+      if (!checkDocumentAccess(msg.docId, state.systemId)) {
         send(
           state,
           {
@@ -449,7 +452,7 @@ export async function routeMessage(
       }
       const { response, sequencedEnvelope } = handleSubmitChange(msg, relay);
       send(state, response, log);
-      documentOwnership.set(msg.docId, state.systemId ?? "");
+      documentOwnership.set(msg.docId, state.systemId);
 
       // Broadcast DocumentUpdate to all subscribers except submitter
       broadcastDocumentUpdate(
@@ -473,7 +476,7 @@ export async function routeMessage(
       }
       // Boundary cast: Zod outputs plain Uint8Array, protocol types use branded crypto types
       const msg = result.data as SubmitSnapshotRequest;
-      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+      if (!checkDocumentAccess(msg.docId, state.systemId)) {
         send(
           state,
           {
@@ -489,7 +492,7 @@ export async function routeMessage(
       }
       const response = handleSubmitSnapshot(msg, relay);
       send(state, response, log);
-      documentOwnership.set(msg.docId, state.systemId ?? "");
+      documentOwnership.set(msg.docId, state.systemId);
       break;
     }
     case "DocumentLoadRequest": {
@@ -498,7 +501,7 @@ export async function routeMessage(
         sendValidationError(state, messageType, result.error, log);
         return;
       }
-      if (!checkDocumentAccess(result.data.docId, state.systemId ?? "")) {
+      if (!checkDocumentAccess(result.data.docId, state.systemId)) {
         send(
           state,
           {

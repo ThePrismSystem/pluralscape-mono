@@ -1,5 +1,11 @@
-import type { ProfileType, SyncConnectionState } from "./connection-state.js";
+import type {
+  AuthenticatedState,
+  AwaitingAuthState,
+  ProfileType,
+  SyncConnectionState,
+} from "./connection-state.js";
 import type { AuthContext } from "../lib/auth-context.js";
+import type { AppLogger } from "../lib/logger.js";
 import type { WSContext } from "hono/ws";
 
 /**
@@ -12,9 +18,19 @@ export class ConnectionManager {
   private readonly docIndex = new Map<string, Set<string>>();
   private unauthCount = 0;
 
-  /** Register a new unauthenticated connection. */
-  register(connectionId: string, ws: WSContext, connectedAt: number): SyncConnectionState {
-    const state: SyncConnectionState = {
+  /** Reserve a slot for an unauthenticated connection (before onOpen fires). */
+  reserveUnauthSlot(): void {
+    this.unauthCount++;
+  }
+
+  /** Release a reserved unauthenticated slot (if onOpen never fires). */
+  releaseUnauthSlot(): void {
+    this.unauthCount--;
+  }
+
+  /** Register a new unauthenticated connection. Does not increment unauthCount (caller pre-reserves). */
+  register(connectionId: string, ws: WSContext, connectedAt: number): AwaitingAuthState {
+    const state: AwaitingAuthState = {
       connectionId,
       ws,
       connectedAt,
@@ -25,30 +41,52 @@ export class ConnectionManager {
       subscribedDocs: new Set(),
       mutationCount: 0,
       mutationWindowStart: 0,
+      mutationPreviousCount: 0,
       readCount: 0,
       readWindowStart: 0,
+      readPreviousCount: 0,
       rateLimitStrikes: 0,
       authTimeoutHandle: null,
     };
     this.connections.set(connectionId, state);
-    this.unauthCount++;
     return state;
   }
 
-  /** Promote a connection to authenticated, updating indexes. */
+  /** Promote a connection to authenticated, updating indexes. Returns false if connection not found. */
   authenticate(
     connectionId: string,
     auth: AuthContext,
     systemId: string,
     profileType: ProfileType,
-  ): void {
+  ): boolean {
     const state = this.connections.get(connectionId);
-    if (!state) return;
+    if (!state) return false;
 
-    state.phase = "authenticated";
-    state.auth = auth;
-    state.systemId = systemId;
-    state.profileType = profileType;
+    // Clear auth timeout inside authenticate
+    if (state.authTimeoutHandle !== null) {
+      clearTimeout(state.authTimeoutHandle);
+    }
+
+    // Create a new AuthenticatedState (can't mutate readonly discriminant)
+    const authenticated: AuthenticatedState = {
+      connectionId: state.connectionId,
+      ws: state.ws,
+      connectedAt: state.connectedAt,
+      phase: "authenticated",
+      auth,
+      systemId,
+      profileType,
+      subscribedDocs: state.subscribedDocs,
+      mutationCount: state.mutationCount,
+      mutationWindowStart: state.mutationWindowStart,
+      mutationPreviousCount: state.mutationPreviousCount,
+      readCount: state.readCount,
+      readWindowStart: state.readWindowStart,
+      readPreviousCount: state.readPreviousCount,
+      rateLimitStrikes: state.rateLimitStrikes,
+      authTimeoutHandle: null,
+    };
+    this.connections.set(connectionId, authenticated);
     this.unauthCount--;
 
     // Update account index
@@ -58,6 +96,8 @@ export class ConnectionManager {
       this.accountIndex.set(auth.accountId, accountSet);
     }
     accountSet.add(connectionId);
+
+    return true;
   }
 
   /** Add a document subscription for a connection. */
@@ -99,7 +139,6 @@ export class ConnectionManager {
     // Clear auth timeout
     if (state.authTimeoutHandle !== null) {
       clearTimeout(state.authTimeoutHandle);
-      state.authTimeoutHandle = null;
     }
 
     // Decrement unauth counter if not yet authenticated
@@ -158,16 +197,18 @@ export class ConnectionManager {
   }
 
   /** Close all connections and reset state. */
-  closeAll(code: number, reason: string): void {
+  closeAll(code: number, reason: string, log?: Pick<AppLogger, "debug">): void {
     for (const state of this.connections.values()) {
       if (state.authTimeoutHandle !== null) {
         clearTimeout(state.authTimeoutHandle);
-        state.authTimeoutHandle = null;
       }
       try {
         state.ws.close(code, reason);
-      } catch {
-        // Connection may already be dead
+      } catch (err) {
+        log?.debug("Failed to close WebSocket during closeAll", {
+          connectionId: state.connectionId,
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }
     this.connections.clear();

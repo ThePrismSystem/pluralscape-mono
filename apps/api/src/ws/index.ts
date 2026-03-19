@@ -24,6 +24,8 @@ import {
   WS_SUBPROTOCOL,
 } from "./ws.constants.js";
 
+import type { AppLogger } from "../lib/logger.js";
+
 // ── Singleton connection manager ────────────────────────────────────
 
 export const connectionManager = new ConnectionManager();
@@ -31,8 +33,12 @@ export const connectionManager = new ConnectionManager();
 // ── Public API for shutdown ─────────────────────────────────────────
 
 /** Close all active WebSocket connections (used during server shutdown). */
-export function closeAllConnections(code: number, reason: string): void {
-  connectionManager.closeAll(code, reason);
+export function closeAllConnections(
+  code: number,
+  reason: string,
+  log?: Pick<AppLogger, "debug">,
+): void {
+  connectionManager.closeAll(code, reason, log);
 }
 
 /** Number of active WebSocket connections. */
@@ -88,11 +94,16 @@ syncWsApp.get(
       };
     }
 
+    // Reserve slot synchronously before upgrade completes (Slowloris prevention)
+    connectionManager.reserveUnauthSlot();
+
     const connectionId = uuidv7();
+    let opened = false;
     log.info("WebSocket upgrade accepted", { connectionId });
 
     return {
       onOpen(_, ws) {
+        opened = true;
         const state = connectionManager.register(connectionId, ws, Date.now());
 
         // Auth timeout — connection must authenticate within WS_AUTH_TIMEOUT_MS
@@ -132,7 +143,12 @@ syncWsApp.get(
       },
 
       onClose() {
-        connectionManager.remove(connectionId);
+        if (!opened) {
+          // onOpen never fired — release reserved slot
+          connectionManager.releaseUnauthSlot();
+        } else {
+          connectionManager.remove(connectionId);
+        }
         log.debug("WebSocket connection closed", {
           connectionId,
           activeConnections: connectionManager.activeCount,

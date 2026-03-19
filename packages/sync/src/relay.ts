@@ -1,5 +1,8 @@
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 
+/** Error message fragment for snapshot version conflicts. */
+export const SNAPSHOT_VERSION_CONFLICT_MESSAGE = "is not newer than current version";
+
 export interface RelayDocumentState {
   readonly envelopes: readonly EncryptedChangeEnvelope[];
   readonly snapshot: EncryptedSnapshotEnvelope | null;
@@ -56,7 +59,7 @@ export class EncryptedRelay {
     const existing = this.snapshots.get(envelope.documentId);
     if (existing && existing.snapshotVersion >= envelope.snapshotVersion) {
       throw new Error(
-        `Snapshot version ${String(envelope.snapshotVersion)} is not newer than current version ${String(existing.snapshotVersion)}`,
+        `Snapshot version ${String(envelope.snapshotVersion)} ${SNAPSHOT_VERSION_CONFLICT_MESSAGE} ${String(existing.snapshotVersion)}`,
       );
     }
     this.snapshots.set(envelope.documentId, envelope);

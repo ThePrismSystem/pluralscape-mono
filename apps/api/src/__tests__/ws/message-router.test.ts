@@ -79,6 +79,7 @@ describe("message-router", () => {
 
   beforeEach(() => {
     manager = new ConnectionManager();
+    manager.reserveUnauthSlot();
     state = manager.register("conn-1", mockWs() as never, Date.now());
     sent.length = 0;
   });
@@ -92,7 +93,8 @@ describe("message-router", () => {
     it("accepts AuthenticateRequest as first message", async () => {
       await routeMessage(authRequest(), state, manager, log);
 
-      expect(state.phase).toBe("authenticated");
+      // authenticate() creates a new object — check the manager's copy
+      expect(manager.get("conn-1")?.phase).toBe("authenticated");
       const resp = lastResponse();
       expect(resp["type"]).toBe("AuthenticateResponse");
     });
@@ -150,6 +152,10 @@ describe("message-router", () => {
   describe("authenticated phase", () => {
     beforeEach(async () => {
       await routeMessage(authRequest(), state, manager, log);
+      // Re-fetch state — authenticate() creates a new object in the map
+      const refreshed = manager.get("conn-1");
+      if (!refreshed) throw new Error("State not found after auth");
+      state = refreshed;
       sent.length = 0;
     });
 
@@ -292,8 +298,26 @@ describe("message-router", () => {
 
   describe("closing phase", () => {
     it("silently discards messages in closing phase", async () => {
-      state.phase = "closing";
-      await routeMessage(authRequest(), state, manager, log);
+      // Create a state object in the closing phase
+      const closingState: SyncConnectionState = {
+        connectionId: state.connectionId,
+        ws: state.ws,
+        connectedAt: state.connectedAt,
+        phase: "closing",
+        auth: null,
+        systemId: null,
+        profileType: null,
+        subscribedDocs: new Set(),
+        mutationCount: 0,
+        mutationWindowStart: 0,
+        mutationPreviousCount: 0,
+        readCount: 0,
+        readWindowStart: 0,
+        readPreviousCount: 0,
+        rateLimitStrikes: 0,
+        authTimeoutHandle: null,
+      };
+      await routeMessage(authRequest(), closingState, manager, log);
       expect(sent).toHaveLength(0);
     });
   });
@@ -301,6 +325,9 @@ describe("message-router", () => {
   describe("rate limiting", () => {
     beforeEach(async () => {
       await routeMessage(authRequest(), state, manager, log);
+      const refreshed = manager.get("conn-1");
+      if (!refreshed) throw new Error("State not found after auth");
+      state = refreshed;
       sent.length = 0;
     });
 
@@ -324,9 +351,12 @@ describe("message-router", () => {
     it("closes connection after repeated rate limit strikes", async () => {
       const ws = mockWs();
       const strikeManager = new ConnectionManager();
-      const strikeState = strikeManager.register("conn-strike", ws as never, Date.now());
+      strikeManager.reserveUnauthSlot();
+      const strikeStateInit = strikeManager.register("conn-strike", ws as never, Date.now());
       // Authenticate first
-      await routeMessage(authRequest(), strikeState, strikeManager, log);
+      await routeMessage(authRequest(), strikeStateInit, strikeManager, log);
+      const strikeState = strikeManager.get("conn-strike");
+      if (!strikeState) throw new Error("State not found after auth");
       sent.length = 0;
 
       // Simulate many rate limit violations
@@ -375,6 +405,7 @@ describe("message-router", () => {
         debug: vi.fn(),
       };
       const brokenManager = new ConnectionManager();
+      brokenManager.reserveUnauthSlot();
       const brokenState = brokenManager.register("conn-broken", brokenWs as never, Date.now());
 
       // Authenticate first (this send will also fail but we need the state)
@@ -395,6 +426,9 @@ describe("message-router", () => {
   describe("prototype pollution prevention", () => {
     beforeEach(async () => {
       await routeMessage(authRequest(), state, manager, log);
+      const refreshed = manager.get("conn-1");
+      if (!refreshed) throw new Error("State not found after auth");
+      state = refreshed;
       sent.length = 0;
     });
 
@@ -429,6 +463,9 @@ describe("message-router", () => {
   describe("document access control", () => {
     beforeEach(async () => {
       await routeMessage(authRequest(), state, manager, log);
+      const refreshed = manager.get("conn-1");
+      if (!refreshed) throw new Error("State not found after auth");
+      state = refreshed;
       sent.length = 0;
     });
 

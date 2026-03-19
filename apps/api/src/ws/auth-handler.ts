@@ -52,7 +52,7 @@ export async function handleAuthenticate(
 
   const { auth } = result;
 
-  // 3. Per-account connection limit
+  // 2. Per-account connection limit
   if (manager.getAccountConnectionCount(auth.accountId) >= WS_MAX_CONNECTIONS_PER_ACCOUNT) {
     return {
       ok: false,
@@ -67,8 +67,8 @@ export async function handleAuthenticate(
     };
   }
 
-  // 4. System ownership check (owner profiles only)
-  if (message.profileType !== "friend" && !auth.ownedSystemIds.has(message.systemId as SystemId)) {
+  // 3. System ownership check
+  if (!auth.ownedSystemIds.has(message.systemId as SystemId)) {
     return {
       ok: false,
       error: {
@@ -82,13 +82,26 @@ export async function handleAuthenticate(
     };
   }
 
-  // 5. Success — promote connection
-  manager.authenticate(state.connectionId, auth, message.systemId, message.profileType);
+  // 4. Success — promote connection
+  const authenticated = manager.authenticate(
+    state.connectionId,
+    auth,
+    message.systemId,
+    message.profileType,
+  );
 
-  // Clear auth timeout
-  if (state.authTimeoutHandle !== null) {
-    clearTimeout(state.authTimeoutHandle);
-    state.authTimeoutHandle = null;
+  if (!authenticated) {
+    return {
+      ok: false,
+      error: {
+        type: "SyncError",
+        correlationId,
+        code: "AUTH_FAILED",
+        message: "Connection no longer exists",
+        docId: null,
+      },
+      closeCode: WS_CLOSE_POLICY_VIOLATION,
+    };
   }
 
   return {

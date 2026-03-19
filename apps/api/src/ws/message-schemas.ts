@@ -10,6 +10,7 @@ import { z } from "zod";
 import { SESSION_TOKEN_PATTERN } from "../middleware/middleware.constants.js";
 
 import { base64urlToBytes } from "./serialization.js";
+import { WS_MAX_SUBSCRIBE_DOCUMENTS } from "./ws.constants.js";
 
 // ── Shared schemas ──────────────────────────────────────────────────
 
@@ -63,7 +64,7 @@ export const manifestRequestSchema = z.object({
 export const subscribeRequestSchema = z.object({
   type: z.literal("SubscribeRequest"),
   correlationId,
-  documents: z.array(documentVersionEntry),
+  documents: z.array(documentVersionEntry).max(WS_MAX_SUBSCRIBE_DOCUMENTS),
 });
 
 export const unsubscribeRequestSchema = z.object({

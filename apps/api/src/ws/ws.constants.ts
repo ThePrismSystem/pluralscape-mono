@@ -59,3 +59,6 @@ export const WS_RELAY_MAX_DOCUMENTS = 1_000;
 
 /** Number of consecutive rate limit strikes before closing the connection. */
 export const WS_RATE_LIMIT_STRIKE_MAX = 10;
+
+/** Maximum number of documents in a single SubscribeRequest. */
+export const WS_MAX_SUBSCRIBE_DOCUMENTS = 100;

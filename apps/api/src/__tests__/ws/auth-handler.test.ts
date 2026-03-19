@@ -70,6 +70,7 @@ describe("handleAuthenticate", () => {
   it("succeeds with valid token and protocol version", async () => {
     const auth = validAuth();
     mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
     state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
@@ -82,11 +83,13 @@ describe("handleAuthenticate", () => {
       expect(typeof result.response.serverTime).toBe("number");
     }
     expect(manager.get("conn-1")?.phase).toBe("authenticated");
+    // Auth timeout is cleared by manager.authenticate()
     expect(manager.get("conn-1")?.authTimeoutHandle).toBeNull();
   });
 
   it("returns AUTH_FAILED for invalid token", async () => {
     mockValidateSession.mockResolvedValue({ ok: false, error: "UNAUTHENTICATED" });
+    manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
     const result = await handleAuthenticate(validRequest(), state, manager);
@@ -100,6 +103,7 @@ describe("handleAuthenticate", () => {
 
   it("returns AUTH_EXPIRED for expired session", async () => {
     mockValidateSession.mockResolvedValue({ ok: false, error: "SESSION_EXPIRED" });
+    manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
     const result = await handleAuthenticate(validRequest(), state, manager);
@@ -116,6 +120,7 @@ describe("handleAuthenticate", () => {
       ownedSystemIds: new Set<SystemId>(),
     };
     mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
     const result = await handleAuthenticate(validRequest(), state, manager);
@@ -126,12 +131,31 @@ describe("handleAuthenticate", () => {
     }
   });
 
-  it("skips system ownership check for friend profile", async () => {
+  it("requires system ownership even for friend profile", async () => {
     const auth: AuthContext = {
       ...validAuth(),
       ownedSystemIds: new Set<SystemId>(),
     };
     mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    manager.reserveUnauthSlot();
+    const state = manager.register("conn-1", mockWs() as never, Date.now());
+
+    const result = await handleAuthenticate(
+      validRequest({ profileType: "friend" }),
+      state,
+      manager,
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("PERMISSION_DENIED");
+    }
+  });
+
+  it("friend profile succeeds when system is owned", async () => {
+    const auth = validAuth();
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
+    manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
     const result = await handleAuthenticate(
@@ -150,10 +174,12 @@ describe("handleAuthenticate", () => {
     // Fill up account connections to the limit
     for (let i = 0; i < 10; i++) {
       const id = `existing-${String(i)}`;
+      manager.reserveUnauthSlot();
       manager.register(id, mockWs() as never, Date.now());
       manager.authenticate(id, auth, SYSTEM_ID, "owner-full");
     }
 
+    manager.reserveUnauthSlot();
     const state = manager.register("conn-new", mockWs() as never, Date.now());
     const result = await handleAuthenticate(validRequest(), state, manager);
 
@@ -165,17 +191,35 @@ describe("handleAuthenticate", () => {
 
   it("clears auth timeout on success", async () => {
     mockValidateSession.mockResolvedValue({ ok: true, auth: validAuth(), session: {} as never });
+    manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
-    const handle = setTimeout(() => {}, 10_000);
-    state.authTimeoutHandle = handle;
+    state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
     await handleAuthenticate(validRequest(), state, manager);
 
-    expect(state.authTimeoutHandle).toBeNull();
+    // Auth timeout is cleared by manager.authenticate() — check the new state in the map
+    const updated = manager.get("conn-1");
+    expect(updated?.authTimeoutHandle).toBeNull();
+  });
+
+  it("returns AUTH_FAILED when connection removed during auth", async () => {
+    mockValidateSession.mockResolvedValue({ ok: true, auth: validAuth(), session: {} as never });
+    manager.reserveUnauthSlot();
+    const state = manager.register("conn-1", mockWs() as never, Date.now());
+    // Simulate connection removal during async auth
+    manager.remove("conn-1");
+
+    const result = await handleAuthenticate(validRequest(), state, manager);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("AUTH_FAILED");
+    }
   });
 
   it("preserves correlationId in response", async () => {
     mockValidateSession.mockResolvedValue({ ok: true, auth: validAuth(), session: {} as never });
+    manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
     const result = await handleAuthenticate(
