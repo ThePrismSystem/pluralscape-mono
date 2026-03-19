@@ -43,6 +43,7 @@ describe("PG pool configuration", () => {
   const mockSql = { end: vi.fn().mockResolvedValue(undefined) };
 
   beforeEach(() => {
+    vi.resetModules();
     capturedOptions.length = 0;
     vi.doMock("postgres", () => ({
       default: (_connStr: string, opts?: Record<string, unknown>) => {

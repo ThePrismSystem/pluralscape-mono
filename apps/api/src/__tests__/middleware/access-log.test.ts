@@ -42,13 +42,14 @@ function createApp(): Hono {
 }
 
 describe("accessLogMiddleware", () => {
-  it("logs a successful 200 request with method, path, status, and duration", async () => {
+  it("logs a successful 200 request with method, path, status, requestId, and duration", async () => {
     const app = createApp();
     await app.request("/ok");
 
     expect(mockLogInfo).toHaveBeenCalledWith(
       "HTTP request",
       expect.objectContaining({
+        requestId: expect.any(String),
         method: "GET",
         path: "/ok",
         status: 200,
@@ -64,6 +65,7 @@ describe("accessLogMiddleware", () => {
     expect(mockLogInfo).toHaveBeenCalledWith(
       "HTTP request",
       expect.objectContaining({
+        requestId: expect.any(String),
         method: "GET",
         path: "/fail",
         status: 500,
@@ -78,6 +80,7 @@ describe("accessLogMiddleware", () => {
     expect(mockLogInfo).toHaveBeenCalledWith(
       "HTTP request",
       expect.objectContaining({
+        requestId: expect.any(String),
         method: "POST",
         path: "/submit",
         status: 201,
@@ -92,6 +95,7 @@ describe("accessLogMiddleware", () => {
     expect(mockLogInfo).toHaveBeenCalledWith(
       "HTTP request",
       expect.objectContaining({
+        requestId: expect.any(String),
         method: "PUT",
         path: "/update",
       }),
@@ -105,6 +109,7 @@ describe("accessLogMiddleware", () => {
     expect(mockLogInfo).toHaveBeenCalledWith(
       "HTTP request",
       expect.objectContaining({
+        requestId: expect.any(String),
         method: "DELETE",
         path: "/remove",
       }),
@@ -131,6 +136,26 @@ describe("accessLogMiddleware", () => {
     expect(mockLogInfo).toHaveBeenCalledWith(
       "HTTP request",
       expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("logs even when no error handler is registered and the handler throws", async () => {
+    const app = new Hono();
+    app.use("*", requestIdMiddleware());
+    app.use("*", accessLogMiddleware());
+    app.get("/throw", () => {
+      throw new Error("unhandled");
+    });
+
+    await app.request("/throw");
+
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      "HTTP request",
+      expect.objectContaining({
+        method: "GET",
+        path: "/throw",
+        status: 500,
+      }),
     );
   });
 });

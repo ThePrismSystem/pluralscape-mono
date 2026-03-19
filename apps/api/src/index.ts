@@ -58,6 +58,17 @@ app.route("/account", accountRoutes);
 app.route("/auth", authRoutes);
 app.route("/systems", systemRoutes);
 
+/**
+ * Gracefully shuts down the server and drains the connection pool.
+ * Exported for testability — does NOT call process.exit().
+ */
+export async function shutdown(server: { stop(): Promise<void> | void } | null): Promise<void> {
+  logger.info("Shutting down");
+  if (server) await server.stop();
+  const raw = getRawClient();
+  if (raw) await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
+}
+
 async function start(): Promise<void> {
   await initSodium();
 
@@ -95,27 +106,27 @@ async function start(): Promise<void> {
     }
   }
 
+  let httpServer: { stop(): Promise<void> | void } | null = null;
+
   if (typeof Bun !== "undefined") {
-    const server = Bun.serve({
+    httpServer = Bun.serve({
       port,
       fetch: app.fetch,
     });
 
     logger.info("Pluralscape API listening", { port });
-
-    async function shutdown(): Promise<void> {
-      logger.info("Shutting down");
-      await server.stop();
-      const raw = getRawClient();
-      if (raw) {
-        await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
-      }
-      process.exit(0);
-    }
-
-    process.on("SIGTERM", () => void shutdown());
-    process.on("SIGINT", () => void shutdown());
   }
+
+  const handleShutdown = (): void => {
+    shutdown(httpServer)
+      .then(() => process.exit(0))
+      .catch((err: unknown) => {
+        logger.error("Shutdown failed", err instanceof Error ? { err } : { error: String(err) });
+        process.exit(1);
+      });
+  };
+  process.on("SIGTERM", handleShutdown);
+  process.on("SIGINT", handleShutdown);
 }
 
 void start();

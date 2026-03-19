@@ -6,6 +6,10 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
  * Avoids importing postgres.js types into shared code that SQLite consumers also use.
  */
 export interface Closeable {
+  /**
+   * Drains the connection pool, waiting for in-flight queries to finish.
+   * @param options.timeout Seconds to wait before force-closing connections (postgres.js convention).
+   */
   end(options?: { timeout?: number }): Promise<void>;
 }
 
