@@ -5,6 +5,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
+import { wrapResult } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { reorderMemberPhotos } from "../../../services/member-photo.service.js";
 
@@ -24,5 +25,5 @@ reorderRoute.put("/reorder", async (c) => {
 
   const db = await getDb();
   const result = await reorderMemberPhotos(db, systemId, memberId, body, auth, audit);
-  return c.json({ items: result });
+  return c.json(wrapResult({ items: result }));
 });

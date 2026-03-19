@@ -1,5 +1,5 @@
 import { members, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -7,6 +7,7 @@ import { HTTP_CONFLICT, HTTP_FORBIDDEN, HTTP_NOT_FOUND } from "../http.constants
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64OrNull, parseAndValidateBlob } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
+import { buildPaginatedResult } from "../lib/pagination.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_SYSTEM_DATA_BYTES,
@@ -76,17 +77,7 @@ export async function listSystems(
     .orderBy(systems.id)
     .limit(effectiveLimit + 1);
 
-  const hasMore = rows.length > effectiveLimit;
-  const items = (hasMore ? rows.slice(0, effectiveLimit) : rows).map(toSystemProfileResult);
-  const lastItem = items[items.length - 1];
-  const nextCursor = hasMore && lastItem ? toCursor(lastItem.id) : null;
-
-  return {
-    items,
-    nextCursor,
-    hasMore,
-    totalCount: null,
-  };
+  return buildPaginatedResult(rows, effectiveLimit, toSystemProfileResult);
 }
 
 // ── GET ─────────────────────────────────────────────────────────────

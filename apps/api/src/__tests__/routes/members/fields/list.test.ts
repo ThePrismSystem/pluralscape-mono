@@ -65,7 +65,7 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns 200 with field value items", async () => {
+  it("returns 200 with field value items in data envelope", async () => {
     vi.mocked(listFieldValues).mockResolvedValueOnce([FIELD_VALUE_RESULT]);
 
     const app = createApp();
@@ -73,23 +73,23 @@ describe("GET /systems/:systemId/members/:memberId/fields", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      items: { id: string; memberId: string; version: number }[];
+      data: { items: { id: string; memberId: string; version: number }[] };
     };
-    expect(body.items).toHaveLength(1);
-    expect(body.items[0]?.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
-    expect(body.items[0]?.memberId).toBe(MEM_ID);
-    expect(body.items[0]?.version).toBe(1);
+    expect(body.data.items).toHaveLength(1);
+    expect(body.data.items[0]?.id).toBe("fv_550e8400-e29b-41d4-a716-446655440000");
+    expect(body.data.items[0]?.memberId).toBe(MEM_ID);
+    expect(body.data.items[0]?.version).toBe(1);
   });
 
-  it("returns 200 with empty items array", async () => {
+  it("returns 200 with empty items array in data envelope", async () => {
     vi.mocked(listFieldValues).mockResolvedValueOnce([]);
 
     const app = createApp();
     const res = await app.request(FIELDS_PATH);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { items: unknown[] };
-    expect(body.items).toHaveLength(0);
+    const body = (await res.json()) as { data: { items: unknown[] } };
+    expect(body.data.items).toHaveLength(0);
   });
 
   it("forwards systemId and memberId to service", async () => {

@@ -16,12 +16,16 @@
           application/json:
             schema:
               type: object
-              required: [photos]
+              required: [data]
               properties:
-                photos:
-                  type: array
-                  items:
-                    $ref: "../schemas/common.yaml#/EncryptedEntity"
+                data:
+                  type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/common.yaml#/EncryptedEntity"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "429":
@@ -57,7 +61,7 @@
         $ref: "../openapi.yaml#/components/responses/RateLimited"
 
 /systems/{systemId}/members/{memberId}/photos/reorder:
-  post:
+  put:
     operationId: reorderMemberPhotos
     tags: [Member Photos]
     summary: Reorder member photos
@@ -80,9 +84,16 @@
           application/json:
             schema:
               type: object
+              required: [data]
               properties:
-                ok:
-                  type: boolean
+                data:
+                  type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/common.yaml#/EncryptedEntity"
       "400":
         $ref: "../openapi.yaml#/components/responses/ValidationError"
       "401":

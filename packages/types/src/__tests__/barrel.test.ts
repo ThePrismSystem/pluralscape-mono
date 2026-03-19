@@ -231,6 +231,7 @@ import type {
   CodeBlock,
   DividerBlock,
   EntityLinkBlock,
+  ActionResult,
   ApiError,
   ApiResponse,
   ArchivedCustomFront,
@@ -791,6 +792,9 @@ describe("barrel exports", () => {
 
     type AR = ApiResponse<string>;
     expectTypeOf<AR>().toBeObject();
+
+    type ACR = ActionResult;
+    expectTypeOf<ACR>().toBeObject();
 
     type AE = ApiError;
     expectTypeOf<AE>().toBeObject();

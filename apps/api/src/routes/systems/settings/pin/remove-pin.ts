@@ -5,6 +5,7 @@ import { createAuditWriter } from "../../../../lib/audit-writer.js";
 import { getDb } from "../../../../lib/db.js";
 import { requireIdParam } from "../../../../lib/id-param.js";
 import { parseJsonBody } from "../../../../lib/parse-json-body.js";
+import { wrapAction } from "../../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../../middleware/rate-limit.js";
 import { removePin } from "../../../../services/pin.service.js";
 
@@ -23,5 +24,5 @@ removePinRoute.delete("/", async (c) => {
 
   const db = await getDb();
   await removePin(db, systemId, body, auth, audit);
-  return c.json({ success: true });
+  return c.json(wrapAction());
 });

@@ -1,7 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { ApiErrorCode } from "../api-constants.js";
-import type { ApiError, ApiResponse, Result, ValidationError } from "../results.js";
+import type { ActionResult, ApiError, ApiResponse, Result, ValidationError } from "../results.js";
 
 describe("Result", () => {
   it("discriminates on ok field", () => {
@@ -37,7 +37,7 @@ describe("Result", () => {
 describe("ApiResponse", () => {
   it("discriminates success and error responses", () => {
     function handleResponse(resp: ApiResponse<{ id: string }>): void {
-      if (resp.error === null) {
+      if (resp.data !== undefined) {
         expectTypeOf(resp.data).toEqualTypeOf<{ id: string }>();
       } else {
         expectTypeOf(resp.error).toExtend<ApiError>();
@@ -46,11 +46,32 @@ describe("ApiResponse", () => {
     expectTypeOf(handleResponse).toBeFunction();
   });
 
-  it("rejects both data and error non-null", () => {
+  it("accepts data-only success response", () => {
+    assertType<ApiResponse<string>>({ data: "ok" });
+  });
+
+  it("accepts error response with requestId", () => {
+    assertType<ApiResponse<string>>({
+      error: { code: "INTERNAL_ERROR", message: "fail" },
+      requestId: "550e8400-e29b-41d4-a716-446655440000",
+    });
+  });
+
+  it("rejects both data and error present", () => {
     assertType<ApiResponse<string>>(
-      // @ts-expect-error cannot have both data and error non-null
-      { data: "ok", error: { code: "INTERNAL_ERROR", message: "fail" } },
+      // @ts-expect-error cannot have both data and error
+      { data: "ok", error: { code: "INTERNAL_ERROR", message: "fail" }, requestId: "abc" },
     );
+  });
+});
+
+describe("ActionResult", () => {
+  it("has success: true", () => {
+    expectTypeOf<ActionResult["success"]>().toEqualTypeOf<true>();
+  });
+
+  it("accepts valid action result", () => {
+    assertType<ActionResult>({ success: true });
   });
 });
 

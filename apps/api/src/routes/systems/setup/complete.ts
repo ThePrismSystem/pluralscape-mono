@@ -5,6 +5,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
+import { wrapResult } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { setupComplete } from "../../../services/setup.service.js";
 
@@ -23,5 +24,5 @@ setupCompleteRoute.post("/", async (c) => {
 
   const db = await getDb();
   const result = await setupComplete(db, systemId, body, auth, audit);
-  return c.json(result);
+  return c.json(wrapResult(result));
 });

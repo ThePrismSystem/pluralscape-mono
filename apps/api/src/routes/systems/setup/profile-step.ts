@@ -5,6 +5,7 @@ import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
+import { wrapAction } from "../../../lib/response.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { setupProfileStep } from "../../../services/setup.service.js";
 
@@ -22,6 +23,6 @@ profileStepRoute.post("/", async (c) => {
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
-  const result = await setupProfileStep(db, systemId, body, auth, audit);
-  return c.json(result);
+  await setupProfileStep(db, systemId, body, auth, audit);
+  return c.json(wrapAction());
 });

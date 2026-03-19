@@ -79,9 +79,9 @@ describe("GET /:id/setup/status", () => {
     const res = await app.request(`/${SYS_ID}/setup/status`);
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_STATUS;
-    expect(body.isComplete).toBe(false);
-    expect(body.nomenclatureComplete).toBe(false);
+    const body = (await res.json()) as { data: typeof MOCK_STATUS };
+    expect(body.data.isComplete).toBe(false);
+    expect(body.data.nomenclatureComplete).toBe(false);
   });
 
   it("applies the readDefault rate limit category", () => {
@@ -117,8 +117,8 @@ describe("POST /:id/setup/nomenclature", () => {
     const res = await postJSON(app, `/${SYS_ID}/setup/nomenclature`, { encryptedData: "data" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_STEP_RESULT;
-    expect(body.success).toBe(true);
+    const body = (await res.json()) as { data: { success: true } };
+    expect(body.data.success).toBe(true);
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
@@ -164,8 +164,8 @@ describe("POST /:id/setup/profile", () => {
     const res = await postJSON(app, `/${SYS_ID}/setup/profile`, { encryptedData: "data" });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_STEP_RESULT;
-    expect(body.success).toBe(true);
+    const body = (await res.json()) as { data: { success: true } };
+    expect(body.data.success).toBe(true);
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
@@ -214,9 +214,9 @@ describe("POST /:id/setup/complete", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = (await res.json()) as typeof MOCK_COMPLETE_RESULT;
-    expect(body.id).toBe("sset_abc");
-    expect(body.version).toBe(1);
+    const body = (await res.json()) as { data: typeof MOCK_COMPLETE_RESULT };
+    expect(body.data.id).toBe("sset_abc");
+    expect(body.data.version).toBe(1);
   });
 
   it("returns 400 VALIDATION_ERROR for malformed JSON body", async () => {
