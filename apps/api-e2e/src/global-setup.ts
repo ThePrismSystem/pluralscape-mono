@@ -6,7 +6,7 @@
  *
  * EMAIL_HASH_PEPPER defaults to a stable test value if not set.
  */
-import { execSync, spawn, type ChildProcess } from "node:child_process";
+import { execFileSync, execSync, spawn, type ChildProcess } from "node:child_process";
 import crypto from "node:crypto";
 import path from "node:path";
 
@@ -126,7 +126,7 @@ async function globalSetup(): Promise<void> {
   console.info("[e2e] Applying migrations...");
   const migrateScript = path.join(MONOREPO_ROOT, "apps/api-e2e/src/migrate.ts");
   try {
-    execSync(`bun "${migrateScript}" "${databaseUrl}"`, {
+    execFileSync("bun", [migrateScript, databaseUrl], {
       cwd: MONOREPO_ROOT,
       env: process.env,
       stdio: "pipe",
@@ -163,6 +163,9 @@ async function globalSetup(): Promise<void> {
     }
   });
 
+  if (!serverProcess.pid) {
+    throw new Error("Failed to spawn API server — pid is undefined");
+  }
   process.env["E2E_SERVER_PID"] = String(serverProcess.pid);
 
   await pollHealth(`http://localhost:${String(E2E_PORT)}`, HEALTH_TIMEOUT_MS);
