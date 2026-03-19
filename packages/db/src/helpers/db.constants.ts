@@ -18,3 +18,17 @@ export const AUDIT_LOG_DETAIL_MAX_LENGTH = 2_048;
 export const URL_MAX_LENGTH = 2_048;
 /** Number of days to retain audit log entries before PII cleanup deletes them. */
 export const AUDIT_LOG_RETENTION_DAYS = 90;
+
+// ── PG Pool Defaults ──────────────────────────────────────────────────
+
+/** Maximum number of connections in the postgres.js pool. */
+export const PG_POOL_MAX_CONNECTIONS = 10;
+
+/** Seconds a connection can sit idle before being released. */
+export const PG_POOL_IDLE_TIMEOUT_SECONDS = 20;
+
+/** Seconds to wait when acquiring a new connection before timing out. */
+export const PG_POOL_CONNECT_TIMEOUT_SECONDS = 10;
+
+/** Maximum lifetime of a connection in seconds (30 minutes). */
+export const PG_POOL_MAX_LIFETIME_SECONDS = 1_800;

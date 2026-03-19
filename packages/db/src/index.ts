@@ -34,8 +34,13 @@ export type { RlsExecutor, RlsScopeType, RlsTableName } from "./rls/index.js";
 
 // ── Client ─────────────────────────────────────────────────────
 export { createDatabase, createDatabaseFromEnv } from "./client/factory.js";
-export type { PgConfig, SqliteConfig, DatabaseConfig } from "./client/factory.js";
-export type { DatabaseClient, PgDatabaseClient, SqliteDatabaseClient } from "./client/types.js";
+export type { PgConfig, PgPoolOptions, SqliteConfig, DatabaseConfig } from "./client/factory.js";
+export type {
+  Closeable,
+  DatabaseClient,
+  PgDatabaseClient,
+  SqliteDatabaseClient,
+} from "./client/types.js";
 
 // ── Helpers ────────────────────────────────────────────────────
 export {
@@ -81,7 +86,13 @@ export type { BucketContentEntityType } from "@pluralscape/types";
 export type { DbAuditActor } from "./helpers/index.js";
 
 // ── Constants ────────────────────────────────────────────────
-export { AUDIT_LOG_RETENTION_DAYS } from "./helpers/db.constants.js";
+export {
+  AUDIT_LOG_RETENTION_DAYS,
+  PG_POOL_CONNECT_TIMEOUT_SECONDS,
+  PG_POOL_IDLE_TIMEOUT_SECONDS,
+  PG_POOL_MAX_CONNECTIONS,
+  PG_POOL_MAX_LIFETIME_SECONDS,
+} from "./helpers/db.constants.js";
 
 // ── Queries (Job Helpers) ─────────────────────────────────────
 export type { CleanupResult } from "./queries/index.js";
