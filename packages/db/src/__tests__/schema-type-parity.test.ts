@@ -8,6 +8,8 @@
  */
 
 import { getTableColumns } from "drizzle-orm";
+import { getTableConfig as getPgTableConfig } from "drizzle-orm/pg-core";
+import { getTableConfig as getSqliteTableConfig } from "drizzle-orm/sqlite-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { BUCKET_CONTENT_ENTITY_TYPES } from "../helpers/enums.js";
@@ -846,4 +848,134 @@ describe("BUCKET_CONTENT_ENTITY_TYPES invariants", () => {
     const unique = new Set(BUCKET_CONTENT_ENTITY_TYPES);
     expect(unique.size).toBe(BUCKET_CONTENT_ENTITY_TYPES.length);
   });
+});
+
+// ---------------------------------------------------------------------------
+// 7. Index name parity
+// ---------------------------------------------------------------------------
+
+/**
+ * Known legitimate index divergences between PG and SQLite.
+ * Key: index name, Value: reason for the divergence.
+ */
+const KNOWN_PG_ONLY_INDEXES = new Set([
+  // Expression index using EXTRACT(EPOCH …) — not available in SQLite
+  "sessions_ttl_duration_ms_idx",
+  // Denormalized session_start_time index for partitioned FK — not needed in SQLite
+  "fronting_comments_session_start_idx",
+  // PG serial column uses a simple seq index; SQLite integer uses system_id-prefixed index
+  "sync_queue_seq_idx",
+]);
+
+const KNOWN_SQLITE_ONLY_INDEXES = new Set([
+  // SQLite uses system_id-prefixed seq index (integer, not serial)
+  "sync_queue_system_id_seq_idx",
+]);
+
+/**
+ * Known FK count divergences between PG and SQLite.
+ * Key: table name, Value: [expectedPg, expectedSqlite].
+ */
+const KNOWN_FK_DIVERGENCES: Record<string, [number, number]> = {
+  // SQLite adds an FK to fronting_sessions that PG can't enforce (non-partitioned FK ref)
+  journalEntries: [1, 2],
+};
+
+/**
+ * Build parallel arrays of {name, pgIndexNames, sqliteIndexNames, pgFkCount, sqliteFkCount, pgCheckCount, sqliteCheckCount}
+ * at module level so that test iterations can reference them without runtime casts.
+ */
+function buildStructuralPairs(): Array<{
+  name: string;
+  pgIndexNames: string[];
+  sqliteIndexNames: string[];
+  pgFkCount: number;
+  sqliteFkCount: number;
+  pgCheckCount: number;
+  sqliteCheckCount: number;
+}> {
+  const results: Array<{
+    name: string;
+    pgIndexNames: string[];
+    sqliteIndexNames: string[];
+    pgFkCount: number;
+    sqliteFkCount: number;
+    pgCheckCount: number;
+    sqliteCheckCount: number;
+  }> = [];
+
+  for (const { name } of TABLE_PAIRS) {
+    // Access the table objects directly from the namespace imports
+    const pgTableObj = pg[name as keyof typeof pg];
+    const sqlTableObj = sqlite[name as keyof typeof sqlite];
+    if (typeof pgTableObj !== "object" || typeof sqlTableObj !== "object") continue;
+
+    // getTableConfig accepts any table-like object — the column structure is sufficient
+    const pgConfig = getPgTableConfig(pgTableObj as Parameters<typeof getPgTableConfig>[0]);
+    const sqlConfig = getSqliteTableConfig(
+      sqlTableObj as Parameters<typeof getSqliteTableConfig>[0],
+    );
+
+    const pgIdxNames = pgConfig.indexes.map((i) => i.config.name);
+    const sqlIdxNames = sqlConfig.indexes.map((i) => i.config.name);
+
+    results.push({
+      name,
+      pgIndexNames: pgIdxNames.filter((n): n is string => typeof n === "string"),
+      sqliteIndexNames: sqlIdxNames.filter((n): n is string => typeof n === "string"),
+      pgFkCount: pgConfig.foreignKeys.length,
+      sqliteFkCount: sqlConfig.foreignKeys.length,
+      pgCheckCount: pgConfig.checks.length,
+      sqliteCheckCount: sqlConfig.checks.length,
+    });
+  }
+
+  return results;
+}
+
+const STRUCTURAL_PAIRS = buildStructuralPairs();
+
+describe("PG and SQLite index name parity", () => {
+  for (const pair of STRUCTURAL_PAIRS) {
+    it(`${pair.name} has matching index names`, () => {
+      const pgNames = new Set(pair.pgIndexNames);
+      const sqlNames = new Set(pair.sqliteIndexNames);
+
+      const pgOnly = [...pgNames].filter((n) => !sqlNames.has(n) && !KNOWN_PG_ONLY_INDEXES.has(n));
+      const sqlOnly = [...sqlNames].filter(
+        (n) => !pgNames.has(n) && !KNOWN_SQLITE_ONLY_INDEXES.has(n),
+      );
+
+      expect(pgOnly, `unexpected PG-only indexes in ${pair.name}`).toEqual([]);
+      expect(sqlOnly, `unexpected SQLite-only indexes in ${pair.name}`).toEqual([]);
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 8. FK count parity
+// ---------------------------------------------------------------------------
+describe("PG and SQLite FK count parity", () => {
+  for (const pair of STRUCTURAL_PAIRS) {
+    it(`${pair.name} has matching FK count`, () => {
+      const known = KNOWN_FK_DIVERGENCES[pair.name];
+      if (known) {
+        expect(pair.pgFkCount, `${pair.name} PG FK count`).toBe(known[0]);
+        expect(pair.sqliteFkCount, `${pair.name} SQLite FK count`).toBe(known[1]);
+      } else {
+        expect(pair.pgFkCount, `FK count mismatch in ${pair.name}`).toBe(pair.sqliteFkCount);
+      }
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// 9. CHECK constraint count parity
+// ---------------------------------------------------------------------------
+describe("PG and SQLite CHECK constraint count parity", () => {
+  for (const pair of STRUCTURAL_PAIRS) {
+    it(`${pair.name} has matching CHECK constraint count`, () => {
+      expect(pair.pgCheckCount, `CHECK count mismatch in ${pair.name}`).toBe(pair.sqliteCheckCount);
+    });
+  }
 });
