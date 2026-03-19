@@ -104,6 +104,49 @@ export class SyncWsClient {
     return this.waitForMessage(null);
   }
 
+  /** Send SubscribeRequest and wait for SubscribeResponse. */
+  async subscribe(
+    documents: Array<{ docId: string; lastSyncedSeq: number; lastSnapshotVersion: number }>,
+  ): Promise<ServerMessage> {
+    this.send({
+      type: "SubscribeRequest",
+      correlationId: null,
+      documents,
+    });
+    return this.waitForMessage("SubscribeResponse");
+  }
+
+  /** Send SubmitChangeRequest (wire format with base64url strings) and wait for response. */
+  async submitChange(
+    docId: string,
+    change: {
+      ciphertext: string;
+      nonce: string;
+      signature: string;
+      authorPublicKey: string;
+      documentId: string;
+    },
+  ): Promise<ServerMessage> {
+    // Send raw JSON — wire format uses base64url strings, not Uint8Array
+    this.sendRaw(
+      JSON.stringify({
+        type: "SubmitChangeRequest",
+        correlationId: null,
+        docId,
+        change,
+      }),
+    );
+    return this.waitForMessage(null);
+  }
+
+  /** Send a raw string over the WebSocket. */
+  sendRaw(data: string): void {
+    if (this.ws?.readyState !== WebSocket.OPEN) {
+      throw new Error("WebSocket not connected");
+    }
+    this.ws.send(data);
+  }
+
   /** Close the connection. */
   close(): void {
     if (this.ws) {
