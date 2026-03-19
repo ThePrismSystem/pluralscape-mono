@@ -17,9 +17,7 @@ import { createCategoryRateLimiter, setRateLimitStore } from "./middleware/rate-
 import { requestIdMiddleware } from "./middleware/request-id.js";
 import { createSecureHeaders } from "./middleware/secure-headers.js";
 import { createValkeyStore } from "./middleware/stores/valkey-store.js";
-import { accountRoutes } from "./routes/account/index.js";
-import { authRoutes } from "./routes/auth/index.js";
-import { systemRoutes } from "./routes/systems/index.js";
+import { v1Routes } from "./routes/v1.js";
 import { DEFAULT_PORT, SHUTDOWN_TIMEOUT_SECONDS } from "./server.constants.js";
 
 const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
@@ -54,9 +52,7 @@ app.get("/health", (c) => {
   return c.json({ status: "healthy" });
 });
 
-app.route("/account", accountRoutes);
-app.route("/auth", authRoutes);
-app.route("/systems", systemRoutes);
+app.route("/v1", v1Routes);
 
 /**
  * Gracefully shuts down the server and drains the connection pool.
@@ -64,9 +60,12 @@ app.route("/systems", systemRoutes);
  */
 export async function shutdown(server: { stop(): Promise<void> | void } | null): Promise<void> {
   logger.info("Shutting down");
-  if (server) await server.stop();
-  const raw = getRawClient();
-  if (raw) await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
+  try {
+    if (server) await server.stop();
+  } finally {
+    const raw = getRawClient();
+    if (raw) await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
+  }
 }
 
 async function start(): Promise<void> {
@@ -117,7 +116,10 @@ async function start(): Promise<void> {
     logger.info("Pluralscape API listening", { port });
   }
 
+  let shuttingDown = false;
   const handleShutdown = (): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     shutdown(httpServer)
       .then(() => process.exit(0))
       .catch((err: unknown) => {

@@ -25,7 +25,6 @@ vi.mock("../../lib/logger.js", () => ({
 const { shutdown } = await import("../../index.js");
 
 afterEach(() => {
-  vi.restoreAllMocks();
   mockGetRawClient.mockReset();
   mockLogInfo.mockReset();
   mockLogError.mockReset();
@@ -74,13 +73,24 @@ describe("shutdown", () => {
     expect(mockStop).toHaveBeenCalledOnce();
   });
 
-  it("propagates errors from server.stop()", async () => {
+  it("handles both null server and null rawClient", async () => {
+    mockGetRawClient.mockReturnValue(null);
+
+    await shutdown(null);
+
+    expect(mockLogInfo).toHaveBeenCalledWith("Shutting down");
+  });
+
+  it("still drains pool when server.stop() throws", async () => {
+    const mockEnd = vi.fn().mockResolvedValue(undefined);
+    const mockRawClient: Closeable = { end: mockEnd };
+    mockGetRawClient.mockReturnValue(mockRawClient);
     const mockServer = {
       stop: vi.fn().mockRejectedValue(new Error("stop failed")),
     };
-    mockGetRawClient.mockReturnValue(null);
 
     await expect(shutdown(mockServer)).rejects.toThrow("stop failed");
+    expect(mockEnd).toHaveBeenCalledWith({ timeout: expect.any(Number) });
   });
 
   it("propagates errors from raw.end()", async () => {
