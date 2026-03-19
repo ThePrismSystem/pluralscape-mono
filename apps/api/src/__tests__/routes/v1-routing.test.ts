@@ -37,4 +37,14 @@ describe("v1 route prefix", () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it("GET /v1/account returns non-404 (account routes mounted)", async () => {
+    const res = await app.request("/v1/account");
+    expect(res.status).not.toBe(404);
+  });
+
+  it("GET /v1/systems returns non-404 (system routes mounted)", async () => {
+    const res = await app.request("/v1/systems");
+    expect(res.status).not.toBe(404);
+  });
 });

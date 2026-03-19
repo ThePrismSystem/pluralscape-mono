@@ -127,13 +127,6 @@ export function testBlobT2(
 export const MS_PER_DAY = 86_400_000;
 export const TTL_RETENTION_DAYS = 30;
 
-/** Generate CREATE TABLE DDL + all CREATE INDEX statements as a single semicolon-separated string. */
-function ddlWithIndexes(table: PgTable): string {
-  const create = pgTableToCreateDDL(table);
-  const indexes = pgTableToIndexDDL(table);
-  return [create, ...indexes].join(";\n");
-}
-
 /** Generate only CREATE INDEX statements as a single semicolon-separated string. */
 function indexDDL(table: PgTable): string {
   return pgTableToIndexDDL(table).join(";\n");
@@ -141,8 +134,10 @@ function indexDDL(table: PgTable): string {
 
 export const PG_DDL = {
   // --- Auth ---
-  accounts: ddlWithIndexes(accounts),
-  authKeys: ddlWithIndexes(authKeys),
+  accounts: pgTableToCreateDDL(accounts),
+  accountsIndexes: indexDDL(accounts),
+  authKeys: pgTableToCreateDDL(authKeys),
+  authKeysIndexes: indexDDL(authKeys),
   sessions: pgTableToCreateDDL(sessions),
   sessionsIndexes: indexDDL(sessions),
   recoveryKeys: pgTableToCreateDDL(recoveryKeys),
@@ -207,8 +202,10 @@ export const PG_DDL = {
   fieldBucketVisibility: pgTableToCreateDDL(fieldBucketVisibility),
   fieldBucketVisibilityIndexes: indexDDL(fieldBucketVisibility),
   // --- Settings ---
-  nomenclatureSettings: ddlWithIndexes(nomenclatureSettings),
-  systemSettings: ddlWithIndexes(systemSettings),
+  nomenclatureSettings: pgTableToCreateDDL(nomenclatureSettings),
+  nomenclatureSettingsIndexes: indexDDL(nomenclatureSettings),
+  systemSettings: pgTableToCreateDDL(systemSettings),
+  systemSettingsIndexes: indexDDL(systemSettings),
   // --- API Keys & Audit ---
   apiKeys: pgTableToCreateDDL(apiKeys),
   apiKeysIndexes: indexDDL(apiKeys),
@@ -250,7 +247,8 @@ export const PG_DDL = {
   innerworldRegionsIndexes: indexDDL(innerworldRegions),
   innerworldEntities: pgTableToCreateDDL(innerworldEntities),
   innerworldEntitiesIndexes: indexDDL(innerworldEntities),
-  innerworldCanvas: ddlWithIndexes(innerworldCanvas),
+  innerworldCanvas: pgTableToCreateDDL(innerworldCanvas),
+  innerworldCanvasIndexes: indexDDL(innerworldCanvas),
   // --- PK Bridge ---
   pkBridgeConfigs: pgTableToCreateDDL(pkBridgeConfigs),
   pkBridgeConfigsIndexes: indexDDL(pkBridgeConfigs),
@@ -344,6 +342,7 @@ export async function pgExec(client: PGlite, sql: string): Promise<void> {
 
 async function createPgBaseTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.accounts);
+  await pgExec(client, PG_DDL.accountsIndexes);
   await pgExec(client, PG_DDL.systems);
   await pgExec(client, PG_DDL.systemsIndexes);
 }
@@ -384,7 +383,9 @@ export async function pgInsertSystem(
 
 export async function createPgAuthTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.accounts);
+  await pgExec(client, PG_DDL.accountsIndexes);
   await pgExec(client, PG_DDL.authKeys);
+  await pgExec(client, PG_DDL.authKeysIndexes);
   await pgExec(client, PG_DDL.sessions);
   await pgExec(client, PG_DDL.sessionsIndexes);
   await pgExec(client, PG_DDL.recoveryKeys);
@@ -478,11 +479,13 @@ export async function createPgCustomFieldsTables(client: PGlite): Promise<void> 
 export async function createPgNomenclatureSettingsTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.nomenclatureSettings);
+  await pgExec(client, PG_DDL.nomenclatureSettingsIndexes);
 }
 
 export async function createPgSystemSettingsTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.systemSettings);
+  await pgExec(client, PG_DDL.systemSettingsIndexes);
 }
 
 export async function createPgApiKeysTables(client: PGlite): Promise<void> {
@@ -624,6 +627,7 @@ export async function createPgInnerworldTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.innerworldEntities);
   await pgExec(client, PG_DDL.innerworldEntitiesIndexes);
   await pgExec(client, PG_DDL.innerworldCanvas);
+  await pgExec(client, PG_DDL.innerworldCanvasIndexes);
 }
 
 export async function createPgPkBridgeTables(client: PGlite): Promise<void> {
@@ -733,7 +737,9 @@ export async function createPgKeyRotationTables(client: PGlite): Promise<void> {
 export async function createPgAllTables(client: PGlite): Promise<void> {
   // Base tables
   await pgExec(client, PG_DDL.accounts);
+  await pgExec(client, PG_DDL.accountsIndexes);
   await pgExec(client, PG_DDL.authKeys);
+  await pgExec(client, PG_DDL.authKeysIndexes);
   await pgExec(client, PG_DDL.sessions);
   await pgExec(client, PG_DDL.sessionsIndexes);
   await pgExec(client, PG_DDL.recoveryKeys);
@@ -801,7 +807,9 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.fieldBucketVisibilityIndexes);
   // Settings
   await pgExec(client, PG_DDL.nomenclatureSettings);
+  await pgExec(client, PG_DDL.nomenclatureSettingsIndexes);
   await pgExec(client, PG_DDL.systemSettings);
+  await pgExec(client, PG_DDL.systemSettingsIndexes);
   // API keys, audit log
   await pgExec(client, PG_DDL.apiKeys);
   await pgExec(client, PG_DDL.apiKeysIndexes);
@@ -843,6 +851,7 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.innerworldEntities);
   await pgExec(client, PG_DDL.innerworldEntitiesIndexes);
   await pgExec(client, PG_DDL.innerworldCanvas);
+  await pgExec(client, PG_DDL.innerworldCanvasIndexes);
   // PK bridge
   await pgExec(client, PG_DDL.pkBridgeConfigs);
   await pgExec(client, PG_DDL.pkBridgeConfigsIndexes);

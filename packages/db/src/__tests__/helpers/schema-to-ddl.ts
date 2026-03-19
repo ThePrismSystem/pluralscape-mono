@@ -23,9 +23,8 @@ function renderSQL(sqlObj: SQL): string {
 function escapeDefault(value: unknown): string {
   if (value === null || value === undefined) return "NULL";
   if (typeof value === "number" || typeof value === "boolean") return String(value);
-  // value is a string at this point (number/boolean handled above)
-  const str = typeof value === "string" ? value : JSON.stringify(value);
-  return `'${str}'`;
+  if (typeof value === "string") return `'${value}'`;
+  return `'${JSON.stringify(value)}'`;
 }
 
 /** Extract the Drizzle table name from a FK reference's foreignTable. */

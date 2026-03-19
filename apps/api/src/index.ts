@@ -60,9 +60,12 @@ app.route("/v1", v1Routes);
  */
 export async function shutdown(server: { stop(): Promise<void> | void } | null): Promise<void> {
   logger.info("Shutting down");
-  if (server) await server.stop();
-  const raw = getRawClient();
-  if (raw) await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
+  try {
+    if (server) await server.stop();
+  } finally {
+    const raw = getRawClient();
+    if (raw) await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
+  }
 }
 
 async function start(): Promise<void> {
@@ -113,7 +116,10 @@ async function start(): Promise<void> {
     logger.info("Pluralscape API listening", { port });
   }
 
+  let shuttingDown = false;
   const handleShutdown = (): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     shutdown(httpServer)
       .then(() => process.exit(0))
       .catch((err: unknown) => {

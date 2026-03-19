@@ -41,7 +41,7 @@ export function getRawClient(): Closeable | null {
 /** Set the DB client directly (for testing). */
 export function setDbForTesting(db: PostgresJsDatabase, rawClient?: Closeable): void {
   cachedDb = db;
-  if (rawClient !== undefined) cachedRawClient = rawClient;
+  cachedRawClient = rawClient ?? null;
 }
 
 /** Reset the DB cache (for testing). */

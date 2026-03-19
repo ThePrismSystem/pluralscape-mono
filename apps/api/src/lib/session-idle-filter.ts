@@ -28,8 +28,12 @@ export function buildIdleTimeoutFilter(currentTimeMs: number): SQL {
   conditions.push(isNull(sessions.lastActive));
   conditions.push(isNull(sessions.expiresAt));
 
+  // Shared SQL expression: TTL in milliseconds derived from (expiresAt - createdAt).
+  // Cast to bigint before multiplying to avoid float equality issues.
+  const ttlDurationExpr = sql`EXTRACT(EPOCH FROM (${sessions.expiresAt} - ${sessions.createdAt}))::bigint * 1000`;
+
   for (const config of Object.values(SESSION_TIMEOUTS)) {
-    const ttlMatchExpr = sql`EXTRACT(EPOCH FROM (${sessions.expiresAt} - ${sessions.createdAt})) * 1000 = ${config.absoluteTtlMs}`;
+    const ttlMatchExpr = sql`${ttlDurationExpr} = ${config.absoluteTtlMs}`;
 
     if (config.idleTimeoutMs === null) {
       // No idle timeout for this session type — match by absoluteTtl
@@ -49,7 +53,7 @@ export function buildIdleTimeoutFilter(currentTimeMs: number): SQL {
   const knownTtls = Object.values(SESSION_TIMEOUTS).map((c) => c.absoluteTtlMs);
   const unknownTtlCondition = and(
     not(isNull(sessions.expiresAt)),
-    sql`EXTRACT(EPOCH FROM (${sessions.expiresAt} - ${sessions.createdAt})) * 1000 NOT IN (${sql.join(
+    sql`${ttlDurationExpr} NOT IN (${sql.join(
       knownTtls.map((t) => sql`${t}`),
       sql`, `,
     )})`,

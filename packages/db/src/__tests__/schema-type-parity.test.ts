@@ -881,11 +881,7 @@ const KNOWN_FK_DIVERGENCES: Record<string, [number, number]> = {
   journalEntries: [1, 2],
 };
 
-/**
- * Build parallel arrays of {name, pgIndexNames, sqliteIndexNames, pgFkCount, sqliteFkCount, pgCheckCount, sqliteCheckCount}
- * at module level so that test iterations can reference them without runtime casts.
- */
-function buildStructuralPairs(): Array<{
+interface StructuralPair {
   name: string;
   pgIndexNames: string[];
   sqliteIndexNames: string[];
@@ -893,16 +889,14 @@ function buildStructuralPairs(): Array<{
   sqliteFkCount: number;
   pgCheckCount: number;
   sqliteCheckCount: number;
-}> {
-  const results: Array<{
-    name: string;
-    pgIndexNames: string[];
-    sqliteIndexNames: string[];
-    pgFkCount: number;
-    sqliteFkCount: number;
-    pgCheckCount: number;
-    sqliteCheckCount: number;
-  }> = [];
+}
+
+/**
+ * Build parallel arrays of StructuralPair
+ * at module level so that test iterations can reference them without runtime casts.
+ */
+function buildStructuralPairs(): StructuralPair[] {
+  const results: StructuralPair[] = [];
 
   for (const { name } of TABLE_PAIRS) {
     // Access the table objects directly from the namespace imports
