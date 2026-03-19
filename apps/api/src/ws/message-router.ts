@@ -27,7 +27,13 @@ import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
-import type { ServerMessage, SyncError } from "@pluralscape/sync";
+import type {
+  ServerMessage,
+  SubmitChangeRequest,
+  SubmitSnapshotRequest,
+  SyncError,
+} from "@pluralscape/sync";
+import type { ZodError } from "zod";
 
 // ── Singleton relay (Phase 1: in-memory) ────────────────────────────
 
@@ -90,6 +96,27 @@ function sendErrorAndClose(
   } catch {
     // Already closed
   }
+}
+
+/** Send a validation error for a specific message type. */
+function sendValidationError(
+  state: SyncConnectionState,
+  messageType: string,
+  zodError: ZodError,
+  log: AppLogger,
+): void {
+  const detail = zodError.issues[0]?.message ?? "Validation failed";
+  send(
+    state,
+    {
+      type: "SyncError",
+      correlationId: null,
+      code: "MALFORMED_MESSAGE",
+      message: `Invalid ${messageType}: ${detail}`,
+      docId: null,
+    },
+    log,
+  );
 }
 
 // ── Rate limiting ───────────────────────────────────────────────────
@@ -225,7 +252,7 @@ export async function routeMessage(
       return;
     }
 
-    const authResult = await handleAuthenticate(result.data as never, state, manager);
+    const authResult = await handleAuthenticate(result.data, state, manager);
     if (authResult.ok) {
       send(state, authResult.response, log);
       log.info("WebSocket authenticated", {
@@ -270,8 +297,8 @@ export async function routeMessage(
     return;
   }
 
-  // 5. Rate limit check
-  const isMutation = MUTATION_MESSAGE_TYPES.has(messageType);
+  // 5. Rate limit check (safe cast: Object.hasOwn guard proves messageType is a valid key)
+  const isMutation = MUTATION_MESSAGE_TYPES.has(messageType as ClientMessageType);
   if (!checkRateLimit(state, isMutation)) {
     send(
       state,
@@ -287,43 +314,34 @@ export async function routeMessage(
     return;
   }
 
-  // 6. Validate schema
-  const typedKey = messageType as ClientMessageType;
-  const schema = CLIENT_MESSAGE_SCHEMAS[typedKey];
-  const result = schema.safeParse(parsed);
-  if (!result.success) {
-    const detail = result.error.issues[0]?.message ?? "Validation failed";
-    send(
-      state,
-      {
-        type: "SyncError",
-        correlationId: null,
-        code: "MALFORMED_MESSAGE",
-        message: `Invalid ${messageType}: ${detail}`,
-        docId: null,
-      },
-      log,
-    );
-    return;
-  }
-
-  // 7. Dispatch to handler
-  const validated = result.data;
-  switch (typedKey) {
+  // 6. Validate and dispatch — each branch validates with its specific schema,
+  // giving TypeScript perfect type inference without `as never` casts.
+  // Safe cast: Object.hasOwn guard above proves messageType is a valid key.
+  const typedMessageType = messageType as ClientMessageType;
+  switch (typedMessageType) {
     case "ManifestRequest": {
-      const response = handleManifestRequest(validated as never);
+      const result = CLIENT_MESSAGE_SCHEMAS.ManifestRequest.safeParse(parsed);
+      if (!result.success) {
+        sendValidationError(state, messageType, result.error, log);
+        return;
+      }
+      const response = handleManifestRequest(result.data);
       send(state, response, log);
       break;
     }
     case "SubscribeRequest": {
-      const msg = validated as { documents: ReadonlyArray<{ docId: string }> };
-      for (const entry of msg.documents) {
+      const result = CLIENT_MESSAGE_SCHEMAS.SubscribeRequest.safeParse(parsed);
+      if (!result.success) {
+        sendValidationError(state, messageType, result.error, log);
+        return;
+      }
+      for (const entry of result.data.documents) {
         if (!checkDocumentAccess(entry.docId, state.systemId ?? "")) {
           send(
             state,
             {
               type: "SyncError",
-              correlationId: (validated as { correlationId: string | null }).correlationId,
+              correlationId: result.data.correlationId,
               code: "PERMISSION_DENIED",
               message: "Access denied",
               docId: entry.docId,
@@ -333,60 +351,75 @@ export async function routeMessage(
           return;
         }
       }
-      const response = handleSubscribeRequest(validated as never, state, manager, relay);
+      const response = handleSubscribeRequest(result.data, state, manager, relay);
       send(state, response, log);
       break;
     }
     case "UnsubscribeRequest": {
-      handleUnsubscribeRequest(validated as never, state, manager);
+      const result = CLIENT_MESSAGE_SCHEMAS.UnsubscribeRequest.safeParse(parsed);
+      if (!result.success) {
+        sendValidationError(state, messageType, result.error, log);
+        return;
+      }
+      handleUnsubscribeRequest(result.data, state, manager);
       break;
     }
     case "FetchSnapshotRequest": {
-      const msg = validated as { docId: string; correlationId: string | null };
-      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+      const result = CLIENT_MESSAGE_SCHEMAS.FetchSnapshotRequest.safeParse(parsed);
+      if (!result.success) {
+        sendValidationError(state, messageType, result.error, log);
+        return;
+      }
+      if (!checkDocumentAccess(result.data.docId, state.systemId ?? "")) {
         send(
           state,
           {
             type: "SyncError",
-            correlationId: msg.correlationId,
+            correlationId: result.data.correlationId,
             code: "PERMISSION_DENIED",
             message: "Access denied",
-            docId: msg.docId,
+            docId: result.data.docId,
           },
           log,
         );
         return;
       }
-      const response = handleFetchSnapshot(validated as never, relay);
+      const response = handleFetchSnapshot(result.data, relay);
       send(state, response, log);
       break;
     }
     case "FetchChangesRequest": {
-      const msg = validated as { docId: string; correlationId: string | null };
-      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+      const result = CLIENT_MESSAGE_SCHEMAS.FetchChangesRequest.safeParse(parsed);
+      if (!result.success) {
+        sendValidationError(state, messageType, result.error, log);
+        return;
+      }
+      if (!checkDocumentAccess(result.data.docId, state.systemId ?? "")) {
         send(
           state,
           {
             type: "SyncError",
-            correlationId: msg.correlationId,
+            correlationId: result.data.correlationId,
             code: "PERMISSION_DENIED",
             message: "Access denied",
-            docId: msg.docId,
+            docId: result.data.docId,
           },
           log,
         );
         return;
       }
-      const response = handleFetchChanges(validated as never, relay);
+      const response = handleFetchChanges(result.data, relay);
       send(state, response, log);
       break;
     }
     case "SubmitChangeRequest": {
-      const msg = validated as {
-        docId: string;
-        correlationId: string | null;
-        change: Record<string, unknown>;
-      };
+      const result = CLIENT_MESSAGE_SCHEMAS.SubmitChangeRequest.safeParse(parsed);
+      if (!result.success) {
+        sendValidationError(state, messageType, result.error, log);
+        return;
+      }
+      // Boundary cast: Zod outputs plain Uint8Array, protocol types use branded crypto types
+      const msg = result.data as SubmitChangeRequest;
       if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
         send(
           state,
@@ -401,7 +434,7 @@ export async function routeMessage(
         );
         return;
       }
-      const response = handleSubmitChange(validated as never, relay);
+      const response = handleSubmitChange(msg, relay);
       send(state, response, log);
       documentOwnership.set(msg.docId, state.systemId ?? "");
 
@@ -411,7 +444,7 @@ export async function routeMessage(
           type: "DocumentUpdate",
           correlationId: null,
           docId: msg.docId,
-          changes: [{ ...msg.change, documentId: msg.docId, seq: response.assignedSeq } as never],
+          changes: [{ ...msg.change, documentId: msg.docId, seq: response.assignedSeq }],
         },
         state.connectionId,
         manager,
@@ -420,7 +453,13 @@ export async function routeMessage(
       break;
     }
     case "SubmitSnapshotRequest": {
-      const msg = validated as { docId: string; correlationId: string | null };
+      const result = CLIENT_MESSAGE_SCHEMAS.SubmitSnapshotRequest.safeParse(parsed);
+      if (!result.success) {
+        sendValidationError(state, messageType, result.error, log);
+        return;
+      }
+      // Boundary cast: Zod outputs plain Uint8Array, protocol types use branded crypto types
+      const msg = result.data as SubmitSnapshotRequest;
       if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
         send(
           state,
@@ -435,28 +474,32 @@ export async function routeMessage(
         );
         return;
       }
-      const response = handleSubmitSnapshot(validated as never, relay);
+      const response = handleSubmitSnapshot(msg, relay);
       send(state, response, log);
       documentOwnership.set(msg.docId, state.systemId ?? "");
       break;
     }
     case "DocumentLoadRequest": {
-      const msg = validated as { docId: string; correlationId: string | null };
-      if (!checkDocumentAccess(msg.docId, state.systemId ?? "")) {
+      const result = CLIENT_MESSAGE_SCHEMAS.DocumentLoadRequest.safeParse(parsed);
+      if (!result.success) {
+        sendValidationError(state, messageType, result.error, log);
+        return;
+      }
+      if (!checkDocumentAccess(result.data.docId, state.systemId ?? "")) {
         send(
           state,
           {
             type: "SyncError",
-            correlationId: msg.correlationId,
+            correlationId: result.data.correlationId,
             code: "PERMISSION_DENIED",
             message: "Access denied",
-            docId: msg.docId,
+            docId: result.data.docId,
           },
           log,
         );
         return;
       }
-      const [snapshotResp, changesResp] = handleDocumentLoad(validated as never, relay);
+      const [snapshotResp, changesResp] = handleDocumentLoad(result.data, relay);
       send(state, snapshotResp, log);
       send(state, changesResp, log);
       break;
@@ -467,7 +510,7 @@ export async function routeMessage(
     }
     default: {
       // Compile-time enforcement: all ClientMessageType values handled
-      const _exhaustive: never = typedKey;
+      const _exhaustive: never = typedMessageType;
       void _exhaustive;
     }
   }

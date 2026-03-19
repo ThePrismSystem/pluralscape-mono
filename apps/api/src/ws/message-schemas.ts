@@ -125,7 +125,7 @@ export const CLIENT_MESSAGE_SCHEMAS = {
 export type ClientMessageType = keyof typeof CLIENT_MESSAGE_SCHEMAS;
 
 /** Set of mutation message types (subject to mutation rate limiting). */
-export const MUTATION_MESSAGE_TYPES: ReadonlySet<string> = new Set([
+export const MUTATION_MESSAGE_TYPES: ReadonlySet<ClientMessageType> = new Set<ClientMessageType>([
   "SubmitChangeRequest",
   "SubmitSnapshotRequest",
 ]);

@@ -6,6 +6,7 @@ import { WS_CLOSE_POLICY_VIOLATION, WS_MAX_CONNECTIONS_PER_ACCOUNT } from "./ws.
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type { AuthenticateRequest, AuthenticateResponse, SyncError } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
 
 /** Result of handling an AuthenticateRequest. */
 export type AuthResult =
@@ -67,7 +68,7 @@ export async function handleAuthenticate(
   }
 
   // 4. System ownership check (owner profiles only)
-  if (message.profileType !== "friend" && !auth.ownedSystemIds.has(message.systemId as never)) {
+  if (message.profileType !== "friend" && !auth.ownedSystemIds.has(message.systemId as SystemId)) {
     return {
       ok: false,
       error: {

@@ -48,5 +48,5 @@ export const VALKEY_CHANNEL_PREFIX_REVOKE = "ps:revoke:";
 /** WebSocket close code 1001: server is going away (shutdown). */
 export const WS_CLOSE_GOING_AWAY = 1001;
 
-/** WebSocket close code for policy violations (session revoked, etc.). */
-export const WS_CLOSE_POLICY_VIOLATION = 4001;
+/** WebSocket close code 1008: policy violation (RFC 6455). */
+export const WS_CLOSE_POLICY_VIOLATION = 1008;
