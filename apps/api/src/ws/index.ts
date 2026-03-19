@@ -16,6 +16,7 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 
 import { upgradeWebSocket, websocket } from "./bun-adapter.js";
 import { ConnectionManager } from "./connection-manager.js";
+import { routeMessage } from "./message-router.js";
 import {
   WS_AUTH_TIMEOUT_MS,
   WS_CLOSE_POLICY_VIOLATION,
@@ -112,9 +113,17 @@ syncWsApp.get(
         });
       },
 
-      onMessage() {
-        // Message routing implemented in Task 4 (api-bvtm)
-        log.debug("WebSocket message received", { connectionId });
+      onMessage(evt) {
+        const state = connectionManager.get(connectionId);
+        if (!state) return;
+
+        // V1 protocol is text-framed JSON — reject binary frames
+        if (typeof evt.data !== "string") {
+          log.warn("WebSocket received non-string message", { connectionId });
+          return;
+        }
+
+        void routeMessage(evt.data, state, connectionManager, log);
       },
 
       onClose() {

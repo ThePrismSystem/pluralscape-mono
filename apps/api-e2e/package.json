@@ -11,6 +11,7 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@pluralscape/crypto": "workspace:*",
+    "@pluralscape/sync": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@pluralscape/types": "workspace:*",
     "@types/node": "^22.0.0",
