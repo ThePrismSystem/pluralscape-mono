@@ -6,6 +6,7 @@ import { bodyLimit } from "hono/body-limit";
 
 import { HTTP_CONTENT_TOO_LARGE } from "./http.constants.js";
 import { ApiHttpError } from "./lib/api-error.js";
+import { getRawClient } from "./lib/db.js";
 import { logger } from "./lib/logger.js";
 import { initStorageAdapter } from "./lib/storage.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
@@ -18,7 +19,7 @@ import { createValkeyStore } from "./middleware/stores/valkey-store.js";
 import { accountRoutes } from "./routes/account/index.js";
 import { authRoutes } from "./routes/auth/index.js";
 import { systemRoutes } from "./routes/systems/index.js";
-import { DEFAULT_PORT } from "./server.constants.js";
+import { DEFAULT_PORT, SHUTDOWN_TIMEOUT_SECONDS } from "./server.constants.js";
 
 const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
 
@@ -93,12 +94,25 @@ async function start(): Promise<void> {
   }
 
   if (typeof Bun !== "undefined") {
-    Bun.serve({
+    const server = Bun.serve({
       port,
       fetch: app.fetch,
     });
 
     logger.info("Pluralscape API listening", { port });
+
+    async function shutdown(): Promise<void> {
+      logger.info("Shutting down");
+      await server.stop();
+      const raw = getRawClient();
+      if (raw) {
+        await raw.end({ timeout: SHUTDOWN_TIMEOUT_SECONDS });
+      }
+      process.exit(0);
+    }
+
+    process.on("SIGTERM", () => void shutdown());
+    process.on("SIGINT", () => void shutdown());
   }
 }
 
