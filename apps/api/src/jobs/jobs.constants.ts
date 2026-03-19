@@ -3,8 +3,7 @@
  * Domain: background job handlers.
  */
 
-/** Number of milliseconds in one day. */
-const MS_PER_DAY = 86_400_000;
+import { MS_PER_DAY } from "@pluralscape/types";
 
 /**
  * Grace period before archived blob S3 objects are permanently deleted.

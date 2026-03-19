@@ -381,6 +381,48 @@ describe("deleteGroup", () => {
       }),
     );
   });
+
+  it("runs dependent checks in parallel via Promise.all", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([{ id: GROUP_ID }]);
+
+    // Use manually-controlled deferred promises. If the implementation dispatches
+    // queries sequentially, it will block on the first unresolved promise and never
+    // reach the second .where() call. With Promise.all, both .where() calls happen
+    // synchronously before either promise resolves.
+    let resolve1!: (v: { count: number }[]) => void;
+    let resolve2!: (v: { count: number }[]) => void;
+
+    chain.where
+      .mockReturnValueOnce(chain) // existence → .limit()
+      .mockReturnValueOnce(
+        new Promise<{ count: number }[]>((r) => {
+          resolve1 = r;
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise<{ count: number }[]>((r) => {
+          resolve2 = r;
+        }),
+      );
+
+    // Start deleteGroup without awaiting — sequential impl would deadlock here
+    const done = deleteGroup(db, SYSTEM_ID, GROUP_ID, AUTH, mockAudit);
+
+    // Flush microtasks so existence check resolves and dependent queries dispatch
+    await new Promise<void>((r) => {
+      queueMicrotask(r);
+    });
+
+    // Both dependent-check .where() calls dispatched before either resolved
+    expect(chain.where).toHaveBeenCalledTimes(3); // 1 existence + 2 dependents
+
+    resolve1([{ count: 0 }]);
+    resolve2([{ count: 0 }]);
+    await done;
+
+    expect(chain.select).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("moveGroup", () => {
