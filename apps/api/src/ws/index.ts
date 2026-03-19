@@ -15,49 +15,33 @@ import { accessLogMiddleware } from "../middleware/access-log.js";
 import { requestIdMiddleware } from "../middleware/request-id.js";
 
 import { upgradeWebSocket, websocket } from "./bun-adapter.js";
-import { WS_AUTH_TIMEOUT_MS, WS_CLOSE_POLICY_VIOLATION, WS_SUBPROTOCOL } from "./ws.constants.js";
+import { ConnectionManager } from "./connection-manager.js";
+import {
+  WS_AUTH_TIMEOUT_MS,
+  WS_CLOSE_POLICY_VIOLATION,
+  WS_MAX_UNAUTHED_CONNECTIONS,
+  WS_SUBPROTOCOL,
+} from "./ws.constants.js";
 
-import type { WSContext } from "hono/ws";
+// ── Singleton connection manager ────────────────────────────────────
 
-// ── Connection registry (populated by Task 2: ConnectionManager) ────
-// For now, a minimal map to track connections for shutdown cleanup.
-
-interface MinimalConnectionEntry {
-  readonly connectionId: string;
-  readonly ws: WSContext;
-  authTimeoutHandle: ReturnType<typeof setTimeout> | null;
-  authenticated: boolean;
-}
-
-const connections = new Map<string, MinimalConnectionEntry>();
+export const connectionManager = new ConnectionManager();
 
 // ── Public API for shutdown ─────────────────────────────────────────
 
 /** Close all active WebSocket connections (used during server shutdown). */
 export function closeAllConnections(code: number, reason: string): void {
-  for (const entry of connections.values()) {
-    if (entry.authTimeoutHandle !== null) {
-      clearTimeout(entry.authTimeoutHandle);
-      entry.authTimeoutHandle = null;
-    }
-    try {
-      entry.ws.close(code, reason);
-    } catch {
-      // Connection may already be dead
-    }
-  }
-  connections.clear();
+  connectionManager.closeAll(code, reason);
 }
 
 /** Number of active WebSocket connections. */
 export function getActiveConnectionCount(): number {
-  return connections.size;
+  return connectionManager.activeCount;
 }
 
 // ── Allowed origins ─────────────────────────────────────────────────
 
 function isAllowedOrigin(origin: string | undefined): boolean {
-  // In development/test, allow all origins
   if (process.env["NODE_ENV"] === "test" || process.env["NODE_ENV"] === "development") {
     return true;
   }
@@ -93,15 +77,26 @@ syncWsApp.get(
       };
     }
 
+    // Pre-upgrade: reject if unauthenticated connection cap reached
+    if (!connectionManager.canAcceptUnauthenticated(WS_MAX_UNAUTHED_CONNECTIONS)) {
+      log.warn("WebSocket upgrade rejected: unauthenticated connection limit reached");
+      return {
+        onOpen(_, ws) {
+          ws.close(WS_CLOSE_POLICY_VIOLATION, "Too many pending connections");
+        },
+      };
+    }
+
     const connectionId = uuidv7();
     log.info("WebSocket upgrade accepted", { connectionId });
 
     return {
       onOpen(_, ws) {
-        // Set auth timeout — connection must authenticate within WS_AUTH_TIMEOUT_MS
-        const authTimeout = setTimeout(() => {
-          const entry = connections.get(connectionId);
-          if (entry) {
+        const state = connectionManager.register(connectionId, ws, Date.now());
+
+        // Auth timeout — connection must authenticate within WS_AUTH_TIMEOUT_MS
+        state.authTimeoutHandle = setTimeout(() => {
+          if (connectionManager.get(connectionId)) {
             log.warn("WebSocket auth timeout", { connectionId });
             try {
               ws.close(WS_CLOSE_POLICY_VIOLATION, "Authentication timeout");
@@ -111,16 +106,9 @@ syncWsApp.get(
           }
         }, WS_AUTH_TIMEOUT_MS);
 
-        connections.set(connectionId, {
-          connectionId,
-          ws,
-          authTimeoutHandle: authTimeout,
-          authenticated: false,
-        });
-
         log.debug("WebSocket connection opened", {
           connectionId,
-          activeConnections: connections.size,
+          activeConnections: connectionManager.activeCount,
         });
       },
 
@@ -130,15 +118,10 @@ syncWsApp.get(
       },
 
       onClose() {
-        const entry = connections.get(connectionId);
-        if (entry?.authTimeoutHandle !== null && entry?.authTimeoutHandle !== undefined) {
-          clearTimeout(entry.authTimeoutHandle);
-        }
-        connections.delete(connectionId);
-
+        connectionManager.remove(connectionId);
         log.debug("WebSocket connection closed", {
           connectionId,
-          activeConnections: connections.size,
+          activeConnections: connectionManager.activeCount,
         });
       },
 
