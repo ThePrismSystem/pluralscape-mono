@@ -43,8 +43,7 @@ CREATE INDEX IF NOT EXISTS sync_offline_queue_unsynced_idx
   ON sync_offline_queue (synced_at) WHERE synced_at IS NULL`;
 
 function toUint8Array(buf: Uint8Array): Uint8Array {
-  if (buf instanceof Uint8Array && buf.constructor === Uint8Array) return buf;
-  return new Uint8Array(buf);
+  return buf.constructor === Uint8Array ? buf : new Uint8Array(buf);
 }
 
 function rowToEntry(row: QueueRow): OfflineQueueEntry {
@@ -64,20 +63,9 @@ function rowToEntry(row: QueueRow): OfflineQueueEntry {
   };
 }
 
-/** Base-36 radix for compact alphanumeric encoding of IDs. */
-const BASE36_RADIX = 36;
-
-/** Start index for slicing random string (skip "0."). */
-const RANDOM_SLICE_START = 2;
-
-/** End index for slicing random string. */
-const RANDOM_SLICE_END = 10;
-
-/** Generates a simple unique ID for queue entries. */
+/** Generates a unique ID for queue entries using crypto.randomUUID(). */
 function generateId(): string {
-  const timestamp = Date.now().toString(BASE36_RADIX);
-  const random = Math.random().toString(BASE36_RADIX).slice(RANDOM_SLICE_START, RANDOM_SLICE_END);
-  return `oq_${timestamp}_${random}`;
+  return `oq_${crypto.randomUUID()}`;
 }
 
 /** Cached prepared statements for all SQLite operations. */
@@ -149,9 +137,12 @@ export class SqliteOfflineQueueAdapter implements OfflineQueueAdapter {
   }
 
   deleteConfirmed(cutoffMs: number): Promise<number> {
-    this.stmts.deleteConfirmed.run(cutoffMs);
-    const result = this.stmts.countDeleted.get();
-    return Promise.resolve(result?.cnt ?? 0);
+    const count = this.driver.transaction(() => {
+      this.stmts.deleteConfirmed.run(cutoffMs);
+      const result = this.stmts.countDeleted.get();
+      return result?.cnt ?? 0;
+    });
+    return Promise.resolve(count);
   }
 
   close(): void {

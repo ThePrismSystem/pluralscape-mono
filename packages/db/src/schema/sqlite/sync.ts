@@ -10,6 +10,16 @@ import { systems } from "./systems.js";
 import type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+/** Conflict resolution strategies — mirrors @pluralscape/sync ConflictResolutionStrategy to avoid circular dep. */
+type ConflictResolutionStrategy =
+  | "lww-field"
+  | "append-both"
+  | "add-wins"
+  | "post-merge-cycle"
+  | "post-merge-sort-normalize"
+  | "post-merge-checkin-normalize"
+  | "post-merge-friend-status";
+
 export const syncDocuments = sqliteTable(
   "sync_documents",
   {
@@ -86,7 +96,7 @@ export const syncConflicts = sqliteTable(
     entityType: text("entity_type").notNull(),
     entityId: text("entity_id").notNull(),
     fieldName: text("field_name"),
-    resolution: text("resolution").notNull(),
+    resolution: text("resolution").notNull().$type<ConflictResolutionStrategy>(),
     detectedAt: sqliteTimestamp("detected_at").notNull(),
     summary: text("summary").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),

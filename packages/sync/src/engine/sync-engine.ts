@@ -65,6 +65,11 @@ export class SyncEngine {
   private readonly conflictPersistenceAdapter?: ConflictPersistenceAdapter;
   private readonly offlineQueueAdapter?: OfflineQueueAdapter;
   private readonly postMergeValidator = new PostMergeValidator();
+  private readonly offlineQueueManager?: OfflineQueueManager;
+  private failedConflictPersistence: Array<{
+    documentId: string;
+    notifications: readonly ConflictNotification[];
+  }> = [];
 
   constructor(config: SyncEngineConfig) {
     this.networkAdapter = config.networkAdapter;
@@ -77,6 +82,15 @@ export class SyncEngine {
     this.onConflict = config.onConflict;
     this.conflictPersistenceAdapter = config.conflictPersistenceAdapter;
     this.offlineQueueAdapter = config.offlineQueueAdapter;
+
+    if (config.offlineQueueAdapter) {
+      this.offlineQueueManager = new OfflineQueueManager({
+        offlineQueueAdapter: config.offlineQueueAdapter,
+        networkAdapter: config.networkAdapter,
+        storageAdapter: config.storageAdapter,
+        onError: config.onError,
+      });
+    }
   }
 
   // ── Bootstrap ───────────────────────────────────────────────────────
@@ -137,17 +151,27 @@ export class SyncEngine {
    * Called automatically at end of bootstrap and can be called manually.
    */
   async replayOfflineQueue(): Promise<void> {
-    if (!this.offlineQueueAdapter) return;
-
-    const manager = new OfflineQueueManager({
-      offlineQueueAdapter: this.offlineQueueAdapter,
-      networkAdapter: this.networkAdapter,
-      storageAdapter: this.storageAdapter,
-      onError: this.onError,
-    });
+    if (!this.offlineQueueManager) return;
 
     try {
-      await manager.replay();
+      const result = await this.offlineQueueManager.replay();
+
+      // Load newly-persisted changes into in-memory sessions
+      if (result.replayed > 0) {
+        for (const [docId, session] of this.sessions) {
+          const changes = await this.storageAdapter.loadChangesSince(docId, session.lastSyncedSeq);
+          if (changes.length > 0) {
+            session.applyEncryptedChanges(changes);
+          }
+        }
+      }
+
+      if (result.failed > 0) {
+        this.onError(
+          `Offline queue replay completed with failures: ${String(result.failed)} failed, ${String(result.skipped)} skipped`,
+          null,
+        );
+      }
     } catch (error) {
       this.onError("Offline queue replay failed", error);
     }
@@ -243,8 +267,8 @@ export class SyncEngine {
     for (const sub of this.subscriptions) {
       try {
         sub.unsubscribe();
-      } catch {
-        // Best-effort cleanup
+      } catch (error) {
+        this.onError("Failed to unsubscribe during dispose", error);
       }
     }
     this.subscriptions.length = 0;
@@ -253,13 +277,13 @@ export class SyncEngine {
     this.documentQueues.clear();
     try {
       (this.networkAdapter as { close?(): void }).close?.();
-    } catch {
-      /* best-effort */
+    } catch (error) {
+      this.onError("Failed to close network adapter during dispose", error);
     }
     try {
       (this.storageAdapter as { close?(): void }).close?.();
-    } catch {
-      /* best-effort */
+    } catch (error) {
+      this.onError("Failed to close storage adapter during dispose", error);
     }
   }
 
@@ -300,7 +324,7 @@ export class SyncEngine {
     session.applyEncryptedChanges(newChanges);
 
     // Run post-merge validation to correct merge artifacts
-    this.runPostMergeValidation(session);
+    await this.runPostMergeValidation(docId, session);
 
     // THEN persist (if this fails, data is still correct in memory; server will re-send)
     await this.persistChanges(docId, newChanges);
@@ -370,7 +394,7 @@ export class SyncEngine {
       session.applyEncryptedChanges(changes);
 
       // Run post-merge validation to correct merge artifacts
-      this.runPostMergeValidation(session);
+      await this.runPostMergeValidation(docId, session);
 
       await this.persistChanges(docId, changes);
     }
@@ -384,11 +408,21 @@ export class SyncEngine {
     });
   }
 
-  private runPostMergeValidation(session: EncryptedSyncSession<unknown>): void {
+  private async runPostMergeValidation(
+    docId: string,
+    session: EncryptedSyncSession<unknown>,
+  ): Promise<void> {
+    const notifications: ConflictNotification[] = [];
+    const now = Date.now();
+    let correctionEnvelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[] = [];
+
+    // Run each validator independently so partial failures don't block others
     try {
       const result = this.postMergeValidator.runAllValidations(session);
-      const notifications: ConflictNotification[] = [];
-      const now = Date.now();
+      correctionEnvelopes = result.correctionEnvelopes;
+
+      // Collect tombstone notifications
+      notifications.push(...result.tombstoneNotifications);
 
       for (const cycleBreak of result.cycleBreaks) {
         notifications.push({
@@ -430,24 +464,59 @@ export class SyncEngine {
           summary: `Normalized ${String(result.friendConnectionNormalizations)} friend connection(s)`,
         });
       }
-
-      // Fire onConflict callbacks
-      if (this.onConflict) {
-        for (const notification of notifications) {
-          this.onConflict(notification);
-        }
-      }
-
-      // Persist conflict records (best-effort, non-blocking)
-      if (this.conflictPersistenceAdapter && notifications.length > 0) {
-        this.conflictPersistenceAdapter
-          .saveConflicts(session.documentId, notifications)
-          .catch((err: unknown) => {
-            this.onError("Failed to persist conflict records", err);
-          });
-      }
     } catch (error) {
       this.onError("Post-merge validation failed", error);
+    }
+
+    // Submit correction envelopes to server and persist locally
+    await this.submitCorrectionEnvelopes(docId, correctionEnvelopes);
+
+    // Fire onConflict callbacks
+    if (this.onConflict) {
+      for (const notification of notifications) {
+        this.onConflict(notification);
+      }
+    }
+
+    // Persist conflict records (best-effort, with retry of previously failed)
+    await this.persistConflicts(docId, notifications);
+  }
+
+  private async submitCorrectionEnvelopes(
+    docId: string,
+    envelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[],
+  ): Promise<void> {
+    for (const envelope of envelopes) {
+      try {
+        const sequenced = await this.networkAdapter.submitChange(docId, envelope);
+        await this.storageAdapter.appendChange(docId, sequenced);
+      } catch (error) {
+        this.onError(`Failed to submit correction envelope for ${docId}`, error);
+      }
+    }
+  }
+
+  private async persistConflicts(
+    docId: string,
+    notifications: readonly ConflictNotification[],
+  ): Promise<void> {
+    if (!this.conflictPersistenceAdapter) return;
+
+    // Include previously failed attempts
+    const retryBatch = [...this.failedConflictPersistence];
+    this.failedConflictPersistence = [];
+
+    if (notifications.length > 0) {
+      retryBatch.push({ documentId: docId, notifications });
+    }
+
+    for (const batch of retryBatch) {
+      try {
+        await this.conflictPersistenceAdapter.saveConflicts(batch.documentId, batch.notifications);
+      } catch (error) {
+        this.onError("Failed to persist conflict records", error);
+        this.failedConflictPersistence.push(batch);
+      }
     }
   }
 

@@ -23,3 +23,9 @@ export const BLOB_S3_CLEANUP_BATCH_SIZE = 100;
  * to allow for debugging, then permanently deleted.
  */
 export const SYNC_QUEUE_RETENTION_MS = 7 * MS_PER_DAY;
+
+/**
+ * Retention period for persisted conflict records before cleanup deletes them.
+ * Conflict records are kept for 90 days for auditing and debugging purposes.
+ */
+export const SYNC_CONFLICTS_RETENTION_MS = 90 * MS_PER_DAY;

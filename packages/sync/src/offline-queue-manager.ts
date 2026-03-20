@@ -46,7 +46,11 @@ export class OfflineQueueManager {
     this.offlineQueueAdapter = config.offlineQueueAdapter;
     this.networkAdapter = config.networkAdapter;
     this.storageAdapter = config.storageAdapter;
-    this.onError = config.onError ?? (() => {});
+    this.onError =
+      config.onError ??
+      ((message, error) => {
+        console.error(message, error);
+      });
   }
 
   /**
@@ -74,19 +78,23 @@ export class OfflineQueueManager {
 
     let replayed = 0;
     let failed = 0;
-    const skipped = 0;
+    let skipped = 0;
 
-    // Process each document's entries in order
+    // Process each document's entries in order (causal ordering)
     for (const [, docEntries] of byDocument) {
       // Sort by enqueuedAt (should already be sorted, but ensure)
       docEntries.sort((a, b) => a.enqueuedAt - b.enqueuedAt);
 
-      for (const entry of docEntries) {
+      for (let i = 0; i < docEntries.length; i++) {
+        const entry = docEntries[i] as OfflineQueueEntry;
         const success = await this.replayEntry(entry);
         if (success) {
           replayed++;
         } else {
           failed++;
+          // Skip remaining entries for this document (causal dependency)
+          skipped += docEntries.length - i - 1;
+          break;
         }
       }
     }

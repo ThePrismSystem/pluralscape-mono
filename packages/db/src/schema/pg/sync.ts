@@ -15,6 +15,16 @@ import { systems } from "./systems.js";
 import type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+/** Conflict resolution strategies — mirrors @pluralscape/sync ConflictResolutionStrategy to avoid circular dep. */
+type ConflictResolutionStrategy =
+  | "lww-field"
+  | "append-both"
+  | "add-wins"
+  | "post-merge-cycle"
+  | "post-merge-sort-normalize"
+  | "post-merge-checkin-normalize"
+  | "post-merge-friend-status";
+
 export const syncDocuments = pgTable(
   "sync_documents",
   {
@@ -94,7 +104,9 @@ export const syncConflicts = pgTable(
     entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull(),
     entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
     fieldName: varchar("field_name", { length: ENUM_MAX_LENGTH }),
-    resolution: varchar("resolution", { length: ENUM_MAX_LENGTH }).notNull(),
+    resolution: varchar("resolution", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<ConflictResolutionStrategy>(),
     detectedAt: pgTimestamp("detected_at").notNull(),
     summary: varchar("summary", { length: 1024 }).notNull(),
     createdAt: pgTimestamp("created_at").notNull(),

@@ -32,4 +32,10 @@ export interface ConflictPersistenceAdapter {
    * with the same notifications).
    */
   saveConflicts(documentId: string, notifications: readonly ConflictNotification[]): Promise<void>;
+
+  /**
+   * Delete conflict records older than the given cutoff timestamp.
+   * Returns the number of records deleted.
+   */
+  deleteOlderThan(cutoffMs: number): Promise<number>;
 }

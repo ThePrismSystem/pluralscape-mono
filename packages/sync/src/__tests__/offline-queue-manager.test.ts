@@ -2,9 +2,9 @@
  * OfflineQueueManager tests.
  *
  * Uses mock adapters to test replay ordering, partial failure handling,
- * and empty queue no-op.
+ * causal ordering, and empty queue no-op.
  */
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { OfflineQueueManager } from "../offline-queue-manager.js";
 
@@ -74,6 +74,10 @@ function mockStorageAdapter(): SyncStorageAdapter {
 }
 
 describe("OfflineQueueManager", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("returns zero counts for empty queue", async () => {
     const manager = new OfflineQueueManager({
       offlineQueueAdapter: mockOfflineQueueAdapter([]),
@@ -120,9 +124,16 @@ describe("OfflineQueueManager", () => {
 
     // Verify markSynced was called for each entry
     expect(markSynced).toHaveBeenCalledTimes(3);
+
+    // Verify markSynced was called in enqueuedAt order: e1 (1000), e3 (1500), e2 (2000)
+    // markSynced(entry.id, sequenced.seq) per the offline-queue-manager
+    const syncedEntryIds = markSynced.mock.calls.map((call: unknown[]) => call[0]) as string[];
+    expect(syncedEntryIds).toEqual(["e1", "e3", "e2"]);
   });
 
   it("handles partial failures gracefully", async () => {
+    vi.useFakeTimers();
+
     const entries = [makeEntry("e1", "doc_a", 1000), makeEntry("e2", "doc_a", 2000)];
 
     let callCount = 0;
@@ -135,7 +146,7 @@ describe("OfflineQueueManager", () => {
             // First entry fails all 3 retries
             return Promise.reject(new Error("Network error"));
           }
-          // Second entry succeeds on first try
+          // Second entry would succeed but is skipped due to causal ordering
           return Promise.resolve({ ...change, seq: 1 });
         }),
     });
@@ -148,12 +159,18 @@ describe("OfflineQueueManager", () => {
       onError,
     });
 
-    const result = await manager.replay();
+    const replayPromise = manager.replay();
+    // Advance past all backoff delays
+    await vi.advanceTimersByTimeAsync(10_000);
+    const result = await replayPromise;
 
-    // First entry failed all retries, second succeeded
-    expect(result.replayed).toBe(1);
+    // First entry failed all retries, second is skipped (causal ordering)
+    expect(result.replayed).toBe(0);
     expect(result.failed).toBe(1);
+    expect(result.skipped).toBe(1);
     expect(onError).toHaveBeenCalled();
+
+    vi.useRealTimers();
   });
 
   it("groups entries by documentId and processes all documents", async () => {
@@ -202,5 +219,47 @@ describe("OfflineQueueManager", () => {
       "doc_a",
       expect.objectContaining({ seq: expect.any(Number) }),
     );
+  });
+
+  it("skips remaining entries for a document when one fails (causal ordering)", async () => {
+    vi.useFakeTimers();
+
+    const entries = [
+      makeEntry("e1", "doc_a", 1000),
+      makeEntry("e2", "doc_a", 2000),
+      makeEntry("e3", "doc_a", 3000),
+    ];
+
+    let callCount = 0;
+    const networkAdapter = mockNetworkAdapter({
+      submitChange: vi
+        .fn()
+        .mockImplementation((_docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
+          callCount++;
+          if (callCount === 1) {
+            // First entry succeeds
+            return Promise.resolve({ ...change, seq: 1 });
+          }
+          // Second entry fails all retries
+          return Promise.reject(new Error("Network error"));
+        }),
+    });
+
+    const manager = new OfflineQueueManager({
+      offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+      networkAdapter,
+      storageAdapter: mockStorageAdapter(),
+      onError: vi.fn(),
+    });
+
+    const replayPromise = manager.replay();
+    await vi.advanceTimersByTimeAsync(10_000);
+    const result = await replayPromise;
+
+    expect(result.replayed).toBe(1); // e1 succeeded
+    expect(result.failed).toBe(1); // e2 failed
+    expect(result.skipped).toBe(1); // e3 skipped due to causal dependency
+
+    vi.useRealTimers();
   });
 });

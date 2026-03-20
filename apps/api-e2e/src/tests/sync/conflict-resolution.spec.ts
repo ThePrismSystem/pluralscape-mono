@@ -98,7 +98,10 @@ test.describe("Sync conflict resolution E2E", () => {
     }
   });
 
-  test("tombstone propagation: client A archives, client B receives push", async ({
+  // E2E limitation: this test verifies transport-level change delivery, not CRDT tombstone
+  // semantics. Actual tombstone enforcement (archive-wins) is tested in the PostMergeValidator
+  // unit tests where we have access to real Automerge documents.
+  test("change propagation: client A submits, client B receives push (transport-level tombstone delivery)", async ({
     registeredAccount,
     request,
   }) => {
