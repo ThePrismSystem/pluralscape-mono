@@ -1,11 +1,11 @@
 ---
 # api-n8wk
 title: SSE fallback
-status: todo
+status: completed
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-19T11:40:27Z
+updated_at: 2026-03-20T10:36:33Z
 parent: ps-afy4
 blocked_by:
   - api-fh4u
@@ -30,3 +30,10 @@ Blocked by api-fh4u (WebSocket server) — specifically requires Valkey pub/sub 
 ## Design References
 
 - `docs/adr/007-realtime.md` — SSE as fallback transport
+
+## Summary of Changes
+
+- Implemented complete SSE fallback system with all 5 child tasks
+- New files: sse.constants.ts, sse-manager.ts, notification-pubsub.ts, notifications/stream.ts
+- Wired ValkeyPubSub for notifications at startup in index.ts
+- Mounted at /v1/notifications via v1Routes

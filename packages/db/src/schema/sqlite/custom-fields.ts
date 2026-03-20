@@ -68,6 +68,7 @@ export const fieldValues = sqliteTable(
   },
   (t) => [
     index("field_values_definition_system_idx").on(t.fieldDefinitionId, t.systemId),
+    index("field_values_system_member_idx").on(t.systemId, t.memberId),
     foreignKey({
       columns: [t.fieldDefinitionId, t.systemId],
       foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],

@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
 describe("session cascade on account deletion (structural verification)", () => {
   const authSchemaPath = resolve(
     import.meta.dirname,
-    "../../../../packages/db/src/schema/pg/auth.ts",
+    "../../../../../packages/db/src/schema/pg/auth.ts",
   );
   const authSchemaSource = readFileSync(authSchemaPath, "utf8");
 
