@@ -79,6 +79,9 @@ export {
   SODIUM_CONSTANTS,
 } from "./crypto.constants.js";
 
+// ── Hex encoding ─────────────────────────────────────────────────────
+export { fromHex, toHex } from "./hex.js";
+
 // ── Sodium lifecycle ────────────────────────────────────────────────
 export { configureSodium, getSodium, initSodium, isReady } from "./sodium.js";
 

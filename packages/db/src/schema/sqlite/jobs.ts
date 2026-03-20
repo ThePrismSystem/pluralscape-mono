@@ -11,8 +11,11 @@ import type { JobId, JobResult, JobStatus, JobType } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 const DEFAULT_MAX_ATTEMPTS = 5;
-/** Conservative baseline timeout; job types with long-running work should override per-job. */
-const DEFAULT_TIMEOUT_MS = 30000;
+/**
+ * Conservative baseline timeout; job types with long-running work should override per-job.
+ * Matches DEFAULT_TIMEOUT_MS in @pluralscape/queue (not imported to avoid circular dependency).
+ */
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 export const jobs = sqliteTable(
   "jobs",

@@ -53,14 +53,14 @@ export const PWHASH_SALT_BYTES = 16;
 /** Interactive ops limit (for development/testing — faster). */
 export const PWHASH_OPSLIMIT_INTERACTIVE = 2;
 
-/** Interactive memory limit in bytes (64 MB). */
-export const PWHASH_MEMLIMIT_INTERACTIVE = 67108864;
+/** Interactive memory limit in bytes (64 MiB). */
+export const PWHASH_MEMLIMIT_INTERACTIVE = 64 * 1_024 * 1_024;
 
 /** Moderate ops limit. */
 export const PWHASH_OPSLIMIT_MODERATE = 3;
 
-/** Moderate memory limit in bytes (256 MB). */
-export const PWHASH_MEMLIMIT_MODERATE = 268435456;
+/** Moderate memory limit in bytes (256 MiB). */
+export const PWHASH_MEMLIMIT_MODERATE = 256 * 1_024 * 1_024;
 
 /** Sensitive ops limit (OWASP minimum for server-side password hashing). */
 export const PWHASH_OPSLIMIT_SENSITIVE = 4;
@@ -69,7 +69,7 @@ export const PWHASH_OPSLIMIT_SENSITIVE = 4;
 export const PWHASH_OPSLIMIT_MOBILE = 2;
 
 /** Mobile memory limit in bytes (32 MiB — OWASP Mobile minimum). */
-export const PWHASH_MEMLIMIT_MOBILE = 33554432;
+export const PWHASH_MEMLIMIT_MOBILE = 32 * 1_024 * 1_024;
 
 // ── KDF (BLAKE2B) ───────────────────────────────────────────────────
 
@@ -103,7 +103,15 @@ export const MIN_PASSWORD_LENGTH = 8;
 /** Version tag prepended to safety number fingerprint inputs. */
 export const SAFETY_NUMBER_VERSION = 1;
 
-/** Number of BLAKE2b iterations used to compute a safety number fingerprint. */
+/**
+ * Number of BLAKE2b iterations used to compute a safety number fingerprint.
+ *
+ * Follows the Signal protocol's safety number specification: 5200 iterations
+ * ensures sufficient computational cost for fingerprint derivation while
+ * remaining fast enough for interactive use.
+ *
+ * @see https://signal.org/docs/specifications/safety-number/
+ */
 export const SAFETY_NUMBER_ITERATIONS = 5200;
 
 /** Output length in bytes for each user's fingerprint before digit encoding. */
