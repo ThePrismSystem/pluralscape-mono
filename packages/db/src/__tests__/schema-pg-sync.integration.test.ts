@@ -58,7 +58,7 @@ describe("PG sync schema", () => {
       encryptedPayload: new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
       authorPublicKey: new Uint8Array(32).fill(0x01),
       nonce: new Uint8Array(24).fill(seq),
-      signature: new Uint8Array(64).fill(0x03),
+      signature: new Uint8Array(64).fill(0x77),
       createdAt: Date.now(),
     };
   }
@@ -71,7 +71,7 @@ describe("PG sync schema", () => {
       encryptedPayload: new Uint8Array([0xca, 0xfe, 0xba, 0xbe]),
       authorPublicKey: new Uint8Array(32).fill(0x02),
       nonce: new Uint8Array(24).fill(0xaa),
-      signature: new Uint8Array(64).fill(0x04),
+      signature: new Uint8Array(64).fill(0x88),
       createdAt: Date.now(),
     };
   }
@@ -309,6 +309,8 @@ describe("PG sync schema", () => {
       const signature = new Uint8Array(64).fill(0x05);
       const changeId = crypto.randomUUID();
 
+      const signature = new Uint8Array(64).fill(0x77);
+
       await db.insert(syncChanges).values({
         id: changeId,
         documentId,
@@ -397,7 +399,7 @@ describe("PG sync schema", () => {
         encryptedPayload: new Uint8Array([0x01]),
         authorPublicKey,
         nonce,
-        signature: new Uint8Array(64).fill(0x07),
+        signature: new Uint8Array(64).fill(0x77),
         createdAt: Date.now(),
       });
 
@@ -409,7 +411,7 @@ describe("PG sync schema", () => {
           encryptedPayload: new Uint8Array([0x02]),
           authorPublicKey,
           nonce,
-          signature: new Uint8Array(64).fill(0x08),
+          signature: new Uint8Array(64).fill(0x77),
           createdAt: Date.now(),
         }),
       ).rejects.toThrow();
@@ -444,6 +446,7 @@ describe("PG sync schema", () => {
       const encryptedPayload = new Uint8Array([0xca, 0xfe, 0xba, 0xbe]);
       const authorPublicKey = new Uint8Array(32).fill(0x07);
       const nonce = new Uint8Array(24).fill(0x08);
+      const signature = new Uint8Array(64).fill(0x88);
 
       const signature = new Uint8Array(64).fill(0x09);
 
@@ -499,7 +502,7 @@ describe("PG sync schema", () => {
       const newNonce = new Uint8Array(24).fill(0xbb);
       const updatedAt = Date.now();
 
-      const newSignature = new Uint8Array(64).fill(0xcc);
+      const newSignature = new Uint8Array(64).fill(0x99);
       await db
         .insert(syncSnapshots)
         .values({
@@ -529,6 +532,21 @@ describe("PG sync schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.snapshotVersion).toBe(2);
       expect(rows[0]?.encryptedPayload).toEqual(newPayload);
+    });
+
+    it("rejects negative snapshotVersion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
+      const documentId = doc?.documentId ?? "";
+
+      await expect(
+        db.insert(syncSnapshots).values({
+          ...makeSnapshot(documentId),
+          snapshotVersion: -1,
+        }),
+      ).rejects.toThrow();
     });
 
     it("cascades on document deletion", async () => {

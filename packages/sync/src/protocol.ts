@@ -231,6 +231,8 @@ export interface SubscribeResponse extends SyncMessageBase {
    * Omitted for documents already current at the client's lastSyncedSeq.
    */
   readonly catchup: readonly DocumentCatchup[];
+  /** Document IDs that were dropped because the subscription cap was reached. */
+  readonly droppedDocIds: readonly string[];
 }
 
 /**

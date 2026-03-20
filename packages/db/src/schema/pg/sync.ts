@@ -12,7 +12,7 @@ import { SYNC_DOC_TYPES, SYNC_KEY_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { SyncDocType, SyncKeyType } from "@pluralscape/types";
+import type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const syncDocuments = pgTable(
@@ -22,7 +22,7 @@ export const syncDocuments = pgTable(
     systemId: varchar("system_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    docType: varchar("doc_type", { length: ENUM_MAX_LENGTH }).notNull().$type<SyncDocType>(),
+    docType: varchar("doc_type", { length: ENUM_MAX_LENGTH }).notNull().$type<SyncDocumentType>(),
     sizeBytes: integer("size_bytes").notNull().default(0),
     snapshotVersion: integer("snapshot_version").notNull().default(0),
     lastSeq: integer("last_seq").notNull().default(0),
@@ -31,7 +31,7 @@ export const syncDocuments = pgTable(
     keyType: varchar("key_type", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("derived")
-      .$type<SyncKeyType>(),
+      .$type<DocumentKeyType>(),
     bucketId: varchar("bucket_id", { length: ID_MAX_LENGTH }),
     channelId: varchar("channel_id", { length: ID_MAX_LENGTH }),
     createdAt: pgTimestamp("created_at").notNull(),
@@ -68,17 +68,21 @@ export const syncChanges = pgTable(
   ],
 );
 
-export const syncSnapshots = pgTable("sync_snapshots", {
-  documentId: varchar("document_id", { length: DOCUMENT_ID_MAX_LENGTH })
-    .primaryKey()
-    .references(() => syncDocuments.documentId, { onDelete: "cascade" }),
-  snapshotVersion: integer("snapshot_version").notNull(),
-  encryptedPayload: pgBinary("encrypted_payload").notNull(),
-  authorPublicKey: pgBinary("author_public_key").notNull(),
-  nonce: pgBinary("nonce").notNull(),
-  signature: pgBinary("signature").notNull(),
-  createdAt: pgTimestamp("created_at").notNull(),
-});
+export const syncSnapshots = pgTable(
+  "sync_snapshots",
+  {
+    documentId: varchar("document_id", { length: DOCUMENT_ID_MAX_LENGTH })
+      .primaryKey()
+      .references(() => syncDocuments.documentId, { onDelete: "cascade" }),
+    snapshotVersion: integer("snapshot_version").notNull(),
+    encryptedPayload: pgBinary("encrypted_payload").notNull(),
+    authorPublicKey: pgBinary("author_public_key").notNull(),
+    nonce: pgBinary("nonce").notNull(),
+    signature: pgBinary("signature").notNull(),
+    createdAt: pgTimestamp("created_at").notNull(),
+  },
+  (t) => [check("sync_snapshots_snapshot_version_check", sql`${t.snapshotVersion} >= 0`)],
+);
 
 export type SyncDocumentRow = InferSelectModel<typeof syncDocuments>;
 export type NewSyncDocument = InferInsertModel<typeof syncDocuments>;

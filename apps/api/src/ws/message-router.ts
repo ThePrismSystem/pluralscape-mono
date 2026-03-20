@@ -186,8 +186,9 @@ async function dispatchWithAccess<T extends { docId: string; correlationId: stri
   try {
     send(state, await handler(msg), log);
   } catch (err) {
-    log.error("Read handler threw", {
+    log.error("Handler threw in dispatchWithAccess", {
       connectionId: state.connectionId,
+      messageType,
       docId: msg.docId,
       error: formatError(err),
     });
@@ -349,7 +350,8 @@ export async function routeMessage(
         return;
       }
       try {
-        send(state, await handleManifestRequest(msg, relay), log);
+        const response = await handleManifestRequest(msg, relay);
+        if (!send(state, response, log)) return;
       } catch (err) {
         log.error("handleManifestRequest threw", {
           connectionId: state.connectionId,
@@ -357,7 +359,7 @@ export async function routeMessage(
         });
         send(
           state,
-          makeSyncError("INTERNAL_ERROR", "Failed to process manifest request", msg.correlationId),
+          makeSyncError("INTERNAL_ERROR", "Failed to process manifest", msg.correlationId),
           log,
         );
       }
@@ -383,20 +385,14 @@ export async function routeMessage(
         // Denied docs get a PERMISSION_DENIED sent by checkAccess; continue with rest
       }
       try {
-        const result = await handleSubscribeRequest(
+        const response = await handleSubscribeRequest(
           { ...msg, documents: permitted },
           state,
           manager,
           relay,
+          log,
         );
-        send(state, result.response, log);
-        for (const docId of result.skippedDocIds) {
-          send(
-            state,
-            makeSyncError("QUOTA_EXCEEDED", "Subscription limit reached", msg.correlationId, docId),
-            log,
-          );
-        }
+        if (!send(state, response, log)) return;
       } catch (err) {
         log.error("handleSubscribeRequest threw", {
           connectionId: state.connectionId,
@@ -404,7 +400,7 @@ export async function routeMessage(
         });
         send(
           state,
-          makeSyncError("INTERNAL_ERROR", "Failed to process subscribe request", msg.correlationId),
+          makeSyncError("INTERNAL_ERROR", "Failed to process subscription", msg.correlationId),
           log,
         );
       }
@@ -505,8 +501,11 @@ export async function routeMessage(
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
       try {
-        send(state, await handleSubmitSnapshot(msg, relay), log);
-        documentOwnership.set(msg.docId, state.systemId);
+        const response = await handleSubmitSnapshot(msg, relay);
+        if (!send(state, response, log)) return;
+        if (response.type !== "SyncError") {
+          documentOwnership.set(msg.docId, state.systemId);
+        }
       } catch (err) {
         log.error("handleSubmitSnapshot threw", {
           connectionId: state.connectionId,

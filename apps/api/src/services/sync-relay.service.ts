@@ -1,14 +1,10 @@
+import { assertAeadNonce, assertSignature, assertSignPublicKey } from "@pluralscape/crypto";
 import { syncChanges, syncDocuments, syncSnapshots } from "@pluralscape/db/pg";
-import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
-import {
-  createId,
-  ID_PREFIXES,
-  type BucketId,
-  type ChannelId,
-  type SystemId,
-} from "@pluralscape/types";
+import { SnapshotVersionConflictError } from "@pluralscape/sync";
+import { createId, ID_PREFIXES } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
+import type { SyncChangeRow, SyncSnapshotRow } from "@pluralscape/db/pg";
 import type {
   EncryptedChangeEnvelope,
   EncryptedSnapshotEnvelope,
@@ -16,6 +12,7 @@ import type {
   SyncManifestEntry,
   SyncRelayService,
 } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** PostgreSQL-backed implementation of SyncRelayService. */
@@ -24,12 +21,30 @@ export class PgSyncRelayService implements SyncRelayService {
 
   async submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<number> {
     return await this.db.transaction(async (tx) => {
+      const now = Date.now();
+
+      // Check dedup: if (documentId, authorPublicKey, nonce) already exists, return existing seq
+      const [existing] = await tx
+        .select({ seq: syncChanges.seq })
+        .from(syncChanges)
+        .where(
+          and(
+            eq(syncChanges.documentId, envelope.documentId),
+            eq(syncChanges.authorPublicKey, envelope.authorPublicKey),
+            eq(syncChanges.nonce, envelope.nonce),
+          ),
+        );
+
+      if (existing) {
+        return existing.seq;
+      }
+
       // Atomically increment last_seq and get the new value
       const [updated] = await tx
         .update(syncDocuments)
         .set({
           lastSeq: sql`${syncDocuments.lastSeq} + 1`,
-          updatedAt: Date.now(),
+          updatedAt: now,
         })
         .where(eq(syncDocuments.documentId, envelope.documentId))
         .returning({ lastSeq: syncDocuments.lastSeq });
@@ -40,22 +55,16 @@ export class PgSyncRelayService implements SyncRelayService {
 
       const seq = updated.lastSeq;
 
-      const [inserted] = await tx
-        .insert(syncChanges)
-        .values({
-          id: createId(ID_PREFIXES.syncChange),
-          documentId: envelope.documentId,
-          seq,
-          encryptedPayload: envelope.ciphertext,
-          authorPublicKey: envelope.authorPublicKey,
-          nonce: envelope.nonce,
-          signature: envelope.signature,
-          createdAt: Date.now(),
-        })
-        .onConflictDoNothing({
-          target: [syncChanges.documentId, syncChanges.authorPublicKey, syncChanges.nonce],
-        })
-        .returning({ seq: syncChanges.seq });
+      await tx.insert(syncChanges).values({
+        id: createId(ID_PREFIXES.syncChange),
+        documentId: envelope.documentId,
+        seq,
+        encryptedPayload: envelope.ciphertext,
+        authorPublicKey: envelope.authorPublicKey,
+        nonce: envelope.nonce,
+        signature: envelope.signature,
+        createdAt: now,
+      });
 
       if (inserted) return inserted.seq;
 
@@ -85,24 +94,19 @@ export class PgSyncRelayService implements SyncRelayService {
       .where(and(eq(syncChanges.documentId, documentId), gt(syncChanges.seq, sinceSeq)))
       .orderBy(syncChanges.seq);
 
-    return rows.map((row) => ({
-      ciphertext: row.encryptedPayload,
-      nonce: row.nonce as EncryptedChangeEnvelope["nonce"],
-      signature: row.signature as EncryptedChangeEnvelope["signature"],
-      authorPublicKey: row.authorPublicKey as EncryptedChangeEnvelope["authorPublicKey"],
-      documentId: row.documentId,
-      seq: row.seq,
-    }));
+    return rows.map((row) => this.mapChangeRow(row));
   }
 
   async submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void> {
     await this.db.transaction(async (tx) => {
-      // Atomic UPDATE WHERE prevents TOCTOU race on snapshot version check
-      const [updated] = await tx
+      const now = Date.now();
+
+      // Atomic conditional UPDATE eliminates TOCTOU race
+      const [atomicResult] = await tx
         .update(syncDocuments)
         .set({
           snapshotVersion: envelope.snapshotVersion,
-          updatedAt: Date.now(),
+          updatedAt: now,
         })
         .where(
           and(
@@ -110,21 +114,23 @@ export class PgSyncRelayService implements SyncRelayService {
             sql`${syncDocuments.snapshotVersion} < ${envelope.snapshotVersion}`,
           ),
         )
-        .returning({ documentId: syncDocuments.documentId });
+        .returning({ snapshotVersion: syncDocuments.snapshotVersion });
 
-      if (!updated) {
-        // Disambiguate: doc not found vs version conflict
+      if (!atomicResult) {
+        // Determine whether "not found" or "version conflict"
         const [doc] = await tx
           .select({ snapshotVersion: syncDocuments.snapshotVersion })
           .from(syncDocuments)
           .where(eq(syncDocuments.documentId, envelope.documentId));
-        if (!doc) throw new Error(`Document not found: ${envelope.documentId}`);
-        throw new Error(
-          `Snapshot version ${String(envelope.snapshotVersion)} ${SNAPSHOT_VERSION_CONFLICT_MESSAGE} ${String(doc.snapshotVersion)}`,
-        );
+
+        if (!doc) {
+          throw new Error(`Document not found: ${envelope.documentId}`);
+        }
+
+        throw new SnapshotVersionConflictError(envelope.snapshotVersion, doc.snapshotVersion);
       }
 
-      const now = Date.now();
+      // Upsert snapshot
       await tx
         .insert(syncSnapshots)
         .values({
@@ -144,7 +150,6 @@ export class PgSyncRelayService implements SyncRelayService {
             authorPublicKey: envelope.authorPublicKey,
             nonce: envelope.nonce,
             signature: envelope.signature,
-            createdAt: now,
           },
         });
     });
@@ -158,14 +163,7 @@ export class PgSyncRelayService implements SyncRelayService {
 
     if (!row) return null;
 
-    return {
-      ciphertext: row.encryptedPayload,
-      nonce: row.nonce as EncryptedSnapshotEnvelope["nonce"],
-      signature: row.signature as EncryptedSnapshotEnvelope["signature"],
-      authorPublicKey: row.authorPublicKey as EncryptedSnapshotEnvelope["authorPublicKey"],
-      documentId: row.documentId,
-      snapshotVersion: row.snapshotVersion,
-    };
+    return this.mapSnapshotRow(row);
   }
 
   async getManifest(systemId: SystemId): Promise<SyncManifest> {
@@ -189,5 +187,33 @@ export class PgSyncRelayService implements SyncRelayService {
     }));
 
     return { documents, systemId };
+  }
+
+  private mapChangeRow(row: SyncChangeRow): EncryptedChangeEnvelope {
+    assertAeadNonce(row.nonce);
+    assertSignature(row.signature);
+    assertSignPublicKey(row.authorPublicKey);
+    return {
+      ciphertext: row.encryptedPayload,
+      nonce: row.nonce,
+      signature: row.signature,
+      authorPublicKey: row.authorPublicKey,
+      documentId: row.documentId,
+      seq: row.seq,
+    };
+  }
+
+  private mapSnapshotRow(row: SyncSnapshotRow): EncryptedSnapshotEnvelope {
+    assertAeadNonce(row.nonce);
+    assertSignature(row.signature);
+    assertSignPublicKey(row.authorPublicKey);
+    return {
+      ciphertext: row.encryptedPayload,
+      nonce: row.nonce,
+      signature: row.signature,
+      authorPublicKey: row.authorPublicKey,
+      documentId: row.documentId,
+      snapshotVersion: row.snapshotVersion,
+    };
   }
 }

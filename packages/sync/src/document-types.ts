@@ -1,9 +1,12 @@
-import type { BucketId, ChannelId, SyncDocType, SyncKeyType, SystemId } from "@pluralscape/types";
+import type {
+  BucketId,
+  ChannelId,
+  SyncDocumentType,
+  DocumentKeyType,
+  SystemId,
+} from "@pluralscape/types";
 
-/** Sync document types — aliased from the canonical types in @pluralscape/types. */
-export type SyncDocumentType = SyncDocType;
-/** Which encryption key tier a document uses — aliased from @pluralscape/types. */
-export type DocumentKeyType = SyncKeyType;
+export type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 
 /** Parsed components of a document ID. */
 export type ParsedDocumentId =

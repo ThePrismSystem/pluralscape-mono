@@ -281,8 +281,8 @@ export { serverSafe } from "./server-safe.js";
 
 // ── Sync ──────────────────────────────────────────────────────
 export type {
-  SyncDocType,
-  SyncKeyType,
+  SyncDocumentType,
+  DocumentKeyType,
   SyncIndicatorStatus,
   SyncDocument,
   SyncState,

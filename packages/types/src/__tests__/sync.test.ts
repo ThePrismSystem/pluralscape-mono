@@ -3,17 +3,17 @@ import { assertType, describe, expectTypeOf, it } from "vitest";
 import type { SyncDocumentId, SystemId } from "../ids.js";
 import type {
   SyncDocument,
-  SyncDocType,
+  SyncDocumentType,
   SyncIndicator,
   SyncIndicatorStatus,
-  SyncKeyType,
+  DocumentKeyType,
   SyncState,
 } from "../sync.js";
 import type { UnixMillis } from "../timestamps.js";
 
-describe("SyncDocType", () => {
+describe("SyncDocumentType", () => {
   it("is exhaustive in a switch statement", () => {
-    function handle(t: SyncDocType): string {
+    function handle(t: SyncDocumentType): string {
       switch (t) {
         case "system-core":
         case "fronting":
@@ -32,25 +32,25 @@ describe("SyncDocType", () => {
   });
 
   it("accepts all valid variants", () => {
-    assertType<SyncDocType>("system-core");
-    assertType<SyncDocType>("fronting");
-    assertType<SyncDocType>("chat");
-    assertType<SyncDocType>("journal");
-    assertType<SyncDocType>("privacy-config");
-    assertType<SyncDocType>("bucket");
+    assertType<SyncDocumentType>("system-core");
+    assertType<SyncDocumentType>("fronting");
+    assertType<SyncDocumentType>("chat");
+    assertType<SyncDocumentType>("journal");
+    assertType<SyncDocumentType>("privacy-config");
+    assertType<SyncDocumentType>("bucket");
   });
 
   it("rejects invalid variants", () => {
-    // @ts-expect-error invalid SyncDocType
-    assertType<SyncDocType>("member");
-    // @ts-expect-error invalid SyncDocType
-    assertType<SyncDocType>("unknown");
+    // @ts-expect-error invalid SyncDocumentType
+    assertType<SyncDocumentType>("member");
+    // @ts-expect-error invalid SyncDocumentType
+    assertType<SyncDocumentType>("unknown");
   });
 });
 
-describe("SyncKeyType", () => {
+describe("DocumentKeyType", () => {
   it("is exhaustive in a switch statement", () => {
-    function handle(k: SyncKeyType): string {
+    function handle(k: DocumentKeyType): string {
       switch (k) {
         case "derived":
         case "bucket":
@@ -65,13 +65,13 @@ describe("SyncKeyType", () => {
   });
 
   it("accepts all valid variants", () => {
-    assertType<SyncKeyType>("derived");
-    assertType<SyncKeyType>("bucket");
+    assertType<DocumentKeyType>("derived");
+    assertType<DocumentKeyType>("bucket");
   });
 
   it("rejects invalid variants", () => {
-    // @ts-expect-error invalid SyncKeyType
-    assertType<SyncKeyType>("symmetric");
+    // @ts-expect-error invalid DocumentKeyType
+    assertType<DocumentKeyType>("symmetric");
   });
 });
 
@@ -98,13 +98,13 @@ describe("SyncDocument", () => {
   it("has expected fields", () => {
     expectTypeOf<SyncDocument["documentId"]>().toEqualTypeOf<string>();
     expectTypeOf<SyncDocument["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<SyncDocument["docType"]>().toEqualTypeOf<SyncDocType>();
+    expectTypeOf<SyncDocument["docType"]>().toEqualTypeOf<SyncDocumentType>();
     expectTypeOf<SyncDocument["sizeBytes"]>().toEqualTypeOf<number>();
     expectTypeOf<SyncDocument["snapshotVersion"]>().toEqualTypeOf<number>();
     expectTypeOf<SyncDocument["lastSeq"]>().toEqualTypeOf<number>();
     expectTypeOf<SyncDocument["archived"]>().toEqualTypeOf<boolean>();
     expectTypeOf<SyncDocument["timePeriod"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<SyncDocument["keyType"]>().toEqualTypeOf<SyncKeyType>();
+    expectTypeOf<SyncDocument["keyType"]>().toEqualTypeOf<DocumentKeyType>();
     expectTypeOf<SyncDocument["bucketId"]>().toEqualTypeOf<string | null>();
     expectTypeOf<SyncDocument["channelId"]>().toEqualTypeOf<string | null>();
     expectTypeOf<SyncDocument["createdAt"]>().toEqualTypeOf<UnixMillis>();

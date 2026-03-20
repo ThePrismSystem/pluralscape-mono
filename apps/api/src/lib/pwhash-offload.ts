@@ -6,7 +6,18 @@
  */
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Worker } from "node:worker_threads";
+import { Worker as _Worker } from "node:worker_threads";
+
+// node:worker_threads Worker has .on() but Bun's ambient Worker type does not.
+// Re-declare with the EventEmitter methods we actually use.
+interface NodeWorker {
+  on(event: "message", listener: (value: WorkerResponse) => void): void;
+  on(event: "error", listener: (err: Error) => void): void;
+  postMessage(value: unknown): void;
+  terminate(): Promise<number>;
+}
+const _ctor: unknown = _Worker;
+const Worker = _ctor as new (path: string) => NodeWorker;
 
 const POOL_SIZE = 2;
 
@@ -22,22 +33,7 @@ interface WorkerResponse {
   readonly error?: string;
 }
 
-/**
- * Bun's Worker from node:worker_threads supports Node-style .on() at
- * runtime but @types/bun doesn't declare it on the Worker class.
- */
-interface WorkerWithEvents extends Worker {
-  on(event: "message", fn: (msg: WorkerResponse) => void): this;
-  on(event: "error", fn: (err: Error) => void): this;
-}
-
-/** Narrow Worker to its event-emitter interface that Bun supports at runtime. */
-function asEmitter(w: Worker): WorkerWithEvents {
-  // Worker extends EventEmitter in Node and Bun, but @types/bun omits it
-  return w as WorkerWithEvents;
-}
-
-let pool: Worker[] | null = null;
+let pool: NodeWorker[] | null = null;
 let nextId = 0;
 let roundRobin = 0;
 const pending = new Map<number, PendingRequest>();
@@ -47,7 +43,7 @@ function getWorkerPath(): string {
   return join(currentDir, "pwhash-worker-thread.js");
 }
 
-function initPool(): Worker[] {
+function initPool(): NodeWorker[] {
   if (pool) return pool;
 
   const workerPath = getWorkerPath();
@@ -80,7 +76,7 @@ function initPool(): Worker[] {
 function dispatch(message: Record<string, unknown>): Promise<unknown> {
   const workers = initPool();
   const id = nextId++;
-  const worker = workers[roundRobin % workers.length] as Worker;
+  const worker = workers[roundRobin % workers.length] as NodeWorker;
   roundRobin++;
 
   return new Promise((resolve, reject) => {
