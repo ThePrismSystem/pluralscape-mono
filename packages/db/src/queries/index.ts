@@ -26,4 +26,7 @@ export {
   pgDetachOldPartitions,
 } from "./partition-maintenance.js";
 export type { PartitionedTable, DetachableTable, DetachResult } from "./partition-maintenance.js";
-export { pgCleanupDeviceTransfers } from "./device-transfer-cleanup.js";
+export {
+  pgCleanupDeviceTransfers,
+  sqliteCleanupDeviceTransfers,
+} from "./device-transfer-cleanup.js";

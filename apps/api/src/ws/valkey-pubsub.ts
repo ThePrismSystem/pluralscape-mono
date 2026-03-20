@@ -214,16 +214,19 @@ export class ValkeyPubSub {
 
     if (channelHandlers.size === 0) {
       this.handlers.delete(channel);
-      this.activeChannels.delete(channel);
       if (this.subscriber) {
         try {
           await this.subscriber.unsubscribe(channel);
+          this.activeChannels.delete(channel);
         } catch (err) {
+          // Leave activeChannels intact so reconnect logic can retry
           logger.warn("Valkey unsubscribe failed", {
             channel,
             error: formatError(err),
           });
         }
+      } else {
+        this.activeChannels.delete(channel);
       }
     }
   }

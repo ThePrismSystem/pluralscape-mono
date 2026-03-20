@@ -104,6 +104,7 @@ export {
   sqliteCleanupOrphanedTags,
   sqliteCleanupAllOrphanedTags,
   pgCleanupDeviceTransfers,
+  sqliteCleanupDeviceTransfers,
 } from "./queries/index.js";
 
 // ── Views / Query Helpers ─────────────────────────────────────

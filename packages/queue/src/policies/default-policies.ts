@@ -94,5 +94,11 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     maxBackoffMs: 30_000,
     strategy: "exponential",
   },
-  "device-transfer-cleanup": HEAVY_BACKOFF,
+  "device-transfer-cleanup": {
+    maxRetries: 3,
+    backoffMs: 10_000,
+    backoffMultiplier: 2,
+    maxBackoffMs: 60_000,
+    strategy: "exponential",
+  },
 };
