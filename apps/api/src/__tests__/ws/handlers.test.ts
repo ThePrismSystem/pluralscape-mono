@@ -49,10 +49,12 @@ function sig(fill: number): Signature {
   return bytes as Signature;
 }
 
+let changeCounter = 0;
+
 function mockChangeWithoutSeq(docId: string): Omit<EncryptedChangeEnvelope, "seq"> {
   return {
     ciphertext: new Uint8Array([1, 2, 3]),
-    nonce: nonce(4),
+    nonce: nonce(++changeCounter),
     signature: sig(7),
     authorPublicKey: pubkey(10),
     documentId: docId,

@@ -72,6 +72,9 @@ function initPool(): NodeWorker[] {
   return pool;
 }
 
+/** Timeout for worker operations (includes cold-start libsodium init). */
+const DISPATCH_TIMEOUT_MS = 30_000;
+
 function dispatch(message: Record<string, unknown>): Promise<unknown> {
   const workers = initPool();
   const id = nextId++;
@@ -79,7 +82,21 @@ function dispatch(message: Record<string, unknown>): Promise<unknown> {
   roundRobin++;
 
   return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      reject(new Error("pwhash worker timeout"));
+    }, DISPATCH_TIMEOUT_MS);
+
+    pending.set(id, {
+      resolve: (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      reject: (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    });
     worker.postMessage({ ...message, id });
   });
 }
