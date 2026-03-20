@@ -154,6 +154,7 @@ describe("PgSyncRelayService", () => {
       const service = new PgSyncRelayService(db);
 
       // Atomic UPDATE returns 0 rows
+      chain.where.mockReturnValueOnce(chain); // UPDATE .where() — must chain
       chain.returning.mockResolvedValueOnce([]);
       // SELECT finds doc with higher version
       chain.where.mockResolvedValueOnce([{ snapshotVersion: 5 }]);
@@ -168,6 +169,7 @@ describe("PgSyncRelayService", () => {
       const service = new PgSyncRelayService(db);
 
       // Atomic UPDATE returns 0 rows
+      chain.where.mockReturnValueOnce(chain); // UPDATE .where() — must chain
       chain.returning.mockResolvedValueOnce([]);
       // SELECT returns empty
       chain.where.mockResolvedValueOnce([]);
