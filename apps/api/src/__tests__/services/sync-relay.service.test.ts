@@ -127,10 +127,11 @@ describe("PgSyncRelayService", () => {
     // Seed account + system
     const accountId = crypto.randomUUID();
     systemId = `sys_${crypto.randomUUID().slice(0, 8)}`;
-    await client.exec(`INSERT INTO accounts (id) VALUES ('${accountId}')`);
-    await client.exec(
-      `INSERT INTO systems (id, account_id) VALUES ('${systemId}', '${accountId}')`,
-    );
+    await client.query("INSERT INTO accounts (id) VALUES ($1)", [accountId]);
+    await client.query("INSERT INTO systems (id, account_id) VALUES ($1, $2)", [
+      systemId,
+      accountId,
+    ]);
   });
 
   afterAll(async () => {
@@ -145,9 +146,10 @@ describe("PgSyncRelayService", () => {
     const now = new Date().toISOString();
     const docType = overrides.docType ?? "system-core";
     const bucketId = overrides.bucketId ?? null;
-    await client.exec(
+    await client.query(
       `INSERT INTO sync_documents (document_id, system_id, doc_type, bucket_id, created_at, updated_at)
-       VALUES ('${docId}', '${systemId}', '${docType}', ${bucketId ? `'${bucketId}'` : "NULL"}, '${now}', '${now}')`,
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [docId, systemId, docType, bucketId, now, now],
     );
     return docId;
   }

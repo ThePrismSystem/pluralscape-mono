@@ -6,7 +6,6 @@
  */
 import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
 
-
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type {

@@ -17,9 +17,9 @@ export interface SyncManifestEntry {
   /** Key type determining which encryption key is used. */
   readonly keyType: DocumentKeyType;
   /** Present for bucket documents — identifies which bucket. */
-  readonly bucketId: BucketId | undefined;
+  readonly bucketId: BucketId | null;
   /** Present for chat documents — identifies which channel. */
-  readonly channelId: ChannelId | undefined;
+  readonly channelId: ChannelId | null;
   /** Present for time-split documents (e.g. "2026-Q1", "2026-03", "2026"). */
   readonly timePeriod: string | null;
   /** Unix milliseconds when the document was created on the server. */

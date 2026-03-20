@@ -1,6 +1,12 @@
 import { syncChanges, syncDocuments, syncSnapshots } from "@pluralscape/db/pg";
 import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
-import { createId, ID_PREFIXES, type SystemId } from "@pluralscape/types";
+import {
+  createId,
+  ID_PREFIXES,
+  type BucketId,
+  type ChannelId,
+  type SystemId,
+} from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
 import type {
@@ -172,8 +178,8 @@ export class PgSyncRelayService implements SyncRelayService {
       docId: row.documentId,
       docType: row.docType,
       keyType: row.keyType,
-      bucketId: (row.bucketId ?? undefined) as SyncManifestEntry["bucketId"],
-      channelId: (row.channelId ?? undefined) as SyncManifestEntry["channelId"],
+      bucketId: row.bucketId as BucketId | null,
+      channelId: row.channelId as ChannelId | null,
       timePeriod: row.timePeriod,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
