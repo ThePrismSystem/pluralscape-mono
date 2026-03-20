@@ -27,7 +27,7 @@ export interface OfflineQueueManagerConfig {
   readonly offlineQueueAdapter: OfflineQueueAdapter;
   readonly networkAdapter: SyncNetworkAdapter;
   readonly storageAdapter: SyncStorageAdapter;
-  readonly onError?: (message: string, error: unknown) => void;
+  readonly onError: (message: string, error: unknown) => void;
 }
 
 /**
@@ -46,11 +46,7 @@ export class OfflineQueueManager {
     this.offlineQueueAdapter = config.offlineQueueAdapter;
     this.networkAdapter = config.networkAdapter;
     this.storageAdapter = config.storageAdapter;
-    this.onError =
-      config.onError ??
-      ((message, error) => {
-        console.error(message, error);
-      });
+    this.onError = config.onError;
   }
 
   /**

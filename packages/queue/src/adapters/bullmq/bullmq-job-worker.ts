@@ -1,3 +1,4 @@
+import { extractErrorMessage } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 import { Worker } from "bullmq";
 
@@ -14,8 +15,7 @@ import type { StoredJobData } from "./job-mapper.js";
 import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
-import type { JobLogger } from "../../observability/job-logger.js";
-import type { JobDefinition, JobId, JobType, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobId, JobType, Logger, UnixMillis } from "@pluralscape/types";
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 
@@ -37,7 +37,7 @@ export class BullMQJobWorker implements JobWorker {
   private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
-  private readonly logger: JobLogger | undefined;
+  private readonly logger: Logger;
   private readonly clock: () => UnixMillis;
 
   private worker: Worker | null = null;
@@ -52,20 +52,20 @@ export class BullMQJobWorker implements JobWorker {
     queueName: string,
     connection: IORedis,
     queue: JobQueue,
-    options?: {
+    options: {
       pollIntervalMs?: number;
       shutdownTimeoutMs?: number;
-      logger?: JobLogger;
+      logger: Logger;
       clock?: () => UnixMillis;
     },
   ) {
     this.queueName = queueName;
     this.connection = connection;
     this.queue = queue;
-    this.pollIntervalMs = options?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
-    this.shutdownTimeoutMs = options?.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
-    this.logger = options?.logger;
-    this.clock = options?.clock ?? now;
+    this.pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+    this.shutdownTimeoutMs = options.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS;
+    this.logger = options.logger;
+    this.clock = options.clock ?? now;
     this.token = `worker-${String(now())}-${Math.random().toString(BASE_36).slice(2)}`;
   }
 
@@ -142,8 +142,7 @@ export class BullMQJobWorker implements JobWorker {
     } catch (err) {
       this.consecutivePollFailures++;
       this.nextPollAt = (this.clock() + pollBackoffMs(this.consecutivePollFailures)) as UnixMillis;
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger?.error("worker.poll-failed", { error: message });
+      this.logger.error("worker.poll-failed", { error: extractErrorMessage(err) });
       return;
     }
 
@@ -182,8 +181,10 @@ export class BullMQJobWorker implements JobWorker {
         try {
           await this.queue.fail(job.id, `No handler registered for job type "${job.type}"`);
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          this.logger?.error("worker.fail-delegation-error", { jobId: job.id, error: msg });
+          this.logger.error("worker.fail-delegation-error", {
+            jobId: job.id,
+            error: extractErrorMessage(err),
+          });
         }
         return;
       }
@@ -191,12 +192,14 @@ export class BullMQJobWorker implements JobWorker {
       try {
         await handler(job, { heartbeat: heartbeatHandle, signal: controller.signal });
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = extractErrorMessage(err);
         try {
           await this.queue.fail(job.id, message);
         } catch (failErr) {
-          const msg = failErr instanceof Error ? failErr.message : String(failErr);
-          this.logger?.error("worker.fail-delegation-error", { jobId: job.id, error: msg });
+          this.logger.error("worker.fail-delegation-error", {
+            jobId: job.id,
+            error: extractErrorMessage(failErr),
+          });
         }
         return;
       }
@@ -209,15 +212,15 @@ export class BullMQJobWorker implements JobWorker {
           break;
         } catch (err) {
           ackAttempt++;
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = extractErrorMessage(err);
           if (ackAttempt >= MAX_ACK_RETRIES) {
-            this.logger?.error("worker.acknowledge-exhausted", {
+            this.logger.error("worker.acknowledge-exhausted", {
               jobId: job.id,
               error: msg,
               attempts: ackAttempt,
             });
           } else {
-            this.logger?.warn("worker.acknowledge-retry", {
+            this.logger.warn("worker.acknowledge-retry", {
               jobId: job.id,
               error: msg,
               attempt: ackAttempt,

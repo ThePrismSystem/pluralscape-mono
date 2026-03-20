@@ -1,7 +1,7 @@
 import Database from "better-sqlite3-multiple-ciphers";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { SqliteJobQueue } from "../adapters/sqlite/sqlite-job-queue.js";
 import { SqliteJobWorker } from "../adapters/sqlite/sqlite-job-worker.js";
@@ -10,8 +10,10 @@ import { dequeueOrFail, makeJobParams } from "./helpers.js";
 import { runJobQueueContract } from "./job-queue.contract.js";
 import { runJobWorkerContract } from "./job-worker.contract.js";
 
-import type { UnixMillis } from "@pluralscape/types";
+import type { Logger, UnixMillis } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+
+const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 const JOBS_DDL = sql`
   CREATE TABLE IF NOT EXISTS jobs (
@@ -47,8 +49,8 @@ const PRIORITY_INDEX = sql`
 let client: InstanceType<typeof Database>;
 let db: BetterSQLite3Database;
 
-function createQueue(clock?: () => UnixMillis): SqliteJobQueue {
-  return new SqliteJobQueue(db, clock);
+function createQueue(options?: { clock?: () => UnixMillis; logger?: Logger }): SqliteJobQueue {
+  return new SqliteJobQueue(db, { logger: options?.logger ?? mockLogger, clock: options?.clock });
 }
 
 beforeAll(() => {
@@ -76,7 +78,7 @@ describe("SqliteJobQueue", () => {
 describe("SqliteJobWorker", () => {
   runJobWorkerContract(
     () => createQueue(),
-    (queue) => new SqliteJobWorker(queue, { pollIntervalMs: 50 }),
+    (queue) => new SqliteJobWorker(queue, { pollIntervalMs: 50, logger: mockLogger }),
   );
 });
 
@@ -86,7 +88,7 @@ describe("SqliteJobQueue-specific", () => {
   describe("findStalledJobs", () => {
     it("detects a stalled job when heartbeat timeout has elapsed", async () => {
       let currentTime = 1000 as UnixMillis;
-      const queue = createQueue(() => currentTime);
+      const queue = createQueue({ clock: () => currentTime });
 
       await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
       await queue.dequeue();
@@ -99,7 +101,7 @@ describe("SqliteJobQueue-specific", () => {
 
     it("does not report a job as stalled when heartbeat resets the clock", async () => {
       let currentTime = 1000 as UnixMillis;
-      const queue = createQueue(() => currentTime);
+      const queue = createQueue({ clock: () => currentTime });
 
       await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
       const job = await dequeueOrFail(queue);
@@ -124,6 +126,25 @@ describe("SqliteJobQueue-specific", () => {
       const second = await queue.enqueue(makeJobParams({ idempotencyKey: key }));
       expect(second.status).toBe("pending");
       expect(second.id).not.toBe(first.id);
+    });
+  });
+
+  describe("logger forwarding", () => {
+    it("forwards logger to fireHook when hook throws", async () => {
+      const errorFn = vi.fn();
+      const queue = createQueue({ logger: { info: vi.fn(), warn: vi.fn(), error: errorFn } });
+      queue.setEventHooks({
+        onComplete: () => {
+          throw new Error("hook exploded");
+        },
+      });
+      await queue.enqueue(makeJobParams());
+      const job = await dequeueOrFail(queue);
+      await queue.acknowledge(job.id, {});
+      expect(errorFn).toHaveBeenCalledWith(
+        "hook.error",
+        expect.objectContaining({ error: "hook exploded" }),
+      );
     });
   });
 });

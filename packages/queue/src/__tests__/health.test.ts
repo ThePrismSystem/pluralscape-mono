@@ -7,10 +7,12 @@ import { dequeueOrFail, makeJobParams } from "./helpers.js";
 import { InMemoryJobQueue } from "./mock-queue.js";
 import { InMemoryJobWorker } from "./mock-worker.js";
 
-import type { UnixMillis } from "@pluralscape/types";
+import type { Logger, UnixMillis } from "@pluralscape/types";
+
+const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 function makeHealth(worker?: InMemoryJobWorker, clock?: () => UnixMillis) {
-  const queue = new InMemoryJobQueue();
+  const queue = new InMemoryJobQueue(mockLogger);
   const metrics = new InMemoryJobMetrics();
   const service = new QueueHealthService(queue, metrics, worker, clock);
   return { queue, metrics, service };
@@ -51,7 +53,7 @@ describe("QueueHealthService", () => {
 
   it("counts stalled jobs", async () => {
     let currentTime = 1000 as UnixMillis;
-    const queue = new InMemoryJobQueue(() => currentTime);
+    const queue = new InMemoryJobQueue(mockLogger, () => currentTime);
     const metrics = new InMemoryJobMetrics();
     const service = new QueueHealthService(queue, metrics, undefined, () => currentTime);
 
@@ -64,9 +66,9 @@ describe("QueueHealthService", () => {
   });
 
   it("reflects worker running state", async () => {
-    const queue = new InMemoryJobQueue();
+    const queue = new InMemoryJobQueue(mockLogger);
     const metrics = new InMemoryJobMetrics();
-    const worker = new InMemoryJobWorker(queue);
+    const worker = new InMemoryJobWorker(queue, { logger: mockLogger });
     const service = new QueueHealthService(queue, metrics, worker);
 
     worker.registerHandler("sync-push", async () => {});

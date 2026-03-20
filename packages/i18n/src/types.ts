@@ -1,5 +1,5 @@
 import type { NAMESPACES } from "./i18n.constants.js";
-import type { Locale } from "@pluralscape/types";
+import type { Locale, Logger } from "@pluralscape/types";
 
 /** A translation namespace name. */
 export type I18nNamespace = (typeof NAMESPACES)[number];
@@ -17,4 +17,6 @@ export interface I18nConfig {
   readonly resources: Record<string, TranslationResources>;
   /** Missing key handling mode. Defaults to "warn". */
   readonly missingKeyMode?: "warn" | "throw";
+  /** Logger for missing key warnings. Only used when missingKeyMode is "warn". */
+  readonly logger?: Pick<Logger, "warn">;
 }

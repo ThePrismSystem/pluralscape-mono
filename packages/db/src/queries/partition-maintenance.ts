@@ -1,3 +1,4 @@
+import { extractErrorMessage } from "@pluralscape/types";
 import { sql } from "drizzle-orm";
 
 import { validateMonthsAhead, validateOlderThanMonths } from "./types.js";
@@ -126,10 +127,7 @@ export async function pgDetachOldPartitions<
         await db.execute(sql`DROP TABLE ${sql.raw(`"${partition_name}"`)}`);
         detachedCount++;
       } catch (err) {
-        errors.push({
-          partitionName: partition_name,
-          error: err instanceof Error ? err.message : String(err),
-        });
+        errors.push({ partitionName: partition_name, error: extractErrorMessage(err) });
       }
     }
   }

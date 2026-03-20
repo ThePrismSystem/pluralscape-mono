@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_RETRY_POLICIES } from "../policies/default-policies.js";
 import { applyDefaultPolicies } from "../policies/policy-registry.js";
 
 import { InMemoryJobQueue } from "./mock-queue.js";
 
-import type { JobType } from "@pluralscape/types";
+import type { JobType, Logger } from "@pluralscape/types";
+
+const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 /** All job types — must match the JobType union exactly. */
 const ALL_JOB_TYPES: readonly JobType[] = [
@@ -65,7 +67,7 @@ describe("DEFAULT_RETRY_POLICIES", () => {
 
 describe("applyDefaultPolicies", () => {
   it("sets all 17 policies on the queue", () => {
-    const queue = new InMemoryJobQueue();
+    const queue = new InMemoryJobQueue(mockLogger);
     applyDefaultPolicies(queue);
 
     for (const type of ALL_JOB_TYPES) {

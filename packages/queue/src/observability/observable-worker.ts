@@ -1,6 +1,7 @@
+import { extractErrorMessage } from "@pluralscape/types";
+
 import type { JobWorker, JobHandler } from "../job-worker.js";
-import type { JobLogger } from "./job-logger.js";
-import type { JobDefinition, JobType } from "@pluralscape/types";
+import type { JobDefinition, JobType, Logger } from "@pluralscape/types";
 
 /**
  * Decorator that wraps a JobWorker to emit structured log lines
@@ -8,9 +9,9 @@ import type { JobDefinition, JobType } from "@pluralscape/types";
  */
 export class ObservableJobWorker implements JobWorker {
   private readonly inner: JobWorker;
-  private readonly logger: JobLogger;
+  private readonly logger: Logger;
 
-  constructor(inner: JobWorker, logger: JobLogger) {
+  constructor(inner: JobWorker, logger: Logger) {
     this.inner = inner;
     this.logger = logger;
   }
@@ -23,8 +24,11 @@ export class ObservableJobWorker implements JobWorker {
         await handler(job as JobDefinition<T>, ctx);
         this.logger.info("job.handler-succeeded", { jobId: job.id, type: job.type });
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        this.logger.error("job.handler-failed", { jobId: job.id, type: job.type, error: message });
+        this.logger.error("job.handler-failed", {
+          jobId: job.id,
+          type: job.type,
+          error: extractErrorMessage(err),
+        });
         throw err;
       }
     };

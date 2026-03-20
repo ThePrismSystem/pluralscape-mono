@@ -1,3 +1,5 @@
+import { extractErrorMessage } from "@pluralscape/types";
+
 import type { JobQueue } from "../job-queue.js";
 import type { JobDefinition, JobId, JobType, SystemId } from "@pluralscape/types";
 
@@ -65,8 +67,7 @@ export class DLQManager {
         await op(job.id);
         succeeded++;
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        errors.push({ jobId: job.id, error: message });
+        errors.push({ jobId: job.id, error: extractErrorMessage(err) });
       }
     }
 

@@ -2,15 +2,14 @@ import pino from "pino";
 
 import { env } from "../env.js";
 
+import type { Logger } from "@pluralscape/types";
+
 /** Branded symbol for safe type narrowing in getContextLogger. */
 export const APP_LOGGER_BRAND: unique symbol = Symbol("AppLogger");
 
 /** Structured logger interface matching the (message, data?) signature. */
-export interface AppLogger {
+export interface AppLogger extends Logger {
   readonly [APP_LOGGER_BRAND]: true;
-  info(message: string, data?: Record<string, unknown>): void;
-  warn(message: string, data?: Record<string, unknown>): void;
-  error(message: string, data?: Record<string, unknown>): void;
   debug(message: string, data?: Record<string, unknown>): void;
 }
 
@@ -32,7 +31,7 @@ function wrapLevel(
 
 /**
  * Wraps a Pino logger instance into the AppLogger interface,
- * using the (message, data?) signature convention from JobLogger.
+ * using the (message, data?) signature convention from Logger.
  */
 function wrapPino(pinoInstance: pino.Logger): AppLogger {
   return {

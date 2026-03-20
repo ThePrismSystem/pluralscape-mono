@@ -20,3 +20,8 @@ export function now(): UnixMillis {
 export function toISO(ms: UnixMillis): ISOTimestamp {
   return new Date(ms).toISOString() as ISOTimestamp;
 }
+
+/** Extracts a human-readable message from an unknown caught value. */
+export function extractErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}

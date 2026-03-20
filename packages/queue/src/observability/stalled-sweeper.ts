@@ -1,12 +1,14 @@
+import { extractErrorMessage } from "@pluralscape/types";
+
 import type { JobQueue } from "../job-queue.js";
-import type { JobLogger } from "./job-logger.js";
+import type { Logger } from "@pluralscape/types";
 
 const DEFAULT_INTERVAL_MS = 30_000;
 const STALL_ERROR_MESSAGE = "Job stalled: heartbeat timeout exceeded";
 
 export interface StalledSweeperOptions {
   intervalMs?: number;
-  logger?: JobLogger;
+  logger: Logger;
   /** Called after each sweep with the number of stalled jobs found. */
   onSweep?: (count: number) => void;
 }
@@ -18,16 +20,16 @@ export interface StalledSweeperOptions {
 export class StalledJobSweeper {
   private readonly queue: JobQueue;
   private readonly intervalMs: number;
-  private readonly logger: JobLogger | undefined;
+  private readonly logger: Logger;
   private readonly onSweep: ((count: number) => void) | undefined;
   private timer: ReturnType<typeof setInterval> | null = null;
   private sweeping = false;
 
-  constructor(queue: JobQueue, options?: StalledSweeperOptions) {
+  constructor(queue: JobQueue, options: StalledSweeperOptions) {
     this.queue = queue;
-    this.intervalMs = options?.intervalMs ?? DEFAULT_INTERVAL_MS;
-    this.logger = options?.logger;
-    this.onSweep = options?.onSweep;
+    this.intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
+    this.logger = options.logger;
+    this.onSweep = options.onSweep;
   }
 
   start(): void {
@@ -54,20 +56,21 @@ export class StalledJobSweeper {
     try {
       const stalled = await this.queue.findStalledJobs();
       if (stalled.length > 0) {
-        this.logger?.warn("stalled-sweeper.found", { count: stalled.length });
+        this.logger.warn("stalled-sweeper.found", { count: stalled.length });
         for (const job of stalled) {
           try {
             await this.queue.fail(job.id, STALL_ERROR_MESSAGE);
           } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            this.logger?.error("stalled-sweeper.fail-error", { jobId: job.id, error: message });
+            this.logger.error("stalled-sweeper.fail-error", {
+              jobId: job.id,
+              error: extractErrorMessage(err),
+            });
           }
         }
       }
       this.onSweep?.(stalled.length);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger?.error("stalled-sweeper.sweep-error", { error: message });
+      this.logger.error("stalled-sweeper.sweep-error", { error: extractErrorMessage(err) });
     } finally {
       this.sweeping = false;
     }

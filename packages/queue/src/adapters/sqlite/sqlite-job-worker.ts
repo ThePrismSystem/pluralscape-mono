@@ -1,3 +1,4 @@
+import { extractErrorMessage } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 
 import {
@@ -10,8 +11,7 @@ import { ACK_RETRY_DELAY_MS, MAX_ACK_RETRIES, pollBackoffMs } from "../../queue.
 import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
-import type { JobLogger } from "../../observability/job-logger.js";
-import type { JobDefinition, JobType, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobType, Logger, UnixMillis } from "@pluralscape/types";
 
 const DEFAULT_POLL_INTERVAL_MS = 100;
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000;
@@ -28,7 +28,7 @@ export class SqliteJobWorker implements JobWorker {
   private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
-  private readonly logger: JobLogger | undefined;
+  private readonly logger: Logger;
   private readonly clock: () => UnixMillis;
 
   private running = false;
@@ -47,9 +47,9 @@ export class SqliteJobWorker implements JobWorker {
     }: {
       pollIntervalMs?: number;
       shutdownTimeoutMs?: number;
-      logger?: JobLogger;
+      logger: Logger;
       clock?: () => UnixMillis;
-    } = {},
+    },
   ) {
     this.queue = queue;
     this.pollIntervalMs = pollIntervalMs;
@@ -117,8 +117,7 @@ export class SqliteJobWorker implements JobWorker {
     } catch (err) {
       this.consecutivePollFailures++;
       this.nextPollAt = (this.clock() + pollBackoffMs(this.consecutivePollFailures)) as UnixMillis;
-      const message = err instanceof Error ? err.message : String(err);
-      this.logger?.error("worker.poll-failed", { error: message });
+      this.logger.error("worker.poll-failed", { error: extractErrorMessage(err) });
       return;
     }
 
@@ -146,12 +145,14 @@ export class SqliteJobWorker implements JobWorker {
       try {
         await handler(job, { heartbeat: heartbeatHandle, signal: controller.signal });
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = extractErrorMessage(err);
         try {
           await this.queue.fail(job.id, message);
         } catch (failErr) {
-          const failMsg = failErr instanceof Error ? failErr.message : String(failErr);
-          this.logger?.error("worker.fail-failed", { jobId: job.id, error: failMsg });
+          this.logger.error("worker.fail-failed", {
+            jobId: job.id,
+            error: extractErrorMessage(failErr),
+          });
         }
         return;
       }
@@ -163,15 +164,15 @@ export class SqliteJobWorker implements JobWorker {
           break;
         } catch (err) {
           ackAttempt++;
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = extractErrorMessage(err);
           if (ackAttempt >= MAX_ACK_RETRIES) {
-            this.logger?.error("worker.acknowledge-exhausted", {
+            this.logger.error("worker.acknowledge-exhausted", {
               jobId: job.id,
               error: msg,
               attempts: ackAttempt,
             });
           } else {
-            this.logger?.warn("worker.acknowledge-retry", {
+            this.logger.warn("worker.acknowledge-retry", {
               jobId: job.id,
               error: msg,
               attempt: ackAttempt,

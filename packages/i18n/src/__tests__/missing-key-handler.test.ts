@@ -4,22 +4,28 @@ import { createMissingKeyHandler } from "../missing-key-handler.js";
 
 describe("createMissingKeyHandler", () => {
   describe("warn mode", () => {
-    it("logs a warning with the missing key details", () => {
-      const handler = createMissingKeyHandler("warn");
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    it("logs a warning via the provided logger", () => {
+      const warnFn = vi.fn();
+      const handler = createMissingKeyHandler("warn", { warn: warnFn });
 
       handler("greeting", "common");
 
-      expect(warnSpy).toHaveBeenCalledWith("Missing translation key: common:greeting");
+      expect(warnFn).toHaveBeenCalledWith("Missing translation key: common:greeting");
     });
 
     it("does not throw", () => {
-      const handler = createMissingKeyHandler("warn");
-      vi.spyOn(console, "warn").mockImplementation(() => {});
+      const handler = createMissingKeyHandler("warn", { warn: vi.fn() });
 
       expect(() => {
         handler("greeting", "common");
       }).not.toThrow();
+    });
+
+    it("throws when mode is 'warn' and no logger provided", () => {
+      expect(() => {
+        // @ts-expect-error Testing runtime guard — overload requires logger for "warn" mode
+        createMissingKeyHandler("warn");
+      }).toThrow("Logger is required when missingKeyMode is 'warn'");
     });
   });
 
@@ -38,6 +44,12 @@ describe("createMissingKeyHandler", () => {
       expect(() => {
         handler("loginButton", "auth");
       }).toThrow("Missing translation key: auth:loginButton");
+    });
+
+    it("does not require logger when mode is 'throw'", () => {
+      expect(() => {
+        createMissingKeyHandler("throw");
+      }).not.toThrow();
     });
   });
 });

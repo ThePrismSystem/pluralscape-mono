@@ -21,7 +21,7 @@ interface I18nProviderProps {
  */
 export function I18nProvider({ config, children }: I18nProviderProps): React.JSX.Element {
   const instance = useMemo(() => {
-    const i18n = createI18nInstance({ missingKeyMode: config.missingKeyMode });
+    const i18n = createI18nInstance(config);
     i18n.use(initReactI18next);
     void i18n.init({
       lng: config.locale,
@@ -33,7 +33,13 @@ export function I18nProvider({ config, children }: I18nProviderProps): React.JSX
       initAsync: false,
     });
     return i18n;
-  }, [config.locale, config.fallbackLocale, config.missingKeyMode]);
+  }, [
+    config.locale,
+    config.fallbackLocale,
+    config.missingKeyMode,
+    config.logger,
+    config.resources,
+  ]);
 
   return <I18nextProvider i18n={instance}>{children}</I18nextProvider>;
 }

@@ -1,5 +1,7 @@
 import { createDatabaseFromEnv } from "@pluralscape/db";
 
+import { logger } from "./logger.js";
+
 import type { Closeable } from "@pluralscape/db";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -12,7 +14,7 @@ let state: DbState = { status: "idle" };
 
 async function initDb(): Promise<PostgresJsDatabase> {
   try {
-    const client = await createDatabaseFromEnv();
+    const client = await createDatabaseFromEnv(logger);
     if (client.dialect !== "pg") {
       throw new Error("API requires PostgreSQL — set DB_DIALECT=pg in environment.");
     }

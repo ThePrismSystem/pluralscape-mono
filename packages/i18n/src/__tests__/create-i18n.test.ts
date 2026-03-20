@@ -1,18 +1,20 @@
 import { initReactI18next } from "react-i18next";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createI18nInstance } from "../create-i18n.js";
 import { DEFAULT_LOCALE, DEFAULT_NAMESPACE, NAMESPACES } from "../i18n.constants.js";
 
+const mockWarnLogger = { warn: vi.fn() };
+
 describe("createI18nInstance", () => {
   it("creates a new i18next instance", () => {
-    const instance = createI18nInstance();
+    const instance = createI18nInstance({ logger: mockWarnLogger });
     expect(instance).toBeDefined();
     expect(instance.isInitialized).toBeFalsy();
   });
 
   it("sets saveMissing via the 3rdParty plugin", async () => {
-    const instance = createI18nInstance();
+    const instance = createI18nInstance({ logger: mockWarnLogger });
     instance.use(initReactI18next);
 
     await instance.init({
@@ -27,7 +29,7 @@ describe("createI18nInstance", () => {
   });
 
   it("caller sets fallbackLng via init (not the factory)", async () => {
-    const instance = createI18nInstance();
+    const instance = createI18nInstance({ logger: mockWarnLogger });
     instance.use(initReactI18next);
 
     await instance.init({
@@ -42,7 +44,8 @@ describe("createI18nInstance", () => {
   });
 
   it("fires the missing key handler when a key is missing", async () => {
-    const instance = createI18nInstance({ missingKeyMode: "warn" });
+    const warnFn = vi.fn();
+    const instance = createI18nInstance({ missingKeyMode: "warn", logger: { warn: warnFn } });
     instance.use(initReactI18next);
 
     await instance.init({

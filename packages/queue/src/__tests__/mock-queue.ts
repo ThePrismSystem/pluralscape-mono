@@ -17,6 +17,7 @@ import type {
   JobId,
   JobResult,
   JobType,
+  Logger,
   RetryPolicy,
   UnixMillis,
 } from "@pluralscape/types";
@@ -36,10 +37,12 @@ export class InMemoryJobQueue implements JobQueue {
   /** Maps idempotency key → job ID (all statuses — GC'd only on completed re-enqueue) */
   private readonly idempotencyIndex = new Map<string, string>();
   private readonly retryPolicies = new Map<JobType, RetryPolicy>();
+  private readonly logger: Logger;
   private hooks: JobEventHooks = {};
   readonly clock: () => UnixMillis;
 
-  constructor(clock?: () => UnixMillis) {
+  constructor(logger: Logger, clock?: () => UnixMillis) {
+    this.logger = logger;
     this.clock = clock ?? now;
   }
 
@@ -140,7 +143,7 @@ export class InMemoryJobQueue implements JobQueue {
       result: jobResult,
     };
     this.jobs.set(jobId, completed);
-    await fireHook(this.hooks, "onComplete", completed);
+    await fireHook(this.hooks, "onComplete", completed, undefined, this.logger);
     return completed;
   }
 
@@ -163,8 +166,8 @@ export class InMemoryJobQueue implements JobQueue {
         result: { success: false, message: error, completedAt: currentTime },
       };
       this.jobs.set(jobId, updated);
-      await fireHook(this.hooks, "onFail", updated, new Error(error));
-      await fireHook(this.hooks, "onDeadLetter", updated);
+      await fireHook(this.hooks, "onFail", updated, new Error(error), this.logger);
+      await fireHook(this.hooks, "onDeadLetter", updated, undefined, this.logger);
     } else {
       const policy = this.getRetryPolicy(job.type);
       const backoff = calculateBackoff(policy, newAttempts);
@@ -176,7 +179,7 @@ export class InMemoryJobQueue implements JobQueue {
         nextRetryAt: (currentTime + backoff) as UnixMillis,
       };
       this.jobs.set(jobId, updated);
-      await fireHook(this.hooks, "onFail", updated, new Error(error));
+      await fireHook(this.hooks, "onFail", updated, new Error(error), this.logger);
     }
 
     return updated;

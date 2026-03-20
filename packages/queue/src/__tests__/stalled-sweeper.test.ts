@@ -5,12 +5,14 @@ import { StalledJobSweeper } from "../observability/stalled-sweeper.js";
 import { dequeueOrFail, makeJobParams } from "./helpers.js";
 import { InMemoryJobQueue } from "./mock-queue.js";
 
-import type { UnixMillis } from "@pluralscape/types";
+import type { Logger, UnixMillis } from "@pluralscape/types";
+
+const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 describe("StalledJobSweeper", () => {
   it("starts and stops cleanly", () => {
-    const queue = new InMemoryJobQueue();
-    const sweeper = new StalledJobSweeper(queue, { intervalMs: 60_000 });
+    const queue = new InMemoryJobQueue(mockLogger);
+    const sweeper = new StalledJobSweeper(queue, { intervalMs: 60_000, logger: mockLogger });
     expect(sweeper.isRunning()).toBe(false);
     sweeper.start();
     expect(sweeper.isRunning()).toBe(true);
@@ -19,8 +21,8 @@ describe("StalledJobSweeper", () => {
   });
 
   it("start() is idempotent — calling twice does not create two timers", () => {
-    const queue = new InMemoryJobQueue();
-    const sweeper = new StalledJobSweeper(queue, { intervalMs: 60_000 });
+    const queue = new InMemoryJobQueue(mockLogger);
+    const sweeper = new StalledJobSweeper(queue, { intervalMs: 60_000, logger: mockLogger });
     sweeper.start();
     sweeper.start(); // should be a no-op
     expect(sweeper.isRunning()).toBe(true);
@@ -30,9 +32,9 @@ describe("StalledJobSweeper", () => {
 
   it("sweep() fails stalled jobs and calls onSweep with count", async () => {
     let currentTime = 1000 as UnixMillis;
-    const queue = new InMemoryJobQueue(() => currentTime);
+    const queue = new InMemoryJobQueue(mockLogger, () => currentTime);
     const onSweep = vi.fn();
-    const sweeper = new StalledJobSweeper(queue, { onSweep });
+    const sweeper = new StalledJobSweeper(queue, { onSweep, logger: mockLogger });
 
     await queue.enqueue(makeJobParams({ timeoutMs: 3000 }));
     await dequeueOrFail(queue);
@@ -49,9 +51,9 @@ describe("StalledJobSweeper", () => {
   });
 
   it("sweep() calls onSweep with 0 when no stalled jobs", async () => {
-    const queue = new InMemoryJobQueue();
+    const queue = new InMemoryJobQueue(mockLogger);
     const onSweep = vi.fn();
-    const sweeper = new StalledJobSweeper(queue, { onSweep });
+    const sweeper = new StalledJobSweeper(queue, { onSweep, logger: mockLogger });
 
     await sweeper.sweep();
 
@@ -60,7 +62,7 @@ describe("StalledJobSweeper", () => {
 
   it("sweep() logs stalled jobs when a logger is provided", async () => {
     let currentTime = 1000 as UnixMillis;
-    const queue = new InMemoryJobQueue(() => currentTime);
+    const queue = new InMemoryJobQueue(mockLogger, () => currentTime);
     const warn = vi.fn();
     const sweeper = new StalledJobSweeper(queue, {
       logger: { info: vi.fn(), warn, error: vi.fn() },
@@ -79,8 +81,8 @@ describe("StalledJobSweeper", () => {
   });
 
   it("skips sweep when a previous sweep is still running", async () => {
-    const queue = new InMemoryJobQueue();
-    const sweeper = new StalledJobSweeper(queue);
+    const queue = new InMemoryJobQueue(mockLogger);
+    const sweeper = new StalledJobSweeper(queue, { logger: mockLogger });
 
     let resolveFirst!: () => void;
     const blockingPromise = new Promise<readonly import("@pluralscape/types").JobDefinition[]>(
@@ -108,8 +110,8 @@ describe("StalledJobSweeper", () => {
   });
 
   it("resets sweeping flag even when sweep throws", async () => {
-    const queue = new InMemoryJobQueue();
-    const sweeper = new StalledJobSweeper(queue);
+    const queue = new InMemoryJobQueue(mockLogger);
+    const sweeper = new StalledJobSweeper(queue, { logger: mockLogger });
 
     const spy = vi.spyOn(queue, "findStalledJobs").mockRejectedValueOnce(new Error("db down"));
     await sweeper.sweep();
@@ -122,7 +124,7 @@ describe("StalledJobSweeper", () => {
   });
 
   it("sweep() does not throw when findStalledJobs() rejects (logs error instead)", async () => {
-    const queue = new InMemoryJobQueue();
+    const queue = new InMemoryJobQueue(mockLogger);
     const error = vi.fn();
     const sweeper = new StalledJobSweeper(queue, {
       logger: { info: vi.fn(), warn: vi.fn(), error },
@@ -138,7 +140,7 @@ describe("StalledJobSweeper", () => {
   });
 
   it("sweep() does not throw when fail() rejects (logs error instead)", async () => {
-    const queue = new InMemoryJobQueue();
+    const queue = new InMemoryJobQueue(mockLogger);
     const error = vi.fn();
     const sweeper = new StalledJobSweeper(queue, {
       logger: { info: vi.fn(), warn: vi.fn(), error },

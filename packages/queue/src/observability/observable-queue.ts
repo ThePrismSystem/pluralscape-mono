@@ -3,9 +3,15 @@ import { now } from "@pluralscape/types/runtime";
 import type { JobEventHooks } from "../event-hooks.js";
 import type { JobQueue } from "../job-queue.js";
 import type { IdempotencyCheckResult, JobEnqueueParams, JobFilter } from "../types.js";
-import type { JobLogger } from "./job-logger.js";
 import type { JobMetrics } from "./job-metrics.js";
-import type { JobDefinition, JobId, JobType, RetryPolicy, UnixMillis } from "@pluralscape/types";
+import type {
+  JobDefinition,
+  JobId,
+  JobType,
+  Logger,
+  RetryPolicy,
+  UnixMillis,
+} from "@pluralscape/types";
 
 /**
  * Decorator that wraps a JobQueue to record metrics and emit structured log lines
@@ -14,15 +20,10 @@ import type { JobDefinition, JobId, JobType, RetryPolicy, UnixMillis } from "@pl
 export class ObservableJobQueue implements JobQueue {
   private readonly inner: JobQueue;
   private readonly metrics: JobMetrics;
-  private readonly logger: JobLogger;
+  private readonly logger: Logger;
   private readonly clock: () => UnixMillis;
 
-  constructor(
-    inner: JobQueue,
-    metrics: JobMetrics,
-    logger: JobLogger,
-    clock: () => UnixMillis = now,
-  ) {
+  constructor(inner: JobQueue, metrics: JobMetrics, logger: Logger, clock: () => UnixMillis = now) {
     this.inner = inner;
     this.metrics = metrics;
     this.logger = logger;

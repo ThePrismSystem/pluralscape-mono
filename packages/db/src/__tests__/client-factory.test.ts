@@ -275,10 +275,10 @@ describe("createDatabaseFromEnv", () => {
     process.env["DB_DIALECT"] = "sqlite";
     delete process.env["DATABASE_PATH"];
     delete process.env["SQLITE_ENCRYPTION_KEY"];
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const client = await createDatabaseFromEnv();
+    const warnFn = vi.fn();
+    const client = await createDatabaseFromEnv({ warn: warnFn });
     expect(client.dialect).toBe("sqlite");
-    expect(warnSpy).toHaveBeenCalledWith("DATABASE_PATH not set, defaulting to 'pluralscape.db'");
+    expect(warnFn).toHaveBeenCalledWith("DATABASE_PATH not set, defaulting to 'pluralscape.db'");
   });
 
   it("throws when SQLITE_ENCRYPTION_KEY is set but empty", async () => {

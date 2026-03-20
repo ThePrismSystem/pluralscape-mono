@@ -99,6 +99,27 @@ describe("WsNetworkAdapter", () => {
 
       expect(received.length).toBeGreaterThan(0);
     });
+
+    it("logs a warning when a subscriber callback throws", async () => {
+      const warnFn = vi.fn();
+      const transport = new MockSyncTransport();
+      const relay = transport.getRelay();
+      const adapter = new WsNetworkAdapter(transport, 30_000, { warn: warnFn });
+      const docId = crypto.randomUUID();
+
+      adapter.subscribe(docId, () => {
+        throw new Error("subscriber error");
+      });
+
+      relay.submit(mockChangeWithoutSeq(docId));
+      await adapter.submitChange(docId, mockChangeWithoutSeq(docId));
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(warnFn).toHaveBeenCalledWith(
+        "Subscriber callback error",
+        expect.objectContaining({ error: expect.any(String) }),
+      );
+    });
   });
 
   describe("SyncError handling", () => {
@@ -200,6 +221,26 @@ describe("WsNetworkAdapter", () => {
 
       // Subscription should have been cleaned up — unsubscribe should not throw
       // (no UnsubscribeRequest will be sent since there are no remaining callbacks)
+    });
+
+    it("logs a warning when subscribe transport send fails", async () => {
+      const warnFn = vi.fn();
+      const transport: SyncTransport = {
+        state: "connected",
+        send: () => Promise.reject(new Error("send failed")),
+        onMessage: () => {},
+        close: () => {},
+      };
+      const adapter = new WsNetworkAdapter(transport, 5_000, { warn: warnFn });
+      const cb = vi.fn();
+
+      adapter.subscribe("doc-1", cb);
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(warnFn).toHaveBeenCalledWith(
+        "Subscribe transport send failed",
+        expect.objectContaining({ error: expect.any(String) }),
+      );
     });
   });
 

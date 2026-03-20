@@ -1,4 +1,4 @@
-import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { BullMQJobQueue } from "../adapters/bullmq/bullmq-job-queue.js";
 import { BullMQJobWorker } from "../adapters/bullmq/bullmq-job-worker.js";
@@ -9,8 +9,10 @@ import { runJobWorkerContract } from "./job-worker.contract.js";
 import { ensureValkey } from "./valkey-container.js";
 
 import type { ValkeyTestContext } from "./valkey-container.js";
-import type { UnixMillis } from "@pluralscape/types";
+import type { Logger, UnixMillis } from "@pluralscape/types";
 import type IORedis from "ioredis";
+
+const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 // Resolve Valkey availability before any tests run
 const ctx: ValkeyTestContext = await ensureValkey();
@@ -23,12 +25,12 @@ function nextQueueName(): string {
   return `test-${String(Date.now())}-${String(testId)}`;
 }
 
-function createQueue(
-  clock?: () => UnixMillis,
-  options?: { logger?: import("../observability/job-logger.js").JobLogger },
-): BullMQJobQueue {
+function createQueue(options?: { clock?: () => UnixMillis; logger?: Logger }): BullMQJobQueue {
   if (redis === null) throw new Error("Valkey not available");
-  return new BullMQJobQueue(nextQueueName(), redis, clock, options);
+  return new BullMQJobQueue(nextQueueName(), redis, {
+    logger: options?.logger ?? mockLogger,
+    clock: options?.clock,
+  });
 }
 
 afterAll(async () => {
@@ -70,7 +72,7 @@ describe.skipIf(!ctx.available)("BullMQJobWorker", () => {
     (queue) => {
       const q = queue as BullMQJobQueue;
       if (redis === null) throw new Error("Valkey not available");
-      return new BullMQJobWorker(q.name, redis, queue, { pollIntervalMs: 50 });
+      return new BullMQJobWorker(q.name, redis, queue, { pollIntervalMs: 50, logger: mockLogger });
     },
   );
 });
@@ -101,7 +103,7 @@ describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
 
   it("detects stalled jobs with injectable clock", async () => {
     let currentTime = 1000 as UnixMillis;
-    queue = createQueue(() => currentTime);
+    queue = createQueue({ clock: () => currentTime });
 
     await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
     await queue.dequeue();

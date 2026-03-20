@@ -83,6 +83,7 @@ describe("OfflineQueueManager", () => {
       offlineQueueAdapter: mockOfflineQueueAdapter([]),
       networkAdapter: mockNetworkAdapter(),
       storageAdapter: mockStorageAdapter(),
+      onError: vi.fn(),
     });
 
     const result = await manager.replay();
@@ -112,6 +113,7 @@ describe("OfflineQueueManager", () => {
       offlineQueueAdapter: queueAdapter,
       networkAdapter,
       storageAdapter: mockStorageAdapter(),
+      onError: vi.fn(),
     });
 
     const result = await manager.replay();
@@ -192,6 +194,7 @@ describe("OfflineQueueManager", () => {
       offlineQueueAdapter: queueAdapter,
       networkAdapter,
       storageAdapter: mockStorageAdapter(),
+      onError: vi.fn(),
     });
 
     const result = await manager.replay();
@@ -210,6 +213,7 @@ describe("OfflineQueueManager", () => {
       offlineQueueAdapter: mockOfflineQueueAdapter(entries),
       networkAdapter: mockNetworkAdapter(),
       storageAdapter,
+      onError: vi.fn(),
     });
 
     await manager.replay();

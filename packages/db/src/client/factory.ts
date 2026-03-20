@@ -7,6 +7,7 @@ import {
 } from "../helpers/db.constants.js";
 
 import type { DatabaseClient, PgDatabaseClient, SqliteDatabaseClient } from "./types.js";
+import type { Logger } from "@pluralscape/types";
 
 /** Hex-encoded key pattern for SQLCipher encryption. */
 const HEX_KEY_RE = /^[0-9a-fA-F]+$/;
@@ -97,7 +98,9 @@ export async function createDatabase(config: DatabaseConfig): Promise<DatabaseCl
  * Creates a database client from environment variables.
  * Reads DB_DIALECT and DATABASE_URL / DATABASE_PATH.
  */
-export async function createDatabaseFromEnv(): Promise<DatabaseClient> {
+export async function createDatabaseFromEnv(
+  logger?: Pick<Logger, "warn">,
+): Promise<DatabaseClient> {
   const dialect = getDialect();
   switch (dialect) {
     case "pg": {
@@ -110,7 +113,7 @@ export async function createDatabaseFromEnv(): Promise<DatabaseClient> {
     case "sqlite": {
       const filename = process.env["DATABASE_PATH"];
       if (!filename) {
-        console.warn("DATABASE_PATH not set, defaulting to 'pluralscape.db'");
+        logger?.warn("DATABASE_PATH not set, defaulting to 'pluralscape.db'");
       }
       const rawKey = process.env["SQLITE_ENCRYPTION_KEY"];
       if (rawKey !== undefined && rawKey === "") {
