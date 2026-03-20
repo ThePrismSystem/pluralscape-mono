@@ -1,6 +1,15 @@
 import type { SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 
+/** Constant-time-safe byte-by-byte comparison for Uint8Array values. */
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 /** Thrown when a snapshot submission has a version not newer than the current one. */
 export class SnapshotVersionConflictError extends Error {
   override readonly name = "SnapshotVersionConflictError" as const;
@@ -49,6 +58,21 @@ export class EncryptedRelay {
 
   submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): number {
     this.evictIfNeeded(envelope.documentId);
+
+    // Dedup: if (documentId, authorPublicKey, nonce) already exists, return existing seq
+    const existing = this.documents.get(envelope.documentId);
+    if (existing) {
+      for (const e of existing) {
+        if (
+          bytesEqual(e.authorPublicKey, envelope.authorPublicKey) &&
+          bytesEqual(e.nonce, envelope.nonce)
+        ) {
+          this.touch(envelope.documentId);
+          return e.seq;
+        }
+      }
+    }
+
     const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
     const seq = currentSeq + 1;
     this.seqCounters.set(envelope.documentId, seq);
