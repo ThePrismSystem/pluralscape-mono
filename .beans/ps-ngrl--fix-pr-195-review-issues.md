@@ -1,6 +1,6 @@
 ---
 # ps-ngrl
-title: 'Fix PR #195 review issues'
+title: "Fix PR #195 review issues"
 status: completed
 type: task
 priority: normal
@@ -30,10 +30,10 @@ Address 4 critical, 6 important, and 7 suggestion items from PR review
 - [x] Item 18: Fix submitChange error message format
 - [x] Run all tests
 
-
 ## Summary of Changes
 
 Addressed all 17 review items from PR #195:
+
 - Critical: Fixed limit forwarding, apply-before-persist ordering, made onError required, added error callbacks to WsNetworkAdapter
 - Important: Added close(), try/catch in dispose(), queue routing for handleIncomingChanges, completed eviction test, added relay integration tests, VERSION_CONFLICT logging
 - Suggestions: Extracted persistChanges helper, added mapConcurrent comment, fixed redundant has+get, documented getSession cast, typed timestamps as UnixMillis, fixed error message format

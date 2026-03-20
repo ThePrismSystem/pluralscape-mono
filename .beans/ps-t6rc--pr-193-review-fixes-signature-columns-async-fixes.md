@@ -1,6 +1,6 @@
 ---
 # ps-t6rc
-title: 'PR #193 review fixes: signature columns, async fixes, dedup, error handling, perf, type cleanup'
+title: "PR #193 review fixes: signature columns, async fixes, dedup, error handling, perf, type cleanup"
 status: completed
 type: task
 priority: normal
