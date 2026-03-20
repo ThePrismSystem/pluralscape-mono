@@ -152,7 +152,8 @@ const subsystemHierarchy = createHierarchyService<
     restored: "subsystem.restored",
   },
   beforeUpdate: async (tx, entityId, parsed, systemId) => {
-    const parentSubsystemId = parsed.parentSubsystemId as string | null;
+    const rawParentId = parsed.parentSubsystemId;
+    const parentSubsystemId = typeof rawParentId === "string" ? rawParentId : null;
 
     // Reject self-parenting
     if (parentSubsystemId === entityId) {

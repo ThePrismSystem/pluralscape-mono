@@ -13,7 +13,7 @@ export function accessLogMiddleware(): MiddlewareHandler {
       const duration = Date.now() - start;
       const log = getContextLogger(c);
       log.info("HTTP request", {
-        requestId: c.get("requestId") as string | undefined,
+        requestId: c.res.headers.get("X-Request-Id") ?? undefined,
         method: c.req.method,
         path: c.req.path,
         status: c.res.status,
