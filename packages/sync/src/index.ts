@@ -127,6 +127,10 @@ export type {
   SyncNetworkAdapter,
   SyncSubscription,
 } from "./adapters/network-adapter.js";
+export type { SqliteDriver, SqliteStatement } from "./adapters/sqlite-driver.js";
+export { SqliteStorageAdapter } from "./adapters/sqlite-storage-adapter.js";
+export { createBunSqliteDriver } from "./adapters/bun-sqlite-driver.js";
+export { WsNetworkAdapter } from "./adapters/ws-network-adapter.js";
 
 // ── Compaction & document lifecycle ───────────────────────────────────
 export { checkCompactionEligibility, LazyDocumentSizeTracker } from "./compaction.js";

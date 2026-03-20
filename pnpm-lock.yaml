@@ -474,6 +474,12 @@ importers:
       '@pluralscape/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      better-sqlite3-multiple-ciphers:
+        specifier: ^12.6.2
+        version: 12.6.2
       eslint:
         specifier: ^10.0.3
         version: 10.0.3
