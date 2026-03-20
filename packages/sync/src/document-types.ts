@@ -1,16 +1,6 @@
-import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
+import type { BucketId, ChannelId, SyncDocType, SyncKeyType, SystemId } from "@pluralscape/types";
 
-/** Sync document types matching the document topology spec (Section 3). */
-export type SyncDocumentType =
-  | "system-core"
-  | "fronting"
-  | "chat"
-  | "journal"
-  | "privacy-config"
-  | "bucket";
-
-/** Which encryption key tier a document uses. */
-export type DocumentKeyType = "derived" | "bucket";
+export type { SyncDocType as SyncDocumentType, SyncKeyType as DocumentKeyType } from "@pluralscape/types";
 
 /** Parsed components of a document ID. */
 export type ParsedDocumentId =
@@ -93,8 +83,8 @@ const PREFIX_CONFIGS = [
   { prefix: "bucket-", documentType: "bucket", keyType: "bucket", timeSplitPattern: null },
 ] as const satisfies readonly {
   prefix: string;
-  documentType: SyncDocumentType;
-  keyType: DocumentKeyType;
+  documentType: SyncDocType;
+  keyType: SyncKeyType;
   timeSplitPattern: RegExp | null;
 }[];
 
