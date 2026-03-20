@@ -81,6 +81,7 @@ export class MockSyncTransport implements SyncTransport {
             changes: this.relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
             snapshot: null,
           })),
+          droppedDocIds: [],
         };
 
       case "UnsubscribeRequest":

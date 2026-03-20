@@ -309,8 +309,6 @@ describe("PG sync schema", () => {
       const signature = new Uint8Array(64).fill(0x05);
       const changeId = crypto.randomUUID();
 
-      const signature = new Uint8Array(64).fill(0x77);
-
       await db.insert(syncChanges).values({
         id: changeId,
         documentId,
@@ -447,8 +445,6 @@ describe("PG sync schema", () => {
       const authorPublicKey = new Uint8Array(32).fill(0x07);
       const nonce = new Uint8Array(24).fill(0x08);
       const signature = new Uint8Array(64).fill(0x88);
-
-      const signature = new Uint8Array(64).fill(0x09);
 
       await db.insert(syncSnapshots).values({
         documentId,

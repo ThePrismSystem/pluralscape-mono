@@ -49,8 +49,7 @@ function initPool(): NodeWorker[] {
   const workerPath = getWorkerPath();
   pool = Array.from({ length: POOL_SIZE }, () => {
     const worker = new Worker(workerPath);
-    const emitter = asEmitter(worker);
-    emitter.on("message", (msg: WorkerResponse) => {
+    worker.on("message", (msg: WorkerResponse) => {
       const req = pending.get(msg.id);
       if (!req) return;
       pending.delete(msg.id);
@@ -60,7 +59,7 @@ function initPool(): NodeWorker[] {
         req.reject(new Error(msg.error ?? "Worker error"));
       }
     });
-    emitter.on("error", (err: Error) => {
+    worker.on("error", (err: Error) => {
       // Reject all pending requests on this worker
       for (const [id, req] of pending) {
         req.reject(err);

@@ -1,7 +1,6 @@
-
 import type { DocumentKeyType, SyncDocumentType } from "../document-types.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
-import type { SystemId } from "@pluralscape/types";
+import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
 
 // ── Manifest ─────────────────────────────────────────────────────────
 

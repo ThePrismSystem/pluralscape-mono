@@ -12,7 +12,7 @@ import type {
   SyncManifestEntry,
   SyncRelayService,
 } from "@pluralscape/sync";
-import type { SystemId } from "@pluralscape/types";
+import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** PostgreSQL-backed implementation of SyncRelayService. */
@@ -66,21 +66,7 @@ export class PgSyncRelayService implements SyncRelayService {
         createdAt: now,
       });
 
-      if (inserted) return inserted.seq;
-
-      // Dedup hit — return existing seq (wasted seq from increment is harmless)
-      const [existing] = await tx
-        .select({ seq: syncChanges.seq })
-        .from(syncChanges)
-        .where(
-          and(
-            eq(syncChanges.documentId, envelope.documentId),
-            eq(syncChanges.authorPublicKey, envelope.authorPublicKey),
-            eq(syncChanges.nonce, envelope.nonce),
-          ),
-        );
-      if (!existing) throw new Error(`Dedup lookup failed: ${envelope.documentId}`);
-      return existing.seq;
+      return seq;
     });
   }
 

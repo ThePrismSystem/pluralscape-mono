@@ -387,7 +387,6 @@ describe("SQLite sync schema", () => {
       const now = Date.now();
       const authorKey = Buffer.from([0xde, 0xad, 0xbe, 0xef]);
       const nonce = Buffer.from([0xca, 0xfe, 0xba, 0xbe]);
-      const signature = Buffer.from([0xdd, 0xee, 0xff]);
 
       db.insert(syncChanges)
         .values({
