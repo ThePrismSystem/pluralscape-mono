@@ -17,7 +17,7 @@
     "@eslint-community/eslint-plugin-eslint-comments": "^4.7.1"
   },
   "peerDependencies": {
-    "eslint": "^9.0.0",
+    "eslint": "^9.0.0 || ^10.0.0",
     "typescript": "^5.0.0"
   }
 }

@@ -32,11 +32,7 @@
       "ignoreDependencies": ["@tanstack/react-query", "@trpc/client", "@trpc/react-query"]
     },
     "packages/crypto": {
-      "ignoreDependencies": [
-        "@pluralscape/test-utils",
-        "@types/libsodium-wrappers-sumo",
-        "react-native-libsodium"
-      ]
+      "ignoreDependencies": ["@pluralscape/test-utils", "react-native-libsodium"]
     },
     "packages/db": {
       "ignore": ["drizzle.config.pg.ts", "drizzle.config.sqlite.ts", "scripts/**"]

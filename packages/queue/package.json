@@ -17,7 +17,7 @@
     "@pluralscape/types": "workspace:*",
     "bullmq": "^5.52.1",
     "drizzle-orm": "^0.45.1",
-    "ioredis": "5.9.3"
+    "ioredis": "5.10.1"
   },
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",

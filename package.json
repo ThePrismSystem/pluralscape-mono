@@ -54,12 +54,14 @@
   },
   "pnpm": {
     "overrides": {
-      "@trpc/server": "11.13.4",
+      "@trpc/server": "11.14.0",
+      "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.6.2",
+      "ioredis": "5.10.1",
       "esbuild": ">=0.25.0",
       "fast-xml-parser": ">=5.5.7",
       "flatted": ">=3.4.2"
     }
   },
   "prettier": "@pluralscape/prettier-config",
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@9.15.9"
 }

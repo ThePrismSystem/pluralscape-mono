@@ -14,12 +14,13 @@
   "dependencies": {
     "@pluralscape/crypto": "workspace:*",
     "@pluralscape/types": "workspace:*",
+    "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.6.2",
     "better-sqlite3-multiple-ciphers": "^12.6.2",
     "drizzle-orm": "^0.45.1",
     "postgres": "^3.4.5"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.3.16",
+    "@electric-sql/pglite": "^0.4.0",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/test-utils": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
