@@ -17,6 +17,8 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 const ONE_DAY_MS = 86_400_000;
 const ONE_HOUR_MS = 3_600_000;
+/** 16-byte salt for device transfer test inserts. */
+const TEST_CODE_SALT = new Uint8Array(16);
 
 const schema = { accounts, authKeys, sessions, recoveryKeys, deviceTransferRequests };
 
@@ -572,6 +574,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         sourceSessionId: source.id,
         targetSessionId: target.id,
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });
@@ -587,6 +590,30 @@ describe("PG auth schema", () => {
       expect(rows[0]?.expiresAt).toBe(now + ONE_HOUR_MS);
     });
 
+    it("accepts targetSessionId as null", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: null,
+        codeSalt: TEST_CODE_SALT,
+        createdAt: now,
+        expiresAt: now + ONE_HOUR_MS,
+      });
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.targetSessionId).toBeNull();
+    });
+
     it("defaults encryptedKeyMaterial to null", async () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);
@@ -599,6 +626,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         sourceSessionId: source.id,
         targetSessionId: target.id,
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });
@@ -624,6 +652,7 @@ describe("PG auth schema", () => {
         sourceSessionId: source.id,
         targetSessionId: target.id,
         encryptedKeyMaterial: keyMaterial,
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });
@@ -647,6 +676,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         sourceSessionId: source.id,
         targetSessionId: target.id,
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });
@@ -672,6 +702,7 @@ describe("PG auth schema", () => {
         targetSessionId: target.id,
         status: "approved",
         encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });
@@ -696,6 +727,7 @@ describe("PG auth schema", () => {
         sourceSessionId: source.id,
         targetSessionId: target.id,
         status: "expired",
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });
@@ -720,6 +752,7 @@ describe("PG auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           status: "invalid" as "pending",
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         }),
@@ -738,6 +771,7 @@ describe("PG auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now - 1000,
         }),
@@ -756,6 +790,7 @@ describe("PG auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now,
         }),
@@ -774,6 +809,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         sourceSessionId: source.id,
         targetSessionId: target.id,
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });
@@ -798,6 +834,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         sourceSessionId: source.id,
         targetSessionId: target.id,
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });
@@ -821,6 +858,7 @@ describe("PG auth schema", () => {
           accountId: account.id,
           sourceSessionId: "nonexistent",
           targetSessionId: session.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         }),
@@ -832,6 +870,7 @@ describe("PG auth schema", () => {
           accountId: account.id,
           sourceSessionId: session.id,
           targetSessionId: "nonexistent",
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         }),
@@ -851,6 +890,7 @@ describe("PG auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           status: "approved",
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         }),
@@ -869,6 +909,7 @@ describe("PG auth schema", () => {
         accountId: account.id,
         sourceSessionId: source.id,
         targetSessionId: target.id,
+        codeSalt: TEST_CODE_SALT,
         createdAt: now,
         expiresAt: now + ONE_HOUR_MS,
       });

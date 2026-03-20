@@ -515,6 +515,7 @@ describe("PG views / query helpers", () => {
         sourceSessionId: sourceSession,
         targetSessionId: targetSession,
         status: "pending",
+        codeSalt: new Uint8Array(16),
         createdAt: now,
         expiresAt: now + 3600000,
       });
@@ -532,6 +533,7 @@ describe("PG views / query helpers", () => {
         sourceSessionId: sourceSession2,
         targetSessionId: targetSession2,
         status: "pending",
+        codeSalt: new Uint8Array(16),
         createdAt: now - 7200000,
         expiresAt: now - 3600000,
       });

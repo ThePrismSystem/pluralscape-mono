@@ -97,7 +97,7 @@ export interface ActiveDeviceTransfer {
   readonly id: string;
   readonly accountId: string;
   readonly sourceSessionId: string;
-  readonly targetSessionId: string;
+  readonly targetSessionId: string | null;
   readonly createdAt: number;
   readonly expiresAt: number;
 }

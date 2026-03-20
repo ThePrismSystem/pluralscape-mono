@@ -17,6 +17,8 @@ import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const ONE_DAY_MS = 86_400_000;
 const ONE_HOUR_MS = 3_600_000;
+/** 16-byte salt for device transfer test inserts. */
+const TEST_CODE_SALT = new Uint8Array(16);
 
 const schema = { accounts, authKeys, sessions, recoveryKeys, deviceTransferRequests };
 
@@ -629,6 +631,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })
@@ -646,6 +649,61 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.expiresAt).toBe(now + ONE_HOUR_MS);
     });
 
+    it("accepts targetSessionId as null", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: null,
+          codeSalt: TEST_CODE_SALT,
+          createdAt: now,
+          expiresAt: now + ONE_HOUR_MS,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.targetSessionId).toBeNull();
+    });
+
+    it("cascades on target session deletion with null-safe FK", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
+          createdAt: now,
+          expiresAt: now + ONE_HOUR_MS,
+        })
+        .run();
+
+      db.delete(sessions).where(eq(sessions.id, target.id)).run();
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
     it("defaults encryptedKeyMaterial to null", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
@@ -659,6 +717,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })
@@ -687,6 +746,7 @@ describe("SQLite auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           encryptedKeyMaterial: keyMaterial,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })
@@ -713,6 +773,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })
@@ -741,6 +802,7 @@ describe("SQLite auth schema", () => {
           targetSessionId: target.id,
           status: "approved",
           encryptedKeyMaterial: new Uint8Array([1, 2, 3]),
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })
@@ -768,6 +830,7 @@ describe("SQLite auth schema", () => {
           sourceSessionId: source.id,
           targetSessionId: target.id,
           status: "expired",
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })
@@ -796,6 +859,7 @@ describe("SQLite auth schema", () => {
             sourceSessionId: source.id,
             targetSessionId: target.id,
             status: "invalid" as "pending",
+            codeSalt: TEST_CODE_SALT,
             createdAt: now,
             expiresAt: now + ONE_HOUR_MS,
           })
@@ -817,6 +881,7 @@ describe("SQLite auth schema", () => {
             accountId: account.id,
             sourceSessionId: source.id,
             targetSessionId: target.id,
+            codeSalt: TEST_CODE_SALT,
             createdAt: now,
             expiresAt: now - 1000,
           })
@@ -838,6 +903,7 @@ describe("SQLite auth schema", () => {
             accountId: account.id,
             sourceSessionId: source.id,
             targetSessionId: target.id,
+            codeSalt: TEST_CODE_SALT,
             createdAt: now,
             expiresAt: now,
           })
@@ -858,6 +924,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })
@@ -885,6 +952,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })
@@ -912,6 +980,7 @@ describe("SQLite auth schema", () => {
             accountId: account.id,
             sourceSessionId: "nonexistent",
             targetSessionId: session.id,
+            codeSalt: TEST_CODE_SALT,
             createdAt: now,
             expiresAt: now + ONE_HOUR_MS,
           })
@@ -926,6 +995,7 @@ describe("SQLite auth schema", () => {
             accountId: account.id,
             sourceSessionId: session.id,
             targetSessionId: "nonexistent",
+            codeSalt: TEST_CODE_SALT,
             createdAt: now,
             expiresAt: now + ONE_HOUR_MS,
           })
@@ -948,6 +1018,7 @@ describe("SQLite auth schema", () => {
             sourceSessionId: source.id,
             targetSessionId: target.id,
             status: "approved",
+            codeSalt: TEST_CODE_SALT,
             createdAt: now,
             expiresAt: now + ONE_HOUR_MS,
           })
@@ -968,6 +1039,7 @@ describe("SQLite auth schema", () => {
           accountId: account.id,
           sourceSessionId: source.id,
           targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
           createdAt: now,
           expiresAt: now + ONE_HOUR_MS,
         })

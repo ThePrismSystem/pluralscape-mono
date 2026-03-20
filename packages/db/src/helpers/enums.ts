@@ -384,6 +384,7 @@ export const JOB_TYPES = [
   "report-generate",
   "audit-log-cleanup",
   "partition-maintenance",
+  "device-transfer-cleanup",
 ] as const satisfies readonly JobType[];
 export const JOB_STATUSES = [
   "pending",

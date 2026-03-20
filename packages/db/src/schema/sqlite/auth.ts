@@ -106,11 +106,13 @@ export const deviceTransferRequests = sqliteTable(
     sourceSessionId: text("source_session_id")
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
-    targetSessionId: text("target_session_id")
-      .notNull()
-      .references(() => sessions.id, { onDelete: "cascade" }),
+    targetSessionId: text("target_session_id").references(() => sessions.id, {
+      onDelete: "cascade",
+    }),
     status: text("status").notNull().default("pending").$type<DeviceTransferStatus>(),
     encryptedKeyMaterial: sqliteBinary("encrypted_key_material"),
+    codeSalt: sqliteBinary("code_salt").notNull(),
+    codeAttempts: integer("code_attempts").notNull().default(0),
     createdAt: sqliteTimestamp("created_at").notNull(),
     expiresAt: sqliteTimestamp("expires_at").notNull(),
   },

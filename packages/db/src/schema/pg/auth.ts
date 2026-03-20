@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, pgTable, uniqueIndex, varchar } from "drizzle-orm/pg-core";
 
 import { pgBinary, pgEncryptedBlob, pgTimestamp } from "../../columns/pg.js";
 import { timestamps, versioned, versionCheckFor } from "../../helpers/audit.pg.js";
@@ -116,14 +116,17 @@ export const deviceTransferRequests = pgTable(
     sourceSessionId: varchar("source_session_id", { length: ID_MAX_LENGTH })
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
-    targetSessionId: varchar("target_session_id", { length: ID_MAX_LENGTH })
-      .notNull()
-      .references(() => sessions.id, { onDelete: "cascade" }),
+    targetSessionId: varchar("target_session_id", { length: ID_MAX_LENGTH }).references(
+      () => sessions.id,
+      { onDelete: "cascade" },
+    ),
     status: varchar("status", { length: ENUM_MAX_LENGTH })
       .notNull()
       .default("pending")
       .$type<DeviceTransferStatus>(),
     encryptedKeyMaterial: pgBinary("encrypted_key_material"),
+    codeSalt: pgBinary("code_salt").notNull(),
+    codeAttempts: integer("code_attempts").notNull().default(0),
     createdAt: pgTimestamp("created_at").notNull(),
     expiresAt: pgTimestamp("expires_at").notNull(),
   },
