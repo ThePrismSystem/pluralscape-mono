@@ -256,4 +256,94 @@ describe("SyncEngine steady-state", () => {
       await engine.handleIncomingChanges("unknown-sys_test", []);
     });
   });
+
+  describe("offline queue integration", () => {
+    it("enqueues change before submitting to server", async () => {
+      const relay = new EncryptedRelay();
+      const enqueue = vi.fn().mockResolvedValue("entry-1");
+      const markSynced = vi.fn().mockResolvedValue(undefined);
+      const offlineQueueAdapter = {
+        enqueue,
+        drainUnsynced: vi.fn().mockResolvedValue([]),
+        markSynced,
+        deleteConfirmed: vi.fn().mockResolvedValue(0),
+      };
+
+      const engine = await createBootstrappedEngine({
+        networkAdapter: relayNetworkAdapter(relay),
+        offlineQueueAdapter,
+      });
+
+      await engine.applyLocalChange("system-core-sys_test", (doc) => {
+        const d = doc as Record<string, Record<string, unknown>>;
+        d["_offline_test"] = { value: "test" };
+      });
+
+      // Enqueue should have been called before submit
+      expect(enqueue).toHaveBeenCalledTimes(1);
+      expect(enqueue).toHaveBeenCalledWith(
+        "system-core-sys_test",
+        expect.objectContaining({ ciphertext: expect.any(Uint8Array) }),
+      );
+    });
+
+    it("marks entry as synced after successful submission", async () => {
+      const relay = new EncryptedRelay();
+      const markSynced = vi.fn().mockResolvedValue(undefined);
+      const offlineQueueAdapter = {
+        enqueue: vi.fn().mockResolvedValue("entry-1"),
+        drainUnsynced: vi.fn().mockResolvedValue([]),
+        markSynced,
+        deleteConfirmed: vi.fn().mockResolvedValue(0),
+      };
+
+      const engine = await createBootstrappedEngine({
+        networkAdapter: relayNetworkAdapter(relay),
+        offlineQueueAdapter,
+      });
+
+      const seq = await engine.applyLocalChange("system-core-sys_test", (doc) => {
+        const d = doc as Record<string, Record<string, unknown>>;
+        d["_sync_test"] = { value: 1 };
+      });
+
+      expect(markSynced).toHaveBeenCalledTimes(1);
+      expect(markSynced).toHaveBeenCalledWith("entry-1", seq);
+    });
+
+    it("does not mark synced when server submission fails", async () => {
+      const markSynced = vi.fn().mockResolvedValue(undefined);
+      const offlineQueueAdapter = {
+        enqueue: vi.fn().mockResolvedValue("entry-1"),
+        drainUnsynced: vi.fn().mockResolvedValue([]),
+        markSynced,
+        deleteConfirmed: vi.fn().mockResolvedValue(0),
+      };
+
+      const failingNetwork = {
+        submitChange: vi.fn().mockRejectedValue(new Error("Network offline")),
+        fetchChangesSince: vi.fn().mockResolvedValue([]),
+        submitSnapshot: vi.fn().mockResolvedValue(undefined),
+        fetchLatestSnapshot: vi.fn().mockResolvedValue(null),
+        subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+        fetchManifest: vi.fn().mockResolvedValue(SYSTEM_CORE_MANIFEST),
+      };
+
+      const engine = await createBootstrappedEngine({
+        networkAdapter: failingNetwork,
+        offlineQueueAdapter,
+      });
+
+      await expect(
+        engine.applyLocalChange("system-core-sys_test", (doc) => {
+          const d = doc as Record<string, Record<string, unknown>>;
+          d["_fail_test"] = { value: 1 };
+        }),
+      ).rejects.toThrow("Network offline");
+
+      // Enqueue was called, but markSynced was NOT called
+      expect(offlineQueueAdapter.enqueue).toHaveBeenCalledTimes(1);
+      expect(markSynced).not.toHaveBeenCalled();
+    });
+  });
 });

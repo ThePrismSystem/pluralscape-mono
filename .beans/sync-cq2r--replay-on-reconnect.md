@@ -1,11 +1,11 @@
 ---
 # sync-cq2r
 title: Replay on reconnect
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-19T11:39:41Z
-updated_at: 2026-03-19T11:39:41Z
+updated_at: 2026-03-20T10:24:43Z
 parent: sync-hji0
 ---
 
@@ -19,3 +19,7 @@ Drain offline queue in seq order on AuthenticateResponse (reconnect). Mark synce
 - INTERNAL_ERROR response triggers exponential backoff before retry
 - Replay progress tracked (partial replay resumable after disconnect)
 - Integration test: enqueue N changes offline, reconnect, verify all arrive at relay
+
+## Summary of Changes
+
+Implemented as part of feat/sync-conflict-resolution-and-offline-queue branch.
