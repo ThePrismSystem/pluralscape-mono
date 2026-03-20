@@ -19,7 +19,7 @@ export class MockSyncTransport implements SyncTransport {
 
   send(message: ClientMessage): Promise<void> {
     if (this.state !== "connected") {
-      throw new Error("Transport not connected");
+      return Promise.reject(new Error("Transport not connected"));
     }
     // Process message and generate response
     const response = this.processMessage(message);

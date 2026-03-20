@@ -1,5 +1,6 @@
 import type { DocumentKeyType, SyncDocumentType } from "../document-types.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
+import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
 
 // ── Manifest ─────────────────────────────────────────────────────────
 
@@ -16,9 +17,9 @@ export interface SyncManifestEntry {
   /** Key type determining which encryption key is used. */
   readonly keyType: DocumentKeyType;
   /** Present for bucket documents — identifies which bucket. */
-  readonly bucketId: string | undefined;
+  readonly bucketId: BucketId | undefined;
   /** Present for chat documents — identifies which channel. */
-  readonly channelId: string | undefined;
+  readonly channelId: ChannelId | undefined;
   /** Present for time-split documents (e.g. "2026-Q1", "2026-03", "2026"). */
   readonly timePeriod: string | null;
   /** Unix milliseconds when the document was created on the server. */
@@ -40,7 +41,7 @@ export interface SyncManifestEntry {
  */
 export interface SyncManifest {
   /** The system ID this manifest belongs to. */
-  readonly systemId: string;
+  readonly systemId: SystemId;
   readonly documents: readonly SyncManifestEntry[];
 }
 
@@ -112,4 +113,7 @@ export interface SyncNetworkAdapter {
    * Friend devices receive a filtered manifest (bucket docs with active KeyGrants only).
    */
   fetchManifest(systemId: string): Promise<SyncManifest>;
+
+  /** Release resources (pending requests, timers, subscriptions). Optional. */
+  dispose?(): void;
 }
