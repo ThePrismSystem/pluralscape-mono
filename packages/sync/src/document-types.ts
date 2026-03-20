@@ -1,16 +1,9 @@
-import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
+import type { BucketId, ChannelId, SyncDocType, SyncKeyType, SystemId } from "@pluralscape/types";
 
-/** Sync document types matching the document topology spec (Section 3). */
-export type SyncDocumentType =
-  | "system-core"
-  | "fronting"
-  | "chat"
-  | "journal"
-  | "privacy-config"
-  | "bucket";
-
-/** Which encryption key tier a document uses. */
-export type DocumentKeyType = "derived" | "bucket";
+/** Sync document types — aliased from the canonical types in @pluralscape/types. */
+export type SyncDocumentType = SyncDocType;
+/** Which encryption key tier a document uses — aliased from @pluralscape/types. */
+export type DocumentKeyType = SyncKeyType;
 
 /** Parsed components of a document ID. */
 export type ParsedDocumentId =

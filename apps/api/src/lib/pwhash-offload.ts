@@ -26,16 +26,15 @@ interface WorkerResponse {
  * Bun's Worker from node:worker_threads supports Node-style .on() at
  * runtime but @types/bun doesn't declare it on the Worker class.
  */
-interface WorkerEmitter {
-  on(event: "message", fn: (msg: WorkerResponse) => void): void;
-  on(event: "error", fn: (err: Error) => void): void;
-  postMessage(msg: unknown): void;
+interface WorkerWithEvents extends Worker {
+  on(event: "message", fn: (msg: WorkerResponse) => void): this;
+  on(event: "error", fn: (err: Error) => void): this;
 }
 
 /** Narrow Worker to its event-emitter interface that Bun supports at runtime. */
-function asEmitter(w: Worker): WorkerEmitter {
+function asEmitter(w: Worker): WorkerWithEvents {
   // Worker extends EventEmitter in Node and Bun, but @types/bun omits it
-  return w as never;
+  return w as WorkerWithEvents;
 }
 
 let pool: Worker[] | null = null;

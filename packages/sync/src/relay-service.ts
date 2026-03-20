@@ -1,5 +1,6 @@
 import type { SyncManifest } from "./adapters/network-adapter.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
+import type { SystemId } from "@pluralscape/types";
 
 /**
  * Server-side relay service interface for encrypted sync operations.
@@ -25,5 +26,5 @@ export interface SyncRelayService {
   getLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null>;
 
   /** Get the document manifest for a system. */
-  getManifest(systemId: string): Promise<SyncManifest>;
+  getManifest(systemId: SystemId): Promise<SyncManifest>;
 }
