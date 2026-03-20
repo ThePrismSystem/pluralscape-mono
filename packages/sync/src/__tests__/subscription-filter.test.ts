@@ -8,14 +8,20 @@ import type {
   OwnerLiteProfile,
   ReplicationProfile,
 } from "../replication-profiles.js";
+import type { BucketId, ChannelId } from "@pluralscape/types";
+
+/** Cast a string to BucketId for test fixtures. */
+const bid = (id: string): BucketId => id as BucketId;
+/** Cast a string to ChannelId for test fixtures. */
+const cid = (id: string): ChannelId => id as ChannelId;
 
 function entry(
   overrides: Partial<SyncManifestEntry> & { docId: string; docType: SyncManifestEntry["docType"] },
 ): SyncManifestEntry {
   return {
     keyType: "derived",
-    bucketId: undefined,
-    channelId: undefined,
+    bucketId: null,
+    channelId: null,
     timePeriod: null,
     createdAt: 1000,
     updatedAt: 1000,
@@ -90,7 +96,12 @@ describe("filterManifest — owner-lite", () => {
       documents: [
         entry({ docId: "system-core-sys_a", docType: "system-core" }),
         entry({ docId: "privacy-config-sys_a", docType: "privacy-config" }),
-        entry({ docId: "bucket-bkt_a", docType: "bucket", keyType: "bucket", bucketId: "bkt_a" }),
+        entry({
+          docId: "bucket-bkt_a",
+          docType: "bucket",
+          keyType: "bucket",
+          bucketId: bid("bkt_a"),
+        }),
       ],
     };
     const result = filterManifest(manifest, profile, [], NOW);
@@ -121,7 +132,12 @@ describe("filterManifest — owner-lite", () => {
     const recentUpdate = NOW - 10 * 24 * 60 * 60 * 1000; // 10 days ago
     const manifest = {
       documents: [
-        entry({ docId: "chat-ch_a", docType: "chat", channelId: "ch_a", updatedAt: recentUpdate }),
+        entry({
+          docId: "chat-ch_a",
+          docType: "chat",
+          channelId: cid("ch_a"),
+          updatedAt: recentUpdate,
+        }),
       ],
     };
     const result = filterManifest(manifest, profile, [], NOW);
@@ -132,7 +148,12 @@ describe("filterManifest — owner-lite", () => {
     const oldUpdate = NOW - 60 * 24 * 60 * 60 * 1000; // 60 days ago
     const manifest = {
       documents: [
-        entry({ docId: "chat-ch_a", docType: "chat", channelId: "ch_a", updatedAt: oldUpdate }),
+        entry({
+          docId: "chat-ch_a",
+          docType: "chat",
+          channelId: cid("ch_a"),
+          updatedAt: oldUpdate,
+        }),
       ],
     };
     const result = filterManifest(manifest, profile, [], NOW);
@@ -180,13 +201,13 @@ describe("filterManifest — friend", () => {
           docId: "bucket-bkt_shared",
           docType: "bucket",
           keyType: "bucket",
-          bucketId: "bkt_shared",
+          bucketId: bid("bkt_shared"),
         }),
         entry({
           docId: "bucket-bkt_other",
           docType: "bucket",
           keyType: "bucket",
-          bucketId: "bkt_other",
+          bucketId: bid("bkt_other"),
         }),
       ],
     };
@@ -204,7 +225,7 @@ describe("filterManifest — friend", () => {
           docId: "bucket-bkt_shared",
           docType: "bucket",
           keyType: "bucket",
-          bucketId: "bkt_shared",
+          bucketId: bid("bkt_shared"),
         }),
       ],
     };
@@ -219,7 +240,7 @@ describe("filterManifest — friend", () => {
           docId: "bucket-bkt_shared",
           docType: "bucket",
           keyType: "bucket",
-          bucketId: "bkt_shared",
+          bucketId: bid("bkt_shared"),
         }),
       ],
     };
@@ -235,7 +256,7 @@ describe("filterManifest — friend", () => {
           docId: "bucket-bkt_shared",
           docType: "bucket",
           keyType: "bucket",
-          bucketId: "bkt_shared",
+          bucketId: bid("bkt_shared"),
         }),
       ],
     };
@@ -304,7 +325,7 @@ describe("filterManifest — friend edge cases", () => {
           docId: "bucket-bkt_a",
           docType: "bucket",
           keyType: "bucket",
-          bucketId: "bkt_a",
+          bucketId: bid("bkt_a"),
         }),
       ],
     };
@@ -323,7 +344,7 @@ describe("filterManifest — chat time-split edge cases", () => {
         entry({
           docId: "chat-ch_a-2026-03",
           docType: "chat",
-          channelId: "ch_a",
+          channelId: cid("ch_a"),
           timePeriod: "2026-03",
           updatedAt: oldUpdate,
         }),

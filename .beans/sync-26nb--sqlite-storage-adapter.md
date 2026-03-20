@@ -1,11 +1,11 @@
 ---
 # sync-26nb
 title: SQLite storage adapter
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-19T11:39:41Z
-updated_at: 2026-03-19T11:39:41Z
+updated_at: 2026-03-20T01:23:14Z
 parent: sync-qxxo
 ---
 
@@ -20,3 +20,10 @@ Implement \`SyncStorageAdapter\` for mobile client using SQLite.
 - listDocuments returns all known document IDs
 - deleteDocument removes all changes and snapshots for a document
 - Works with both Bun SQLite and expo-sqlite (or compatible interface)
+
+## Summary of Changes
+
+- Created SqliteDriver interface (minimal abstraction for bun:sqlite and expo-sqlite)
+- Created createBunSqliteDriver wrapper for bun:sqlite
+- Implemented SqliteStorageAdapter passing all contract tests (15 tests)
+- Added bun-sqlite.d.ts ambient types for tsc compatibility

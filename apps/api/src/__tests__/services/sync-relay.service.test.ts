@@ -246,8 +246,8 @@ describe("PgSyncRelayService", () => {
       expect(manifest.systemId).toBe("sys-1");
       expect(manifest.documents).toHaveLength(1);
       expect(manifest.documents[0]?.docId).toBe("doc-1");
-      expect(manifest.documents[0]?.bucketId).toBeUndefined();
-      expect(manifest.documents[0]?.channelId).toBeUndefined();
+      expect(manifest.documents[0]?.bucketId).toBeNull();
+      expect(manifest.documents[0]?.channelId).toBeNull();
     });
 
     it("returns empty for no matches", async () => {

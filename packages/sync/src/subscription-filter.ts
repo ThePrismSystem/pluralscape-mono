@@ -135,7 +135,7 @@ function filterFriend(
   const grantedBuckets = new Set(profile.grantedBucketIds);
 
   const active = documents.filter(
-    (e) => e.docType === "bucket" && e.bucketId !== undefined && grantedBuckets.has(e.bucketId),
+    (e) => e.docType === "bucket" && e.bucketId !== null && grantedBuckets.has(e.bucketId),
   );
 
   const activeIds = new Set(active.map((e) => e.docId));

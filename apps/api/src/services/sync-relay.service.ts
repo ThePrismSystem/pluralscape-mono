@@ -12,7 +12,7 @@ import type {
   SyncManifestEntry,
   SyncRelayService,
 } from "@pluralscape/sync";
-import type { SystemId } from "@pluralscape/types";
+import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** PostgreSQL-backed implementation of SyncRelayService. */
@@ -162,8 +162,8 @@ export class PgSyncRelayService implements SyncRelayService {
       docId: row.documentId,
       docType: row.docType,
       keyType: row.keyType,
-      bucketId: row.bucketId ?? undefined,
-      channelId: row.channelId ?? undefined,
+      bucketId: row.bucketId as BucketId | null,
+      channelId: row.channelId as ChannelId | null,
       timePeriod: row.timePeriod,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,

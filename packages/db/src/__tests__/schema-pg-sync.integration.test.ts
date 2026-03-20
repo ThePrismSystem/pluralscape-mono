@@ -306,9 +306,8 @@ describe("PG sync schema", () => {
       const encryptedPayload = new Uint8Array([0xde, 0xad, 0xbe, 0xef, 0x01, 0x02]);
       const authorPublicKey = new Uint8Array(32).fill(0x03);
       const nonce = new Uint8Array(24).fill(0x04);
+      const signature = new Uint8Array(64).fill(0x05);
       const changeId = crypto.randomUUID();
-
-      const signature = new Uint8Array(64).fill(0x77);
 
       await db.insert(syncChanges).values({
         id: changeId,

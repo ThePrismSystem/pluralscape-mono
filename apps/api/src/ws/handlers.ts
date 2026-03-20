@@ -50,6 +50,12 @@ export async function handleManifestRequest(
 
 // ── Subscribe / Unsubscribe ─────────────────────────────────────────
 
+/** Result of handling a SubscribeRequest, including skipped docs for quota reporting. */
+export interface SubscribeResult {
+  readonly response: SubscribeResponse;
+  readonly skippedDocIds: readonly string[];
+}
+
 /** Handle a SubscribeRequest. Registers subscriptions and computes catch-up. */
 export async function handleSubscribeRequest(
   message: SubscribeRequest,
