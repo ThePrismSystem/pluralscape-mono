@@ -14,7 +14,7 @@
     "@pluralscape/sync": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
     "@pluralscape/types": "workspace:*",
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.0.0",
     "drizzle-orm": "^0.45.1",
     "postgres": "^3.4.5",
     "typescript": "^5.7.3"

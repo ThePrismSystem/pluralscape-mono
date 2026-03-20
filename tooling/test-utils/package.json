@@ -10,7 +10,7 @@
     "./factories": "./src/factories/index.ts"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.3.16",
+    "@electric-sql/pglite": "^0.4.0",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
