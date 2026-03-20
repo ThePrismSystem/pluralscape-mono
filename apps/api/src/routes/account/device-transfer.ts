@@ -1,3 +1,5 @@
+import { TRANSFER_TIMEOUT_MS } from "@pluralscape/crypto";
+import { MS_PER_HOUR } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import {
@@ -20,30 +22,27 @@ import {
   initiateTransfer,
 } from "../../services/device-transfer.service.js";
 
-import { MS_PER_HOUR, TRANSFER_INITIATION_LIMIT } from "./device-transfer.constants.js";
+import {
+  MAX_TRANSFER_CODE_ATTEMPTS,
+  TRANSFER_INITIATION_LIMIT,
+} from "./device-transfer.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 import type { Context } from "hono";
 
 /** Extract accountId from an authenticated context for rate-limit keying. */
-function extractAccountId(c: Context): string {
-  const auth: unknown = c.get("auth");
-  if (auth !== null && typeof auth === "object" && "accountId" in auth) {
-    const { accountId } = auth as { accountId: string };
-    return accountId;
-  }
-  return "__unauthenticated__";
-}
+const extractAccountId = (c: Context): string => (c.get("auth") as { accountId: string }).accountId;
 
 export const deviceTransferRoute = new Hono<AuthEnv>();
 
-// IP-keyed rate limiter for transfer initiation
+// Account-keyed rate limiter for transfer initiation
 deviceTransferRoute.use(
   "/",
   createRateLimiter({
     limit: TRANSFER_INITIATION_LIMIT,
     windowMs: MS_PER_HOUR,
     keyPrefix: "deviceTransfer:initiate",
+    keyExtractor: extractAccountId,
   }),
 );
 
@@ -83,14 +82,14 @@ deviceTransferRoute.post("/", async (c) => {
   }
 });
 
-// Per-account rate limiter for completion (prevents brute-forcing codes)
+// Per-transfer rate limiter for completion (prevents brute-forcing codes)
 deviceTransferRoute.use(
   "/:id/complete",
   createRateLimiter({
-    limit: TRANSFER_INITIATION_LIMIT,
-    windowMs: MS_PER_HOUR,
-    keyPrefix: "deviceTransfer:account",
-    keyExtractor: extractAccountId,
+    limit: MAX_TRANSFER_CODE_ATTEMPTS,
+    windowMs: TRANSFER_TIMEOUT_MS,
+    keyPrefix: "deviceTransfer:complete",
+    keyExtractor: (c) => c.req.param("id") ?? extractAccountId(c),
   }),
 );
 
@@ -121,11 +120,11 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
     if (error instanceof TransferNotFoundError) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", error.message);
     }
-    if (error instanceof TransferCodeError) {
+    if (error instanceof TransferCodeError || error instanceof TransferExpiredError) {
       throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", error.message);
     }
-    if (error instanceof TransferExpiredError) {
-      throw new ApiHttpError(HTTP_UNAUTHORIZED, "UNAUTHENTICATED", error.message);
+    if (error instanceof TransferValidationError) {
+      throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
     }
     throw error;
   }
