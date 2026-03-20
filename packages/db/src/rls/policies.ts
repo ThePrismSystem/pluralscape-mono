@@ -174,8 +174,8 @@ export const RLS_TABLE_POLICIES = {
 
   // Sync
   sync_documents: "system",
-  sync_queue: "system",
-  sync_conflicts: "system",
+  sync_changes: "system",
+  sync_snapshots: "system",
 } as const satisfies Record<string, RlsScopeType>;
 
 /** Type-safe table names that have RLS policies. */

@@ -59,6 +59,7 @@ export const syncChanges = pgTable(
     encryptedPayload: pgBinary("encrypted_payload").notNull(),
     authorPublicKey: pgBinary("author_public_key").notNull(),
     nonce: pgBinary("nonce").notNull(),
+    signature: pgBinary("signature").notNull(),
     createdAt: pgTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -75,6 +76,7 @@ export const syncSnapshots = pgTable("sync_snapshots", {
   encryptedPayload: pgBinary("encrypted_payload").notNull(),
   authorPublicKey: pgBinary("author_public_key").notNull(),
   nonce: pgBinary("nonce").notNull(),
+  signature: pgBinary("signature").notNull(),
   createdAt: pgTimestamp("created_at").notNull(),
 });
 

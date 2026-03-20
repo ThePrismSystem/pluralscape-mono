@@ -51,6 +51,7 @@ export const syncChanges = sqliteTable(
     encryptedPayload: sqliteBinary("encrypted_payload").notNull(),
     authorPublicKey: sqliteBinary("author_public_key").notNull(),
     nonce: sqliteBinary("nonce").notNull(),
+    signature: sqliteBinary("signature").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -67,6 +68,7 @@ export const syncSnapshots = sqliteTable("sync_snapshots", {
   encryptedPayload: sqliteBinary("encrypted_payload").notNull(),
   authorPublicKey: sqliteBinary("author_public_key").notNull(),
   nonce: sqliteBinary("nonce").notNull(),
+  signature: sqliteBinary("signature").notNull(),
   createdAt: sqliteTimestamp("created_at").notNull(),
 });
 

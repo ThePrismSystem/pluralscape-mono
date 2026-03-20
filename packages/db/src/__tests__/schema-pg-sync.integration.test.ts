@@ -58,6 +58,7 @@ describe("PG sync schema", () => {
       encryptedPayload: new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
       authorPublicKey: new Uint8Array(32).fill(0x01),
       nonce: new Uint8Array(24).fill(seq),
+      signature: new Uint8Array(64).fill(0x03),
       createdAt: Date.now(),
     };
   }
@@ -70,6 +71,7 @@ describe("PG sync schema", () => {
       encryptedPayload: new Uint8Array([0xca, 0xfe, 0xba, 0xbe]),
       authorPublicKey: new Uint8Array(32).fill(0x02),
       nonce: new Uint8Array(24).fill(0xaa),
+      signature: new Uint8Array(64).fill(0x04),
       createdAt: Date.now(),
     };
   }
@@ -304,6 +306,7 @@ describe("PG sync schema", () => {
       const encryptedPayload = new Uint8Array([0xde, 0xad, 0xbe, 0xef, 0x01, 0x02]);
       const authorPublicKey = new Uint8Array(32).fill(0x03);
       const nonce = new Uint8Array(24).fill(0x04);
+      const signature = new Uint8Array(64).fill(0x05);
       const changeId = crypto.randomUUID();
 
       await db.insert(syncChanges).values({
@@ -313,6 +316,7 @@ describe("PG sync schema", () => {
         encryptedPayload,
         authorPublicKey,
         nonce,
+        signature,
         createdAt: now,
       });
 
@@ -324,6 +328,7 @@ describe("PG sync schema", () => {
       expect(row?.encryptedPayload).toEqual(encryptedPayload);
       expect(row?.authorPublicKey).toEqual(authorPublicKey);
       expect(row?.nonce).toEqual(nonce);
+      expect(row?.signature).toEqual(signature);
       expect(row?.createdAt).toBe(now);
     });
 
@@ -392,6 +397,7 @@ describe("PG sync schema", () => {
         encryptedPayload: new Uint8Array([0x01]),
         authorPublicKey,
         nonce,
+        signature: new Uint8Array(64).fill(0x07),
         createdAt: Date.now(),
       });
 
@@ -403,6 +409,7 @@ describe("PG sync schema", () => {
           encryptedPayload: new Uint8Array([0x02]),
           authorPublicKey,
           nonce,
+          signature: new Uint8Array(64).fill(0x08),
           createdAt: Date.now(),
         }),
       ).rejects.toThrow();
@@ -438,12 +445,15 @@ describe("PG sync schema", () => {
       const authorPublicKey = new Uint8Array(32).fill(0x07);
       const nonce = new Uint8Array(24).fill(0x08);
 
+      const signature = new Uint8Array(64).fill(0x09);
+
       await db.insert(syncSnapshots).values({
         documentId,
         snapshotVersion: 5,
         encryptedPayload,
         authorPublicKey,
         nonce,
+        signature,
         createdAt: now,
       });
 
@@ -457,6 +467,7 @@ describe("PG sync schema", () => {
       expect(row?.encryptedPayload).toEqual(encryptedPayload);
       expect(row?.authorPublicKey).toEqual(authorPublicKey);
       expect(row?.nonce).toEqual(nonce);
+      expect(row?.signature).toEqual(signature);
       expect(row?.createdAt).toBe(now);
     });
 
@@ -488,6 +499,7 @@ describe("PG sync schema", () => {
       const newNonce = new Uint8Array(24).fill(0xbb);
       const updatedAt = Date.now();
 
+      const newSignature = new Uint8Array(64).fill(0xcc);
       await db
         .insert(syncSnapshots)
         .values({
@@ -496,6 +508,7 @@ describe("PG sync schema", () => {
           encryptedPayload: newPayload,
           authorPublicKey: new Uint8Array(32).fill(0x09),
           nonce: newNonce,
+          signature: newSignature,
           createdAt: updatedAt,
         })
         .onConflictDoUpdate({
@@ -504,6 +517,7 @@ describe("PG sync schema", () => {
             snapshotVersion: 2,
             encryptedPayload: newPayload,
             nonce: newNonce,
+            signature: newSignature,
             createdAt: updatedAt,
           },
         });

@@ -1330,6 +1330,7 @@ export const SQLITE_DDL = {
       encrypted_payload BLOB NOT NULL,
       author_public_key BLOB NOT NULL,
       nonce BLOB NOT NULL,
+      signature BLOB NOT NULL,
       created_at INTEGER NOT NULL
     )
   `,
@@ -1344,6 +1345,7 @@ export const SQLITE_DDL = {
       encrypted_payload BLOB NOT NULL,
       author_public_key BLOB NOT NULL,
       nonce BLOB NOT NULL,
+      signature BLOB NOT NULL,
       created_at INTEGER NOT NULL
     )
   `,
