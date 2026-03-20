@@ -18,4 +18,6 @@ L5: Ensure S3 probe failure logs don't leak credentials or internal URLs.
 - Sensitive fields redacted or omitted entirely
 - Unit test: simulate S3 probe failure, verify log output contains no sensitive values
 
-## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.
+## Summary of Changes
+
+Implemented as part of feat/api-hardening-audit-013-remaining.

@@ -18,4 +18,6 @@ L8: Replace select(\*) with explicit column selection in group membership list q
 - No behavioral change to API response shape
 - Integration test: verify response contains only documented fields
 
-## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.
+## Summary of Changes
+
+Implemented as part of feat/api-hardening-audit-013-remaining.

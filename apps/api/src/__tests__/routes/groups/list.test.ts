@@ -8,6 +8,9 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
+import type { GroupResult } from "../../../services/group.service.js";
+import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
+
 // ── Mocks ────────────────────────────────────────────────────────
 
 vi.mock("../../../services/group.service.js", () => ({
@@ -78,5 +81,58 @@ describe("GET /systems/:id/groups", () => {
     const res = await app.request(SYS_URL);
 
     expect(res.status).toBe(500);
+  });
+
+  // ── Sparse fieldset tests ──────────────────────────────────────
+
+  it("returns only requested fields when ?fields= is valid", async () => {
+    const page: PaginatedResult<GroupResult> = {
+      items: [
+        {
+          id: "grp_550e8400-e29b-41d4-a716-446655440000" as never,
+          systemId: "sys_550e8400-e29b-41d4-a716-446655440000" as never,
+          parentGroupId: null,
+          sortOrder: 0,
+          encryptedData: "dGVzdA==",
+          version: 1,
+          createdAt: 1000 as never,
+          updatedAt: 1000 as never,
+          archived: false,
+          archivedAt: null,
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    };
+    vi.mocked(listGroups).mockResolvedValueOnce(page);
+
+    const app = createApp();
+    const res = await app.request(`${SYS_URL}?fields=id,version`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as PaginatedResult<Partial<GroupResult>>;
+    expect(body.items[0]).toEqual({ id: "grp_550e8400-e29b-41d4-a716-446655440000", version: 1 });
+    expect(body.items[0]).not.toHaveProperty("sortOrder");
+  });
+
+  it("returns 400 for invalid field name in ?fields=", async () => {
+    const app = createApp();
+    const res = await app.request(`${SYS_URL}?fields=id,badField`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns full response when ?fields= is empty", async () => {
+    vi.mocked(listGroups).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const app = createApp();
+    const res = await app.request(`${SYS_URL}?fields=`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as typeof EMPTY_PAGE;
+    expect(body.items).toEqual([]);
   });
 });

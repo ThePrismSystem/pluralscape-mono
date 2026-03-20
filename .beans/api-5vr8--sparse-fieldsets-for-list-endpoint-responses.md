@@ -20,4 +20,6 @@ M17: Support a fields query parameter on list endpoints to allow clients to requ
 - Applied to: members list, groups list, field definitions list (at minimum)
 - Integration tests: subset fields returned; invalid field → 400
 
-## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.
+## Summary of Changes
+
+Implemented as part of feat/api-hardening-audit-013-remaining.

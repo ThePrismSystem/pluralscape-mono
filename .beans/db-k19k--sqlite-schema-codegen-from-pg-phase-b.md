@@ -11,4 +11,6 @@ parent: ps-mmpz
 
 AST-based codegen script to generate SQLite schema from PG schema with exception registry. Deferred follow-up.
 
-## Deferred\n\nMoved to M4 (ps-mmpz) — explicitly deferred to Phase B.
+## Deferred
+
+Moved to M4 (ps-mmpz) — explicitly deferred to Phase B.

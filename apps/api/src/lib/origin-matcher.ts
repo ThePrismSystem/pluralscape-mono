@@ -4,6 +4,11 @@
  * Supports exact matches and wildcard patterns (e.g., `*.example.com`).
  * Wildcard patterns match any subdomain but NOT the bare domain itself,
  * preventing suffix-injection attacks.
+ *
+ * **Note on wildcard scheme handling:** Wildcard patterns are scheme-agnostic —
+ * `*.example.com` matches both `http://sub.example.com` and `https://sub.example.com`.
+ * For production environments that require https-only, use scheme-prefixed exact
+ * patterns (e.g., `https://app.example.com`) instead of wildcards.
  */
 
 /**
@@ -32,6 +37,9 @@ export function isOriginAllowed(origin: string, allowlist: readonly string[]): b
  * Extracts the hostname from the origin, then checks that the hostname
  * ends with `.example.com` (dot-prefixed to prevent suffix injection).
  * The bare domain `example.com` does not match — only subdomains.
+ *
+ * Scheme-agnostic: matches both http and https origins. Use exact
+ * scheme-prefixed patterns for https-only enforcement.
  */
 function matchesWildcard(origin: string, pattern: string): boolean {
   let hostname: string;

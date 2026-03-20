@@ -19,4 +19,6 @@ M10: Use per-account salts in email hashing instead of a global salt to improve 
 - Same email on different accounts produces different hashes
 - Integration tests: create two accounts with same email domain, verify different hashes; migration test
 
-## Reasons for Scrapping\n\nArchitecturally infeasible: per-account email salting creates a circular dependency. Login must hash the email to find the account, but needs the account's salt to hash. The existing global BLAKE2b pepper is already strong.
+## Reasons for Scrapping
+
+Architecturally infeasible: per-account email salting creates a circular dependency. Login must hash the email to find the account, but needs the account's salt to hash. The existing global BLAKE2b pepper is already strong.

@@ -195,4 +195,58 @@ describe("GET /systems/:systemId/members", () => {
 
     expect(res.status).toBe(500);
   });
+
+  // ── Sparse fieldset tests ──────────────────────────────────────
+
+  it("returns only requested fields when ?fields= is valid", async () => {
+    const page: PaginatedResult<MemberResult> = {
+      items: [
+        {
+          id: "mem_550e8400-e29b-41d4-a716-446655440000" as never,
+          systemId: SYS_ID as never,
+          encryptedData: "dGVzdA==",
+          version: 1,
+          createdAt: 1000 as never,
+          updatedAt: 1000 as never,
+          archived: false,
+          archivedAt: null,
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    };
+    vi.mocked(listMembers).mockResolvedValueOnce(page);
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/members?fields=id,version`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as PaginatedResult<Partial<MemberResult>>;
+    expect(body.items[0]).toEqual({
+      id: "mem_550e8400-e29b-41d4-a716-446655440000",
+      version: 1,
+    });
+    expect(body.items[0]).not.toHaveProperty("encryptedData");
+  });
+
+  it("returns 400 for invalid field name in ?fields=", async () => {
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/members?fields=id,badField`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns full response when ?fields= is empty", async () => {
+    vi.mocked(listMembers).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/members?fields=`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as PaginatedResult<MemberResult>;
+    expect(body.items).toEqual([]);
+  });
 });

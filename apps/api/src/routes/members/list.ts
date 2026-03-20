@@ -12,6 +12,7 @@ import { listMembers } from "../../services/member.service.js";
 import { DEFAULT_MEMBER_LIMIT, MAX_MEMBER_LIMIT } from "./members.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
+import type { MemberResult } from "../../services/member.service.js";
 
 const MEMBER_FIELDS = [
   "id",
@@ -22,7 +23,7 @@ const MEMBER_FIELDS = [
   "updatedAt",
   "archived",
   "archivedAt",
-] as const;
+] as const satisfies readonly (keyof MemberResult)[];
 
 export const listRoute = new Hono<AuthEnv>();
 

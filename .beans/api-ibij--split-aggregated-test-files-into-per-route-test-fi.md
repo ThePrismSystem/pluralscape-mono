@@ -18,4 +18,6 @@ L10: Break large aggregated test files into smaller per-route test files for bet
 - All existing tests preserved (no test removals)
 - Test organization follows convention: `__tests__/<route-name>.test.ts`
 
-## Summary of Changes\n\nAlready implemented — 95 per-route test files already exist, no aggregated files remain.
+## Summary of Changes
+
+Already implemented — 95 per-route test files already exist, no aggregated files remain.

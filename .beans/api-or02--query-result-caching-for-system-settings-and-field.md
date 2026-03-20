@@ -21,4 +21,6 @@ M16: Cache frequently-read, rarely-written data (system settings, field definiti
 - Cache keys scoped by systemId (no cross-system leakage)
 - Integration tests: read → cache hit → write → cache miss → read from DB
 
-## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.
+## Summary of Changes
+
+Implemented as part of feat/api-hardening-audit-013-remaining.

@@ -19,4 +19,6 @@ M12: Validate CORS origin against an allowlist instead of reflecting the request
 - Allowlist supports exact match and optional wildcard subdomains
 - Integration tests: request from allowed origin → headers present; disallowed → no headers
 
-## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.
+## Summary of Changes
+
+Implemented as part of feat/api-hardening-audit-013-remaining.

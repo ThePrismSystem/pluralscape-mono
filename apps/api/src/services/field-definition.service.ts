@@ -163,7 +163,7 @@ export async function createFieldDefinition(
   const fieldId = createId(ID_PREFIXES.fieldDefinition);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     // Check quota inside transaction to prevent TOCTOU races
     const [countResult] = await tx
       .select({ count: count() })
@@ -203,9 +203,10 @@ export async function createFieldDefinition(
       systemId,
     });
 
-    invalidateFieldDefCache();
     return toFieldDefinitionResult(row);
   });
+  invalidateFieldDefCache();
+  return result;
 }
 
 // ── LIST ────────────────────────────────────────────────────────────
@@ -311,7 +312,7 @@ export async function updateFieldDefinition(
     setClause.sortOrder = parsed.data.sortOrder;
   }
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const updated = await tx
       .update(fieldDefinitions)
       .set(setClause)
@@ -351,9 +352,10 @@ export async function updateFieldDefinition(
       systemId,
     });
 
-    invalidateFieldDefCache();
     return toFieldDefinitionResult(row);
   });
+  invalidateFieldDefCache();
+  return result;
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
@@ -397,9 +399,8 @@ export async function archiveFieldDefinition(
       .update(fieldDefinitions)
       .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
       .where(and(eq(fieldDefinitions.id, fieldId), eq(fieldDefinitions.systemId, systemId)));
-
-    invalidateFieldDefCache();
   });
+  invalidateFieldDefCache();
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -413,7 +414,7 @@ export async function restoreFieldDefinition(
 ): Promise<FieldDefinitionResult> {
   assertSystemOwnership(systemId, auth);
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select()
       .from(fieldDefinitions)
@@ -449,9 +450,10 @@ export async function restoreFieldDefinition(
       systemId,
     });
 
-    invalidateFieldDefCache();
     return toFieldDefinitionResult(row);
   });
+  invalidateFieldDefCache();
+  return result;
 }
 
 // ── DELETE ──────────────────────────────────────────────────────────
@@ -555,7 +557,6 @@ export async function deleteFieldDefinition(
     });
 
     await tx.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldId));
-
-    invalidateFieldDefCache();
   });
+  invalidateFieldDefCache();
 }

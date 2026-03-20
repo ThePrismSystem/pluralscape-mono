@@ -51,7 +51,7 @@ export class QueryCache<T> {
   }
 
   /** Current number of entries (including possibly-expired ones). */
-  get size(): number {
+  get approximateSize(): number {
     return this.store.size;
   }
 }

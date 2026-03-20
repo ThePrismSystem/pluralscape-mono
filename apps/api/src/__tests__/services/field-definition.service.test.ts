@@ -549,3 +549,40 @@ describe("deleteFieldDefinition", () => {
     );
   });
 });
+
+describe("field definition cache lifecycle", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+    clearFieldDefCache();
+  });
+
+  it("caches list results and invalidates on write", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValue([makeFieldDefRow()]);
+
+    // First call — cache miss, hits DB
+    await listFieldDefinitions(db, SYSTEM_ID, AUTH);
+    expect(chain.limit).toHaveBeenCalledTimes(1);
+
+    // Second call — cache hit, no additional DB call
+    await listFieldDefinitions(db, SYSTEM_ID, AUTH);
+    expect(chain.limit).toHaveBeenCalledTimes(1);
+
+    // Write operation — invalidates cache
+    chain.where.mockResolvedValueOnce([{ count: 0 }]);
+    chain.returning.mockResolvedValueOnce([makeFieldDefRow()]);
+    await createFieldDefinition(
+      db,
+      SYSTEM_ID,
+      { fieldType: "text", encryptedData: VALID_BLOB_BASE64 },
+      AUTH,
+      mockAudit,
+    );
+
+    // Third call — cache miss after invalidation, hits DB again
+    chain.limit.mockResolvedValueOnce([makeFieldDefRow()]);
+    await listFieldDefinitions(db, SYSTEM_ID, AUTH);
+    expect(chain.limit).toHaveBeenCalledTimes(2);
+  });
+});

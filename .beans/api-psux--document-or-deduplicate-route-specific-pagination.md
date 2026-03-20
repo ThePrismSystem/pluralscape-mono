@@ -17,4 +17,6 @@ L3: Several routes define their own DEFAULT/MAX limit constants. Document the ra
 - Either consolidate into shared constants file with JSDoc rationale, or add JSDoc to each route-specific constant explaining why it differs
 - No behavioral change to pagination defaults
 
-## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.
+## Summary of Changes
+
+Implemented as part of feat/api-hardening-audit-013-remaining.

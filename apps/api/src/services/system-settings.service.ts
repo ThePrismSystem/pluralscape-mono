@@ -108,7 +108,7 @@ export async function updateSystemSettings(
   const blob = validateEncryptedBlob(parsed.data.encryptedData);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const updated = await tx
       .update(systemSettings)
       .set({
@@ -147,8 +147,8 @@ export async function updateSystemSettings(
       systemId,
     });
 
-    const result = toSystemSettingsResult(row);
-    settingsCache.invalidate(systemId);
-    return result;
+    return toSystemSettingsResult(row);
   });
+  settingsCache.invalidate(systemId);
+  return result;
 }

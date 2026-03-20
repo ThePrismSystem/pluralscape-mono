@@ -18,4 +18,6 @@ M5: Send email confirmation when a recovery key is regenerated to alert account 
 - Email is non-blocking (queued via job system, regeneration doesn't wait for delivery)
 - Integration test: regenerate recovery key → verify email job enqueued with correct recipient
 
-## Deferred\n\nMoved to M4 (ps-mmpz) — no email infrastructure exists yet.
+## Deferred
+
+Moved to M4 (ps-mmpz) — no email infrastructure exists yet.

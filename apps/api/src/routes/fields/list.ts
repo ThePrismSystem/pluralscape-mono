@@ -12,6 +12,7 @@ import { listFieldDefinitions } from "../../services/field-definition.service.js
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "./fields.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
+import type { FieldDefinitionResult } from "../../services/field-definition.service.js";
 
 const FIELD_DEF_FIELDS = [
   "id",
@@ -25,7 +26,7 @@ const FIELD_DEF_FIELDS = [
   "updatedAt",
   "archived",
   "archivedAt",
-] as const;
+] as const satisfies readonly (keyof FieldDefinitionResult)[];
 
 export const listRoute = new Hono<AuthEnv>();
 

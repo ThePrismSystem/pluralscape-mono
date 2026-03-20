@@ -18,4 +18,6 @@ L4: The hierarchy service runs sequential dependency checks that could be parall
 - Error handling: if any check fails, all results still reported (Promise.allSettled or equivalent)
 - Unit tests: verify parallel execution produces same results as sequential
 
-## Summary of Changes\n\nAlready implemented — `hierarchy-service-factory.ts:592` already uses `Promise.all()`.
+## Summary of Changes
+
+Already implemented — `hierarchy-service-factory.ts:592` already uses `Promise.all()`.

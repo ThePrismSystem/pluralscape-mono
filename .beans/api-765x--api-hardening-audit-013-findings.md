@@ -11,4 +11,11 @@ parent: ps-afy4
 
 Track all MEDIUM and LOW findings from the API core comprehensive audit (013). HIGH findings are addressed in fix/audit-high-findings.
 
-## Summary of Changes\n\nAll 14 remaining children resolved:\n- 4 already implemented (completed)\n- 1 architecturally infeasible (scrapped: api-htya)\n- 2 deferred to M4 (api-nk7m, db-k19k)\n- 7 implemented in feat/api-hardening-audit-013-remaining
+## Summary of Changes
+
+All 14 remaining children resolved:
+
+- 4 already implemented (completed)
+- 1 architecturally infeasible (scrapped: api-htya)
+- 2 deferred to M4 (api-nk7m, db-k19k)
+- 7 implemented in feat/api-hardening-audit-013-remaining

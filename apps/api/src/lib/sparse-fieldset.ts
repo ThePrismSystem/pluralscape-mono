@@ -51,10 +51,16 @@ export function parseSparseFields(
  * Filter an object to only include the specified fields.
  * If `fields` is undefined, returns the original object unchanged.
  */
+export function filterFields<T extends object>(item: T, fields: undefined): T;
+export function filterFields<T extends object>(item: T, fields: ReadonlySet<string>): Partial<T>;
 export function filterFields<T extends object>(
   item: T,
   fields: ReadonlySet<string> | undefined,
-): Partial<T> {
+): T | Partial<T>;
+export function filterFields<T extends object>(
+  item: T,
+  fields: ReadonlySet<string> | undefined,
+): T | Partial<T> {
   if (!fields) return item;
 
   const result: Record<string, unknown> = {};

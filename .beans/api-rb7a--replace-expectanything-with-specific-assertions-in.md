@@ -17,4 +17,6 @@ L9: Strengthen test assertions by replacing expect.anything() with specific valu
 - Use expect.stringMatching(), exact values, or structural matchers as appropriate
 - No false positives: tests should fail if values change unexpectedly
 
-## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.
+## Summary of Changes
+
+Implemented as part of feat/api-hardening-audit-013-remaining.

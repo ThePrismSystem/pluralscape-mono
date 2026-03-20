@@ -216,4 +216,39 @@ describe("system-settings service", () => {
       });
     });
   });
+
+  // ── Cache lifecycle ──────────────────────────────────────────────
+
+  describe("settings cache lifecycle", () => {
+    const VALID_PAYLOAD = {
+      encryptedData: Buffer.from(new Uint8Array(32)).toString("base64"),
+      version: 1,
+    };
+
+    beforeEach(() => {
+      mockSafeParseSuccess(VALID_PAYLOAD);
+    });
+
+    it("caches get results and invalidates on update", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([SETTINGS_ROW]);
+
+      // First call — cache miss, hits DB
+      await getSystemSettings(db, SYSTEM_ID, AUTH);
+      expect(chain.limit).toHaveBeenCalledTimes(1);
+
+      // Second call — cache hit, no additional DB call
+      await getSystemSettings(db, SYSTEM_ID, AUTH);
+      expect(chain.limit).toHaveBeenCalledTimes(1);
+
+      // Write operation — invalidates cache
+      chain.returning.mockResolvedValueOnce([SETTINGS_ROW]);
+      await updateSystemSettings(db, SYSTEM_ID, VALID_PAYLOAD, AUTH, mockAudit);
+
+      // Third call — cache miss after invalidation, hits DB again
+      chain.limit.mockResolvedValueOnce([SETTINGS_ROW]);
+      await getSystemSettings(db, SYSTEM_ID, AUTH);
+      expect(chain.limit).toHaveBeenCalledTimes(2);
+    });
+  });
 });

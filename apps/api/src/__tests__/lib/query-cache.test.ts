@@ -58,7 +58,7 @@ describe("QueryCache", () => {
 
     cache.clear();
 
-    expect(cache.size).toBe(0);
+    expect(cache.approximateSize).toBe(0);
     expect(cache.get("a")).toBeUndefined();
   });
 
@@ -77,7 +77,7 @@ describe("QueryCache", () => {
     const cache = new QueryCache<string>(1000);
     cache.set("a", "1");
     cache.set("b", "2");
-    expect(cache.size).toBe(2);
+    expect(cache.approximateSize).toBe(2);
   });
 
   it("works with object values", () => {

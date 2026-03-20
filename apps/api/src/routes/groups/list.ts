@@ -10,6 +10,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { listGroups } from "../../services/group.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
+import type { GroupResult } from "../../services/group.service.js";
 
 const GROUP_FIELDS = [
   "id",
@@ -22,7 +23,7 @@ const GROUP_FIELDS = [
   "updatedAt",
   "archived",
   "archivedAt",
-] as const;
+] as const satisfies readonly (keyof GroupResult)[];
 
 export const listRoute = new Hono<AuthEnv>();
 

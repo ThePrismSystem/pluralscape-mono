@@ -8,7 +8,13 @@
 /** AWS access key ID pattern: starts with AKIA followed by 16 alphanumeric chars. */
 const AWS_ACCESS_KEY_PATTERN = /\bAKIA[0-9A-Z]{16}\b/g;
 
-/** AWS secret key pattern: 40-char base64-ish string (alphanumeric + /+). */
+/**
+ * AWS secret key pattern: 40-char base64-ish string (alphanumeric + /+).
+ *
+ * Only matches secrets in quoted assignment contexts (e.g., `key="..."` or `key: "..."`).
+ * Does not catch secrets in `Authorization` headers, unquoted formats, or other
+ * non-assignment contexts. Extend with additional patterns if broader coverage is needed.
+ */
 const AWS_SECRET_KEY_PATTERN = /(?<=[:=]\s*")[A-Za-z0-9/+=]{40}(?=")/g;
 
 /** S3 endpoint URL pattern. */

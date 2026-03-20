@@ -19,4 +19,6 @@ L1: Rename snake_case query parameter to camelCase for API consistency.
 - All tests updated to use new parameter name
 - Integration tests: new param works; old param → 400
 
-## Summary of Changes\n\nAlready implemented — all routes and Zod schemas use `includeArchived` (camelCase).
+## Summary of Changes
+
+Already implemented — all routes and Zod schemas use `includeArchived` (camelCase).

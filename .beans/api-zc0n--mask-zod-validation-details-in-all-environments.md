@@ -19,4 +19,6 @@ M6: Strip detailed Zod error paths from API error responses in production to avo
 - Applies to all routes using Zod validation
 - Integration tests: prod mode → generic message; dev mode → full details
 
-## Summary of Changes\n\nAlready implemented — `error-handler.ts:94-106` already strips Zod validation details in production.
+## Summary of Changes
+
+Already implemented — `error-handler.ts:94-106` already strips Zod validation details in production.

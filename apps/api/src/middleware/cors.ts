@@ -29,7 +29,7 @@ export function createCorsMiddleware(): MiddlewareHandler {
   }
 
   return cors({
-    origin: (requestOrigin) => (isOriginAllowed(requestOrigin, origins) ? requestOrigin : ""),
+    origin: (requestOrigin) => (isOriginAllowed(requestOrigin, origins) ? requestOrigin : null),
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     maxAge: CORS_MAX_AGE_SECONDS,
