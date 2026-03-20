@@ -25,13 +25,12 @@ export interface SyncEngineConfig {
   readonly sodium: SodiumAdapter;
   readonly profile: ReplicationProfile;
   readonly systemId: string;
+  /** Error handler for non-fatal errors (hydration failures, incoming change errors). */
+  readonly onError: (message: string, error: unknown) => void;
 }
 
-/** Internal tracking of per-document sync position. */
-interface DocumentState {
-  lastSyncedSeq: number;
-  lastSnapshotVersion: number;
-}
+/** Maximum parallel document hydrations during bootstrap. */
+const HYDRATION_CONCURRENCY = 5;
 
 /** Compute the maximum seq from a set of changes without spread (stack-safe for large arrays). */
 function computeMaxSeq(changes: readonly { seq: number }[], current: number): number {
@@ -50,7 +49,7 @@ function computeMaxSeq(changes: readonly { seq: number }[], current: number): nu
  */
 export class SyncEngine {
   private readonly sessions = new Map<string, EncryptedSyncSession<unknown>>();
-  private readonly syncStates = new Map<string, DocumentState>();
+  private readonly syncStates = new Map<string, DocumentSyncState>();
   private readonly subscriptions: Array<{ unsubscribe(): void }> = [];
   private readonly config: SyncEngineConfig;
 
@@ -103,21 +102,19 @@ export class SyncEngine {
 
   // ── Session access ──────────────────────────────────────────────────
 
-  /** Get a hydrated session by document ID. */
+  /**
+   * Get a hydrated session by document ID.
+   * Note: The generic type T is caller-asserted — the engine stores sessions
+   * as EncryptedSyncSession<unknown>. Callers must ensure T matches the
+   * actual document type for the given docId.
+   */
   getSession<T>(docId: string): EncryptedSyncSession<T> | undefined {
     return this.sessions.get(docId) as EncryptedSyncSession<T> | undefined;
   }
 
   /** Get sync state for a document. */
   getSyncState(docId: string): DocumentSyncState | undefined {
-    const state = this.syncStates.get(docId);
-    if (!state) return undefined;
-    return {
-      docId,
-      lastSyncedSeq: state.lastSyncedSeq,
-      lastSnapshotVersion: state.lastSnapshotVersion,
-      onDemand: false,
-    };
+    return this.syncStates.get(docId);
   }
 
   /** Get all active document IDs. */
@@ -132,13 +129,14 @@ export class SyncEngine {
    * Returns the server-assigned sequence number.
    */
   async applyLocalChange(docId: string, changeFn: (doc: unknown) => void): Promise<number> {
-    const session = this.sessions.get(docId);
-    if (!session) {
-      throw new Error(`No active session for document: ${docId}`);
-    }
+    return this.enqueueDocumentOperation(docId, async () => {
+      const session = this.sessions.get(docId);
+      if (!session) {
+        throw new Error(`No active session for document: ${docId}`);
+      }
 
-    // Produce encrypted change (no seq yet)
-    const envelope = session.change(changeFn);
+      // Produce encrypted change (no seq yet)
+      const envelope = session.change(changeFn);
 
     // Submit to server — get server-assigned seq
     const sequenced = await this.config.networkAdapter.submitChange(docId, envelope);
@@ -146,10 +144,14 @@ export class SyncEngine {
     // Persist locally with server seq
     await this.config.storageAdapter.appendChange(docId, sequenced);
 
-    // Update sync state
-    this.updateSyncState(docId, sequenced.seq);
+        // Update sync state
+        this.updateSyncState(docId, sequenced.seq);
 
-    return sequenced.seq;
+        return sequenced.seq;
+      } catch (error) {
+        throw error;
+      }
+    });
   }
 
   // ── Steady-state: inbound ──────────────────────────────────────────
@@ -187,7 +189,11 @@ export class SyncEngine {
   /** Unsubscribe from all documents and clear sessions. */
   dispose(): void {
     for (const sub of this.subscriptions) {
-      sub.unsubscribe();
+      try {
+        sub.unsubscribe();
+      } catch {
+        // Best-effort cleanup
+      }
     }
     this.subscriptions.length = 0;
     this.sessions.clear();
@@ -220,7 +226,6 @@ export class SyncEngine {
     const snapshot = serverSnapshotVersion > localSnapshotVersion ? serverSnapshot : localSnapshot;
 
     let session: EncryptedSyncSession<unknown>;
-    let lastSeq = 0;
 
     if (snapshot) {
       session = EncryptedSyncSession.fromSnapshot(
@@ -264,16 +269,55 @@ export class SyncEngine {
 
     this.sessions.set(docId, session);
     this.syncStates.set(docId, {
-      lastSyncedSeq: lastSeq,
+      docId,
+      lastSyncedSeq: session.lastSyncedSeq,
       lastSnapshotVersion: snapshot?.snapshotVersion ?? 0,
+      onDemand: false,
     });
   }
 
   private updateSyncState(docId: string, seq: number): void {
     const existing = this.syncStates.get(docId);
     this.syncStates.set(docId, {
+      docId,
       lastSyncedSeq: seq,
       lastSnapshotVersion: existing?.lastSnapshotVersion ?? 0,
+      onDemand: existing?.onDemand ?? false,
     });
   }
+}
+
+// ── Utility ─────────────────────────────────────────────────────────
+
+/**
+ * Runs `fn` over `items` with bounded concurrency, returning settled results.
+ * Safe in single-threaded JS: `index++` is atomic within a synchronous tick.
+ */
+async function mapConcurrent<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<PromiseSettledResult<R>[]> {
+  const results = Array.from<PromiseSettledResult<R>>({ length: items.length });
+  let index = 0;
+
+  async function worker(): Promise<void> {
+    while (index < items.length) {
+      const i = index++;
+      const item = items[i] as T;
+      try {
+        const value = await fn(item);
+        results[i] = { status: "fulfilled", value };
+      } catch (reason) {
+        results[i] = { status: "rejected", reason };
+      }
+    }
+  }
+
+  const workers: Promise<void>[] = [];
+  for (let i = 0; i < Math.min(limit, items.length); i++) {
+    workers.push(worker());
+  }
+  await Promise.all(workers);
+  return results;
 }

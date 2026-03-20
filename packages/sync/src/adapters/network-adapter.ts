@@ -40,7 +40,7 @@ export interface SyncManifestEntry {
  */
 export interface SyncManifest {
   /** The system ID this manifest belongs to. */
-  readonly systemId: string;
+  readonly systemId: SystemId;
   readonly documents: readonly SyncManifestEntry[];
 }
 
@@ -112,4 +112,7 @@ export interface SyncNetworkAdapter {
    * Friend devices receive a filtered manifest (bucket docs with active KeyGrants only).
    */
   fetchManifest(systemId: string): Promise<SyncManifest>;
+
+  /** Release resources (pending requests, timers, subscriptions). Optional. */
+  dispose?(): void;
 }

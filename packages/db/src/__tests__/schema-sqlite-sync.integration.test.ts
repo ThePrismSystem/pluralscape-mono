@@ -13,7 +13,7 @@ import {
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
 
-import type { SyncDocType } from "@pluralscape/types";
+import type { SyncDocumentType } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, syncDocuments, syncChanges, syncSnapshots };
@@ -27,7 +27,7 @@ describe("SQLite sync schema", () => {
     sqliteInsertSystem(db, accountId, id);
 
   /** Insert a minimal valid syncDocuments row and return its documentId. */
-  const insertDocument = (systemId: string, docType: SyncDocType = "system-core"): string => {
+  const insertDocument = (systemId: string, docType: SyncDocumentType = "system-core"): string => {
     const documentId = crypto.randomUUID();
     const now = Date.now();
     db.insert(syncDocuments)
@@ -498,6 +498,7 @@ describe("SQLite sync schema", () => {
       const documentId = insertDocument(systemId);
       const now = Date.now();
       const buf = Buffer.from([0x01]);
+      const sig = Buffer.alloc(64, 0x88);
 
       db.insert(syncSnapshots)
         .values({
@@ -544,6 +545,7 @@ describe("SQLite sync schema", () => {
       const documentId = insertDocument(systemId);
       const now = Date.now();
       const buf = Buffer.from([0x01]);
+      const sig = Buffer.alloc(64, 0x88);
 
       db.insert(syncSnapshots)
         .values({
@@ -575,12 +577,37 @@ describe("SQLite sync schema", () => {
       ).toThrow(/UNIQUE|constraint/i);
     });
 
+    it("rejects negative snapshotVersion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+      const now = Date.now();
+      const buf = Buffer.from([0x01]);
+      const sig = Buffer.alloc(64, 0x88);
+
+      expect(() =>
+        db
+          .insert(syncSnapshots)
+          .values({
+            documentId,
+            snapshotVersion: -1,
+            encryptedPayload: buf,
+            authorPublicKey: buf,
+            nonce: buf,
+            signature: sig,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow();
+    });
+
     it("cascades on document deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const documentId = insertDocument(systemId);
       const now = Date.now();
       const buf = Buffer.from([0x01]);
+      const sig = Buffer.alloc(64, 0x88);
 
       db.insert(syncSnapshots)
         .values({

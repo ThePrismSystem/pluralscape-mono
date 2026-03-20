@@ -12,7 +12,7 @@ import {
 } from "./blob-constants.js";
 
 import type { EncryptedPayload, StreamEncryptedPayload } from "../symmetric.js";
-import type { AeadKey, AeadNonce, KdfMasterKey } from "../types.js";
+import type { AeadKey, KdfMasterKey } from "../types.js";
 import type { BlobEncryptionMetadata } from "./blob-encryption-metadata.js";
 
 /** Parameters for decrypting a blob. */
@@ -81,7 +81,7 @@ function deserializePayload(data: Uint8Array): EncryptedPayload {
   const nonce = data.subarray(0, nonceBytes);
   assertAeadNonce(nonce);
   const ciphertext = data.subarray(nonceBytes);
-  return { ciphertext, nonce: nonce as AeadNonce };
+  return { ciphertext, nonce };
 }
 
 /** Deserialize a stream-encrypted payload from a single Uint8Array. */
@@ -138,7 +138,7 @@ function deserializeStreamPayload(data: Uint8Array): StreamEncryptedPayload {
     const ciphertext = data.subarray(offset, offset + ctLen);
     offset += ctLen;
 
-    chunks.push({ ciphertext, nonce: nonce as AeadNonce });
+    chunks.push({ ciphertext, nonce });
   }
 
   return { chunks, totalLength };

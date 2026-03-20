@@ -1,8 +1,10 @@
+import { assertAeadNonce, assertSignature, assertSignPublicKey } from "@pluralscape/crypto";
 import { syncChanges, syncDocuments, syncSnapshots } from "@pluralscape/db/pg";
-import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
+import { SnapshotVersionConflictError } from "@pluralscape/sync";
 import { createId, ID_PREFIXES } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
+import type { SyncChangeRow, SyncSnapshotRow } from "@pluralscape/db/pg";
 import type {
   EncryptedChangeEnvelope,
   EncryptedSnapshotEnvelope,
@@ -49,7 +51,7 @@ export class PgSyncRelayService implements SyncRelayService {
         .update(syncDocuments)
         .set({
           lastSeq: sql`${syncDocuments.lastSeq} + 1`,
-          updatedAt: Date.now(),
+          updatedAt: now,
         })
         .where(eq(syncDocuments.documentId, envelope.documentId))
         .returning({ lastSeq: syncDocuments.lastSeq });
@@ -105,18 +107,36 @@ export class PgSyncRelayService implements SyncRelayService {
         .where(eq(syncDocuments.documentId, envelope.documentId))
         .for("update");
 
-      if (!doc) {
-        throw new Error(`Document not found: ${envelope.documentId}`);
-      }
+      // Atomic conditional UPDATE eliminates TOCTOU race
+      const [atomicResult] = await tx
+        .update(syncDocuments)
+        .set({
+          snapshotVersion: envelope.snapshotVersion,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(syncDocuments.documentId, envelope.documentId),
+            sql`${syncDocuments.snapshotVersion} < ${envelope.snapshotVersion}`,
+          ),
+        )
+        .returning({ snapshotVersion: syncDocuments.snapshotVersion });
 
-      if (doc.snapshotVersion >= envelope.snapshotVersion) {
-        throw new Error(
-          `Snapshot version ${String(envelope.snapshotVersion)} ${SNAPSHOT_VERSION_CONFLICT_MESSAGE} ${String(doc.snapshotVersion)}`,
-        );
+      if (!atomicResult) {
+        // Determine whether "not found" or "version conflict"
+        const [doc] = await tx
+          .select({ snapshotVersion: syncDocuments.snapshotVersion })
+          .from(syncDocuments)
+          .where(eq(syncDocuments.documentId, envelope.documentId));
+
+        if (!doc) {
+          throw new Error(`Document not found: ${envelope.documentId}`);
+        }
+
+        throw new SnapshotVersionConflictError(envelope.snapshotVersion, doc.snapshotVersion);
       }
 
       // Upsert snapshot
-      const now = Date.now();
       await tx
         .insert(syncSnapshots)
         .values({
@@ -141,15 +161,6 @@ export class PgSyncRelayService implements SyncRelayService {
             createdAt: now,
           },
         });
-
-      // Update document metadata
-      await tx
-        .update(syncDocuments)
-        .set({
-          snapshotVersion: envelope.snapshotVersion,
-          updatedAt: now,
-        })
-        .where(eq(syncDocuments.documentId, envelope.documentId));
     });
   }
 
@@ -172,7 +183,7 @@ export class PgSyncRelayService implements SyncRelayService {
     };
   }
 
-  async getManifest(systemId: string): Promise<SyncManifest> {
+  async getManifest(systemId: SystemId): Promise<SyncManifest> {
     const rows = await this.db
       .select()
       .from(syncDocuments)
@@ -193,5 +204,33 @@ export class PgSyncRelayService implements SyncRelayService {
     }));
 
     return { documents, systemId };
+  }
+
+  private mapChangeRow(row: SyncChangeRow): EncryptedChangeEnvelope {
+    assertAeadNonce(row.nonce);
+    assertSignature(row.signature);
+    assertSignPublicKey(row.authorPublicKey);
+    return {
+      ciphertext: row.encryptedPayload,
+      nonce: row.nonce,
+      signature: row.signature,
+      authorPublicKey: row.authorPublicKey,
+      documentId: row.documentId,
+      seq: row.seq,
+    };
+  }
+
+  private mapSnapshotRow(row: SyncSnapshotRow): EncryptedSnapshotEnvelope {
+    assertAeadNonce(row.nonce);
+    assertSignature(row.signature);
+    assertSignPublicKey(row.authorPublicKey);
+    return {
+      ciphertext: row.encryptedPayload,
+      nonce: row.nonce,
+      signature: row.signature,
+      authorPublicKey: row.authorPublicKey,
+      documentId: row.documentId,
+      snapshotVersion: row.snapshotVersion,
+    };
   }
 }

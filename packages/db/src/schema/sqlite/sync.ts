@@ -7,7 +7,7 @@ import { SYNC_DOC_TYPES, SYNC_KEY_TYPES } from "../../helpers/enums.js";
 
 import { systems } from "./systems.js";
 
-import type { SyncDocType, SyncKeyType } from "@pluralscape/types";
+import type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const syncDocuments = sqliteTable(
@@ -17,13 +17,13 @@ export const syncDocuments = sqliteTable(
     systemId: text("system_id")
       .notNull()
       .references(() => systems.id, { onDelete: "cascade" }),
-    docType: text("doc_type").notNull().$type<SyncDocType>(),
+    docType: text("doc_type").notNull().$type<SyncDocumentType>(),
     sizeBytes: integer("size_bytes").notNull().default(0),
     snapshotVersion: integer("snapshot_version").notNull().default(0),
     lastSeq: integer("last_seq").notNull().default(0),
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
     timePeriod: text("time_period"),
-    keyType: text("key_type").notNull().default("derived").$type<SyncKeyType>(),
+    keyType: text("key_type").notNull().default("derived").$type<DocumentKeyType>(),
     bucketId: text("bucket_id"),
     channelId: text("channel_id"),
     createdAt: sqliteTimestamp("created_at").notNull(),

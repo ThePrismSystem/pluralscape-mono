@@ -754,6 +754,356 @@ describe("message-router", () => {
       expect(resp["message"]).toBe("Failed to process snapshot");
     });
 
+    it("sends INTERNAL_ERROR when handleManifestRequest throws", async () => {
+      const brokenRelay = {
+        submit: vi.fn(),
+        submitSnapshot: vi.fn(),
+        getEnvelopesSince: vi.fn(),
+        getLatestSnapshot: vi.fn(),
+        getManifest: vi.fn(() => {
+          throw new Error("manifest failure");
+        }),
+      };
+      const brokenCtx: RouterContext = {
+        relay: brokenRelay as never,
+        documentOwnership: new Map<string, SystemId>(),
+        manager,
+      };
+
+      await routeMessage(
+        JSON.stringify({
+          type: "ManifestRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          systemId: "sys_test",
+        }),
+        state,
+        log,
+        brokenCtx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INTERNAL_ERROR");
+      expect(resp["message"]).toBe("Failed to process manifest");
+    });
+
+    it("sends INTERNAL_ERROR when handleSubscribeRequest throws", async () => {
+      const brokenRelay = {
+        submit: vi.fn(),
+        submitSnapshot: vi.fn(),
+        getEnvelopesSince: vi.fn(() => {
+          throw new Error("subscribe failure");
+        }),
+        getLatestSnapshot: vi.fn(),
+        getManifest: vi.fn(),
+      };
+      const brokenCtx: RouterContext = {
+        relay: brokenRelay as never,
+        documentOwnership: new Map<string, SystemId>(),
+        manager,
+      };
+
+      await routeMessage(
+        JSON.stringify({
+          type: "SubscribeRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          documents: [{ docId: "doc-sub-err", lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
+        }),
+        state,
+        log,
+        brokenCtx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INTERNAL_ERROR");
+      expect(resp["message"]).toBe("Failed to process subscription");
+    });
+
+    it("sends INTERNAL_ERROR when handleSubmitChange throws", async () => {
+      const brokenRelay = {
+        submit: vi.fn(() => {
+          throw new Error("change failure");
+        }),
+        submitSnapshot: vi.fn(),
+        getEnvelopesSince: vi.fn(),
+        getLatestSnapshot: vi.fn(),
+        getManifest: vi.fn(),
+      };
+      const brokenCtx: RouterContext = {
+        relay: brokenRelay as never,
+        documentOwnership: new Map<string, SystemId>(),
+        manager,
+      };
+
+      const change = makeChangePayload("doc-change-err");
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitChangeRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          docId: "doc-change-err",
+          change,
+        }),
+        state,
+        log,
+        brokenCtx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INTERNAL_ERROR");
+      expect(resp["message"]).toBe("Failed to process change");
+    });
+
+    it("sends INTERNAL_ERROR when handleDocumentLoad throws", async () => {
+      const brokenRelay = {
+        submit: vi.fn(),
+        submitSnapshot: vi.fn(),
+        getEnvelopesSince: vi.fn(),
+        getLatestSnapshot: vi.fn(() => {
+          throw new Error("load failure");
+        }),
+        getManifest: vi.fn(),
+      };
+      const brokenCtx: RouterContext = {
+        relay: brokenRelay as never,
+        documentOwnership: new Map<string, SystemId>(),
+        manager,
+      };
+
+      await routeMessage(
+        JSON.stringify({
+          type: "DocumentLoadRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          docId: "doc-load-err",
+          persist: false,
+        }),
+        state,
+        log,
+        brokenCtx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INTERNAL_ERROR");
+      expect(resp["message"]).toBe("Failed to load document");
+    });
+
+    it("sends INTERNAL_ERROR when FetchSnapshotRequest handler throws via dispatchWithAccess", async () => {
+      const brokenRelay = {
+        submit: vi.fn(),
+        submitSnapshot: vi.fn(),
+        getEnvelopesSince: vi.fn(),
+        getLatestSnapshot: vi.fn(() => {
+          throw new Error("fetch failure");
+        }),
+        getManifest: vi.fn(),
+      };
+      const brokenCtx: RouterContext = {
+        relay: brokenRelay as never,
+        documentOwnership: new Map<string, SystemId>(),
+        manager,
+      };
+
+      await routeMessage(
+        JSON.stringify({
+          type: "FetchSnapshotRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          docId: "doc-fetch-err",
+        }),
+        state,
+        log,
+        brokenCtx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INTERNAL_ERROR");
+      expect(resp["message"]).toBe("Failed to process request");
+    });
+
+    it("SubmitSnapshotRequest VERSION_CONFLICT does not set ownership", async () => {
+      // First submit to establish version 2
+      const snapshot1 = {
+        ciphertext: base64urlOfLength(32, 1),
+        nonce: base64urlOfLength(24, 2),
+        signature: base64urlOfLength(64, 3),
+        authorPublicKey: base64urlOfLength(32, 4),
+        documentId: "doc-vc",
+        snapshotVersion: 2,
+      };
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitSnapshotRequest",
+          correlationId: null,
+          docId: "doc-vc",
+          snapshot: snapshot1,
+        }),
+        state,
+        log,
+        ctx,
+      );
+      sent.length = 0;
+      ctx.documentOwnership.clear();
+
+      // Now submit stale version 1 — should get VERSION_CONFLICT
+      const snapshot2 = {
+        ciphertext: base64urlOfLength(32, 5),
+        nonce: base64urlOfLength(24, 6),
+        signature: base64urlOfLength(64, 7),
+        authorPublicKey: base64urlOfLength(32, 8),
+        documentId: "doc-vc",
+        snapshotVersion: 1,
+      };
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitSnapshotRequest",
+          correlationId: null,
+          docId: "doc-vc",
+          snapshot: snapshot2,
+        }),
+        state,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("VERSION_CONFLICT");
+      // Ownership should NOT be set after a VERSION_CONFLICT
+      expect(ctx.documentOwnership.has("doc-vc")).toBe(false);
+    });
+
+    it("ManifestRequest with broken ws does not crash", async () => {
+      const brokenWs = mockWs();
+      brokenWs.send.mockImplementation(() => {
+        throw new Error("broken pipe");
+      });
+      const brokenManager = new ConnectionManager();
+      brokenManager.reserveUnauthSlot();
+      brokenManager.register("conn-broken-mfst", brokenWs as never, Date.now());
+      brokenManager.authenticate(
+        "conn-broken-mfst",
+        {
+          accountId: "acct_test" as AccountId,
+          systemId: "sys_test" as SystemId,
+          sessionId: "sess_test" as SessionId,
+          accountType: "system",
+          ownedSystemIds: new Set(["sys_test" as SystemId]),
+        },
+        "sys_test" as SystemId,
+        "owner-full",
+      );
+      const brokenState = brokenManager.get("conn-broken-mfst");
+      if (!brokenState) throw new Error("State not found");
+      const brokenCtx = createRouterContext(1000, brokenManager);
+
+      await expect(
+        routeMessage(
+          JSON.stringify({
+            type: "ManifestRequest",
+            correlationId: null,
+            systemId: "sys_test",
+          }),
+          brokenState,
+          log,
+          brokenCtx,
+        ),
+      ).resolves.not.toThrow();
+
+      brokenManager.closeAll(1001, "test cleanup");
+    });
+
+    it("SubscribeRequest with broken ws does not crash", async () => {
+      const brokenWs = mockWs();
+      brokenWs.send.mockImplementation(() => {
+        throw new Error("broken pipe");
+      });
+      const brokenManager = new ConnectionManager();
+      brokenManager.reserveUnauthSlot();
+      brokenManager.register("conn-broken-sub", brokenWs as never, Date.now());
+      brokenManager.authenticate(
+        "conn-broken-sub",
+        {
+          accountId: "acct_test" as AccountId,
+          systemId: "sys_test" as SystemId,
+          sessionId: "sess_test" as SessionId,
+          accountType: "system",
+          ownedSystemIds: new Set(["sys_test" as SystemId]),
+        },
+        "sys_test" as SystemId,
+        "owner-full",
+      );
+      const brokenState = brokenManager.get("conn-broken-sub");
+      if (!brokenState) throw new Error("State not found");
+      const brokenCtx = createRouterContext(1000, brokenManager);
+
+      await expect(
+        routeMessage(
+          JSON.stringify({
+            type: "SubscribeRequest",
+            correlationId: null,
+            documents: [{ docId: "doc-1", lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
+          }),
+          brokenState,
+          log,
+          brokenCtx,
+        ),
+      ).resolves.not.toThrow();
+
+      brokenManager.closeAll(1001, "test cleanup");
+    });
+
+    it("SubmitSnapshotRequest with broken ws does not crash", async () => {
+      const brokenWs = mockWs();
+      brokenWs.send.mockImplementation(() => {
+        throw new Error("broken pipe");
+      });
+      const brokenManager = new ConnectionManager();
+      brokenManager.reserveUnauthSlot();
+      brokenManager.register("conn-broken-snap", brokenWs as never, Date.now());
+      brokenManager.authenticate(
+        "conn-broken-snap",
+        {
+          accountId: "acct_test" as AccountId,
+          systemId: "sys_test" as SystemId,
+          sessionId: "sess_test" as SessionId,
+          accountType: "system",
+          ownedSystemIds: new Set(["sys_test" as SystemId]),
+        },
+        "sys_test" as SystemId,
+        "owner-full",
+      );
+      const brokenState = brokenManager.get("conn-broken-snap");
+      if (!brokenState) throw new Error("State not found");
+      const brokenCtx = createRouterContext(1000, brokenManager);
+
+      const snapshot = {
+        ciphertext: base64urlOfLength(32, 1),
+        nonce: base64urlOfLength(24, 2),
+        signature: base64urlOfLength(64, 3),
+        authorPublicKey: base64urlOfLength(32, 4),
+        documentId: "doc-snap-broken",
+        snapshotVersion: 1,
+      };
+
+      await expect(
+        routeMessage(
+          JSON.stringify({
+            type: "SubmitSnapshotRequest",
+            correlationId: null,
+            docId: "doc-snap-broken",
+            snapshot,
+          }),
+          brokenState,
+          log,
+          brokenCtx,
+        ),
+      ).resolves.not.toThrow();
+
+      brokenManager.closeAll(1001, "test cleanup");
+    });
+
     it("sends empty SubscribeResponse when all documents are denied", async () => {
       ctx.documentOwnership.set("doc-denied-1", "sys_other" as SystemId);
       ctx.documentOwnership.set("doc-denied-2", "sys_other" as SystemId);

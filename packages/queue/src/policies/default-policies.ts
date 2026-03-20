@@ -84,7 +84,6 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     maxBackoffMs: 60_000,
     strategy: "exponential",
   },
-  "sync-queue-cleanup": HEAVY_BACKOFF,
   "audit-log-cleanup": HEAVY_BACKOFF,
   "partition-maintenance": HEAVY_BACKOFF,
   "sync-compaction": {

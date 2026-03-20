@@ -1,5 +1,3 @@
-/** Maximum byte size for Automerge document heads stored in the sync queue. */
-export const MAX_AUTOMERGE_HEADS_BYTES = 16_384;
 /** Cap on error log entries retained per system before oldest are pruned. */
 export const MAX_ERROR_LOG_ENTRIES = 1_000;
 /** 10 GiB (10 * 1024^3). Upper bound for blob_metadata.size_bytes. */

@@ -88,7 +88,7 @@ describe("enum arrays", () => {
     expect(DEVICE_TRANSFER_STATUSES).toEqual(["pending", "approved", "expired"]);
   });
 
-  it("SYNC_DOC_TYPES matches SyncDocType union", () => {
+  it("SYNC_DOC_TYPES matches SyncDocumentType union", () => {
     expect(SYNC_DOC_TYPES).toEqual([
       "system-core",
       "fronting",
@@ -99,7 +99,7 @@ describe("enum arrays", () => {
     ]);
   });
 
-  it("SYNC_KEY_TYPES matches SyncKeyType union", () => {
+  it("SYNC_KEY_TYPES matches DocumentKeyType union", () => {
     expect(SYNC_KEY_TYPES).toEqual(["derived", "bucket"]);
   });
 
@@ -207,7 +207,6 @@ describe("enum arrays", () => {
     expect(JOB_TYPES).toHaveLength(16);
     expect(JOB_TYPES).toContain("sync-push");
     expect(JOB_TYPES).toContain("report-generate");
-    expect(JOB_TYPES).toContain("sync-queue-cleanup");
     expect(JOB_TYPES).toContain("partition-maintenance");
   });
 

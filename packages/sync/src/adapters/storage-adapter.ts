@@ -55,4 +55,10 @@ export interface SyncStorageAdapter {
    * Called when a document is removed from the manifest and no longer needed.
    */
   deleteDocument(documentId: string): Promise<void>;
+
+  /**
+   * Releases any resources held by the adapter (e.g. database connections).
+   * Optional — not all adapters require explicit cleanup.
+   */
+  close?(): void;
 }

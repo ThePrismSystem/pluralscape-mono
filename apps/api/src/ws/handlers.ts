@@ -4,14 +4,17 @@
  * All handlers for the authenticated phase of the sync protocol, consolidated
  * into a single module for import simplicity.
  */
-import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
+import { SnapshotVersionConflictError } from "@pluralscape/sync";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
+import type { AppLogger } from "../lib/logger.js";
 import type {
   ChangeAccepted,
   ChangesResponse,
+  DocumentCatchup,
   DocumentLoadRequest,
+  DocumentVersionEntry,
   EncryptedChangeEnvelope,
   FetchChangesRequest,
   FetchSnapshotRequest,
@@ -27,6 +30,7 @@ import type {
   SyncRelayService,
   UnsubscribeRequest,
 } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Manifest ────────────────────────────────────────────────────────
 
@@ -35,7 +39,8 @@ export async function handleManifestRequest(
   message: ManifestRequest,
   relay: SyncRelayService,
 ): Promise<ManifestResponse> {
-  const manifest = await relay.getManifest(message.systemId);
+  // Safe cast: router validates message.systemId === state.systemId before dispatch
+  const manifest = await relay.getManifest(message.systemId as SystemId);
   return {
     type: "ManifestResponse",
     correlationId: message.correlationId,
@@ -45,18 +50,31 @@ export async function handleManifestRequest(
 
 // ── Subscribe / Unsubscribe ─────────────────────────────────────────
 
+/** Result of handling a SubscribeRequest, including skipped docs for quota reporting. */
+export interface SubscribeResult {
+  readonly response: SubscribeResponse;
+  readonly skippedDocIds: readonly string[];
+}
+
 /** Handle a SubscribeRequest. Registers subscriptions and computes catch-up. */
 export async function handleSubscribeRequest(
   message: SubscribeRequest,
   state: SyncConnectionState,
   manager: ConnectionManager,
   relay: SyncRelayService,
+  log: AppLogger,
 ): Promise<SubscribeResponse> {
-  const catchup = [];
+  // Phase 1: register subscriptions, partition into permitted vs dropped
+  const droppedDocIds: string[] = [];
+  const permitted: DocumentVersionEntry[] = [];
 
   for (const entry of message.documents) {
     if (!manager.addSubscription(state.connectionId, entry.docId)) {
-      // Subscription cap reached — skip this document silently
+      droppedDocIds.push(entry.docId);
+      log.warn("Subscription cap reached, dropping document", {
+        connectionId: state.connectionId,
+        docId: entry.docId,
+      });
       continue;
     }
 
@@ -76,10 +94,34 @@ export async function handleSubscribeRequest(
     }
   }
 
+  // Phase 2: fetch catchup data in parallel
+  const catchupResults = await Promise.all(
+    permitted.map(async (entry): Promise<DocumentCatchup | null> => {
+      const [changes, snapshot] = await Promise.all([
+        relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+        relay.getLatestSnapshot(entry.docId),
+      ]);
+      const hasNewerSnapshot =
+        snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
+
+      if (changes.length > 0 || hasNewerSnapshot) {
+        return {
+          docId: entry.docId,
+          changes,
+          snapshot: hasNewerSnapshot ? snapshot : null,
+        };
+      }
+      return null;
+    }),
+  );
+
+  const catchup = catchupResults.filter((c): c is DocumentCatchup => c !== null);
+
   return {
     type: "SubscribeResponse",
     correlationId: message.correlationId,
     catchup,
+    droppedDocIds,
   };
 }
 
@@ -167,7 +209,7 @@ export async function handleSubmitSnapshot(
       snapshotVersion: message.snapshot.snapshotVersion,
     };
   } catch (err) {
-    if (err instanceof Error && err.message.includes(SNAPSHOT_VERSION_CONFLICT_MESSAGE)) {
+    if (err instanceof SnapshotVersionConflictError) {
       return {
         type: "SyncError",
         correlationId: message.correlationId,

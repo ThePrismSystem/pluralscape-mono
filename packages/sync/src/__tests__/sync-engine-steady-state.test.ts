@@ -28,6 +28,7 @@ import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
+import type { SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -55,7 +56,7 @@ afterAll(() => {
 });
 
 const SYSTEM_CORE_MANIFEST: SyncManifest = {
-  systemId: "sys_test",
+  systemId: "sys_test" as SystemId,
   documents: [
     {
       docId: "system-core-sys_test",
@@ -64,8 +65,8 @@ const SYSTEM_CORE_MANIFEST: SyncManifest = {
       bucketId: null,
       channelId: null,
       timePeriod: null,
-      createdAt: 1000,
-      updatedAt: 1000,
+      createdAt: 1000 as UnixMillis,
+      updatedAt: 1000 as UnixMillis,
       sizeBytes: 0,
       snapshotVersion: 0,
       archived: false,
@@ -118,7 +119,8 @@ async function createBootstrappedEngine(
     keyResolver: createKeyResolver(),
     sodium,
     profile: { profileType: "owner-full" },
-    systemId: "sys_test",
+    systemId: "sys_test" as SystemId,
+    onError: vi.fn(),
     ...overrides,
   });
   await engine.bootstrap();
@@ -203,8 +205,9 @@ describe("SyncEngine steady-state", () => {
         sodium,
       });
 
-      const envelope = senderSession.change((d: Record<string, unknown>) => {
-        (d["items"] as Record<string, string>)["key1"] = "value1";
+      const envelope = senderSession.change((d) => {
+        const doc = d;
+        (doc["items"] as Record<string, string>)["key1"] = "value1";
       });
 
       const change: EncryptedChangeEnvelope = { ...envelope, seq: 10 };
@@ -231,10 +234,10 @@ describe("SyncEngine steady-state", () => {
         sodium,
       });
 
-      const e1 = senderSession.change((d: Record<string, unknown>) => {
+      const e1 = senderSession.change((d) => {
         d["counter"] = 1;
       });
-      const e2 = senderSession.change((d: Record<string, unknown>) => {
+      const e2 = senderSession.change((d) => {
         d["counter"] = 2;
       });
 

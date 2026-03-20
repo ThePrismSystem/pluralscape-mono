@@ -56,7 +56,7 @@ export function decryptThenVerify(
   }
   const sigBytes = combined.subarray(0, SIGN_BYTES);
   assertSignature(sigBytes);
-  const sig = sigBytes as Signature;
+  const sig = sigBytes;
   const data = combined.subarray(SIGN_BYTES);
   if (!verify(data, sig, signingPublicKey)) {
     throw new SignatureVerificationError();

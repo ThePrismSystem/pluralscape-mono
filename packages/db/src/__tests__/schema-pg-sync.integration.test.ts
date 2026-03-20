@@ -503,6 +503,7 @@ describe("PG sync schema", () => {
       const newSignature = new Uint8Array(64).fill(0x06);
       const updatedAt = Date.now();
 
+      const newSignature = new Uint8Array(64).fill(0x99);
       await db
         .insert(syncSnapshots)
         .values({
@@ -534,6 +535,21 @@ describe("PG sync schema", () => {
       expect(rows).toHaveLength(1);
       expect(rows[0]?.snapshotVersion).toBe(2);
       expect(rows[0]?.encryptedPayload).toEqual(newPayload);
+    });
+
+    it("rejects negative snapshotVersion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+
+      const [doc] = await db.insert(syncDocuments).values(makeDoc(systemId)).returning();
+      const documentId = doc?.documentId ?? "";
+
+      await expect(
+        db.insert(syncSnapshots).values({
+          ...makeSnapshot(documentId),
+          snapshotVersion: -1,
+        }),
+      ).rejects.toThrow();
     });
 
     it("cascades on document deletion", async () => {

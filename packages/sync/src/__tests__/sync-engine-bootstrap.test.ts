@@ -16,6 +16,7 @@ import type { DocumentKeyResolver } from "../document-key-resolver.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { DocumentKeys } from "../types.js";
 import type { AeadKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
+import type { SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Mock factories ──────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ function mockStorageAdapter(overrides: Partial<SyncStorageAdapter> = {}): SyncSt
 }
 
 function mockNetworkAdapter(overrides: Partial<SyncNetworkAdapter> = {}): SyncNetworkAdapter {
-  const emptyManifest: SyncManifest = { systemId: "sys_test", documents: [] };
+  const emptyManifest: SyncManifest = { systemId: "sys_test" as SystemId, documents: [] };
   return {
     submitChange: vi.fn().mockResolvedValue({ seq: 1 }),
     fetchChangesSince: vi.fn().mockResolvedValue([]),
@@ -76,7 +77,8 @@ function createEngine(overrides: Partial<SyncEngineConfig> = {}): SyncEngine {
     keyResolver: mockKeyResolver(keys),
     sodium: mockSodium(),
     profile: { profileType: "owner-full" },
-    systemId: "sys_test",
+    systemId: "sys_test" as SystemId,
+    onError: vi.fn(),
     ...overrides,
   });
 }
@@ -92,7 +94,7 @@ describe("SyncEngine bootstrap", () => {
 
   it("hydrates documents from manifest", async () => {
     const manifest: SyncManifest = {
-      systemId: "sys_test",
+      systemId: "sys_test" as SystemId,
       documents: [
         {
           docId: "system-core-sys_test",
@@ -101,8 +103,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000,
-          updatedAt: 1000,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
           sizeBytes: 100,
           snapshotVersion: 0,
           archived: false,
@@ -138,7 +140,7 @@ describe("SyncEngine bootstrap", () => {
   it("subscribes to active documents for real-time updates", async () => {
     const subscribeFn = vi.fn().mockReturnValue({ unsubscribe: vi.fn() });
     const manifest: SyncManifest = {
-      systemId: "sys_test",
+      systemId: "sys_test" as SystemId,
       documents: [
         {
           docId: "system-core-sys_test",
@@ -147,8 +149,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000,
-          updatedAt: 1000,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
           sizeBytes: 100,
           snapshotVersion: 0,
           archived: false,
@@ -170,7 +172,7 @@ describe("SyncEngine bootstrap", () => {
   it("fetches server changes during hydration", async () => {
     const fetchChangesSince = vi.fn().mockResolvedValue([]);
     const manifest: SyncManifest = {
-      systemId: "sys_test",
+      systemId: "sys_test" as SystemId,
       documents: [
         {
           docId: "system-core-sys_test",
@@ -179,8 +181,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000,
-          updatedAt: 1000,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
           sizeBytes: 0,
           snapshotVersion: 0,
           archived: false,
@@ -337,7 +339,7 @@ describe("SyncEngine bootstrap", () => {
   it("disposes cleanly by unsubscribing all", async () => {
     const unsubscribe = vi.fn();
     const manifest: SyncManifest = {
-      systemId: "sys_test",
+      systemId: "sys_test" as SystemId,
       documents: [
         {
           docId: "system-core-sys_test",
@@ -346,8 +348,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000,
-          updatedAt: 1000,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
           sizeBytes: 0,
           snapshotVersion: 0,
           archived: false,

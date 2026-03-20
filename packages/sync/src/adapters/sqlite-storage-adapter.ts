@@ -1,5 +1,5 @@
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
-import type { SqliteDriver } from "./sqlite-driver.js";
+import type { SqliteDriver, SqliteStatement } from "./sqlite-driver.js";
 import type { SyncStorageAdapter } from "./storage-adapter.js";
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 
@@ -84,20 +84,61 @@ function rowToSnapshot(row: SnapshotRow): EncryptedSnapshotEnvelope {
   };
 }
 
+/** Cached prepared statements for all SQLite operations. */
+interface CachedStatements {
+  readonly loadSnapshot: SqliteStatement<SnapshotRow>;
+  readonly saveSnapshot: SqliteStatement;
+  readonly loadChanges: SqliteStatement<ChangeRow>;
+  readonly appendChange: SqliteStatement;
+  readonly pruneChanges: SqliteStatement;
+  readonly listDocs: SqliteStatement<DocIdRow>;
+  readonly deleteChanges: SqliteStatement;
+  readonly deleteSnapshots: SqliteStatement;
+}
+
 /** SQLite-backed SyncStorageAdapter for client-side local sync storage. */
 export class SqliteStorageAdapter implements SyncStorageAdapter {
   private readonly driver: SqliteDriver;
+  private readonly stmts: CachedStatements;
 
   constructor(driver: SqliteDriver) {
     this.driver = driver;
     driver.exec(CREATE_SNAPSHOTS);
     driver.exec(CREATE_CHANGES);
+    this.stmts = {
+      loadSnapshot: driver.prepare<SnapshotRow>(
+        "SELECT * FROM sync_local_snapshots WHERE document_id = ?",
+      ),
+      saveSnapshot: driver.prepare(
+        `INSERT OR REPLACE INTO sync_local_snapshots
+         (document_id, snapshot_version, ciphertext, nonce, signature, author_public_key)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ),
+      loadChanges: driver.prepare<ChangeRow>(
+        `SELECT * FROM sync_local_changes
+         WHERE document_id = ? AND seq > ?
+         ORDER BY seq ASC`,
+      ),
+      appendChange: driver.prepare(
+        `INSERT OR IGNORE INTO sync_local_changes
+         (document_id, seq, ciphertext, nonce, signature, author_public_key)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ),
+      pruneChanges: driver.prepare(
+        "DELETE FROM sync_local_changes WHERE document_id = ? AND seq <= ?",
+      ),
+      listDocs: driver.prepare<DocIdRow>(
+        `SELECT document_id FROM sync_local_snapshots
+         UNION
+         SELECT DISTINCT document_id FROM sync_local_changes`,
+      ),
+      deleteChanges: driver.prepare("DELETE FROM sync_local_changes WHERE document_id = ?"),
+      deleteSnapshots: driver.prepare("DELETE FROM sync_local_snapshots WHERE document_id = ?"),
+    };
   }
 
   loadSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
-    const row = this.driver
-      .prepare<SnapshotRow>("SELECT * FROM sync_local_snapshots WHERE document_id = ?")
-      .get(documentId);
+    const row = this.stmts.loadSnapshot.get(documentId);
     return Promise.resolve(row ? rowToSnapshot(row) : null);
   }
 
@@ -124,31 +165,19 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
     documentId: string,
     sinceSeq: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
-    const rows = this.driver
-      .prepare<ChangeRow>(
-        `SELECT * FROM sync_local_changes
-         WHERE document_id = ? AND seq > ?
-         ORDER BY seq ASC`,
-      )
-      .all(documentId, sinceSeq);
+    const rows = this.stmts.loadChanges.all(documentId, sinceSeq);
     return Promise.resolve(rows.map(rowToEnvelope));
   }
 
   appendChange(documentId: string, change: EncryptedChangeEnvelope): Promise<void> {
-    this.driver
-      .prepare(
-        `INSERT OR REPLACE INTO sync_local_changes
-         (document_id, seq, ciphertext, nonce, signature, author_public_key)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        documentId,
-        change.seq,
-        change.ciphertext,
-        change.nonce,
-        change.signature,
-        change.authorPublicKey,
-      );
+    this.stmts.appendChange.run(
+      documentId,
+      change.seq,
+      change.ciphertext,
+      change.nonce,
+      change.signature,
+      change.authorPublicKey,
+    );
     return Promise.resolve();
   }
 
@@ -160,20 +189,14 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
   }
 
   listDocuments(): Promise<readonly string[]> {
-    const rows = this.driver
-      .prepare<DocIdRow>(
-        `SELECT document_id FROM sync_local_snapshots
-         UNION
-         SELECT DISTINCT document_id FROM sync_local_changes`,
-      )
-      .all();
+    const rows = this.stmts.listDocs.all();
     return Promise.resolve(rows.map((r) => r.document_id));
   }
 
   deleteDocument(documentId: string): Promise<void> {
     this.driver.transaction(() => {
-      this.driver.prepare("DELETE FROM sync_local_changes WHERE document_id = ?").run(documentId);
-      this.driver.prepare("DELETE FROM sync_local_snapshots WHERE document_id = ?").run(documentId);
+      this.stmts.deleteChanges.run(documentId);
+      this.stmts.deleteSnapshots.run(documentId);
     });
     return Promise.resolve();
   }

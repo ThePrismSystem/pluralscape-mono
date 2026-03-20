@@ -1,7 +1,8 @@
 {
   "extends": "@pluralscape/tsconfig/node.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["bun"]
   },
   "include": ["src", "../../types"]
 }

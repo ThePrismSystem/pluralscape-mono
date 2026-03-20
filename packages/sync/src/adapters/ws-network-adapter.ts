@@ -2,6 +2,9 @@ import type { ClientMessage, ServerMessage, SyncTransport } from "../protocol.js
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SyncManifest, SyncNetworkAdapter, SyncSubscription } from "./network-adapter.js";
 
+/** Distributive Omit that preserves union members. */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
 /** Default timeout for request/response pairs (ms). */
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -44,20 +47,12 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "SubmitChangeRequest",
-      correlationId,
       docId: documentId,
       change,
     });
 
-    if (response.type === "SyncError") {
-      throw new Error(`SyncError: ${response.message}`);
-    }
-
-    if (response.type !== "ChangeAccepted") {
-      throw new Error(`Unexpected response: ${response.type}`);
-    }
-
-    const seq = response.assignedSeq;
+    const accepted = this.expectResponse(response, "ChangeAccepted");
+    const seq = accepted.assignedSeq;
     this.updateLastSeq(documentId, seq);
 
     return { ...change, documentId, seq };
@@ -70,7 +65,6 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "FetchChangesRequest",
-      correlationId,
       docId: documentId,
       sinceSeq,
     });
@@ -83,14 +77,13 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       throw new Error(`Unexpected response: ${response.type}`);
     }
 
-    return response.changes;
+    return changesResp.changes;
   }
 
   async submitSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
     const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "SubmitSnapshotRequest",
-      correlationId,
       docId: documentId,
       snapshot,
     });
@@ -99,7 +92,6 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       if (response.code === "VERSION_CONFLICT") return;
       throw new Error(`SyncError: ${response.message}`);
     }
-
     if (response.type !== "SnapshotAccepted") {
       throw new Error(`Unexpected response: ${response.type}`);
     }
@@ -109,7 +101,6 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "FetchSnapshotRequest",
-      correlationId,
       docId: documentId,
     });
 
@@ -195,7 +186,6 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "ManifestRequest",
-      correlationId,
       systemId,
     });
 
@@ -206,8 +196,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     if (response.type !== "ManifestResponse") {
       throw new Error(`Unexpected response: ${response.type}`);
     }
-
-    return response.manifest;
+    return response as Extract<ServerMessage, { type: T }>;
   }
 
   /** Dispose the adapter, clearing all pending requests and subscriptions. */
@@ -234,6 +223,8 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
           }
         }
       }
+      const lastPushed = msg.changes[msg.changes.length - 1];
+      if (lastPushed) this.updateLastSeq(msg.docId, lastPushed.seq);
       return;
     }
 
@@ -269,12 +260,22 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         timer,
       });
 
-      void this.transport.send(message).catch((err: unknown) => {
+      void this.transport.send(fullMessage).catch((err: unknown) => {
         clearTimeout(timer);
         this.pending.delete(correlationId);
         reject(err instanceof Error ? err : new Error(String(err)));
       });
     });
+  }
+
+  dispose(): void {
+    for (const [, pending] of this.pending) {
+      clearTimeout(pending.timer);
+      pending.reject(new Error("Adapter disposed"));
+    }
+    this.pending.clear();
+    this.subscriptions.clear();
+    this.lastSeqPerDoc.clear();
   }
 
   private updateLastSeq(documentId: string, seq: number): void {
