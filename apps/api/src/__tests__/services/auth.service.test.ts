@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const mockEnv = vi.hoisted(() => ({
+  NODE_ENV: "test" as "development" | "test" | "production",
+  LOG_LEVEL: "info" as const,
+  TRUST_PROXY: false,
+}));
+
+vi.mock("../../env.js", () => ({ env: mockEnv }));
+
 import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
@@ -110,78 +118,72 @@ describe("auth service", () => {
   // ── extractIpAddress ───────────────────────────────────────────────
 
   describe("extractIpAddress", () => {
-    const originalTrustProxy = process.env["TRUST_PROXY"];
-
     afterEach(() => {
-      if (originalTrustProxy === undefined) {
-        delete process.env["TRUST_PROXY"];
-      } else {
-        process.env["TRUST_PROXY"] = originalTrustProxy;
-      }
+      mockEnv.TRUST_PROXY = false;
     });
 
     it("returns null when TRUST_PROXY is not set", () => {
-      delete process.env["TRUST_PROXY"];
+      mockEnv.TRUST_PROXY = false;
       const c = mockContext({ "x-forwarded-for": "1.2.3.4" });
       expect(extractIpAddress(c)).toBeNull();
     });
 
-    it("returns null when TRUST_PROXY is set to something other than '1'", () => {
-      process.env["TRUST_PROXY"] = "true";
+    it("returns null when TRUST_PROXY is false", () => {
+      mockEnv.TRUST_PROXY = false;
       const c = mockContext({ "x-forwarded-for": "1.2.3.4" });
       expect(extractIpAddress(c)).toBeNull();
     });
 
-    it("returns the first IP from x-forwarded-for when TRUST_PROXY=1", () => {
-      process.env["TRUST_PROXY"] = "1";
+    it("returns the first IP from x-forwarded-for when TRUST_PROXY=true", () => {
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" });
       expect(extractIpAddress(c)).toBe("1.2.3.4");
     });
 
-    it("returns a single IP from x-forwarded-for when TRUST_PROXY=1", () => {
-      process.env["TRUST_PROXY"] = "1";
+    it("returns a single IP from x-forwarded-for when TRUST_PROXY=true", () => {
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "10.0.0.1" });
       expect(extractIpAddress(c)).toBe("10.0.0.1");
     });
 
     it("trims whitespace from the extracted IP", () => {
-      process.env["TRUST_PROXY"] = "1";
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "  192.168.1.1  , 10.0.0.1" });
       expect(extractIpAddress(c)).toBe("192.168.1.1");
     });
 
-    it("returns null when TRUST_PROXY=1 but x-forwarded-for is missing", () => {
-      process.env["TRUST_PROXY"] = "1";
+    it("returns null when TRUST_PROXY=true but x-forwarded-for is missing", () => {
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({});
       expect(extractIpAddress(c)).toBeNull();
     });
 
-    it("returns null when TRUST_PROXY=1 and x-forwarded-for is empty", () => {
-      process.env["TRUST_PROXY"] = "1";
+    it("returns null when TRUST_PROXY=true and x-forwarded-for is empty", () => {
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "" });
       expect(extractIpAddress(c)).toBeNull();
     });
 
-    it("returns null when TRUST_PROXY=1 and x-forwarded-for is not a valid IP", () => {
-      process.env["TRUST_PROXY"] = "1";
+    it("returns null when TRUST_PROXY=true and x-forwarded-for is not a valid IP", () => {
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "not-an-ip-address" });
       expect(extractIpAddress(c)).toBeNull();
     });
 
-    it("returns null when TRUST_PROXY=1 and x-forwarded-for contains script injection", () => {
-      process.env["TRUST_PROXY"] = "1";
+    it("returns null when TRUST_PROXY=true and x-forwarded-for contains script injection", () => {
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "<script>alert(1)</script>" });
       expect(extractIpAddress(c)).toBeNull();
     });
 
-    it("accepts valid IPv6 from x-forwarded-for when TRUST_PROXY=1", () => {
-      process.env["TRUST_PROXY"] = "1";
+    it("accepts valid IPv6 from x-forwarded-for when TRUST_PROXY=true", () => {
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "::1" });
       expect(extractIpAddress(c)).toBe("::1");
     });
 
-    it("returns null when TRUST_PROXY=1 and x-forwarded-for contains only whitespace", () => {
-      process.env["TRUST_PROXY"] = "1";
+    it("returns null when TRUST_PROXY=true and x-forwarded-for contains only whitespace", () => {
+      mockEnv.TRUST_PROXY = true;
       const c = mockContext({ "x-forwarded-for": "   " });
       // After split(",")[0]?.trim(), result is "" which has length 0
       expect(extractIpAddress(c)).toBeNull();

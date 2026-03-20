@@ -58,10 +58,6 @@ vi.mock("drizzle-orm", () => ({
   eq: vi.fn((col: unknown, val: unknown) => ({ type: "eq", col, val })),
 }));
 
-vi.mock("../../routes/systems/systems.constants.js", () => ({
-  MAX_ENCRYPTED_DATA_BYTES: 65536,
-}));
-
 vi.mock("../../services/recovery-key.service.js", () => ({
   getRecoveryKeyStatus: vi.fn(),
 }));

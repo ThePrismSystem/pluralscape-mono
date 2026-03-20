@@ -2,12 +2,17 @@ import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HSTS_MAX_AGE_SECONDS } from "../../middleware/middleware.constants.js";
+import { createSecureHeaders } from "../../middleware/secure-headers.js";
+
+const mockEnv = vi.hoisted(() => ({
+  NODE_ENV: "test" as "development" | "test" | "production",
+}));
+
+vi.mock("../../env.js", () => ({ env: mockEnv }));
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-async function createApp(): Promise<Hono> {
-  // Dynamic import so NODE_ENV changes take effect
-  const { createSecureHeaders } = await import("../../middleware/secure-headers.js");
+function createApp(): Hono {
   const app = new Hono();
   app.use("*", createSecureHeaders());
   app.get("/test", (c) => c.json({ ok: true }));
@@ -18,12 +23,11 @@ async function createApp(): Promise<Hono> {
 
 describe("createSecureHeaders", () => {
   afterEach(() => {
-    vi.restoreAllMocks();
-    vi.unstubAllEnvs();
+    mockEnv.NODE_ENV = "test";
   });
 
   it("sets Content-Security-Policy header", async () => {
-    const app = await createApp();
+    const app = createApp();
     const res = await app.request("/test");
 
     expect(res.status).toBe(200);
@@ -34,7 +38,7 @@ describe("createSecureHeaders", () => {
   });
 
   it("sets X-Frame-Options to DENY", async () => {
-    const app = await createApp();
+    const app = createApp();
     const res = await app.request("/test");
 
     expect(res.headers.get("X-Frame-Options")).toBe("DENY");
@@ -42,14 +46,8 @@ describe("createSecureHeaders", () => {
 
   describe("HSTS in production", () => {
     it("sets Strict-Transport-Security with max-age, includeSubDomains, and preload", async () => {
-      vi.stubEnv("NODE_ENV", "production");
-      // Re-import to pick up new NODE_ENV
-      vi.resetModules();
-      const { createSecureHeaders } = await import("../../middleware/secure-headers.js");
-
-      const app = new Hono();
-      app.use("*", createSecureHeaders());
-      app.get("/test", (c) => c.json({ ok: true }));
+      mockEnv.NODE_ENV = "production";
+      const app = createApp();
 
       const res = await app.request("/test");
       const hsts = res.headers.get("Strict-Transport-Security");
@@ -63,13 +61,8 @@ describe("createSecureHeaders", () => {
 
   describe("HSTS in non-production", () => {
     it("does not set Strict-Transport-Security when NODE_ENV is not production", async () => {
-      vi.stubEnv("NODE_ENV", "development");
-      vi.resetModules();
-      const { createSecureHeaders } = await import("../../middleware/secure-headers.js");
-
-      const app = new Hono();
-      app.use("*", createSecureHeaders());
-      app.get("/test", (c) => c.json({ ok: true }));
+      mockEnv.NODE_ENV = "development";
+      const app = createApp();
 
       const res = await app.request("/test");
       const hsts = res.headers.get("Strict-Transport-Security");

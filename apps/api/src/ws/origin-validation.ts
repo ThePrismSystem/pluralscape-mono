@@ -4,6 +4,8 @@
  * Extracted from index.ts for testability.
  */
 
+import { env } from "../env.js";
+
 /**
  * Check whether a WebSocket upgrade request's Origin header is allowed.
  *
@@ -13,7 +15,7 @@
  * - In production, origin must be in the ALLOWED_ORIGINS comma-separated env var.
  */
 export function isAllowedOrigin(origin: string | undefined): boolean {
-  if (process.env["NODE_ENV"] === "test" || process.env["NODE_ENV"] === "development") {
+  if (env.NODE_ENV === "test" || env.NODE_ENV === "development") {
     return true;
   }
 
@@ -24,6 +26,6 @@ export function isAllowedOrigin(origin: string | undefined): boolean {
     return true;
   }
 
-  const allowed = process.env["ALLOWED_ORIGINS"]?.split(",").map((s) => s.trim()) ?? [];
+  const allowed = env.ALLOWED_ORIGINS?.split(",").map((s) => s.trim()) ?? [];
   return allowed.includes(origin);
 }

@@ -1,5 +1,7 @@
 import { secureHeaders as honoSecureHeaders } from "hono/secure-headers";
 
+import { env } from "../env.js";
+
 import { HSTS_MAX_AGE_SECONDS } from "./middleware.constants.js";
 
 import type { MiddlewareHandler } from "hono";
@@ -11,7 +13,7 @@ import type { MiddlewareHandler } from "hono";
  * HSTS is only enabled in production to avoid browser caching issues in dev.
  */
 export function createSecureHeaders(): MiddlewareHandler {
-  const isProduction = process.env["NODE_ENV"] === "production";
+  const isProduction = env.NODE_ENV === "production";
 
   return honoSecureHeaders({
     contentSecurityPolicy: {

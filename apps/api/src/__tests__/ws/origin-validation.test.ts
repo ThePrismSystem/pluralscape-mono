@@ -2,56 +2,61 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { isAllowedOrigin } from "../../ws/origin-validation.js";
 
-describe("isAllowedOrigin", () => {
-  const originalEnv = process.env;
+const mockEnv = vi.hoisted(() => ({
+  NODE_ENV: "test" as "development" | "test" | "production",
+  ALLOWED_ORIGINS: undefined as string | undefined,
+}));
 
+vi.mock("../../env.js", () => ({ env: mockEnv }));
+
+describe("isAllowedOrigin", () => {
   afterEach(() => {
-    process.env = originalEnv;
-    vi.unstubAllEnvs();
+    mockEnv.NODE_ENV = "test";
+    mockEnv.ALLOWED_ORIGINS = undefined;
   });
 
   it("returns true in test environment", () => {
-    vi.stubEnv("NODE_ENV", "test");
+    mockEnv.NODE_ENV = "test";
     expect(isAllowedOrigin("https://evil.example")).toBe(true);
   });
 
   it("returns true in development environment", () => {
-    vi.stubEnv("NODE_ENV", "development");
+    mockEnv.NODE_ENV = "development";
     expect(isAllowedOrigin("https://evil.example")).toBe(true);
   });
 
   it("returns true when origin is undefined (non-browser client)", () => {
-    vi.stubEnv("NODE_ENV", "production");
+    mockEnv.NODE_ENV = "production";
     expect(isAllowedOrigin(undefined)).toBe(true);
   });
 
   it("returns true when origin is in ALLOWED_ORIGINS", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("ALLOWED_ORIGINS", "https://app.example.com,https://staging.example.com");
+    mockEnv.NODE_ENV = "production";
+    mockEnv.ALLOWED_ORIGINS = "https://app.example.com,https://staging.example.com";
     expect(isAllowedOrigin("https://app.example.com")).toBe(true);
   });
 
   it("returns false when origin is not in ALLOWED_ORIGINS", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("ALLOWED_ORIGINS", "https://app.example.com");
+    mockEnv.NODE_ENV = "production";
+    mockEnv.ALLOWED_ORIGINS = "https://app.example.com";
     expect(isAllowedOrigin("https://evil.example")).toBe(false);
   });
 
   it("returns false when ALLOWED_ORIGINS is empty", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("ALLOWED_ORIGINS", "");
+    mockEnv.NODE_ENV = "production";
+    mockEnv.ALLOWED_ORIGINS = "";
     expect(isAllowedOrigin("https://app.example.com")).toBe(false);
   });
 
   it("returns false when ALLOWED_ORIGINS is not set", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    delete process.env["ALLOWED_ORIGINS"];
+    mockEnv.NODE_ENV = "production";
+    mockEnv.ALLOWED_ORIGINS = undefined;
     expect(isAllowedOrigin("https://app.example.com")).toBe(false);
   });
 
   it("trims whitespace from ALLOWED_ORIGINS entries", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("ALLOWED_ORIGINS", "https://a.com, https://b.com , https://c.com");
+    mockEnv.NODE_ENV = "production";
+    mockEnv.ALLOWED_ORIGINS = "https://a.com, https://b.com , https://c.com";
     expect(isAllowedOrigin("https://b.com")).toBe(true);
   });
 });

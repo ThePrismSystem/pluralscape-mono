@@ -1,3 +1,4 @@
+import { env } from "../env.js";
 import {
   CLIENT_PLATFORM_HEADER,
   DEFAULT_PLATFORM,
@@ -16,7 +17,7 @@ export interface RequestMeta {
 
 /** Extract IP address from request context. */
 export function extractIpAddress(c: Context): string | null {
-  if (process.env["TRUST_PROXY"] === "1") {
+  if (env.TRUST_PROXY) {
     const forwarded = c.req.header("x-forwarded-for");
     const ip = forwarded?.split(",")[0]?.trim();
     if (ip && isValidIpFormat(ip)) return ip;

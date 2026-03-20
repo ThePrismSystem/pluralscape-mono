@@ -11,6 +11,7 @@
       "groupName": "dev dependencies (patch/minor)"
     },
     {
+      "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch"],
       "automerge": true,
       "automergeType": "pr",

@@ -8,6 +8,12 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
+const mockEnv = vi.hoisted(() => ({
+  NODE_ENV: "test" as "development" | "test" | "production",
+}));
+
+vi.mock("../env.js", () => ({ env: mockEnv }));
+
 const { mockLogError, mockLogWarn, mockLogInfo, mockLogDebug } = vi.hoisted(() => ({
   mockLogError: vi.fn(),
   mockLogWarn: vi.fn(),
@@ -30,14 +36,8 @@ vi.mock("../lib/logger.js", () => {
 });
 
 describe("errorHandler", () => {
-  const originalEnv = process.env["NODE_ENV"];
-
   afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env["NODE_ENV"];
-    } else {
-      process.env["NODE_ENV"] = originalEnv;
-    }
+    mockEnv.NODE_ENV = "test";
     vi.restoreAllMocks();
     mockLogError.mockClear();
     mockLogWarn.mockClear();
@@ -93,7 +93,7 @@ describe("errorHandler", () => {
   });
 
   it("includes error message in development for unknown errors", async () => {
-    process.env["NODE_ENV"] = "development";
+    mockEnv.NODE_ENV = "development";
     const app = createApp();
     const res = await app.request("/fail");
     const body = (await res.json()) as ApiErrorResponse;
@@ -101,7 +101,7 @@ describe("errorHandler", () => {
   });
 
   it("returns generic error message in production for unknown errors", async () => {
-    process.env["NODE_ENV"] = "production";
+    mockEnv.NODE_ENV = "production";
     const app = createApp();
     const res = await app.request("/fail");
     const body = (await res.json()) as ApiErrorResponse;
@@ -118,7 +118,7 @@ describe("errorHandler", () => {
   });
 
   it("never exposes stack traces", async () => {
-    process.env["NODE_ENV"] = "development";
+    mockEnv.NODE_ENV = "development";
     const app = createApp();
     const res = await app.request("/fail");
     const text = await res.clone().text();
@@ -167,7 +167,7 @@ describe("errorHandler", () => {
   });
 
   it("masks message and strips details for 5xx in production", async () => {
-    process.env["NODE_ENV"] = "production";
+    mockEnv.NODE_ENV = "production";
     const app = createApp();
     const res = await app.request("/server-error");
     expect(res.status).toBe(500);
@@ -188,7 +188,7 @@ describe("errorHandler", () => {
   });
 
   it("ApiHttpError 4xx is NOT masked in production", async () => {
-    process.env["NODE_ENV"] = "production";
+    mockEnv.NODE_ENV = "production";
     const app = createApp();
     const res = await app.request("/api-error");
     expect(res.status).toBe(422);
@@ -199,7 +199,7 @@ describe("errorHandler", () => {
   });
 
   it("strips ZodError details in production", async () => {
-    process.env["NODE_ENV"] = "production";
+    mockEnv.NODE_ENV = "production";
     const app = new Hono();
     app.use("*", requestIdMiddleware());
     app.onError(errorHandler);
@@ -217,7 +217,7 @@ describe("errorHandler", () => {
   });
 
   it("includes ZodError details in development", async () => {
-    process.env["NODE_ENV"] = "development";
+    mockEnv.NODE_ENV = "development";
     const app = new Hono();
     app.use("*", requestIdMiddleware());
     app.onError(errorHandler);
@@ -234,7 +234,7 @@ describe("errorHandler", () => {
   });
 
   it("ApiHttpError 5xx is masked in production", async () => {
-    process.env["NODE_ENV"] = "production";
+    mockEnv.NODE_ENV = "production";
     const app = createApp();
     const res = await app.request("/api-error-5xx");
     expect(res.status).toBe(502);

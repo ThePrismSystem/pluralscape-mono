@@ -106,7 +106,7 @@ export async function shutdown(server: { stop(): Promise<void> | void } | null):
 
 async function start(): Promise<void> {
   // Fail-fast: DISABLE_RATE_LIMIT is a test-only escape hatch. Refuse to start in production with it set.
-  if (env.DISABLE_RATE_LIMIT === "1" && env.NODE_ENV !== "test") {
+  if (env.DISABLE_RATE_LIMIT && env.NODE_ENV !== "test") {
     throw new Error("DISABLE_RATE_LIMIT=1 is only allowed when NODE_ENV=test. Refusing to start.");
   }
 
@@ -119,7 +119,7 @@ async function start(): Promise<void> {
       bucket: s3Bucket,
       region: env.BLOB_STORAGE_S3_REGION,
       endpoint: env.BLOB_STORAGE_S3_ENDPOINT,
-      forcePathStyle: env.BLOB_STORAGE_S3_FORCE_PATH_STYLE === "1",
+      forcePathStyle: env.BLOB_STORAGE_S3_FORCE_PATH_STYLE,
     });
     initStorageAdapter(adapter);
     // Probe bucket accessibility — logs a warning if credentials or bucket are misconfigured

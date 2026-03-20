@@ -1,17 +1,17 @@
 import { Hono } from "hono";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCorsMiddleware } from "../middleware/cors.js";
 
-describe("corsMiddleware", () => {
-  const originalEnv = process.env["CORS_ORIGIN"];
+const mockEnv = vi.hoisted(() => ({
+  CORS_ORIGIN: undefined as string | undefined,
+}));
 
+vi.mock("../env.js", () => ({ env: mockEnv }));
+
+describe("corsMiddleware", () => {
   afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env["CORS_ORIGIN"];
-    } else {
-      process.env["CORS_ORIGIN"] = originalEnv;
-    }
+    mockEnv.CORS_ORIGIN = undefined;
   });
 
   function createApp(): Hono {
@@ -22,7 +22,7 @@ describe("corsMiddleware", () => {
   }
 
   it("returns no CORS headers when CORS_ORIGIN is unset", async () => {
-    delete process.env["CORS_ORIGIN"];
+    mockEnv.CORS_ORIGIN = undefined;
     const app = createApp();
     const res = await app.request("/test", {
       headers: { origin: "https://evil.com" },
@@ -31,7 +31,7 @@ describe("corsMiddleware", () => {
   });
 
   it("returns CORS headers for allowed origin", async () => {
-    process.env["CORS_ORIGIN"] = "https://app.example.com";
+    mockEnv.CORS_ORIGIN = "https://app.example.com";
     const app = createApp();
     const res = await app.request("/test", {
       headers: { origin: "https://app.example.com" },
@@ -40,7 +40,7 @@ describe("corsMiddleware", () => {
   });
 
   it("supports comma-separated origins", async () => {
-    process.env["CORS_ORIGIN"] = "https://a.com,https://b.com";
+    mockEnv.CORS_ORIGIN = "https://a.com,https://b.com";
     const app = createApp();
 
     const resA = await app.request("/test", {
@@ -55,7 +55,7 @@ describe("corsMiddleware", () => {
   });
 
   it("rejects origins not in the allowlist", async () => {
-    process.env["CORS_ORIGIN"] = "https://app.example.com";
+    mockEnv.CORS_ORIGIN = "https://app.example.com";
     const app = createApp();
     const res = await app.request("/test", {
       headers: { origin: "https://evil.com" },
@@ -64,7 +64,7 @@ describe("corsMiddleware", () => {
   });
 
   it("handles preflight OPTIONS requests", async () => {
-    process.env["CORS_ORIGIN"] = "https://app.example.com";
+    mockEnv.CORS_ORIGIN = "https://app.example.com";
     const app = createApp();
     const res = await app.request("/test", {
       method: "OPTIONS",
@@ -77,7 +77,7 @@ describe("corsMiddleware", () => {
   });
 
   it("ignores blank entries in CORS_ORIGIN (trailing commas, whitespace-only)", async () => {
-    process.env["CORS_ORIGIN"] = "https://app.example.com,,  ,";
+    mockEnv.CORS_ORIGIN = "https://app.example.com,,  ,";
     const app = createApp();
 
     const res = await app.request("/test", {
@@ -87,7 +87,7 @@ describe("corsMiddleware", () => {
   });
 
   it("all-whitespace CORS_ORIGIN returns no CORS headers", async () => {
-    process.env["CORS_ORIGIN"] = "   ,  , ";
+    mockEnv.CORS_ORIGIN = "   ,  , ";
     const app = createApp();
     const res = await app.request("/test", {
       headers: { origin: "https://evil.com" },
@@ -96,7 +96,7 @@ describe("corsMiddleware", () => {
   });
 
   it("preflight includes Access-Control-Allow-Methods and Allow-Headers", async () => {
-    process.env["CORS_ORIGIN"] = "https://app.example.com";
+    mockEnv.CORS_ORIGIN = "https://app.example.com";
     const app = createApp();
     const res = await app.request("/test", {
       method: "OPTIONS",
@@ -110,7 +110,7 @@ describe("corsMiddleware", () => {
   });
 
   it("includes Vary: Origin for dynamic origin allowlist", async () => {
-    process.env["CORS_ORIGIN"] = "https://a.com,https://b.com";
+    mockEnv.CORS_ORIGIN = "https://a.com,https://b.com";
     const app = createApp();
     const res = await app.request("/test", {
       headers: { origin: "https://a.com" },

@@ -1,5 +1,6 @@
 import { HTTPException } from "hono/http-exception";
 
+import { env } from "../env.js";
 import {
   HTTP_BAD_REQUEST,
   HTTP_FORBIDDEN,
@@ -75,7 +76,7 @@ function formatError(
  * In production, 5xx errors have their message masked and details stripped.
  */
 export const errorHandler: ErrorHandler = (err, c) => {
-  const isProduction = process.env["NODE_ENV"] === "production";
+  const isProduction = env.NODE_ENV === "production";
   const requestId = getRequestId(c);
   const log = getContextLogger(c);
 
