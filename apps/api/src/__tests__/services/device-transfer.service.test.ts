@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  KeyDerivationUnavailableError,
   TransferCodeError,
   TransferExpiredError,
   TransferNotFoundError,
@@ -200,8 +201,6 @@ describe("device-transfer.service", () => {
       keyMaterial[1] = 2;
 
       chain.limit.mockResolvedValue([makeRow({ encryptedKeyMaterial: keyMaterial })]);
-      // The success path uses transaction → update → set → where → returning
-      chain.returning.mockResolvedValue([{ id: "dtr_test" }]);
 
       const result = await completeTransfer(
         db,
@@ -217,15 +216,23 @@ describe("device-transfer.service", () => {
       expect(mockAudit).toHaveBeenCalled();
     });
 
-    it("successful completion sets status to approved and targetSessionId", async () => {
+    it("successful completion deletes the transfer record", async () => {
       chain.limit.mockResolvedValue([makeRow()]);
-      chain.returning.mockResolvedValue([{ id: "dtr_test" }]);
 
       await completeTransfer(db, "dtr_test", ACCOUNT_ID, TARGET_SESSION_ID, "12345678", mockAudit);
 
-      expect(chain.set).toHaveBeenCalledWith(
-        expect.objectContaining({ status: "approved", targetSessionId: TARGET_SESSION_ID }),
-      );
+      expect(chain.delete).toHaveBeenCalled();
+    });
+
+    it("throws KeyDerivationUnavailableError when worker pool fails", async () => {
+      const { deriveTransferKeyOffload } = await import("../../lib/pwhash-offload.js");
+      vi.mocked(deriveTransferKeyOffload).mockRejectedValueOnce(new Error("pwhash worker timeout"));
+
+      chain.limit.mockResolvedValue([makeRow()]);
+
+      await expect(
+        completeTransfer(db, "dtr_test", ACCOUNT_ID, TARGET_SESSION_ID, "12345678", mockAudit),
+      ).rejects.toThrow(KeyDerivationUnavailableError);
     });
 
     it("increments codeAttempts atomically on wrong code", async () => {

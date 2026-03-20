@@ -5,7 +5,6 @@ import {
   assertAeadKey,
   assertPwhashSalt,
   decryptFromTransfer,
-  deriveTransferKey,
   isValidTransferCode,
 } from "@pluralscape/crypto";
 import { deviceTransferRequests } from "@pluralscape/db/pg";
@@ -38,6 +37,11 @@ export class TransferCodeError extends Error {
 
 export class TransferExpiredError extends Error {
   override readonly name = "TransferExpiredError" as const;
+}
+
+/** Thrown when the Argon2id worker pool is unavailable and key derivation cannot proceed. */
+export class KeyDerivationUnavailableError extends Error {
+  override readonly name = "KeyDerivationUnavailableError" as const;
 }
 
 // ── Initiate transfer ────────────────────────────────────────────────
@@ -168,24 +172,28 @@ export async function completeTransfer(
   const salt = row.codeSalt;
   assertPwhashSalt(salt);
 
-  // Derive the transfer key from the code and stored salt (off main thread, sync fallback)
+  // Derive the transfer key from the code and stored salt (off main thread only)
   let codeCorrect = false;
   try {
-    let transferKey: AeadKey;
-    try {
-      const raw = await deriveTransferKeyOffload(code, salt);
-      assertAeadKey(raw);
-      transferKey = raw;
-    } catch {
-      // Worker pool unavailable (e.g. Bun runtime) — fall back to synchronous derivation
-      transferKey = deriveTransferKey(code, salt);
-    }
+    const raw = await deriveTransferKeyOffload(code, salt);
+    assertAeadKey(raw);
+    const transferKey: AeadKey = raw;
     const payload = deserializeEncryptedPayload(row.encryptedKeyMaterial);
     decryptFromTransfer(payload, transferKey);
     codeCorrect = true;
   } catch (error) {
-    if (!(error instanceof DecryptionFailedError)) throw error;
-    // Decryption failed — wrong code, handled below
+    if (error instanceof DecryptionFailedError) {
+      // Decryption failed — wrong code, handled below
+    } else if (
+      error instanceof Error &&
+      (error.message === "pwhash worker timeout" || error.message.includes("Worker"))
+    ) {
+      throw new KeyDerivationUnavailableError("Key derivation service is temporarily unavailable", {
+        cause: error,
+      });
+    } else {
+      throw error;
+    }
   }
 
   if (!codeCorrect) {
@@ -221,29 +229,19 @@ export async function completeTransfer(
     throw new TransferCodeError("Incorrect transfer code");
   }
 
-  // Success: atomically mark approved and set target session
+  // Success: audit the completion, then delete the transfer record to prevent
+  // offline brute-force attacks against the stored encrypted key material.
+  const encryptedKeyMaterialHex = toHex(row.encryptedKeyMaterial);
+
   await db.transaction(async (tx) => {
-    const [approved] = await tx
-      .update(deviceTransferRequests)
-      .set({ status: "approved", targetSessionId: sessionId })
-      .where(
-        and(
-          eq(deviceTransferRequests.id, transferId),
-          eq(deviceTransferRequests.status, "pending"),
-        ),
-      )
-      .returning({ id: deviceTransferRequests.id });
-
-    if (!approved) {
-      throw new TransferNotFoundError("Transfer already completed or expired");
-    }
-
     await audit(tx, {
       eventType: "auth.device-transfer-completed",
       actor: { kind: "account", id: accountId },
-      detail: `Transfer ${transferId} completed`,
+      detail: `Transfer ${transferId} completed by session ${sessionId}`,
     });
+
+    await tx.delete(deviceTransferRequests).where(eq(deviceTransferRequests.id, transferId));
   });
 
-  return { encryptedKeyMaterialHex: toHex(row.encryptedKeyMaterial) };
+  return { encryptedKeyMaterialHex };
 }
