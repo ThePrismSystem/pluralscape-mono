@@ -4,6 +4,7 @@ import { S3BlobStorageAdapter } from "@pluralscape/storage/s3";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
+import { env } from "./env.js";
 import { HTTP_CONTENT_TOO_LARGE } from "./http.constants.js";
 import { ApiHttpError } from "./lib/api-error.js";
 import { getRawClient } from "./lib/db.js";
@@ -20,7 +21,6 @@ import { createSecureHeaders } from "./middleware/secure-headers.js";
 import { createValkeyStore } from "./middleware/stores/valkey-store.js";
 import { v1Routes } from "./routes/v1.js";
 import {
-  DEFAULT_PORT,
   NOTIFY_SERVER_ID_SUFFIX_LENGTH,
   SERVER_STOP_TIMEOUT_SECONDS,
   SHUTDOWN_TIMEOUT_SECONDS,
@@ -32,7 +32,7 @@ import {
   WS_MAX_MESSAGE_BYTES,
 } from "./ws/ws.constants.js";
 
-const port = Number(process.env["API_PORT"]) || DEFAULT_PORT;
+const port = env.API_PORT;
 
 export const app = new Hono();
 
@@ -106,20 +106,20 @@ export async function shutdown(server: { stop(): Promise<void> | void } | null):
 
 async function start(): Promise<void> {
   // Fail-fast: DISABLE_RATE_LIMIT is a test-only escape hatch. Refuse to start in production with it set.
-  if (process.env["DISABLE_RATE_LIMIT"] === "1" && process.env["NODE_ENV"] !== "test") {
+  if (env.DISABLE_RATE_LIMIT && env.NODE_ENV !== "test") {
     throw new Error("DISABLE_RATE_LIMIT=1 is only allowed when NODE_ENV=test. Refusing to start.");
   }
 
   await initSodium();
 
   // Initialize blob storage: prefer S3 if configured, fall back to filesystem
-  const s3Bucket = process.env["BLOB_STORAGE_S3_BUCKET"];
+  const s3Bucket = env.BLOB_STORAGE_S3_BUCKET;
   if (s3Bucket) {
     const adapter = new S3BlobStorageAdapter({
       bucket: s3Bucket,
-      region: process.env["BLOB_STORAGE_S3_REGION"] ?? "us-east-1",
-      endpoint: process.env["BLOB_STORAGE_S3_ENDPOINT"],
-      forcePathStyle: process.env["BLOB_STORAGE_S3_FORCE_PATH_STYLE"] === "1",
+      region: env.BLOB_STORAGE_S3_REGION,
+      endpoint: env.BLOB_STORAGE_S3_ENDPOINT,
+      forcePathStyle: env.BLOB_STORAGE_S3_FORCE_PATH_STYLE,
     });
     initStorageAdapter(adapter);
     // Probe bucket accessibility — logs a warning if credentials or bucket are misconfigured
@@ -133,12 +133,12 @@ async function start(): Promise<void> {
       );
     }
   } else {
-    const storageRoot = process.env["BLOB_STORAGE_PATH"] ?? "./data/blobs";
+    const storageRoot = env.BLOB_STORAGE_PATH;
     initStorageAdapter(new FilesystemBlobStorageAdapter({ storageRoot }));
   }
 
   // Resolve rate limit store: prefer Valkey if configured, fall back to in-memory
-  const valkeyUrl = process.env["VALKEY_URL"];
+  const valkeyUrl = env.VALKEY_URL;
   if (valkeyUrl) {
     const store = await createValkeyStore(valkeyUrl);
     if (store) {

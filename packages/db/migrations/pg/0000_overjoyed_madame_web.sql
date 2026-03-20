@@ -845,45 +845,59 @@ CREATE TABLE "switches" (
 	CONSTRAINT "switches_archived_consistency_check" CHECK (("switches"."archived" = true) = ("switches"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
+CREATE TABLE "sync_changes" (
+	"id" varchar(50) PRIMARY KEY NOT NULL,
+	"document_id" varchar(255) NOT NULL,
+	"seq" integer NOT NULL,
+	"encrypted_payload" "bytea" NOT NULL,
+	"author_public_key" "bytea" NOT NULL,
+	"nonce" "bytea" NOT NULL,
+	"signature" "bytea" NOT NULL,
+	"created_at" timestamptz NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "sync_conflicts" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"system_id" varchar(50) NOT NULL,
+	"document_id" varchar(255) NOT NULL,
 	"entity_type" varchar(50) NOT NULL,
 	"entity_id" varchar(50) NOT NULL,
-	"local_version" integer NOT NULL,
-	"remote_version" integer NOT NULL,
-	"resolution" varchar(50),
-	"created_at" timestamptz NOT NULL,
-	"resolved_at" timestamptz,
-	"details" text,
-	CONSTRAINT "sync_conflicts_resolution_check" CHECK ("sync_conflicts"."resolution" IS NULL OR "sync_conflicts"."resolution" IN ('local', 'remote', 'merged')),
-	CONSTRAINT "sync_conflicts_resolution_resolved_at_check" CHECK (("sync_conflicts"."resolution" IS NULL) = ("sync_conflicts"."resolved_at" IS NULL))
+	"field_name" varchar(50),
+	"resolution" varchar(50) NOT NULL,
+	"detected_at" timestamptz NOT NULL,
+	"summary" varchar(1024) NOT NULL,
+	"created_at" timestamptz NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "sync_documents" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
+	"document_id" varchar(255) PRIMARY KEY NOT NULL,
 	"system_id" varchar(50) NOT NULL,
-	"entity_type" varchar(50) NOT NULL,
-	"entity_id" varchar(50) NOT NULL,
-	"automerge_heads" "bytea",
-	"version" integer DEFAULT 1 NOT NULL,
+	"doc_type" varchar(50) NOT NULL,
+	"size_bytes" integer DEFAULT 0 NOT NULL,
+	"snapshot_version" integer DEFAULT 0 NOT NULL,
+	"last_seq" integer DEFAULT 0 NOT NULL,
+	"archived" boolean DEFAULT false NOT NULL,
+	"time_period" varchar(50),
+	"key_type" varchar(50) DEFAULT 'derived' NOT NULL,
+	"bucket_id" varchar(50),
+	"channel_id" varchar(50),
 	"created_at" timestamptz NOT NULL,
-	"last_synced_at" timestamptz,
-	CONSTRAINT "sync_documents_version_check" CHECK ("sync_documents"."version" >= 1),
-	CONSTRAINT "sync_documents_automerge_heads_size_check" CHECK ("sync_documents"."automerge_heads" IS NULL OR octet_length("sync_documents"."automerge_heads") <= 16384)
+	"updated_at" timestamptz NOT NULL,
+	CONSTRAINT "sync_documents_doc_type_check" CHECK ("sync_documents"."doc_type" IS NULL OR "sync_documents"."doc_type" IN ('system-core', 'fronting', 'chat', 'journal', 'privacy-config', 'bucket')),
+	CONSTRAINT "sync_documents_key_type_check" CHECK ("sync_documents"."key_type" IS NULL OR "sync_documents"."key_type" IN ('derived', 'bucket')),
+	CONSTRAINT "sync_documents_size_bytes_check" CHECK ("sync_documents"."size_bytes" >= 0),
+	CONSTRAINT "sync_documents_snapshot_version_check" CHECK ("sync_documents"."snapshot_version" >= 0),
+	CONSTRAINT "sync_documents_last_seq_check" CHECK ("sync_documents"."last_seq" >= 0)
 );
 --> statement-breakpoint
-CREATE TABLE "sync_queue" (
-	"id" varchar(50) PRIMARY KEY NOT NULL,
-	"seq" serial NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"entity_type" varchar(50) NOT NULL,
-	"entity_id" varchar(50) NOT NULL,
-	"operation" varchar(50) NOT NULL,
-	"encrypted_change_data" "bytea" NOT NULL,
+CREATE TABLE "sync_snapshots" (
+	"document_id" varchar(255) PRIMARY KEY NOT NULL,
+	"snapshot_version" integer NOT NULL,
+	"encrypted_payload" "bytea" NOT NULL,
+	"author_public_key" "bytea" NOT NULL,
+	"nonce" "bytea" NOT NULL,
+	"signature" "bytea" NOT NULL,
 	"created_at" timestamptz NOT NULL,
-	"synced_at" timestamptz,
-	CONSTRAINT "sync_queue_operation_check" CHECK ("sync_queue"."operation" IS NULL OR "sync_queue"."operation" IN ('create', 'update', 'delete'))
+	CONSTRAINT "sync_snapshots_snapshot_version_check" CHECK ("sync_snapshots"."snapshot_version" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "system_settings" (
@@ -1113,9 +1127,10 @@ ALTER TABLE "subsystem_side_system_links" ADD CONSTRAINT "subsystem_side_system_
 ALTER TABLE "subsystems" ADD CONSTRAINT "subsystems_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subsystems" ADD CONSTRAINT "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk" FOREIGN KEY ("parent_subsystem_id","system_id") REFERENCES "public"."subsystems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "switches" ADD CONSTRAINT "switches_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sync_conflicts" ADD CONSTRAINT "sync_conflicts_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sync_changes" ADD CONSTRAINT "sync_changes_document_id_sync_documents_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."sync_documents"("document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sync_conflicts" ADD CONSTRAINT "sync_conflicts_document_id_sync_documents_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."sync_documents"("document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sync_documents" ADD CONSTRAINT "sync_documents_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sync_queue" ADD CONSTRAINT "sync_queue_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sync_snapshots" ADD CONSTRAINT "sync_snapshots_document_id_sync_documents_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."sync_documents"("document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "system_settings" ADD CONSTRAINT "system_settings_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "system_snapshots" ADD CONSTRAINT "system_snapshots_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "systems" ADD CONSTRAINT "systems_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -1171,6 +1186,7 @@ CREATE INDEX "field_bucket_visibility_bucket_id_idx" ON "field_bucket_visibility
 CREATE INDEX "field_bucket_visibility_system_id_idx" ON "field_bucket_visibility" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "field_definitions_system_archived_idx" ON "field_definitions" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "field_values_definition_system_idx" ON "field_values" USING btree ("field_definition_id","system_id");--> statement-breakpoint
+CREATE INDEX "field_values_system_member_idx" ON "field_values" USING btree ("system_id","member_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "field_values_definition_member_uniq" ON "field_values" USING btree ("field_definition_id","member_id") WHERE "field_values"."member_id" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "field_values_definition_system_uniq" ON "field_values" USING btree ("field_definition_id","system_id") WHERE "field_values"."member_id" IS NULL;--> statement-breakpoint
 CREATE INDEX "friend_bucket_assignments_bucket_id_idx" ON "friend_bucket_assignments" USING btree ("bucket_id");--> statement-breakpoint
@@ -1194,6 +1210,7 @@ CREATE INDEX "fronting_sessions_active_idx" ON "fronting_sessions" USING btree (
 CREATE INDEX "fronting_sessions_system_archived_idx" ON "fronting_sessions" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "group_memberships_member_id_idx" ON "group_memberships" USING btree ("member_id");--> statement-breakpoint
 CREATE INDEX "group_memberships_system_id_idx" ON "group_memberships" USING btree ("system_id");--> statement-breakpoint
+CREATE INDEX "group_memberships_system_group_idx" ON "group_memberships" USING btree ("system_id","group_id");--> statement-breakpoint
 CREATE INDEX "groups_system_archived_idx" ON "groups" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "import_jobs_account_id_status_idx" ON "import_jobs" USING btree ("account_id","status");--> statement-breakpoint
 CREATE INDEX "import_jobs_system_id_idx" ON "import_jobs" USING btree ("system_id");--> statement-breakpoint
@@ -1235,7 +1252,7 @@ CREATE INDEX "sessions_account_id_idx" ON "sessions" USING btree ("account_id");
 CREATE UNIQUE INDEX "sessions_token_hash_idx" ON "sessions" USING btree ("token_hash");--> statement-breakpoint
 CREATE INDEX "sessions_revoked_last_active_idx" ON "sessions" USING btree ("revoked","last_active");--> statement-breakpoint
 CREATE INDEX "sessions_expires_at_idx" ON "sessions" USING btree ("expires_at") WHERE "sessions"."expires_at" IS NOT NULL;--> statement-breakpoint
-CREATE INDEX "sessions_ttl_duration_ms_idx" ON "sessions" USING btree ((EXTRACT(EPOCH FROM ("expires_at" - "created_at")) * 1000));--> statement-breakpoint
+CREATE INDEX "sessions_ttl_duration_ms_idx" ON "sessions" USING btree ((CAST(EXTRACT(EPOCH FROM ("expires_at" - "created_at")) * 1000 AS bigint)));--> statement-breakpoint
 CREATE INDEX "side_system_layer_links_side_system_id_idx" ON "side_system_layer_links" USING btree ("side_system_id");--> statement-breakpoint
 CREATE INDEX "side_system_layer_links_layer_id_idx" ON "side_system_layer_links" USING btree ("layer_id");--> statement-breakpoint
 CREATE INDEX "side_system_memberships_side_system_id_idx" ON "side_system_memberships" USING btree ("side_system_id");--> statement-breakpoint
@@ -1252,13 +1269,12 @@ CREATE INDEX "subsystem_side_system_links_side_system_id_idx" ON "subsystem_side
 CREATE INDEX "subsystems_system_archived_idx" ON "subsystems" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "switches_system_timestamp_idx" ON "switches" USING btree ("system_id","timestamp");--> statement-breakpoint
 CREATE INDEX "switches_system_archived_idx" ON "switches" USING btree ("system_id","archived");--> statement-breakpoint
-CREATE INDEX "sync_conflicts_system_id_entity_type_entity_id_idx" ON "sync_conflicts" USING btree ("system_id","entity_type","entity_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "sync_documents_system_id_entity_type_entity_id_idx" ON "sync_documents" USING btree ("system_id","entity_type","entity_id");--> statement-breakpoint
-CREATE INDEX "sync_queue_system_id_synced_at_idx" ON "sync_queue" USING btree ("system_id","synced_at");--> statement-breakpoint
-CREATE INDEX "sync_queue_system_id_entity_type_entity_id_idx" ON "sync_queue" USING btree ("system_id","entity_type","entity_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "sync_queue_seq_idx" ON "sync_queue" USING btree ("seq");--> statement-breakpoint
-CREATE INDEX "sync_queue_unsynced_idx" ON "sync_queue" USING btree ("system_id","seq") WHERE "sync_queue"."synced_at" IS NULL;--> statement-breakpoint
-CREATE INDEX "sync_queue_cleanup_idx" ON "sync_queue" USING btree ("synced_at") WHERE "sync_queue"."synced_at" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "sync_changes_document_id_seq_idx" ON "sync_changes" USING btree ("document_id","seq");--> statement-breakpoint
+CREATE UNIQUE INDEX "sync_changes_dedup_idx" ON "sync_changes" USING btree ("document_id","author_public_key","nonce");--> statement-breakpoint
+CREATE INDEX "sync_conflicts_document_id_idx" ON "sync_conflicts" USING btree ("document_id");--> statement-breakpoint
+CREATE INDEX "sync_conflicts_detected_at_idx" ON "sync_conflicts" USING btree ("detected_at");--> statement-breakpoint
+CREATE INDEX "sync_documents_system_id_idx" ON "sync_documents" USING btree ("system_id");--> statement-breakpoint
+CREATE INDEX "sync_documents_system_id_doc_type_idx" ON "sync_documents" USING btree ("system_id","doc_type");--> statement-breakpoint
 CREATE INDEX "system_snapshots_system_created_idx" ON "system_snapshots" USING btree ("system_id","created_at");--> statement-breakpoint
 CREATE INDEX "systems_account_id_idx" ON "systems" USING btree ("account_id");--> statement-breakpoint
 CREATE INDEX "timer_configs_system_archived_idx" ON "timer_configs" USING btree ("system_id","archived");--> statement-breakpoint

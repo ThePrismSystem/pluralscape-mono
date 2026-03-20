@@ -2,27 +2,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiErrorResponse } from "@pluralscape/types";
 
-describe("middleware composition", () => {
-  const originalEnv = process.env["NODE_ENV"];
-  const originalTrustProxy = process.env["TRUST_PROXY"];
-  const originalCorsOrigin = process.env["CORS_ORIGIN"];
+const mockEnv = vi.hoisted(() => ({
+  NODE_ENV: "test" as "development" | "test" | "production",
+  LOG_LEVEL: "info" as const,
+  TRUST_PROXY: false,
+  DISABLE_RATE_LIMIT: false,
+  CORS_ORIGIN: undefined as string | undefined,
+}));
 
+vi.mock("../env.js", () => ({ env: mockEnv }));
+
+describe("middleware composition", () => {
   afterEach(() => {
-    if (originalEnv === undefined) {
-      delete process.env["NODE_ENV"];
-    } else {
-      process.env["NODE_ENV"] = originalEnv;
-    }
-    if (originalTrustProxy === undefined) {
-      delete process.env["TRUST_PROXY"];
-    } else {
-      process.env["TRUST_PROXY"] = originalTrustProxy;
-    }
-    if (originalCorsOrigin === undefined) {
-      delete process.env["CORS_ORIGIN"];
-    } else {
-      process.env["CORS_ORIGIN"] = originalCorsOrigin;
-    }
+    mockEnv.NODE_ENV = "test";
+    mockEnv.TRUST_PROXY = false;
+    mockEnv.CORS_ORIGIN = undefined;
     vi.restoreAllMocks();
   });
 
@@ -70,7 +64,7 @@ describe("middleware composition", () => {
       throw new Error("secret internal details");
     });
 
-    process.env["NODE_ENV"] = "production";
+    mockEnv.NODE_ENV = "production";
     const res = await testApp.request("/boom");
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;

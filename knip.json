@@ -1,0 +1,52 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreDependencies": ["@pluralscape/tsconfig", "@pluralscape/eslint-config"],
+  "ignoreBinaries": ["beans"],
+  "workspaces": {
+    ".": {},
+    "apps/api": {
+      "entry": ["src/index.ts"],
+      "ignoreDependencies": ["@hono/node-server", "@pluralscape/test-utils"]
+    },
+    "apps/api-e2e": {
+      "ignore": ["src/migrate.ts"],
+      "ignoreDependencies": ["drizzle-orm", "postgres"]
+    },
+    "apps/mobile": {
+      "entry": ["app/**/*.tsx"],
+      "ignoreDependencies": [
+        "@pluralscape/api-client",
+        "@pluralscape/crypto",
+        "@pluralscape/sync",
+        "@pluralscape/types",
+        "expo-localization",
+        "@tanstack/react-query",
+        "expo-modules-core",
+        "expo-updates",
+        "@babel/core",
+        "babel-preset-expo"
+      ],
+      "ignore": ["metro.config.cjs", "modules/**"]
+    },
+    "packages/api-client": {
+      "ignoreDependencies": ["@tanstack/react-query", "@trpc/client", "@trpc/react-query"]
+    },
+    "packages/crypto": {
+      "ignoreDependencies": [
+        "@pluralscape/test-utils",
+        "@types/libsodium-wrappers-sumo",
+        "react-native-libsodium"
+      ]
+    },
+    "packages/db": {
+      "ignore": ["drizzle.config.pg.ts", "drizzle.config.sqlite.ts", "scripts/**"]
+    },
+    "packages/sync": {
+      "ignore": ["src/adapters/index.ts", "src/factories/index.ts", "src/strategies/index.ts"],
+      "ignoreDependencies": ["@types/better-sqlite3"]
+    },
+    "tooling/eslint-config": {
+      "ignoreDependencies": ["@typescript-eslint/eslint-plugin", "@typescript-eslint/parser"]
+    }
+  }
+}

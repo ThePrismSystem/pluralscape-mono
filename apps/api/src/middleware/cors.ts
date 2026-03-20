@@ -1,5 +1,7 @@
 import { cors } from "hono/cors";
 
+import { env } from "../env.js";
+
 import { CORS_MAX_AGE_SECONDS } from "./middleware.constants.js";
 
 import type { MiddlewareHandler } from "hono";
@@ -10,7 +12,7 @@ import type { MiddlewareHandler } from "hono";
  * are blank, no cross-origin requests are allowed.
  */
 export function createCorsMiddleware(): MiddlewareHandler {
-  const raw = process.env["CORS_ORIGIN"];
+  const raw = env.CORS_ORIGIN;
   if (!raw) {
     return (_, next) => next();
   }

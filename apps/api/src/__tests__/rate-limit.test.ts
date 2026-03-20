@@ -14,20 +14,23 @@ import { requestIdMiddleware } from "../middleware/request-id.js";
 import type { RateLimitResult, RateLimitStore } from "../middleware/rate-limit-store.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
-describe("rate limiter middleware", () => {
-  const originalTrustProxy = process.env["TRUST_PROXY"];
+const mockEnv = vi.hoisted(() => ({
+  NODE_ENV: "test" as "development" | "test" | "production",
+  LOG_LEVEL: "info" as const,
+  TRUST_PROXY: false,
+  DISABLE_RATE_LIMIT: false,
+}));
 
+vi.mock("../env.js", () => ({ env: mockEnv }));
+
+describe("rate limiter middleware", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
 
   afterEach(() => {
     vi.useRealTimers();
-    if (originalTrustProxy === undefined) {
-      delete process.env["TRUST_PROXY"];
-    } else {
-      process.env["TRUST_PROXY"] = originalTrustProxy;
-    }
+    mockEnv.TRUST_PROXY = false;
   });
 
   function createApp(limit = 3, windowMs = 60_000): Hono {
@@ -78,7 +81,7 @@ describe("rate limiter middleware", () => {
   });
 
   it("TRUST_PROXY unset: x-forwarded-for is ignored, all requests share global bucket", async () => {
-    delete process.env["TRUST_PROXY"];
+    mockEnv.TRUST_PROXY = false;
     const app = createApp(2);
 
     await app.request("/test", {
@@ -94,7 +97,7 @@ describe("rate limiter middleware", () => {
   });
 
   it("TRUST_PROXY=1: tracks clients independently by x-forwarded-for", async () => {
-    process.env["TRUST_PROXY"] = "1";
+    mockEnv.TRUST_PROXY = true;
     const app = createApp(1);
 
     const res1 = await app.request("/test", {
@@ -114,7 +117,7 @@ describe("rate limiter middleware", () => {
   });
 
   it("evicts expired entries when store exceeds threshold", async () => {
-    process.env["TRUST_PROXY"] = "1";
+    mockEnv.TRUST_PROXY = true;
     const app = createApp(1, 1_000);
 
     for (let i = 0; i < 5; i++) {
@@ -132,7 +135,7 @@ describe("rate limiter middleware", () => {
   });
 
   it("TRUST_PROXY=1: falls back to global bucket for non-IP x-forwarded-for", async () => {
-    process.env["TRUST_PROXY"] = "1";
+    mockEnv.TRUST_PROXY = true;
     const app = createApp(2);
 
     // Garbage values should all share the global bucket
@@ -149,7 +152,7 @@ describe("rate limiter middleware", () => {
   });
 
   it("TRUST_PROXY=1: accepts valid IPv6 as rate-limit key", async () => {
-    process.env["TRUST_PROXY"] = "1";
+    mockEnv.TRUST_PROXY = true;
     const app = createApp(1);
 
     const res1 = await app.request("/test", {

@@ -1,5 +1,7 @@
 import pino from "pino";
 
+import { env } from "../env.js";
+
 /** Branded symbol for safe type narrowing in getContextLogger. */
 export const APP_LOGGER_BRAND: unique symbol = Symbol("AppLogger");
 
@@ -42,11 +44,9 @@ function wrapPino(pinoInstance: pino.Logger): AppLogger {
   };
 }
 
-const DEFAULT_LOG_LEVEL = "info";
-
 const pinoRoot: pino.Logger = pino({
   name: "pluralscape-api",
-  level: process.env["LOG_LEVEL"] ?? DEFAULT_LOG_LEVEL,
+  level: env.LOG_LEVEL,
 });
 
 /** Root application logger. */

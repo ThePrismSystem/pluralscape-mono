@@ -45,10 +45,6 @@ vi.mock("drizzle-orm", () => ({
   sql: Object.assign(vi.fn(), { raw: vi.fn() }),
 }));
 
-vi.mock("../../routes/systems/systems.constants.js", () => ({
-  MAX_ENCRYPTED_DATA_BYTES: 65536,
-}));
-
 // ── Imports after mocks ──────────────────────────────────────────────
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");

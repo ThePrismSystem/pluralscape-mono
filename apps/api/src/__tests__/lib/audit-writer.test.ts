@@ -5,6 +5,12 @@ import type { AccountId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { Context } from "hono";
 
+const mockEnv = vi.hoisted(() => ({
+  TRUST_PROXY: false,
+}));
+
+vi.mock("../../env.js", () => ({ env: mockEnv }));
+
 // Mock writeAuditLog before importing the module under test
 const writeAuditLogSpy = vi.fn().mockResolvedValue(undefined);
 vi.mock("../../lib/audit-log.js", () => ({
@@ -127,52 +133,36 @@ describe("createAuditWriter", () => {
     expect(mockParams(0).userAgent).toBe("PluralscapeApp/2.0");
   });
 
-  it("captures IP from x-forwarded-for when TRUST_PROXY=1", async () => {
-    const originalEnv = process.env["TRUST_PROXY"];
-    process.env["TRUST_PROXY"] = "1";
+  it("captures IP from x-forwarded-for when TRUST_PROXY=true", async () => {
+    mockEnv.TRUST_PROXY = true;
 
-    try {
-      const c = createMockContext({ "x-forwarded-for": "203.0.113.50, 10.0.0.1" });
-      const audit = createAuditWriter(c);
-      const db = createMockDb();
+    const c = createMockContext({ "x-forwarded-for": "203.0.113.50, 10.0.0.1" });
+    const audit = createAuditWriter(c);
+    const db = createMockDb();
 
-      await audit(db, {
-        eventType: "auth.login",
-        actor: { kind: "account", id: "acc_test" },
-      });
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
 
-      expect(mockParams(0).ipAddress).toBe("203.0.113.50");
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env["TRUST_PROXY"];
-      } else {
-        process.env["TRUST_PROXY"] = originalEnv;
-      }
-    }
+    expect(mockParams(0).ipAddress).toBe("203.0.113.50");
+
+    mockEnv.TRUST_PROXY = false;
   });
 
   it("sets ipAddress to null when TRUST_PROXY is not set", async () => {
-    const originalEnv = process.env["TRUST_PROXY"];
-    delete process.env["TRUST_PROXY"];
+    mockEnv.TRUST_PROXY = false;
 
-    try {
-      const c = createMockContext({ "x-forwarded-for": "203.0.113.50" });
-      const audit = createAuditWriter(c);
-      const db = createMockDb();
+    const c = createMockContext({ "x-forwarded-for": "203.0.113.50" });
+    const audit = createAuditWriter(c);
+    const db = createMockDb();
 
-      await audit(db, {
-        eventType: "auth.login",
-        actor: { kind: "account", id: "acc_test" },
-      });
+    await audit(db, {
+      eventType: "auth.login",
+      actor: { kind: "account", id: "acc_test" },
+    });
 
-      expect(mockParams(0).ipAddress).toBeNull();
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env["TRUST_PROXY"];
-      } else {
-        process.env["TRUST_PROXY"] = originalEnv;
-      }
-    }
+    expect(mockParams(0).ipAddress).toBeNull();
   });
 
   it("passes the db/tx instance through to writeAuditLog", async () => {

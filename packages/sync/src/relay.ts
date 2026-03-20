@@ -65,6 +65,7 @@ export class EncryptedRelay {
     }
 
     this.evictIfNeeded(envelope.documentId);
+
     const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
     const seq = currentSeq + 1;
     this.seqCounters.set(envelope.documentId, seq);

@@ -1,32 +1,32 @@
 import { initSodium } from "@pluralscape/crypto";
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getEmailHashPepper, hashEmail } from "../../lib/email-hash.js";
+
+const mockEnv = vi.hoisted(() => ({
+  EMAIL_HASH_PEPPER: undefined as string | undefined,
+}));
+
+vi.mock("../../env.js", () => ({ env: mockEnv }));
 
 beforeAll(async () => {
   await initSodium();
 });
 
 describe("getEmailHashPepper", () => {
-  const originalPepper = process.env["EMAIL_HASH_PEPPER"];
-
   afterEach(() => {
-    if (originalPepper === undefined) {
-      delete process.env["EMAIL_HASH_PEPPER"];
-    } else {
-      process.env["EMAIL_HASH_PEPPER"] = originalPepper;
-    }
+    mockEnv.EMAIL_HASH_PEPPER = undefined;
   });
 
   it("throws when EMAIL_HASH_PEPPER is not set", () => {
-    delete process.env["EMAIL_HASH_PEPPER"];
+    mockEnv.EMAIL_HASH_PEPPER = undefined;
     expect(() => getEmailHashPepper()).toThrow(
       "EMAIL_HASH_PEPPER environment variable is required",
     );
   });
 
   it("throws when EMAIL_HASH_PEPPER is empty string", () => {
-    process.env["EMAIL_HASH_PEPPER"] = "";
+    mockEnv.EMAIL_HASH_PEPPER = "";
     expect(() => getEmailHashPepper()).toThrow(
       "EMAIL_HASH_PEPPER environment variable is required",
     );
@@ -34,7 +34,7 @@ describe("getEmailHashPepper", () => {
 
   it("returns correct bytes for valid 64-char hex", () => {
     // 64 hex chars = 32 bytes
-    process.env["EMAIL_HASH_PEPPER"] = "deadbeef".repeat(8);
+    mockEnv.EMAIL_HASH_PEPPER = "deadbeef".repeat(8);
     const result = getEmailHashPepper();
     expect(result).toBeInstanceOf(Uint8Array);
     expect(result.length).toBe(32);
@@ -45,34 +45,28 @@ describe("getEmailHashPepper", () => {
   });
 
   it("throws for wrong-length hex (not 64 chars)", () => {
-    process.env["EMAIL_HASH_PEPPER"] = "deadbeef";
+    mockEnv.EMAIL_HASH_PEPPER = "deadbeef";
     expect(() => getEmailHashPepper()).toThrow("64-character hex string");
   });
 
   it("throws for odd-length hex string", () => {
-    process.env["EMAIL_HASH_PEPPER"] = "a".repeat(63);
+    mockEnv.EMAIL_HASH_PEPPER = "a".repeat(63);
     expect(() => getEmailHashPepper()).toThrow("64-character hex string");
   });
 
   it("throws for invalid hex characters", () => {
-    process.env["EMAIL_HASH_PEPPER"] = "z".repeat(64);
+    mockEnv.EMAIL_HASH_PEPPER = "z".repeat(64);
     expect(() => getEmailHashPepper()).toThrow("EMAIL_HASH_PEPPER must be a valid hex string");
   });
 });
 
 describe("hashEmail", () => {
-  const originalPepper = process.env["EMAIL_HASH_PEPPER"];
-
   beforeEach(() => {
-    process.env["EMAIL_HASH_PEPPER"] = "a".repeat(64); // 32 bytes of 0xaa
+    mockEnv.EMAIL_HASH_PEPPER = "a".repeat(64); // 32 bytes of 0xaa
   });
 
   afterEach(() => {
-    if (originalPepper === undefined) {
-      delete process.env["EMAIL_HASH_PEPPER"];
-    } else {
-      process.env["EMAIL_HASH_PEPPER"] = originalPepper;
-    }
+    mockEnv.EMAIL_HASH_PEPPER = undefined;
   });
 
   it("returns a 64-character hex string", () => {

@@ -1,5 +1,6 @@
 import { RATE_LIMITS } from "@pluralscape/types";
 
+import { env } from "../env.js";
 import { HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { isValidIpFormat } from "../lib/ip-validation.js";
 import { logger } from "../lib/logger.js";
@@ -40,7 +41,7 @@ interface RateLimiterOptions {
  * all requests share a single global bucket to prevent IP spoofing.
  */
 function getClientKey(c: Context): string {
-  if (process.env["TRUST_PROXY"] !== "1") {
+  if (!env.TRUST_PROXY) {
     // Warn once if XFF is present but TRUST_PROXY is not configured
     if (!xffWarningLogged && c.req.header("x-forwarded-for")) {
       xffWarningLogged = true;
@@ -66,7 +67,7 @@ function getClientKey(c: Context): string {
  * to avoid X-Forwarded-For spoofing. Set TRUST_PROXY=1 behind a reverse proxy.
  */
 /** When true, rate limiting is disabled. Set by E2E test harness only. */
-const RATE_LIMIT_DISABLED = process.env["DISABLE_RATE_LIMIT"] === "1";
+const RATE_LIMIT_DISABLED = env.DISABLE_RATE_LIMIT;
 
 export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandler {
   const { limit, windowMs, keyPrefix, keyExtractor } = options;

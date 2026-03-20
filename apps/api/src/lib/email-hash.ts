@@ -1,5 +1,6 @@
 import { getSodium } from "@pluralscape/crypto";
 
+import { env } from "../env.js";
 import { EMAIL_HASH_LENGTH, PEPPER_HEX_LENGTH } from "../routes/auth/auth.constants.js";
 
 import { HEX_RADIX } from "./hex.constants.js";
@@ -14,7 +15,7 @@ const HEX_CHARS_PER_BYTE = 2;
  * Losing this value breaks all email lookups — it must be backed up securely.
  */
 export function getEmailHashPepper(): Uint8Array {
-  const hex = process.env["EMAIL_HASH_PEPPER"];
+  const hex = env.EMAIL_HASH_PEPPER;
   if (!hex || hex.length === 0) {
     throw new Error(
       "EMAIL_HASH_PEPPER environment variable is required but not set. " +

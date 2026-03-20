@@ -22,9 +22,13 @@
     "codeql": "bash scripts/codeql/analyze.sh",
     "openapi:lint": "redocly lint docs/openapi/openapi.yaml --config docs/openapi/redocly.yaml",
     "openapi:bundle": "redocly bundle docs/openapi/openapi.yaml --config docs/openapi/redocly.yaml -o docs/openapi.yaml",
+    "commitlint": "commitlint --from=origin/main --to=HEAD",
+    "knip": "knip --exclude exports --exclude types",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/prettier-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
@@ -32,6 +36,7 @@
     "@vitest/coverage-v8": "^4.1.0",
     "eslint": "^10.0.3",
     "husky": "^9.1.7",
+    "knip": "^6.0.0",
     "lint-staged": "^16.4.0",
     "prettier": "^3.5.3",
     "turbo": "^2.8.17",
@@ -51,8 +56,8 @@
     "overrides": {
       "@trpc/server": "11.13.4",
       "esbuild": ">=0.25.0",
-      "fast-xml-parser": ">=5.5.6",
-      "flatted": ">=3.4.0"
+      "fast-xml-parser": ">=5.5.7",
+      "flatted": ">=3.4.2"
     }
   },
   "prettier": "@pluralscape/prettier-config",

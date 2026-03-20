@@ -1,2 +1,0 @@
-DROP INDEX "sessions_ttl_duration_ms_idx";--> statement-breakpoint
-CREATE INDEX "sessions_ttl_duration_ms_idx" ON "sessions" USING btree ((CAST(EXTRACT(EPOCH FROM ("expires_at" - "created_at")) * 1000 AS bigint)));

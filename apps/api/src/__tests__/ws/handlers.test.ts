@@ -52,10 +52,11 @@ function sig(fill: number): Signature {
 let changeCounter = 0;
 
 function mockChangeWithoutSeq(docId: string): Omit<EncryptedChangeEnvelope, "seq"> {
+  const fill = ++changeCounter;
   return {
     ciphertext: new Uint8Array([1, 2, 3]),
-    nonce: nonce(++changeCounter),
-    signature: sig(7),
+    nonce: nonce(fill),
+    signature: sig(fill),
     authorPublicKey: pubkey(10),
     documentId: docId,
   };

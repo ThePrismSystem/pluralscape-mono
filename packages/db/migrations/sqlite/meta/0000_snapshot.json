@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "fa92a620-8f30-463f-95a0-75356fa61828",
+  "id": "9409dac3-f520-4d52-bf87-4488ac9bee18",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -2402,6 +2402,11 @@
           "columns": ["field_definition_id", "system_id"],
           "isUnique": false
         },
+        "field_values_system_member_idx": {
+          "name": "field_values_system_member_idx",
+          "columns": ["system_id", "member_id"],
+          "isUnique": false
+        },
         "field_values_definition_member_uniq": {
           "name": "field_values_definition_member_uniq",
           "columns": ["field_definition_id", "member_id"],
@@ -3302,6 +3307,11 @@
           "name": "group_memberships_system_id_idx",
           "columns": ["system_id"],
           "isUnique": false
+        },
+        "group_memberships_system_group_idx": {
+          "name": "group_memberships_system_group_idx",
+          "columns": ["system_id", "group_id"],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -4094,7 +4104,7 @@
         },
         "jobs_type_check": {
           "name": "jobs_type_check",
-          "value": "\"jobs\".\"type\" IS NULL OR \"jobs\".\"type\" IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate', 'sync-queue-cleanup', 'audit-log-cleanup', 'partition-maintenance')"
+          "value": "\"jobs\".\"type\" IS NULL OR \"jobs\".\"type\" IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate', 'audit-log-cleanup', 'partition-maintenance', 'device-transfer-cleanup')"
         },
         "jobs_attempts_max_check": {
           "name": "jobs_attempts_max_check",
@@ -6931,6 +6941,93 @@
         }
       }
     },
+    "sync_changes": {
+      "name": "sync_changes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "seq": {
+          "name": "seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "encrypted_payload": {
+          "name": "encrypted_payload",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "author_public_key": {
+          "name": "author_public_key",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nonce": {
+          "name": "nonce",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "signature": {
+          "name": "signature",
+          "type": "blob",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "sync_changes_document_id_seq_idx": {
+          "name": "sync_changes_document_id_seq_idx",
+          "columns": ["document_id", "seq"],
+          "isUnique": true
+        },
+        "sync_changes_dedup_idx": {
+          "name": "sync_changes_dedup_idx",
+          "columns": ["document_id", "author_public_key", "nonce"],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "sync_changes_document_id_sync_documents_document_id_fk": {
+          "name": "sync_changes_document_id_sync_documents_document_id_fk",
+          "tableFrom": "sync_changes",
+          "tableTo": "sync_documents",
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["document_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "sync_conflicts": {
       "name": "sync_conflicts",
       "columns": {
@@ -6941,8 +7038,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "system_id": {
-          "name": "system_id",
+        "document_id": {
+          "name": "document_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -6962,25 +7059,32 @@
           "notNull": true,
           "autoincrement": false
         },
-        "local_version": {
-          "name": "local_version",
-          "type": "integer",
+        "field_name": {
+          "name": "field_name",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "remote_version": {
-          "name": "remote_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
         "resolution": {
           "name": "resolution",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "detected_at": {
+          "name": "detected_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
           "autoincrement": false
         },
         "created_at": {
@@ -6989,58 +7093,40 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "resolved_at": {
-          "name": "resolved_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "details": {
-          "name": "details",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
-        "sync_conflicts_system_id_entity_type_entity_id_idx": {
-          "name": "sync_conflicts_system_id_entity_type_entity_id_idx",
-          "columns": ["system_id", "entity_type", "entity_id"],
+        "sync_conflicts_document_id_idx": {
+          "name": "sync_conflicts_document_id_idx",
+          "columns": ["document_id"],
+          "isUnique": false
+        },
+        "sync_conflicts_detected_at_idx": {
+          "name": "sync_conflicts_detected_at_idx",
+          "columns": ["detected_at"],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "sync_conflicts_system_id_systems_id_fk": {
-          "name": "sync_conflicts_system_id_systems_id_fk",
+        "sync_conflicts_document_id_sync_documents_document_id_fk": {
+          "name": "sync_conflicts_document_id_sync_documents_document_id_fk",
           "tableFrom": "sync_conflicts",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
+          "tableTo": "sync_documents",
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["document_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {
-        "sync_conflicts_resolution_check": {
-          "name": "sync_conflicts_resolution_check",
-          "value": "\"sync_conflicts\".\"resolution\" IS NULL OR \"sync_conflicts\".\"resolution\" IN ('local', 'remote', 'merged')"
-        },
-        "sync_conflicts_resolution_resolved_at_check": {
-          "name": "sync_conflicts_resolution_resolved_at_check",
-          "value": "(\"sync_conflicts\".\"resolution\" IS NULL) = (\"sync_conflicts\".\"resolved_at\" IS NULL)"
-        }
-      }
+      "checkConstraints": {}
     },
     "sync_documents": {
       "name": "sync_documents",
       "columns": {
-        "id": {
-          "name": "id",
+        "document_id": {
+          "name": "document_id",
           "type": "text",
           "primaryKey": true,
           "notNull": true,
@@ -7053,34 +7139,73 @@
           "notNull": true,
           "autoincrement": false
         },
-        "entity_type": {
-          "name": "entity_type",
+        "doc_type": {
+          "name": "doc_type",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "entity_id": {
-          "name": "entity_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "automerge_heads": {
-          "name": "automerge_heads",
-          "type": "blob",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "version": {
-          "name": "version",
+        "size_bytes": {
+          "name": "size_bytes",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": 1
+          "default": 0
+        },
+        "snapshot_version": {
+          "name": "snapshot_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "last_seq": {
+          "name": "last_seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "archived": {
+          "name": "archived",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "time_period": {
+          "name": "time_period",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "key_type": {
+          "name": "key_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'derived'"
+        },
+        "bucket_id": {
+          "name": "bucket_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
@@ -7089,19 +7214,24 @@
           "notNull": true,
           "autoincrement": false
         },
-        "last_synced_at": {
-          "name": "last_synced_at",
+        "updated_at": {
+          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         }
       },
       "indexes": {
-        "sync_documents_system_id_entity_type_entity_id_idx": {
-          "name": "sync_documents_system_id_entity_type_entity_id_idx",
-          "columns": ["system_id", "entity_type", "entity_id"],
-          "isUnique": true
+        "sync_documents_system_id_idx": {
+          "name": "sync_documents_system_id_idx",
+          "columns": ["system_id"],
+          "isUnique": false
+        },
+        "sync_documents_system_id_doc_type_idx": {
+          "name": "sync_documents_system_id_doc_type_idx",
+          "columns": ["system_id", "doc_type"],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -7118,63 +7248,68 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
-        "sync_documents_version_check": {
-          "name": "sync_documents_version_check",
-          "value": "\"sync_documents\".\"version\" >= 1"
+        "sync_documents_doc_type_check": {
+          "name": "sync_documents_doc_type_check",
+          "value": "\"sync_documents\".\"doc_type\" IS NULL OR \"sync_documents\".\"doc_type\" IN ('system-core', 'fronting', 'chat', 'journal', 'privacy-config', 'bucket')"
         },
-        "sync_documents_automerge_heads_size_check": {
-          "name": "sync_documents_automerge_heads_size_check",
-          "value": "\"sync_documents\".\"automerge_heads\" IS NULL OR length(\"sync_documents\".\"automerge_heads\") <= 16384"
+        "sync_documents_key_type_check": {
+          "name": "sync_documents_key_type_check",
+          "value": "\"sync_documents\".\"key_type\" IS NULL OR \"sync_documents\".\"key_type\" IN ('derived', 'bucket')"
+        },
+        "sync_documents_size_bytes_check": {
+          "name": "sync_documents_size_bytes_check",
+          "value": "\"sync_documents\".\"size_bytes\" >= 0"
+        },
+        "sync_documents_snapshot_version_check": {
+          "name": "sync_documents_snapshot_version_check",
+          "value": "\"sync_documents\".\"snapshot_version\" >= 0"
+        },
+        "sync_documents_last_seq_check": {
+          "name": "sync_documents_last_seq_check",
+          "value": "\"sync_documents\".\"last_seq\" >= 0"
         }
       }
     },
-    "sync_queue": {
-      "name": "sync_queue",
+    "sync_snapshots": {
+      "name": "sync_snapshots",
       "columns": {
-        "id": {
-          "name": "id",
+        "document_id": {
+          "name": "document_id",
           "type": "text",
           "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
-        "seq": {
-          "name": "seq",
+        "snapshot_version": {
+          "name": "snapshot_version",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "system_id": {
-          "name": "system_id",
-          "type": "text",
+        "encrypted_payload": {
+          "name": "encrypted_payload",
+          "type": "blob",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "entity_type": {
-          "name": "entity_type",
-          "type": "text",
+        "author_public_key": {
+          "name": "author_public_key",
+          "type": "blob",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "entity_id": {
-          "name": "entity_id",
-          "type": "text",
+        "nonce": {
+          "name": "nonce",
+          "type": "blob",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "operation": {
-          "name": "operation",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "encrypted_change_data": {
-          "name": "encrypted_change_data",
+        "signature": {
+          "name": "signature",
           "type": "blob",
           "primaryKey": false,
           "notNull": true,
@@ -7186,51 +7321,16 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "synced_at": {
-          "name": "synced_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
-      "indexes": {
-        "sync_queue_system_id_synced_at_idx": {
-          "name": "sync_queue_system_id_synced_at_idx",
-          "columns": ["system_id", "synced_at"],
-          "isUnique": false
-        },
-        "sync_queue_system_id_entity_type_entity_id_idx": {
-          "name": "sync_queue_system_id_entity_type_entity_id_idx",
-          "columns": ["system_id", "entity_type", "entity_id"],
-          "isUnique": false
-        },
-        "sync_queue_unsynced_idx": {
-          "name": "sync_queue_unsynced_idx",
-          "columns": ["system_id", "seq"],
-          "isUnique": false,
-          "where": "\"sync_queue\".\"synced_at\" IS NULL"
-        },
-        "sync_queue_cleanup_idx": {
-          "name": "sync_queue_cleanup_idx",
-          "columns": ["synced_at"],
-          "isUnique": false,
-          "where": "\"sync_queue\".\"synced_at\" IS NOT NULL"
-        },
-        "sync_queue_system_id_seq_idx": {
-          "name": "sync_queue_system_id_seq_idx",
-          "columns": ["system_id", "seq"],
-          "isUnique": true
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
-        "sync_queue_system_id_systems_id_fk": {
-          "name": "sync_queue_system_id_systems_id_fk",
-          "tableFrom": "sync_queue",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
+        "sync_snapshots_document_id_sync_documents_document_id_fk": {
+          "name": "sync_snapshots_document_id_sync_documents_document_id_fk",
+          "tableFrom": "sync_snapshots",
+          "tableTo": "sync_documents",
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["document_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7238,9 +7338,9 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
-        "sync_queue_operation_check": {
-          "name": "sync_queue_operation_check",
-          "value": "\"sync_queue\".\"operation\" IS NULL OR \"sync_queue\".\"operation\" IN ('create', 'update', 'delete')"
+        "sync_snapshots_snapshot_version_check": {
+          "name": "sync_snapshots_snapshot_version_check",
+          "value": "\"sync_snapshots\".\"snapshot_version\" >= 0"
         }
       }
     },
