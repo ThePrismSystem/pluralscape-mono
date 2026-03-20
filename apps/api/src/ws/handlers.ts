@@ -6,6 +6,7 @@
  */
 import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
 
+
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type {
@@ -27,6 +28,7 @@ import type {
   SyncRelayService,
   UnsubscribeRequest,
 } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Manifest ────────────────────────────────────────────────────────
 
@@ -35,7 +37,7 @@ export async function handleManifestRequest(
   message: ManifestRequest,
   relay: SyncRelayService,
 ): Promise<ManifestResponse> {
-  const manifest = await relay.getManifest(message.systemId);
+  const manifest = await relay.getManifest(message.systemId as SystemId);
   return {
     type: "ManifestResponse",
     correlationId: message.correlationId,
@@ -45,23 +47,32 @@ export async function handleManifestRequest(
 
 // ── Subscribe / Unsubscribe ─────────────────────────────────────────
 
+/** Result of handling a SubscribeRequest, including skipped docs for quota reporting. */
+export interface SubscribeResult {
+  readonly response: SubscribeResponse;
+  readonly skippedDocIds: readonly string[];
+}
+
 /** Handle a SubscribeRequest. Registers subscriptions and computes catch-up. */
 export async function handleSubscribeRequest(
   message: SubscribeRequest,
   state: SyncConnectionState,
   manager: ConnectionManager,
   relay: SyncRelayService,
-): Promise<SubscribeResponse> {
+): Promise<SubscribeResult> {
   const catchup = [];
+  const skippedDocIds: string[] = [];
 
   for (const entry of message.documents) {
     if (!manager.addSubscription(state.connectionId, entry.docId)) {
-      // Subscription cap reached — skip this document silently
+      skippedDocIds.push(entry.docId);
       continue;
     }
 
-    const changes = await relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq);
-    const snapshot = await relay.getLatestSnapshot(entry.docId);
+    const [changes, snapshot] = await Promise.all([
+      relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+      relay.getLatestSnapshot(entry.docId),
+    ]);
     const hasNewerSnapshot =
       snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
 
@@ -75,9 +86,12 @@ export async function handleSubscribeRequest(
   }
 
   return {
-    type: "SubscribeResponse",
-    correlationId: message.correlationId,
-    catchup,
+    response: {
+      type: "SubscribeResponse",
+      correlationId: message.correlationId,
+      catchup,
+    },
+    skippedDocIds,
   };
 }
 
@@ -189,9 +203,10 @@ export async function handleDocumentLoad(
   message: DocumentLoadRequest,
   relay: SyncRelayService,
 ): Promise<[SnapshotResponse, ChangesResponse]> {
-  const snapshot = await relay.getLatestSnapshot(message.docId);
-  const sinceSeq = 0;
-  const changes = await relay.getEnvelopesSince(message.docId, sinceSeq);
+  const [snapshot, changes] = await Promise.all([
+    relay.getLatestSnapshot(message.docId),
+    relay.getEnvelopesSince(message.docId, 0),
+  ]);
 
   return [
     {

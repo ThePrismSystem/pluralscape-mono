@@ -111,7 +111,7 @@ describe("handleManifestRequest", () => {
       systemId,
     };
 
-    const result = await handleManifestRequest(message, relay.asService(systemId));
+    const result = await handleManifestRequest(message, relay.asService());
 
     expect(result).toEqual({
       type: "ManifestResponse",
@@ -130,7 +130,7 @@ describe("handleManifestRequest", () => {
       systemId,
     };
 
-    const result = await handleManifestRequest(message, relay.asService(systemId));
+    const result = await handleManifestRequest(message, relay.asService());
 
     expect(result.correlationId).toBe(correlationId);
   });
@@ -164,12 +164,12 @@ describe("handleSubscribeRequest", () => {
 
     const result = await handleSubscribeRequest(message, state, manager, relay.asService());
 
-    expect(result.type).toBe("SubscribeResponse");
-    expect(result.correlationId).toBe(correlationId);
-    expect(result.catchup).toHaveLength(1);
-    expect(result.catchup[0]?.docId).toBe(docId);
-    expect(result.catchup[0]?.changes).toHaveLength(1);
-    expect(result.catchup[0]?.snapshot).toBeNull();
+    expect(result.response.type).toBe("SubscribeResponse");
+    expect(result.response.correlationId).toBe(correlationId);
+    expect(result.response.catchup).toHaveLength(1);
+    expect(result.response.catchup[0]?.docId).toBe(docId);
+    expect(result.response.catchup[0]?.changes).toHaveLength(1);
+    expect(result.response.catchup[0]?.snapshot).toBeNull();
   });
 
   it("includes newer snapshot in catchup when available", async () => {
@@ -192,9 +192,9 @@ describe("handleSubscribeRequest", () => {
 
     const result = await handleSubscribeRequest(message, state, manager, relay.asService());
 
-    expect(result.catchup).toHaveLength(1);
-    expect(result.catchup[0]?.snapshot).not.toBeNull();
-    expect(result.catchup[0]?.snapshot?.snapshotVersion).toBe(1);
+    expect(result.response.catchup).toHaveLength(1);
+    expect(result.response.catchup[0]?.snapshot).not.toBeNull();
+    expect(result.response.catchup[0]?.snapshot?.snapshotVersion).toBe(1);
   });
 
   it("omits catchup entry when client is already current", async () => {
@@ -217,7 +217,7 @@ describe("handleSubscribeRequest", () => {
 
     const result = await handleSubscribeRequest(message, state, manager, relay.asService());
 
-    expect(result.catchup).toHaveLength(0);
+    expect(result.response.catchup).toHaveLength(0);
   });
 
   it("adds subscription to connection manager", async () => {
@@ -266,7 +266,9 @@ describe("handleSubscribeRequest", () => {
     const result = await handleSubscribeRequest(message, state, manager, relay.asService());
 
     // The excess doc should NOT be in catchup since subscription cap was reached
-    expect(result.catchup).toHaveLength(0);
+    expect(result.response.catchup).toHaveLength(0);
+    expect(result.skippedDocIds).toHaveLength(1);
+    expect(result.skippedDocIds[0]).toBe(extraDocId);
   });
 });
 

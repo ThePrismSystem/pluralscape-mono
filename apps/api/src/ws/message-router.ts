@@ -357,11 +357,20 @@ export async function routeMessage(
         }
         // Denied docs get a PERMISSION_DENIED sent by checkAccess; continue with rest
       }
-      send(
+      const result = await handleSubscribeRequest(
+        { ...msg, documents: permitted },
         state,
-        await handleSubscribeRequest({ ...msg, documents: permitted }, state, manager, relay),
-        log,
+        manager,
+        relay,
       );
+      send(state, result.response, log);
+      for (const docId of result.skippedDocIds) {
+        send(
+          state,
+          makeSyncError("QUOTA_EXCEEDED", "Subscription limit reached", msg.correlationId, docId),
+          log,
+        );
+      }
       break;
     }
     case "UnsubscribeRequest": {
