@@ -71,6 +71,7 @@ describe("AuditEventType", () => {
         case "custom-front.deleted":
         case "auth.biometric-enrolled":
         case "auth.biometric-verified":
+        case "auth.biometric-failed":
         case "settings.pin-set":
         case "settings.pin-removed":
         case "settings.pin-verified":

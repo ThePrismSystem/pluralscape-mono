@@ -51,6 +51,7 @@ export type AuditEventType =
   | "custom-front.deleted"
   | "auth.biometric-enrolled"
   | "auth.biometric-verified"
+  | "auth.biometric-failed"
   | "settings.pin-set"
   | "settings.pin-removed"
   | "settings.pin-verified"

@@ -107,6 +107,12 @@ export async function verifyBiometric(
     .limit(1);
 
   if (!match) {
+    await audit(db, {
+      eventType: "auth.biometric-failed",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Biometric verification failed",
+      systemId: auth.systemId,
+    });
     throw new ApiHttpError(HTTP_UNAUTHORIZED, "INVALID_TOKEN", "Biometric token is invalid");
   }
 

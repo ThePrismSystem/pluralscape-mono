@@ -186,6 +186,26 @@ describe("verifyBiometric", () => {
     });
   });
 
+  it("audits failed biometric verification before throwing", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValueOnce([]);
+    const auth = createAuth();
+
+    await expect(verifyBiometric(db, VALID_VERIFY_BODY, auth, mockAudit)).rejects.toMatchObject({
+      code: "INVALID_TOKEN",
+    });
+
+    expect(mockAudit).toHaveBeenCalledOnce();
+    expect(mockAudit).toHaveBeenCalledWith(
+      db,
+      expect.objectContaining({
+        eventType: "auth.biometric-failed",
+        actor: { kind: "account", id: auth.accountId },
+        systemId: auth.systemId,
+      }),
+    );
+  });
+
   it("audits the verification event", async () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([{ id: "bt_test123" }]);
