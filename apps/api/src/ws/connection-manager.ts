@@ -1,5 +1,9 @@
 import { SlidingWindowCounter } from "./sliding-window-counter.js";
-import { WS_MAX_SUBSCRIPTIONS_PER_CONNECTION } from "./ws.constants.js";
+import {
+  WS_CLOSE_GOING_AWAY,
+  WS_MAX_SUBSCRIPTIONS_PER_CONNECTION,
+  WS_SHUTDOWN_DRAIN_POLL_MS,
+} from "./ws.constants.js";
 import { formatError } from "./ws.utils.js";
 
 import type {
@@ -22,6 +26,7 @@ export class ConnectionManager {
   private readonly accountIndex = new Map<string, Set<string>>();
   private readonly docIndex = new Map<string, Set<string>>();
   private unauthCount = 0;
+  private shuttingDown = false;
 
   /** Reserve a slot for an unauthenticated connection (before onOpen fires). */
   reserveUnauthSlot(): void {
@@ -234,6 +239,61 @@ export class ConnectionManager {
           error: formatError(err),
         });
       }
+    }
+    this.connections.clear();
+    this.accountIndex.clear();
+    this.docIndex.clear();
+    this.unauthCount = 0;
+  }
+
+  /** Whether the manager is in the process of shutting down. */
+  get isShuttingDown(): boolean {
+    return this.shuttingDown;
+  }
+
+  /**
+   * Graceful shutdown sequence:
+   * 1. Set accepting flag to false (reject new connections)
+   * 2. Send close frame to all connections
+   * 3. Wait for connections to drain (with timeout)
+   * 4. Force-close remaining connections
+   */
+  async gracefulShutdown(timeoutMs: number, log?: Pick<AppLogger, "debug">): Promise<void> {
+    // Phase 1: Reject new connections
+    this.shuttingDown = true;
+
+    if (this.connections.size === 0) {
+      return;
+    }
+
+    // Phase 2: Send close frame to all connections
+    for (const state of this.connections.values()) {
+      if (state.authTimeoutHandle !== null) {
+        clearTimeout(state.authTimeoutHandle);
+      }
+      try {
+        state.ws.close(WS_CLOSE_GOING_AWAY, "Server shutting down");
+      } catch (err) {
+        log?.debug("Failed to close WebSocket during graceful shutdown", {
+          connectionId: state.connectionId,
+          error: formatError(err),
+        });
+      }
+    }
+
+    // Phase 3: Wait for connections to drain or timeout
+    const drainStart = Date.now();
+    while (this.connections.size > 0 && Date.now() - drainStart < timeoutMs) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, WS_SHUTDOWN_DRAIN_POLL_MS);
+      });
+    }
+
+    // Phase 4: Force-close remaining connections
+    if (this.connections.size > 0) {
+      log?.debug("Force-closing remaining connections after graceful shutdown timeout", {
+        remaining: this.connections.size,
+      });
     }
     this.connections.clear();
     this.accountIndex.clear();

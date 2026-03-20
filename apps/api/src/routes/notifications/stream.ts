@@ -11,10 +11,15 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 
+import { HTTP_TOO_MANY_REQUESTS } from "../../http.constants.js";
 import { logger } from "../../lib/logger.js";
 import { getNotificationPubSub } from "../../lib/notification-pubsub.js";
 import { SseEventBuffer } from "../../lib/sse-manager.js";
-import { SSE_CHANNEL_PREFIX, SSE_HEARTBEAT_INTERVAL_MS } from "../../lib/sse.constants.js";
+import {
+  SSE_CHANNEL_PREFIX,
+  SSE_HEARTBEAT_INTERVAL_MS,
+  SSE_MAX_CONNECTIONS_PER_ACCOUNT,
+} from "../../lib/sse.constants.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 
@@ -54,6 +59,18 @@ notificationsRoutes.get("/stream", (c) => {
   const accountId = auth.accountId;
   const lastEventId = c.req.header("Last-Event-ID");
   const state = getOrCreateState(accountId);
+
+  // M1: Enforce per-account SSE connection limit
+  if (state.streams.size >= SSE_MAX_CONNECTIONS_PER_ACCOUNT) {
+    return c.json(
+      {
+        error: "TOO_MANY_STREAMS",
+        message: `Maximum of ${String(SSE_MAX_CONNECTIONS_PER_ACCOUNT)} concurrent SSE connections per account exceeded`,
+      },
+      HTTP_TOO_MANY_REQUESTS,
+    );
+  }
+
   const pubsub = getNotificationPubSub();
   const channel = `${SSE_CHANNEL_PREFIX}${accountId}`;
 
@@ -150,8 +167,20 @@ notificationsRoutes.get("/stream", (c) => {
   });
 });
 
+/** Get the number of active SSE streams for an account. */
+export function getAccountSseStreamCount(accountId: string): number {
+  return accountStates.get(accountId)?.streams.size ?? 0;
+}
+
 /** Reset SSE state (for testing). */
 export function _resetSseStateForTesting(): void {
   accountStates.clear();
   noPubSubWarningLogged = false;
+}
+
+/** Add a mock stream entry for testing connection limits (does not create a real stream). */
+export function _addMockStreamForTesting(accountId: string): void {
+  const state = getOrCreateState(accountId);
+  // Use a unique object as a stand-in for a real SSEStreamingApi
+  state.streams.add({} as SSEStreamingApi);
 }

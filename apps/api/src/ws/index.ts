@@ -22,6 +22,7 @@ import { serializeServerMessage } from "./serialization.js";
 import {
   WS_AUTH_TIMEOUT_MS,
   WS_CLOSE_POLICY_VIOLATION,
+  WS_GRACEFUL_SHUTDOWN_TIMEOUT_MS,
   WS_MAX_UNAUTHED_CONNECTIONS,
   WS_RELAY_MAX_DOCUMENTS,
   WS_SUBPROTOCOL,
@@ -45,6 +46,14 @@ export function closeAllConnections(
   log?: Pick<AppLogger, "debug">,
 ): void {
   connectionManager.closeAll(code, reason, log);
+}
+
+/** Gracefully shut down all WebSocket connections with a phased close sequence. */
+export async function gracefulShutdownConnections(
+  log?: Pick<AppLogger, "debug">,
+  timeoutMs = WS_GRACEFUL_SHUTDOWN_TIMEOUT_MS,
+): Promise<void> {
+  await connectionManager.gracefulShutdown(timeoutMs, log);
 }
 
 /** Number of active WebSocket connections. */

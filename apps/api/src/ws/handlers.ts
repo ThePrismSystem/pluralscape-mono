@@ -6,6 +6,8 @@
  */
 import { SnapshotVersionConflictError } from "@pluralscape/sync";
 
+import { WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
+
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type { AppLogger } from "../lib/logger.js";
@@ -80,26 +82,32 @@ export async function handleSubscribeRequest(
     permitted.push(entry);
   }
 
-  // Phase 2: fetch catchup data in parallel
-  const catchupResults = await Promise.all(
-    permitted.map(async (entry): Promise<DocumentCatchup | null> => {
-      const [changes, snapshot] = await Promise.all([
-        relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
-        relay.getLatestSnapshot(entry.docId),
-      ]);
-      const hasNewerSnapshot =
-        snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
+  // Phase 2: fetch catchup data with bounded concurrency
+  const catchupResults: (DocumentCatchup | null)[] = [];
 
-      if (changes.length > 0 || hasNewerSnapshot) {
-        return {
-          docId: entry.docId,
-          changes,
-          snapshot: hasNewerSnapshot ? snapshot : null,
-        };
-      }
-      return null;
-    }),
-  );
+  for (let i = 0; i < permitted.length; i += WS_SUBSCRIBE_CONCURRENCY) {
+    const batch = permitted.slice(i, i + WS_SUBSCRIBE_CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map(async (entry): Promise<DocumentCatchup | null> => {
+        const [changes, snapshot] = await Promise.all([
+          relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+          relay.getLatestSnapshot(entry.docId),
+        ]);
+        const hasNewerSnapshot =
+          snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
+
+        if (changes.length > 0 || hasNewerSnapshot) {
+          return {
+            docId: entry.docId,
+            changes,
+            snapshot: hasNewerSnapshot ? snapshot : null,
+          };
+        }
+        return null;
+      }),
+    );
+    catchupResults.push(...batchResults);
+  }
 
   const catchup = catchupResults.filter((c): c is DocumentCatchup => c !== null);
 
