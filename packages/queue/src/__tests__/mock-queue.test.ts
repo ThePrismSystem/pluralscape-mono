@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { makeJobParams } from "./helpers.js";
 import { runJobQueueContract } from "./job-queue.contract.js";
@@ -6,16 +6,18 @@ import { runJobWorkerContract } from "./job-worker.contract.js";
 import { InMemoryJobQueue } from "./mock-queue.js";
 import { InMemoryJobWorker } from "./mock-worker.js";
 
-import type { UnixMillis } from "@pluralscape/types";
+import type { Logger, UnixMillis } from "@pluralscape/types";
+
+const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 describe("InMemoryJobQueue", () => {
-  runJobQueueContract(() => new InMemoryJobQueue());
+  runJobQueueContract(() => new InMemoryJobQueue(mockLogger));
 });
 
 describe("InMemoryJobWorker", () => {
   runJobWorkerContract(
-    () => new InMemoryJobQueue(),
-    (queue) => new InMemoryJobWorker(queue),
+    () => new InMemoryJobQueue(mockLogger),
+    (queue) => new InMemoryJobWorker(queue, { logger: mockLogger }),
   );
 });
 
@@ -23,7 +25,7 @@ describe("InMemoryJobQueue-specific", () => {
   describe("findStalledJobs", () => {
     it("detects a stalled job when heartbeat timeout has elapsed", async () => {
       let currentTime = 1000 as UnixMillis;
-      const queue = new InMemoryJobQueue(() => currentTime);
+      const queue = new InMemoryJobQueue(mockLogger, () => currentTime);
 
       await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
       await queue.dequeue(); // transitions to running, sets lastHeartbeatAt = 1000
@@ -37,7 +39,7 @@ describe("InMemoryJobQueue-specific", () => {
 
     it("does not report a job as stalled when heartbeat resets the clock", async () => {
       let currentTime = 1000 as UnixMillis;
-      const queue = new InMemoryJobQueue(() => currentTime);
+      const queue = new InMemoryJobQueue(mockLogger, () => currentTime);
 
       await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
       const job = await queue.dequeue();

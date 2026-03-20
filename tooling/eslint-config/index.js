@@ -163,7 +163,6 @@ export default tseslint.config(
       "**/global-setup.ts",
       "**/global-teardown.ts",
       "**/migrate.ts",
-      "**/observability/job-logger.ts",
     ],
     rules: {
       "no-console": "off",

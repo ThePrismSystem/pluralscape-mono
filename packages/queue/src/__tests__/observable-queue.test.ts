@@ -22,9 +22,9 @@ function makeLogger(): {
 }
 
 function makeObservable(clock?: () => UnixMillis) {
-  const inner = new InMemoryJobQueue(clock);
-  const metrics = new InMemoryJobMetrics();
   const { logger, info, warn, error } = makeLogger();
+  const inner = new InMemoryJobQueue(logger, clock);
+  const metrics = new InMemoryJobMetrics();
   const queue =
     clock !== undefined
       ? new ObservableJobQueue(inner, metrics, logger, clock)

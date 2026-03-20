@@ -1,3 +1,5 @@
+import { extractErrorMessage } from "@pluralscape/types";
+
 import type { JobEventHooks } from "./event-hooks.js";
 import type { JobDefinition, Logger } from "@pluralscape/types";
 
@@ -10,21 +12,21 @@ export async function fireHook(
   event: "onFail",
   job: JobDefinition,
   error: Error,
-  logger?: Logger,
+  logger: Pick<Logger, "error">,
 ): Promise<void>;
 export async function fireHook(
   hooks: JobEventHooks,
   event: "onComplete" | "onDeadLetter",
   job: JobDefinition,
-  error?: undefined,
-  logger?: Logger,
+  error: undefined,
+  logger: Pick<Logger, "error">,
 ): Promise<void>;
 export async function fireHook(
   hooks: JobEventHooks,
   event: keyof JobEventHooks,
   job: JobDefinition,
-  error?: Error,
-  logger?: Logger,
+  error: Error | undefined,
+  logger: Pick<Logger, "error">,
 ): Promise<void> {
   try {
     if (event === "onComplete") {
@@ -35,7 +37,6 @@ export async function fireHook(
       await hooks.onDeadLetter?.(job);
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    logger?.error("hook.error", { event, jobId: job.id, error: message });
+    logger.error("hook.error", { event, jobId: job.id, error: extractErrorMessage(err) });
   }
 }

@@ -5,6 +5,10 @@ import { DLQManager } from "../dlq/dlq-manager.js";
 import { dequeueOrFail, makeJobParams, testSystemId } from "./helpers.js";
 import { InMemoryJobQueue } from "./mock-queue.js";
 
+import type { Logger } from "@pluralscape/types";
+
+const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+
 function createDLQJob(queue: InMemoryJobQueue): ReturnType<typeof queue.enqueue> {
   return queue.enqueue(makeJobParams({ maxAttempts: 1 }));
 }
@@ -17,13 +21,13 @@ async function failToDLQ(queue: InMemoryJobQueue): Promise<void> {
 describe("DLQManager", () => {
   describe("list", () => {
     it("returns empty array when no dead-lettered jobs exist", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
       expect(await dlq.list()).toHaveLength(0);
     });
 
     it("returns dead-lettered jobs", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
       await createDLQJob(queue);
       await failToDLQ(queue);
@@ -34,7 +38,7 @@ describe("DLQManager", () => {
     });
 
     it("filters by type", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
 
       await queue.enqueue(makeJobParams({ type: "sync-push", maxAttempts: 1 }));
@@ -56,7 +60,7 @@ describe("DLQManager", () => {
 
   describe("replay", () => {
     it("resets a dead-lettered job to pending", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
       const enqueued = await createDLQJob(queue);
       await failToDLQ(queue);
@@ -69,7 +73,7 @@ describe("DLQManager", () => {
 
   describe("replayAll", () => {
     it("replays all dead-lettered jobs", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
 
       await createDLQJob(queue);
@@ -84,7 +88,7 @@ describe("DLQManager", () => {
     });
 
     it("with systemId filter only replays matching jobs", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
       const sysA = testSystemId("sys_aaaaaaaa-0000-0000-0000-000000000001");
       const sysB = testSystemId("sys_aaaaaaaa-0000-0000-0000-000000000002");
@@ -107,7 +111,7 @@ describe("DLQManager", () => {
     });
 
     it("with type filter only replays matching jobs", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
 
       await queue.enqueue(makeJobParams({ type: "sync-push", maxAttempts: 1 }));
@@ -128,7 +132,7 @@ describe("DLQManager", () => {
     });
 
     it("returns zero counts when no dead-lettered jobs", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
       const result = await dlq.replayAll();
       expect(result.succeeded).toBe(0);
@@ -136,7 +140,7 @@ describe("DLQManager", () => {
     });
 
     it("collects errors for jobs that fail to replay", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
 
       await createDLQJob(queue);
@@ -164,7 +168,7 @@ describe("DLQManager", () => {
 
   describe("purge", () => {
     it("cancels all dead-lettered jobs (archives via cancellation)", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
 
       await createDLQJob(queue);
@@ -185,7 +189,7 @@ describe("DLQManager", () => {
     });
 
     it("with type filter only purges matching jobs", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
 
       await queue.enqueue(makeJobParams({ type: "sync-push", maxAttempts: 1 }));
@@ -206,7 +210,7 @@ describe("DLQManager", () => {
     });
 
     it("collects errors for jobs that fail to cancel", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
 
       await createDLQJob(queue);
@@ -223,13 +227,13 @@ describe("DLQManager", () => {
 
   describe("depth", () => {
     it("returns 0 when no dead-lettered jobs", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
       expect(await dlq.depth()).toBe(0);
     });
 
     it("returns the count of dead-lettered jobs", async () => {
-      const queue = new InMemoryJobQueue();
+      const queue = new InMemoryJobQueue(mockLogger);
       const dlq = new DLQManager(queue);
 
       await createDLQJob(queue);

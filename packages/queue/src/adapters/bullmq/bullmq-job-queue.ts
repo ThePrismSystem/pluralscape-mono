@@ -1,3 +1,4 @@
+import { extractErrorMessage } from "@pluralscape/types";
 import { createId, now } from "@pluralscape/types/runtime";
 import { Queue, Worker } from "bullmq";
 
@@ -46,7 +47,7 @@ export class BullMQJobQueue implements JobQueue {
   private readonly retryPolicies = new Map<JobType, RetryPolicy>();
   private hooks: JobEventHooks = {};
   private readonly clock: () => UnixMillis;
-  private readonly logger: Logger | undefined;
+  private readonly logger: Logger;
   private readonly queue: Queue;
   private readonly fetchWorker: Worker;
   private readonly redis: IORedis;
@@ -57,11 +58,10 @@ export class BullMQJobQueue implements JobQueue {
   constructor(
     queueName: string,
     connection: IORedis,
-    clock?: () => UnixMillis,
-    options?: { logger?: Logger },
+    options: { logger: Logger; clock?: () => UnixMillis },
   ) {
-    this.clock = clock ?? now;
-    this.logger = options?.logger;
+    this.clock = options.clock ?? now;
+    this.logger = options.logger;
     this.redis = connection;
     this.name = queueName;
     this.prefix = `psq:${queueName}`;
@@ -88,14 +88,12 @@ export class BullMQJobQueue implements JobQueue {
     try {
       await this.fetchWorker.close();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger?.warn("queue.close-worker-error", { error: msg });
+      this.logger.warn("queue.close-worker-error", { error: extractErrorMessage(err) });
     }
     try {
       await this.queue.close();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger?.warn("queue.close-queue-error", { error: msg });
+      this.logger.warn("queue.close-queue-error", { error: extractErrorMessage(err) });
     }
   }
 
@@ -187,16 +185,16 @@ export class BullMQJobQueue implements JobQueue {
     try {
       await this.redis.set(idemKey, id);
     } catch (err) {
-      this.logger?.error("queue.idem-key-update-failed", {
+      this.logger.error("queue.idem-key-update-failed", {
         jobId: id,
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(err),
       });
       try {
         await this.redis.del(idemKey);
       } catch (delErr) {
-        this.logger?.warn("queue.idem-key-cleanup-failed", {
+        this.logger.warn("queue.idem-key-cleanup-failed", {
           idemKey,
-          error: delErr instanceof Error ? delErr.message : String(delErr),
+          error: extractErrorMessage(delErr),
         });
       }
       throw err;
@@ -271,8 +269,10 @@ export class BullMQJobQueue implements JobQueue {
         try {
           await job.moveToDelayed(this.clock() + PUT_BACK_DELAY_MS, this.token);
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          this.logger?.warn("queue.dequeue-putback-error", { jobId: job.id, error: msg });
+          this.logger.warn("queue.dequeue-putback-error", {
+            jobId: job.id,
+            error: extractErrorMessage(err),
+          });
         }
       }
     }

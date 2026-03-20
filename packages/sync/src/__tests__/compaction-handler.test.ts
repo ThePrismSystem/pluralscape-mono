@@ -100,7 +100,7 @@ describe("handleCompaction", () => {
       currentSnapshotVersion: 0,
     };
 
-    const result = await handleCompaction(input, relayService, storage);
+    const result = await handleCompaction(input, relayService, storage, { warn: vi.fn() });
 
     expect(result.compacted).toBe(true);
     if (!result.compacted) throw new Error("expected compacted");
@@ -125,7 +125,7 @@ describe("handleCompaction", () => {
       currentSnapshotVersion: 2,
     };
 
-    const result = await handleCompaction(input, relayService, storage);
+    const result = await handleCompaction(input, relayService, storage, { warn: vi.fn() });
 
     expect(result.compacted).toBe(true);
     if (!result.compacted) throw new Error("expected compacted");
@@ -153,7 +153,7 @@ describe("handleCompaction", () => {
     storage.saveSnapshot = saveSnapshot;
     storage.pruneChangesBeforeSnapshot = pruneChanges;
 
-    const result = await handleCompaction(input, relayService, storage);
+    const result = await handleCompaction(input, relayService, storage, { warn: vi.fn() });
 
     expect(result.compacted).toBe(false);
     expect(result.reason).toBe("not-eligible");
@@ -181,7 +181,7 @@ describe("handleCompaction", () => {
       allDocumentSizes,
     };
 
-    const result = await handleCompaction(input, relayService, storage);
+    const result = await handleCompaction(input, relayService, storage, { warn: vi.fn() });
 
     expect(result.compacted).toBe(false);
     expect(result.reason).toBe("storage-budget-exceeded");
@@ -208,7 +208,7 @@ describe("handleCompaction", () => {
       currentSnapshotVersion: 0,
     };
 
-    await handleCompaction(input, relayService, storage);
+    await handleCompaction(input, relayService, storage, { warn: vi.fn() });
 
     expect(submitSnapshot).toHaveBeenCalledTimes(1);
     const envelope = submitSnapshot.mock.calls[0]?.[0];
@@ -232,7 +232,7 @@ describe("handleCompaction", () => {
       currentSnapshotVersion: 0,
     };
 
-    const result = await handleCompaction(input, relayService, storage);
+    const result = await handleCompaction(input, relayService, storage, { warn: vi.fn() });
 
     expect(result.compacted).toBe(true);
     if (!result.compacted) throw new Error("expected compacted");

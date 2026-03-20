@@ -17,6 +17,7 @@ function makeConfig(overrides?: Partial<I18nConfig>): I18nConfig {
     resources: {
       en: { common: { greeting: "Hello, World!" } },
     },
+    logger: { warn: vi.fn() },
     ...overrides,
   };
 }

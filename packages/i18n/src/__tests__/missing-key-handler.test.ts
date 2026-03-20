@@ -21,12 +21,11 @@ describe("createMissingKeyHandler", () => {
       }).not.toThrow();
     });
 
-    it("is a no-op when no logger is provided", () => {
-      const handler = createMissingKeyHandler("warn");
-
+    it("throws when mode is 'warn' and no logger provided", () => {
       expect(() => {
-        handler("greeting", "common");
-      }).not.toThrow();
+        // @ts-expect-error Testing runtime guard — overload requires logger for "warn" mode
+        createMissingKeyHandler("warn");
+      }).toThrow("Logger is required when missingKeyMode is 'warn'");
     });
   });
 
@@ -45,6 +44,12 @@ describe("createMissingKeyHandler", () => {
       expect(() => {
         handler("loginButton", "auth");
       }).toThrow("Missing translation key: auth:loginButton");
+    });
+
+    it("does not require logger when mode is 'throw'", () => {
+      expect(() => {
+        createMissingKeyHandler("throw");
+      }).not.toThrow();
     });
   });
 });

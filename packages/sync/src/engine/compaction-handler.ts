@@ -60,7 +60,7 @@ export async function handleCompaction(
   input: CompactionInput,
   relayService: SyncRelayService,
   storageAdapter: SyncStorageAdapter,
-  logger?: Pick<Logger, "warn">,
+  logger: Pick<Logger, "warn">,
 ): Promise<CompactionResult> {
   const {
     documentId,
@@ -103,7 +103,7 @@ export async function handleCompaction(
     await storageAdapter.saveSnapshot(documentId, snapshotEnvelope);
     await storageAdapter.pruneChangesBeforeSnapshot(documentId, lastSyncedSeq);
   } catch (error: unknown) {
-    logger?.warn("CompactionHandler: local save/prune failed", {
+    logger.warn("CompactionHandler: local save/prune failed", {
       documentId,
       error: String(error),
     });

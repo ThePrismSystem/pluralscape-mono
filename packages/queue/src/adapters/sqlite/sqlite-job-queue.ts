@@ -37,15 +37,14 @@ export class SqliteJobQueue implements JobQueue {
   private readonly retryPolicies = new Map<JobType, RetryPolicy>();
   private hooks: JobEventHooks = {};
   private readonly clock: () => UnixMillis;
-  private readonly logger: Logger | undefined;
+  private readonly logger: Logger;
 
   constructor(
     private readonly db: BetterSQLite3Database,
-    clock?: () => UnixMillis,
-    options?: { logger?: Logger },
+    options: { logger: Logger; clock?: () => UnixMillis },
   ) {
-    this.clock = clock ?? now;
-    this.logger = options?.logger;
+    this.clock = options.clock ?? now;
+    this.logger = options.logger;
   }
 
   enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition> {

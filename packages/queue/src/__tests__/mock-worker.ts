@@ -1,3 +1,4 @@
+import { extractErrorMessage } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 
 import {
@@ -25,7 +26,7 @@ export class InMemoryJobWorker implements JobWorker {
   private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
-  private readonly logger: Logger | undefined;
+  private readonly logger: Logger;
   private readonly clock: () => UnixMillis;
 
   private running = false;
@@ -45,9 +46,9 @@ export class InMemoryJobWorker implements JobWorker {
     }: {
       pollIntervalMs?: number;
       shutdownTimeoutMs?: number;
-      logger?: Logger;
+      logger: Logger;
       clock?: () => UnixMillis;
-    } = {},
+    },
   ) {
     this.queue = queue;
     this.pollIntervalMs = pollIntervalMs;
@@ -119,8 +120,7 @@ export class InMemoryJobWorker implements JobWorker {
     } catch (err) {
       this.consecutivePollFailures++;
       this.nextPollAt = (this.clock() + pollBackoffMs(this.consecutivePollFailures)) as UnixMillis;
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger?.error("worker.poll-failed", { error: msg });
+      this.logger.error("worker.poll-failed", { error: extractErrorMessage(err) });
       return;
     }
 
@@ -151,12 +151,14 @@ export class InMemoryJobWorker implements JobWorker {
       try {
         await handler(job, { heartbeat: heartbeatHandle, signal: controller.signal });
       } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        const message = extractErrorMessage(err);
         try {
           await this.queue.fail(job.id, message);
         } catch (failErr) {
-          const failMsg = failErr instanceof Error ? failErr.message : String(failErr);
-          this.logger?.error("worker.fail-failed", { jobId: job.id, error: failMsg });
+          this.logger.error("worker.fail-failed", {
+            jobId: job.id,
+            error: extractErrorMessage(failErr),
+          });
         }
         return;
       }
@@ -169,15 +171,15 @@ export class InMemoryJobWorker implements JobWorker {
           break;
         } catch (err) {
           ackAttempt++;
-          const msg = err instanceof Error ? err.message : String(err);
+          const msg = extractErrorMessage(err);
           if (ackAttempt >= MAX_ACK_RETRIES) {
-            this.logger?.error("worker.acknowledge-exhausted", {
+            this.logger.error("worker.acknowledge-exhausted", {
               jobId: job.id,
               error: msg,
               attempts: ackAttempt,
             });
           } else {
-            this.logger?.warn("worker.acknowledge-retry", {
+            this.logger.warn("worker.acknowledge-retry", {
               jobId: job.id,
               error: msg,
               attempt: ackAttempt,

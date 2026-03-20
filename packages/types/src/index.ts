@@ -640,4 +640,4 @@ export {
 export type { Logger } from "./logger.js";
 
 // ── Runtime utilities ──────────────────────────────────────────────
-export { createId, now, toISO } from "./runtime.js";
+export { createId, now, toISO, extractErrorMessage } from "./runtime.js";
