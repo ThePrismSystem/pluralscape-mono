@@ -65,6 +65,7 @@ export const groupMemberships = sqliteTable(
     primaryKey({ columns: [t.groupId, t.memberId] }),
     index("group_memberships_member_id_idx").on(t.memberId),
     index("group_memberships_system_id_idx").on(t.systemId),
+    index("group_memberships_system_group_idx").on(t.systemId, t.groupId),
     foreignKey({
       columns: [t.groupId, t.systemId],
       foreignColumns: [groups.id, groups.systemId],

@@ -1,4 +1,5 @@
 import {
+  PWHASH_OPSLIMIT_SENSITIVE,
   derivePasswordKey,
   encryptPrivateKey,
   generateIdentityKeypair,
@@ -22,6 +23,7 @@ import { toHex } from "../lib/hex.js";
 import { buildIdleTimeoutFilter } from "../lib/session-idle-filter.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { isUniqueViolation } from "../lib/unique-violation.js";
+import { getAccountLoginStore } from "../middleware/stores/account-login-store.js";
 import {
   ANTI_ENUM_TARGET_MS,
   DEFAULT_SESSION_LIMIT,
@@ -37,7 +39,7 @@ import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
-import type { AccountId, AccountType, SystemId } from "@pluralscape/types";
+import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Registration ───────────────────────────────────────────────────
@@ -219,6 +221,14 @@ export async function loginAccount(
   const parsed = LoginCredentialsSchema.parse(credentials);
   const emailHash = hashEmail(parsed.email);
 
+  // Check throttle BEFORE DB lookup, keyed on emailHash (not account.id)
+  // to prevent account existence enumeration via 429 vs 401 responses
+  const loginStore = getAccountLoginStore();
+  const throttleState = await loginStore.check(emailHash);
+  if (throttleState.throttled) {
+    throw new LoginThrottledError(throttleState.windowResetAt);
+  }
+
   const [account] = await db
     .select()
     .from(accounts)
@@ -235,6 +245,13 @@ export async function loginAccount(
         err instanceof Error ? { err } : { error: String(err) },
       );
     }
+    // Record failure for throttling on non-existent accounts too
+    void loginStore.recordFailure(emailHash).catch((throttleErr: unknown) => {
+      log.error(
+        "Failed to record login failure for throttle",
+        throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
+      );
+    });
     // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
     // Uses a zeroed account ID since no real account exists for this email.
     void audit(db, {
@@ -251,6 +268,9 @@ export async function loginAccount(
 
   const valid = verifyPassword(account.passwordHash, parsed.password);
   if (!valid) {
+    // Record failed attempt for throttling
+    await loginStore.recordFailure(emailHash);
+
     // Fire-and-forget: we don't block the response on audit writes for failed attempts.
     void audit(db, {
       eventType: "auth.login-failed",
@@ -264,6 +284,27 @@ export async function loginAccount(
       );
     });
     return null;
+  }
+
+  // Successful login: reset the throttle counter
+  await loginStore.reset(emailHash);
+
+  // Fire-and-forget: rehash password if it uses old params
+  if (needsRehash(account.passwordHash)) {
+    const newHash = hashPassword(parsed.password, "server");
+    void db
+      .update(accounts)
+      .set({ passwordHash: newHash, updatedAt: now() })
+      .where(and(eq(accounts.id, account.id), eq(accounts.passwordHash, account.passwordHash)))
+      .then(() => {
+        log.info("Rehashed password to current params", { accountId: account.id });
+      })
+      .catch((rehashErr: unknown) => {
+        log.error(
+          "Failed to rehash password on login",
+          rehashErr instanceof Error ? { err: rehashErr } : { error: String(rehashErr) },
+        );
+      });
   }
 
   let systemId: string | null = null;
@@ -447,7 +488,19 @@ class ValidationError extends Error {
   override readonly name = "ValidationError" as const;
 }
 
-export { ValidationError };
+/** Thrown when an account exceeds the failed login attempt threshold. */
+class LoginThrottledError extends Error {
+  override readonly name = "LoginThrottledError" as const;
+  /** UnixMillis when the throttle window resets. */
+  readonly windowResetAt: UnixMillis;
+
+  constructor(windowResetAt: number) {
+    super("Too many failed login attempts");
+    this.windowResetAt = windowResetAt as UnixMillis;
+  }
+}
+
+export { LoginThrottledError, ValidationError };
 
 export function isDuplicateEmailError(error: unknown): boolean {
   if (!isUniqueViolation(error)) return false;
@@ -460,6 +513,18 @@ export function isDuplicateEmailError(error: unknown): boolean {
       "constraint_name" in e &&
       (e as { constraint_name: string }).constraint_name === "accounts_email_hash_idx",
   );
+}
+
+/**
+ * Check whether an Argon2id hash needs rehashing because it was produced
+ * with fewer iterations than the current server profile requires.
+ * Parses the `t=N` parameter from the standard `$argon2id$v=19$m=...,t=N,...` format.
+ */
+export function needsRehash(hash: string): boolean {
+  const match = /\$argon2id\$v=\d+\$m=\d+,t=(\d+),/.exec(hash);
+  if (!match) return false;
+  const iterations = Number(match[1]);
+  return iterations < PWHASH_OPSLIMIT_SENSITIVE;
 }
 
 /** Generate a fake recovery key that looks like a real one for anti-enumeration. */

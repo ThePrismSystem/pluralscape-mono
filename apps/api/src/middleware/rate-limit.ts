@@ -2,6 +2,7 @@ import { RATE_LIMITS } from "@pluralscape/types";
 
 import { HTTP_TOO_MANY_REQUESTS } from "../http.constants.js";
 import { isValidIpFormat } from "../lib/ip-validation.js";
+import { logger } from "../lib/logger.js";
 
 import { MS_PER_SECOND } from "./middleware.constants.js";
 import { MemoryRateLimitStore } from "./stores/memory-store.js";
@@ -12,6 +13,12 @@ import type { Context, MiddlewareHandler } from "hono";
 
 /** Global fallback key when proxy is untrusted or header is missing. */
 const GLOBAL_KEY = "__global__";
+
+/**
+ * Whether the XFF-without-TRUST_PROXY warning has been logged.
+ * Only logged once per server lifecycle to avoid log spam.
+ */
+let xffWarningLogged = false;
 
 interface RateLimiterOptions {
   /** Maximum requests per window. */
@@ -32,6 +39,15 @@ interface RateLimiterOptions {
  */
 function getClientKey(c: Context): string {
   if (process.env["TRUST_PROXY"] !== "1") {
+    // Warn once if XFF is present but TRUST_PROXY is not configured
+    if (!xffWarningLogged && c.req.header("x-forwarded-for")) {
+      xffWarningLogged = true;
+      logger.warn(
+        "X-Forwarded-For header detected but TRUST_PROXY is not set. " +
+          "All requests share a single global rate-limit bucket. " +
+          "Set TRUST_PROXY=1 if running behind a reverse proxy.",
+      );
+    }
     return GLOBAL_KEY;
   }
   const forwarded = c.req.header("x-forwarded-for");
@@ -101,6 +117,11 @@ export function setRateLimitStore(store: RateLimitStore): void {
 /** Reset the shared store (for testing). */
 export function _resetRateLimitStoreForTesting(): void {
   sharedStore = undefined;
+}
+
+/** Reset the XFF warning flag (for testing). */
+export function _resetXffWarningForTesting(): void {
+  xffWarningLogged = false;
 }
 
 /** Creates a rate limiter using the predefined limits for a given category. */

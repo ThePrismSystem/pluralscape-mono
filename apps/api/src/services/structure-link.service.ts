@@ -195,11 +195,16 @@ function createLinkTableOps(mapping: LinkColumnMapping): {
 } {
   const { table, id: idCol, entityACol, entityBCol, systemId: systemIdCol } = mapping;
 
+  const asString = (value: unknown): string => {
+    if (typeof value !== "string") throw new Error("Expected string from DB row");
+    return value;
+  };
+
   const normalize = (row: Record<string, unknown>): NormalizedLinkRow => ({
-    id: row.id as string,
-    entityAId: row[mapping.entityAInsertKey] as string,
-    entityBId: row[mapping.entityBInsertKey] as string,
-    systemId: row.systemId as string,
+    id: asString(row.id),
+    entityAId: asString(row[mapping.entityAInsertKey]),
+    entityBId: asString(row[mapping.entityBInsertKey]),
+    systemId: asString(row.systemId),
     encryptedData: row.encryptedData as EncryptedBlob | null,
     createdAt: row.createdAt as number,
   });

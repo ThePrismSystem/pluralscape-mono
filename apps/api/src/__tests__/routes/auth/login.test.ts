@@ -17,9 +17,13 @@ vi.mock("../../../lib/request-meta.js", () => ({
 
 vi.mock("../../../lib/audit-writer.js", () => mockAuditWriterFactory());
 
-vi.mock("../../../services/auth.service.js", () => ({
-  loginAccount: vi.fn(),
-}));
+vi.mock("../../../services/auth.service.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../services/auth.service.js")>();
+  return {
+    loginAccount: vi.fn(),
+    LoginThrottledError: actual.LoginThrottledError,
+  };
+});
 
 vi.mock("../../../lib/db.js", () => mockDbFactory());
 
@@ -143,5 +147,21 @@ describe("POST /login", () => {
     expect(res.status).toBe(500);
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("INTERNAL_ERROR");
+  });
+
+  it("returns 429 LOGIN_THROTTLED with fixed Retry-After when account is throttled", async () => {
+    const { LoginThrottledError } = await import("../../../services/auth.service.js");
+    const futureTime = Date.now() + 60_000;
+    vi.mocked(loginAccount).mockRejectedValueOnce(new LoginThrottledError(futureTime));
+
+    const app = createApp();
+    const res = await postJSON(app, "/login", VALID_CREDENTIALS);
+
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("LOGIN_THROTTLED");
+    expect(body.error.message).toBe("Too many failed login attempts");
+    // Fixed Retry-After: always the full window duration (900s = 15 min)
+    expect(res.headers.get("Retry-After")).toBe("900");
   });
 });

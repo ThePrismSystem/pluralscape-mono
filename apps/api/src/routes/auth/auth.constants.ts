@@ -24,10 +24,11 @@ export const DEFAULT_PLATFORM = "web" as const satisfies ClientPlatform;
  * Dummy Argon2id hash for anti-timing attacks on login.
  * Used when the email is not found — we run verification against this
  * to equalize timing with real account lookups.
+ * Parameters must match the current server profile (t=4, m=65536, p=1).
  * Generated with: hashPassword("dummypasswordfiller", "server")
  */
 export const DUMMY_ARGON2_HASH =
-  "$argon2id$v=19$m=65536,t=3,p=1$R8XiCuEH7Vp0dU/c3DPG7g$DsumexqNIgHFu2dhin/zZci/+LwXFjSIpq2OienfAd4";
+  "$argon2id$v=19$m=65536,t=4,p=1$R8XiCuEH7Vp0dU/c3DPG7g$DsumexqNIgHFu2dhin/zZci/+LwXFjSIpq2OienfAd4";
 
 /** Length of random email salt in bytes. */
 export const EMAIL_SALT_BYTES = 16;

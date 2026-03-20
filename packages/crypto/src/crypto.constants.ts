@@ -62,6 +62,9 @@ export const PWHASH_OPSLIMIT_MODERATE = 3;
 /** Moderate memory limit in bytes (256 MB). */
 export const PWHASH_MEMLIMIT_MODERATE = 268435456;
 
+/** Sensitive ops limit (OWASP minimum for server-side password hashing). */
+export const PWHASH_OPSLIMIT_SENSITIVE = 4;
+
 /** Mobile ops limit (for memory-constrained devices). */
 export const PWHASH_OPSLIMIT_MOBILE = 2;
 
@@ -125,6 +128,7 @@ export const SODIUM_CONSTANTS = Object.freeze({
   PWHASH_MEMLIMIT_INTERACTIVE,
   PWHASH_OPSLIMIT_MODERATE,
   PWHASH_MEMLIMIT_MODERATE,
+  PWHASH_OPSLIMIT_SENSITIVE,
   PWHASH_OPSLIMIT_MOBILE,
   PWHASH_MEMLIMIT_MOBILE,
   KDF_KEY_BYTES,

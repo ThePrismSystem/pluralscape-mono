@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { HTTP_BAD_REQUEST, HTTP_FORBIDDEN, HTTP_UNAUTHORIZED } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { toHex } from "../lib/hex.js";
+import { logger } from "../lib/logger.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
@@ -107,6 +108,16 @@ export async function verifyBiometric(
     .limit(1);
 
   if (!match) {
+    void audit(db, {
+      eventType: "auth.biometric-failed",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Biometric verification failed",
+      systemId: auth.systemId,
+    }).catch((auditError: unknown) => {
+      logger.error("Failed to write auth.biometric-failed audit", {
+        err: auditError instanceof Error ? auditError : { message: String(auditError) },
+      });
+    });
     throw new ApiHttpError(HTTP_UNAUTHORIZED, "INVALID_TOKEN", "Biometric token is invalid");
   }
 

@@ -8,6 +8,7 @@ import { HTTP_CONTENT_TOO_LARGE } from "./http.constants.js";
 import { ApiHttpError } from "./lib/api-error.js";
 import { getRawClient } from "./lib/db.js";
 import { logger } from "./lib/logger.js";
+import { setNotificationPubSub } from "./lib/notification-pubsub.js";
 import { initStorageAdapter } from "./lib/storage.js";
 import { accessLogMiddleware } from "./middleware/access-log.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
@@ -20,6 +21,7 @@ import { createValkeyStore } from "./middleware/stores/valkey-store.js";
 import { v1Routes } from "./routes/v1.js";
 import {
   DEFAULT_PORT,
+  NOTIFY_SERVER_ID_SUFFIX_LENGTH,
   SERVER_STOP_TIMEOUT_SECONDS,
   SHUTDOWN_TIMEOUT_SECONDS,
 } from "./server.constants.js";
@@ -141,6 +143,17 @@ async function start(): Promise<void> {
     const store = await createValkeyStore(valkeyUrl);
     if (store) {
       setRateLimitStore(store);
+    }
+
+    // Initialize notification pub/sub for SSE (separate connection pair)
+    const { ValkeyPubSub } = await import("./ws/valkey-pubsub.js");
+    const notifyPubSub = new ValkeyPubSub(
+      "notify-" + crypto.randomUUID().slice(0, NOTIFY_SERVER_ID_SUFFIX_LENGTH),
+    );
+    const connected = await notifyPubSub.connect(valkeyUrl);
+    if (connected) {
+      setNotificationPubSub(notifyPubSub);
+      logger.info("Notification SSE pub/sub connected");
     }
   }
 

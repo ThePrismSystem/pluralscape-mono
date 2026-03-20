@@ -261,10 +261,9 @@ export function createHierarchyService<
 
     return db.transaction(async (tx) => {
       // Validate parent exists in same system if non-null
-      const parentId =
-        parentFieldName in (parsed as Record<string, unknown>)
-          ? ((parsed as Record<string, unknown>)[parentFieldName] as string | null)
-          : null;
+      const parsedRecord = parsed as Record<string, unknown>;
+      const rawParentId = parentFieldName in parsedRecord ? parsedRecord[parentFieldName] : null;
+      const parentId = typeof rawParentId === "string" ? rawParentId : null;
       if (parentId !== null) {
         const [parent] = await tx
           .select({ id: columns.id })
@@ -535,7 +534,7 @@ export function createHierarchyService<
       }
 
       // If parent is archived, promote to root
-      let newParentId = existing.parentId as string | null;
+      let newParentId = typeof existing.parentId === "string" ? existing.parentId : null;
       if (newParentId !== null) {
         const [parent] = await tx
           .select({ archived: columns.archived })

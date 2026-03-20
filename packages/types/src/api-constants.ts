@@ -61,6 +61,7 @@ const RATE_LIMIT_PURGE = 1;
 const RATE_LIMIT_AUDIT_QUERY = 30;
 const RATE_LIMIT_FRIEND_CODE = 10;
 const RATE_LIMIT_PUBLIC_API = 60;
+const RATE_LIMIT_SSE_STREAM = 5;
 
 export const RATE_LIMITS = {
   global: { limit: RATE_LIMIT_GLOBAL, windowMs: MS_PER_MINUTE },
@@ -78,6 +79,7 @@ export const RATE_LIMITS = {
   auditQuery: { limit: RATE_LIMIT_AUDIT_QUERY, windowMs: MS_PER_MINUTE },
   friendCodeGeneration: { limit: RATE_LIMIT_FRIEND_CODE, windowMs: MS_PER_MINUTE },
   publicApi: { limit: RATE_LIMIT_PUBLIC_API, windowMs: MS_PER_MINUTE },
+  sseStream: { limit: RATE_LIMIT_SSE_STREAM, windowMs: MS_PER_MINUTE },
 } as const satisfies Record<string, RateLimitConfig>;
 
 export type RateLimitCategory = keyof typeof RATE_LIMITS;
@@ -106,6 +108,7 @@ export const API_ERROR_CODES = {
   BLOB_TOO_LARGE: "BLOB_TOO_LARGE",
   QUOTA_EXCEEDED: "QUOTA_EXCEEDED",
   RATE_LIMITED: "RATE_LIMITED",
+  LOGIN_THROTTLED: "LOGIN_THROTTLED",
   INTERNAL_ERROR: "INTERNAL_ERROR",
   SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
 } as const;
