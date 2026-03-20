@@ -34,7 +34,7 @@ export {
 } from "./encrypted-sync.js";
 
 export type { SyncRelayService } from "./relay-service.js";
-export { EncryptedRelay, SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "./relay.js";
+export { EncryptedRelay, SnapshotVersionConflictError } from "./relay.js";
 export type { RelayDocumentState, RelayOptions } from "./relay.js";
 
 export { EncryptedSyncSession, syncThroughRelay } from "./sync-session.js";
