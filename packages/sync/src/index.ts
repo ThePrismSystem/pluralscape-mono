@@ -169,8 +169,8 @@ export type {
 export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_PROFILE } from "./replication-profiles.js";
 
 // ── Sync engine ──────────────────────────────────────────────────────
-export { SyncEngine } from "./engine/index.js";
-export type { SyncEngineConfig } from "./engine/index.js";
+export { SyncEngine, compactionIdempotencyKey, handleCompaction } from "./engine/index.js";
+export type { SyncEngineConfig, CompactionInput, CompactionResult } from "./engine/index.js";
 
 // ── Protocol messages ──────────────────────────────────────────────────
 export type {

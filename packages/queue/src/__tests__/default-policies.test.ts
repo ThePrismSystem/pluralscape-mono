@@ -7,7 +7,7 @@ import { InMemoryJobQueue } from "./mock-queue.js";
 
 import type { JobType } from "@pluralscape/types";
 
-/** All 15 job types — must match the JobType union exactly. */
+/** All job types — must match the JobType union exactly. */
 const ALL_JOB_TYPES: readonly JobType[] = [
   "sync-push",
   "sync-pull",
@@ -24,6 +24,7 @@ const ALL_JOB_TYPES: readonly JobType[] = [
   "sync-queue-cleanup",
   "audit-log-cleanup",
   "partition-maintenance",
+  "sync-compaction",
 ] as const;
 
 describe("DEFAULT_RETRY_POLICIES", () => {

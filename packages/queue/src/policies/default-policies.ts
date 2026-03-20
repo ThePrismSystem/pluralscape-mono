@@ -18,7 +18,7 @@ const HEAVY_BACKOFF: RetryPolicy = {
 };
 
 /**
- * Default retry policies for all 15 job types.
+ * Default retry policies for all job types.
  *
  * Keys are typed as `Record<JobType, RetryPolicy>` to guarantee
  * compile-time coverage when new job types are added.
@@ -87,4 +87,11 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
   "sync-queue-cleanup": HEAVY_BACKOFF,
   "audit-log-cleanup": HEAVY_BACKOFF,
   "partition-maintenance": HEAVY_BACKOFF,
+  "sync-compaction": {
+    maxRetries: 3,
+    backoffMs: 1_000,
+    backoffMultiplier: 2,
+    maxBackoffMs: 30_000,
+    strategy: "exponential",
+  },
 };
