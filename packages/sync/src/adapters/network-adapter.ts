@@ -1,6 +1,7 @@
 import type { UnixMillis } from "@pluralscape/types";
 import type { DocumentKeyType, SyncDocumentType } from "../document-types.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
+import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
 
 // ── Manifest ─────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ export interface SyncManifestEntry {
  */
 export interface SyncManifest {
   /** The system ID this manifest belongs to. */
-  readonly systemId: string;
+  readonly systemId: SystemId;
   readonly documents: readonly SyncManifestEntry[];
 }
 

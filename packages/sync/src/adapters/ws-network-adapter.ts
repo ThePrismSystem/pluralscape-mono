@@ -5,6 +5,9 @@ import type { ClientMessage, ServerMessage, SyncTransport } from "../protocol.js
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SyncManifest, SyncNetworkAdapter, SyncSubscription } from "./network-adapter.js";
 
+/** Distributive Omit that preserves union members. */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
 /** Default timeout for request/response pairs (ms). */
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -56,10 +59,8 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     documentId: string,
     change: Omit<EncryptedChangeEnvelope, "seq">,
   ): Promise<EncryptedChangeEnvelope> {
-    const correlationId = crypto.randomUUID();
-    const response = await this.request<ServerMessage>({
+    const response = await this.request({
       type: "SubmitChangeRequest",
-      correlationId,
       docId: documentId,
       change,
     });
@@ -82,10 +83,8 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     sinceSeq: number,
     limit?: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
-    const correlationId = crypto.randomUUID();
-    const response = await this.request<ServerMessage>({
+    const response = await this.request({
       type: "FetchChangesRequest",
-      correlationId,
       docId: documentId,
       sinceSeq,
       limit,
@@ -99,14 +98,12 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       throw new Error(`Unexpected response: ${response.type}`);
     }
 
-    return response.changes;
+    return changesResp.changes;
   }
 
   async submitSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
-    const correlationId = crypto.randomUUID();
-    const response = await this.request<ServerMessage>({
+    const response = await this.request({
       type: "SubmitSnapshotRequest",
-      correlationId,
       docId: documentId,
       snapshot,
     });
@@ -119,17 +116,14 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       }
       return;
     }
-
     if (response.type !== "SnapshotAccepted") {
       throw new Error(`Unexpected response: ${response.type}`);
     }
   }
 
   async fetchLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
-    const correlationId = crypto.randomUUID();
-    const response = await this.request<ServerMessage>({
+    const response = await this.request({
       type: "FetchSnapshotRequest",
-      correlationId,
       docId: documentId,
     });
 
@@ -188,11 +182,15 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         callbacks.delete(onChanges);
         if (callbacks.size === 0) {
           this.subscriptions.delete(documentId);
-          void this.transport.send({
-            type: "UnsubscribeRequest",
-            correlationId: crypto.randomUUID(),
-            docId: documentId,
-          });
+          void this.transport
+            .send({
+              type: "UnsubscribeRequest",
+              correlationId: crypto.randomUUID(),
+              docId: documentId,
+            })
+            .catch(() => {
+              /* unsubscribe send failure is non-critical */
+            });
         }
       },
     };
@@ -204,10 +202,8 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   }
 
   async fetchManifest(systemId: string): Promise<SyncManifest> {
-    const correlationId = crypto.randomUUID();
-    const response = await this.request<ServerMessage>({
+    const response = await this.request({
       type: "ManifestRequest",
-      correlationId,
       systemId,
     });
 
@@ -218,8 +214,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     if (response.type !== "ManifestResponse") {
       throw new Error(`Unexpected response: ${response.type}`);
     }
-
-    return response.manifest;
+    return response as Extract<ServerMessage, { type: T }>;
   }
 
   private handleMessage(msg: ServerMessage): void {
@@ -235,6 +230,8 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
           }
         }
       }
+      const lastPushed = msg.changes[msg.changes.length - 1];
+      if (lastPushed) this.updateLastSeq(msg.docId, lastPushed.seq);
       return;
     }
 
@@ -249,25 +246,25 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     }
   }
 
-  private request<T extends ServerMessage>(message: ClientMessage): Promise<T> {
-    const correlationId = message.correlationId;
-    if (!correlationId) {
-      return Promise.reject(new Error("Message must have a correlationId"));
-    }
+  private request(
+    message: DistributiveOmit<ClientMessage, "correlationId">,
+  ): Promise<ServerMessage> {
+    const correlationId = crypto.randomUUID();
+    const fullMessage = { ...message, correlationId } as ClientMessage;
 
-    return new Promise<T>((resolve, reject) => {
+    return new Promise<ServerMessage>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(correlationId);
         reject(new Error(`Request timed out: ${message.type}`));
       }, this.timeoutMs);
 
       this.pending.set(correlationId, {
-        resolve: resolve as (value: ServerMessage) => void,
+        resolve,
         reject,
         timer,
       });
 
-      void this.transport.send(message).catch((err: unknown) => {
+      void this.transport.send(fullMessage).catch((err: unknown) => {
         clearTimeout(timer);
         this.pending.delete(correlationId);
         reject(err instanceof Error ? err : new Error(String(err)));

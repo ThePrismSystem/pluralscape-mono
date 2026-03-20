@@ -20,4 +20,7 @@ export interface SqliteDriver {
 
   /** Run a function inside a transaction. Rollback on throw. */
   transaction<T>(fn: () => T): T;
+
+  /** Close the database connection. */
+  close(): void;
 }

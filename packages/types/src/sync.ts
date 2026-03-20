@@ -2,7 +2,7 @@ import type { SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** Sync document types matching the document topology spec. */
-export type SyncDocType =
+export type SyncDocumentType =
   | "system-core"
   | "fronting"
   | "chat"
@@ -11,7 +11,7 @@ export type SyncDocType =
   | "bucket";
 
 /** Which encryption key tier a document uses. */
-export type SyncKeyType = "derived" | "bucket";
+export type DocumentKeyType = "derived" | "bucket";
 
 /** Visual indicator status for the sync UI. */
 export type SyncIndicatorStatus = "synced" | "syncing" | "offline" | "error";
@@ -20,13 +20,13 @@ export type SyncIndicatorStatus = "synced" | "syncing" | "offline" | "error";
 export interface SyncDocument {
   readonly documentId: string;
   readonly systemId: SystemId;
-  readonly docType: SyncDocType;
+  readonly docType: SyncDocumentType;
   readonly sizeBytes: number;
   readonly snapshotVersion: number;
   readonly lastSeq: number;
   readonly archived: boolean;
   readonly timePeriod: string | null;
-  readonly keyType: SyncKeyType;
+  readonly keyType: DocumentKeyType;
   readonly bucketId: string | null;
   readonly channelId: string | null;
   readonly createdAt: UnixMillis;

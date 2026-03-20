@@ -496,8 +496,11 @@ export async function routeMessage(
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
       try {
-        send(state, await handleSubmitSnapshot(msg, relay), log);
-        documentOwnership.set(msg.docId, state.systemId);
+        const response = await handleSubmitSnapshot(msg, relay);
+        if (!send(state, response, log)) return;
+        if (response.type !== "SyncError") {
+          documentOwnership.set(msg.docId, state.systemId);
+        }
       } catch (err) {
         log.error("handleSubmitSnapshot threw", {
           connectionId: state.connectionId,

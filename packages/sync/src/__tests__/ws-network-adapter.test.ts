@@ -9,6 +9,32 @@ import { nonce, pubkey, sig } from "./test-crypto-helpers.js";
 import type { ServerMessage, SyncTransport, TransportState } from "../protocol.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
 
+import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
+import type { EncryptedChangeEnvelope, ServerMessage, SyncTransport } from "@pluralscape/sync";
+
+function nonce(fill: number): AeadNonce {
+  const bytes: unknown = new Uint8Array(24).fill(fill);
+  return bytes as AeadNonce;
+}
+function pubkey(fill: number): SignPublicKey {
+  const bytes: unknown = new Uint8Array(32).fill(fill);
+  return bytes as SignPublicKey;
+}
+function sig(fill: number): Signature {
+  const bytes: unknown = new Uint8Array(64).fill(fill);
+  return bytes as Signature;
+}
+
+function mockChangeWithoutSeq(docId: string): Omit<EncryptedChangeEnvelope, "seq"> {
+  return {
+    ciphertext: new Uint8Array([1, 2, 3]),
+    nonce: nonce(0xaa),
+    signature: sig(0xbb),
+    authorPublicKey: pubkey(0xcc),
+    documentId: docId,
+  };
+}
+
 describe("WsNetworkAdapter", () => {
   function createAdapter(): WsNetworkAdapter {
     const transport = new MockSyncTransport();

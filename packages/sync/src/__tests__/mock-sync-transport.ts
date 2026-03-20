@@ -6,6 +6,7 @@ import { EncryptedRelay } from "../relay.js";
 
 import type { ClientMessage, ServerMessage, SyncTransport, TransportState } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
+import type { SystemId } from "@pluralscape/types";
 
 export class MockSyncTransport implements SyncTransport {
   state: TransportState = "connected";
@@ -21,7 +22,7 @@ export class MockSyncTransport implements SyncTransport {
 
   send(message: ClientMessage): Promise<void> {
     if (this.state !== "connected") {
-      throw new Error("Transport not connected");
+      return Promise.reject(new Error("Transport not connected"));
     }
     // Process message and generate response
     const response = this.processMessage(message);
@@ -81,7 +82,7 @@ export class MockSyncTransport implements SyncTransport {
         return {
           type: "ManifestResponse",
           correlationId: message.correlationId,
-          manifest: { systemId: message.systemId, documents: [] },
+          manifest: { systemId: message.systemId as SystemId, documents: [] },
         };
 
       case "SubscribeRequest":
@@ -96,6 +97,7 @@ export class MockSyncTransport implements SyncTransport {
             changes: this.relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
             snapshot: null,
           })),
+          droppedDocIds: [],
         };
 
       case "UnsubscribeRequest":

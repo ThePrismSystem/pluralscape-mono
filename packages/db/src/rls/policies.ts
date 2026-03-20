@@ -172,10 +172,9 @@ export const RLS_TABLE_POLICIES = {
   // Search
   search_index: "system",
 
-  // Sync
+  // Sync — sync_changes and sync_snapshots lack system_id; access control
+  // flows via FK to sync_documents which has system_id.
   sync_documents: "system",
-  sync_queue: "system",
-  sync_conflicts: "system",
 } as const satisfies Record<string, RlsScopeType>;
 
 /** Type-safe table names that have RLS policies. */
