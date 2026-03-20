@@ -34,7 +34,12 @@ export {
 } from "./encrypted-sync.js";
 
 export type { SyncRelayService } from "./relay-service.js";
-export { EncryptedRelay, SnapshotVersionConflictError } from "./relay.js";
+export { RELAY_MAX_ENVELOPES_PER_DOCUMENT } from "./relay.constants.js";
+export {
+  EncryptedRelay,
+  EnvelopeLimitExceededError,
+  SnapshotVersionConflictError,
+} from "./relay.js";
 export type { RelayDocumentState, RelayOptions } from "./relay.js";
 
 export { EncryptedSyncSession, syncThroughRelay } from "./sync-session.js";
