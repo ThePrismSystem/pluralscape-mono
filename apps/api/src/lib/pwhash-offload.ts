@@ -22,6 +22,22 @@ interface WorkerResponse {
   readonly error?: string;
 }
 
+/**
+ * Bun's Worker from node:worker_threads supports Node-style .on() at
+ * runtime but @types/bun doesn't declare it on the Worker class.
+ */
+interface WorkerEmitter {
+  on(event: "message", fn: (msg: WorkerResponse) => void): void;
+  on(event: "error", fn: (err: Error) => void): void;
+  postMessage(msg: unknown): void;
+}
+
+/** Narrow Worker to its event-emitter interface that Bun supports at runtime. */
+function asEmitter(w: Worker): WorkerEmitter {
+  // Worker extends EventEmitter in Node and Bun, but @types/bun omits it
+  return w as never;
+}
+
 let pool: Worker[] | null = null;
 let nextId = 0;
 let roundRobin = 0;
@@ -38,7 +54,8 @@ function initPool(): Worker[] {
   const workerPath = getWorkerPath();
   pool = Array.from({ length: POOL_SIZE }, () => {
     const worker = new Worker(workerPath);
-    worker.on("message", (msg: WorkerResponse) => {
+    const emitter = asEmitter(worker);
+    emitter.on("message", (msg: WorkerResponse) => {
       const req = pending.get(msg.id);
       if (!req) return;
       pending.delete(msg.id);
@@ -48,7 +65,7 @@ function initPool(): Worker[] {
         req.reject(new Error(msg.error ?? "Worker error"));
       }
     });
-    worker.on("error", (err: Error) => {
+    emitter.on("error", (err: Error) => {
       // Reject all pending requests on this worker
       for (const [id, req] of pending) {
         req.reject(err);
