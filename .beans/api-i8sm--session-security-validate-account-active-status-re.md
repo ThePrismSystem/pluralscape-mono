@@ -1,11 +1,11 @@
 ---
 # api-i8sm
 title: "Session security: validate account active status, revoke on deletion"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T15:57:46Z
-updated_at: 2026-03-19T11:39:42Z
+updated_at: 2026-03-20T10:24:36Z
 parent: api-765x
 ---
 
