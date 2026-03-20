@@ -60,8 +60,10 @@ export async function handleSubscribeRequest(
       continue;
     }
 
-    const changes = await relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq);
-    const snapshot = await relay.getLatestSnapshot(entry.docId);
+    const [changes, snapshot] = await Promise.all([
+      relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+      relay.getLatestSnapshot(entry.docId),
+    ]);
     const hasNewerSnapshot =
       snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
 
@@ -189,9 +191,10 @@ export async function handleDocumentLoad(
   message: DocumentLoadRequest,
   relay: SyncRelayService,
 ): Promise<[SnapshotResponse, ChangesResponse]> {
-  const snapshot = await relay.getLatestSnapshot(message.docId);
-  const sinceSeq = 0;
-  const changes = await relay.getEnvelopesSince(message.docId, sinceSeq);
+  const [snapshot, changes] = await Promise.all([
+    relay.getLatestSnapshot(message.docId),
+    relay.getEnvelopesSince(message.docId, 0),
+  ]);
 
   return [
     {
