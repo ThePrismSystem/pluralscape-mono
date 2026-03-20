@@ -1,12 +1,12 @@
 import * as Automerge from "@automerge/automerge";
 
-import type { SyncDocumentType } from "../document-types.js";
 import type { BucketProjectionDocument } from "../schemas/bucket.js";
 import type { ChatDocument } from "../schemas/chat.js";
 import type { FrontingDocument } from "../schemas/fronting.js";
 import type { JournalDocument } from "../schemas/journal.js";
 import type { PrivacyConfigDocument } from "../schemas/privacy-config.js";
 import type { SystemCoreDocument } from "../schemas/system-core.js";
+import type { SyncDocType } from "@pluralscape/types";
 
 // ── helper ────────────────────────────────────────────────────────────
 
@@ -188,7 +188,7 @@ export function createBucketDocument(): Automerge.Doc<BucketProjectionDocument> 
  * with placeholder values and must be populated via a subsequent change().
  */
 export function createDocument(
-  type: SyncDocumentType,
+  type: SyncDocType,
 ):
   | Automerge.Doc<SystemCoreDocument>
   | Automerge.Doc<FrontingDocument>

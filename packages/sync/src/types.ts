@@ -1,6 +1,6 @@
-import type { SyncDocumentType } from "./document-types.js";
 import type { AeadKey, SignKeypair, SignPublicKey } from "@pluralscape/crypto";
 import type { AeadNonce, Signature } from "@pluralscape/crypto";
+import type { SyncDocType } from "@pluralscape/types";
 
 export interface DocumentKeys {
   readonly encryptionKey: AeadKey;
@@ -48,7 +48,7 @@ export type TimeSplitUnit = "quarter" | "month" | "year";
 
 /** Configuration for time-based document splitting. */
 export interface TimeSplitConfig {
-  readonly documentType: SyncDocumentType;
+  readonly documentType: SyncDocType;
   readonly splitUnit: TimeSplitUnit;
   readonly splitThresholdBytes: number;
 }
@@ -61,7 +61,7 @@ export const TIME_SPLIT_CONFIGS: readonly TimeSplitConfig[] = [
 ] as const;
 
 /** Maximum document size limits per document type (bytes). */
-export const DOCUMENT_SIZE_LIMITS: Record<SyncDocumentType, number> = {
+export const DOCUMENT_SIZE_LIMITS: Record<SyncDocType, number> = {
   "system-core": 10_485_760,
   fronting: 20_971_520,
   chat: 20_971_520,
@@ -82,7 +82,7 @@ export const DEFAULT_STORAGE_BUDGET: StorageBudget = {
 
 /** Categories used in sync priority ordering: base document types plus historical variants. */
 export type SyncPriorityCategory =
-  | SyncDocumentType
+  | SyncDocType
   | "fronting-historical"
   | "chat-historical"
   | "journal-historical";

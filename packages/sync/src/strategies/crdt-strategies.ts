@@ -14,14 +14,14 @@ export type CrdtStorageType =
   | "junction-map"
   | "singleton-lww";
 
-import type { SyncDocumentType } from "../document-types.js";
+import type { SyncDocType } from "@pluralscape/types";
 
 /** The full CRDT strategy for a single entity type. */
 export interface CrdtStrategy {
   /** How the entity is stored in Automerge. */
   readonly storageType: CrdtStorageType;
   /** Which document contains this entity type. */
-  readonly document: SyncDocumentType;
+  readonly document: SyncDocType;
   /**
    * Human-readable description of mutation semantics.
    * Summarises which fields are mutable after creation and what wins on conflict.

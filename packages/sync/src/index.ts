@@ -39,7 +39,7 @@ export type { RelayDocumentState, RelayOptions } from "./relay.js";
 
 export { EncryptedSyncSession, syncThroughRelay } from "./sync-session.js";
 
-export type { DocumentKeyType, ParsedDocumentId, SyncDocumentType } from "./document-types.js";
+export type { ParsedDocumentId } from "./document-types.js";
 export { InvalidDocumentIdError, parseDocumentId } from "./document-types.js";
 
 export type { DocumentKeyResolverConfig } from "./document-key-resolver.js";

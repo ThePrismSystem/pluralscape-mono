@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ENTITY_CRDT_STRATEGIES, type CrdtStorageType } from "../strategies/crdt-strategies.js";
 
-import type { SyncDocumentType } from "../document-types.js";
+import type { SyncDocType } from "@pluralscape/types";
 
 const VALID_STORAGE_TYPES: readonly CrdtStorageType[] = [
   "lww-map",
@@ -12,7 +12,7 @@ const VALID_STORAGE_TYPES: readonly CrdtStorageType[] = [
   "singleton-lww",
 ];
 
-const VALID_DOCUMENT_TYPES: readonly SyncDocumentType[] = [
+const VALID_DOCUMENT_TYPES: readonly SyncDocType[] = [
   "system-core",
   "fronting",
   "chat",
