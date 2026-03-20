@@ -80,7 +80,7 @@ import {
   subsystemSideSystemLinks,
   subsystems,
 } from "../../schema/pg/structure.js";
-import { syncConflicts, syncDocuments, syncQueue } from "../../schema/pg/sync.js";
+import { syncChanges, syncDocuments, syncSnapshots } from "../../schema/pg/sync.js";
 import { systemSettings } from "../../schema/pg/system-settings.js";
 import { systems } from "../../schema/pg/systems.js";
 import { checkInRecords, timerConfigs } from "../../schema/pg/timers.js";
@@ -285,10 +285,10 @@ export const PG_DDL = {
   // --- Sync ---
   syncDocuments: pgTableToCreateDDL(syncDocuments),
   syncDocumentsIndexes: indexDDL(syncDocuments),
-  syncQueue: pgTableToCreateDDL(syncQueue),
-  syncQueueIndexes: indexDDL(syncQueue),
-  syncConflicts: pgTableToCreateDDL(syncConflicts),
-  syncConflictsIndexes: indexDDL(syncConflicts),
+  syncChanges: pgTableToCreateDDL(syncChanges),
+  syncChangesIndexes: indexDDL(syncChanges),
+  syncSnapshots: pgTableToCreateDDL(syncSnapshots),
+  syncSnapshotsIndexes: indexDDL(syncSnapshots),
   // --- Key Rotation ---
   bucketKeyRotations: pgTableToCreateDDL(bucketKeyRotations),
   bucketKeyRotationsIndexes: indexDDL(bucketKeyRotations),
@@ -699,10 +699,10 @@ export async function createPgSyncTables(client: PGlite): Promise<void> {
   await createPgBaseTables(client);
   await pgExec(client, PG_DDL.syncDocuments);
   await pgExec(client, PG_DDL.syncDocumentsIndexes);
-  await pgExec(client, PG_DDL.syncQueue);
-  await pgExec(client, PG_DDL.syncQueueIndexes);
-  await pgExec(client, PG_DDL.syncConflicts);
-  await pgExec(client, PG_DDL.syncConflictsIndexes);
+  await pgExec(client, PG_DDL.syncChanges);
+  await pgExec(client, PG_DDL.syncChangesIndexes);
+  await pgExec(client, PG_DDL.syncSnapshots);
+  await pgExec(client, PG_DDL.syncSnapshotsIndexes);
 }
 
 export async function createPgAnalyticsTables(client: PGlite): Promise<void> {
@@ -884,10 +884,10 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   // Sync
   await pgExec(client, PG_DDL.syncDocuments);
   await pgExec(client, PG_DDL.syncDocumentsIndexes);
-  await pgExec(client, PG_DDL.syncQueue);
-  await pgExec(client, PG_DDL.syncQueueIndexes);
-  await pgExec(client, PG_DDL.syncConflicts);
-  await pgExec(client, PG_DDL.syncConflictsIndexes);
+  await pgExec(client, PG_DDL.syncChanges);
+  await pgExec(client, PG_DDL.syncChangesIndexes);
+  await pgExec(client, PG_DDL.syncSnapshots);
+  await pgExec(client, PG_DDL.syncSnapshotsIndexes);
   // Snapshots
   await pgExec(client, PG_DDL.systemSnapshots);
   await pgExec(client, PG_DDL.systemSnapshotsIndexes);

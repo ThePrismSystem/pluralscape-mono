@@ -1,57 +1,77 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import type { SyncDocumentId, SystemId } from "../ids.js";
 import type {
-  EntityType,
-  SyncConflictId,
-  SyncDocumentId,
-  SyncQueueItemId,
-  SystemId,
-} from "../ids.js";
-import type {
-  SyncConflict,
   SyncDocument,
+  SyncDocType,
   SyncIndicator,
   SyncIndicatorStatus,
-  SyncOperation,
-  SyncQueueItem,
-  SyncResolution,
+  SyncKeyType,
   SyncState,
 } from "../sync.js";
 import type { UnixMillis } from "../timestamps.js";
 
-describe("SyncOperation", () => {
+describe("SyncDocType", () => {
   it("is exhaustive in a switch statement", () => {
-    function handle(op: SyncOperation): string {
-      switch (op) {
-        case "create":
-        case "update":
-        case "delete":
-          return op;
+    function handle(t: SyncDocType): string {
+      switch (t) {
+        case "system-core":
+        case "fronting":
+        case "chat":
+        case "journal":
+        case "privacy-config":
+        case "bucket":
+          return t;
         default: {
-          const _exhaustive: never = op;
+          const _exhaustive: never = t;
           return _exhaustive;
         }
       }
     }
     expectTypeOf(handle).toBeFunction();
   });
+
+  it("accepts all valid variants", () => {
+    assertType<SyncDocType>("system-core");
+    assertType<SyncDocType>("fronting");
+    assertType<SyncDocType>("chat");
+    assertType<SyncDocType>("journal");
+    assertType<SyncDocType>("privacy-config");
+    assertType<SyncDocType>("bucket");
+  });
+
+  it("rejects invalid variants", () => {
+    // @ts-expect-error invalid SyncDocType
+    assertType<SyncDocType>("member");
+    // @ts-expect-error invalid SyncDocType
+    assertType<SyncDocType>("unknown");
+  });
 });
 
-describe("SyncResolution", () => {
+describe("SyncKeyType", () => {
   it("is exhaustive in a switch statement", () => {
-    function handle(res: SyncResolution): string {
-      switch (res) {
-        case "local":
-        case "remote":
-        case "merged":
-          return res;
+    function handle(k: SyncKeyType): string {
+      switch (k) {
+        case "derived":
+        case "bucket":
+          return k;
         default: {
-          const _exhaustive: never = res;
+          const _exhaustive: never = k;
           return _exhaustive;
         }
       }
     }
     expectTypeOf(handle).toBeFunction();
+  });
+
+  it("accepts all valid variants", () => {
+    assertType<SyncKeyType>("derived");
+    assertType<SyncKeyType>("bucket");
+  });
+
+  it("rejects invalid variants", () => {
+    // @ts-expect-error invalid SyncKeyType
+    assertType<SyncKeyType>("symmetric");
   });
 });
 
@@ -76,42 +96,27 @@ describe("SyncIndicatorStatus", () => {
 
 describe("SyncDocument", () => {
   it("has expected fields", () => {
-    expectTypeOf<SyncDocument["id"]>().toEqualTypeOf<SyncDocumentId>();
+    expectTypeOf<SyncDocument["documentId"]>().toEqualTypeOf<string>();
     expectTypeOf<SyncDocument["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<SyncDocument["entityType"]>().toEqualTypeOf<EntityType>();
-    expectTypeOf<SyncDocument["entityId"]>().toEqualTypeOf<string>();
-    expectTypeOf<SyncDocument["automergeHeads"]>().toEqualTypeOf<Uint8Array | null>();
-    expectTypeOf<SyncDocument["lastSyncedAt"]>().toEqualTypeOf<UnixMillis | null>();
-    expectTypeOf<SyncDocument["version"]>().toEqualTypeOf<number>();
+    expectTypeOf<SyncDocument["docType"]>().toEqualTypeOf<SyncDocType>();
+    expectTypeOf<SyncDocument["sizeBytes"]>().toEqualTypeOf<number>();
+    expectTypeOf<SyncDocument["snapshotVersion"]>().toEqualTypeOf<number>();
+    expectTypeOf<SyncDocument["lastSeq"]>().toEqualTypeOf<number>();
+    expectTypeOf<SyncDocument["archived"]>().toEqualTypeOf<boolean>();
+    expectTypeOf<SyncDocument["timePeriod"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SyncDocument["keyType"]>().toEqualTypeOf<SyncKeyType>();
+    expectTypeOf<SyncDocument["bucketId"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<SyncDocument["channelId"]>().toEqualTypeOf<string | null>();
     expectTypeOf<SyncDocument["createdAt"]>().toEqualTypeOf<UnixMillis>();
+    expectTypeOf<SyncDocument["updatedAt"]>().toEqualTypeOf<UnixMillis>();
   });
-});
 
-describe("SyncQueueItem", () => {
-  it("has expected fields", () => {
-    expectTypeOf<SyncQueueItem["id"]>().toEqualTypeOf<SyncQueueItemId>();
-    expectTypeOf<SyncQueueItem["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<SyncQueueItem["entityType"]>().toEqualTypeOf<EntityType>();
-    expectTypeOf<SyncQueueItem["entityId"]>().toEqualTypeOf<string>();
-    expectTypeOf<SyncQueueItem["operation"]>().toEqualTypeOf<SyncOperation>();
-    expectTypeOf<SyncQueueItem["changeData"]>().toEqualTypeOf<Uint8Array>();
-    expectTypeOf<SyncQueueItem["createdAt"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<SyncQueueItem["syncedAt"]>().toEqualTypeOf<UnixMillis | null>();
+  it("has no legacy id field", () => {
+    expectTypeOf<SyncDocument>().not.toHaveProperty("id");
   });
-});
 
-describe("SyncConflict", () => {
-  it("has expected fields", () => {
-    expectTypeOf<SyncConflict["id"]>().toEqualTypeOf<SyncConflictId>();
-    expectTypeOf<SyncConflict["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<SyncConflict["entityType"]>().toEqualTypeOf<EntityType>();
-    expectTypeOf<SyncConflict["entityId"]>().toEqualTypeOf<string>();
-    expectTypeOf<SyncConflict["localVersion"]>().toEqualTypeOf<number>();
-    expectTypeOf<SyncConflict["remoteVersion"]>().toEqualTypeOf<number>();
-    expectTypeOf<SyncConflict["resolution"]>().toEqualTypeOf<SyncResolution | null>();
-    expectTypeOf<SyncConflict["resolvedAt"]>().toEqualTypeOf<UnixMillis | null>();
-    expectTypeOf<SyncConflict["details"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<SyncConflict["createdAt"]>().toEqualTypeOf<UnixMillis>();
+  it("has no legacy entityType field", () => {
+    expectTypeOf<SyncDocument>().not.toHaveProperty("entityType");
   });
 });
 
@@ -139,20 +144,5 @@ describe("branded ID non-interchangeability", () => {
   it("SyncDocumentId is not assignable from plain string", () => {
     // @ts-expect-error plain string not assignable to branded type
     assertType<SyncDocumentId>("sdoc_test");
-  });
-
-  it("SyncQueueItemId is not assignable from plain string", () => {
-    // @ts-expect-error plain string not assignable to branded type
-    assertType<SyncQueueItemId>("sqi_test");
-  });
-
-  it("SyncConflictId is not assignable from plain string", () => {
-    // @ts-expect-error plain string not assignable to branded type
-    assertType<SyncConflictId>("scon_test");
-  });
-
-  it("sync IDs are not interchangeable", () => {
-    // @ts-expect-error different branded types
-    expectTypeOf<SyncDocumentId>().toEqualTypeOf<SyncQueueItemId>();
   });
 });

@@ -112,7 +112,7 @@ describe("SubscriptionSet", () => {
     const entry: SyncManifestEntry = {
       docId: "system-core-sys_abc",
       docType: "system-core",
-      keyType: "master",
+      keyType: "derived",
       bucketId: undefined,
       channelId: undefined,
       timePeriod: null,

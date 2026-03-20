@@ -13,7 +13,7 @@ function entry(
   overrides: Partial<SyncManifestEntry> & { docId: string; docType: SyncManifestEntry["docType"] },
 ): SyncManifestEntry {
   return {
-    keyType: "master",
+    keyType: "derived",
     bucketId: undefined,
     channelId: undefined,
     timePeriod: null,

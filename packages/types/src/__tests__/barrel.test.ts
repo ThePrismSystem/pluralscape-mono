@@ -321,16 +321,14 @@ import type {
   Relationship,
   SafeModeContentItem,
   SafeModeUIFlags,
-  SyncConflict,
-  SyncConflictId,
+  SyncChangeId,
   SyncDocument,
   SyncDocumentId,
+  SyncDocType,
   SyncIndicator,
   SyncIndicatorStatus,
-  SyncOperation,
-  SyncQueueItem,
-  SyncQueueItemId,
-  SyncResolution,
+  SyncKeyType,
+  SyncSnapshotId,
   SyncState,
   SyncPreferences,
   SystemProfile,
@@ -537,15 +535,13 @@ describe("barrel exports", () => {
   });
 
   it("exports sync types", () => {
+    expectTypeOf<SyncChangeId>().toExtend<string>();
     expectTypeOf<SyncDocumentId>().toExtend<string>();
-    expectTypeOf<SyncQueueItemId>().toExtend<string>();
-    expectTypeOf<SyncConflictId>().toExtend<string>();
-    expectTypeOf<SyncOperation>().toBeString();
-    expectTypeOf<SyncResolution>().toBeString();
+    expectTypeOf<SyncSnapshotId>().toExtend<string>();
+    expectTypeOf<SyncDocType>().toBeString();
+    expectTypeOf<SyncKeyType>().toBeString();
     expectTypeOf<SyncIndicatorStatus>().toBeString();
     expectTypeOf<SyncDocument>().toBeObject();
-    expectTypeOf<SyncQueueItem>().toBeObject();
-    expectTypeOf<SyncConflict>().toBeObject();
     expectTypeOf<SyncState>().toBeObject();
     expectTypeOf<SyncIndicator>().toBeObject();
   });

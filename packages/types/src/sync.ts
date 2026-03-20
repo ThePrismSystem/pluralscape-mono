@@ -1,62 +1,36 @@
-import type {
-  EntityType,
-  SyncConflictId,
-  SyncDocumentId,
-  SyncQueueItemId,
-  SystemId,
-} from "./ids.js";
+import type { SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
-/** The kind of operation a sync queue item represents. */
-export type SyncOperation = "create" | "update" | "delete";
+/** Sync document types matching the document topology spec. */
+export type SyncDocType =
+  | "system-core"
+  | "fronting"
+  | "chat"
+  | "journal"
+  | "privacy-config"
+  | "bucket";
 
-/** How a sync conflict was resolved. */
-export type SyncResolution = "local" | "remote" | "merged";
+/** Which encryption key tier a document uses. */
+export type SyncKeyType = "derived" | "bucket";
 
 /** Visual indicator status for the sync UI. */
 export type SyncIndicatorStatus = "synced" | "syncing" | "offline" | "error";
 
-/** Tracks an Automerge document's sync state for a particular entity. */
+/** Server-side sync document metadata (document-level, not entity-level). */
 export interface SyncDocument {
-  readonly id: SyncDocumentId;
+  readonly documentId: string;
   readonly systemId: SystemId;
-  readonly entityType: EntityType;
-  /** Plain string rather than branded ID — the referenced entity type varies by entityType. */
-  readonly entityId: string;
-  /** Null until first successful sync round-trip. */
-  readonly automergeHeads: Uint8Array | null;
-  readonly lastSyncedAt: UnixMillis | null;
-  readonly version: number;
+  readonly docType: SyncDocType;
+  readonly sizeBytes: number;
+  readonly snapshotVersion: number;
+  readonly lastSeq: number;
+  readonly archived: boolean;
+  readonly timePeriod: string | null;
+  readonly keyType: SyncKeyType;
+  readonly bucketId: string | null;
+  readonly channelId: string | null;
   readonly createdAt: UnixMillis;
-}
-
-/** An offline write queued for sync. Replayed in order when connectivity returns. */
-export interface SyncQueueItem {
-  readonly id: SyncQueueItemId;
-  readonly seq: number;
-  readonly systemId: SystemId;
-  readonly entityType: EntityType;
-  /** Plain string rather than branded ID — the referenced entity type varies by entityType. */
-  readonly entityId: string;
-  readonly operation: SyncOperation;
-  readonly changeData: Uint8Array;
-  readonly createdAt: UnixMillis;
-  readonly syncedAt: UnixMillis | null;
-}
-
-/** A recorded conflict between local and remote versions. */
-export interface SyncConflict {
-  readonly id: SyncConflictId;
-  readonly systemId: SystemId;
-  readonly entityType: EntityType;
-  /** Plain string rather than branded ID — the referenced entity type varies by entityType. */
-  readonly entityId: string;
-  readonly localVersion: number;
-  readonly remoteVersion: number;
-  readonly resolution: SyncResolution | null;
-  readonly resolvedAt: UnixMillis | null;
-  readonly details: string | null;
-  readonly createdAt: UnixMillis;
+  readonly updatedAt: UnixMillis;
 }
 
 /** Overall sync status for a system. Runtime state, not persisted. */

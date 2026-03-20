@@ -1297,58 +1297,57 @@ export const SQLITE_DDL = {
   `,
   // Sync
   syncDocuments: `
-    CREATE TABLE sync_documents (
-      id TEXT PRIMARY KEY,
+    CREATE TABLE IF NOT EXISTS sync_documents (
+      document_id TEXT PRIMARY KEY NOT NULL,
       system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      entity_type TEXT NOT NULL,
-      entity_id TEXT NOT NULL,
-      automerge_heads BLOB,
-      version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+      doc_type TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL DEFAULT 0,
+      snapshot_version INTEGER NOT NULL DEFAULT 0,
+      last_seq INTEGER NOT NULL DEFAULT 0,
+      archived INTEGER NOT NULL DEFAULT 0,
+      time_period TEXT,
+      key_type TEXT NOT NULL DEFAULT 'derived',
+      bucket_id TEXT,
+      channel_id TEXT,
       created_at INTEGER NOT NULL,
-      last_synced_at INTEGER,
-      CHECK (automerge_heads IS NULL OR length(automerge_heads) <= 16384)
+      updated_at INTEGER NOT NULL,
+      CHECK (doc_type IS NULL OR doc_type IN ('system-core', 'fronting', 'chat', 'journal', 'privacy-config', 'bucket')),
+      CHECK (key_type IS NULL OR key_type IN ('derived', 'bucket')),
+      CHECK (size_bytes >= 0),
+      CHECK (snapshot_version >= 0),
+      CHECK (last_seq >= 0)
     )
   `,
   syncDocumentsIndexes: `
-    CREATE UNIQUE INDEX sync_documents_system_id_entity_type_entity_id_idx ON sync_documents (system_id, entity_type, entity_id)
+    CREATE INDEX IF NOT EXISTS sync_documents_system_id_idx ON sync_documents(system_id);
+    CREATE INDEX IF NOT EXISTS sync_documents_system_id_doc_type_idx ON sync_documents(system_id, doc_type)
   `,
-  syncQueue: `
-    CREATE TABLE sync_queue (
-      id TEXT PRIMARY KEY,
+  syncChanges: `
+    CREATE TABLE IF NOT EXISTS sync_changes (
+      id TEXT PRIMARY KEY NOT NULL,
+      document_id TEXT NOT NULL REFERENCES sync_documents(document_id) ON DELETE CASCADE,
       seq INTEGER NOT NULL,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      entity_type TEXT NOT NULL,
-      entity_id TEXT NOT NULL,
-      operation TEXT NOT NULL CHECK (operation IN ('create', 'update', 'delete')),
-      encrypted_change_data BLOB NOT NULL,
-      created_at INTEGER NOT NULL,
-      synced_at INTEGER
+      encrypted_payload BLOB NOT NULL,
+      author_public_key BLOB NOT NULL,
+      nonce BLOB NOT NULL,
+      created_at INTEGER NOT NULL
     )
   `,
-  syncQueueIndexes: `
-    CREATE INDEX sync_queue_system_id_synced_at_idx ON sync_queue (system_id, synced_at);
-    CREATE INDEX sync_queue_system_id_entity_type_entity_id_idx ON sync_queue (system_id, entity_type, entity_id);
-    CREATE UNIQUE INDEX sync_queue_system_id_seq_idx ON sync_queue (system_id, seq);
-    CREATE INDEX sync_queue_unsynced_idx ON sync_queue (system_id, seq) WHERE synced_at IS NULL
+  syncChangesIndexes: `
+    CREATE UNIQUE INDEX IF NOT EXISTS sync_changes_document_id_seq_idx ON sync_changes(document_id, seq);
+    CREATE UNIQUE INDEX IF NOT EXISTS sync_changes_dedup_idx ON sync_changes(document_id, author_public_key, nonce)
   `,
-  syncConflicts: `
-    CREATE TABLE sync_conflicts (
-      id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      entity_type TEXT NOT NULL,
-      entity_id TEXT NOT NULL,
-      local_version INTEGER NOT NULL,
-      remote_version INTEGER NOT NULL,
-      resolution TEXT CHECK (resolution IN ('local', 'remote', 'merged') OR resolution IS NULL),
-      created_at INTEGER NOT NULL,
-      resolved_at INTEGER,
-      details TEXT,
-      CHECK ((resolution IS NULL) = (resolved_at IS NULL))
+  syncSnapshots: `
+    CREATE TABLE IF NOT EXISTS sync_snapshots (
+      document_id TEXT PRIMARY KEY NOT NULL REFERENCES sync_documents(document_id) ON DELETE CASCADE,
+      snapshot_version INTEGER NOT NULL,
+      encrypted_payload BLOB NOT NULL,
+      author_public_key BLOB NOT NULL,
+      nonce BLOB NOT NULL,
+      created_at INTEGER NOT NULL
     )
   `,
-  syncConflictsIndexes: `
-    CREATE INDEX sync_conflicts_system_id_entity_type_entity_id_idx ON sync_conflicts (system_id, entity_type, entity_id)
-  `,
+  syncSnapshotsIndexes: ``,
   // Jobs (SQLite-only)
   jobs: `
     CREATE TABLE jobs (
@@ -1802,10 +1801,10 @@ export function createSqliteSyncTables(client: InstanceType<typeof Database>): v
   createSqliteBaseTables(client);
   client.exec(SQLITE_DDL.syncDocuments);
   client.exec(SQLITE_DDL.syncDocumentsIndexes);
-  client.exec(SQLITE_DDL.syncQueue);
-  client.exec(SQLITE_DDL.syncQueueIndexes);
-  client.exec(SQLITE_DDL.syncConflicts);
-  client.exec(SQLITE_DDL.syncConflictsIndexes);
+  client.exec(SQLITE_DDL.syncChanges);
+  client.exec(SQLITE_DDL.syncChangesIndexes);
+  client.exec(SQLITE_DDL.syncSnapshots);
+  client.exec(SQLITE_DDL.syncSnapshotsIndexes);
 }
 
 export function createSqliteJobsTables(client: InstanceType<typeof Database>): void {

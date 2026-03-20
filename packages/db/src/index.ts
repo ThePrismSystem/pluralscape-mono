@@ -51,8 +51,8 @@ export {
   FRIEND_CONNECTION_STATUSES,
   AUTH_KEY_TYPES,
   DEVICE_TRANSFER_STATUSES,
-  SYNC_OPERATIONS,
-  SYNC_RESOLUTIONS,
+  SYNC_DOC_TYPES,
+  SYNC_KEY_TYPES,
   API_KEY_KEY_TYPES,
   API_KEY_SCOPES,
   AUDIT_EVENT_TYPES,
@@ -97,8 +97,6 @@ export {
 // ── Queries (Job Helpers) ─────────────────────────────────────
 export type { CleanupResult } from "./queries/index.js";
 export {
-  pgCleanupSyncedEntries,
-  sqliteCleanupSyncedEntries,
   pgCleanupAuditLog,
   sqliteCleanupAuditLog,
   pgCleanupOrphanedTags,

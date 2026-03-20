@@ -39,8 +39,8 @@ import type {
   ServerChannel,
   ServerPoll,
   SnapshotTrigger,
-  SyncOperation,
-  SyncResolution,
+  SyncDocType,
+  SyncKeyType,
   WebhookDeliveryStatus,
   WebhookEventType,
 } from "@pluralscape/types";
@@ -118,16 +118,15 @@ export const DEVICE_TRANSFER_STATUSES = [
   "approved",
   "expired",
 ] as const satisfies readonly DeviceTransferStatus[];
-export const SYNC_OPERATIONS = [
-  "create",
-  "update",
-  "delete",
-] as const satisfies readonly SyncOperation[];
-export const SYNC_RESOLUTIONS = [
-  "local",
-  "remote",
-  "merged",
-] as const satisfies readonly SyncResolution[];
+export const SYNC_DOC_TYPES = [
+  "system-core",
+  "fronting",
+  "chat",
+  "journal",
+  "privacy-config",
+  "bucket",
+] as const satisfies readonly SyncDocType[];
+export const SYNC_KEY_TYPES = ["derived", "bucket"] as const satisfies readonly SyncKeyType[];
 /**
  * Naming convention: TABLE_COLUMN (e.g. API_KEY_KEY_TYPES = api_keys.key_type).
  * Each array name maps to the table and column it constrains, so
@@ -441,8 +440,8 @@ export const ENTITY_TYPES = [
   "recovery-key",
   "device-transfer-request",
   "sync-document",
-  "sync-queue-item",
-  "sync-conflict",
+  "sync-change",
+  "sync-snapshot",
   "import-job",
   "pk-bridge-config",
   "account-purge-request",

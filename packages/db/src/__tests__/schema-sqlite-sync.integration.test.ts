@@ -4,7 +4,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
-import { syncConflicts, syncDocuments, syncQueue } from "../schema/sqlite/sync.js";
+import { syncChanges, syncDocuments, syncSnapshots } from "../schema/sqlite/sync.js";
 import { systems } from "../schema/sqlite/systems.js";
 
 import {
@@ -13,18 +13,28 @@ import {
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
 
+import type { SyncDocType } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
-const schema = { accounts, systems, syncDocuments, syncQueue, syncConflicts };
+const schema = { accounts, systems, syncDocuments, syncChanges, syncSnapshots };
 
 describe("SQLite sync schema", () => {
   let client: InstanceType<typeof Database>;
   let db: BetterSQLite3Database<typeof schema>;
-  let seqCounter = Math.floor(Math.random() * 1_000_000);
 
   const insertAccount = (id?: string): string => sqliteInsertAccount(db, id);
   const insertSystem = (accountId: string, id?: string): string =>
     sqliteInsertSystem(db, accountId, id);
+
+  /** Insert a minimal valid syncDocuments row and return its documentId. */
+  const insertDocument = (systemId: string, docType: SyncDocType = "system-core"): string => {
+    const documentId = crypto.randomUUID();
+    const now = Date.now();
+    db.insert(syncDocuments)
+      .values({ documentId, systemId, docType, createdAt: now, updatedAt: now })
+      .run();
+    return documentId;
+  };
 
   beforeAll(() => {
     client = new Database(":memory:");
@@ -38,640 +48,126 @@ describe("SQLite sync schema", () => {
   });
 
   afterEach(() => {
-    db.delete(syncConflicts).run();
-    db.delete(syncQueue).run();
+    db.delete(syncSnapshots).run();
+    db.delete(syncChanges).run();
     db.delete(syncDocuments).run();
   });
 
+  // ---------------------------------------------------------------------------
+  // sync_documents
+  // ---------------------------------------------------------------------------
+
   describe("sync_documents", () => {
-    it("round-trips with all fields including binary automergeHeads", () => {
+    it("round-trips all fields", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const heads = new Uint8Array([10, 20, 30, 40]);
-
-      db.insert(syncDocuments)
-        .values({
-          id,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          automergeHeads: heads,
-          version: 3,
-          createdAt: now,
-          lastSyncedAt: now + 1000,
-        })
-        .run();
-
-      const rows = db.select().from(syncDocuments).where(eq(syncDocuments.id, id)).all();
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.systemId).toBe(systemId);
-      expect(rows[0]?.entityType).toBe("member");
-      expect(rows[0]?.automergeHeads).toEqual(heads);
-      expect(rows[0]?.version).toBe(3);
-      expect(rows[0]?.lastSyncedAt).toBe(now + 1000);
-    });
-
-    it("defaults version to 1", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const documentId = crypto.randomUUID();
       const now = Date.now();
 
       db.insert(syncDocuments)
         .values({
-          id,
+          documentId,
           systemId,
-          entityType: "group",
-          entityId: crypto.randomUUID(),
+          docType: "fronting",
+          sizeBytes: 1024,
+          snapshotVersion: 2,
+          lastSeq: 7,
+          archived: true,
+          timePeriod: "2024-01",
+          keyType: "bucket",
+          bucketId: crypto.randomUUID(),
+          channelId: crypto.randomUUID(),
           createdAt: now,
+          updatedAt: now + 1000,
         })
         .run();
-
-      const rows = db.select().from(syncDocuments).where(eq(syncDocuments.id, id)).all();
-      expect(rows[0]?.version).toBe(1);
-    });
-
-    it("allows nullable automergeHeads and lastSyncedAt", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(syncDocuments)
-        .values({
-          id,
-          systemId,
-          entityType: "note",
-          entityId: crypto.randomUUID(),
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(syncDocuments).where(eq(syncDocuments.id, id)).all();
-      expect(rows[0]?.automergeHeads).toBeNull();
-      expect(rows[0]?.lastSyncedAt).toBeNull();
-    });
-
-    it("rejects version less than 1", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-
-      expect(() =>
-        db
-          .insert(syncDocuments)
-          .values({
-            id: crypto.randomUUID(),
-            systemId,
-            entityType: "member",
-            entityId: crypto.randomUUID(),
-            version: 0,
-            createdAt: now,
-          })
-          .run(),
-      ).toThrow();
-    });
-
-    it("rejects duplicate (system_id, entity_type, entity_id)", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const entityId = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(syncDocuments)
-        .values({
-          id: crypto.randomUUID(),
-          systemId,
-          entityType: "member",
-          entityId,
-          createdAt: now,
-        })
-        .run();
-
-      expect(() =>
-        db
-          .insert(syncDocuments)
-          .values({
-            id: crypto.randomUUID(),
-            systemId,
-            entityType: "member",
-            entityId,
-            createdAt: now,
-          })
-          .run(),
-      ).toThrow(/UNIQUE|constraint/i);
-    });
-
-    it("cascades on system deletion", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(syncDocuments)
-        .values({
-          id,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          createdAt: now,
-        })
-        .run();
-
-      db.delete(systems).where(eq(systems.id, systemId)).run();
-      const rows = db.select().from(syncDocuments).where(eq(syncDocuments.id, id)).all();
-      expect(rows).toHaveLength(0);
-    });
-
-    it("accepts automergeHeads at 16384 bytes", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const heads = new Uint8Array(16_384).fill(0xab);
-
-      db.insert(syncDocuments)
-        .values({
-          id,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          automergeHeads: heads,
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(syncDocuments).where(eq(syncDocuments.id, id)).all();
-      expect(rows).toHaveLength(1);
-    });
-
-    it("rejects automergeHeads exceeding 16384 bytes", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-      const heads = new Uint8Array(16_385).fill(0xab);
-
-      expect(() =>
-        db
-          .insert(syncDocuments)
-          .values({
-            id: crypto.randomUUID(),
-            systemId,
-            entityType: "member",
-            entityId: crypto.randomUUID(),
-            automergeHeads: heads,
-            createdAt: now,
-          })
-          .run(),
-      ).toThrow();
-    });
-  });
-
-  describe("sync_queue", () => {
-    it("round-trips with all fields including binary encryptedChangeData", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const data = new Uint8Array([1, 2, 3, 4, 5]);
-
-      db.insert(syncQueue)
-        .values({
-          id,
-          seq: ++seqCounter,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          operation: "create",
-          encryptedChangeData: data,
-          createdAt: now,
-          syncedAt: now + 5000,
-        })
-        .run();
-
-      const rows = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.systemId).toBe(systemId);
-      expect(rows[0]?.entityType).toBe("member");
-      expect(rows[0]?.operation).toBe("create");
-      expect(rows[0]?.encryptedChangeData).toEqual(data);
-      expect(rows[0]?.syncedAt).toBe(now + 5000);
-    });
-
-    it("allows nullable syncedAt", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(syncQueue)
-        .values({
-          id,
-          seq: ++seqCounter,
-          systemId,
-          entityType: "group",
-          entityId: crypto.randomUUID(),
-          operation: "update",
-          encryptedChangeData: new Uint8Array([10]),
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
-      expect(rows[0]?.syncedAt).toBeNull();
-    });
-
-    it("rejects invalid operation", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-
-      expect(() =>
-        db
-          .insert(syncQueue)
-          .values({
-            id: crypto.randomUUID(),
-            seq: ++seqCounter,
-            systemId,
-            entityType: "member",
-            entityId: crypto.randomUUID(),
-            operation: "invalid" as "create",
-            encryptedChangeData: new Uint8Array([1]),
-            createdAt: now,
-          })
-          .run(),
-      ).toThrow();
-    });
-
-    it("supports lifecycle: insert unsynced then mark synced", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(syncQueue)
-        .values({
-          id,
-          seq: ++seqCounter,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          operation: "create",
-          encryptedChangeData: new Uint8Array([1, 2, 3]),
-          createdAt: now,
-        })
-        .run();
-
-      const before = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
-      expect(before[0]?.syncedAt).toBeNull();
-
-      const syncedAt = now + 5000;
-      db.update(syncQueue).set({ syncedAt }).where(eq(syncQueue.id, id)).run();
-
-      const after = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
-      expect(after[0]?.syncedAt).toBe(syncedAt);
-    });
-
-    it("round-trips binary encryptedChangeData accurately", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const data = new Uint8Array([0, 127, 128, 255]);
-
-      db.insert(syncQueue)
-        .values({
-          id,
-          seq: ++seqCounter,
-          systemId,
-          entityType: "note",
-          entityId: crypto.randomUUID(),
-          operation: "delete",
-          encryptedChangeData: data,
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(syncQueue).where(eq(syncQueue.id, id)).all();
-      expect(rows[0]?.encryptedChangeData).toEqual(data);
-    });
-
-    it("assigns explicit seq values for ordering", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-      const ids = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
-      const seqs = [++seqCounter, ++seqCounter, ++seqCounter];
-
-      for (let i = 0; i < ids.length; i++) {
-        const id = ids[i];
-        const seq = seqs[i];
-        if (id === undefined || seq === undefined) continue;
-        db.insert(syncQueue)
-          .values({
-            id,
-            seq,
-            systemId,
-            entityType: "member",
-            entityId: crypto.randomUUID(),
-            operation: "create",
-            encryptedChangeData: new Uint8Array([1]),
-            createdAt: now,
-          })
-          .run();
-      }
-
-      const rows = ids.map(
-        (id) => db.select().from(syncQueue).where(eq(syncQueue.id, id)).all()[0],
-      );
-      const s0 = rows[0]?.seq;
-      const s1 = rows[1]?.seq;
-      const s2 = rows[2]?.seq;
-      expect(s0).toBe(seqs[0]);
-      expect(s1).toBe(seqs[1]);
-      expect(s2).toBe(seqs[2]);
-      expect(s0).toBeDefined();
-      expect(s1).toBeDefined();
-      expect(s2).toBeDefined();
-      if (s0 === undefined || s1 === undefined || s2 === undefined) return;
-      expect(s0).toBeLessThan(s1);
-      expect(s1).toBeLessThan(s2);
-    });
-
-    it("orders replay correctly via seq column", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-
-      const id1 = crypto.randomUUID();
-      const id2 = crypto.randomUUID();
-      const id3 = crypto.randomUUID();
-      const orderedIds = [id1, id2, id3];
-
-      for (const id of orderedIds) {
-        db.insert(syncQueue)
-          .values({
-            id,
-            seq: ++seqCounter,
-            systemId,
-            entityType: "member",
-            entityId: crypto.randomUUID(),
-            operation: "create",
-            encryptedChangeData: new Uint8Array([1]),
-            createdAt: now,
-          })
-          .run();
-      }
 
       const rows = db
         .select()
-        .from(syncQueue)
-        .where(eq(syncQueue.systemId, systemId))
-        .orderBy(syncQueue.seq)
+        .from(syncDocuments)
+        .where(eq(syncDocuments.documentId, documentId))
         .all();
 
-      expect(rows.map((r) => r.id)).toEqual(orderedIds);
-    });
-
-    it("rejects duplicate seq values", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-      const seq = ++seqCounter;
-
-      db.insert(syncQueue)
-        .values({
-          id: crypto.randomUUID(),
-          seq,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          operation: "create",
-          encryptedChangeData: new Uint8Array([1]),
-          createdAt: now,
-        })
-        .run();
-
-      expect(() =>
-        db
-          .insert(syncQueue)
-          .values({
-            id: crypto.randomUUID(),
-            seq,
-            systemId,
-            entityType: "member",
-            entityId: crypto.randomUUID(),
-            operation: "create",
-            encryptedChangeData: new Uint8Array([1]),
-            createdAt: now,
-          })
-          .run(),
-      ).toThrow(/UNIQUE|constraint/i);
-    });
-
-    it("rejects duplicate seq within same system", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-      const seq = ++seqCounter;
-
-      db.insert(syncQueue)
-        .values({
-          id: crypto.randomUUID(),
-          seq,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          operation: "create",
-          encryptedChangeData: new Uint8Array([1]),
-          createdAt: now,
-        })
-        .run();
-
-      expect(() =>
-        db
-          .insert(syncQueue)
-          .values({
-            id: crypto.randomUUID(),
-            seq,
-            systemId,
-            entityType: "member",
-            entityId: crypto.randomUUID(),
-            operation: "update",
-            encryptedChangeData: new Uint8Array([2]),
-            createdAt: now,
-          })
-          .run(),
-      ).toThrow(/UNIQUE|constraint/i);
-    });
-
-    it("allows same seq across different systems", () => {
-      const accountId1 = insertAccount();
-      const systemId1 = insertSystem(accountId1);
-      const accountId2 = insertAccount();
-      const systemId2 = insertSystem(accountId2);
-      const now = Date.now();
-      const seq = ++seqCounter;
-
-      db.insert(syncQueue)
-        .values({
-          id: crypto.randomUUID(),
-          seq,
-          systemId: systemId1,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          operation: "create",
-          encryptedChangeData: new Uint8Array([1]),
-          createdAt: now,
-        })
-        .run();
-
-      db.insert(syncQueue)
-        .values({
-          id: crypto.randomUUID(),
-          seq,
-          systemId: systemId2,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          operation: "create",
-          encryptedChangeData: new Uint8Array([1]),
-          createdAt: now,
-        })
-        .run();
-
-      const rows1 = db.select().from(syncQueue).where(eq(syncQueue.systemId, systemId1)).all();
-      const rows2 = db.select().from(syncQueue).where(eq(syncQueue.systemId, systemId2)).all();
-      expect(rows1).toHaveLength(1);
-      expect(rows2).toHaveLength(1);
-      expect(rows1[0]?.seq).toBe(seq);
-      expect(rows2[0]?.seq).toBe(seq);
-    });
-  });
-
-  describe("sync_queue indexes", () => {
-    it("uses compound index for system_id + synced_at queries", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-
-      db.insert(syncQueue)
-        .values({
-          id: crypto.randomUUID(),
-          seq: ++seqCounter,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          operation: "create",
-          encryptedChangeData: new Uint8Array([1]),
-          createdAt: now,
-          syncedAt: now + 1000,
-        })
-        .run();
-
-      const plan = client
-        .prepare(
-          `EXPLAIN QUERY PLAN SELECT * FROM sync_queue WHERE system_id = ? AND synced_at = ?`,
-        )
-        .all(systemId, now + 1000);
-      const detail = (plan as Array<{ detail: string }>).map((r) => r.detail).join(" ");
-      expect(detail).toMatch(/USING INDEX sync_queue_system_id_synced_at_idx/);
-    });
-
-    it("creates partial index for unsynced items", () => {
-      const indexes = client
-        .prepare(
-          `SELECT name, sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'sync_queue'`,
-        )
-        .all() as Array<{ name: string; sql: string | null }>;
-      const unsyncedIdx = indexes.find((i) => i.name === "sync_queue_unsynced_idx");
-      expect(unsyncedIdx).toBeDefined();
-      expect(unsyncedIdx?.sql).toMatch(/WHERE.*synced_at IS NULL/i);
-    });
-  });
-
-  describe("sync_conflicts", () => {
-    it("round-trips with all fields", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(syncConflicts)
-        .values({
-          id,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          localVersion: 3,
-          remoteVersion: 5,
-          resolution: "merged",
-          createdAt: now,
-          resolvedAt: now + 2000,
-          details: "auto-merged field changes",
-        })
-        .run();
-
-      const rows = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
       expect(rows).toHaveLength(1);
-      expect(rows[0]?.systemId).toBe(systemId);
-      expect(rows[0]?.entityType).toBe("member");
-      expect(rows[0]?.localVersion).toBe(3);
-      expect(rows[0]?.remoteVersion).toBe(5);
-      expect(rows[0]?.resolution).toBe("merged");
-      expect(rows[0]?.resolvedAt).toBe(now + 2000);
-      expect(rows[0]?.details).toBe("auto-merged field changes");
+      const row = rows[0];
+      expect(row?.systemId).toBe(systemId);
+      expect(row?.docType).toBe("fronting");
+      expect(row?.sizeBytes).toBe(1024);
+      expect(row?.snapshotVersion).toBe(2);
+      expect(row?.lastSeq).toBe(7);
+      expect(row?.archived).toBe(true);
+      expect(row?.timePeriod).toBe("2024-01");
+      expect(row?.keyType).toBe("bucket");
+      expect(row?.bucketId).toBeDefined();
+      expect(row?.channelId).toBeDefined();
+      expect(row?.createdAt).toBe(now);
+      expect(row?.updatedAt).toBe(now + 1000);
     });
 
-    it("allows nullable resolution for unresolved conflicts", () => {
+    it("applies default values: sizeBytes=0, snapshotVersion=0, lastSeq=0, archived=false, keyType='derived'", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
+      const documentId = crypto.randomUUID();
       const now = Date.now();
 
-      db.insert(syncConflicts)
-        .values({
-          id,
-          systemId,
-          entityType: "group",
-          entityId: crypto.randomUUID(),
-          localVersion: 1,
-          remoteVersion: 2,
-          createdAt: now,
-        })
+      db.insert(syncDocuments)
+        .values({ documentId, systemId, docType: "chat", createdAt: now, updatedAt: now })
         .run();
 
-      const rows = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
-      expect(rows[0]?.resolution).toBeNull();
-      expect(rows[0]?.resolvedAt).toBeNull();
-      expect(rows[0]?.details).toBeNull();
+      const rows = db
+        .select()
+        .from(syncDocuments)
+        .where(eq(syncDocuments.documentId, documentId))
+        .all();
+
+      expect(rows[0]?.sizeBytes).toBe(0);
+      expect(rows[0]?.snapshotVersion).toBe(0);
+      expect(rows[0]?.lastSeq).toBe(0);
+      expect(rows[0]?.archived).toBe(false);
+      expect(rows[0]?.keyType).toBe("derived");
     });
 
-    it("rejects invalid resolution", () => {
+    it("allows null for optional fields: timePeriod, bucketId, channelId", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(syncDocuments)
+        .values({ documentId, systemId, docType: "journal", createdAt: now, updatedAt: now })
+        .run();
+
+      const rows = db
+        .select()
+        .from(syncDocuments)
+        .where(eq(syncDocuments.documentId, documentId))
+        .all();
+
+      expect(rows[0]?.timePeriod).toBeNull();
+      expect(rows[0]?.bucketId).toBeNull();
+      expect(rows[0]?.channelId).toBeNull();
+    });
+
+    it("rejects invalid doc_type", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const now = Date.now();
 
       expect(() =>
         db
-          .insert(syncConflicts)
+          .insert(syncDocuments)
           .values({
-            id: crypto.randomUUID(),
+            documentId: crypto.randomUUID(),
             systemId,
-            entityType: "member",
-            entityId: crypto.randomUUID(),
-            localVersion: 1,
-            remoteVersion: 2,
-            resolution: "invalid" as "local",
+            docType: "invalid-type" as "chat",
             createdAt: now,
-            resolvedAt: now,
+            updatedAt: now,
           })
           .run(),
       ).toThrow();
     });
 
-    it("rejects resolution set with resolvedAt null", () => {
+    it("rejects invalid key_type", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const now = Date.now();
@@ -679,103 +175,405 @@ describe("SQLite sync schema", () => {
       expect(() =>
         client
           .prepare(
-            `INSERT INTO sync_conflicts (id, system_id, entity_type, entity_id, local_version, remote_version, resolution, created_at) VALUES (?, ?, 'member', ?, 1, 2, 'local', ?)`,
+            `INSERT INTO sync_documents (document_id, system_id, doc_type, key_type, created_at, updated_at)
+             VALUES (?, ?, 'system-core', 'invalid-key-type', ?, ?)`,
           )
-          .run(crypto.randomUUID(), systemId, crypto.randomUUID(), now),
-      ).toThrow(/constraint/i);
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow();
     });
 
-    it("rejects resolvedAt set with resolution null", () => {
+    it("rejects negative sizeBytes", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
       const now = Date.now();
 
       expect(() =>
-        client
-          .prepare(
-            `INSERT INTO sync_conflicts (id, system_id, entity_type, entity_id, local_version, remote_version, created_at, resolved_at) VALUES (?, ?, 'member', ?, 1, 2, ?, ?)`,
-          )
-          .run(crypto.randomUUID(), systemId, crypto.randomUUID(), now, now),
-      ).toThrow(/constraint/i);
+        db
+          .insert(syncDocuments)
+          .values({
+            documentId: crypto.randomUUID(),
+            systemId,
+            docType: "system-core",
+            sizeBytes: -1,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
 
-    it.each(["local", "remote"] as const)("exercises %s resolution", (resolution) => {
+    it("rejects negative snapshotVersion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
       const now = Date.now();
 
-      db.insert(syncConflicts)
-        .values({
-          id,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          localVersion: 1,
-          remoteVersion: 2,
-          resolution,
-          createdAt: now,
-          resolvedAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
-      expect(rows[0]?.resolution).toBe(resolution);
+      expect(() =>
+        db
+          .insert(syncDocuments)
+          .values({
+            documentId: crypto.randomUUID(),
+            systemId,
+            docType: "system-core",
+            snapshotVersion: -1,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
 
-    it("supports conflict lifecycle: insert unresolved then resolve", () => {
+    it("rejects negative lastSeq", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
       const now = Date.now();
 
-      db.insert(syncConflicts)
-        .values({
-          id,
-          systemId,
-          entityType: "member",
-          entityId: crypto.randomUUID(),
-          localVersion: 3,
-          remoteVersion: 4,
-          createdAt: now,
-        })
-        .run();
-
-      const before = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
-      expect(before[0]?.resolution).toBeNull();
-      expect(before[0]?.resolvedAt).toBeNull();
-
-      const resolvedAt = now + 5000;
-      db.update(syncConflicts)
-        .set({ resolution: "local", resolvedAt })
-        .where(eq(syncConflicts.id, id))
-        .run();
-
-      const after = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
-      expect(after[0]?.resolution).toBe("local");
-      expect(after[0]?.resolvedAt).toBe(resolvedAt);
+      expect(() =>
+        db
+          .insert(syncDocuments)
+          .values({
+            documentId: crypto.randomUUID(),
+            systemId,
+            docType: "system-core",
+            lastSeq: -1,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow();
     });
 
     it("cascades on system deletion", () => {
       const accountId = insertAccount();
       const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+
+      const rows = db
+        .select()
+        .from(syncDocuments)
+        .where(eq(syncDocuments.documentId, documentId))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // sync_changes
+  // ---------------------------------------------------------------------------
+
+  describe("sync_changes", () => {
+    it("round-trips all fields including binary columns", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
       const id = crypto.randomUUID();
       const now = Date.now();
+      const payload = Buffer.from([0x01, 0x02, 0x03, 0x04, 0x05]);
+      const authorKey = Buffer.from([0xaa, 0xbb, 0xcc]);
+      const nonce = Buffer.from([0x11, 0x22, 0x33]);
 
-      db.insert(syncConflicts)
+      db.insert(syncChanges)
         .values({
           id,
-          systemId,
-          entityType: "note",
-          entityId: crypto.randomUUID(),
-          localVersion: 1,
-          remoteVersion: 2,
+          documentId,
+          seq: 1,
+          encryptedPayload: payload,
+          authorPublicKey: authorKey,
+          nonce,
           createdAt: now,
         })
         .run();
 
-      db.delete(systems).where(eq(systems.id, systemId)).run();
-      const rows = db.select().from(syncConflicts).where(eq(syncConflicts.id, id)).all();
+      const rows = db.select().from(syncChanges).where(eq(syncChanges.id, id)).all();
+      expect(rows).toHaveLength(1);
+      const row = rows[0];
+      expect(row?.documentId).toBe(documentId);
+      expect(row?.seq).toBe(1);
+      expect(Buffer.from(row?.encryptedPayload as Buffer)).toEqual(payload);
+      expect(Buffer.from(row?.authorPublicKey as Buffer)).toEqual(authorKey);
+      expect(Buffer.from(row?.nonce as Buffer)).toEqual(nonce);
+      expect(row?.createdAt).toBe(now);
+    });
+
+    it("enforces unique (documentId, seq) constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+      const now = Date.now();
+      const makeChange = () =>
+        Buffer.from(crypto.randomUUID().replace(/-/g, ""), "hex").subarray(0, 8);
+
+      db.insert(syncChanges)
+        .values({
+          id: crypto.randomUUID(),
+          documentId,
+          seq: 5,
+          encryptedPayload: makeChange(),
+          authorPublicKey: makeChange(),
+          nonce: makeChange(),
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(syncChanges)
+          .values({
+            id: crypto.randomUUID(),
+            documentId,
+            seq: 5,
+            encryptedPayload: makeChange(),
+            authorPublicKey: makeChange(),
+            nonce: makeChange(),
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("allows same seq across different documents", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const docId1 = insertDocument(systemId, "chat");
+      const docId2 = insertDocument(systemId, "journal");
+      const now = Date.now();
+      const makeChange = () =>
+        Buffer.from(crypto.randomUUID().replace(/-/g, ""), "hex").subarray(0, 8);
+
+      db.insert(syncChanges)
+        .values({
+          id: crypto.randomUUID(),
+          documentId: docId1,
+          seq: 1,
+          encryptedPayload: makeChange(),
+          authorPublicKey: makeChange(),
+          nonce: makeChange(),
+          createdAt: now,
+        })
+        .run();
+
+      db.insert(syncChanges)
+        .values({
+          id: crypto.randomUUID(),
+          documentId: docId2,
+          seq: 1,
+          encryptedPayload: makeChange(),
+          authorPublicKey: makeChange(),
+          nonce: makeChange(),
+          createdAt: now,
+        })
+        .run();
+
+      const rows1 = db.select().from(syncChanges).where(eq(syncChanges.documentId, docId1)).all();
+      const rows2 = db.select().from(syncChanges).where(eq(syncChanges.documentId, docId2)).all();
+      expect(rows1).toHaveLength(1);
+      expect(rows2).toHaveLength(1);
+    });
+
+    it("deduplicates via unique (documentId, authorPublicKey, nonce) constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+      const now = Date.now();
+      const authorKey = Buffer.from([0xde, 0xad, 0xbe, 0xef]);
+      const nonce = Buffer.from([0xca, 0xfe, 0xba, 0xbe]);
+
+      db.insert(syncChanges)
+        .values({
+          id: crypto.randomUUID(),
+          documentId,
+          seq: 1,
+          encryptedPayload: Buffer.from([0x01]),
+          authorPublicKey: authorKey,
+          nonce,
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(syncChanges)
+          .values({
+            id: crypto.randomUUID(),
+            documentId,
+            seq: 2,
+            encryptedPayload: Buffer.from([0x02]),
+            authorPublicKey: authorKey,
+            nonce,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("cascades on document deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+      const buf = Buffer.from([0x01, 0x02]);
+
+      db.insert(syncChanges)
+        .values({
+          id,
+          documentId,
+          seq: 1,
+          encryptedPayload: buf,
+          authorPublicKey: buf,
+          nonce: buf,
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(syncDocuments).where(eq(syncDocuments.documentId, documentId)).run();
+
+      const rows = db.select().from(syncChanges).where(eq(syncChanges.id, id)).all();
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // sync_snapshots
+  // ---------------------------------------------------------------------------
+
+  describe("sync_snapshots", () => {
+    it("round-trips all fields including binary columns", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+      const now = Date.now();
+      const payload = Buffer.from([0xf0, 0xe1, 0xd2, 0xc3]);
+      const authorKey = Buffer.from([0x10, 0x20, 0x30]);
+      const nonce = Buffer.from([0xa1, 0xb2, 0xc3]);
+
+      db.insert(syncSnapshots)
+        .values({
+          documentId,
+          snapshotVersion: 3,
+          encryptedPayload: payload,
+          authorPublicKey: authorKey,
+          nonce,
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(syncSnapshots)
+        .where(eq(syncSnapshots.documentId, documentId))
+        .all();
+
+      expect(rows).toHaveLength(1);
+      const row = rows[0];
+      expect(row?.snapshotVersion).toBe(3);
+      expect(Buffer.from(row?.encryptedPayload as Buffer)).toEqual(payload);
+      expect(Buffer.from(row?.authorPublicKey as Buffer)).toEqual(authorKey);
+      expect(Buffer.from(row?.nonce as Buffer)).toEqual(nonce);
+      expect(row?.createdAt).toBe(now);
+    });
+
+    it("enforces one snapshot per document (upsert replaces previous)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+      const now = Date.now();
+      const buf = Buffer.from([0x01]);
+
+      db.insert(syncSnapshots)
+        .values({
+          documentId,
+          snapshotVersion: 1,
+          encryptedPayload: buf,
+          authorPublicKey: buf,
+          nonce: buf,
+          createdAt: now,
+        })
+        .run();
+
+      // Upsert: replace with a newer snapshot version
+      client
+        .prepare(
+          `INSERT INTO sync_snapshots (document_id, snapshot_version, encrypted_payload, author_public_key, nonce, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT (document_id) DO UPDATE SET
+             snapshot_version = excluded.snapshot_version,
+             encrypted_payload = excluded.encrypted_payload,
+             author_public_key = excluded.author_public_key,
+             nonce = excluded.nonce,
+             created_at = excluded.created_at`,
+        )
+        .run(documentId, 2, Buffer.from([0x02]), buf, buf, now + 1000);
+
+      const rows = db
+        .select()
+        .from(syncSnapshots)
+        .where(eq(syncSnapshots.documentId, documentId))
+        .all();
+
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.snapshotVersion).toBe(2);
+    });
+
+    it("rejects duplicate documentId insert without ON CONFLICT", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+      const now = Date.now();
+      const buf = Buffer.from([0x01]);
+
+      db.insert(syncSnapshots)
+        .values({
+          documentId,
+          snapshotVersion: 1,
+          encryptedPayload: buf,
+          authorPublicKey: buf,
+          nonce: buf,
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(syncSnapshots)
+          .values({
+            documentId,
+            snapshotVersion: 2,
+            encryptedPayload: buf,
+            authorPublicKey: buf,
+            nonce: buf,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("cascades on document deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const documentId = insertDocument(systemId);
+      const now = Date.now();
+      const buf = Buffer.from([0x01]);
+
+      db.insert(syncSnapshots)
+        .values({
+          documentId,
+          snapshotVersion: 1,
+          encryptedPayload: buf,
+          authorPublicKey: buf,
+          nonce: buf,
+          createdAt: now,
+        })
+        .run();
+
+      db.delete(syncDocuments).where(eq(syncDocuments.documentId, documentId)).run();
+
+      const rows = db
+        .select()
+        .from(syncSnapshots)
+        .where(eq(syncSnapshots.documentId, documentId))
+        .all();
       expect(rows).toHaveLength(0);
     });
   });

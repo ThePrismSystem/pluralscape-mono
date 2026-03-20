@@ -32,3 +32,6 @@ export const PG_POOL_CONNECT_TIMEOUT_SECONDS = 10;
 
 /** Maximum lifetime of a connection in seconds (30 minutes). */
 export const PG_POOL_MAX_LIFETIME_SECONDS = 1_800;
+
+/** Maximum character length for sync document IDs (e.g., `fronting-sys_abc-2026-Q1`). */
+export const DOCUMENT_ID_MAX_LENGTH = 255;

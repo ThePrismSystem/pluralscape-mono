@@ -48,8 +48,8 @@ import type {
   RecoveryKeyId,
   DeviceTransferRequestId,
   SyncDocumentId,
-  SyncQueueItemId,
-  SyncConflictId,
+  SyncChangeId,
+  SyncSnapshotId,
   ImportJobId,
   ExportRequestId,
   FrontingReportId,
@@ -152,8 +152,8 @@ describe("branded ID types", () => {
     expectTypeOf<RecoveryKeyId>().toExtend<string>();
     expectTypeOf<DeviceTransferRequestId>().toExtend<string>();
     expectTypeOf<SyncDocumentId>().toExtend<string>();
-    expectTypeOf<SyncQueueItemId>().toExtend<string>();
-    expectTypeOf<SyncConflictId>().toExtend<string>();
+    expectTypeOf<SyncChangeId>().toExtend<string>();
+    expectTypeOf<SyncSnapshotId>().toExtend<string>();
     expectTypeOf<ImportJobId>().toExtend<string>();
     expectTypeOf<ExportRequestId>().toExtend<string>();
     expectTypeOf<FrontingReportId>().toExtend<string>();
@@ -276,8 +276,8 @@ describe("EntityType", () => {
         case "recovery-key":
         case "device-transfer-request":
         case "sync-document":
-        case "sync-queue-item":
-        case "sync-conflict":
+        case "sync-change":
+        case "sync-snapshot":
         case "import-job":
         case "pk-bridge-config":
         case "account-purge-request":

@@ -11,7 +11,7 @@ export {
 } from "./recovery-key.js";
 export type { CleanupResult } from "./types.js";
 export { validateOlderThanDays, validateMonthsAhead, validateOlderThanMonths } from "./types.js";
-export { pgCleanupSyncedEntries, sqliteCleanupSyncedEntries } from "./sync-queue-cleanup.js";
+// sync-queue-cleanup removed: sync queue replaced by document-level sync_changes table
 export { pgCleanupAuditLog, sqliteCleanupAuditLog } from "./audit-log-cleanup.js";
 export {
   pgCleanupOrphanedTags,

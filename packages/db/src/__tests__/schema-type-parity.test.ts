@@ -395,14 +395,14 @@ const TABLE_PAIRS: Array<{
     sqliteTable: getTableColumns(sqlite.syncDocuments),
   },
   {
-    name: "syncQueue",
-    pgTable: getTableColumns(pg.syncQueue),
-    sqliteTable: getTableColumns(sqlite.syncQueue),
+    name: "syncChanges",
+    pgTable: getTableColumns(pg.syncChanges),
+    sqliteTable: getTableColumns(sqlite.syncChanges),
   },
   {
-    name: "syncConflicts",
-    pgTable: getTableColumns(pg.syncConflicts),
-    sqliteTable: getTableColumns(sqlite.syncConflicts),
+    name: "syncSnapshots",
+    pgTable: getTableColumns(pg.syncSnapshots),
+    sqliteTable: getTableColumns(sqlite.syncSnapshots),
   },
   // Key Rotation
   {

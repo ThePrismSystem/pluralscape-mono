@@ -101,7 +101,8 @@ function createAuthenticatedState(
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe("handleManifestRequest", () => {
-  it("returns a ManifestResponse with an empty document list", () => {
+  it("returns a ManifestResponse with an empty document list", async () => {
+    const relay = new EncryptedRelay();
     const systemId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
     const message: ManifestRequest = {
@@ -110,7 +111,7 @@ describe("handleManifestRequest", () => {
       systemId,
     };
 
-    const result = handleManifestRequest(message);
+    const result = await handleManifestRequest(message, relay.asService(systemId));
 
     expect(result).toEqual({
       type: "ManifestResponse",
@@ -119,15 +120,17 @@ describe("handleManifestRequest", () => {
     });
   });
 
-  it("echoes the correlationId from the request", () => {
+  it("echoes the correlationId from the request", async () => {
+    const relay = new EncryptedRelay();
     const correlationId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
     const message: ManifestRequest = {
       type: "ManifestRequest",
       correlationId,
-      systemId: crypto.randomUUID(),
+      systemId,
     };
 
-    const result = handleManifestRequest(message);
+    const result = await handleManifestRequest(message, relay.asService(systemId));
 
     expect(result.correlationId).toBe(correlationId);
   });
@@ -140,7 +143,7 @@ describe("handleSubscribeRequest", () => {
     manager.closeAll(1001, "test cleanup");
   });
 
-  it("registers subscriptions and returns catchup with changes", () => {
+  it("registers subscriptions and returns catchup with changes", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
@@ -159,7 +162,7 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
 
-    const result = handleSubscribeRequest(message, state, manager, relay);
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService());
 
     expect(result.type).toBe("SubscribeResponse");
     expect(result.correlationId).toBe(correlationId);
@@ -169,7 +172,7 @@ describe("handleSubscribeRequest", () => {
     expect(result.catchup[0]?.snapshot).toBeNull();
   });
 
-  it("includes newer snapshot in catchup when available", () => {
+  it("includes newer snapshot in catchup when available", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
@@ -187,14 +190,14 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
 
-    const result = handleSubscribeRequest(message, state, manager, relay);
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService());
 
     expect(result.catchup).toHaveLength(1);
     expect(result.catchup[0]?.snapshot).not.toBeNull();
     expect(result.catchup[0]?.snapshot?.snapshotVersion).toBe(1);
   });
 
-  it("omits catchup entry when client is already current", () => {
+  it("omits catchup entry when client is already current", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
@@ -212,12 +215,12 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId, lastSyncedSeq: seq, lastSnapshotVersion: 0 }],
     };
 
-    const result = handleSubscribeRequest(message, state, manager, relay);
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService());
 
     expect(result.catchup).toHaveLength(0);
   });
 
-  it("adds subscription to connection manager", () => {
+  it("adds subscription to connection manager", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
@@ -232,12 +235,12 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
 
-    handleSubscribeRequest(message, state, manager, relay);
+    await handleSubscribeRequest(message, state, manager, relay.asService());
 
     expect(manager.getSubscribers(docId).has(connId)).toBe(true);
   });
 
-  it("skips catchup for documents beyond subscription cap", () => {
+  it("skips catchup for documents beyond subscription cap", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
     const connId = crypto.randomUUID();
@@ -260,7 +263,7 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId: extraDocId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
 
-    const result = handleSubscribeRequest(message, state, manager, relay);
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService());
 
     // The excess doc should NOT be in catchup since subscription cap was reached
     expect(result.catchup).toHaveLength(0);
@@ -274,7 +277,7 @@ describe("handleUnsubscribeRequest", () => {
     manager.closeAll(1001, "test cleanup");
   });
 
-  it("removes subscription from connection manager", () => {
+  it("removes subscription from connection manager", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
@@ -289,7 +292,7 @@ describe("handleUnsubscribeRequest", () => {
       correlationId: crypto.randomUUID(),
       documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
-    handleSubscribeRequest(subMsg, state, manager, relay);
+    await handleSubscribeRequest(subMsg, state, manager, relay.asService());
     expect(manager.getSubscribers(docId).has(connId)).toBe(true);
 
     // Now unsubscribe
@@ -324,7 +327,7 @@ describe("handleUnsubscribeRequest", () => {
 });
 
 describe("handleFetchSnapshot", () => {
-  it("returns the latest snapshot from the relay", () => {
+  it("returns the latest snapshot from the relay", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
@@ -337,7 +340,7 @@ describe("handleFetchSnapshot", () => {
       docId,
     };
 
-    const result = handleFetchSnapshot(message, relay);
+    const result = await handleFetchSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SnapshotResponse");
     expect(result.correlationId).toBe(correlationId);
@@ -346,7 +349,7 @@ describe("handleFetchSnapshot", () => {
     expect(result.snapshot?.snapshotVersion).toBe(1);
   });
 
-  it("returns null snapshot when no snapshot exists", () => {
+  it("returns null snapshot when no snapshot exists", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -356,14 +359,14 @@ describe("handleFetchSnapshot", () => {
       docId,
     };
 
-    const result = handleFetchSnapshot(message, relay);
+    const result = await handleFetchSnapshot(message, relay.asService());
 
     expect(result.snapshot).toBeNull();
   });
 });
 
 describe("handleFetchChanges", () => {
-  it("returns changes since the given seq", () => {
+  it("returns changes since the given seq", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
@@ -379,7 +382,7 @@ describe("handleFetchChanges", () => {
       sinceSeq: 1,
     };
 
-    const result = handleFetchChanges(message, relay);
+    const result = await handleFetchChanges(message, relay.asService());
 
     expect(result.type).toBe("ChangesResponse");
     expect(result.correlationId).toBe(correlationId);
@@ -389,7 +392,7 @@ describe("handleFetchChanges", () => {
     expect(result.changes[1]?.seq).toBe(3);
   });
 
-  it("returns empty array when no changes exist after sinceSeq", () => {
+  it("returns empty array when no changes exist after sinceSeq", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -402,12 +405,12 @@ describe("handleFetchChanges", () => {
       sinceSeq: 1,
     };
 
-    const result = handleFetchChanges(message, relay);
+    const result = await handleFetchChanges(message, relay.asService());
 
     expect(result.changes).toHaveLength(0);
   });
 
-  it("returns empty array for unknown document", () => {
+  it("returns empty array for unknown document", async () => {
     const relay = new EncryptedRelay();
 
     const message: FetchChangesRequest = {
@@ -417,14 +420,14 @@ describe("handleFetchChanges", () => {
       sinceSeq: 0,
     };
 
-    const result = handleFetchChanges(message, relay);
+    const result = await handleFetchChanges(message, relay.asService());
 
     expect(result.changes).toHaveLength(0);
   });
 });
 
 describe("handleSubmitChange", () => {
-  it("assigns a seq and returns ChangeAccepted with the sequenced envelope", () => {
+  it("assigns a seq and returns ChangeAccepted with the sequenced envelope", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
@@ -436,7 +439,7 @@ describe("handleSubmitChange", () => {
       change: mockChangeWithoutSeq(docId),
     };
 
-    const { response, sequencedEnvelope } = handleSubmitChange(message, relay);
+    const { response, sequencedEnvelope } = await handleSubmitChange(message, relay.asService());
 
     expect(response.type).toBe("ChangeAccepted");
     expect(response.correlationId).toBe(correlationId);
@@ -446,7 +449,7 @@ describe("handleSubmitChange", () => {
     expect(sequencedEnvelope.documentId).toBe(docId);
   });
 
-  it("assigns monotonically increasing seq values", () => {
+  it("assigns monotonically increasing seq values", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -463,14 +466,14 @@ describe("handleSubmitChange", () => {
       change: mockChangeWithoutSeq(docId),
     };
 
-    const result1 = handleSubmitChange(msg1, relay);
-    const result2 = handleSubmitChange(msg2, relay);
+    const result1 = await handleSubmitChange(msg1, relay.asService());
+    const result2 = await handleSubmitChange(msg2, relay.asService());
 
     expect(result1.response.assignedSeq).toBe(1);
     expect(result2.response.assignedSeq).toBe(2);
   });
 
-  it("overrides documentId in the change with the request docId", () => {
+  it("overrides documentId in the change with the request docId", async () => {
     const relay = new EncryptedRelay();
     const requestDocId = crypto.randomUUID();
     const differentDocId = crypto.randomUUID();
@@ -484,7 +487,7 @@ describe("handleSubmitChange", () => {
       change: changeWithDifferentDoc,
     };
 
-    const { response, sequencedEnvelope } = handleSubmitChange(message, relay);
+    const { response, sequencedEnvelope } = await handleSubmitChange(message, relay.asService());
 
     expect(response.docId).toBe(requestDocId);
     expect(sequencedEnvelope.documentId).toBe(requestDocId);
@@ -497,7 +500,7 @@ describe("handleSubmitChange", () => {
 });
 
 describe("handleSubmitSnapshot", () => {
-  it("returns SnapshotAccepted for a valid snapshot", () => {
+  it("returns SnapshotAccepted for a valid snapshot", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
@@ -509,7 +512,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = handleSubmitSnapshot(message, relay);
+    const result = await handleSubmitSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SnapshotAccepted");
     expect(result.correlationId).toBe(correlationId);
@@ -519,7 +522,7 @@ describe("handleSubmitSnapshot", () => {
     }
   });
 
-  it("returns SyncError with VERSION_CONFLICT when snapshot version is not newer", () => {
+  it("returns SyncError with VERSION_CONFLICT when snapshot version is not newer", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -533,7 +536,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = handleSubmitSnapshot(message, relay);
+    const result = await handleSubmitSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
@@ -542,7 +545,7 @@ describe("handleSubmitSnapshot", () => {
     }
   });
 
-  it("returns SyncError when submitting the same version", () => {
+  it("returns SyncError when submitting the same version", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -555,12 +558,12 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = handleSubmitSnapshot(message, relay);
+    const result = await handleSubmitSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SyncError");
   });
 
-  it("overrides documentId in the snapshot with the request docId", () => {
+  it("overrides documentId in the snapshot with the request docId", async () => {
     const relay = new EncryptedRelay();
     const requestDocId = crypto.randomUUID();
     const differentDocId = crypto.randomUUID();
@@ -572,7 +575,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(differentDocId, 1),
     };
 
-    const result = handleSubmitSnapshot(message, relay);
+    const result = await handleSubmitSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SnapshotAccepted");
 
@@ -584,7 +587,7 @@ describe("handleSubmitSnapshot", () => {
 });
 
 describe("handleDocumentLoad", () => {
-  it("returns both snapshot and changes for the requested document", () => {
+  it("returns both snapshot and changes for the requested document", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
@@ -600,7 +603,10 @@ describe("handleDocumentLoad", () => {
       persist: false,
     };
 
-    const [snapshotResponse, changesResponse] = handleDocumentLoad(message, relay);
+    const [snapshotResponse, changesResponse] = await handleDocumentLoad(
+      message,
+      relay.asService(),
+    );
 
     expect(snapshotResponse.type).toBe("SnapshotResponse");
     expect(snapshotResponse.correlationId).toBe(correlationId);
@@ -614,7 +620,7 @@ describe("handleDocumentLoad", () => {
     expect(changesResponse.changes).toHaveLength(2);
   });
 
-  it("returns null snapshot when none exists", () => {
+  it("returns null snapshot when none exists", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -627,13 +633,16 @@ describe("handleDocumentLoad", () => {
       persist: true,
     };
 
-    const [snapshotResponse, changesResponse] = handleDocumentLoad(message, relay);
+    const [snapshotResponse, changesResponse] = await handleDocumentLoad(
+      message,
+      relay.asService(),
+    );
 
     expect(snapshotResponse.snapshot).toBeNull();
     expect(changesResponse.changes).toHaveLength(1);
   });
 
-  it("returns empty changes and null snapshot for unknown document", () => {
+  it("returns empty changes and null snapshot for unknown document", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -644,13 +653,16 @@ describe("handleDocumentLoad", () => {
       persist: false,
     };
 
-    const [snapshotResponse, changesResponse] = handleDocumentLoad(message, relay);
+    const [snapshotResponse, changesResponse] = await handleDocumentLoad(
+      message,
+      relay.asService(),
+    );
 
     expect(snapshotResponse.snapshot).toBeNull();
     expect(changesResponse.changes).toHaveLength(0);
   });
 
-  it("returns all changes from seq 0", () => {
+  it("returns all changes from seq 0", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -665,7 +677,7 @@ describe("handleDocumentLoad", () => {
       persist: false,
     };
 
-    const [, changesResponse] = handleDocumentLoad(message, relay);
+    const [, changesResponse] = await handleDocumentLoad(message, relay.asService());
 
     expect(changesResponse.changes).toHaveLength(3);
     expect(changesResponse.changes[0]?.seq).toBe(1);

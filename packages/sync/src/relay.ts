@@ -1,3 +1,5 @@
+import type { SyncManifest } from "./adapters/network-adapter.js";
+import type { SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 
 /** Error message fragment for snapshot version conflicts. */
@@ -92,6 +94,21 @@ export class EncryptedRelay {
       this.touch(documentId);
     }
     return snapshot;
+  }
+
+  /** Wrap this relay as an async SyncRelayService for use with WS handlers. */
+  asService(systemId = ""): SyncRelayService {
+    const manifest: SyncManifest = { documents: [], systemId };
+    return {
+      submit: (e) => Promise.resolve(this.submit(e)),
+      getEnvelopesSince: (d, s) => Promise.resolve(this.getEnvelopesSince(d, s)),
+      submitSnapshot: (e) => {
+        this.submitSnapshot(e);
+        return Promise.resolve();
+      },
+      getLatestSnapshot: (d) => Promise.resolve(this.getLatestSnapshot(d)),
+      getManifest: () => Promise.resolve(manifest),
+    };
   }
 
   inspectStorage(documentId: string): RelayDocumentState | undefined {

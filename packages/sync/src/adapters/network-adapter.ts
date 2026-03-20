@@ -1,4 +1,4 @@
-import type { SyncDocumentType } from "../document-types.js";
+import type { DocumentKeyType, SyncDocumentType } from "../document-types.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 
 // ── Manifest ─────────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ export interface SyncManifestEntry {
   /** Which sync document type this entry represents. */
   readonly docType: SyncDocumentType;
   /** Key type determining which encryption key is used. */
-  readonly keyType: "master" | "bucket";
+  readonly keyType: DocumentKeyType;
   /** Present for bucket documents — identifies which bucket. */
   readonly bucketId: string | undefined;
   /** Present for chat documents — identifies which channel. */
