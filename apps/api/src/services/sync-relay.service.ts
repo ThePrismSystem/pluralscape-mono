@@ -1,8 +1,10 @@
+import { assertAeadNonce, assertSignature, assertSignPublicKey } from "@pluralscape/crypto";
 import { syncChanges, syncDocuments, syncSnapshots } from "@pluralscape/db/pg";
-import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
+import { SnapshotVersionConflictError } from "@pluralscape/sync";
 import { createId, ID_PREFIXES } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
+import type { SyncChangeRow, SyncSnapshotRow } from "@pluralscape/db/pg";
 import type {
   EncryptedChangeEnvelope,
   EncryptedSnapshotEnvelope,
@@ -10,7 +12,7 @@ import type {
   SyncManifestEntry,
   SyncRelayService,
 } from "@pluralscape/sync";
-import type { SyncChangeRow, SyncSnapshotRow } from "@pluralscape/db/pg";
+import type { SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** PostgreSQL-backed implementation of SyncRelayService. */
@@ -111,9 +113,7 @@ export class PgSyncRelayService implements SyncRelayService {
           throw new Error(`Document not found: ${envelope.documentId}`);
         }
 
-        throw new Error(
-          `Snapshot version ${String(envelope.snapshotVersion)} ${SNAPSHOT_VERSION_CONFLICT_MESSAGE} ${String(doc.snapshotVersion)}`,
-        );
+        throw new SnapshotVersionConflictError(envelope.snapshotVersion, doc.snapshotVersion);
       }
 
       // Upsert snapshot
@@ -136,7 +136,6 @@ export class PgSyncRelayService implements SyncRelayService {
             authorPublicKey: envelope.authorPublicKey,
             nonce: envelope.nonce,
             signature: envelope.signature,
-            createdAt: now,
           },
         });
     });
@@ -153,7 +152,7 @@ export class PgSyncRelayService implements SyncRelayService {
     return this.mapSnapshotRow(row);
   }
 
-  async getManifest(systemId: string): Promise<SyncManifest> {
+  async getManifest(systemId: SystemId): Promise<SyncManifest> {
     const rows = await this.db
       .select()
       .from(syncDocuments)
@@ -177,22 +176,28 @@ export class PgSyncRelayService implements SyncRelayService {
   }
 
   private mapChangeRow(row: SyncChangeRow): EncryptedChangeEnvelope {
+    assertAeadNonce(row.nonce);
+    assertSignature(row.signature);
+    assertSignPublicKey(row.authorPublicKey);
     return {
       ciphertext: row.encryptedPayload,
-      nonce: row.nonce as EncryptedChangeEnvelope["nonce"],
-      signature: row.signature as EncryptedChangeEnvelope["signature"],
-      authorPublicKey: row.authorPublicKey as EncryptedChangeEnvelope["authorPublicKey"],
+      nonce: row.nonce,
+      signature: row.signature,
+      authorPublicKey: row.authorPublicKey,
       documentId: row.documentId,
       seq: row.seq,
     };
   }
 
   private mapSnapshotRow(row: SyncSnapshotRow): EncryptedSnapshotEnvelope {
+    assertAeadNonce(row.nonce);
+    assertSignature(row.signature);
+    assertSignPublicKey(row.authorPublicKey);
     return {
       ciphertext: row.encryptedPayload,
-      nonce: row.nonce as EncryptedSnapshotEnvelope["nonce"],
-      signature: row.signature as EncryptedSnapshotEnvelope["signature"],
-      authorPublicKey: row.authorPublicKey as EncryptedSnapshotEnvelope["authorPublicKey"],
+      nonce: row.nonce,
+      signature: row.signature,
+      authorPublicKey: row.authorPublicKey,
       documentId: row.documentId,
       snapshotVersion: row.snapshotVersion,
     };

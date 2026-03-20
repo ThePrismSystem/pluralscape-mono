@@ -350,7 +350,8 @@ export async function routeMessage(
         return;
       }
       try {
-        send(state, await handleManifestRequest(msg, relay), log);
+        const response = await handleManifestRequest(msg, relay);
+        if (!send(state, response, log)) return;
       } catch (err) {
         log.error("handleManifestRequest threw", {
           connectionId: state.connectionId,
@@ -384,11 +385,14 @@ export async function routeMessage(
         // Denied docs get a PERMISSION_DENIED sent by checkAccess; continue with rest
       }
       try {
-        send(
+        const response = await handleSubscribeRequest(
+          { ...msg, documents: permitted },
           state,
-          await handleSubscribeRequest({ ...msg, documents: permitted }, state, manager, relay),
+          manager,
+          relay,
           log,
         );
+        if (!send(state, response, log)) return;
       } catch (err) {
         log.error("handleSubscribeRequest threw", {
           connectionId: state.connectionId,
@@ -497,8 +501,11 @@ export async function routeMessage(
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
       try {
-        send(state, await handleSubmitSnapshot(msg, relay), log);
-        documentOwnership.set(msg.docId, state.systemId);
+        const response = await handleSubmitSnapshot(msg, relay);
+        if (!send(state, response, log)) return;
+        if (response.type !== "SyncError") {
+          documentOwnership.set(msg.docId, state.systemId);
+        }
       } catch (err) {
         log.error("handleSubmitSnapshot threw", {
           connectionId: state.connectionId,
@@ -542,12 +549,7 @@ export async function routeMessage(
         });
         send(
           state,
-          makeSyncError(
-            "INTERNAL_ERROR",
-            "Failed to load document",
-            msg.correlationId,
-            msg.docId,
-          ),
+          makeSyncError("INTERNAL_ERROR", "Failed to load document", msg.correlationId, msg.docId),
           log,
         );
       }
