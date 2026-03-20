@@ -67,7 +67,6 @@ function mockSnapshot(docId: string, version: number): EncryptedSnapshotEnvelope
     authorPublicKey: pubkey(10),
     documentId: docId,
     snapshotVersion: version,
-    lastSeq: 0,
   };
 }
 

@@ -20,7 +20,6 @@ export function makeSnapshot(version: number, documentId: string): EncryptedSnap
   return {
     documentId,
     snapshotVersion: version,
-    lastSeq: 0,
     ciphertext: new Uint8Array([10, 20, 30, version]),
     nonce: nonce(version),
     signature: sig(3),

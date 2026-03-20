@@ -39,7 +39,7 @@ export type { RelayDocumentState, RelayOptions } from "./relay.js";
 
 export { EncryptedSyncSession, syncThroughRelay } from "./sync-session.js";
 
-export type { ParsedDocumentId } from "./document-types.js";
+export type { DocumentKeyType, ParsedDocumentId, SyncDocumentType } from "./document-types.js";
 export { InvalidDocumentIdError, parseDocumentId } from "./document-types.js";
 
 export type { DocumentKeyResolverConfig } from "./document-key-resolver.js";
@@ -167,16 +167,6 @@ export type {
   OnDemandLoadRequest,
 } from "./replication-profiles.js";
 export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_PROFILE } from "./replication-profiles.js";
-
-// ── Sync engine ──────────────────────────────────────────────────────
-export { SyncEngine, compactionIdempotencyKey, handleCompaction } from "./engine/index.js";
-export type {
-  SyncEngineConfig,
-  CompactionInput,
-  CompactionResult,
-  CompactionReason,
-  CompactionSkipReason,
-} from "./engine/index.js";
 
 // ── Protocol messages ──────────────────────────────────────────────────
 export type {

@@ -1,8 +1,8 @@
 import { parseDocumentId } from "./document-types.js";
 import { SYNC_PRIORITY_ORDER } from "./types.js";
 
+import type { SyncDocumentType } from "./document-types.js";
 import type { StorageBudget, SyncPriorityCategory } from "./types.js";
-import type { SyncDocType } from "@pluralscape/types";
 
 /** Result of checking a set of documents against a storage budget. */
 export interface StorageBudgetStatus {
@@ -26,7 +26,7 @@ export function checkStorageBudget(
   return { withinBudget: usedBytes <= maxBytes, usedBytes, maxBytes, excessBytes };
 }
 
-const HISTORICAL_CATEGORY: Partial<Record<SyncDocType, SyncPriorityCategory>> = {
+const HISTORICAL_CATEGORY: Partial<Record<SyncDocumentType, SyncPriorityCategory>> = {
   fronting: "fronting-historical",
   chat: "chat-historical",
   journal: "journal-historical",

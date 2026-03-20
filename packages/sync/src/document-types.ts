@@ -1,4 +1,12 @@
-import type { BucketId, ChannelId, SyncDocType, SyncKeyType, SystemId } from "@pluralscape/types";
+import type {
+  BucketId,
+  ChannelId,
+  SyncDocumentType,
+  DocumentKeyType,
+  SystemId,
+} from "@pluralscape/types";
+
+export type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 
 /** Parsed components of a document ID. */
 export type ParsedDocumentId =
@@ -81,8 +89,8 @@ const PREFIX_CONFIGS = [
   { prefix: "bucket-", documentType: "bucket", keyType: "bucket", timeSplitPattern: null },
 ] as const satisfies readonly {
   prefix: string;
-  documentType: SyncDocType;
-  keyType: SyncKeyType;
+  documentType: SyncDocumentType;
+  keyType: DocumentKeyType;
   timeSplitPattern: RegExp | null;
 }[];
 

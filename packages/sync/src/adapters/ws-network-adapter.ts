@@ -1,3 +1,6 @@
+declare function setTimeout(fn: () => void, ms: number): number;
+declare function clearTimeout(id: number): void;
+
 import type { ClientMessage, ServerMessage, SyncTransport } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SyncManifest, SyncNetworkAdapter, SyncSubscription } from "./network-adapter.js";
@@ -8,10 +11,10 @@ type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K>
 /** Default timeout for request/response pairs (ms). */
 const REQUEST_TIMEOUT_MS = 30_000;
 
-interface PendingRequest {
-  resolve: (value: ServerMessage) => void;
+interface PendingRequest<T> {
+  resolve: (value: T) => void;
   reject: (reason: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+  timer: number;
 }
 
 /**
@@ -22,14 +25,13 @@ interface PendingRequest {
  */
 export class WsNetworkAdapter implements SyncNetworkAdapter {
   private readonly transport: SyncTransport;
-  private readonly pending = new Map<string, PendingRequest>();
+  private readonly pending = new Map<string, PendingRequest<ServerMessage>>();
   private readonly subscriptions = new Map<
     string,
     Set<(changes: readonly EncryptedChangeEnvelope[]) => void>
   >();
   private readonly lastSeqPerDoc = new Map<string, number>();
   private readonly timeoutMs: number;
-  private disposed = false;
 
   constructor(transport: SyncTransport, timeoutMs = REQUEST_TIMEOUT_MS) {
     this.transport = transport;
@@ -44,7 +46,6 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     documentId: string,
     change: Omit<EncryptedChangeEnvelope, "seq">,
   ): Promise<EncryptedChangeEnvelope> {
-    const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "SubmitChangeRequest",
       docId: documentId,
@@ -62,26 +63,20 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     documentId: string,
     sinceSeq: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
-    const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "FetchChangesRequest",
       docId: documentId,
       sinceSeq,
     });
 
-    if (response.type === "SyncError") {
-      throw new Error(`SyncError [${response.code}]: ${response.message}`);
-    }
-
-    if (response.type !== "ChangesResponse") {
-      throw new Error(`Unexpected response: ${response.type}`);
-    }
+    const changesResp = this.expectResponse(response, "ChangesResponse");
+    const last = changesResp.changes[changesResp.changes.length - 1];
+    if (last) this.updateLastSeq(documentId, last.seq);
 
     return changesResp.changes;
   }
 
   async submitSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
-    const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "SubmitSnapshotRequest",
       docId: documentId,
@@ -89,8 +84,9 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     });
 
     if (response.type === "SyncError") {
+      // Server already has a newer version — not an error for the submitter
       if (response.code === "VERSION_CONFLICT") return;
-      throw new Error(`SyncError: ${response.message}`);
+      throw new Error(`SyncError [${response.code}]: ${response.message}`);
     }
     if (response.type !== "SnapshotAccepted") {
       throw new Error(`Unexpected response: ${response.type}`);
@@ -98,21 +94,13 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   }
 
   async fetchLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
-    const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "FetchSnapshotRequest",
       docId: documentId,
     });
 
-    if (response.type === "SyncError") {
-      throw new Error(`SyncError [${response.code}]: ${response.message}`);
-    }
-
-    if (response.type !== "SnapshotResponse") {
-      throw new Error(`Unexpected response: ${response.type}`);
-    }
-
-    return response.snapshot;
+    const snapshotResp = this.expectResponse(response, "SnapshotResponse");
+    return snapshotResp.snapshot;
   }
 
   subscribe(
@@ -126,43 +114,18 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     }
     callbacks.add(onChanges);
 
-    // Send SubscribeRequest and handle catch-up from response
+    // Send SubscribeRequest (fire-and-forget for subscribe)
     const lastSeq = this.lastSeqPerDoc.get(documentId) ?? 0;
-    void this.request({
-      type: "SubscribeRequest",
-      correlationId: crypto.randomUUID(),
-      documents: [{ docId: documentId, lastSyncedSeq: lastSeq, lastSnapshotVersion: 0 }],
-    })
-      .then((resp) => {
-        if (resp.type === "SyncError") {
-          console.warn(
-            `[WsNetworkAdapter] subscribe failed for ${documentId}: [${resp.code}] ${resp.message}`,
-          );
-          callbacks.delete(onChanges);
-          if (callbacks.size === 0) {
-            this.subscriptions.delete(documentId);
-          }
-          return;
-        }
-        if (resp.type === "SubscribeResponse") {
-          for (const entry of resp.catchup) {
-            if (entry.docId === documentId && entry.changes.length > 0) {
-              const cbs = this.subscriptions.get(documentId);
-              if (cbs) {
-                for (const cb of cbs) {
-                  try {
-                    cb(entry.changes);
-                  } catch {
-                    /* subscriber error is non-fatal */
-                  }
-                }
-              }
-            }
-          }
-        }
+    void this.transport
+      .send({
+        type: "SubscribeRequest",
+        correlationId: crypto.randomUUID(),
+        documents: [{ docId: documentId, lastSyncedSeq: lastSeq, lastSnapshotVersion: 0 }],
       })
-      .catch((error: unknown) => {
-        console.warn(`[WsNetworkAdapter] subscribe transport error for ${documentId}`, error);
+      .catch((err: unknown) => {
+        console.warn("Subscribe transport send failed:", err);
+        callbacks.delete(onChanges);
+        if (callbacks.size === 0) this.subscriptions.delete(documentId);
       });
 
     return {
@@ -170,44 +133,41 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         callbacks.delete(onChanges);
         if (callbacks.size === 0) {
           this.subscriptions.delete(documentId);
-          if (!this.disposed) {
-            void this.transport.send({
+          void this.transport
+            .send({
               type: "UnsubscribeRequest",
               correlationId: crypto.randomUUID(),
               docId: documentId,
+            })
+            .catch(() => {
+              /* unsubscribe send failure is non-critical */
             });
-          }
         }
       },
     };
   }
 
   async fetchManifest(systemId: string): Promise<SyncManifest> {
-    const correlationId = crypto.randomUUID();
     const response = await this.request({
       type: "ManifestRequest",
       systemId,
     });
 
+    const manifestResp = this.expectResponse(response, "ManifestResponse");
+    return manifestResp.manifest;
+  }
+
+  private expectResponse<T extends ServerMessage["type"]>(
+    response: ServerMessage,
+    expectedType: T,
+  ): Extract<ServerMessage, { type: T }> {
     if (response.type === "SyncError") {
       throw new Error(`SyncError [${response.code}]: ${response.message}`);
     }
-
-    if (response.type !== "ManifestResponse") {
+    if (response.type !== expectedType) {
       throw new Error(`Unexpected response: ${response.type}`);
     }
     return response as Extract<ServerMessage, { type: T }>;
-  }
-
-  /** Dispose the adapter, clearing all pending requests and subscriptions. */
-  dispose(): void {
-    this.disposed = true;
-    for (const [id, pending] of this.pending) {
-      clearTimeout(pending.timer);
-      pending.reject(new Error("Adapter disposed"));
-      this.pending.delete(id);
-    }
-    this.subscriptions.clear();
   }
 
   private handleMessage(msg: ServerMessage): void {
@@ -218,8 +178,8 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         for (const cb of callbacks) {
           try {
             cb(msg.changes);
-          } catch {
-            /* subscriber error is non-fatal */
+          } catch (err) {
+            console.warn("Subscriber callback error:", err);
           }
         }
       }
@@ -239,17 +199,14 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     }
   }
 
-  private request(message: ClientMessage): Promise<ServerMessage> {
-    const correlationId = message.correlationId;
-
-    if (this.disposed || !correlationId) {
-      return Promise.reject(
-        new Error(this.disposed ? "Adapter disposed" : "Missing correlationId"),
-      );
-    }
+  private request(
+    message: DistributiveOmit<ClientMessage, "correlationId">,
+  ): Promise<ServerMessage> {
+    const correlationId = crypto.randomUUID();
+    const fullMessage = { ...message, correlationId } as ClientMessage;
 
     return new Promise<ServerMessage>((resolve, reject) => {
-      const timer = globalThis.setTimeout(() => {
+      const timer = setTimeout(() => {
         this.pending.delete(correlationId);
         reject(new Error(`Request timed out: ${message.type}`));
       }, this.timeoutMs);

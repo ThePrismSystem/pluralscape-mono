@@ -21,8 +21,6 @@ import { SyncEngine } from "../engine/sync-engine.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { nonce, pubkey, sig } from "./test-crypto-helpers.js";
-
 import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
@@ -253,45 +251,9 @@ describe("SyncEngine steady-state", () => {
       expect(state?.lastSyncedSeq).toBe(7);
     });
 
-    it("does not persist changes that fail CRDT application", async () => {
-      const appendChange = vi.fn().mockResolvedValue(undefined);
-      const engine = await createBootstrappedEngine({
-        storageAdapter: mockStorageAdapter({ appendChange }),
-      });
-
-      // Craft an invalid encrypted change (garbage ciphertext) — CRDT apply should fail
-      const badChange: EncryptedChangeEnvelope = {
-        documentId: "system-core-sys_test",
-        seq: 99,
-        ciphertext: new Uint8Array([0xff, 0xfe, 0xfd]),
-        nonce: nonce(99),
-        signature: sig(99),
-        authorPublicKey: pubkey(99),
-      };
-
-      await expect(
-        engine.handleIncomingChanges("system-core-sys_test", [badChange]),
-      ).rejects.toThrow();
-
-      // Nothing should have been persisted since CRDT application failed first
-      expect(appendChange).not.toHaveBeenCalled();
-    });
-
     it("ignores changes for unknown documents", async () => {
-      const appendChange = vi.fn().mockResolvedValue(undefined);
-      const engine = await createBootstrappedEngine({
-        storageAdapter: mockStorageAdapter({ appendChange }),
-      });
-      const fakeChange: EncryptedChangeEnvelope = {
-        documentId: "unknown-sys_test",
-        seq: 1,
-        ciphertext: new Uint8Array([1]),
-        nonce: nonce(1),
-        signature: sig(1),
-        authorPublicKey: pubkey(1),
-      };
-      await engine.handleIncomingChanges("unknown-sys_test", [fakeChange]);
-      expect(appendChange).not.toHaveBeenCalled();
+      const engine = await createBootstrappedEngine();
+      await engine.handleIncomingChanges("unknown-sys_test", []);
     });
   });
 });

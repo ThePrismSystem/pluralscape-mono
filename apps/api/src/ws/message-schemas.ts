@@ -82,7 +82,6 @@ const snapshotEnvelope = z.object({
   authorPublicKey: signPublicKeyBytes,
   documentId: z.string().min(1),
   snapshotVersion: z.number().int().positive(),
-  lastSeq: z.number().int().nonnegative(),
 });
 
 /** Per-document sync position. */

@@ -58,7 +58,7 @@ describe("PG sync schema", () => {
       encryptedPayload: new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
       authorPublicKey: new Uint8Array(32).fill(0x01),
       nonce: new Uint8Array(24).fill(seq),
-      signature: new Uint8Array(64).fill(0x05),
+      signature: new Uint8Array(64).fill(0x77),
       createdAt: Date.now(),
     };
   }
@@ -68,11 +68,10 @@ describe("PG sync schema", () => {
     return {
       documentId,
       snapshotVersion: 1,
-      lastSeq: 0,
       encryptedPayload: new Uint8Array([0xca, 0xfe, 0xba, 0xbe]),
       authorPublicKey: new Uint8Array(32).fill(0x02),
       nonce: new Uint8Array(24).fill(0xaa),
-      signature: new Uint8Array(64).fill(0x05),
+      signature: new Uint8Array(64).fill(0x88),
       createdAt: Date.now(),
     };
   }
@@ -390,7 +389,6 @@ describe("PG sync schema", () => {
 
       const authorPublicKey = new Uint8Array(32).fill(0x05);
       const nonce = new Uint8Array(24).fill(0x06);
-      const signature = new Uint8Array(64).fill(0x07);
 
       await db.insert(syncChanges).values({
         id: crypto.randomUUID(),
@@ -399,7 +397,7 @@ describe("PG sync schema", () => {
         encryptedPayload: new Uint8Array([0x01]),
         authorPublicKey,
         nonce,
-        signature,
+        signature: new Uint8Array(64).fill(0x77),
         createdAt: Date.now(),
       });
 
@@ -411,7 +409,7 @@ describe("PG sync schema", () => {
           encryptedPayload: new Uint8Array([0x02]),
           authorPublicKey,
           nonce,
-          signature,
+          signature: new Uint8Array(64).fill(0x77),
           createdAt: Date.now(),
         }),
       ).rejects.toThrow();
@@ -446,12 +444,11 @@ describe("PG sync schema", () => {
       const encryptedPayload = new Uint8Array([0xca, 0xfe, 0xba, 0xbe]);
       const authorPublicKey = new Uint8Array(32).fill(0x07);
       const nonce = new Uint8Array(24).fill(0x08);
-      const signature = new Uint8Array(64).fill(0x05);
+      const signature = new Uint8Array(64).fill(0x88);
 
       await db.insert(syncSnapshots).values({
         documentId,
         snapshotVersion: 5,
-        lastSeq: 42,
         encryptedPayload,
         authorPublicKey,
         nonce,
@@ -466,7 +463,6 @@ describe("PG sync schema", () => {
       expect(rows).toHaveLength(1);
       const row = rows[0];
       expect(row?.snapshotVersion).toBe(5);
-      expect(row?.lastSeq).toBe(42);
       expect(row?.encryptedPayload).toEqual(encryptedPayload);
       expect(row?.authorPublicKey).toEqual(authorPublicKey);
       expect(row?.nonce).toEqual(nonce);
@@ -500,7 +496,6 @@ describe("PG sync schema", () => {
 
       const newPayload = new Uint8Array([0x11, 0x22, 0x33]);
       const newNonce = new Uint8Array(24).fill(0xbb);
-      const newSignature = new Uint8Array(64).fill(0x06);
       const updatedAt = Date.now();
 
       const newSignature = new Uint8Array(64).fill(0x99);
@@ -509,7 +504,6 @@ describe("PG sync schema", () => {
         .values({
           documentId,
           snapshotVersion: 2,
-          lastSeq: 10,
           encryptedPayload: newPayload,
           authorPublicKey: new Uint8Array(32).fill(0x09),
           nonce: newNonce,
@@ -520,7 +514,6 @@ describe("PG sync schema", () => {
           target: syncSnapshots.documentId,
           set: {
             snapshotVersion: 2,
-            lastSeq: 10,
             encryptedPayload: newPayload,
             nonce: newNonce,
             signature: newSignature,

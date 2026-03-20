@@ -1342,12 +1342,12 @@ export const SQLITE_DDL = {
     CREATE TABLE IF NOT EXISTS sync_snapshots (
       document_id TEXT PRIMARY KEY NOT NULL REFERENCES sync_documents(document_id) ON DELETE CASCADE,
       snapshot_version INTEGER NOT NULL,
-      last_seq INTEGER NOT NULL DEFAULT 0,
       encrypted_payload BLOB NOT NULL,
       author_public_key BLOB NOT NULL,
       nonce BLOB NOT NULL,
       signature BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      CHECK (snapshot_version >= 0)
     )
   `,
   syncSnapshotsIndexes: ``,

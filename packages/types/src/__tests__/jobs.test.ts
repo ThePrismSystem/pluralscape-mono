@@ -43,6 +43,7 @@ describe("JobType", () => {
         case "account-purge":
         case "bucket-key-rotation":
         case "report-generate":
+        case "sync-queue-cleanup":
         case "audit-log-cleanup":
         case "partition-maintenance":
         case "sync-compaction":

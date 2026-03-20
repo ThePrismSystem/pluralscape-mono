@@ -107,7 +107,7 @@ export class EncryptedRelay {
   }
 
   /** Wrap this relay as an async SyncRelayService for use with WS handlers. */
-  asService(systemId = ""): SyncRelayService {
+  asService(): SyncRelayService {
     return {
       submit: (envelope) => Promise.resolve(this.submit(envelope)),
       getEnvelopesSince: (documentId, sinceSeq) =>
@@ -117,7 +117,7 @@ export class EncryptedRelay {
         return Promise.resolve();
       },
       getLatestSnapshot: (d) => Promise.resolve(this.getLatestSnapshot(d)),
-      getManifest: (sid) => Promise.resolve({ documents: [], systemId: sid || systemId }),
+      getManifest: (id) => Promise.resolve({ documents: [], systemId: id }),
     };
   }
 

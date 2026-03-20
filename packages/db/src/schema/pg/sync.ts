@@ -68,18 +68,21 @@ export const syncChanges = pgTable(
   ],
 );
 
-export const syncSnapshots = pgTable("sync_snapshots", {
-  documentId: varchar("document_id", { length: DOCUMENT_ID_MAX_LENGTH })
-    .primaryKey()
-    .references(() => syncDocuments.documentId, { onDelete: "cascade" }),
-  snapshotVersion: integer("snapshot_version").notNull(),
-  lastSeq: integer("last_seq").notNull().default(0),
-  encryptedPayload: pgBinary("encrypted_payload").notNull(),
-  authorPublicKey: pgBinary("author_public_key").notNull(),
-  nonce: pgBinary("nonce").notNull(),
-  signature: pgBinary("signature").notNull(),
-  createdAt: pgTimestamp("created_at").notNull(),
-});
+export const syncSnapshots = pgTable(
+  "sync_snapshots",
+  {
+    documentId: varchar("document_id", { length: DOCUMENT_ID_MAX_LENGTH })
+      .primaryKey()
+      .references(() => syncDocuments.documentId, { onDelete: "cascade" }),
+    snapshotVersion: integer("snapshot_version").notNull(),
+    encryptedPayload: pgBinary("encrypted_payload").notNull(),
+    authorPublicKey: pgBinary("author_public_key").notNull(),
+    nonce: pgBinary("nonce").notNull(),
+    signature: pgBinary("signature").notNull(),
+    createdAt: pgTimestamp("created_at").notNull(),
+  },
+  (t) => [check("sync_snapshots_snapshot_version_check", sql`${t.snapshotVersion} >= 0`)],
+);
 
 export type SyncDocumentRow = InferSelectModel<typeof syncDocuments>;
 export type NewSyncDocument = InferInsertModel<typeof syncDocuments>;

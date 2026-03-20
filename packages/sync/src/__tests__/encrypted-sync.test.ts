@@ -109,7 +109,7 @@ describe("verifyEnvelopeSignature", () => {
 describe("encryptSnapshot / decryptSnapshot", () => {
   it("1.8 — roundtrip preserves snapshot bytes", () => {
     const snapshot = testBytes(128);
-    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium, 0);
+    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium);
     const recovered = decryptSnapshot(envelope, keys.encryptionKey, sodium);
     expect(recovered).toEqual(snapshot);
   });
@@ -117,8 +117,8 @@ describe("encryptSnapshot / decryptSnapshot", () => {
   it("1.9 — AD uses explicit big-endian encoding for snapshotVersion", () => {
     const snapshot = testBytes(64);
 
-    const envelope1 = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium, 0);
-    const envelope2 = encryptSnapshot(snapshot, DOCUMENT_ID, 2, keys, sodium, 0);
+    const envelope1 = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium);
+    const envelope2 = encryptSnapshot(snapshot, DOCUMENT_ID, 2, keys, sodium);
 
     // Decrypting with wrong version should fail (AD mismatch)
     const wrongVersion = { ...envelope1, snapshotVersion: 2 };
@@ -131,7 +131,7 @@ describe("encryptSnapshot / decryptSnapshot", () => {
 
   it("1.10 — decryptSnapshot throws SignatureVerificationError when ciphertext is tampered", () => {
     const snapshot = testBytes(64);
-    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium, 0);
+    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium);
     const tampered = { ...envelope, ciphertext: flipFirstByte(envelope.ciphertext) };
     expect(() => decryptSnapshot(tampered, keys.encryptionKey, sodium)).toThrow(
       SignatureVerificationError,
@@ -140,7 +140,7 @@ describe("encryptSnapshot / decryptSnapshot", () => {
 
   it("1.11 — decryptSnapshot throws with wrong encryption key", () => {
     const snapshot = testBytes(64);
-    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium, 0);
+    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium);
     const wrongKey = sodium.aeadKeygen();
     expect(() => decryptSnapshot(envelope, wrongKey, sodium)).toThrow();
   });

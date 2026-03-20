@@ -11,9 +11,9 @@ import {
   createSystemCoreDocument,
 } from "../factories/document-factory.js";
 
-import type { SyncDocType } from "@pluralscape/types";
+import type { SyncDocumentType } from "../document-types.js";
 
-const ALL_DOCUMENT_TYPES: readonly SyncDocType[] = [
+const ALL_DOCUMENT_TYPES: readonly SyncDocumentType[] = [
   "system-core",
   "fronting",
   "chat",
@@ -227,7 +227,7 @@ describe("Document factories", () => {
   });
 
   describe("createDocument (generic factory)", () => {
-    it("produces a valid doc for every SyncDocType", () => {
+    it("produces a valid doc for every SyncDocumentType", () => {
       for (const type of ALL_DOCUMENT_TYPES) {
         const doc = createDocument(type);
         expect(doc, `createDocument("${type}") should return a doc`).toBeDefined();

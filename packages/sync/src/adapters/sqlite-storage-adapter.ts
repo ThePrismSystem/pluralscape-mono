@@ -6,7 +6,6 @@ import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 interface SnapshotRow {
   document_id: string;
   snapshot_version: number;
-  last_seq: number;
   ciphertext: Uint8Array;
   nonce: Uint8Array;
   signature: Uint8Array;
@@ -30,7 +29,6 @@ const CREATE_SNAPSHOTS = `
 CREATE TABLE IF NOT EXISTS sync_local_snapshots (
   document_id TEXT PRIMARY KEY,
   snapshot_version INTEGER NOT NULL,
-  last_seq INTEGER NOT NULL,
   ciphertext BLOB NOT NULL,
   nonce BLOB NOT NULL,
   signature BLOB NOT NULL,
@@ -53,13 +51,10 @@ function toUint8Array(buf: Uint8Array): Uint8Array {
   return new Uint8Array(buf);
 }
 
-function mapCryptoFields(row: {
-  ciphertext: Uint8Array;
-  nonce: Uint8Array;
-  signature: Uint8Array;
-  author_public_key: Uint8Array;
-}) {
+function rowToEnvelope(row: ChangeRow): EncryptedChangeEnvelope {
   return {
+    documentId: row.document_id,
+    seq: row.seq,
     ciphertext: toUint8Array(row.ciphertext),
     nonce: toUint8Array(row.nonce) as AeadNonce,
     signature: toUint8Array(row.signature) as Signature,
@@ -67,20 +62,14 @@ function mapCryptoFields(row: {
   };
 }
 
-function rowToEnvelope(row: ChangeRow): EncryptedChangeEnvelope {
-  return {
-    documentId: row.document_id,
-    seq: row.seq,
-    ...mapCryptoFields(row),
-  };
-}
-
 function rowToSnapshot(row: SnapshotRow): EncryptedSnapshotEnvelope {
   return {
     documentId: row.document_id,
     snapshotVersion: row.snapshot_version,
-    lastSeq: row.last_seq,
-    ...mapCryptoFields(row),
+    ciphertext: toUint8Array(row.ciphertext),
+    nonce: toUint8Array(row.nonce) as AeadNonce,
+    signature: toUint8Array(row.signature) as Signature,
+    authorPublicKey: toUint8Array(row.author_public_key) as SignPublicKey,
   };
 }
 
@@ -143,21 +132,14 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
   }
 
   saveSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
-    this.driver
-      .prepare(
-        `INSERT OR REPLACE INTO sync_local_snapshots
-         (document_id, snapshot_version, last_seq, ciphertext, nonce, signature, author_public_key)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        documentId,
-        snapshot.snapshotVersion,
-        snapshot.lastSeq,
-        snapshot.ciphertext,
-        snapshot.nonce,
-        snapshot.signature,
-        snapshot.authorPublicKey,
-      );
+    this.stmts.saveSnapshot.run(
+      documentId,
+      snapshot.snapshotVersion,
+      snapshot.ciphertext,
+      snapshot.nonce,
+      snapshot.signature,
+      snapshot.authorPublicKey,
+    );
     return Promise.resolve();
   }
 
@@ -181,10 +163,8 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
     return Promise.resolve();
   }
 
-  pruneChangesBeforeSnapshot(documentId: string, lastSeqCoveredBySnapshot: number): Promise<void> {
-    this.driver
-      .prepare("DELETE FROM sync_local_changes WHERE document_id = ? AND seq <= ?")
-      .run(documentId, lastSeqCoveredBySnapshot);
+  pruneChangesBeforeSnapshot(documentId: string, snapshotVersion: number): Promise<void> {
+    this.stmts.pruneChanges.run(documentId, snapshotVersion);
     return Promise.resolve();
   }
 

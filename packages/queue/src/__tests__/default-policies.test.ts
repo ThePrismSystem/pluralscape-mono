@@ -21,6 +21,7 @@ const ALL_JOB_TYPES: readonly JobType[] = [
   "account-purge",
   "bucket-key-rotation",
   "report-generate",
+  "sync-queue-cleanup",
   "audit-log-cleanup",
   "partition-maintenance",
   "sync-compaction",
@@ -62,7 +63,7 @@ describe("DEFAULT_RETRY_POLICIES", () => {
 });
 
 describe("applyDefaultPolicies", () => {
-  it("sets all 14 policies on the queue", () => {
+  it("sets all 15 policies on the queue", () => {
     const queue = new InMemoryJobQueue();
     applyDefaultPolicies(queue);
 

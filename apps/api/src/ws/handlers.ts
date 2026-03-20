@@ -77,21 +77,7 @@ export async function handleSubscribeRequest(
       });
       continue;
     }
-
-    const [changes, snapshot] = await Promise.all([
-      relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
-      relay.getLatestSnapshot(entry.docId),
-    ]);
-    const hasNewerSnapshot =
-      snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
-
-    if (changes.length > 0 || hasNewerSnapshot) {
-      catchup.push({
-        docId: entry.docId,
-        changes,
-        snapshot: hasNewerSnapshot ? snapshot : null,
-      });
-    }
+    permitted.push(entry);
   }
 
   // Phase 2: fetch catchup data in parallel
@@ -233,8 +219,10 @@ export async function handleDocumentLoad(
   message: DocumentLoadRequest,
   relay: SyncRelayService,
 ): Promise<[SnapshotResponse, ChangesResponse]> {
-  const snapshot = await relay.getLatestSnapshot(message.docId);
-  const changes = await relay.getEnvelopesSince(message.docId, 0);
+  const [snapshot, changes] = await Promise.all([
+    relay.getLatestSnapshot(message.docId),
+    relay.getEnvelopesSince(message.docId, 0),
+  ]);
 
   return [
     {

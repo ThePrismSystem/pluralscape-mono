@@ -104,7 +104,6 @@ describe("serializeServerMessage", () => {
         authorPublicKey: pubkey(10),
         documentId: crypto.randomUUID(),
         snapshotVersion: 1,
-        lastSeq: 0,
       },
     };
 
@@ -204,7 +203,6 @@ describe("serializeServerMessage", () => {
         authorPublicKey: pubkey(3),
         documentId: crypto.randomUUID(),
         snapshotVersion: 5,
-        lastSeq: 0,
       },
     };
 
