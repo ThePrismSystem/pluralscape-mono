@@ -108,7 +108,7 @@ describe("createGroup", () => {
     expect(result.sortOrder).toBe(0);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group.created" }),
     );
   });
@@ -286,7 +286,7 @@ describe("updateGroup", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group.updated" }),
     );
   });
@@ -352,7 +352,7 @@ describe("deleteGroup", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group.deleted" }),
     );
   });
@@ -453,7 +453,7 @@ describe("moveGroup", () => {
 
     expect(result.parentGroupId).toBe(parentId);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group.moved" }),
     );
   });
@@ -578,7 +578,7 @@ describe("reorderGroups", () => {
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledTimes(1);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({
         eventType: "group.updated",
         detail: "Reordered 1 group(s)",
@@ -652,7 +652,7 @@ describe("archiveGroup", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group.archived" }),
     );
   });
@@ -683,7 +683,7 @@ describe("restoreGroup", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group.restored" }),
     );
   });
@@ -724,7 +724,7 @@ describe("copyGroup", () => {
 
     expect(result.id).toBe("grp_copy");
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group.created" }),
     );
   });

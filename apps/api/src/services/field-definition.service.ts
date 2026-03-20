@@ -9,9 +9,11 @@ import { and, count, eq, gt, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { FIELD_DEFINITIONS_CACHE_TTL_MS } from "../lib/cache.constants.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
+import { QueryCache } from "../lib/query-cache.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "../routes/fields/fields.constants.js";
 
@@ -27,6 +29,36 @@ import type {
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+// ── Cache ───────────────────────────────────────────────────────────
+
+/**
+ * Cache for field definition list results, keyed by `systemId:cursor:limit:includeArchived`.
+ * Invalidated on any write operation (create, update, archive, restore, delete).
+ */
+const fieldDefCache = new QueryCache<PaginatedResult<FieldDefinitionResult>>(
+  FIELD_DEFINITIONS_CACHE_TTL_MS,
+);
+
+/** Build a cache key for list queries. */
+function listCacheKey(
+  systemId: SystemId,
+  cursor?: PaginationCursor,
+  limit?: number,
+  includeArchived?: boolean,
+): string {
+  return `${systemId}:${cursor ?? ""}:${String(limit ?? "")}:${String(includeArchived ?? false)}`;
+}
+
+/** Invalidate all cached list results (clears entire cache on any write). */
+function invalidateFieldDefCache(): void {
+  fieldDefCache.clear();
+}
+
+/** Exported for test teardown. */
+export function clearFieldDefCache(): void {
+  fieldDefCache.clear();
+}
 
 // ── Constants ───────────────────────────────────────────────────────
 
@@ -131,7 +163,7 @@ export async function createFieldDefinition(
   const fieldId = createId(ID_PREFIXES.fieldDefinition);
   const timestamp = now();
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     // Check quota inside transaction to prevent TOCTOU races
     const [countResult] = await tx
       .select({ count: count() })
@@ -173,6 +205,8 @@ export async function createFieldDefinition(
 
     return toFieldDefinitionResult(row);
   });
+  invalidateFieldDefCache();
+  return result;
 }
 
 // ── LIST ────────────────────────────────────────────────────────────
@@ -190,6 +224,10 @@ export async function listFieldDefinitions(
   assertSystemOwnership(systemId, auth);
 
   const limit = Math.min(opts?.limit ?? DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT);
+  const cacheKey = listCacheKey(systemId, opts?.cursor, limit, opts?.includeArchived);
+  const cached = fieldDefCache.get(cacheKey);
+  if (cached) return cached;
+
   const conditions = [eq(fieldDefinitions.systemId, systemId)];
 
   if (!opts?.includeArchived) {
@@ -207,7 +245,9 @@ export async function listFieldDefinitions(
     .orderBy(fieldDefinitions.id)
     .limit(limit + 1);
 
-  return buildPaginatedResult(rows, limit, toFieldDefinitionResult);
+  const result = buildPaginatedResult(rows, limit, toFieldDefinitionResult);
+  fieldDefCache.set(cacheKey, result);
+  return result;
 }
 
 // ── GET ─────────────────────────────────────────────────────────────
@@ -272,7 +312,7 @@ export async function updateFieldDefinition(
     setClause.sortOrder = parsed.data.sortOrder;
   }
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const updated = await tx
       .update(fieldDefinitions)
       .set(setClause)
@@ -314,6 +354,8 @@ export async function updateFieldDefinition(
 
     return toFieldDefinitionResult(row);
   });
+  invalidateFieldDefCache();
+  return result;
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
@@ -358,6 +400,7 @@ export async function archiveFieldDefinition(
       .set({ archived: true, archivedAt: timestamp, updatedAt: timestamp })
       .where(and(eq(fieldDefinitions.id, fieldId), eq(fieldDefinitions.systemId, systemId)));
   });
+  invalidateFieldDefCache();
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -371,7 +414,7 @@ export async function restoreFieldDefinition(
 ): Promise<FieldDefinitionResult> {
   assertSystemOwnership(systemId, auth);
 
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select()
       .from(fieldDefinitions)
@@ -409,6 +452,8 @@ export async function restoreFieldDefinition(
 
     return toFieldDefinitionResult(row);
   });
+  invalidateFieldDefCache();
+  return result;
 }
 
 // ── DELETE ──────────────────────────────────────────────────────────
@@ -513,4 +558,5 @@ export async function deleteFieldDefinition(
 
     await tx.delete(fieldDefinitions).where(eq(fieldDefinitions.id, fieldId));
   });
+  invalidateFieldDefCache();
 }

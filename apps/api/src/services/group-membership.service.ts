@@ -193,7 +193,12 @@ export async function listGroupMembers(
   }
 
   const rows = await db
-    .select()
+    .select({
+      groupId: groupMemberships.groupId,
+      memberId: groupMemberships.memberId,
+      systemId: groupMemberships.systemId,
+      createdAt: groupMemberships.createdAt,
+    })
     .from(groupMemberships)
     .where(and(...conditions))
     .orderBy(groupMemberships.memberId)
@@ -249,7 +254,12 @@ export async function listMemberGroupMemberships(
   }
 
   const rows = await db
-    .select()
+    .select({
+      groupId: groupMemberships.groupId,
+      memberId: groupMemberships.memberId,
+      systemId: groupMemberships.systemId,
+      createdAt: groupMemberships.createdAt,
+    })
     .from(groupMemberships)
     .where(and(...conditions))
     .orderBy(groupMemberships.groupId)

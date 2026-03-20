@@ -222,7 +222,7 @@ describe("updateSystemProfile", () => {
     expect(result.version).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "system.profile-updated" }),
     );
   });
@@ -320,7 +320,7 @@ describe("archiveSystem", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "system.deleted" }),
     );
   });
@@ -382,7 +382,7 @@ describe("createSystem", () => {
     expect(result.encryptedData).toBeNull();
     expect(result.version).toBe(1);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "system.created" }),
     );
   });

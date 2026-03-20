@@ -152,7 +152,7 @@ describe("nomenclature service", () => {
       expect(result.systemId).toBe(SYSTEM_ID);
       expect(result.version).toBe(1);
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({ eventType: "settings.nomenclature-updated" }),
       );
     });

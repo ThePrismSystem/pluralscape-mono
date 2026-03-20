@@ -70,7 +70,7 @@ describe("addMember", () => {
     expect(result.groupId).toBe(GROUP_ID);
     expect(result.memberId).toBe(MEMBER_ID);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group-membership.added" }),
     );
   });
@@ -126,7 +126,7 @@ describe("removeMember", () => {
     await removeMember(db, SYSTEM_ID, GROUP_ID, MEMBER_ID, AUTH, mockAudit);
 
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "group-membership.removed" }),
     );
   });

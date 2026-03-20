@@ -1,11 +1,11 @@
 ---
 # crypto-og5h
 title: Multi-device key transfer
-status: todo
+status: completed
 type: epic
 priority: high
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-19T11:40:27Z
+updated_at: 2026-03-20T18:17:07Z
 parent: ps-afy4
 blocked_by:
   - crypto-qiwh
@@ -34,3 +34,7 @@ Blocked by api-fh4u (WebSocket server) — uses WebSocket push for transfer appr
 - `docs/planning/encryption-research.md` — Encryption protocol design
 - `docs/adr/006-encryption.md` — Encryption architecture decision
 - `packages/crypto/` — Crypto primitives (crypto-qiwh)
+
+## Summary of Changes
+
+All 7 children completed: initiate/complete transfer endpoints, rate limiting, idle timeout, cleanup job, WebSocket push, and E2E tests. Delivered in feat/crypto-device-transfer PR.

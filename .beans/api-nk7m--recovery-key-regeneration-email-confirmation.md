@@ -5,8 +5,8 @@ status: todo
 type: task
 priority: normal
 created_at: 2026-03-18T15:57:46Z
-updated_at: 2026-03-19T11:39:42Z
-parent: api-765x
+updated_at: 2026-03-20T18:37:23Z
+parent: ps-mmpz
 ---
 
 M5: Send email confirmation when a recovery key is regenerated to alert account owner.
@@ -17,3 +17,7 @@ M5: Send email confirmation when a recovery key is regenerated to alert account 
 - Email contains: timestamp, device/session info (if available), instructions if not initiated by owner
 - Email is non-blocking (queued via job system, regeneration doesn't wait for delivery)
 - Integration test: regenerate recovery key → verify email job enqueued with correct recipient
+
+## Deferred
+
+Moved to M4 (ps-mmpz) — no email infrastructure exists yet.

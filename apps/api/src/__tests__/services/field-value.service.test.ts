@@ -105,7 +105,7 @@ describe("setFieldValue", () => {
     expect(result.version).toBe(1);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-value.set" }),
     );
   });
@@ -271,7 +271,7 @@ describe("updateFieldValue", () => {
     expect(result.version).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-value.updated" }),
     );
   });
@@ -362,7 +362,7 @@ describe("deleteFieldValue", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-value.deleted" }),
     );
   });

@@ -36,10 +36,21 @@ export const EMAIL_SALT_BYTES = 16;
 /** BLAKE2b output length for email hashing (256 bits = 32 bytes). */
 export const EMAIL_HASH_LENGTH = 32;
 
-/** Default page size for session listing. */
+/**
+ * Default page size for session listing.
+ *
+ * Users rarely have more than a handful of active sessions. A default of 25
+ * ensures the session management UI loads all sessions in a single request.
+ */
 export const DEFAULT_SESSION_LIMIT = 25;
 
-/** Maximum page size for session listing. */
+/**
+ * Maximum page size for session listing.
+ *
+ * Capped at 100 to align with the global pagination maximum. Session
+ * listing includes IP and user-agent metadata, so large pages increase
+ * response payload significantly.
+ */
 export const MAX_SESSION_LIMIT = 100;
 
 /** Number of groups in a fake recovery key. */

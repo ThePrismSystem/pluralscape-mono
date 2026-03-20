@@ -175,4 +175,58 @@ describe("GET /systems/:systemId/fields", () => {
 
     expect(res.status).toBe(500);
   });
+
+  // ── Sparse fieldset tests ──────────────────────────────────────
+
+  it("returns only requested fields when ?fields= is valid", async () => {
+    const page: PaginatedResult<FieldDefinitionResult> = {
+      items: [
+        {
+          id: FLD_ID as never,
+          systemId: SYS_ID as never,
+          fieldType: "text",
+          required: false,
+          sortOrder: 0,
+          encryptedData: "dGVzdA==",
+          version: 1,
+          createdAt: 1000 as never,
+          updatedAt: 1000 as never,
+          archived: false,
+          archivedAt: null,
+        },
+      ],
+      nextCursor: null,
+      hasMore: false,
+      totalCount: null,
+    };
+    vi.mocked(listFieldDefinitions).mockResolvedValueOnce(page);
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/fields?fields=id,version`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as PaginatedResult<Partial<FieldDefinitionResult>>;
+    expect(body.items[0]).toEqual({ id: FLD_ID, version: 1 });
+    expect(body.items[0]).not.toHaveProperty("fieldType");
+  });
+
+  it("returns 400 for invalid field name in ?fields=", async () => {
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/fields?fields=id,badField`);
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns full response when ?fields= is empty", async () => {
+    vi.mocked(listFieldDefinitions).mockResolvedValueOnce(EMPTY_PAGE);
+
+    const app = createApp();
+    const res = await app.request(`/systems/${SYS_ID}/fields?fields=`);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as PaginatedResult<FieldDefinitionResult>;
+    expect(body.items).toEqual([]);
+  });
 });

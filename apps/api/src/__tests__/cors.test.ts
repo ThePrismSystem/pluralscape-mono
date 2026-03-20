@@ -118,4 +118,48 @@ describe("corsMiddleware", () => {
     const vary = res.headers.get("vary");
     expect(vary).toContain("Origin");
   });
+
+  // ── Wildcard pattern support ─────────────────────────────────────
+
+  it("matches wildcard origin pattern", async () => {
+    mockEnv.CORS_ORIGIN = "*.example.com";
+    const app = createApp();
+    const res = await app.request("/test", {
+      headers: { origin: "https://app.example.com" },
+    });
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://app.example.com");
+  });
+
+  it("rejects bare domain against wildcard", async () => {
+    mockEnv.CORS_ORIGIN = "*.example.com";
+    const app = createApp();
+    const res = await app.request("/test", {
+      headers: { origin: "https://example.com" },
+    });
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("rejects suffix injection against wildcard", async () => {
+    mockEnv.CORS_ORIGIN = "*.example.com";
+    const app = createApp();
+    const res = await app.request("/test", {
+      headers: { origin: "https://evilexample.com" },
+    });
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("supports mixed exact and wildcard origins", async () => {
+    mockEnv.CORS_ORIGIN = "https://exact.com,*.example.com";
+    const app = createApp();
+
+    const resExact = await app.request("/test", {
+      headers: { origin: "https://exact.com" },
+    });
+    expect(resExact.headers.get("access-control-allow-origin")).toBe("https://exact.com");
+
+    const resWild = await app.request("/test", {
+      headers: { origin: "https://sub.example.com" },
+    });
+    expect(resWild.headers.get("access-control-allow-origin")).toBe("https://sub.example.com");
+  });
 });

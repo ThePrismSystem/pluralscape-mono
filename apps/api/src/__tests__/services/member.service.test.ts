@@ -103,7 +103,7 @@ describe("createMember", () => {
     expect(result.version).toBe(1);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member.created" }),
     );
   });
@@ -276,7 +276,7 @@ describe("updateMember", () => {
     expect(result.version).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member.updated" }),
     );
   });
@@ -368,7 +368,7 @@ describe("duplicateMember", () => {
     expect(result.id).toBe("mem_new-member");
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member.duplicated" }),
     );
   });
@@ -499,7 +499,7 @@ describe("duplicateMember", () => {
     expect(result.id).toBe("mem_new-member");
     expect(chain.insert).toHaveBeenCalledTimes(2); // member + memberships
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({
         eventType: "member.duplicated",
         detail: expect.stringContaining("2 membership(s) copied"),
@@ -562,7 +562,7 @@ describe("archiveMember", () => {
     // Field values must NOT be deleted during archival (audit S-6 fix)
     expect(chain.delete).not.toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({
         eventType: "member.archived",
         detail: expect.stringContaining("field values preserved"),
@@ -599,7 +599,7 @@ describe("restoreMember", () => {
     expect(result.archived).toBe(false);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member.restored" }),
     );
   });
@@ -635,7 +635,7 @@ describe("deleteMember", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member.deleted" }),
     );
     expect(chain.delete).toHaveBeenCalled();

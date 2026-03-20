@@ -427,7 +427,7 @@ describe("auth service", () => {
 
       await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({
           eventType: "auth.login-failed",
           actor: { kind: "account", id: "acct_00000000-0000-0000-0000-000000000000" },
@@ -538,7 +538,7 @@ describe("auth service", () => {
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({ eventType: "auth.login-failed" }),
       );
     });

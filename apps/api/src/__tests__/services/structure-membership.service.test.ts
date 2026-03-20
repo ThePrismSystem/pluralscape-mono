@@ -140,7 +140,7 @@ describe("addSubsystemMembership", () => {
     expect(result.encryptedData).toBeDefined();
     expect(result.createdAt).toBe(1000);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "subsystem-membership.added" }),
     );
   });
@@ -221,7 +221,7 @@ describe("removeSubsystemMembership", () => {
     await removeSubsystemMembership(db, SYSTEM_ID, MEMBERSHIP_ID, AUTH, mockAudit);
 
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "subsystem-membership.removed" }),
     );
   });
@@ -294,7 +294,7 @@ describe("addSideSystemMembership", () => {
     expect(result.entityId).toBe(SIDE_SYSTEM_ID);
     expect(result.systemId).toBe(SYSTEM_ID);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "side-system-membership.added" }),
     );
   });
@@ -326,7 +326,7 @@ describe("removeSideSystemMembership", () => {
     await removeSideSystemMembership(db, SYSTEM_ID, "ssysm_test", AUTH, mockAudit);
 
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "side-system-membership.removed" }),
     );
   });
@@ -390,7 +390,7 @@ describe("addLayerMembership", () => {
     expect(result.entityId).toBe(LAYER_ID);
     expect(result.systemId).toBe(SYSTEM_ID);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "layer-membership.added" }),
     );
   });
@@ -422,7 +422,7 @@ describe("removeLayerMembership", () => {
     await removeLayerMembership(db, SYSTEM_ID, "lyrm_test", AUTH, mockAudit);
 
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "layer-membership.removed" }),
     );
   });

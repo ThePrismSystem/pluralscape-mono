@@ -112,7 +112,7 @@ describe("createRegion", () => {
     expect(result.parentRegionId).toBeNull();
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-region.created" }),
     );
   });
@@ -133,7 +133,7 @@ describe("createRegion", () => {
 
     expect(result.parentRegionId).toBe(parentId);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-region.created" }),
     );
   });
@@ -272,7 +272,7 @@ describe("updateRegion", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-region.updated" }),
     );
   });
@@ -332,7 +332,7 @@ describe("archiveRegion", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-region.archived" }),
     );
   });
@@ -364,7 +364,7 @@ describe("restoreRegion", () => {
     expect(result.archived).toBe(false);
     expect(result.archivedAt).toBeNull();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-region.restored" }),
     );
   });
@@ -386,7 +386,7 @@ describe("restoreRegion", () => {
 
     expect(result.parentRegionId).toBeNull();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-region.restored" }),
     );
   });
@@ -418,7 +418,7 @@ describe("deleteRegion", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-region.deleted" }),
     );
   });

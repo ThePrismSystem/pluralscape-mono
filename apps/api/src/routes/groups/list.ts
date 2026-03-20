@@ -4,11 +4,26 @@ import { Hono } from "hono";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parsePaginationLimit } from "../../lib/pagination.js";
+import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { listGroups } from "../../services/group.service.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
+import type { GroupResult } from "../../services/group.service.js";
+
+const GROUP_FIELDS = [
+  "id",
+  "systemId",
+  "parentGroupId",
+  "sortOrder",
+  "encryptedData",
+  "version",
+  "createdAt",
+  "updatedAt",
+  "archived",
+  "archivedAt",
+] as const satisfies readonly (keyof GroupResult)[];
 
 export const listRoute = new Hono<AuthEnv>();
 
@@ -18,6 +33,7 @@ listRoute.get("/", async (c) => {
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
   const cursorParam = c.req.query("cursor");
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
+  const fields = parseSparseFields(c.req.query("fields"), GROUP_FIELDS);
 
   const db = await getDb();
   const result = await listGroups(
@@ -27,5 +43,11 @@ listRoute.get("/", async (c) => {
     cursorParam ? toCursor(cursorParam) : undefined,
     limit,
   );
-  return c.json(result);
+
+  if (!fields) return c.json(result);
+
+  return c.json({
+    ...result,
+    items: result.items.map((item) => filterFields(item, fields)),
+  });
 });

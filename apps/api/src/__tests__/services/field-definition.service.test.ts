@@ -34,6 +34,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const {
+  clearFieldDefCache,
   createFieldDefinition,
   listFieldDefinitions,
   getFieldDefinition,
@@ -83,6 +84,7 @@ describe("createFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("creates a field definition successfully", async () => {
@@ -105,7 +107,7 @@ describe("createFieldDefinition", () => {
     expect(result.version).toBe(1);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.created" }),
     );
   });
@@ -168,6 +170,7 @@ describe("listFieldDefinitions", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("returns empty page when no field definitions exist", async () => {
@@ -219,6 +222,7 @@ describe("getFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("returns field definition when found", async () => {
@@ -245,6 +249,7 @@ describe("updateFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("updates field definition successfully", async () => {
@@ -265,7 +270,7 @@ describe("updateFieldDefinition", () => {
     expect(result.version).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.updated" }),
     );
   });
@@ -342,6 +347,7 @@ describe("archiveFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("archives a field definition successfully", async () => {
@@ -353,7 +359,7 @@ describe("archiveFieldDefinition", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.archived" }),
     );
   });
@@ -377,6 +383,7 @@ describe("restoreFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("restores an archived field definition successfully", async () => {
@@ -393,7 +400,7 @@ describe("restoreFieldDefinition", () => {
     expect(result.archived).toBe(false);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.restored" }),
     );
   });
@@ -417,6 +424,7 @@ describe("deleteFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("deletes a field definition with no dependents", async () => {
@@ -433,7 +441,7 @@ describe("deleteFieldDefinition", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.deleted" }),
     );
   });
@@ -504,7 +512,7 @@ describe("deleteFieldDefinition", () => {
     expect(chain.transaction).toHaveBeenCalled();
     expect(chain.delete).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({
         eventType: "field-definition.deleted",
         detail: expect.stringContaining("force"),
@@ -524,7 +532,7 @@ describe("deleteFieldDefinition", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.deleted" }),
     );
   });
@@ -539,5 +547,42 @@ describe("deleteFieldDefinition", () => {
     await expect(deleteFieldDefinition(db, SYSTEM_ID, FIELD_ID, AUTH, mockAudit)).rejects.toThrow(
       expect.objectContaining({ status: 403, code: "FORBIDDEN" }),
     );
+  });
+});
+
+describe("field definition cache lifecycle", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    mockAudit.mockClear();
+    clearFieldDefCache();
+  });
+
+  it("caches list results and invalidates on write", async () => {
+    const { db, chain } = mockDb();
+    chain.limit.mockResolvedValue([makeFieldDefRow()]);
+
+    // First call — cache miss, hits DB
+    await listFieldDefinitions(db, SYSTEM_ID, AUTH);
+    expect(chain.limit).toHaveBeenCalledTimes(1);
+
+    // Second call — cache hit, no additional DB call
+    await listFieldDefinitions(db, SYSTEM_ID, AUTH);
+    expect(chain.limit).toHaveBeenCalledTimes(1);
+
+    // Write operation — invalidates cache
+    chain.where.mockResolvedValueOnce([{ count: 0 }]);
+    chain.returning.mockResolvedValueOnce([makeFieldDefRow()]);
+    await createFieldDefinition(
+      db,
+      SYSTEM_ID,
+      { fieldType: "text", encryptedData: VALID_BLOB_BASE64 },
+      AUTH,
+      mockAudit,
+    );
+
+    // Third call — cache miss after invalidation, hits DB again
+    chain.limit.mockResolvedValueOnce([makeFieldDefRow()]);
+    await listFieldDefinitions(db, SYSTEM_ID, AUTH);
+    expect(chain.limit).toHaveBeenCalledTimes(2);
   });
 });

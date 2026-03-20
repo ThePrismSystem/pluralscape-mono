@@ -119,7 +119,7 @@ describe("createRelationship", () => {
     expect(result.version).toBe(1);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "relationship.created" }),
     );
   });
@@ -370,7 +370,7 @@ describe("updateRelationship", () => {
     expect(result.version).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "relationship.updated" }),
     );
   });
@@ -454,7 +454,7 @@ describe("deleteRelationship", () => {
     expect(chain.transaction).toHaveBeenCalled();
     expect(chain.delete).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "relationship.deleted" }),
     );
   });
@@ -493,7 +493,7 @@ describe("archiveRelationship", () => {
     expect(chain.transaction).toHaveBeenCalled();
     expect(chain.update).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "relationship.archived" }),
     );
   });
@@ -537,7 +537,7 @@ describe("restoreRelationship", () => {
     expect(result.archivedAt).toBeNull();
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "relationship.restored" }),
     );
   });

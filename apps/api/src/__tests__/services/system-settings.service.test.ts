@@ -49,7 +49,7 @@ vi.mock("drizzle-orm", () => ({
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { UpdateSystemSettingsBodySchema } = await import("@pluralscape/validation");
-const { getSystemSettings, updateSystemSettings } =
+const { clearSettingsCache, getSystemSettings, updateSystemSettings } =
   await import("../../services/system-settings.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -96,6 +96,7 @@ describe("system-settings service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     (mockAudit as ReturnType<typeof vi.fn>).mockClear();
+    clearSettingsCache();
   });
 
   it("throws 404 for system ownership failure", async () => {
@@ -154,7 +155,7 @@ describe("system-settings service", () => {
       expect(result.id).toBe("ss_abc");
       expect(result.version).toBe(1);
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({ eventType: "settings.changed" }),
       );
     });
@@ -213,6 +214,41 @@ describe("system-settings service", () => {
       ).rejects.toMatchObject({
         code: "BLOB_TOO_LARGE",
       });
+    });
+  });
+
+  // ── Cache lifecycle ──────────────────────────────────────────────
+
+  describe("settings cache lifecycle", () => {
+    const VALID_PAYLOAD = {
+      encryptedData: Buffer.from(new Uint8Array(32)).toString("base64"),
+      version: 1,
+    };
+
+    beforeEach(() => {
+      mockSafeParseSuccess(VALID_PAYLOAD);
+    });
+
+    it("caches get results and invalidates on update", async () => {
+      const { db, chain } = mockDb();
+      chain.limit.mockResolvedValue([SETTINGS_ROW]);
+
+      // First call — cache miss, hits DB
+      await getSystemSettings(db, SYSTEM_ID, AUTH);
+      expect(chain.limit).toHaveBeenCalledTimes(1);
+
+      // Second call — cache hit, no additional DB call
+      await getSystemSettings(db, SYSTEM_ID, AUTH);
+      expect(chain.limit).toHaveBeenCalledTimes(1);
+
+      // Write operation — invalidates cache
+      chain.returning.mockResolvedValueOnce([SETTINGS_ROW]);
+      await updateSystemSettings(db, SYSTEM_ID, VALID_PAYLOAD, AUTH, mockAudit);
+
+      // Third call — cache miss after invalidation, hits DB again
+      chain.limit.mockResolvedValueOnce([SETTINGS_ROW]);
+      await getSystemSettings(db, SYSTEM_ID, AUTH);
+      expect(chain.limit).toHaveBeenCalledTimes(2);
     });
   });
 });

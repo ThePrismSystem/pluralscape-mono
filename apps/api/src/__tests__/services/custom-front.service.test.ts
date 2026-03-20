@@ -100,7 +100,7 @@ describe("createCustomFront", () => {
     expect(result.id).toBe(CF_ID);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "custom-front.created" }),
     );
   });
@@ -231,7 +231,7 @@ describe("updateCustomFront", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "custom-front.updated" }),
     );
   });
@@ -327,7 +327,7 @@ describe("archiveCustomFront", () => {
     await archiveCustomFront(db, SYSTEM_ID, CF_ID, AUTH, mockAudit);
 
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "custom-front.archived" }),
     );
   });
@@ -356,7 +356,7 @@ describe("restoreCustomFront", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "custom-front.restored" }),
     );
   });

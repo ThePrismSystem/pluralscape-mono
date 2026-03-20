@@ -125,7 +125,7 @@ describe("upsertCanvas", () => {
     expect(result.version).toBe(1);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-canvas.created" }),
     );
   });
@@ -146,7 +146,7 @@ describe("upsertCanvas", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "innerworld-canvas.updated" }),
     );
   });
