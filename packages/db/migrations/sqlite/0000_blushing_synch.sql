@@ -304,9 +304,11 @@ CREATE TABLE `device_transfer_requests` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
 	`source_session_id` text NOT NULL,
-	`target_session_id` text NOT NULL,
+	`target_session_id` text,
 	`status` text DEFAULT 'pending' NOT NULL,
 	`encrypted_key_material` blob,
+	`code_salt` blob NOT NULL,
+	`code_attempts` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL,
 	`expires_at` integer NOT NULL,
 	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE cascade,
@@ -386,6 +388,7 @@ CREATE TABLE `field_values` (
 );
 --> statement-breakpoint
 CREATE INDEX `field_values_definition_system_idx` ON `field_values` (`field_definition_id`,`system_id`);--> statement-breakpoint
+CREATE INDEX `field_values_system_member_idx` ON `field_values` (`system_id`,`member_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `field_values_definition_member_uniq` ON `field_values` (`field_definition_id`,`member_id`) WHERE "field_values"."member_id" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX `field_values_definition_system_uniq` ON `field_values` (`field_definition_id`,`system_id`) WHERE "field_values"."member_id" IS NULL;--> statement-breakpoint
 CREATE TABLE `friend_bucket_assignments` (
@@ -531,6 +534,7 @@ CREATE TABLE `group_memberships` (
 --> statement-breakpoint
 CREATE INDEX `group_memberships_member_id_idx` ON `group_memberships` (`member_id`);--> statement-breakpoint
 CREATE INDEX `group_memberships_system_id_idx` ON `group_memberships` (`system_id`);--> statement-breakpoint
+CREATE INDEX `group_memberships_system_group_idx` ON `group_memberships` (`system_id`,`group_id`);--> statement-breakpoint
 CREATE TABLE `groups` (
 	`id` text PRIMARY KEY NOT NULL,
 	`system_id` text NOT NULL,
@@ -643,7 +647,7 @@ CREATE TABLE `jobs` (
 	`priority` integer DEFAULT 0 NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "jobs_status_check" CHECK("jobs"."status" IS NULL OR "jobs"."status" IN ('pending', 'running', 'completed', 'cancelled', 'dead-letter')),
-	CONSTRAINT "jobs_type_check" CHECK("jobs"."type" IS NULL OR "jobs"."type" IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate', 'sync-queue-cleanup', 'audit-log-cleanup', 'partition-maintenance')),
+	CONSTRAINT "jobs_type_check" CHECK("jobs"."type" IS NULL OR "jobs"."type" IN ('sync-push', 'sync-pull', 'blob-upload', 'blob-cleanup', 'export-generate', 'import-process', 'webhook-deliver', 'notification-send', 'analytics-compute', 'account-purge', 'bucket-key-rotation', 'report-generate', 'audit-log-cleanup', 'partition-maintenance', 'device-transfer-cleanup')),
 	CONSTRAINT "jobs_attempts_max_check" CHECK("jobs"."attempts" <= "jobs"."max_attempts"),
 	CONSTRAINT "jobs_timeout_ms_check" CHECK("jobs"."timeout_ms" > 0)
 );
@@ -1102,57 +1106,71 @@ CREATE TABLE `switches` (
 --> statement-breakpoint
 CREATE INDEX `switches_system_timestamp_idx` ON `switches` (`system_id`,`timestamp`);--> statement-breakpoint
 CREATE INDEX `switches_system_archived_idx` ON `switches` (`system_id`,`archived`);--> statement-breakpoint
+CREATE TABLE `sync_changes` (
+	`id` text PRIMARY KEY NOT NULL,
+	`document_id` text NOT NULL,
+	`seq` integer NOT NULL,
+	`encrypted_payload` blob NOT NULL,
+	`author_public_key` blob NOT NULL,
+	`nonce` blob NOT NULL,
+	`signature` blob NOT NULL,
+	`created_at` integer NOT NULL,
+	FOREIGN KEY (`document_id`) REFERENCES `sync_documents`(`document_id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `sync_changes_document_id_seq_idx` ON `sync_changes` (`document_id`,`seq`);--> statement-breakpoint
+CREATE UNIQUE INDEX `sync_changes_dedup_idx` ON `sync_changes` (`document_id`,`author_public_key`,`nonce`);--> statement-breakpoint
 CREATE TABLE `sync_conflicts` (
 	`id` text PRIMARY KEY NOT NULL,
-	`system_id` text NOT NULL,
+	`document_id` text NOT NULL,
 	`entity_type` text NOT NULL,
 	`entity_id` text NOT NULL,
-	`local_version` integer NOT NULL,
-	`remote_version` integer NOT NULL,
-	`resolution` text,
+	`field_name` text,
+	`resolution` text NOT NULL,
+	`detected_at` integer NOT NULL,
+	`summary` text NOT NULL,
 	`created_at` integer NOT NULL,
-	`resolved_at` integer,
-	`details` text,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "sync_conflicts_resolution_check" CHECK("sync_conflicts"."resolution" IS NULL OR "sync_conflicts"."resolution" IN ('local', 'remote', 'merged')),
-	CONSTRAINT "sync_conflicts_resolution_resolved_at_check" CHECK(("sync_conflicts"."resolution" IS NULL) = ("sync_conflicts"."resolved_at" IS NULL))
+	FOREIGN KEY (`document_id`) REFERENCES `sync_documents`(`document_id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `sync_conflicts_system_id_entity_type_entity_id_idx` ON `sync_conflicts` (`system_id`,`entity_type`,`entity_id`);--> statement-breakpoint
+CREATE INDEX `sync_conflicts_document_id_idx` ON `sync_conflicts` (`document_id`);--> statement-breakpoint
+CREATE INDEX `sync_conflicts_detected_at_idx` ON `sync_conflicts` (`detected_at`);--> statement-breakpoint
 CREATE TABLE `sync_documents` (
-	`id` text PRIMARY KEY NOT NULL,
+	`document_id` text PRIMARY KEY NOT NULL,
 	`system_id` text NOT NULL,
-	`entity_type` text NOT NULL,
-	`entity_id` text NOT NULL,
-	`automerge_heads` blob,
-	`version` integer DEFAULT 1 NOT NULL,
+	`doc_type` text NOT NULL,
+	`size_bytes` integer DEFAULT 0 NOT NULL,
+	`snapshot_version` integer DEFAULT 0 NOT NULL,
+	`last_seq` integer DEFAULT 0 NOT NULL,
+	`archived` integer DEFAULT false NOT NULL,
+	`time_period` text,
+	`key_type` text DEFAULT 'derived' NOT NULL,
+	`bucket_id` text,
+	`channel_id` text,
 	`created_at` integer NOT NULL,
-	`last_synced_at` integer,
+	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "sync_documents_version_check" CHECK("sync_documents"."version" >= 1),
-	CONSTRAINT "sync_documents_automerge_heads_size_check" CHECK("sync_documents"."automerge_heads" IS NULL OR length("sync_documents"."automerge_heads") <= 16384)
+	CONSTRAINT "sync_documents_doc_type_check" CHECK("sync_documents"."doc_type" IS NULL OR "sync_documents"."doc_type" IN ('system-core', 'fronting', 'chat', 'journal', 'privacy-config', 'bucket')),
+	CONSTRAINT "sync_documents_key_type_check" CHECK("sync_documents"."key_type" IS NULL OR "sync_documents"."key_type" IN ('derived', 'bucket')),
+	CONSTRAINT "sync_documents_size_bytes_check" CHECK("sync_documents"."size_bytes" >= 0),
+	CONSTRAINT "sync_documents_snapshot_version_check" CHECK("sync_documents"."snapshot_version" >= 0),
+	CONSTRAINT "sync_documents_last_seq_check" CHECK("sync_documents"."last_seq" >= 0)
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `sync_documents_system_id_entity_type_entity_id_idx` ON `sync_documents` (`system_id`,`entity_type`,`entity_id`);--> statement-breakpoint
-CREATE TABLE `sync_queue` (
-	`id` text PRIMARY KEY NOT NULL,
-	`seq` integer NOT NULL,
-	`system_id` text NOT NULL,
-	`entity_type` text NOT NULL,
-	`entity_id` text NOT NULL,
-	`operation` text NOT NULL,
-	`encrypted_change_data` blob NOT NULL,
+CREATE INDEX `sync_documents_system_id_idx` ON `sync_documents` (`system_id`);--> statement-breakpoint
+CREATE INDEX `sync_documents_system_id_doc_type_idx` ON `sync_documents` (`system_id`,`doc_type`);--> statement-breakpoint
+CREATE TABLE `sync_snapshots` (
+	`document_id` text PRIMARY KEY NOT NULL,
+	`snapshot_version` integer NOT NULL,
+	`encrypted_payload` blob NOT NULL,
+	`author_public_key` blob NOT NULL,
+	`nonce` blob NOT NULL,
+	`signature` blob NOT NULL,
 	`created_at` integer NOT NULL,
-	`synced_at` integer,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "sync_queue_operation_check" CHECK("sync_queue"."operation" IS NULL OR "sync_queue"."operation" IN ('create', 'update', 'delete'))
+	FOREIGN KEY (`document_id`) REFERENCES `sync_documents`(`document_id`) ON UPDATE no action ON DELETE cascade,
+	CONSTRAINT "sync_snapshots_snapshot_version_check" CHECK("sync_snapshots"."snapshot_version" >= 0)
 );
 --> statement-breakpoint
-CREATE INDEX `sync_queue_system_id_synced_at_idx` ON `sync_queue` (`system_id`,`synced_at`);--> statement-breakpoint
-CREATE INDEX `sync_queue_system_id_entity_type_entity_id_idx` ON `sync_queue` (`system_id`,`entity_type`,`entity_id`);--> statement-breakpoint
-CREATE INDEX `sync_queue_unsynced_idx` ON `sync_queue` (`system_id`,`seq`) WHERE "sync_queue"."synced_at" IS NULL;--> statement-breakpoint
-CREATE INDEX `sync_queue_cleanup_idx` ON `sync_queue` (`synced_at`) WHERE "sync_queue"."synced_at" IS NOT NULL;--> statement-breakpoint
-CREATE UNIQUE INDEX `sync_queue_system_id_seq_idx` ON `sync_queue` (`system_id`,`seq`);--> statement-breakpoint
 CREATE TABLE `system_settings` (
 	`id` text PRIMARY KEY NOT NULL,
 	`system_id` text NOT NULL,

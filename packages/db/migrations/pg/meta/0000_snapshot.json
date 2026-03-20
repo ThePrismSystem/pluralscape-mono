@@ -1,5 +1,5 @@
 {
-  "id": "194ead27-21c5-48fe-95d3-613c06bb1372",
+  "id": "c77a03a0-9836-4d9c-84d2-634f56e9bfd6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2348,7 +2348,7 @@
           "name": "target_session_id",
           "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "status": {
           "name": "status",
@@ -2362,6 +2362,19 @@
           "type": "bytea",
           "primaryKey": false,
           "notNull": false
+        },
+        "code_salt": {
+          "name": "code_salt",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code_attempts": {
+          "name": "code_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -2899,6 +2912,27 @@
             },
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "field_values_system_member_idx": {
+          "name": "field_values_system_member_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "member_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4113,6 +4147,27 @@
           "columns": [
             {
               "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "group_memberships_system_group_idx": {
+          "name": "group_memberships_system_group_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "group_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7126,7 +7181,7 @@
           "name": "sessions_ttl_duration_ms_idx",
           "columns": [
             {
-              "expression": "(EXTRACT(EPOCH FROM (\"expires_at\" - \"created_at\")) * 1000)",
+              "expression": "(CAST(EXTRACT(EPOCH FROM (\"expires_at\" - \"created_at\")) * 1000 AS bigint))",
               "asc": true,
               "isExpression": true,
               "nulls": "last"
@@ -8140,6 +8195,126 @@
       },
       "isRLSEnabled": false
     },
+    "public.sync_changes": {
+      "name": "sync_changes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(50)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seq": {
+          "name": "seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "encrypted_payload": {
+          "name": "encrypted_payload",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_public_key": {
+          "name": "author_public_key",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nonce": {
+          "name": "nonce",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "signature": {
+          "name": "signature",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "sync_changes_document_id_seq_idx": {
+          "name": "sync_changes_document_id_seq_idx",
+          "columns": [
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sync_changes_dedup_idx": {
+          "name": "sync_changes_dedup_idx",
+          "columns": [
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "author_public_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "nonce",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sync_changes_document_id_sync_documents_document_id_fk": {
+          "name": "sync_changes_document_id_sync_documents_document_id_fk",
+          "tableFrom": "sync_changes",
+          "tableTo": "sync_documents",
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["document_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.sync_conflicts": {
       "name": "sync_conflicts",
       "schema": "",
@@ -8150,9 +8325,9 @@
           "primaryKey": true,
           "notNull": true
         },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
+        "document_id": {
+          "name": "document_id",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
@@ -8168,61 +8343,58 @@
           "primaryKey": false,
           "notNull": true
         },
-        "local_version": {
-          "name": "local_version",
-          "type": "integer",
+        "field_name": {
+          "name": "field_name",
+          "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": true
-        },
-        "remote_version": {
-          "name": "remote_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "resolution": {
           "name": "resolution",
           "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
+        },
+        "detected_at": {
+          "name": "detected_at",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "varchar(1024)",
+          "primaryKey": false,
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
-        },
-        "resolved_at": {
-          "name": "resolved_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "details": {
-          "name": "details",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
-        "sync_conflicts_system_id_entity_type_entity_id_idx": {
-          "name": "sync_conflicts_system_id_entity_type_entity_id_idx",
+        "sync_conflicts_document_id_idx": {
+          "name": "sync_conflicts_document_id_idx",
           "columns": [
             {
-              "expression": "system_id",
+              "expression": "document_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sync_conflicts_detected_at_idx": {
+          "name": "sync_conflicts_detected_at_idx",
+          "columns": [
             {
-              "expression": "entity_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "entity_id",
+              "expression": "detected_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -8235,12 +8407,12 @@
         }
       },
       "foreignKeys": {
-        "sync_conflicts_system_id_systems_id_fk": {
-          "name": "sync_conflicts_system_id_systems_id_fk",
+        "sync_conflicts_document_id_sync_documents_document_id_fk": {
+          "name": "sync_conflicts_document_id_sync_documents_document_id_fk",
           "tableFrom": "sync_conflicts",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
+          "tableTo": "sync_documents",
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["document_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8248,25 +8420,16 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "sync_conflicts_resolution_check": {
-          "name": "sync_conflicts_resolution_check",
-          "value": "\"sync_conflicts\".\"resolution\" IS NULL OR \"sync_conflicts\".\"resolution\" IN ('local', 'remote', 'merged')"
-        },
-        "sync_conflicts_resolution_resolved_at_check": {
-          "name": "sync_conflicts_resolution_resolved_at_check",
-          "value": "(\"sync_conflicts\".\"resolution\" IS NULL) = (\"sync_conflicts\".\"resolved_at\" IS NULL)"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.sync_documents": {
       "name": "sync_documents",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
+        "document_id": {
+          "name": "document_id",
+          "type": "varchar(255)",
           "primaryKey": true,
           "notNull": true
         },
@@ -8276,30 +8439,64 @@
           "primaryKey": false,
           "notNull": true
         },
-        "entity_type": {
-          "name": "entity_type",
+        "doc_type": {
+          "name": "doc_type",
           "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
-        "entity_id": {
-          "name": "entity_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "automerge_heads": {
-          "name": "automerge_heads",
-          "type": "bytea",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "version": {
-          "name": "version",
+        "size_bytes": {
+          "name": "size_bytes",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "default": 1
+          "default": 0
+        },
+        "snapshot_version": {
+          "name": "snapshot_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_seq": {
+          "name": "last_seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "time_period": {
+          "name": "time_period",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "key_type": {
+          "name": "key_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'derived'"
+        },
+        "bucket_id": {
+          "name": "bucket_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -8307,16 +8504,31 @@
           "primaryKey": false,
           "notNull": true
         },
-        "last_synced_at": {
-          "name": "last_synced_at",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamptz",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         }
       },
       "indexes": {
-        "sync_documents_system_id_entity_type_entity_id_idx": {
-          "name": "sync_documents_system_id_entity_type_entity_id_idx",
+        "sync_documents_system_id_idx": {
+          "name": "sync_documents_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sync_documents_system_id_doc_type_idx": {
+          "name": "sync_documents_system_id_doc_type_idx",
           "columns": [
             {
               "expression": "system_id",
@@ -8325,19 +8537,13 @@
               "nulls": "last"
             },
             {
-              "expression": "entity_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "entity_id",
+              "expression": "doc_type",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -8358,59 +8564,65 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "sync_documents_version_check": {
-          "name": "sync_documents_version_check",
-          "value": "\"sync_documents\".\"version\" >= 1"
+        "sync_documents_doc_type_check": {
+          "name": "sync_documents_doc_type_check",
+          "value": "\"sync_documents\".\"doc_type\" IS NULL OR \"sync_documents\".\"doc_type\" IN ('system-core', 'fronting', 'chat', 'journal', 'privacy-config', 'bucket')"
         },
-        "sync_documents_automerge_heads_size_check": {
-          "name": "sync_documents_automerge_heads_size_check",
-          "value": "\"sync_documents\".\"automerge_heads\" IS NULL OR octet_length(\"sync_documents\".\"automerge_heads\") <= 16384"
+        "sync_documents_key_type_check": {
+          "name": "sync_documents_key_type_check",
+          "value": "\"sync_documents\".\"key_type\" IS NULL OR \"sync_documents\".\"key_type\" IN ('derived', 'bucket')"
+        },
+        "sync_documents_size_bytes_check": {
+          "name": "sync_documents_size_bytes_check",
+          "value": "\"sync_documents\".\"size_bytes\" >= 0"
+        },
+        "sync_documents_snapshot_version_check": {
+          "name": "sync_documents_snapshot_version_check",
+          "value": "\"sync_documents\".\"snapshot_version\" >= 0"
+        },
+        "sync_documents_last_seq_check": {
+          "name": "sync_documents_last_seq_check",
+          "value": "\"sync_documents\".\"last_seq\" >= 0"
         }
       },
       "isRLSEnabled": false
     },
-    "public.sync_queue": {
-      "name": "sync_queue",
+    "public.sync_snapshots": {
+      "name": "sync_snapshots",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
+        "document_id": {
+          "name": "document_id",
+          "type": "varchar(255)",
           "primaryKey": true,
           "notNull": true
         },
-        "seq": {
-          "name": "seq",
-          "type": "serial",
+        "snapshot_version": {
+          "name": "snapshot_version",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
+        "encrypted_payload": {
+          "name": "encrypted_payload",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": true
         },
-        "entity_type": {
-          "name": "entity_type",
-          "type": "varchar(50)",
+        "author_public_key": {
+          "name": "author_public_key",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": true
         },
-        "entity_id": {
-          "name": "entity_id",
-          "type": "varchar(50)",
+        "nonce": {
+          "name": "nonce",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": true
         },
-        "operation": {
-          "name": "operation",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "encrypted_change_data": {
-          "name": "encrypted_change_data",
+        "signature": {
+          "name": "signature",
           "type": "bytea",
           "primaryKey": false,
           "notNull": true
@@ -8420,124 +8632,16 @@
           "type": "timestamptz",
           "primaryKey": false,
           "notNull": true
-        },
-        "synced_at": {
-          "name": "synced_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": false
         }
       },
-      "indexes": {
-        "sync_queue_system_id_synced_at_idx": {
-          "name": "sync_queue_system_id_synced_at_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "synced_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "sync_queue_system_id_entity_type_entity_id_idx": {
-          "name": "sync_queue_system_id_entity_type_entity_id_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "entity_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "entity_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "sync_queue_seq_idx": {
-          "name": "sync_queue_seq_idx",
-          "columns": [
-            {
-              "expression": "seq",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "sync_queue_unsynced_idx": {
-          "name": "sync_queue_unsynced_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "seq",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"sync_queue\".\"synced_at\" IS NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "sync_queue_cleanup_idx": {
-          "name": "sync_queue_cleanup_idx",
-          "columns": [
-            {
-              "expression": "synced_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"sync_queue\".\"synced_at\" IS NOT NULL",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
-        "sync_queue_system_id_systems_id_fk": {
-          "name": "sync_queue_system_id_systems_id_fk",
-          "tableFrom": "sync_queue",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
+        "sync_snapshots_document_id_sync_documents_document_id_fk": {
+          "name": "sync_snapshots_document_id_sync_documents_document_id_fk",
+          "tableFrom": "sync_snapshots",
+          "tableTo": "sync_documents",
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["document_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8546,9 +8650,9 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "sync_queue_operation_check": {
-          "name": "sync_queue_operation_check",
-          "value": "\"sync_queue\".\"operation\" IS NULL OR \"sync_queue\".\"operation\" IN ('create', 'update', 'delete')"
+        "sync_snapshots_snapshot_version_check": {
+          "name": "sync_snapshots_snapshot_version_check",
+          "value": "\"sync_snapshots\".\"snapshot_version\" >= 0"
         }
       },
       "isRLSEnabled": false
