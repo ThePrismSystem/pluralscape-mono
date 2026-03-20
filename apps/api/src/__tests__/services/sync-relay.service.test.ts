@@ -1,8 +1,10 @@
-import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
+import { SnapshotVersionConflictError } from "@pluralscape/sync";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PgSyncRelayService } from "../../services/sync-relay.service.js";
 import { mockDb } from "../helpers/mock-db.js";
+
+import type { SystemId } from "@pluralscape/types";
 
 /** Build a minimal change envelope (without seq). */
 function makeEnvelope(documentId: string) {
@@ -140,7 +142,7 @@ describe("PgSyncRelayService", () => {
       chain.where.mockResolvedValueOnce([{ snapshotVersion: 5 }]);
 
       await expect(service.submitSnapshot(makeSnapshotEnvelope("doc-1", 3))).rejects.toThrow(
-        SNAPSHOT_VERSION_CONFLICT_MESSAGE,
+        SnapshotVersionConflictError,
       );
     });
 
@@ -220,7 +222,7 @@ describe("PgSyncRelayService", () => {
         },
       ]);
 
-      const manifest = await service.getManifest("sys-1");
+      const manifest = await service.getManifest("sys-1" as SystemId);
 
       expect(manifest.systemId).toBe("sys-1");
       expect(manifest.documents).toHaveLength(1);
@@ -235,7 +237,7 @@ describe("PgSyncRelayService", () => {
 
       chain.where.mockResolvedValueOnce([]);
 
-      const manifest = await service.getManifest("sys-nonexistent");
+      const manifest = await service.getManifest("sys-nonexistent" as SystemId);
 
       expect(manifest.systemId).toBe("sys-nonexistent");
       expect(manifest.documents).toEqual([]);

@@ -1,6 +1,7 @@
 import { EncryptedRelay } from "@pluralscape/sync";
 import { describe, expect, it, vi, afterEach } from "vitest";
 
+import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
 import {
   handleManifestRequest,
@@ -13,7 +14,9 @@ import {
   handleDocumentLoad,
 } from "../../ws/handlers.js";
 
+
 import type { AuthContext } from "../../lib/auth-context.js";
+import type { AppLogger } from "../../lib/logger.js";
 import type { SyncConnectionState } from "../../ws/connection-state.js";
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 import type {
@@ -98,6 +101,18 @@ function createAuthenticatedState(
   return state;
 }
 
+function mockLog(): AppLogger {
+  return {
+    [APP_LOGGER_BRAND]: true as const,
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
+}
+
+const log = mockLog();
+
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe("handleManifestRequest", () => {
@@ -162,7 +177,7 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
 
-    const result = await handleSubscribeRequest(message, state, manager, relay.asService());
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService(), log);
 
     expect(result.type).toBe("SubscribeResponse");
     expect(result.correlationId).toBe(correlationId);
@@ -190,7 +205,7 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
 
-    const result = await handleSubscribeRequest(message, state, manager, relay.asService());
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService(), log);
 
     expect(result.catchup).toHaveLength(1);
     expect(result.catchup[0]?.snapshot).not.toBeNull();
@@ -215,7 +230,7 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId, lastSyncedSeq: seq, lastSnapshotVersion: 0 }],
     };
 
-    const result = await handleSubscribeRequest(message, state, manager, relay.asService());
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService(), log);
 
     expect(result.catchup).toHaveLength(0);
   });
@@ -235,7 +250,7 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
 
-    await handleSubscribeRequest(message, state, manager, relay.asService());
+    await handleSubscribeRequest(message, state, manager, relay.asService(), log);
 
     expect(manager.getSubscribers(docId).has(connId)).toBe(true);
   });
@@ -263,10 +278,33 @@ describe("handleSubscribeRequest", () => {
       documents: [{ docId: extraDocId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
 
-    const result = await handleSubscribeRequest(message, state, manager, relay.asService());
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService(), log);
 
     // The excess doc should NOT be in catchup since subscription cap was reached
     expect(result.catchup).toHaveLength(0);
+    expect(result.droppedDocIds).toEqual([extraDocId]);
+  });
+
+  it("returns empty droppedDocIds when all subscriptions succeed", async () => {
+    manager = new ConnectionManager();
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+    const connId = crypto.randomUUID();
+    const systemId = crypto.randomUUID();
+    const auth = mockAuth();
+    const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
+
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const message: SubscribeRequest = {
+      type: "SubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
+    };
+
+    const result = await handleSubscribeRequest(message, state, manager, relay.asService(), log);
+
+    expect(result.droppedDocIds).toEqual([]);
   });
 });
 
@@ -292,7 +330,7 @@ describe("handleUnsubscribeRequest", () => {
       correlationId: crypto.randomUUID(),
       documents: [{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }],
     };
-    await handleSubscribeRequest(subMsg, state, manager, relay.asService());
+    await handleSubscribeRequest(subMsg, state, manager, relay.asService(), log);
     expect(manager.getSubscribers(docId).has(connId)).toBe(true);
 
     // Now unsubscribe
@@ -340,7 +378,7 @@ describe("handleFetchSnapshot", () => {
       docId,
     };
 
-    const result = await handleFetchSnapshot(message, relay.asService());
+    const result = await handleFetchSnapshot(message, relay.asService(), log);
 
     expect(result.type).toBe("SnapshotResponse");
     expect(result.correlationId).toBe(correlationId);
@@ -382,7 +420,7 @@ describe("handleFetchChanges", () => {
       sinceSeq: 1,
     };
 
-    const result = await handleFetchChanges(message, relay.asService());
+    const result = await handleFetchChanges(message, relay.asService(), log);
 
     expect(result.type).toBe("ChangesResponse");
     expect(result.correlationId).toBe(correlationId);
@@ -512,7 +550,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService());
+    const result = await handleSubmitSnapshot(message, relay.asService(), log);
 
     expect(result.type).toBe("SnapshotAccepted");
     expect(result.correlationId).toBe(correlationId);
@@ -536,7 +574,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService());
+    const result = await handleSubmitSnapshot(message, relay.asService(), log);
 
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
@@ -558,7 +596,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService());
+    const result = await handleSubmitSnapshot(message, relay.asService(), log);
 
     expect(result.type).toBe("SyncError");
   });
@@ -575,7 +613,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(differentDocId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService());
+    const result = await handleSubmitSnapshot(message, relay.asService(), log);
 
     expect(result.type).toBe("SnapshotAccepted");
 
