@@ -34,7 +34,7 @@ import type { ConnectionManager } from "./connection-manager.js";
 import type { AuthenticatedState, SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
-import type { ServerMessage } from "@pluralscape/sync";
+import type { ServerMessage, SyncRelayService } from "@pluralscape/sync";
 import type { SystemId } from "@pluralscape/types";
 import type { ZodType } from "zod";
 
@@ -42,7 +42,7 @@ import type { ZodType } from "zod";
 
 /** Dependencies injected into the router (testable without module singletons). */
 export interface RouterContext {
-  readonly relay: EncryptedRelay;
+  readonly relay: SyncRelayService;
   /**
    * TOFU (Trust On First Use) document ownership.
    *
@@ -68,7 +68,7 @@ export function createRouterContext(
       manager.removeSubscriptionsForDoc(docId);
     },
   });
-  return { relay, documentOwnership, manager };
+  return { relay: relay.asService(), documentOwnership, manager };
 }
 
 // ── Type guards ──────────────────────────────────────────────────────
@@ -171,19 +171,33 @@ function checkAccess(
  * Parse → access check → dispatch helper for single-doc read operations.
  * Reduces duplication in FetchSnapshot and FetchChanges cases.
  */
-function dispatchWithAccess<T extends { docId: string; correlationId: string | null }>(
+async function dispatchWithAccess<T extends { docId: string; correlationId: string | null }>(
   schema: ZodType<T>,
   parsed: unknown,
   state: AuthenticatedState,
   messageType: string,
   log: AppLogger,
   ownership: Map<string, SystemId>,
-  handler: (msg: T) => ServerMessage,
-): void {
+  handler: (msg: T) => Promise<ServerMessage>,
+): Promise<void> {
   const msg = parseMessage(schema, parsed, state, messageType, log);
   if (!msg) return;
   if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, ownership)) return;
-  send(state, handler(msg), log);
+  try {
+    send(state, await handler(msg), log);
+  } catch (err) {
+    log.error("Handler threw in dispatchWithAccess", {
+      connectionId: state.connectionId,
+      messageType,
+      docId: msg.docId,
+      error: formatError(err),
+    });
+    send(
+      state,
+      makeSyncError("INTERNAL_ERROR", "Failed to process request", msg.correlationId, msg.docId),
+      log,
+    );
+  }
 }
 
 // ── Router ──────────────────────────────────────────────────────────
@@ -335,7 +349,20 @@ export async function routeMessage(
         );
         return;
       }
-      send(state, handleManifestRequest(msg), log);
+      try {
+        const response = await handleManifestRequest(msg, relay);
+        if (!send(state, response, log)) return;
+      } catch (err) {
+        log.error("handleManifestRequest threw", {
+          connectionId: state.connectionId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError("INTERNAL_ERROR", "Failed to process manifest", msg.correlationId),
+          log,
+        );
+      }
       break;
     }
     case "SubscribeRequest": {
@@ -357,11 +384,26 @@ export async function routeMessage(
         }
         // Denied docs get a PERMISSION_DENIED sent by checkAccess; continue with rest
       }
-      send(
-        state,
-        handleSubscribeRequest({ ...msg, documents: permitted }, state, manager, relay),
-        log,
-      );
+      try {
+        const response = await handleSubscribeRequest(
+          { ...msg, documents: permitted },
+          state,
+          manager,
+          relay,
+          log,
+        );
+        if (!send(state, response, log)) return;
+      } catch (err) {
+        log.error("handleSubscribeRequest threw", {
+          connectionId: state.connectionId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError("INTERNAL_ERROR", "Failed to process subscription", msg.correlationId),
+          log,
+        );
+      }
       break;
     }
     case "UnsubscribeRequest": {
@@ -377,7 +419,7 @@ export async function routeMessage(
       break;
     }
     case "FetchSnapshotRequest": {
-      dispatchWithAccess(
+      await dispatchWithAccess(
         CLIENT_MESSAGE_SCHEMAS.FetchSnapshotRequest,
         parsed,
         state,
@@ -389,7 +431,7 @@ export async function routeMessage(
       break;
     }
     case "FetchChangesRequest": {
-      dispatchWithAccess(
+      await dispatchWithAccess(
         CLIENT_MESSAGE_SCHEMAS.FetchChangesRequest,
         parsed,
         state,
@@ -415,7 +457,7 @@ export async function routeMessage(
       let response;
       let sequencedEnvelope;
       try {
-        const result = handleSubmitChange(msg, relay);
+        const result = await handleSubmitChange(msg, relay);
         response = result.response;
         sequencedEnvelope = result.sequencedEnvelope;
       } catch (err) {
@@ -459,8 +501,11 @@ export async function routeMessage(
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
       try {
-        send(state, handleSubmitSnapshot(msg, relay), log);
-        documentOwnership.set(msg.docId, state.systemId);
+        const response = await handleSubmitSnapshot(msg, relay);
+        if (!send(state, response, log)) return;
+        if (response.type !== "SyncError") {
+          documentOwnership.set(msg.docId, state.systemId);
+        }
       } catch (err) {
         log.error("handleSubmitSnapshot threw", {
           connectionId: state.connectionId,
@@ -491,10 +536,23 @@ export async function routeMessage(
       if (!msg) return;
       if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
         return;
-      const [snapshotResp, changesResp] = handleDocumentLoad(msg, relay);
-      // I10: Check first send succeeded before sending second
-      if (!send(state, snapshotResp, log)) return;
-      send(state, changesResp, log);
+      try {
+        const [snapshotResp, changesResp] = await handleDocumentLoad(msg, relay);
+        // I10: Check first send succeeded before sending second
+        if (!send(state, snapshotResp, log)) return;
+        send(state, changesResp, log);
+      } catch (err) {
+        log.error("handleDocumentLoad threw", {
+          connectionId: state.connectionId,
+          docId: msg.docId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError("INTERNAL_ERROR", "Failed to load document", msg.correlationId, msg.docId),
+          log,
+        );
+      }
       break;
     }
     default: {

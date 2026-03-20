@@ -12,6 +12,7 @@ import type {
 } from "../adapters/network-adapter.js";
 import type { DocumentKeys, EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { SystemId } from "@pluralscape/types";
 
 type SimpleDoc = { items: string[] };
 
@@ -73,7 +74,7 @@ class MockNetworkAdapter implements SyncNetworkAdapter {
   }
 
   fetchManifest(systemId: string): Promise<SyncManifest> {
-    return Promise.resolve({ systemId, documents: [] });
+    return Promise.resolve({ systemId: systemId as SystemId, documents: [] });
   }
 }
 

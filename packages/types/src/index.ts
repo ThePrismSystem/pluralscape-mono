@@ -49,8 +49,8 @@ export type {
   RecoveryKeyId,
   DeviceTransferRequestId,
   SyncDocumentId,
-  SyncQueueItemId,
-  SyncConflictId,
+  SyncChangeId,
+  SyncSnapshotId,
   ImportJobId,
   PKBridgeConfigId,
   AccountPurgeRequestId,
@@ -281,12 +281,10 @@ export { serverSafe } from "./server-safe.js";
 
 // ── Sync ──────────────────────────────────────────────────────
 export type {
-  SyncOperation,
-  SyncResolution,
+  SyncDocumentType,
+  DocumentKeyType,
   SyncIndicatorStatus,
   SyncDocument,
-  SyncQueueItem,
-  SyncConflict,
   SyncState,
   SyncIndicator,
 } from "./sync.js";

@@ -1,5 +1,7 @@
-import type { SyncDocumentType } from "../document-types.js";
+
+import type { DocumentKeyType, SyncDocumentType } from "../document-types.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Manifest ─────────────────────────────────────────────────────────
 
@@ -14,7 +16,7 @@ export interface SyncManifestEntry {
   /** Which sync document type this entry represents. */
   readonly docType: SyncDocumentType;
   /** Key type determining which encryption key is used. */
-  readonly keyType: "master" | "bucket";
+  readonly keyType: DocumentKeyType;
   /** Present for bucket documents — identifies which bucket. */
   readonly bucketId: string | undefined;
   /** Present for chat documents — identifies which channel. */
@@ -40,7 +42,7 @@ export interface SyncManifestEntry {
  */
 export interface SyncManifest {
   /** The system ID this manifest belongs to. */
-  readonly systemId: string;
+  readonly systemId: SystemId;
   readonly documents: readonly SyncManifestEntry[];
 }
 

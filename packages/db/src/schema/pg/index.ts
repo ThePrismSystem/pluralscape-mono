@@ -53,7 +53,7 @@ export { systems } from "./systems.js";
 export { checkInRecords, timerConfigs } from "./timers.js";
 export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
 export { importJobs, exportRequests, accountPurgeRequests } from "./import-export.js";
-export { syncDocuments, syncQueue, syncConflicts } from "./sync.js";
+export { syncDocuments, syncChanges, syncSnapshots } from "./sync.js";
 export { bucketKeyRotations, bucketRotationItems } from "./key-rotation.js";
 export { systemSnapshots } from "./snapshots.js";
 export {
@@ -244,10 +244,10 @@ export type {
 export type {
   SyncDocumentRow,
   NewSyncDocument,
-  SyncQueueRow,
-  NewSyncQueue,
-  SyncConflictRow,
-  NewSyncConflict,
+  SyncChangeRow,
+  NewSyncChange,
+  SyncSnapshotRow,
+  NewSyncSnapshot,
 } from "./sync.js";
 
 // Analytics

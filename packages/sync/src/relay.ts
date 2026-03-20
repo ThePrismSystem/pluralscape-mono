@@ -1,7 +1,21 @@
+import type { SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 
-/** Error message fragment for snapshot version conflicts. */
-export const SNAPSHOT_VERSION_CONFLICT_MESSAGE = "is not newer than current version";
+/** Thrown when a snapshot submission has a version not newer than the current one. */
+export class SnapshotVersionConflictError extends Error {
+  override readonly name = "SnapshotVersionConflictError" as const;
+  readonly currentVersion: number;
+  readonly attemptedVersion: number;
+
+  constructor(attemptedVersion: number, currentVersion: number, options?: ErrorOptions) {
+    super(
+      `Snapshot version ${String(attemptedVersion)} is not newer than current version ${String(currentVersion)}`,
+      options,
+    );
+    this.currentVersion = currentVersion;
+    this.attemptedVersion = attemptedVersion;
+  }
+}
 
 export interface RelayDocumentState {
   readonly envelopes: readonly EncryptedChangeEnvelope[];
@@ -78,9 +92,7 @@ export class EncryptedRelay {
     this.evictIfNeeded(envelope.documentId);
     const existing = this.snapshots.get(envelope.documentId);
     if (existing && existing.snapshotVersion >= envelope.snapshotVersion) {
-      throw new Error(
-        `Snapshot version ${String(envelope.snapshotVersion)} ${SNAPSHOT_VERSION_CONFLICT_MESSAGE} ${String(existing.snapshotVersion)}`,
-      );
+      throw new SnapshotVersionConflictError(envelope.snapshotVersion, existing.snapshotVersion);
     }
     this.snapshots.set(envelope.documentId, envelope);
     this.touch(envelope.documentId);
@@ -92,6 +104,20 @@ export class EncryptedRelay {
       this.touch(documentId);
     }
     return snapshot;
+  }
+
+  /** Wrap this relay as an async SyncRelayService for use with WS handlers. */
+  asService(): SyncRelayService {
+    return {
+      submit: (e) => Promise.resolve(this.submit(e)),
+      getEnvelopesSince: (d, s) => Promise.resolve(this.getEnvelopesSince(d, s)),
+      submitSnapshot: (e) => {
+        this.submitSnapshot(e);
+        return Promise.resolve();
+      },
+      getLatestSnapshot: (d) => Promise.resolve(this.getLatestSnapshot(d)),
+      getManifest: (id) => Promise.resolve({ documents: [], systemId: id }),
+    };
   }
 
   inspectStorage(documentId: string): RelayDocumentState | undefined {

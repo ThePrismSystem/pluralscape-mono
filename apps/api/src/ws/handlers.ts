@@ -4,15 +4,17 @@
  * All handlers for the authenticated phase of the sync protocol, consolidated
  * into a single module for import simplicity.
  */
-import { SNAPSHOT_VERSION_CONFLICT_MESSAGE } from "@pluralscape/sync";
+import { SnapshotVersionConflictError } from "@pluralscape/sync";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
-import type { EncryptedRelay } from "@pluralscape/sync";
+import type { AppLogger } from "../lib/logger.js";
 import type {
   ChangeAccepted,
   ChangesResponse,
+  DocumentCatchup,
   DocumentLoadRequest,
+  DocumentVersionEntry,
   EncryptedChangeEnvelope,
   FetchChangesRequest,
   FetchSnapshotRequest,
@@ -25,55 +27,81 @@ import type {
   SubscribeRequest,
   SubscribeResponse,
   SyncError,
+  SyncRelayService,
   UnsubscribeRequest,
 } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Manifest ────────────────────────────────────────────────────────
 
-/** Handle a ManifestRequest. Phase 1: returns empty manifest stub. */
-export function handleManifestRequest(message: ManifestRequest): ManifestResponse | SyncError {
+/** Handle a ManifestRequest. Fetches the manifest from the relay service. */
+export async function handleManifestRequest(
+  message: ManifestRequest,
+  relay: SyncRelayService,
+): Promise<ManifestResponse> {
+  // Safe cast: router validates message.systemId === state.systemId before dispatch
+  const manifest = await relay.getManifest(message.systemId as SystemId);
   return {
     type: "ManifestResponse",
     correlationId: message.correlationId,
-    manifest: { documents: [], systemId: message.systemId },
+    manifest,
   };
 }
 
 // ── Subscribe / Unsubscribe ─────────────────────────────────────────
 
 /** Handle a SubscribeRequest. Registers subscriptions and computes catch-up. */
-export function handleSubscribeRequest(
+export async function handleSubscribeRequest(
   message: SubscribeRequest,
   state: SyncConnectionState,
   manager: ConnectionManager,
-  relay: EncryptedRelay,
-): SubscribeResponse {
-  const catchup = [];
+  relay: SyncRelayService,
+  log: AppLogger,
+): Promise<SubscribeResponse> {
+  // Phase 1: register subscriptions, partition into permitted vs dropped
+  const droppedDocIds: string[] = [];
+  const permitted: DocumentVersionEntry[] = [];
 
   for (const entry of message.documents) {
     if (!manager.addSubscription(state.connectionId, entry.docId)) {
-      // Subscription cap reached — skip this document silently
+      droppedDocIds.push(entry.docId);
+      log.warn("Subscription cap reached, dropping document", {
+        connectionId: state.connectionId,
+        docId: entry.docId,
+      });
       continue;
     }
-
-    const changes = relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq);
-    const snapshot = relay.getLatestSnapshot(entry.docId);
-    const hasNewerSnapshot =
-      snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
-
-    if (changes.length > 0 || hasNewerSnapshot) {
-      catchup.push({
-        docId: entry.docId,
-        changes,
-        snapshot: hasNewerSnapshot ? snapshot : null,
-      });
-    }
+    permitted.push(entry);
   }
+
+  // Phase 2: fetch catchup data in parallel
+  const catchupResults = await Promise.all(
+    permitted.map(async (entry): Promise<DocumentCatchup | null> => {
+      const [changes, snapshot] = await Promise.all([
+        relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+        relay.getLatestSnapshot(entry.docId),
+      ]);
+      const hasNewerSnapshot =
+        snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
+
+      if (changes.length > 0 || hasNewerSnapshot) {
+        return {
+          docId: entry.docId,
+          changes,
+          snapshot: hasNewerSnapshot ? snapshot : null,
+        };
+      }
+      return null;
+    }),
+  );
+
+  const catchup = catchupResults.filter((c): c is DocumentCatchup => c !== null);
 
   return {
     type: "SubscribeResponse",
     correlationId: message.correlationId,
     catchup,
+    droppedDocIds,
   };
 }
 
@@ -89,28 +117,28 @@ export function handleUnsubscribeRequest(
 // ── Fetch ───────────────────────────────────────────────────────────
 
 /** Handle a FetchSnapshotRequest. */
-export function handleFetchSnapshot(
+export async function handleFetchSnapshot(
   message: FetchSnapshotRequest,
-  relay: EncryptedRelay,
-): SnapshotResponse {
+  relay: SyncRelayService,
+): Promise<SnapshotResponse> {
   return {
     type: "SnapshotResponse",
     correlationId: message.correlationId,
     docId: message.docId,
-    snapshot: relay.getLatestSnapshot(message.docId),
+    snapshot: await relay.getLatestSnapshot(message.docId),
   };
 }
 
 /** Handle a FetchChangesRequest. */
-export function handleFetchChanges(
+export async function handleFetchChanges(
   message: FetchChangesRequest,
-  relay: EncryptedRelay,
-): ChangesResponse {
+  relay: SyncRelayService,
+): Promise<ChangesResponse> {
   return {
     type: "ChangesResponse",
     correlationId: message.correlationId,
     docId: message.docId,
-    changes: relay.getEnvelopesSince(message.docId, message.sinceSeq),
+    changes: await relay.getEnvelopesSince(message.docId, message.sinceSeq),
   };
 }
 
@@ -123,11 +151,11 @@ export interface SubmitChangeResult {
 }
 
 /** Handle a SubmitChangeRequest. Returns ChangeAccepted and the sequenced envelope. */
-export function handleSubmitChange(
+export async function handleSubmitChange(
   message: SubmitChangeRequest,
-  relay: EncryptedRelay,
-): SubmitChangeResult {
-  const assignedSeq = relay.submit({
+  relay: SyncRelayService,
+): Promise<SubmitChangeResult> {
+  const assignedSeq = await relay.submit({
     ...message.change,
     documentId: message.docId,
   });
@@ -148,12 +176,12 @@ export function handleSubmitChange(
 }
 
 /** Handle a SubmitSnapshotRequest. Returns SnapshotAccepted or SyncError on conflict. */
-export function handleSubmitSnapshot(
+export async function handleSubmitSnapshot(
   message: SubmitSnapshotRequest,
-  relay: EncryptedRelay,
-): SnapshotAccepted | SyncError {
+  relay: SyncRelayService,
+): Promise<SnapshotAccepted | SyncError> {
   try {
-    relay.submitSnapshot({ ...message.snapshot, documentId: message.docId });
+    await relay.submitSnapshot({ ...message.snapshot, documentId: message.docId });
     return {
       type: "SnapshotAccepted",
       correlationId: message.correlationId,
@@ -161,7 +189,7 @@ export function handleSubmitSnapshot(
       snapshotVersion: message.snapshot.snapshotVersion,
     };
   } catch (err) {
-    if (err instanceof Error && err.message.includes(SNAPSHOT_VERSION_CONFLICT_MESSAGE)) {
+    if (err instanceof SnapshotVersionConflictError) {
       return {
         type: "SyncError",
         correlationId: message.correlationId,
@@ -181,13 +209,14 @@ export function handleSubmitSnapshot(
  *
  * Returns both snapshot and changes for the requested document.
  */
-export function handleDocumentLoad(
+export async function handleDocumentLoad(
   message: DocumentLoadRequest,
-  relay: EncryptedRelay,
-): [SnapshotResponse, ChangesResponse] {
-  const snapshot = relay.getLatestSnapshot(message.docId);
-  const sinceSeq = 0;
-  const changes = relay.getEnvelopesSince(message.docId, sinceSeq);
+  relay: SyncRelayService,
+): Promise<[SnapshotResponse, ChangesResponse]> {
+  const [snapshot, changes] = await Promise.all([
+    relay.getLatestSnapshot(message.docId),
+    relay.getEnvelopesSince(message.docId, 0),
+  ]);
 
   return [
     {

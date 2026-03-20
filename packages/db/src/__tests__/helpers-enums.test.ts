@@ -37,8 +37,8 @@ import {
   ROTATION_STATES,
   SEARCHABLE_ENTITY_TYPES,
   SNAPSHOT_TRIGGERS,
-  SYNC_OPERATIONS,
-  SYNC_RESOLUTIONS,
+  SYNC_DOC_TYPES,
+  SYNC_KEY_TYPES,
   WEBHOOK_DELIVERY_STATUSES,
   WEBHOOK_EVENT_TYPES,
 } from "../helpers/enums.js";
@@ -88,12 +88,19 @@ describe("enum arrays", () => {
     expect(DEVICE_TRANSFER_STATUSES).toEqual(["pending", "approved", "expired"]);
   });
 
-  it("SYNC_OPERATIONS matches SyncOperation union", () => {
-    expect(SYNC_OPERATIONS).toEqual(["create", "update", "delete"]);
+  it("SYNC_DOC_TYPES matches SyncDocumentType union", () => {
+    expect(SYNC_DOC_TYPES).toEqual([
+      "system-core",
+      "fronting",
+      "chat",
+      "journal",
+      "privacy-config",
+      "bucket",
+    ]);
   });
 
-  it("SYNC_RESOLUTIONS matches SyncResolution union", () => {
-    expect(SYNC_RESOLUTIONS).toEqual(["local", "remote", "merged"]);
+  it("SYNC_KEY_TYPES matches DocumentKeyType union", () => {
+    expect(SYNC_KEY_TYPES).toEqual(["derived", "bucket"]);
   });
 
   it("API_KEY_KEY_TYPES matches ApiKey keyType union", () => {
@@ -197,10 +204,9 @@ describe("enum arrays", () => {
   });
 
   it("JOB_TYPES matches JobType union", () => {
-    expect(JOB_TYPES).toHaveLength(15);
+    expect(JOB_TYPES).toHaveLength(14);
     expect(JOB_TYPES).toContain("sync-push");
     expect(JOB_TYPES).toContain("report-generate");
-    expect(JOB_TYPES).toContain("sync-queue-cleanup");
     expect(JOB_TYPES).toContain("partition-maintenance");
   });
 
@@ -275,8 +281,8 @@ describe("enum arrays", () => {
     expect(FRIEND_CONNECTION_STATUSES).toHaveLength(4);
     expect(AUTH_KEY_TYPES).toHaveLength(2);
     expect(DEVICE_TRANSFER_STATUSES).toHaveLength(3);
-    expect(SYNC_OPERATIONS).toHaveLength(3);
-    expect(SYNC_RESOLUTIONS).toHaveLength(3);
+    expect(SYNC_DOC_TYPES).toHaveLength(6);
+    expect(SYNC_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_KEY_TYPES).toHaveLength(2);
     expect(API_KEY_SCOPES).toHaveLength(16);
     expect(AUDIT_EVENT_TYPES).toHaveLength(109);
@@ -295,7 +301,7 @@ describe("enum arrays", () => {
     expect(EXPORT_REQUEST_STATUSES).toHaveLength(4);
     expect(ACCOUNT_PURGE_STATUSES).toHaveLength(5);
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
-    expect(JOB_TYPES).toHaveLength(15);
+    expect(JOB_TYPES).toHaveLength(14);
     expect(JOB_STATUSES).toHaveLength(5);
     expect(ENTITY_TYPES).toHaveLength(60);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);
