@@ -25,6 +25,7 @@ const ALL_JOB_TYPES: readonly JobType[] = [
   "audit-log-cleanup",
   "partition-maintenance",
   "sync-compaction",
+  "device-transfer-cleanup",
 ] as const;
 
 describe("DEFAULT_RETRY_POLICIES", () => {
@@ -63,7 +64,7 @@ describe("DEFAULT_RETRY_POLICIES", () => {
 });
 
 describe("applyDefaultPolicies", () => {
-  it("sets all 15 policies on the queue", () => {
+  it("sets all 17 policies on the queue", () => {
     const queue = new InMemoryJobQueue();
     applyDefaultPolicies(queue);
 
