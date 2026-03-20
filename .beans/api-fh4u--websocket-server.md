@@ -1,11 +1,11 @@
 ---
 # api-fh4u
 title: WebSocket server
-status: todo
+status: completed
 type: epic
 priority: critical
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-19T11:39:40Z
+updated_at: 2026-03-20T09:56:15Z
 parent: ps-afy4
 blocking:
   - sync-qxxo
@@ -35,3 +35,5 @@ This is the **critical path** for M3 — sync, SSE, and device transfer all depe
 - `packages/sync/docs/protocol-messages.md` — Wire protocol, all message types
 - `packages/sync/docs/partial-replication.md` — Subscription profiles
 - `docs/adr/007-realtime.md` — Real-time architecture decision
+
+## Summary of Changes\n\nAll 9 child tasks completed: WebSocket upgrade endpoint, Valkey pub/sub fan-out, protocol message router, connection lifecycle manager, session authentication, server-side subscription management, and E2E tests. Full WebSocket infrastructure is operational.

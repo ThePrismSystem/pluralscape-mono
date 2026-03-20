@@ -1,11 +1,11 @@
 ---
 # sync-qxxo
 title: CRDT sync implementation
-status: todo
+status: completed
 type: epic
 priority: critical
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-19T11:40:27Z
+updated_at: 2026-03-20T09:56:16Z
 parent: ps-afy4
 blocking:
   - sync-p1uq
@@ -40,3 +40,5 @@ Blocked by api-fh4u (WebSocket server) — the network adapter requires a workin
 - `packages/sync/docs/document-lifecycle.md` — Create, compact, archive, delete
 - `packages/sync/docs/encrypted-relay-poc-report.md` — PoC validation results
 - `packages/sync/src/adapters/` — Existing adapter interfaces
+
+## Summary of Changes\n\nAll 8 child tasks completed: server-side relay service, SQLite storage adapter, WebSocket network adapter, client sync engine (initial sync + steady-state cycle), compaction job, sync schema audit, and PR review fixes. Full CRDT sync infrastructure is operational.
