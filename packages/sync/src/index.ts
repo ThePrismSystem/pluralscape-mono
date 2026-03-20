@@ -131,6 +131,12 @@ export type { SqliteDriver, SqliteStatement } from "./adapters/sqlite-driver.js"
 export { SqliteStorageAdapter } from "./adapters/sqlite-storage-adapter.js";
 export { createBunSqliteDriver } from "./adapters/bun-sqlite-driver.js";
 export { WsNetworkAdapter } from "./adapters/ws-network-adapter.js";
+export type { OfflineQueueAdapter, OfflineQueueEntry } from "./adapters/offline-queue-adapter.js";
+export { SqliteOfflineQueueAdapter } from "./adapters/sqlite-offline-queue-adapter.js";
+
+// ── Offline queue management ─────────────────────────────────────────
+export { OfflineQueueManager } from "./offline-queue-manager.js";
+export type { ReplayResult, OfflineQueueManagerConfig } from "./offline-queue-manager.js";
 
 // ── Compaction & document lifecycle ───────────────────────────────────
 export { checkCompactionEligibility, LazyDocumentSizeTracker } from "./compaction.js";
@@ -200,6 +206,10 @@ export type {
   SyncMessage,
 } from "./protocol.js";
 export { SYNC_PROTOCOL_VERSION } from "./protocol.js";
+
+// ── Post-merge validation ────────────────────────────────────────────
+export { PostMergeValidator } from "./post-merge-validator.js";
+export type { ConflictPersistenceAdapter, PersistedConflict } from "./conflict-persistence.js";
 
 // ── Sync engine ──────────────────────────────────────────────────────
 export { SyncEngine } from "./engine/index.js";

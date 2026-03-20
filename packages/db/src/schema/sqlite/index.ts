@@ -52,7 +52,7 @@ export { systems } from "./systems.js";
 export { checkInRecords, timerConfigs } from "./timers.js";
 export { webhookConfigs, webhookDeliveries } from "./webhooks.js";
 export { importJobs, exportRequests, accountPurgeRequests } from "./import-export.js";
-export { syncDocuments, syncChanges, syncSnapshots } from "./sync.js";
+export { syncDocuments, syncChanges, syncSnapshots, syncConflicts } from "./sync.js";
 export { bucketKeyRotations, bucketRotationItems } from "./key-rotation.js";
 export { systemSnapshots } from "./snapshots.js";
 export {
@@ -244,6 +244,8 @@ export type {
   NewSyncChange,
   SyncSnapshotRow,
   NewSyncSnapshot,
+  SyncConflictRow,
+  NewSyncConflict,
 } from "./sync.js";
 
 // Analytics

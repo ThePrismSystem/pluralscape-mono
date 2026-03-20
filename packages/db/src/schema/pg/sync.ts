@@ -15,6 +15,16 @@ import { systems } from "./systems.js";
 import type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
+/** Conflict resolution strategies — mirrors @pluralscape/sync ConflictResolutionStrategy to avoid circular dep. */
+type ConflictResolutionStrategy =
+  | "lww-field"
+  | "append-both"
+  | "add-wins"
+  | "post-merge-cycle"
+  | "post-merge-sort-normalize"
+  | "post-merge-checkin-normalize"
+  | "post-merge-friend-status";
+
 export const syncDocuments = pgTable(
   "sync_documents",
   {
@@ -84,9 +94,34 @@ export const syncSnapshots = pgTable(
   (t) => [check("sync_snapshots_snapshot_version_check", sql`${t.snapshotVersion} >= 0`)],
 );
 
+export const syncConflicts = pgTable(
+  "sync_conflicts",
+  {
+    id: varchar("id", { length: ID_MAX_LENGTH }).primaryKey(),
+    documentId: varchar("document_id", { length: DOCUMENT_ID_MAX_LENGTH })
+      .notNull()
+      .references(() => syncDocuments.documentId, { onDelete: "cascade" }),
+    entityType: varchar("entity_type", { length: ENUM_MAX_LENGTH }).notNull(),
+    entityId: varchar("entity_id", { length: ID_MAX_LENGTH }).notNull(),
+    fieldName: varchar("field_name", { length: ENUM_MAX_LENGTH }),
+    resolution: varchar("resolution", { length: ENUM_MAX_LENGTH })
+      .notNull()
+      .$type<ConflictResolutionStrategy>(),
+    detectedAt: pgTimestamp("detected_at").notNull(),
+    summary: varchar("summary", { length: 1024 }).notNull(),
+    createdAt: pgTimestamp("created_at").notNull(),
+  },
+  (t) => [
+    index("sync_conflicts_document_id_idx").on(t.documentId),
+    index("sync_conflicts_detected_at_idx").on(t.detectedAt),
+  ],
+);
+
 export type SyncDocumentRow = InferSelectModel<typeof syncDocuments>;
 export type NewSyncDocument = InferInsertModel<typeof syncDocuments>;
 export type SyncChangeRow = InferSelectModel<typeof syncChanges>;
 export type NewSyncChange = InferInsertModel<typeof syncChanges>;
 export type SyncSnapshotRow = InferSelectModel<typeof syncSnapshots>;
 export type NewSyncSnapshot = InferInsertModel<typeof syncSnapshots>;
+export type SyncConflictRow = InferSelectModel<typeof syncConflicts>;
+export type NewSyncConflict = InferInsertModel<typeof syncConflicts>;

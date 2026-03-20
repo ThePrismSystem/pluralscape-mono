@@ -170,4 +170,6 @@ export interface PostMergeValidationResult {
   readonly sortOrderPatches: readonly SortOrderPatch[];
   readonly checkInNormalizations: number;
   readonly friendConnectionNormalizations: number;
+  readonly tombstoneNotifications: readonly ConflictNotification[];
+  readonly correctionEnvelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[];
 }

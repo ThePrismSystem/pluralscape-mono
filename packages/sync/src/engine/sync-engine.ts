@@ -6,15 +6,19 @@
  * operations and the adapter interfaces for I/O.
  */
 import { createDocument } from "../factories/document-factory.js";
+import { OfflineQueueManager } from "../offline-queue-manager.js";
+import { PostMergeValidator } from "../post-merge-validator.js";
 import { filterManifest } from "../subscription-filter.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
+import type { OfflineQueueAdapter } from "../adapters/offline-queue-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
+import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { DocumentKeyResolver } from "../document-key-resolver.js";
 import type { SyncDocumentType } from "../document-types.js";
 import type { DocumentSyncState, ReplicationProfile } from "../replication-profiles.js";
-import type { EncryptedChangeEnvelope } from "../types.js";
+import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 
 /** Configuration for creating a SyncEngine. */
@@ -27,6 +31,12 @@ export interface SyncEngineConfig {
   readonly systemId: string;
   /** Error handler for non-fatal errors (hydration failures, incoming change errors). */
   readonly onError: (message: string, error: unknown) => void;
+  /** Callback invoked when a post-merge conflict is auto-resolved. */
+  readonly onConflict?: (notification: ConflictNotification) => void;
+  /** Optional adapter for persisting conflict records to a database. */
+  readonly conflictPersistenceAdapter?: ConflictPersistenceAdapter;
+  /** Optional adapter for offline queue persistence. When provided, local changes are enqueued before server submission. */
+  readonly offlineQueueAdapter?: OfflineQueueAdapter;
 }
 
 /** Maximum parallel document hydrations during bootstrap. */
@@ -51,6 +61,15 @@ export class SyncEngine {
   private readonly profile: ReplicationProfile;
   private readonly systemId: string;
   private readonly onError: (message: string, error: unknown) => void;
+  private readonly onConflict?: (notification: ConflictNotification) => void;
+  private readonly conflictPersistenceAdapter?: ConflictPersistenceAdapter;
+  private readonly offlineQueueAdapter?: OfflineQueueAdapter;
+  private readonly postMergeValidator = new PostMergeValidator();
+  private readonly offlineQueueManager?: OfflineQueueManager;
+  private failedConflictPersistence: Array<{
+    documentId: string;
+    notifications: readonly ConflictNotification[];
+  }> = [];
 
   constructor(config: SyncEngineConfig) {
     this.networkAdapter = config.networkAdapter;
@@ -60,6 +79,18 @@ export class SyncEngine {
     this.profile = config.profile;
     this.systemId = config.systemId;
     this.onError = config.onError;
+    this.onConflict = config.onConflict;
+    this.conflictPersistenceAdapter = config.conflictPersistenceAdapter;
+    this.offlineQueueAdapter = config.offlineQueueAdapter;
+
+    if (config.offlineQueueAdapter) {
+      this.offlineQueueManager = new OfflineQueueManager({
+        offlineQueueAdapter: config.offlineQueueAdapter,
+        networkAdapter: config.networkAdapter,
+        storageAdapter: config.storageAdapter,
+        onError: config.onError,
+      });
+    }
   }
 
   // ── Bootstrap ───────────────────────────────────────────────────────
@@ -110,6 +141,40 @@ export class SyncEngine {
       });
       this.subscriptions.push(sub);
     }
+
+    // 6. Replay offline queue if configured
+    await this.replayOfflineQueue();
+  }
+
+  /**
+   * Replay any queued offline changes.
+   * Called automatically at end of bootstrap and can be called manually.
+   */
+  async replayOfflineQueue(): Promise<void> {
+    if (!this.offlineQueueManager) return;
+
+    try {
+      const result = await this.offlineQueueManager.replay();
+
+      // Load newly-persisted changes into in-memory sessions
+      if (result.replayed > 0) {
+        for (const [docId, session] of this.sessions) {
+          const changes = await this.storageAdapter.loadChangesSince(docId, session.lastSyncedSeq);
+          if (changes.length > 0) {
+            session.applyEncryptedChanges(changes);
+          }
+        }
+      }
+
+      if (result.failed > 0) {
+        this.onError(
+          `Offline queue replay completed with failures: ${String(result.failed)} failed, ${String(result.skipped)} skipped`,
+          null,
+        );
+      }
+    } catch (error) {
+      this.onError("Offline queue replay failed", error);
+    }
   }
 
   // ── Session access ──────────────────────────────────────────────────
@@ -138,6 +203,15 @@ export class SyncEngine {
 
   /**
    * Apply a local change to a document and submit to the server.
+   *
+   * Three-phase flow when offlineQueueAdapter is configured:
+   * 1. Enqueue locally (pending, no seq)
+   * 2. Submit to server
+   * 3. On ChangeAccepted: persist + markSynced
+   *
+   * If step 2 fails (offline), the entry stays with synced_at = null
+   * for replay on reconnect.
+   *
    * Returns the server-assigned sequence number.
    */
   async applyLocalChange(docId: string, changeFn: (doc: unknown) => void): Promise<number> {
@@ -150,20 +224,26 @@ export class SyncEngine {
       // Produce encrypted change (no seq yet)
       const envelope = session.change(changeFn);
 
-      try {
-        // Submit to server — get server-assigned seq
-        const sequenced = await this.networkAdapter.submitChange(docId, envelope);
-
-        // Persist locally with server seq
-        await this.storageAdapter.appendChange(docId, sequenced);
-
-        // Update sync state
-        this.updateSyncState(docId, sequenced.seq);
-
-        return sequenced.seq;
-      } catch (error) {
-        throw error;
+      // Phase 1: Enqueue locally if offline queue adapter is configured
+      let queueEntryId: string | undefined;
+      if (this.offlineQueueAdapter) {
+        queueEntryId = await this.offlineQueueAdapter.enqueue(docId, envelope);
       }
+
+      // Phase 2: Submit to server
+      const sequenced = await this.networkAdapter.submitChange(docId, envelope);
+
+      // Phase 3: On success, persist locally and mark synced
+      await this.storageAdapter.appendChange(docId, sequenced);
+
+      if (this.offlineQueueAdapter && queueEntryId !== undefined) {
+        await this.offlineQueueAdapter.markSynced(queueEntryId, sequenced.seq);
+      }
+
+      // Update sync state
+      this.updateSyncState(docId, sequenced.seq);
+
+      return sequenced.seq;
     });
   }
 
@@ -187,8 +267,8 @@ export class SyncEngine {
     for (const sub of this.subscriptions) {
       try {
         sub.unsubscribe();
-      } catch {
-        // Best-effort cleanup
+      } catch (error) {
+        this.onError("Failed to unsubscribe during dispose", error);
       }
     }
     this.subscriptions.length = 0;
@@ -197,13 +277,13 @@ export class SyncEngine {
     this.documentQueues.clear();
     try {
       (this.networkAdapter as { close?(): void }).close?.();
-    } catch {
-      /* best-effort */
+    } catch (error) {
+      this.onError("Failed to close network adapter during dispose", error);
     }
     try {
       (this.storageAdapter as { close?(): void }).close?.();
-    } catch {
-      /* best-effort */
+    } catch (error) {
+      this.onError("Failed to close storage adapter during dispose", error);
     }
   }
 
@@ -242,6 +322,9 @@ export class SyncEngine {
 
     // Apply FIRST (has built-in rollback on crypto failure)
     session.applyEncryptedChanges(newChanges);
+
+    // Run post-merge validation to correct merge artifacts
+    await this.runPostMergeValidation(docId, session);
 
     // THEN persist (if this fails, data is still correct in memory; server will re-send)
     await this.persistChanges(docId, newChanges);
@@ -309,6 +392,10 @@ export class SyncEngine {
     const changes = await this.networkAdapter.fetchChangesSince(docId, session.lastSyncedSeq);
     if (changes.length > 0) {
       session.applyEncryptedChanges(changes);
+
+      // Run post-merge validation to correct merge artifacts
+      await this.runPostMergeValidation(docId, session);
+
       await this.persistChanges(docId, changes);
     }
 
@@ -319,6 +406,118 @@ export class SyncEngine {
       lastSnapshotVersion: snapshot?.snapshotVersion ?? 0,
       onDemand: false,
     });
+  }
+
+  private async runPostMergeValidation(
+    docId: string,
+    session: EncryptedSyncSession<unknown>,
+  ): Promise<void> {
+    const notifications: ConflictNotification[] = [];
+    const now = Date.now();
+    let correctionEnvelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[] = [];
+
+    // Run each validator independently so partial failures don't block others
+    try {
+      const result = this.postMergeValidator.runAllValidations(session);
+      correctionEnvelopes = result.correctionEnvelopes;
+
+      // Collect tombstone notifications
+      notifications.push(...result.tombstoneNotifications);
+
+      for (const cycleBreak of result.cycleBreaks) {
+        notifications.push({
+          entityType: "hierarchy",
+          entityId: cycleBreak.entityId,
+          fieldName: "parentId",
+          resolution: "post-merge-cycle",
+          detectedAt: now,
+          summary: `Cycle broken: nulled parent of ${cycleBreak.entityId} (was ${cycleBreak.formerParentId})`,
+        });
+      }
+      for (const patch of result.sortOrderPatches) {
+        notifications.push({
+          entityType: "sortable",
+          entityId: patch.entityId,
+          fieldName: "sortOrder",
+          resolution: "post-merge-sort-normalize",
+          detectedAt: now,
+          summary: `Sort order normalized: ${patch.entityId} → ${String(patch.newSortOrder)}`,
+        });
+      }
+      if (result.checkInNormalizations > 0) {
+        notifications.push({
+          entityType: "check-in-record",
+          entityId: "batch",
+          fieldName: "dismissed",
+          resolution: "post-merge-checkin-normalize",
+          detectedAt: now,
+          summary: `Normalized ${String(result.checkInNormalizations)} check-in record(s)`,
+        });
+      }
+      if (result.friendConnectionNormalizations > 0) {
+        notifications.push({
+          entityType: "friend-connection",
+          entityId: "batch",
+          fieldName: "status",
+          resolution: "post-merge-friend-status",
+          detectedAt: now,
+          summary: `Normalized ${String(result.friendConnectionNormalizations)} friend connection(s)`,
+        });
+      }
+    } catch (error) {
+      this.onError("Post-merge validation failed", error);
+    }
+
+    // Submit correction envelopes to server and persist locally
+    await this.submitCorrectionEnvelopes(docId, correctionEnvelopes);
+
+    // Fire onConflict callbacks
+    if (this.onConflict) {
+      for (const notification of notifications) {
+        this.onConflict(notification);
+      }
+    }
+
+    // Persist conflict records (best-effort, with retry of previously failed)
+    await this.persistConflicts(docId, notifications);
+  }
+
+  private async submitCorrectionEnvelopes(
+    docId: string,
+    envelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[],
+  ): Promise<void> {
+    for (const envelope of envelopes) {
+      try {
+        const sequenced = await this.networkAdapter.submitChange(docId, envelope);
+        await this.storageAdapter.appendChange(docId, sequenced);
+      } catch (error) {
+        this.onError(`Failed to submit correction envelope for ${docId}`, error);
+      }
+    }
+  }
+
+  private async persistConflicts(
+    docId: string,
+    notifications: readonly ConflictNotification[],
+  ): Promise<void> {
+    if (!this.conflictPersistenceAdapter) return;
+
+    // Include previously failed attempts
+    const retryBatch = [...this.failedConflictPersistence];
+    this.failedConflictPersistence = [];
+
+    if (notifications.length > 0) {
+      retryBatch.push({ documentId: docId, notifications });
+    }
+
+    for (const batch of retryBatch) {
+      try {
+        await this.conflictPersistenceAdapter.saveConflicts(batch.documentId, batch.notifications);
+      } catch (error) {
+        this.onError("Failed to persist conflict records", error);
+        this.failedConflictPersistence.push(batch);
+      }
+    }
   }
 
   private updateSyncState(docId: string, seq: number): void {

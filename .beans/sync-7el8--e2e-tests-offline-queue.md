@@ -1,11 +1,11 @@
 ---
 # sync-7el8
 title: "E2E tests: offline queue"
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-19T11:39:41Z
-updated_at: 2026-03-19T11:39:41Z
+updated_at: 2026-03-20T10:24:43Z
 parent: sync-hji0
 ---
 
@@ -18,3 +18,7 @@ End-to-end tests for offline queue and replay.
 - Test: Multiple offline sessions accumulate, all replay on reconnect
 - Test: Connection drop during replay → resumes correctly on next reconnect
 - All tests use real WebSocket connections
+
+## Summary of Changes
+
+Implemented as part of feat/sync-conflict-resolution-and-offline-queue branch.
