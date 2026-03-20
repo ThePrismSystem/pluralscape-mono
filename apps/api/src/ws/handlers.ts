@@ -192,8 +192,7 @@ export async function handleDocumentLoad(
   relay: SyncRelayService,
 ): Promise<[SnapshotResponse, ChangesResponse]> {
   const snapshot = await relay.getLatestSnapshot(message.docId);
-  const sinceSeq = 0;
-  const changes = await relay.getEnvelopesSince(message.docId, sinceSeq);
+  const changes = await relay.getEnvelopesSince(message.docId, 0);
 
   return [
     {
