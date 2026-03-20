@@ -12,10 +12,10 @@ import { EncryptedSyncSession } from "../sync-session.js";
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { DocumentKeyResolver } from "../document-key-resolver.js";
-import type { SyncDocumentType } from "../document-types.js";
 import type { DocumentSyncState, ReplicationProfile } from "../replication-profiles.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { SyncDocType } from "@pluralscape/types";
 
 /** Configuration for creating a SyncEngine. */
 export interface SyncEngineConfig {
@@ -52,21 +52,10 @@ export class SyncEngine {
   private readonly sessions = new Map<string, EncryptedSyncSession<unknown>>();
   private readonly syncStates = new Map<string, DocumentState>();
   private readonly subscriptions: Array<{ unsubscribe(): void }> = [];
-
-  private readonly networkAdapter: SyncNetworkAdapter;
-  private readonly storageAdapter: SyncStorageAdapter;
-  private readonly keyResolver: DocumentKeyResolver;
-  private readonly sodium: SodiumAdapter;
-  private readonly profile: ReplicationProfile;
-  private readonly systemId: string;
+  private readonly config: SyncEngineConfig;
 
   constructor(config: SyncEngineConfig) {
-    this.networkAdapter = config.networkAdapter;
-    this.storageAdapter = config.storageAdapter;
-    this.keyResolver = config.keyResolver;
-    this.sodium = config.sodium;
-    this.profile = config.profile;
-    this.systemId = config.systemId;
+    this.config = config;
   }
 
   // ── Bootstrap ───────────────────────────────────────────────────────
@@ -77,31 +66,35 @@ export class SyncEngine {
    */
   async bootstrap(): Promise<void> {
     // 1. Fetch manifest and local doc list
-    const manifest = await this.networkAdapter.fetchManifest(this.systemId);
-    const localDocIds = await this.storageAdapter.listDocuments();
+    const manifest = await this.config.networkAdapter.fetchManifest(this.config.systemId);
+    const localDocIds = await this.config.storageAdapter.listDocuments();
 
     // 2. Apply replication profile filter
-    const subscriptionSet = filterManifest(manifest, this.profile, localDocIds);
+    const subscriptionSet = filterManifest(manifest, this.config.profile, localDocIds);
 
     // 3. Hydrate each active document (before eviction, so failed hydration doesn't leave less data)
+    const failedDocIds = new Set<string>();
     for (const entry of subscriptionSet.active) {
       try {
         await this.hydrateDocument(entry.docId, entry.docType);
-      } catch {
-        // Skip failed document — will retry on next bootstrap
+      } catch (error: unknown) {
+        failedDocIds.add(entry.docId);
+        console.warn("[SyncEngine] hydration failed for document", entry.docId, error);
       }
     }
 
-    // 4. Evict stale local docs (after hydration)
+    // 4. Evict stale local docs (after hydration), skip docs that failed hydration
     for (const docId of subscriptionSet.evict) {
-      await this.storageAdapter.deleteDocument(docId);
+      if (!failedDocIds.has(docId)) {
+        await this.config.storageAdapter.deleteDocument(docId);
+      }
     }
 
     // 5. Subscribe for real-time updates
     for (const entry of subscriptionSet.active) {
-      const sub = this.networkAdapter.subscribe(entry.docId, (changes) => {
-        void this.handleIncomingChanges(entry.docId, changes).catch(() => {
-          // Non-fatal: changes will be re-fetched on next bootstrap
+      const sub = this.config.networkAdapter.subscribe(entry.docId, (changes) => {
+        void this.handleIncomingChanges(entry.docId, changes).catch((error: unknown) => {
+          console.warn("[SyncEngine] handleIncomingChanges failed for", entry.docId, error);
         });
       });
       this.subscriptions.push(sub);
@@ -148,10 +141,10 @@ export class SyncEngine {
     const envelope = session.change(changeFn);
 
     // Submit to server — get server-assigned seq
-    const sequenced = await this.networkAdapter.submitChange(docId, envelope);
+    const sequenced = await this.config.networkAdapter.submitChange(docId, envelope);
 
     // Persist locally with server seq
-    await this.storageAdapter.appendChange(docId, sequenced);
+    await this.config.storageAdapter.appendChange(docId, sequenced);
 
     // Update sync state
     this.updateSyncState(docId, sequenced.seq);
@@ -163,7 +156,8 @@ export class SyncEngine {
 
   /**
    * Handle incoming changes from server push (DocumentUpdate).
-   * Persists first, then applies to CRDT to ensure durability.
+   * Applies to CRDT first (validates decryption + Automerge), then persists.
+   * If CRDT application fails, nothing is persisted — no poisoned state.
    */
   async handleIncomingChanges(
     docId: string,
@@ -172,21 +166,20 @@ export class SyncEngine {
     const session = this.sessions.get(docId);
     if (!session) return;
 
-    // Persist each change locally first
-    const persisted: EncryptedChangeEnvelope[] = [];
-    for (const change of changes) {
-      await this.storageAdapter.appendChange(docId, change);
-      persisted.push(change);
-    }
+    if (changes.length === 0) return;
 
-    // Apply persisted changes via session (handles dedup, sorting, decryption)
-    if (persisted.length > 0) {
-      session.applyEncryptedChanges(persisted);
+    // Apply to CRDT first — validates decryption + Automerge integrity.
+    // Session has internal rollback semantics if this throws.
+    session.applyEncryptedChanges(changes);
+
+    // Only persist after successful CRDT application
+    for (const change of changes) {
+      await this.config.storageAdapter.appendChange(docId, change);
     }
 
     // Update sync state to highest seq
     const currentSeq = this.syncStates.get(docId)?.lastSyncedSeq ?? 0;
-    this.updateSyncState(docId, computeMaxSeq(persisted, currentSeq));
+    this.updateSyncState(docId, computeMaxSeq(changes, currentSeq));
   }
 
   // ── Cleanup ─────────────────────────────────────────────────────────
@@ -201,38 +194,46 @@ export class SyncEngine {
     this.syncStates.clear();
 
     // Dispose network adapter if it supports it
-    if ("dispose" in this.networkAdapter && typeof this.networkAdapter.dispose === "function") {
-      (this.networkAdapter as { dispose(): void }).dispose();
+    if (
+      "dispose" in this.config.networkAdapter &&
+      typeof this.config.networkAdapter.dispose === "function"
+    ) {
+      (this.config.networkAdapter as { dispose(): void }).dispose();
     }
   }
 
   // ── Private helpers ─────────────────────────────────────────────────
 
-  private async hydrateDocument(docId: string, docType: SyncDocumentType): Promise<void> {
-    const keys = this.keyResolver.resolveKeys(docId);
+  private async hydrateDocument(docId: string, docType: SyncDocType): Promise<void> {
+    const keys = this.config.keyResolver.resolveKeys(docId);
 
     // Try loading from local storage first
-    const localSnapshot = await this.storageAdapter.loadSnapshot(docId);
-    const localChanges = await this.storageAdapter.loadChangesSince(docId, 0);
+    const localSnapshot = await this.config.storageAdapter.loadSnapshot(docId);
+    const localChanges = await this.config.storageAdapter.loadChangesSince(docId, 0);
 
     // Try fetching from server
-    const serverSnapshot = await this.networkAdapter.fetchLatestSnapshot(docId);
-    const serverSnapshotSeq = serverSnapshot?.snapshotVersion ?? 0;
-    const localSnapshotSeq = localSnapshot?.snapshotVersion ?? 0;
+    const serverSnapshot = await this.config.networkAdapter.fetchLatestSnapshot(docId);
+    const serverSnapshotVersion = serverSnapshot?.snapshotVersion ?? 0;
+    const localSnapshotVersion = localSnapshot?.snapshotVersion ?? 0;
 
     // Use whichever snapshot is newer
-    const snapshot = serverSnapshotSeq > localSnapshotSeq ? serverSnapshot : localSnapshot;
+    const snapshot = serverSnapshotVersion > localSnapshotVersion ? serverSnapshot : localSnapshot;
 
     let session: EncryptedSyncSession<unknown>;
     let lastSeq = 0;
 
     if (snapshot) {
-      session = EncryptedSyncSession.fromSnapshot(snapshot, keys, this.sodium);
+      session = EncryptedSyncSession.fromSnapshot(
+        snapshot,
+        keys,
+        this.config.sodium,
+        snapshot.lastSeq,
+      );
       lastSeq = snapshot.lastSeq;
 
       // Persist server snapshot locally if newer
-      if (serverSnapshot && serverSnapshotSeq > localSnapshotSeq) {
-        await this.storageAdapter.saveSnapshot(docId, serverSnapshot);
+      if (serverSnapshot && serverSnapshotVersion > localSnapshotVersion) {
+        await this.config.storageAdapter.saveSnapshot(docId, serverSnapshot);
       }
     } else {
       // Fresh document — create empty
@@ -240,7 +241,7 @@ export class SyncEngine {
         doc: createDocument(docType) as Record<string, unknown>,
         keys,
         documentId: docId,
-        sodium: this.sodium,
+        sodium: this.config.sodium,
       });
     }
 
@@ -252,11 +253,11 @@ export class SyncEngine {
     }
 
     // Fetch any server changes we don't have
-    const serverChanges = await this.networkAdapter.fetchChangesSince(docId, lastSeq);
+    const serverChanges = await this.config.networkAdapter.fetchChangesSince(docId, lastSeq);
     if (serverChanges.length > 0) {
       session.applyEncryptedChanges(serverChanges);
       for (const change of serverChanges) {
-        await this.storageAdapter.appendChange(docId, change);
+        await this.config.storageAdapter.appendChange(docId, change);
       }
       lastSeq = computeMaxSeq(serverChanges, lastSeq);
     }

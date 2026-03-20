@@ -250,6 +250,30 @@ describe("SyncEngine steady-state", () => {
       expect(state?.lastSyncedSeq).toBe(7);
     });
 
+    it("does not persist changes that fail CRDT application", async () => {
+      const appendChange = vi.fn().mockResolvedValue(undefined);
+      const engine = await createBootstrappedEngine({
+        storageAdapter: mockStorageAdapter({ appendChange }),
+      });
+
+      // Craft an invalid encrypted change (garbage ciphertext) — CRDT apply should fail
+      const badChange: EncryptedChangeEnvelope = {
+        documentId: "system-core-sys_test",
+        seq: 99,
+        ciphertext: new Uint8Array([0xff, 0xfe, 0xfd]),
+        nonce: nonce(99),
+        signature: sig(99),
+        authorPublicKey: pubkey(99),
+      };
+
+      await expect(
+        engine.handleIncomingChanges("system-core-sys_test", [badChange]),
+      ).rejects.toThrow();
+
+      // Nothing should have been persisted since CRDT application failed first
+      expect(appendChange).not.toHaveBeenCalled();
+    });
+
     it("ignores changes for unknown documents", async () => {
       const appendChange = vi.fn().mockResolvedValue(undefined);
       const engine = await createBootstrappedEngine({
