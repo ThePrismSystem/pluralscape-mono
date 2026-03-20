@@ -1,4 +1,3 @@
-
 import type { SyncManifest } from "./adapters/network-adapter.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 import type { SystemId } from "@pluralscape/types";

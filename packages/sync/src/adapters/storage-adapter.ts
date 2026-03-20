@@ -38,6 +38,13 @@ export interface SyncStorageAdapter {
   appendChange(documentId: string, change: EncryptedChangeEnvelope): Promise<void>;
 
   /**
+   * Persists multiple encrypted change envelopes in a single batch.
+   * Optional — callers should fall back to individual `appendChange` calls
+   * when this method is not implemented.
+   */
+  appendChanges?(documentId: string, changes: readonly EncryptedChangeEnvelope[]): Promise<void>;
+
+  /**
    * Removes all change envelopes for a document with seq ≤ the snapshot's
    * snapshotVersion. Called after successfully saving a snapshot to reclaim
    * storage space (the snapshot supersedes the individual changes).
@@ -55,4 +62,10 @@ export interface SyncStorageAdapter {
    * Called when a document is removed from the manifest and no longer needed.
    */
   deleteDocument(documentId: string): Promise<void>;
+
+  /**
+   * Releases any resources held by the adapter (e.g. database connections).
+   * Optional — not all adapters require explicit cleanup.
+   */
+  close?(): void;
 }

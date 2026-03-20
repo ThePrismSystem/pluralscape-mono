@@ -200,3 +200,7 @@ export type {
   SyncMessage,
 } from "./protocol.js";
 export { SYNC_PROTOCOL_VERSION } from "./protocol.js";
+
+// ── Sync engine ──────────────────────────────────────────────────────
+export { SyncEngine } from "./engine/index.js";
+export type { SyncEngineConfig } from "./engine/index.js";
