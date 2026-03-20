@@ -19,7 +19,15 @@ import {
 } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
 
-import type { AeadKey, KdfMasterKey, KeyVersion, PwhashSalt } from "./types.js";
+import type {
+  AeadKey,
+  AeadNonce,
+  KdfMasterKey,
+  KeyVersion,
+  PwhashSalt,
+  Signature,
+  SignPublicKey,
+} from "./types.js";
 
 export function assertBufferLength(buffer: Uint8Array, expected: number, name: string): void {
   if (buffer.length !== expected) {
@@ -33,7 +41,7 @@ export function assertAeadKey(key: Uint8Array): asserts key is AeadKey {
   assertBufferLength(key, AEAD_KEY_BYTES, "AEAD key");
 }
 
-export function assertAeadNonce(nonce: Uint8Array): void {
+export function assertAeadNonce(nonce: Uint8Array): asserts nonce is AeadNonce {
   assertBufferLength(nonce, AEAD_NONCE_BYTES, "AEAD nonce");
 }
 
@@ -53,7 +61,7 @@ export function assertBoxSeed(seed: Uint8Array): void {
   assertBufferLength(seed, BOX_SEED_BYTES, "Box seed");
 }
 
-export function assertSignPublicKey(key: Uint8Array): void {
+export function assertSignPublicKey(key: Uint8Array): asserts key is SignPublicKey {
   assertBufferLength(key, SIGN_PUBLIC_KEY_BYTES, "Sign public key");
 }
 
@@ -61,7 +69,7 @@ export function assertSignSecretKey(key: Uint8Array): void {
   assertBufferLength(key, SIGN_SECRET_KEY_BYTES, "Sign secret key");
 }
 
-export function assertSignature(sig: Uint8Array): void {
+export function assertSignature(sig: Uint8Array): asserts sig is Signature {
   assertBufferLength(sig, SIGN_BYTES, "Signature");
 }
 

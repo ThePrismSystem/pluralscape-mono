@@ -39,8 +39,8 @@ import type {
   ServerChannel,
   ServerPoll,
   SnapshotTrigger,
-  SyncDocType,
-  SyncKeyType,
+  SyncDocumentType,
+  DocumentKeyType,
   WebhookDeliveryStatus,
   WebhookEventType,
 } from "@pluralscape/types";
@@ -125,8 +125,8 @@ export const SYNC_DOC_TYPES = [
   "journal",
   "privacy-config",
   "bucket",
-] as const satisfies readonly SyncDocType[];
-export const SYNC_KEY_TYPES = ["derived", "bucket"] as const satisfies readonly SyncKeyType[];
+] as const satisfies readonly SyncDocumentType[];
+export const SYNC_KEY_TYPES = ["derived", "bucket"] as const satisfies readonly DocumentKeyType[];
 /**
  * Naming convention: TABLE_COLUMN (e.g. API_KEY_KEY_TYPES = api_keys.key_type).
  * Each array name maps to the table and column it constrains, so

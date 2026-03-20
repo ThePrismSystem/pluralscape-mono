@@ -324,10 +324,10 @@ import type {
   SyncChangeId,
   SyncDocument,
   SyncDocumentId,
-  SyncDocType,
+  SyncDocumentType,
   SyncIndicator,
   SyncIndicatorStatus,
-  SyncKeyType,
+  DocumentKeyType,
   SyncSnapshotId,
   SyncState,
   SyncPreferences,
@@ -538,8 +538,8 @@ describe("barrel exports", () => {
     expectTypeOf<SyncChangeId>().toExtend<string>();
     expectTypeOf<SyncDocumentId>().toExtend<string>();
     expectTypeOf<SyncSnapshotId>().toExtend<string>();
-    expectTypeOf<SyncDocType>().toBeString();
-    expectTypeOf<SyncKeyType>().toBeString();
+    expectTypeOf<SyncDocumentType>().toBeString();
+    expectTypeOf<DocumentKeyType>().toBeString();
     expectTypeOf<SyncIndicatorStatus>().toBeString();
     expectTypeOf<SyncDocument>().toBeObject();
     expectTypeOf<SyncState>().toBeObject();

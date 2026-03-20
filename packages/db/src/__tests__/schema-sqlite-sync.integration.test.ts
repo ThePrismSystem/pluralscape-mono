@@ -13,7 +13,7 @@ import {
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
 
-import type { SyncDocType } from "@pluralscape/types";
+import type { SyncDocumentType } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, syncDocuments, syncChanges, syncSnapshots };
@@ -27,7 +27,7 @@ describe("SQLite sync schema", () => {
     sqliteInsertSystem(db, accountId, id);
 
   /** Insert a minimal valid syncDocuments row and return its documentId. */
-  const insertDocument = (systemId: string, docType: SyncDocType = "system-core"): string => {
+  const insertDocument = (systemId: string, docType: SyncDocumentType = "system-core"): string => {
     const documentId = crypto.randomUUID();
     const now = Date.now();
     db.insert(syncDocuments)
