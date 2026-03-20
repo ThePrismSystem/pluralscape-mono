@@ -1,13 +1,11 @@
 import type { SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 
-/** Constant-time-safe byte-by-byte comparison for Uint8Array values. */
-function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
+const HEX_BASE = 16;
+
+/** Convert a Uint8Array to a hex string. */
+function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (b) => b.toString(HEX_BASE).padStart(2, "0")).join("");
 }
 
 /** Thrown when a snapshot submission has a version not newer than the current one. */
@@ -48,6 +46,8 @@ export class EncryptedRelay {
    */
   private readonly accessOrder = new Map<string, true>();
   private readonly seqCounters = new Map<string, number>();
+  /** Nonce-based dedup index: (documentId, authorPublicKey, nonce) → assigned seq. */
+  private readonly dedupIndex = new Map<string, number>();
   private readonly maxDocuments: number;
   private readonly onEvict?: (documentId: string) => void;
 
@@ -57,21 +57,14 @@ export class EncryptedRelay {
   }
 
   submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): number {
-    this.evictIfNeeded(envelope.documentId);
-
-    // Dedup: if (documentId, authorPublicKey, nonce) already exists, return existing seq
-    const existing = this.documents.get(envelope.documentId);
-    if (existing) {
-      for (const e of existing) {
-        if (
-          bytesEqual(e.authorPublicKey, envelope.authorPublicKey) &&
-          bytesEqual(e.nonce, envelope.nonce)
-        ) {
-          this.touch(envelope.documentId);
-          return e.seq;
-        }
-      }
+    // Dedup: if (documentId, authorPublicKey, nonce) already submitted, return existing seq
+    const dedupKey = this.buildDedupKey(envelope);
+    const existingSeq = this.dedupIndex.get(dedupKey);
+    if (existingSeq !== undefined) {
+      return existingSeq;
     }
+
+    this.evictIfNeeded(envelope.documentId);
 
     const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
     const seq = currentSeq + 1;
@@ -84,6 +77,7 @@ export class EncryptedRelay {
       this.documents.set(envelope.documentId, docEnvelopes);
     }
     docEnvelopes.push(withSeq);
+    this.dedupIndex.set(dedupKey, seq);
     this.touch(envelope.documentId);
 
     return seq;
@@ -156,6 +150,11 @@ export class EncryptedRelay {
     };
   }
 
+  /** Build a composite dedup key from (documentId, authorPublicKey, nonce). */
+  private buildDedupKey(envelope: Omit<EncryptedChangeEnvelope, "seq">): string {
+    return `${envelope.documentId}:${toHex(envelope.authorPublicKey)}:${toHex(envelope.nonce)}`;
+  }
+
   /** Move documentId to end of insertion order (most-recently-used). O(1). */
   private touch(documentId: string): void {
     this.accessOrder.delete(documentId);
@@ -179,6 +178,12 @@ export class EncryptedRelay {
     }
 
     if (oldestId !== null) {
+      // Clean up dedup entries for the evicted document
+      for (const key of this.dedupIndex.keys()) {
+        if (key.startsWith(`${oldestId}:`)) {
+          this.dedupIndex.delete(key);
+        }
+      }
       this.documents.delete(oldestId);
       this.snapshots.delete(oldestId);
       this.accessOrder.delete(oldestId);
