@@ -18,6 +18,9 @@ function generateTestTransferPayload(): {
   };
 }
 
+// Argon2id worker pool cold-starts on first completeTransfer call (loads libsodium WASM)
+test.describe.configure({ timeout: 60_000 });
+
 test.describe("Device transfer endpoints", () => {
   test("POST /v1/account/device-transfer initiates a transfer", async ({
     request,

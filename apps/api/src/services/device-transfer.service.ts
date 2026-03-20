@@ -5,6 +5,7 @@ import {
   assertAeadKey,
   assertPwhashSalt,
   decryptFromTransfer,
+  deriveTransferKey,
   isValidTransferCode,
 } from "@pluralscape/crypto";
 import { deviceTransferRequests } from "@pluralscape/db/pg";
@@ -17,6 +18,7 @@ import { deriveTransferKeyOffload } from "../lib/pwhash-offload.js";
 import { MAX_TRANSFER_CODE_ATTEMPTS } from "../routes/account/device-transfer.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
+import type { AeadKey } from "@pluralscape/crypto";
 import type { AccountId, SessionId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -166,11 +168,18 @@ export async function completeTransfer(
   const salt = row.codeSalt;
   assertPwhashSalt(salt);
 
-  // Derive the transfer key from the code and stored salt (off main thread)
+  // Derive the transfer key from the code and stored salt (off main thread, sync fallback)
   let codeCorrect = false;
   try {
-    const transferKey = await deriveTransferKeyOffload(code, salt);
-    assertAeadKey(transferKey);
+    let transferKey: AeadKey;
+    try {
+      const raw = await deriveTransferKeyOffload(code, salt);
+      assertAeadKey(raw);
+      transferKey = raw;
+    } catch {
+      // Worker pool unavailable (e.g. Bun runtime) — fall back to synchronous derivation
+      transferKey = deriveTransferKey(code, salt);
+    }
     const payload = deserializeEncryptedPayload(row.encryptedKeyMaterial);
     decryptFromTransfer(payload, transferKey);
     codeCorrect = true;
