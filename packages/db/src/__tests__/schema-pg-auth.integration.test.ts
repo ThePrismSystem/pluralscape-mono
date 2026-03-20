@@ -590,6 +590,30 @@ describe("PG auth schema", () => {
       expect(rows[0]?.expiresAt).toBe(now + ONE_HOUR_MS);
     });
 
+    it("accepts targetSessionId as null", async () => {
+      const account = await insertAccount();
+      const source = await insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      await db.insert(deviceTransferRequests).values({
+        id,
+        accountId: account.id,
+        sourceSessionId: source.id,
+        targetSessionId: null,
+        codeSalt: TEST_CODE_SALT,
+        createdAt: now,
+        expiresAt: now + ONE_HOUR_MS,
+      });
+
+      const rows = await db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.targetSessionId).toBeNull();
+    });
+
     it("defaults encryptedKeyMaterial to null", async () => {
       const account = await insertAccount();
       const source = await insertSession(account.id);

@@ -649,6 +649,61 @@ describe("SQLite auth schema", () => {
       expect(rows[0]?.expiresAt).toBe(now + ONE_HOUR_MS);
     });
 
+    it("accepts targetSessionId as null", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: null,
+          codeSalt: TEST_CODE_SALT,
+          createdAt: now,
+          expiresAt: now + ONE_HOUR_MS,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.targetSessionId).toBeNull();
+    });
+
+    it("cascades on target session deletion with null-safe FK", () => {
+      const account = insertAccount();
+      const source = insertSession(account.id);
+      const target = insertSession(account.id);
+      const now = Date.now();
+      const id = crypto.randomUUID();
+
+      db.insert(deviceTransferRequests)
+        .values({
+          id,
+          accountId: account.id,
+          sourceSessionId: source.id,
+          targetSessionId: target.id,
+          codeSalt: TEST_CODE_SALT,
+          createdAt: now,
+          expiresAt: now + ONE_HOUR_MS,
+        })
+        .run();
+
+      db.delete(sessions).where(eq(sessions.id, target.id)).run();
+      const rows = db
+        .select()
+        .from(deviceTransferRequests)
+        .where(eq(deviceTransferRequests.id, id))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+
     it("defaults encryptedKeyMaterial to null", () => {
       const account = insertAccount();
       const source = insertSession(account.id);
