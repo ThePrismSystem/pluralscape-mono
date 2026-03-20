@@ -733,6 +733,7 @@ describe("message-router", () => {
         authorPublicKey: base64urlOfLength(32, 4),
         documentId: "doc-snap-err",
         snapshotVersion: 1,
+        lastSeq: 0,
       };
 
       await routeMessage(

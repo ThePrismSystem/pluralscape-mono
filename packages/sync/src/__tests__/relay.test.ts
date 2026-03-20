@@ -106,7 +106,7 @@ describe("EncryptedRelay", () => {
 
   it("2.5 — stores and returns snapshots", () => {
     const snapshot = sodium.randomBytes(256);
-    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium);
+    const envelope = encryptSnapshot(snapshot, DOCUMENT_ID, 1, keys, sodium, 0);
     relay.submitSnapshot(envelope);
 
     const latest = relay.getLatestSnapshot(DOCUMENT_ID);
@@ -116,8 +116,8 @@ describe("EncryptedRelay", () => {
   });
 
   it("2.6 — replaces old snapshot with new one", () => {
-    const snap1 = encryptSnapshot(sodium.randomBytes(128), DOCUMENT_ID, 1, keys, sodium);
-    const snap2 = encryptSnapshot(sodium.randomBytes(128), DOCUMENT_ID, 2, keys, sodium);
+    const snap1 = encryptSnapshot(sodium.randomBytes(128), DOCUMENT_ID, 1, keys, sodium, 0);
+    const snap2 = encryptSnapshot(sodium.randomBytes(128), DOCUMENT_ID, 2, keys, sodium, 0);
 
     relay.submitSnapshot(snap1);
     relay.submitSnapshot(snap2);

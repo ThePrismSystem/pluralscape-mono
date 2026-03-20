@@ -20,26 +20,26 @@ import type { AeadKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
 // ── Mock factories ──────────────────────────────────────────────────
 
 function mockSodium(): SodiumAdapter {
-  return {
-    memzero: vi.fn(),
-  } as never;
+  const s: unknown = { memzero: vi.fn() };
+  return s as SodiumAdapter;
 }
 
 function mockKeys(): DocumentKeys {
+  const encKey: unknown = new Uint8Array(32).fill(0xaa);
+  const privKey: unknown = new Uint8Array(64).fill(0xcc);
+  const signingPair: unknown = { publicKey: pubkey(0xbb), privateKey: privKey };
   return {
-    encryptionKey: new Uint8Array(32).fill(0xaa) as never as AeadKey,
-    signingKeys: {
-      publicKey: pubkey(0xbb),
-      privateKey: new Uint8Array(64).fill(0xcc),
-    } as never as SignKeypair,
+    encryptionKey: encKey as AeadKey,
+    signingKeys: signingPair as SignKeypair,
   };
 }
 
 function mockKeyResolver(keys: DocumentKeys): DocumentKeyResolver {
-  return {
+  const r: unknown = {
     resolveKeys: vi.fn().mockReturnValue(keys),
     dispose: vi.fn(),
-  } as never;
+  };
+  return r as DocumentKeyResolver;
 }
 
 function mockStorageAdapter(overrides: Partial<SyncStorageAdapter> = {}): SyncStorageAdapter {
@@ -98,8 +98,8 @@ describe("SyncEngine bootstrap", () => {
           docId: "system-core-sys_test",
           docType: "system-core",
           keyType: "derived",
-          bucketId: undefined,
-          channelId: undefined,
+          bucketId: null,
+          channelId: null,
           timePeriod: null,
           createdAt: 1000,
           updatedAt: 1000,
@@ -122,16 +122,17 @@ describe("SyncEngine bootstrap", () => {
   });
 
   it("evicts stale local documents not in manifest", async () => {
+    const deleteDocument = vi.fn().mockResolvedValue(undefined);
     const storageAdapter = mockStorageAdapter({
-      listDocuments: vi.fn().mockResolvedValue(["stale-doc-sys_old"]),
+      listDocuments: vi.fn().mockResolvedValue(["system-core-sys_old"]),
+      deleteDocument,
     });
     const networkAdapter = mockNetworkAdapter();
 
     const engine = createEngine({ networkAdapter, storageAdapter });
     await engine.bootstrap();
 
-    // stale-doc-sys_old is not in manifest, but it's also not a valid doc ID
-    // so filterManifest won't put it in evict either. Let's use a real pattern
+    expect(deleteDocument).toHaveBeenCalledWith("system-core-sys_old");
   });
 
   it("subscribes to active documents for real-time updates", async () => {
@@ -143,8 +144,8 @@ describe("SyncEngine bootstrap", () => {
           docId: "system-core-sys_test",
           docType: "system-core",
           keyType: "derived",
-          bucketId: undefined,
-          channelId: undefined,
+          bucketId: null,
+          channelId: null,
           timePeriod: null,
           createdAt: 1000,
           updatedAt: 1000,
@@ -175,8 +176,8 @@ describe("SyncEngine bootstrap", () => {
           docId: "system-core-sys_test",
           docType: "system-core",
           keyType: "derived",
-          bucketId: undefined,
-          channelId: undefined,
+          bucketId: null,
+          channelId: null,
           timePeriod: null,
           createdAt: 1000,
           updatedAt: 1000,
@@ -207,8 +208,8 @@ describe("SyncEngine bootstrap", () => {
           docId: "system-core-sys_test",
           docType: "system-core",
           keyType: "derived",
-          bucketId: undefined,
-          channelId: undefined,
+          bucketId: null,
+          channelId: null,
           timePeriod: null,
           createdAt: 1000,
           updatedAt: 1000,

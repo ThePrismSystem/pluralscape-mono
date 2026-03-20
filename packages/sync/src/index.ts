@@ -170,7 +170,13 @@ export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_PROFILE } from "./replic
 
 // ── Sync engine ──────────────────────────────────────────────────────
 export { SyncEngine, compactionIdempotencyKey, handleCompaction } from "./engine/index.js";
-export type { SyncEngineConfig, CompactionInput, CompactionResult } from "./engine/index.js";
+export type {
+  SyncEngineConfig,
+  CompactionInput,
+  CompactionResult,
+  CompactionReason,
+  CompactionSkipReason,
+} from "./engine/index.js";
 
 // ── Protocol messages ──────────────────────────────────────────────────
 export type {

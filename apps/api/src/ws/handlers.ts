@@ -60,8 +60,10 @@ export async function handleSubscribeRequest(
       continue;
     }
 
-    const changes = await relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq);
-    const snapshot = await relay.getLatestSnapshot(entry.docId);
+    const [changes, snapshot] = await Promise.all([
+      relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+      relay.getLatestSnapshot(entry.docId),
+    ]);
     const hasNewerSnapshot =
       snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
 

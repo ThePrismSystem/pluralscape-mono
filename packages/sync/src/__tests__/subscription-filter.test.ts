@@ -14,8 +14,8 @@ function entry(
 ): SyncManifestEntry {
   return {
     keyType: "derived",
-    bucketId: undefined,
-    channelId: undefined,
+    bucketId: null,
+    channelId: null,
     timePeriod: null,
     createdAt: 1000,
     updatedAt: 1000,

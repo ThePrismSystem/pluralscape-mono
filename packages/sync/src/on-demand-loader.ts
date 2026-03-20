@@ -58,13 +58,7 @@ export async function requestOnDemandDocument<T>(
   let lastSnapshotVersion: number;
 
   if (snapshot) {
-    // fromSnapshot does not accept a lastSyncedSeq because EncryptedSnapshotEnvelope
-    // has no seq field (only snapshotVersion). The session starts with lastSyncedSeq=0,
-    // so fetchChangesSince below will request all changes. This is safe because
-    // applyEncryptedChanges skips envelopes with seq <= lastSyncedSeq_ and Automerge's
-    // applyChanges is idempotent (duplicate changes are deduped by hash). The trade-off
-    // is fetching some already-applied changes, which is acceptable for on-demand loads.
-    session = EncryptedSyncSession.fromSnapshot<T>(snapshot, keys, sodium);
+    session = EncryptedSyncSession.fromSnapshot<T>(snapshot, keys, sodium, snapshot.lastSeq);
     lastSnapshotVersion = snapshot.snapshotVersion;
   } else {
     session = createFreshSession<T>(request.docId, keys, sodium);

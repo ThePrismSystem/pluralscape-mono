@@ -95,6 +95,7 @@ describe("handleCompaction", () => {
       documentId: "system-core-sys_test",
       session,
       changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
+      lastSyncedSeq: 200,
       currentSizeBytes: 100,
       currentSnapshotVersion: 0,
     };
@@ -102,10 +103,11 @@ describe("handleCompaction", () => {
     const result = await handleCompaction(input, relayService, storage);
 
     expect(result.compacted).toBe(true);
+    if (!result.compacted) throw new Error("expected compacted");
     expect(result.reason).toBe("change-threshold");
     expect(result.newSnapshotVersion).toBe(1);
     expect(saveSnapshot).toHaveBeenCalledTimes(1);
-    expect(pruneChanges).toHaveBeenCalledWith("system-core-sys_test", 1);
+    expect(pruneChanges).toHaveBeenCalledWith("system-core-sys_test", 200);
   });
 
   it("compacts when size threshold is met", async () => {
@@ -118,6 +120,7 @@ describe("handleCompaction", () => {
       documentId: "system-core-sys_test",
       session,
       changesSinceSnapshot: 5,
+      lastSyncedSeq: 0,
       currentSizeBytes: DEFAULT_COMPACTION_CONFIG.sizeThresholdBytes,
       currentSnapshotVersion: 2,
     };
@@ -125,6 +128,7 @@ describe("handleCompaction", () => {
     const result = await handleCompaction(input, relayService, storage);
 
     expect(result.compacted).toBe(true);
+    if (!result.compacted) throw new Error("expected compacted");
     expect(result.reason).toBe("size-threshold");
     expect(result.newSnapshotVersion).toBe(3);
   });
@@ -139,6 +143,7 @@ describe("handleCompaction", () => {
       documentId: "system-core-sys_test",
       session,
       changesSinceSnapshot: 5,
+      lastSyncedSeq: 0,
       currentSizeBytes: 100,
       currentSnapshotVersion: 0,
     };
@@ -169,6 +174,7 @@ describe("handleCompaction", () => {
       documentId: "system-core-sys_test",
       session,
       changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
+      lastSyncedSeq: 0,
       currentSizeBytes: 100,
       currentSnapshotVersion: 0,
       budget: DEFAULT_STORAGE_BUDGET,
@@ -197,6 +203,7 @@ describe("handleCompaction", () => {
       documentId: "system-core-sys_test",
       session,
       changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
+      lastSyncedSeq: 0,
       currentSizeBytes: 100,
       currentSnapshotVersion: 0,
     };

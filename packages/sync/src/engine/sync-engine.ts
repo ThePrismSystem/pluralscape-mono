@@ -33,6 +33,15 @@ interface DocumentState {
   lastSnapshotVersion: number;
 }
 
+/** Compute the maximum seq from a set of changes without spread (stack-safe for large arrays). */
+function computeMaxSeq(changes: readonly { seq: number }[], current: number): number {
+  let max = current;
+  for (const c of changes) {
+    if (c.seq > max) max = c.seq;
+  }
+  return max;
+}
+
 /**
  * Client-side sync engine.
  *
@@ -74,20 +83,26 @@ export class SyncEngine {
     // 2. Apply replication profile filter
     const subscriptionSet = filterManifest(manifest, this.profile, localDocIds);
 
-    // 3. Evict stale local docs
-    for (const docId of subscriptionSet.evict) {
-      await this.storageAdapter.deleteDocument(docId);
+    // 3. Hydrate each active document (before eviction, so failed hydration doesn't leave less data)
+    for (const entry of subscriptionSet.active) {
+      try {
+        await this.hydrateDocument(entry.docId, entry.docType);
+      } catch {
+        // Skip failed document — will retry on next bootstrap
+      }
     }
 
-    // 4. Hydrate each active document
-    for (const entry of subscriptionSet.active) {
-      await this.hydrateDocument(entry.docId, entry.docType);
+    // 4. Evict stale local docs (after hydration)
+    for (const docId of subscriptionSet.evict) {
+      await this.storageAdapter.deleteDocument(docId);
     }
 
     // 5. Subscribe for real-time updates
     for (const entry of subscriptionSet.active) {
       const sub = this.networkAdapter.subscribe(entry.docId, (changes) => {
-        void this.handleIncomingChanges(entry.docId, changes);
+        void this.handleIncomingChanges(entry.docId, changes).catch(() => {
+          // Non-fatal: changes will be re-fetched on next bootstrap
+        });
       });
       this.subscriptions.push(sub);
     }
@@ -148,7 +163,7 @@ export class SyncEngine {
 
   /**
    * Handle incoming changes from server push (DocumentUpdate).
-   * Applies to the session and persists locally.
+   * Persists first, then applies to CRDT to ensure durability.
    */
   async handleIncomingChanges(
     docId: string,
@@ -157,22 +172,21 @@ export class SyncEngine {
     const session = this.sessions.get(docId);
     if (!session) return;
 
-    // Apply via session (handles dedup, sorting, decryption)
-    session.applyEncryptedChanges(changes);
-
-    // Persist each change locally
+    // Persist each change locally first
+    const persisted: EncryptedChangeEnvelope[] = [];
     for (const change of changes) {
       await this.storageAdapter.appendChange(docId, change);
+      persisted.push(change);
+    }
+
+    // Apply persisted changes via session (handles dedup, sorting, decryption)
+    if (persisted.length > 0) {
+      session.applyEncryptedChanges(persisted);
     }
 
     // Update sync state to highest seq
-    let maxSeq = this.syncStates.get(docId)?.lastSyncedSeq ?? 0;
-    for (const change of changes) {
-      if (change.seq > maxSeq) {
-        maxSeq = change.seq;
-      }
-    }
-    this.updateSyncState(docId, maxSeq);
+    const currentSeq = this.syncStates.get(docId)?.lastSyncedSeq ?? 0;
+    this.updateSyncState(docId, computeMaxSeq(persisted, currentSeq));
   }
 
   // ── Cleanup ─────────────────────────────────────────────────────────
@@ -185,6 +199,11 @@ export class SyncEngine {
     this.subscriptions.length = 0;
     this.sessions.clear();
     this.syncStates.clear();
+
+    // Dispose network adapter if it supports it
+    if ("dispose" in this.networkAdapter && typeof this.networkAdapter.dispose === "function") {
+      (this.networkAdapter as { dispose(): void }).dispose();
+    }
   }
 
   // ── Private helpers ─────────────────────────────────────────────────
@@ -209,7 +228,7 @@ export class SyncEngine {
 
     if (snapshot) {
       session = EncryptedSyncSession.fromSnapshot(snapshot, keys, this.sodium);
-      lastSeq = snapshot.snapshotVersion;
+      lastSeq = snapshot.lastSeq;
 
       // Persist server snapshot locally if newer
       if (serverSnapshot && serverSnapshotSeq > localSnapshotSeq) {
@@ -226,12 +245,10 @@ export class SyncEngine {
     }
 
     // Apply local changes that are after the snapshot
-    if (localChanges.length > 0) {
-      const changesAfterSnapshot = localChanges.filter((c) => c.seq > lastSeq);
-      if (changesAfterSnapshot.length > 0) {
-        session.applyEncryptedChanges(changesAfterSnapshot);
-        lastSeq = Math.max(lastSeq, ...changesAfterSnapshot.map((c) => c.seq));
-      }
+    const changesAfterSnapshot = localChanges.filter((c) => c.seq > lastSeq);
+    if (changesAfterSnapshot.length > 0) {
+      session.applyEncryptedChanges(changesAfterSnapshot);
+      lastSeq = computeMaxSeq(changesAfterSnapshot, lastSeq);
     }
 
     // Fetch any server changes we don't have
@@ -241,7 +258,7 @@ export class SyncEngine {
       for (const change of serverChanges) {
         await this.storageAdapter.appendChange(docId, change);
       }
-      lastSeq = Math.max(lastSeq, ...serverChanges.map((c) => c.seq));
+      lastSeq = computeMaxSeq(serverChanges, lastSeq);
     }
 
     this.sessions.set(docId, session);

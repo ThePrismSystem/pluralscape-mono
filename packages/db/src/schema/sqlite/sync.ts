@@ -51,6 +51,7 @@ export const syncChanges = sqliteTable(
     encryptedPayload: sqliteBinary("encrypted_payload").notNull(),
     authorPublicKey: sqliteBinary("author_public_key").notNull(),
     nonce: sqliteBinary("nonce").notNull(),
+    signature: sqliteBinary("signature").notNull(),
     createdAt: sqliteTimestamp("created_at").notNull(),
   },
   (t) => [
@@ -64,9 +65,11 @@ export const syncSnapshots = sqliteTable("sync_snapshots", {
     .primaryKey()
     .references(() => syncDocuments.documentId, { onDelete: "cascade" }),
   snapshotVersion: integer("snapshot_version").notNull(),
+  lastSeq: integer("last_seq").notNull().default(0),
   encryptedPayload: sqliteBinary("encrypted_payload").notNull(),
   authorPublicKey: sqliteBinary("author_public_key").notNull(),
   nonce: sqliteBinary("nonce").notNull(),
+  signature: sqliteBinary("signature").notNull(),
   createdAt: sqliteTimestamp("created_at").notNull(),
 });
 

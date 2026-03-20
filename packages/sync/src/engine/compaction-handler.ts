@@ -13,6 +13,12 @@ import type { SyncRelayService } from "../relay-service.js";
 import type { EncryptedSyncSession } from "../sync-session.js";
 import type { CompactionConfig, StorageBudget } from "../types.js";
 
+/** Why a compaction was performed. */
+export type CompactionReason = "change-threshold" | "size-threshold" | "explicit";
+
+/** Why a compaction was skipped. */
+export type CompactionSkipReason = "not-eligible" | "storage-budget-exceeded";
+
 /** Input for the compaction handler. */
 export interface CompactionInput {
   readonly documentId: string;
@@ -20,6 +26,8 @@ export interface CompactionInput {
   readonly changesSinceSnapshot: number;
   readonly currentSizeBytes: number;
   readonly currentSnapshotVersion: number;
+  /** The highest change seq seen by this session. */
+  readonly lastSyncedSeq: number;
   readonly config?: CompactionConfig;
   readonly budget?: StorageBudget;
   /** All document sizes for budget check. */
@@ -27,11 +35,13 @@ export interface CompactionInput {
 }
 
 /** Result of a compaction attempt. */
-export interface CompactionResult {
-  readonly compacted: boolean;
-  readonly reason: string;
-  readonly newSnapshotVersion?: number;
-}
+export type CompactionResult =
+  | {
+      readonly compacted: true;
+      readonly reason: CompactionReason;
+      readonly newSnapshotVersion: number;
+    }
+  | { readonly compacted: false; readonly reason: CompactionSkipReason };
 
 /**
  * Attempt to compact a document by creating a snapshot.
@@ -55,6 +65,7 @@ export async function handleCompaction(
     changesSinceSnapshot,
     currentSizeBytes,
     currentSnapshotVersion,
+    lastSyncedSeq,
     config,
     budget,
     allDocumentSizes,
@@ -82,15 +93,20 @@ export async function handleCompaction(
   // 4. Submit to relay
   await relayService.submitSnapshot(snapshotEnvelope);
 
-  // 5. Save locally
-  await storageAdapter.saveSnapshot(documentId, snapshotEnvelope);
-
-  // 6. Prune old changes
-  await storageAdapter.pruneChangesBeforeSnapshot(documentId, newVersion);
+  // 5-6. Save locally and prune — wrapped in try/catch for partial failure resilience.
+  // If relay submission succeeded but local save/prune fails, the snapshot is still on
+  // the server, so we still report success.
+  try {
+    await storageAdapter.saveSnapshot(documentId, snapshotEnvelope);
+    await storageAdapter.pruneChangesBeforeSnapshot(documentId, lastSyncedSeq);
+  } catch {
+    // Local save/prune failed — relay still has the snapshot.
+    // Changes will be pruned on next compaction cycle.
+  }
 
   return {
     compacted: true,
-    reason: eligibility.reason,
+    reason: eligibility.reason as CompactionReason,
     newSnapshotVersion: newVersion,
   };
 }

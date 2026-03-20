@@ -38,11 +38,11 @@ export interface SyncStorageAdapter {
   appendChange(documentId: string, change: EncryptedChangeEnvelope): Promise<void>;
 
   /**
-   * Removes all change envelopes for a document with seq ≤ the snapshot's
-   * snapshotVersion. Called after successfully saving a snapshot to reclaim
-   * storage space (the snapshot supersedes the individual changes).
+   * Removes all change envelopes for a document with seq ≤ the given
+   * lastSeq value. Called after successfully saving a snapshot to reclaim
+   * storage space (the snapshot supersedes changes up to this seq).
    */
-  pruneChangesBeforeSnapshot(documentId: string, snapshotVersion: number): Promise<void>;
+  pruneChangesBeforeSnapshot(documentId: string, lastSeqCoveredBySnapshot: number): Promise<void>;
 
   /**
    * Returns the document IDs of all documents stored locally.

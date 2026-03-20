@@ -23,6 +23,8 @@ export interface EncryptedSnapshotEnvelope {
   readonly authorPublicKey: SignPublicKey;
   readonly documentId: string;
   readonly snapshotVersion: number;
+  /** The highest change seq covered by this snapshot. */
+  readonly lastSeq: number;
 }
 
 // ── Document lifecycle types ─────────────────────────────────────────

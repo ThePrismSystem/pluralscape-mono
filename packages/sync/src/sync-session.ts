@@ -74,7 +74,14 @@ export class EncryptedSyncSession<T> {
 
   createSnapshot(version: number): EncryptedSnapshotEnvelope {
     const saved = Automerge.save(this.doc);
-    return encryptSnapshot(saved, this.documentId, version, this.keys, this.sodium);
+    return encryptSnapshot(
+      saved,
+      this.documentId,
+      version,
+      this.keys,
+      this.sodium,
+      this.lastSyncedSeq_,
+    );
   }
 
   static fromSnapshot<T>(

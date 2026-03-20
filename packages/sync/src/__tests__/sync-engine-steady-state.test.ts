@@ -21,6 +21,8 @@ import { SyncEngine } from "../engine/sync-engine.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
+import { nonce, pubkey, sig } from "./test-crypto-helpers.js";
+
 import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
@@ -59,8 +61,8 @@ const SYSTEM_CORE_MANIFEST: SyncManifest = {
       docId: "system-core-sys_test",
       docType: "system-core",
       keyType: "derived",
-      bucketId: undefined,
-      channelId: undefined,
+      bucketId: null,
+      channelId: null,
       timePeriod: null,
       createdAt: 1000,
       updatedAt: 1000,
@@ -249,8 +251,20 @@ describe("SyncEngine steady-state", () => {
     });
 
     it("ignores changes for unknown documents", async () => {
-      const engine = await createBootstrappedEngine();
-      await engine.handleIncomingChanges("unknown-sys_test", []);
+      const appendChange = vi.fn().mockResolvedValue(undefined);
+      const engine = await createBootstrappedEngine({
+        storageAdapter: mockStorageAdapter({ appendChange }),
+      });
+      const fakeChange: EncryptedChangeEnvelope = {
+        documentId: "unknown-sys_test",
+        seq: 1,
+        ciphertext: new Uint8Array([1]),
+        nonce: nonce(1),
+        signature: sig(1),
+        authorPublicKey: pubkey(1),
+      };
+      await engine.handleIncomingChanges("unknown-sys_test", [fakeChange]);
+      expect(appendChange).not.toHaveBeenCalled();
     });
   });
 });

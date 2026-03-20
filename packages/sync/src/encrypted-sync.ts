@@ -66,6 +66,7 @@ export function encryptSnapshot(
   snapshotVersion: number,
   keys: DocumentKeys,
   sodium: SodiumAdapter,
+  lastSeq: number,
 ): EncryptedSnapshotEnvelope {
   const ad = buildSnapshotAD(documentId, snapshotVersion);
   const { ciphertext, nonce } = sodium.aeadEncrypt(snapshot, ad, keys.encryptionKey);
@@ -78,6 +79,7 @@ export function encryptSnapshot(
     authorPublicKey: keys.signingKeys.publicKey,
     documentId,
     snapshotVersion,
+    lastSeq,
   };
 }
 
