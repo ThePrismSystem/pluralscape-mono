@@ -22,6 +22,8 @@ interface RateLimiterOptions {
   readonly store?: RateLimitStore;
   /** Optional key prefix for rate-limit keys (prevents cross-category collisions). */
   readonly keyPrefix?: string;
+  /** Optional custom key extractor. When provided, overrides the default IP-based key. */
+  readonly keyExtractor?: (c: Context) => string;
 }
 
 /**
@@ -51,7 +53,7 @@ function getClientKey(c: Context): string {
 const RATE_LIMIT_DISABLED = process.env["DISABLE_RATE_LIMIT"] === "1";
 
 export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandler {
-  const { limit, windowMs, keyPrefix } = options;
+  const { limit, windowMs, keyPrefix, keyExtractor } = options;
   const explicitStore = options.store;
   // Fallback store created once per limiter; sharedStore is checked dynamically
   // each request so it is picked up as soon as start() sets it.
@@ -60,7 +62,7 @@ export function createRateLimiter(options: RateLimiterOptions): MiddlewareHandle
   return async (c, next) => {
     if (RATE_LIMIT_DISABLED) return next();
     const store = explicitStore ?? sharedStore ?? fallbackStore;
-    const clientKey = getClientKey(c);
+    const clientKey = keyExtractor ? keyExtractor(c) : getClientKey(c);
     const key = keyPrefix ? `${keyPrefix}:${clientKey}` : clientKey;
     const result = await store.increment(key, windowMs);
 

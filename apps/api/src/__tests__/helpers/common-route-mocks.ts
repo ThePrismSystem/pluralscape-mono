@@ -17,13 +17,16 @@ export function mockDbFactory(): { getDb: ReturnType<typeof vi.fn> } {
 /** Factory for vi.mock("…/rate-limit.js") — passes through to next(). */
 export function mockRateLimitFactory(): {
   createCategoryRateLimiter: ReturnType<typeof vi.fn>;
+  createRateLimiter: ReturnType<typeof vi.fn>;
 } {
+  const passthrough = vi
+    .fn()
+    .mockImplementation(() => async (_c: Context, next: () => Promise<void>) => {
+      await next();
+    });
   return {
-    createCategoryRateLimiter: vi
-      .fn()
-      .mockImplementation(() => async (_c: Context, next: () => Promise<void>) => {
-        await next();
-      }),
+    createCategoryRateLimiter: passthrough,
+    createRateLimiter: passthrough,
   };
 }
 
