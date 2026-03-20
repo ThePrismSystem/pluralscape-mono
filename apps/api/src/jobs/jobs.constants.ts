@@ -16,3 +16,10 @@ export const BLOB_S3_CLEANUP_GRACE_PERIOD_MS = 30 * MS_PER_DAY;
  * Keeps individual job runs bounded to avoid timeouts on large backlogs.
  */
 export const BLOB_S3_CLEANUP_BATCH_SIZE = 100;
+
+/**
+ * Retention period for confirmed offline queue entries before cleanup deletes them.
+ * Entries that have been successfully synced to the server are kept for 7 days
+ * to allow for debugging, then permanently deleted.
+ */
+export const SYNC_QUEUE_RETENTION_MS = 7 * MS_PER_DAY;
