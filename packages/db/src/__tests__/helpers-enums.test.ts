@@ -204,10 +204,9 @@ describe("enum arrays", () => {
   });
 
   it("JOB_TYPES matches JobType union", () => {
-    expect(JOB_TYPES).toHaveLength(15);
+    expect(JOB_TYPES).toHaveLength(14);
     expect(JOB_TYPES).toContain("sync-push");
     expect(JOB_TYPES).toContain("report-generate");
-    expect(JOB_TYPES).toContain("sync-queue-cleanup");
     expect(JOB_TYPES).toContain("partition-maintenance");
   });
 
@@ -302,7 +301,7 @@ describe("enum arrays", () => {
     expect(EXPORT_REQUEST_STATUSES).toHaveLength(4);
     expect(ACCOUNT_PURGE_STATUSES).toHaveLength(5);
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
-    expect(JOB_TYPES).toHaveLength(15);
+    expect(JOB_TYPES).toHaveLength(14);
     expect(JOB_STATUSES).toHaveLength(5);
     expect(ENTITY_TYPES).toHaveLength(60);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);

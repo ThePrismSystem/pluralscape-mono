@@ -382,7 +382,6 @@ export const JOB_TYPES = [
   "account-purge",
   "bucket-key-rotation",
   "report-generate",
-  "sync-queue-cleanup",
   "audit-log-cleanup",
   "partition-maintenance",
 ] as const satisfies readonly JobType[];
