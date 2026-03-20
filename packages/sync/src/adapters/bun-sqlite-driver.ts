@@ -12,6 +12,7 @@ interface BunSqliteDatabase {
   };
   exec(sql: string): void;
   transaction<T>(fn: () => T): () => T;
+  close(): void;
 }
 
 /** Wraps a bun:sqlite Database as a SqliteDriver. */
@@ -37,6 +38,9 @@ export function createBunSqliteDriver(db: BunSqliteDatabase): SqliteDriver {
     transaction<T>(fn: () => T): T {
       const txn = db.transaction(fn);
       return txn();
+    },
+    close(): void {
+      db.close();
     },
   };
 }
