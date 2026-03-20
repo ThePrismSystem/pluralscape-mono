@@ -92,6 +92,19 @@ export async function verifyPinOffload(hash: string, pin: string): Promise<boole
   return dispatch({ op: "verify", hash, pin }) as Promise<boolean>;
 }
 
+/**
+ * Derive a transfer key off the main thread using Argon2id.
+ *
+ * The branded AeadKey type is lost across the structured-clone boundary —
+ * callers must re-assert via assertAeadKey.
+ */
+export async function deriveTransferKeyOffload(
+  code: string,
+  salt: Uint8Array,
+): Promise<Uint8Array> {
+  return dispatch({ op: "deriveTransferKey", code, salt }) as Promise<Uint8Array>;
+}
+
 /** Shutdown the worker pool. Call from test cleanup. */
 export async function _shutdownPool(): Promise<void> {
   if (!pool) return;

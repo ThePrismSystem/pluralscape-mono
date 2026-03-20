@@ -197,6 +197,7 @@ export { MobileKeyLifecycleManager, SECURITY_PRESETS } from "./key-lifecycle.js"
 
 // ── Validation ─────────────────────────────────────────────────────────
 export {
+  assertAeadKey,
   assertAeadNonce,
   assertBufferLength,
   assertPwhashSalt,

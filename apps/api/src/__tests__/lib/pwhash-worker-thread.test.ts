@@ -16,11 +16,15 @@ vi.mock("node:worker_threads", () => ({
 // ── Mock @pluralscape/crypto ───────────────────────────────────────────
 const mockHashPin = vi.fn().mockReturnValue("hashed-value");
 const mockVerifyPin = vi.fn().mockReturnValue(true);
+const mockDeriveTransferKey = vi.fn().mockReturnValue(new Uint8Array(32));
+const mockAssertPwhashSalt = vi.fn();
 
 vi.mock("@pluralscape/crypto", () => ({
   initSodium: vi.fn().mockResolvedValue(undefined),
   hashPin: mockHashPin,
   verifyPin: mockVerifyPin,
+  deriveTransferKey: mockDeriveTransferKey,
+  assertPwhashSalt: mockAssertPwhashSalt,
 }));
 
 // Dynamic import triggers main() which calls initSodium() and registers
@@ -40,8 +44,12 @@ beforeEach(() => {
   mockPostMessage.mockClear();
   mockHashPin.mockClear();
   mockVerifyPin.mockClear();
+  mockDeriveTransferKey.mockClear();
+  mockAssertPwhashSalt.mockClear();
   mockHashPin.mockReturnValue("hashed-value");
   mockVerifyPin.mockReturnValue(true);
+  mockDeriveTransferKey.mockReturnValue(new Uint8Array(32));
+  mockAssertPwhashSalt.mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -87,6 +95,37 @@ describe("pwhash-worker-thread", () => {
         id: 3,
         ok: true,
         value: false,
+      });
+    });
+  });
+
+  describe("deriveTransferKey operation", () => {
+    it("calls deriveTransferKey and posts back the result", () => {
+      const salt = new Uint8Array(16);
+      const handler = getMessageHandler();
+      handler({ id: 10, op: "deriveTransferKey", code: "12345678", salt });
+
+      expect(mockAssertPwhashSalt).toHaveBeenCalledWith(salt);
+      expect(mockDeriveTransferKey).toHaveBeenCalledWith("12345678", salt);
+      expect(mockPostMessage).toHaveBeenCalledWith({
+        id: 10,
+        ok: true,
+        value: new Uint8Array(32),
+      });
+    });
+
+    it("posts back ok=false when assertPwhashSalt throws", () => {
+      mockAssertPwhashSalt.mockImplementation(() => {
+        throw new Error("Invalid salt length");
+      });
+
+      const handler = getMessageHandler();
+      handler({ id: 11, op: "deriveTransferKey", code: "12345678", salt: new Uint8Array(8) });
+
+      expect(mockPostMessage).toHaveBeenCalledWith({
+        id: 11,
+        ok: false,
+        error: "Invalid salt length",
       });
     });
   });
