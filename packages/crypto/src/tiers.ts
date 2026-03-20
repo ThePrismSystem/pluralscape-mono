@@ -5,7 +5,7 @@ import { assertAeadNonce, validateKeyVersion } from "./validation.js";
 
 import type { SodiumAdapter } from "./adapter/interface.js";
 import type { EncryptedPayload } from "./symmetric.js";
-import type { AeadKey, AeadNonce, KdfMasterKey } from "./types.js";
+import type { AeadKey, KdfMasterKey } from "./types.js";
 import type { BucketId, T1EncryptedBlob, T2EncryptedBlob } from "@pluralscape/types";
 
 /** KDF context for data-encryption sub-keys (must be exactly 8 bytes). */
@@ -77,7 +77,7 @@ function blobToPayload(blob: T1EncryptedBlob | T2EncryptedBlob): EncryptedPayloa
   assertAeadNonce(blob.nonce);
   return {
     ciphertext: blob.ciphertext,
-    nonce: blob.nonce as AeadNonce,
+    nonce: blob.nonce,
   };
 }
 
