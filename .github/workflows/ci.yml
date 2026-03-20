@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload coverage report
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: coverage-report
           path: coverage/
@@ -174,7 +174,7 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
       - run: pnpm install --frozen-lockfile
 
