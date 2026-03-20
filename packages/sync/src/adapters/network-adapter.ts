@@ -16,9 +16,9 @@ export interface SyncManifestEntry {
   /** Key type determining which encryption key is used. */
   readonly keyType: DocumentKeyType;
   /** Present for bucket documents — identifies which bucket. */
-  readonly bucketId: string | undefined;
+  readonly bucketId: string | null;
   /** Present for chat documents — identifies which channel. */
-  readonly channelId: string | undefined;
+  readonly channelId: string | null;
   /** Present for time-split documents (e.g. "2026-Q1", "2026-03", "2026"). */
   readonly timePeriod: string | null;
   /** Unix milliseconds when the document was created on the server. */
@@ -82,6 +82,7 @@ export interface SyncNetworkAdapter {
   fetchChangesSince(
     documentId: string,
     sinceSeq: number,
+    limit?: number,
   ): Promise<readonly EncryptedChangeEnvelope[]>;
 
   /**
@@ -104,6 +105,7 @@ export interface SyncNetworkAdapter {
   subscribe(
     documentId: string,
     onChanges: (changes: readonly EncryptedChangeEnvelope[]) => void,
+    lastSyncedSeq?: number,
   ): SyncSubscription;
 
   /**
@@ -112,4 +114,7 @@ export interface SyncNetworkAdapter {
    * Friend devices receive a filtered manifest (bucket docs with active KeyGrants only).
    */
   fetchManifest(systemId: string): Promise<SyncManifest>;
+
+  /** Optional cleanup — close underlying connections. */
+  close?(): void;
 }

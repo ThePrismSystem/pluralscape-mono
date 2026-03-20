@@ -59,8 +59,8 @@ const SYSTEM_CORE_MANIFEST: SyncManifest = {
       docId: "system-core-sys_test",
       docType: "system-core",
       keyType: "derived",
-      bucketId: undefined,
-      channelId: undefined,
+      bucketId: null,
+      channelId: null,
       timePeriod: null,
       createdAt: 1000,
       updatedAt: 1000,
@@ -201,8 +201,9 @@ describe("SyncEngine steady-state", () => {
         sodium,
       });
 
-      const envelope = senderSession.change((d: Record<string, unknown>) => {
-        (d["items"] as Record<string, string>)["key1"] = "value1";
+      const envelope = senderSession.change((d) => {
+        const doc = d as Record<string, unknown>;
+        (doc["items"] as Record<string, string>)["key1"] = "value1";
       });
 
       const change: EncryptedChangeEnvelope = { ...envelope, seq: 10 };
@@ -229,11 +230,11 @@ describe("SyncEngine steady-state", () => {
         sodium,
       });
 
-      const e1 = senderSession.change((d: Record<string, unknown>) => {
-        d["counter"] = 1;
+      const e1 = senderSession.change((d) => {
+        (d as Record<string, unknown>)["counter"] = 1;
       });
-      const e2 = senderSession.change((d: Record<string, unknown>) => {
-        d["counter"] = 2;
+      const e2 = senderSession.change((d) => {
+        (d as Record<string, unknown>)["counter"] = 2;
       });
 
       const changes: EncryptedChangeEnvelope[] = [

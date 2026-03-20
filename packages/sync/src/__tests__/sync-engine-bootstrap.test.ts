@@ -98,8 +98,8 @@ describe("SyncEngine bootstrap", () => {
           docId: "system-core-sys_test",
           docType: "system-core",
           keyType: "derived",
-          bucketId: undefined,
-          channelId: undefined,
+          bucketId: null,
+          channelId: null,
           timePeriod: null,
           createdAt: 1000,
           updatedAt: 1000,
@@ -143,8 +143,8 @@ describe("SyncEngine bootstrap", () => {
           docId: "system-core-sys_test",
           docType: "system-core",
           keyType: "derived",
-          bucketId: undefined,
-          channelId: undefined,
+          bucketId: null,
+          channelId: null,
           timePeriod: null,
           createdAt: 1000,
           updatedAt: 1000,
@@ -163,7 +163,7 @@ describe("SyncEngine bootstrap", () => {
     const engine = createEngine({ networkAdapter });
     await engine.bootstrap();
 
-    expect(subscribeFn).toHaveBeenCalledWith("system-core-sys_test", expect.any(Function));
+    expect(subscribeFn).toHaveBeenCalledWith("system-core-sys_test", expect.any(Function), 0);
   });
 
   it("fetches server changes during hydration", async () => {
@@ -175,8 +175,8 @@ describe("SyncEngine bootstrap", () => {
           docId: "system-core-sys_test",
           docType: "system-core",
           keyType: "derived",
-          bucketId: undefined,
-          channelId: undefined,
+          bucketId: null,
+          channelId: null,
           timePeriod: null,
           createdAt: 1000,
           updatedAt: 1000,
@@ -195,7 +195,7 @@ describe("SyncEngine bootstrap", () => {
     const engine = createEngine({ networkAdapter });
     await engine.bootstrap();
 
-    expect(fetchChangesSince).toHaveBeenCalledWith("system-core-sys_test", 0);
+    expect(fetchChangesSince).toHaveBeenCalledWith("system-core-sys_test", 0, 1000);
   });
 
   it("disposes cleanly by unsubscribing all", async () => {
@@ -207,8 +207,8 @@ describe("SyncEngine bootstrap", () => {
           docId: "system-core-sys_test",
           docType: "system-core",
           keyType: "derived",
-          bucketId: undefined,
-          channelId: undefined,
+          bucketId: null,
+          channelId: null,
           timePeriod: null,
           createdAt: 1000,
           updatedAt: 1000,

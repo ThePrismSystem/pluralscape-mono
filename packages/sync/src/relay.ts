@@ -54,7 +54,7 @@ export class EncryptedRelay {
   }
 
   /** Return envelopes since a given seq using binary search + slice (O(log n)). */
-  getEnvelopesSince(documentId: string, sinceSeq: number): readonly EncryptedChangeEnvelope[] {
+  getEnvelopesSince(documentId: string, sinceSeq: number, limit?: number): readonly EncryptedChangeEnvelope[] {
     const docEnvelopes = this.documents.get(documentId);
     if (!docEnvelopes) {
       return [];
@@ -73,7 +73,8 @@ export class EncryptedRelay {
         high = mid;
       }
     }
-    return docEnvelopes.slice(low);
+    const result = docEnvelopes.slice(low);
+    return limit !== undefined ? result.slice(0, limit) : result;
   }
 
   submitSnapshot(envelope: EncryptedSnapshotEnvelope): void {
@@ -101,7 +102,7 @@ export class EncryptedRelay {
     const manifest: SyncManifest = { documents: [], systemId };
     return {
       submit: (e) => Promise.resolve(this.submit(e)),
-      getEnvelopesSince: (d, s) => Promise.resolve(this.getEnvelopesSince(d, s)),
+      getEnvelopesSince: (d, s, l) => Promise.resolve(this.getEnvelopesSince(d, s, l)),
       submitSnapshot: (e) => {
         this.submitSnapshot(e);
         return Promise.resolve();

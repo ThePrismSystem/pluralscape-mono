@@ -16,6 +16,7 @@ export interface SyncRelayService {
   getEnvelopesSince(
     documentId: string,
     sinceSeq: number,
+    limit?: number,
   ): Promise<readonly EncryptedChangeEnvelope[]>;
 
   /** Submit an encrypted snapshot. Throws on version conflict. */

@@ -77,6 +77,10 @@ export class EncryptedSyncSession<T> {
     return encryptSnapshot(saved, this.documentId, version, this.keys, this.sodium);
   }
 
+  restoreDocument(doc: Automerge.Doc<T>): void {
+    this.doc = doc;
+  }
+
   static fromSnapshot<T>(
     envelope: EncryptedSnapshotEnvelope,
     keys: DocumentKeys,

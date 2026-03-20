@@ -18,12 +18,30 @@ export class PgSyncRelayService implements SyncRelayService {
 
   async submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<number> {
     return await this.db.transaction(async (tx) => {
+      const now = Date.now();
+
+      // Check for idempotent retry via dedup index
+      const [existing] = await tx
+        .select({ seq: syncChanges.seq })
+        .from(syncChanges)
+        .where(
+          and(
+            eq(syncChanges.documentId, envelope.documentId),
+            eq(syncChanges.authorPublicKey, envelope.authorPublicKey),
+            eq(syncChanges.nonce, envelope.nonce),
+          ),
+        );
+
+      if (existing) {
+        return existing.seq;
+      }
+
       // Atomically increment last_seq and get the new value
       const [updated] = await tx
         .update(syncDocuments)
         .set({
           lastSeq: sql`${syncDocuments.lastSeq} + 1`,
-          updatedAt: Date.now(),
+          updatedAt: now,
         })
         .where(eq(syncDocuments.documentId, envelope.documentId))
         .returning({ lastSeq: syncDocuments.lastSeq });
@@ -41,7 +59,8 @@ export class PgSyncRelayService implements SyncRelayService {
         encryptedPayload: envelope.ciphertext,
         authorPublicKey: envelope.authorPublicKey,
         nonce: envelope.nonce,
-        createdAt: Date.now(),
+        signature: envelope.signature,
+        createdAt: now,
       });
 
       return seq;
@@ -51,17 +70,24 @@ export class PgSyncRelayService implements SyncRelayService {
   async getEnvelopesSince(
     documentId: string,
     sinceSeq: number,
+    limit?: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
-    const rows = await this.db
+    let query = this.db
       .select()
       .from(syncChanges)
       .where(and(eq(syncChanges.documentId, documentId), gt(syncChanges.seq, sinceSeq)))
       .orderBy(syncChanges.seq);
 
+    if (limit !== undefined) {
+      query = query.limit(limit);
+    }
+
+    const rows = await query;
+
     return rows.map((row) => ({
       ciphertext: row.encryptedPayload,
       nonce: row.nonce as EncryptedChangeEnvelope["nonce"],
-      signature: new Uint8Array(0) as EncryptedChangeEnvelope["signature"],
+      signature: row.signature as EncryptedChangeEnvelope["signature"],
       authorPublicKey: row.authorPublicKey as EncryptedChangeEnvelope["authorPublicKey"],
       documentId: row.documentId,
       seq: row.seq,
@@ -70,11 +96,12 @@ export class PgSyncRelayService implements SyncRelayService {
 
   async submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void> {
     await this.db.transaction(async (tx) => {
-      // Check current version
+      // Check current version — lock the row to prevent TOCTOU races
       const [doc] = await tx
         .select({ snapshotVersion: syncDocuments.snapshotVersion })
         .from(syncDocuments)
-        .where(eq(syncDocuments.documentId, envelope.documentId));
+        .where(eq(syncDocuments.documentId, envelope.documentId))
+        .for("update");
 
       if (!doc) {
         throw new Error(`Document not found: ${envelope.documentId}`);
@@ -96,6 +123,7 @@ export class PgSyncRelayService implements SyncRelayService {
           encryptedPayload: envelope.ciphertext,
           authorPublicKey: envelope.authorPublicKey,
           nonce: envelope.nonce,
+          signature: envelope.signature,
           createdAt: now,
         })
         .onConflictDoUpdate({
@@ -105,6 +133,7 @@ export class PgSyncRelayService implements SyncRelayService {
             encryptedPayload: envelope.ciphertext,
             authorPublicKey: envelope.authorPublicKey,
             nonce: envelope.nonce,
+            signature: envelope.signature,
             createdAt: now,
           },
         });
@@ -131,7 +160,7 @@ export class PgSyncRelayService implements SyncRelayService {
     return {
       ciphertext: row.encryptedPayload,
       nonce: row.nonce as EncryptedSnapshotEnvelope["nonce"],
-      signature: new Uint8Array(0) as EncryptedSnapshotEnvelope["signature"],
+      signature: row.signature as EncryptedSnapshotEnvelope["signature"],
       authorPublicKey: row.authorPublicKey as EncryptedSnapshotEnvelope["authorPublicKey"],
       documentId: row.documentId,
       snapshotVersion: row.snapshotVersion,
@@ -148,8 +177,8 @@ export class PgSyncRelayService implements SyncRelayService {
       docId: row.documentId,
       docType: row.docType,
       keyType: row.keyType,
-      bucketId: row.bucketId ?? undefined,
-      channelId: row.channelId ?? undefined,
+      bucketId: row.bucketId ?? null,
+      channelId: row.channelId ?? null,
       timePeriod: row.timePeriod,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
