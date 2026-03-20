@@ -111,7 +111,7 @@ describe("handleManifestRequest", () => {
       systemId,
     };
 
-    const result = await handleManifestRequest(message, relay.asService(systemId));
+    const result = await handleManifestRequest(message, relay.asService());
 
     expect(result).toEqual({
       type: "ManifestResponse",
@@ -130,7 +130,7 @@ describe("handleManifestRequest", () => {
       systemId,
     };
 
-    const result = await handleManifestRequest(message, relay.asService(systemId));
+    const result = await handleManifestRequest(message, relay.asService());
 
     expect(result.correlationId).toBe(correlationId);
   });
