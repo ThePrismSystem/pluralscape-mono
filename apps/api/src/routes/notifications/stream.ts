@@ -6,10 +6,12 @@
  * - Subscribes to Valkey ps:notify:{accountId} channel
  * - Replays missed events from ring buffer on reconnect (Last-Event-ID)
  * - Sends heartbeat comments every 30s to prevent proxy timeouts
+ * - Single Valkey subscription per account (shared across tabs)
  */
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 
+import { logger } from "../../lib/logger.js";
 import { getNotificationPubSub } from "../../lib/notification-pubsub.js";
 import { SseEventBuffer } from "../../lib/sse-manager.js";
 import { SSE_CHANNEL_PREFIX, SSE_HEARTBEAT_INTERVAL_MS } from "../../lib/sse.constants.js";
@@ -17,96 +19,139 @@ import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
+import type { SSEStreamingApi } from "hono/streaming";
 
 export const notificationsRoutes = new Hono<AuthEnv>();
 
-notificationsRoutes.use("*", createCategoryRateLimiter("readDefault"));
+notificationsRoutes.use("*", createCategoryRateLimiter("sseStream"));
 notificationsRoutes.use("*", authMiddleware());
 
-/** Per-account event buffers for replay on reconnect. */
-const accountBuffers = new Map<string, SseEventBuffer>();
+/** Per-account SSE state: shared buffer, set of connected streams, Valkey handler. */
+interface AccountSseState {
+  buffer: SseEventBuffer;
+  streams: Set<SSEStreamingApi>;
+  messageHandler: ((message: string) => void) | null;
+}
 
-function getOrCreateBuffer(accountId: string): SseEventBuffer {
-  let buffer = accountBuffers.get(accountId);
-  if (!buffer) {
-    buffer = new SseEventBuffer();
-    accountBuffers.set(accountId, buffer);
+const accountStates = new Map<string, AccountSseState>();
+let noPubSubWarningLogged = false;
+
+function getOrCreateState(accountId: string): AccountSseState {
+  let state = accountStates.get(accountId);
+  if (!state) {
+    state = {
+      buffer: new SseEventBuffer(),
+      streams: new Set(),
+      messageHandler: null,
+    };
+    accountStates.set(accountId, state);
   }
-  return buffer;
+  return state;
 }
 
 notificationsRoutes.get("/stream", (c) => {
   const auth = c.get("auth");
   const accountId = auth.accountId;
   const lastEventId = c.req.header("Last-Event-ID");
-  const buffer = getOrCreateBuffer(accountId);
+  const state = getOrCreateState(accountId);
   const pubsub = getNotificationPubSub();
   const channel = `${SSE_CHANNEL_PREFIX}${accountId}`;
 
   return streamSSE(c, async (stream) => {
-    // Replay missed events if reconnecting with Last-Event-ID
-    if (lastEventId) {
-      const missed = buffer.since(lastEventId);
-      if (missed === null) {
-        // Gap detected — client must full sync
-        await stream.writeSSE({
-          event: "full-sync",
-          data: JSON.stringify({ reason: "replay-window-exceeded" }),
-          id: String(buffer.currentId),
-        });
-      } else {
-        for (const event of missed) {
+    // Register this stream
+    state.streams.add(stream);
+
+    let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+
+    try {
+      // Replay missed events if reconnecting with Last-Event-ID
+      if (lastEventId) {
+        const missed = state.buffer.since(lastEventId);
+        if (missed === null) {
+          // Gap detected — client must full sync
           await stream.writeSSE({
-            event: event.event,
-            data: event.data,
-            id: event.id,
+            event: "full-sync",
+            data: JSON.stringify({ reason: "replay-window-exceeded" }),
+            id: String(state.buffer.lastAssignedId),
           });
+        } else {
+          for (const event of missed) {
+            await stream.writeSSE({
+              event: event.event,
+              data: event.data,
+              id: event.id,
+            });
+          }
         }
       }
-    }
 
-    // Heartbeat timer
-    const heartbeatTimer = setInterval(() => {
-      void stream.write(": heartbeat\n\n").catch(() => {
-        // Stream closed — timer will be cleared in cleanup
-      });
-    }, SSE_HEARTBEAT_INTERVAL_MS);
+      // Heartbeat timer
+      heartbeatTimer = setInterval(() => {
+        void stream.write(": heartbeat\n\n").catch(() => {
+          // Stream closed — timer will be cleared in cleanup
+        });
+      }, SSE_HEARTBEAT_INTERVAL_MS);
 
-    // Subscribe to Valkey channel for real-time events
-    const messageHandler = (message: string): void => {
-      let parsed: { event?: string; data?: unknown };
-      try {
-        parsed = JSON.parse(message) as { event?: string; data?: unknown };
-      } catch {
-        return;
+      // Subscribe to Valkey channel — only once per account (first stream)
+      if (pubsub && !state.messageHandler) {
+        const handler = (message: string): void => {
+          let parsed: { event?: string; data?: unknown };
+          try {
+            parsed = JSON.parse(message) as { event?: string; data?: unknown };
+          } catch {
+            logger.warn("SSE: malformed Valkey message", { channel });
+            return;
+          }
+
+          const eventType = typeof parsed.event === "string" ? parsed.event : "notification";
+          const data = JSON.stringify(parsed.data ?? parsed);
+          const id = state.buffer.push(eventType, data);
+
+          // Fan out to all connected streams for this account
+          for (const s of state.streams) {
+            void s.writeSSE({ event: eventType, data, id }).catch(() => {
+              // Stream closed — will be cleaned up
+            });
+          }
+        };
+
+        state.messageHandler = handler;
+        await pubsub.subscribe(channel, handler);
       }
 
-      const eventType = typeof parsed.event === "string" ? parsed.event : "notification";
-      const data = JSON.stringify(parsed.data ?? parsed);
-      const id = buffer.push(eventType, data);
+      if (!pubsub && !noPubSubWarningLogged) {
+        logger.warn("SSE: no pub/sub configured, stream will only receive heartbeats");
+        noPubSubWarningLogged = true;
+      }
 
-      void stream.writeSSE({ event: eventType, data, id }).catch(() => {
-        // Stream closed — will be cleaned up
-      });
-    };
+      // Wait for the stream to close (client disconnect)
+      if (!stream.aborted) {
+        await new Promise<void>((resolve) => {
+          stream.onAbort(() => {
+            resolve();
+          });
+        });
+      }
+    } finally {
+      // Cleanup
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+      }
+      state.streams.delete(stream);
 
-    if (pubsub) {
-      await pubsub.subscribe(channel, messageHandler);
-    }
-
-    // Wait for the stream to close (client disconnect)
-    // Hono's streamSSE keeps the stream alive until the callback resolves
-    // or the client disconnects via AbortSignal
-    await new Promise<void>((resolve) => {
-      stream.onAbort(() => {
-        resolve();
-      });
-    });
-
-    // Cleanup
-    clearInterval(heartbeatTimer);
-    if (pubsub) {
-      await pubsub.unsubscribe(channel, messageHandler);
+      // If no more streams for this account, unsubscribe and clean up
+      if (state.streams.size === 0) {
+        if (pubsub && state.messageHandler) {
+          await pubsub.unsubscribe(channel, state.messageHandler);
+        }
+        accountStates.delete(accountId);
+      }
     }
   });
 });
+
+/** Reset SSE state (for testing). */
+export function _resetSseStateForTesting(): void {
+  accountStates.clear();
+  noPubSubWarningLogged = false;
+}

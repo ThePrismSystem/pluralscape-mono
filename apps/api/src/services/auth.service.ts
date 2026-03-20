@@ -39,7 +39,7 @@ import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
-import type { AccountId, AccountType, SystemId } from "@pluralscape/types";
+import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Registration ───────────────────────────────────────────────────
@@ -221,6 +221,14 @@ export async function loginAccount(
   const parsed = LoginCredentialsSchema.parse(credentials);
   const emailHash = hashEmail(parsed.email);
 
+  // Check throttle BEFORE DB lookup, keyed on emailHash (not account.id)
+  // to prevent account existence enumeration via 429 vs 401 responses
+  const loginStore = getAccountLoginStore();
+  const throttleState = await loginStore.check(emailHash);
+  if (throttleState.throttled) {
+    throw new LoginThrottledError(throttleState.windowResetAt);
+  }
+
   const [account] = await db
     .select()
     .from(accounts)
@@ -237,6 +245,13 @@ export async function loginAccount(
         err instanceof Error ? { err } : { error: String(err) },
       );
     }
+    // Record failure for throttling on non-existent accounts too
+    void loginStore.recordFailure(emailHash).catch((throttleErr: unknown) => {
+      log.error(
+        "Failed to record login failure for throttle",
+        throttleErr instanceof Error ? { err: throttleErr } : { error: String(throttleErr) },
+      );
+    });
     // Fire-and-forget: match timing of the "invalid password" branch which writes an audit event.
     // Uses a zeroed account ID since no real account exists for this email.
     void audit(db, {
@@ -251,17 +266,10 @@ export async function loginAccount(
     return null;
   }
 
-  // Check per-account login throttle before verifying password
-  const loginStore = getAccountLoginStore();
-  const throttleState = loginStore.check(account.id);
-  if (throttleState.throttled) {
-    throw new LoginThrottledError(throttleState.windowResetAt);
-  }
-
   const valid = verifyPassword(account.passwordHash, parsed.password);
   if (!valid) {
     // Record failed attempt for throttling
-    loginStore.recordFailure(account.id);
+    await loginStore.recordFailure(emailHash);
 
     // Fire-and-forget: we don't block the response on audit writes for failed attempts.
     void audit(db, {
@@ -279,7 +287,7 @@ export async function loginAccount(
   }
 
   // Successful login: reset the throttle counter
-  loginStore.reset(account.id);
+  await loginStore.reset(emailHash);
 
   // Fire-and-forget: rehash password if it uses old params
   if (needsRehash(account.passwordHash)) {
@@ -287,7 +295,7 @@ export async function loginAccount(
     void db
       .update(accounts)
       .set({ passwordHash: newHash, updatedAt: now() })
-      .where(eq(accounts.id, account.id))
+      .where(and(eq(accounts.id, account.id), eq(accounts.passwordHash, account.passwordHash)))
       .then(() => {
         log.info("Rehashed password to current params", { accountId: account.id });
       })
@@ -484,11 +492,11 @@ class ValidationError extends Error {
 class LoginThrottledError extends Error {
   override readonly name = "LoginThrottledError" as const;
   /** UnixMillis when the throttle window resets. */
-  readonly windowResetAt: number;
+  readonly windowResetAt: UnixMillis;
 
   constructor(windowResetAt: number) {
     super("Too many failed login attempts");
-    this.windowResetAt = windowResetAt;
+    this.windowResetAt = windowResetAt as UnixMillis;
   }
 }
 

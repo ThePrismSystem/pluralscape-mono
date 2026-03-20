@@ -9,6 +9,7 @@ import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { extractPlatform } from "../../lib/request-meta.js";
 import { MS_PER_SECOND } from "../../middleware/middleware.constants.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
+import { ACCOUNT_LOGIN_WINDOW_MS } from "../../middleware/stores/account-login-store.js";
 import { LoginThrottledError, loginAccount } from "../../services/auth.service.js";
 
 import { AUTH_GENERIC_LOGIN_ERROR } from "./auth.constants.js";
@@ -33,8 +34,7 @@ loginRoute.post("/", async (c) => {
     result = await loginAccount(db, body, platform, audit, log);
   } catch (err: unknown) {
     if (err instanceof LoginThrottledError) {
-      const retryAfter = Math.ceil((err.windowResetAt - Date.now()) / MS_PER_SECOND);
-      c.header("Retry-After", String(Math.max(1, retryAfter)));
+      c.header("Retry-After", String(ACCOUNT_LOGIN_WINDOW_MS / MS_PER_SECOND));
       const requestId = c.res.headers.get("X-Request-Id") ?? crypto.randomUUID();
       return c.json(
         {

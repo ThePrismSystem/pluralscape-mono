@@ -149,7 +149,7 @@ describe("POST /login", () => {
     expect(body.error.code).toBe("INTERNAL_ERROR");
   });
 
-  it("returns 429 LOGIN_THROTTLED with Retry-After when account is throttled", async () => {
+  it("returns 429 LOGIN_THROTTLED with fixed Retry-After when account is throttled", async () => {
     const { LoginThrottledError } = await import("../../../services/auth.service.js");
     const futureTime = Date.now() + 60_000;
     vi.mocked(loginAccount).mockRejectedValueOnce(new LoginThrottledError(futureTime));
@@ -161,8 +161,7 @@ describe("POST /login", () => {
     const body = (await res.json()) as ApiErrorResponse;
     expect(body.error.code).toBe("LOGIN_THROTTLED");
     expect(body.error.message).toBe("Too many failed login attempts");
-    const retryAfter = res.headers.get("Retry-After");
-    expect(retryAfter).toBeTruthy();
-    expect(Number(retryAfter)).toBeGreaterThan(0);
+    // Fixed Retry-After: always the full window duration (900s = 15 min)
+    expect(res.headers.get("Retry-After")).toBe("900");
   });
 });

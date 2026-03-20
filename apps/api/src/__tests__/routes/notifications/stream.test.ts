@@ -10,10 +10,25 @@ vi.mock("../../../middleware/rate-limit.js", () => mockRateLimitFactory());
 vi.mock("../../../lib/notification-pubsub.js", () => ({
   getNotificationPubSub: vi.fn().mockReturnValue(undefined),
 }));
+vi.mock("../../../lib/logger.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/logger.js")>();
+  const mock = {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
+  return {
+    ...actual,
+    logger: mock,
+  };
+});
 
 // ── Import after mocks ──────────────────────────────────────────
 
-const { notificationsRoutes } = await import("../../../routes/notifications/stream.js");
+const { notificationsRoutes, _resetSseStateForTesting } =
+  await import("../../../routes/notifications/stream.js");
+const { logger } = await import("../../../lib/logger.js");
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -26,6 +41,7 @@ function createApp() {
 describe("GET /notifications/stream", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    _resetSseStateForTesting();
   });
 
   it("returns text/event-stream content type", async () => {
@@ -54,5 +70,13 @@ describe("GET /notifications/stream", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toBeTruthy();
+  });
+
+  it("logs warning once when no pub/sub configured", async () => {
+    const app = createApp();
+    await app.request("/notifications/stream");
+    expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(
+      "SSE: no pub/sub configured, stream will only receive heartbeats",
+    );
   });
 });

@@ -65,8 +65,7 @@ describe("SseEventBuffer", () => {
     buffer.push("d", "4"); // Evicts "a"
 
     expect(buffer.size).toBe(3);
-    // Event "a" (id=1) was evicted — since(1) detects gap since oldest is 2
-    // but since(2) should return events 3,4
+    // Event "a" (id=1) was evicted — since(0) detects gap since oldest is 2
     const gapResult = buffer.since("0");
     expect(gapResult).toBeNull(); // Gap: 0 < 2 - 1
 
@@ -95,8 +94,9 @@ describe("SseEventBuffer", () => {
     vi.advanceTimersByTime(maxAgeMs + 1);
     buffer.push("new", "new-data");
 
-    // since("0") should skip the old event
-    const events = buffer.since("0");
+    // since("1") — event 1 is aged out, but since we're asking from id=1 (the aged one itself),
+    // we only need events after it. Event 2 is fresh → returns [event 2]
+    const events = buffer.since("1");
     expect(events).toHaveLength(1);
     expect(events?.[0]?.event).toBe("new");
   });
@@ -115,5 +115,60 @@ describe("SseEventBuffer", () => {
 
     const events = buffer.since("0");
     expect(events).toHaveLength(2);
+  });
+
+  // ── New tests for circular buffer rewrite ───────────────────────
+
+  it("since returns null when targetId >= nextId (restart detection)", () => {
+    const buffer = new SseEventBuffer();
+    buffer.push("a", "1"); // id=1
+    buffer.push("b", "2"); // id=2
+
+    // Client has id=500 from a previous server instance
+    expect(buffer.since("500")).toBeNull();
+    // Client has the exact next ID
+    expect(buffer.since("2")).toEqual([]);
+    // Client has an ID beyond nextId
+    expect(buffer.since("3")).toBeNull();
+  });
+
+  it("since returns null when events between targetId and first fresh result were aged out", () => {
+    const maxAgeMs = 60_000;
+    const buffer = new SseEventBuffer(100, maxAgeMs);
+
+    buffer.push("old1", "1"); // id=1
+    buffer.push("old2", "2"); // id=2
+    vi.advanceTimersByTime(maxAgeMs + 1);
+    buffer.push("new", "3"); // id=3
+
+    // since("0") — events 1,2 aged out, event 3 is fresh, gap detected
+    expect(buffer.since("0")).toBeNull();
+  });
+
+  it("lastAssignedId returns 0 when empty, N after N pushes", () => {
+    const buffer = new SseEventBuffer();
+    expect(buffer.lastAssignedId).toBe(0);
+
+    buffer.push("a", "1");
+    expect(buffer.lastAssignedId).toBe(1);
+
+    buffer.push("b", "2");
+    buffer.push("c", "3");
+    expect(buffer.lastAssignedId).toBe(3);
+  });
+
+  it("maintains O(1) size when pushing beyond capacity", () => {
+    const capacity = 100;
+    const buffer = new SseEventBuffer(capacity);
+
+    for (let i = 0; i < capacity + 50; i++) {
+      buffer.push("evt", String(i));
+    }
+
+    expect(buffer.size).toBe(capacity);
+    // Verify oldest event is correctly evicted
+    const events = buffer.since("50");
+    expect(events).toHaveLength(capacity);
+    expect(events?.[0]?.id).toBe("51");
   });
 });
