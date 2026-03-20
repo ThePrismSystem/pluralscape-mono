@@ -1,4 +1,5 @@
 import {
+  PWHASH_OPSLIMIT_SENSITIVE,
   derivePasswordKey,
   encryptPrivateKey,
   generateIdentityKeypair,
@@ -22,6 +23,7 @@ import { toHex } from "../lib/hex.js";
 import { buildIdleTimeoutFilter } from "../lib/session-idle-filter.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { isUniqueViolation } from "../lib/unique-violation.js";
+import { getAccountLoginStore } from "../middleware/stores/account-login-store.js";
 import {
   ANTI_ENUM_TARGET_MS,
   DEFAULT_SESSION_LIMIT,
@@ -249,8 +251,18 @@ export async function loginAccount(
     return null;
   }
 
+  // Check per-account login throttle before verifying password
+  const loginStore = getAccountLoginStore();
+  const throttleState = loginStore.check(account.id);
+  if (throttleState.throttled) {
+    throw new LoginThrottledError(throttleState.windowResetAt);
+  }
+
   const valid = verifyPassword(account.passwordHash, parsed.password);
   if (!valid) {
+    // Record failed attempt for throttling
+    loginStore.recordFailure(account.id);
+
     // Fire-and-forget: we don't block the response on audit writes for failed attempts.
     void audit(db, {
       eventType: "auth.login-failed",
@@ -264,6 +276,27 @@ export async function loginAccount(
       );
     });
     return null;
+  }
+
+  // Successful login: reset the throttle counter
+  loginStore.reset(account.id);
+
+  // Fire-and-forget: rehash password if it uses old params
+  if (needsRehash(account.passwordHash)) {
+    const newHash = hashPassword(parsed.password, "server");
+    void db
+      .update(accounts)
+      .set({ passwordHash: newHash, updatedAt: now() })
+      .where(eq(accounts.id, account.id))
+      .then(() => {
+        log.info("Rehashed password to current params", { accountId: account.id });
+      })
+      .catch((rehashErr: unknown) => {
+        log.error(
+          "Failed to rehash password on login",
+          rehashErr instanceof Error ? { err: rehashErr } : { error: String(rehashErr) },
+        );
+      });
   }
 
   let systemId: string | null = null;
@@ -447,7 +480,19 @@ class ValidationError extends Error {
   override readonly name = "ValidationError" as const;
 }
 
-export { ValidationError };
+/** Thrown when an account exceeds the failed login attempt threshold. */
+class LoginThrottledError extends Error {
+  override readonly name = "LoginThrottledError" as const;
+  /** UnixMillis when the throttle window resets. */
+  readonly windowResetAt: number;
+
+  constructor(windowResetAt: number) {
+    super("Too many failed login attempts");
+    this.windowResetAt = windowResetAt;
+  }
+}
+
+export { LoginThrottledError, ValidationError };
 
 export function isDuplicateEmailError(error: unknown): boolean {
   if (!isUniqueViolation(error)) return false;
@@ -460,6 +505,18 @@ export function isDuplicateEmailError(error: unknown): boolean {
       "constraint_name" in e &&
       (e as { constraint_name: string }).constraint_name === "accounts_email_hash_idx",
   );
+}
+
+/**
+ * Check whether an Argon2id hash needs rehashing because it was produced
+ * with fewer iterations than the current server profile requires.
+ * Parses the `t=N` parameter from the standard `$argon2id$v=19$m=...,t=N,...` format.
+ */
+export function needsRehash(hash: string): boolean {
+  const match = /\$argon2id\$v=\d+\$m=\d+,t=(\d+),/.exec(hash);
+  if (!match) return false;
+  const iterations = Number(match[1]);
+  return iterations < PWHASH_OPSLIMIT_SENSITIVE;
 }
 
 /** Generate a fake recovery key that looks like a real one for anti-enumeration. */

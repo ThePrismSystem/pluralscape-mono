@@ -19,6 +19,7 @@ import {
 } from "@pluralscape/validation";
 import { and, eq, isNull } from "drizzle-orm";
 
+import { equalizeAntiEnumTiming } from "../lib/anti-enum-timing.js";
 import { hashEmail } from "../lib/email-hash.js";
 import {
   deserializeEncryptedPayload,
@@ -26,7 +27,7 @@ import {
 } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
-import { ANTI_ENUM_TARGET_MS, DUMMY_ARGON2_HASH } from "../routes/auth/auth.constants.js";
+import { DUMMY_ARGON2_HASH } from "../routes/auth/auth.constants.js";
 
 import { INCORRECT_PASSWORD_ERROR } from "./auth.constants.js";
 import { ValidationError } from "./auth.service.js";
@@ -359,14 +360,6 @@ export async function resetPasswordWithRecoveryKey(
       adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.ciphertext);
       adapter.memzero(newRecoveryKeyResult.encryptedMasterKey.nonce);
     }
-  }
-}
-
-async function equalizeAntiEnumTiming(startTime: number): Promise<void> {
-  const elapsed = performance.now() - startTime;
-  const remaining = ANTI_ENUM_TARGET_MS - elapsed;
-  if (remaining > 0) {
-    await new Promise<void>((resolve) => setTimeout(resolve, remaining));
   }
 }
 

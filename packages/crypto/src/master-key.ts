@@ -4,7 +4,7 @@ import {
   PWHASH_MEMLIMIT_INTERACTIVE,
   PWHASH_MEMLIMIT_MOBILE,
   PWHASH_OPSLIMIT_MOBILE,
-  PWHASH_OPSLIMIT_MODERATE,
+  PWHASH_OPSLIMIT_SENSITIVE,
   PWHASH_SALT_BYTES,
 } from "./crypto.constants.js";
 import { InvalidInputError } from "./errors.js";
@@ -14,7 +14,8 @@ import type { KdfMasterKey, PwhashSalt } from "./types.js";
 
 /**
  * Password hashing profile. Controls Argon2id parameters.
- * - "server": 64 MiB / 3 iterations (OPSLIMIT_MODERATE + MEMLIMIT_INTERACTIVE)
+ * - "server": 64 MiB / 4 iterations (OPSLIMIT_SENSITIVE + MEMLIMIT_INTERACTIVE)
+ *   Meets OWASP Sensitive tier: m=65536, t>=4, p=1.
  * - "mobile": 32 MiB / 2 iterations (OPSLIMIT_MOBILE + MEMLIMIT_MOBILE)
  */
 export type PwhashProfile = "server" | "mobile";
@@ -25,9 +26,8 @@ export interface ProfileParams {
 }
 
 export const PROFILE_PARAMS: Readonly<Record<PwhashProfile, ProfileParams>> = {
-  // Server: 3 iterations + 64 MiB (not 256 MiB) to avoid OOM on constrained deployments.
-  // Higher iteration count compensates for the reduced memory parameter.
-  server: { opsLimit: PWHASH_OPSLIMIT_MODERATE, memLimit: PWHASH_MEMLIMIT_INTERACTIVE },
+  // Server: 4 iterations + 64 MiB — meets OWASP Sensitive tier (m=65536, t=4, p=1).
+  server: { opsLimit: PWHASH_OPSLIMIT_SENSITIVE, memLimit: PWHASH_MEMLIMIT_INTERACTIVE },
   mobile: { opsLimit: PWHASH_OPSLIMIT_MOBILE, memLimit: PWHASH_MEMLIMIT_MOBILE },
 };
 

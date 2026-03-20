@@ -1,11 +1,11 @@
 ---
 # api-be81
 title: Add account-level login throttling
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-03-18T15:57:46Z
-updated_at: 2026-03-19T11:39:42Z
+updated_at: 2026-03-20T10:22:34Z
 parent: api-765x
 ---
 
@@ -19,3 +19,11 @@ M1: Implement per-account rate limiting for failed login attempts to prevent bru
 - Rate limit is per-account, independent of source IP
 - Returns 429 with Retry-After header when throttled
 - Integration tests: brute-force simulation (11 attempts), reset-on-success, IP-independence
+
+## Summary of Changes
+
+- Created MemoryAccountLoginStore in apps/api/src/middleware/stores/account-login-store.ts
+- Wired throttle check/reset into loginAccount() in auth.service.ts
+- Added LoginThrottledError with windowResetAt for 429 + Retry-After response
+- Updated login route to catch LoginThrottledError and return structured 429
+- Added unit tests for store and route-level throttle behavior
