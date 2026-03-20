@@ -10,14 +10,40 @@ import type {
   SyncManifestEntry,
   SyncRelayService,
 } from "@pluralscape/sync";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 
-/** PostgreSQL-backed implementation of SyncRelayService. */
+/** Any Drizzle PG database instance (PostgresJs, PGlite, etc). */
+type AnyPgDatabase = PgDatabase<PgQueryResultHKT, Record<string, unknown>>;
+
+/**
+ * PostgreSQL-backed implementation of SyncRelayService.
+ *
+ * Document IDs encode the systemId in their prefix (e.g. "system-core-sys_abc"),
+ * making them globally unique. Operational methods scope implicitly via documentId,
+ * so no separate systemId filter is needed on individual change/snapshot queries.
+ */
 export class PgSyncRelayService implements SyncRelayService {
-  constructor(private readonly db: PostgresJsDatabase) {}
+  constructor(private readonly db: AnyPgDatabase) {}
 
   async submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<number> {
     return await this.db.transaction(async (tx) => {
+      // Check for existing row by dedup key (documentId, authorPublicKey, nonce)
+      const [existing] = await tx
+        .select({ seq: syncChanges.seq })
+        .from(syncChanges)
+        .where(
+          and(
+            eq(syncChanges.documentId, envelope.documentId),
+            eq(syncChanges.authorPublicKey, envelope.authorPublicKey),
+            eq(syncChanges.nonce, envelope.nonce),
+          ),
+        );
+
+      // Idempotent replay: return existing seq without burning a new one
+      if (existing) {
+        return existing.seq;
+      }
+
       // Atomically increment last_seq and get the new value
       const [updated] = await tx
         .update(syncDocuments)
@@ -34,20 +60,17 @@ export class PgSyncRelayService implements SyncRelayService {
 
       const seq = updated.lastSeq;
 
-      // Idempotent insert — if the same change already exists (dedup index), reuse existing seq
-      await tx
-        .insert(syncChanges)
-        .values({
-          id: createId(ID_PREFIXES.syncChange),
-          documentId: envelope.documentId,
-          seq,
-          encryptedPayload: envelope.ciphertext,
-          authorPublicKey: envelope.authorPublicKey,
-          nonce: envelope.nonce,
-          signature: envelope.signature,
-          createdAt: Date.now(),
-        })
-        .onConflictDoNothing();
+      // Insert the change (no onConflictDoNothing — dedup is already handled above)
+      await tx.insert(syncChanges).values({
+        id: createId(ID_PREFIXES.syncChange),
+        documentId: envelope.documentId,
+        seq,
+        encryptedPayload: envelope.ciphertext,
+        authorPublicKey: envelope.authorPublicKey,
+        nonce: envelope.nonce,
+        signature: envelope.signature,
+        createdAt: Date.now(),
+      });
 
       return seq;
     });
@@ -76,17 +99,19 @@ export class PgSyncRelayService implements SyncRelayService {
   async submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void> {
     await this.db.transaction(async (tx) => {
       // Lock the document row to prevent TOCTOU races
-      const [doc] = await tx.execute<{ snapshot_version: number }>(
-        sql`SELECT snapshot_version FROM sync_documents WHERE document_id = ${envelope.documentId} FOR UPDATE`,
-      );
+      const [doc] = await tx
+        .select({ snapshotVersion: syncDocuments.snapshotVersion })
+        .from(syncDocuments)
+        .where(eq(syncDocuments.documentId, envelope.documentId))
+        .for("update");
 
       if (!doc) {
         throw new Error(`Document not found: ${envelope.documentId}`);
       }
 
-      if (doc.snapshot_version >= envelope.snapshotVersion) {
+      if (doc.snapshotVersion >= envelope.snapshotVersion) {
         throw new Error(
-          `Snapshot version ${String(envelope.snapshotVersion)} ${SNAPSHOT_VERSION_CONFLICT_MESSAGE} ${String(doc.snapshot_version)}`,
+          `Snapshot version ${String(envelope.snapshotVersion)} ${SNAPSHOT_VERSION_CONFLICT_MESSAGE} ${String(doc.snapshotVersion)}`,
         );
       }
 
