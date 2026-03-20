@@ -10,6 +10,7 @@ import { ApiHttpError } from "./lib/api-error.js";
 import { getRawClient } from "./lib/db.js";
 import { logger } from "./lib/logger.js";
 import { setNotificationPubSub } from "./lib/notification-pubsub.js";
+import { sanitizeS3Error } from "./lib/s3-log-sanitizer.js";
 import { initStorageAdapter } from "./lib/storage.js";
 import { accessLogMiddleware } from "./middleware/access-log.js";
 import { createCorsMiddleware } from "./middleware/cors.js";
@@ -127,10 +128,9 @@ async function start(): Promise<void> {
     try {
       await adapter.exists("__healthcheck__" as import("@pluralscape/types").StorageKey);
     } catch (error) {
-      logger.warn(
-        "S3 blob storage probe failed — check credentials and bucket config",
-        error instanceof Error ? { err: error } : { error: String(error) },
-      );
+      logger.warn("S3 blob storage probe failed — check credentials and bucket config", {
+        error: sanitizeS3Error(error),
+      });
     }
   } else {
     const storageRoot = env.BLOB_STORAGE_PATH;

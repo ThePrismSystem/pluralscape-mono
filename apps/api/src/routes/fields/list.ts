@@ -5,12 +5,27 @@ import { Hono } from "hono";
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
 import { parsePaginationLimit } from "../../lib/pagination.js";
+import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { listFieldDefinitions } from "../../services/field-definition.service.js";
 
 import { DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT } from "./fields.constants.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
+
+const FIELD_DEF_FIELDS = [
+  "id",
+  "systemId",
+  "fieldType",
+  "required",
+  "sortOrder",
+  "encryptedData",
+  "version",
+  "createdAt",
+  "updatedAt",
+  "archived",
+  "archivedAt",
+] as const;
 
 export const listRoute = new Hono<AuthEnv>();
 
@@ -24,6 +39,7 @@ listRoute.get("/", async (c) => {
     includeArchived: c.req.query("includeArchived"),
   });
   const limit = parsePaginationLimit(limitParam, DEFAULT_FIELD_LIMIT, MAX_FIELD_LIMIT);
+  const fields = parseSparseFields(c.req.query("fields"), FIELD_DEF_FIELDS);
 
   const db = await getDb();
   const result = await listFieldDefinitions(db, systemId, auth, {
@@ -31,5 +47,11 @@ listRoute.get("/", async (c) => {
     limit,
     includeArchived,
   });
-  return c.json(result);
+
+  if (!fields) return c.json(result);
+
+  return c.json({
+    ...result,
+    items: result.items.map((item) => filterFields(item, fields)),
+  });
 });

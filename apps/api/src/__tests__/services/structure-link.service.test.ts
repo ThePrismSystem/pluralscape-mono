@@ -141,7 +141,7 @@ describe("createSubsystemLayerLink", () => {
     expect(result.encryptedData).toBeDefined();
     expect(result.createdAt).toBe(1000);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "structure-link.created" }),
     );
   });
@@ -296,7 +296,7 @@ describe("deleteSubsystemLayerLink", () => {
     await deleteSubsystemLayerLink(db, SYSTEM_ID, LINK_ID, AUTH, mockAudit);
 
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "structure-link.deleted" }),
     );
   });
@@ -379,7 +379,7 @@ describe("createSubsystemSideSystemLink", () => {
     expect(result.systemId).toBe(SYSTEM_ID);
     expect(result.encryptedData).toBeNull();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "structure-link.created" }),
     );
   });
@@ -423,7 +423,7 @@ describe("deleteSubsystemSideSystemLink", () => {
     await deleteSubsystemSideSystemLink(db, SYSTEM_ID, LINK_ID, AUTH, mockAudit);
 
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "structure-link.deleted" }),
     );
   });
@@ -485,7 +485,7 @@ describe("createSideSystemLayerLink", () => {
     expect(result.systemId).toBe(SYSTEM_ID);
     expect(result.encryptedData).toBeNull();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "structure-link.created" }),
     );
   });
@@ -529,7 +529,7 @@ describe("deleteSideSystemLayerLink", () => {
     await deleteSideSystemLayerLink(db, SYSTEM_ID, LINK_ID, AUTH, mockAudit);
 
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "structure-link.deleted" }),
     );
   });

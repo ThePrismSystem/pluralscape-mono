@@ -1,6 +1,7 @@
 import { cors } from "hono/cors";
 
 import { env } from "../env.js";
+import { isOriginAllowed } from "../lib/origin-matcher.js";
 
 import { CORS_MAX_AGE_SECONDS } from "./middleware.constants.js";
 
@@ -8,8 +9,9 @@ import type { MiddlewareHandler } from "hono";
 
 /**
  * Creates CORS middleware. Reads allowed origins from CORS_ORIGIN env var
- * (comma-separated) once at factory call time. When unset or all entries
- * are blank, no cross-origin requests are allowed.
+ * (comma-separated) once at factory call time. Supports wildcard patterns
+ * (e.g., `*.example.com`). When unset or all entries are blank, no
+ * cross-origin requests are allowed.
  */
 export function createCorsMiddleware(): MiddlewareHandler {
   const raw = env.CORS_ORIGIN;
@@ -27,7 +29,7 @@ export function createCorsMiddleware(): MiddlewareHandler {
   }
 
   return cors({
-    origin: origins,
+    origin: (requestOrigin) => (isOriginAllowed(requestOrigin, origins) ? requestOrigin : ""),
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     maxAge: CORS_MAX_AGE_SECONDS,

@@ -109,7 +109,7 @@ describe("createMemberPhoto", () => {
     expect(result.memberId).toBe(MEMBER_ID);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member-photo.created" }),
     );
   });
@@ -320,7 +320,7 @@ describe("reorderMemberPhotos", () => {
 
     expect(result).toHaveLength(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member-photo.reordered" }),
     );
   });
@@ -399,7 +399,7 @@ describe("archiveMemberPhoto", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member-photo.archived" }),
     );
   });
@@ -443,7 +443,7 @@ describe("restoreMemberPhoto", () => {
     expect(result.archived).toBe(false);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member-photo.restored" }),
     );
   });
@@ -482,7 +482,7 @@ describe("deleteMemberPhoto", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "member-photo.deleted" }),
     );
   });

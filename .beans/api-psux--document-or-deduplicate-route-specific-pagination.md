@@ -1,11 +1,11 @@
 ---
 # api-psux
 title: Document or deduplicate route-specific pagination constants
-status: todo
+status: completed
 type: task
 priority: low
 created_at: 2026-03-18T15:58:21Z
-updated_at: 2026-03-19T11:39:42Z
+updated_at: 2026-03-20T18:58:59Z
 parent: api-765x
 ---
 
@@ -16,3 +16,5 @@ L3: Several routes define their own DEFAULT/MAX limit constants. Document the ra
 - Audit all route-specific pagination constants across the API
 - Either consolidate into shared constants file with JSDoc rationale, or add JSDoc to each route-specific constant explaining why it differs
 - No behavioral change to pagination defaults
+
+## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.

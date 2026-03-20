@@ -49,7 +49,7 @@ vi.mock("drizzle-orm", () => ({
 
 const { assertSystemOwnership } = await import("../../lib/system-ownership.js");
 const { UpdateSystemSettingsBodySchema } = await import("@pluralscape/validation");
-const { getSystemSettings, updateSystemSettings } =
+const { clearSettingsCache, getSystemSettings, updateSystemSettings } =
   await import("../../services/system-settings.service.js");
 
 // ── Fixtures ─────────────────────────────────────────────────────────
@@ -96,6 +96,7 @@ describe("system-settings service", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     (mockAudit as ReturnType<typeof vi.fn>).mockClear();
+    clearSettingsCache();
   });
 
   it("throws 404 for system ownership failure", async () => {
@@ -154,7 +155,7 @@ describe("system-settings service", () => {
       expect(result.id).toBe("ss_abc");
       expect(result.version).toBe(1);
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({ eventType: "settings.changed" }),
       );
     });

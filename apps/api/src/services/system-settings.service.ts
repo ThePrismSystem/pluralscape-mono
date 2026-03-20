@@ -6,7 +6,9 @@ import { and, eq, sql } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_CONFLICT, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { SYSTEM_SETTINGS_CACHE_TTL_MS } from "../lib/cache.constants.js";
 import { validateEncryptedBlob } from "../lib/encrypted-blob.js";
+import { QueryCache } from "../lib/query-cache.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -25,6 +27,15 @@ export interface SystemSettingsResult {
   readonly version: number;
   readonly createdAt: UnixMillis;
   readonly updatedAt: UnixMillis;
+}
+
+// ── Cache ───────────────────────────────────────────────────────────
+
+const settingsCache = new QueryCache<SystemSettingsResult>(SYSTEM_SETTINGS_CACHE_TTL_MS);
+
+/** Exported for test teardown. */
+export function clearSettingsCache(): void {
+  settingsCache.clear();
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -60,6 +71,9 @@ export async function getSystemSettings(
 ): Promise<SystemSettingsResult> {
   assertSystemOwnership(systemId, auth);
 
+  const cached = settingsCache.get(systemId);
+  if (cached) return cached;
+
   const [row] = await db
     .select()
     .from(systemSettings)
@@ -70,7 +84,9 @@ export async function getSystemSettings(
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "System settings not found");
   }
 
-  return toSystemSettingsResult(row);
+  const result = toSystemSettingsResult(row);
+  settingsCache.set(systemId, result);
+  return result;
 }
 
 // ── PUT ─────────────────────────────────────────────────────────────
@@ -131,6 +147,8 @@ export async function updateSystemSettings(
       systemId,
     });
 
-    return toSystemSettingsResult(row);
+    const result = toSystemSettingsResult(row);
+    settingsCache.invalidate(systemId);
+    return result;
   });
 }

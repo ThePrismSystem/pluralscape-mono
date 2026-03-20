@@ -327,7 +327,7 @@ describe("setup service", () => {
       expect(result.id).toBe("ss_abc");
       expect(result.systemId).toBe(SYSTEM_ID);
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({ eventType: "setup.completed" }),
       );
     });

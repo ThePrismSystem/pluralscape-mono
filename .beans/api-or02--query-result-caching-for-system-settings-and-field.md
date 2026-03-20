@@ -1,11 +1,11 @@
 ---
 # api-or02
 title: Query result caching for system settings and field definitions
-status: todo
+status: completed
 type: task
 priority: normal
 created_at: 2026-03-18T15:57:46Z
-updated_at: 2026-03-19T11:39:42Z
+updated_at: 2026-03-20T18:58:58Z
 parent: api-765x
 ---
 
@@ -20,3 +20,5 @@ M16: Cache frequently-read, rarely-written data (system settings, field definiti
 - TTL expiry causes next read to fetch from DB
 - Cache keys scoped by systemId (no cross-system leakage)
 - Integration tests: read → cache hit → write → cache miss → read from DB
+
+## Summary of Changes\n\nImplemented as part of feat/api-hardening-audit-013-remaining.

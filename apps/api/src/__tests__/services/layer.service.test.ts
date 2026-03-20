@@ -93,7 +93,7 @@ describe("createLayer", () => {
     expect(result.sortOrder).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "layer.created" }),
     );
   });
@@ -195,7 +195,7 @@ describe("updateLayer", () => {
     expect(result.version).toBe(2);
     expect(result.sortOrder).toBe(5);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "layer.updated" }),
     );
   });
@@ -237,7 +237,7 @@ describe("deleteLayer", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "layer.deleted" }),
     );
   });
@@ -279,7 +279,7 @@ describe("archiveLayer", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "layer.archived" }),
     );
   });
@@ -308,7 +308,7 @@ describe("restoreLayer", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "layer.restored" }),
     );
   });

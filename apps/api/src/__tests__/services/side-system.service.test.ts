@@ -98,7 +98,7 @@ describe("createSideSystem", () => {
     expect(result.id).toBe(SIDE_SYSTEM_ID);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "side-system.created" }),
     );
   });
@@ -193,7 +193,7 @@ describe("updateSideSystem", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "side-system.updated" }),
     );
   });
@@ -235,7 +235,7 @@ describe("deleteSideSystem", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "side-system.deleted" }),
     );
   });
@@ -277,7 +277,7 @@ describe("archiveSideSystem", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "side-system.archived" }),
     );
   });
@@ -306,7 +306,7 @@ describe("restoreSideSystem", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "side-system.restored" }),
     );
   });

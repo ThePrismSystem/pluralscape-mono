@@ -111,7 +111,7 @@ describe("createSubsystem", () => {
     expect(result.systemId).toBe(SYSTEM_ID);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "subsystem.created" }),
     );
   });
@@ -299,7 +299,7 @@ describe("updateSubsystem", () => {
 
     expect(result.version).toBe(2);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "subsystem.updated" }),
     );
   });
@@ -514,7 +514,7 @@ describe("deleteSubsystem", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "subsystem.deleted" }),
     );
   });
@@ -568,7 +568,7 @@ describe("archiveSubsystem", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "subsystem.archived" }),
     );
   });
@@ -607,7 +607,7 @@ describe("restoreSubsystem", () => {
     expect(result.version).toBe(2);
     expect(result.archived).toBe(false);
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "subsystem.restored" }),
     );
   });
@@ -626,7 +626,7 @@ describe("restoreSubsystem", () => {
 
     expect(result.parentSubsystemId).toBeNull();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "subsystem.restored" }),
     );
   });

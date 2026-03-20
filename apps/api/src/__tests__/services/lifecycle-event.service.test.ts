@@ -93,7 +93,7 @@ describe("createLifecycleEvent", () => {
     expect(result.recordedAt).toBe(1000);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "lifecycle-event.created" }),
     );
   });

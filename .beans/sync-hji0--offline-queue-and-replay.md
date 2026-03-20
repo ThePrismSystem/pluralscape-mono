@@ -1,11 +1,11 @@
 ---
 # sync-hji0
 title: Offline queue and replay
-status: todo
+status: completed
 type: epic
 priority: high
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-19T11:40:27Z
+updated_at: 2026-03-20T18:17:07Z
 parent: ps-afy4
 blocked_by:
   - sync-qxxo
@@ -34,3 +34,7 @@ Blocked by sync-qxxo (CRDT sync) — the offline queue wraps the sync engine's s
 
 - `packages/sync/docs/protocol-messages.md` — ChangeAccepted, SubmitChangeRequest
 - `packages/sync/docs/document-lifecycle.md` — Queue and confirmation semantics
+
+## Summary of Changes
+
+All 5 children completed: offline queue persistence, replay on reconnect, cryptographic confirmation, queue cleanup job, and E2E tests. Delivered in feat/sync-conflict-resolution-and-offline-queue PR.

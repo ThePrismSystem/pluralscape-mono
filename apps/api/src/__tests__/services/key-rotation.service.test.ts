@@ -228,7 +228,7 @@ describe("key-rotation service", () => {
       await initiateRotation(db, SYSTEM_ID, BUCKET_ID, VALID_INITIATE_PARAMS, AUTH, mockAudit);
 
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({ eventType: "bucket.key_rotation.initiated" }),
       );
     });
@@ -458,7 +458,7 @@ describe("key-rotation service", () => {
       expect(result.transitioned).toBe(false);
       expect(result.rotation.state).toBe(ROTATION_STATES.migrating);
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({ eventType: "bucket.key_rotation.chunk_completed" }),
       );
     });
@@ -519,7 +519,7 @@ describe("key-rotation service", () => {
       );
 
       expect(mockAudit).toHaveBeenCalledWith(
-        expect.anything(),
+        chain,
         expect.objectContaining({ eventType: "bucket.key_rotation.chunk_completed" }),
       );
     });

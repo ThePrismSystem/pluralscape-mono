@@ -1,11 +1,11 @@
 ---
 # sync-p1uq
 title: Conflict resolution
-status: todo
+status: completed
 type: epic
 priority: high
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-19T11:40:27Z
+updated_at: 2026-03-20T18:17:08Z
 parent: ps-afy4
 blocked_by:
   - sync-qxxo
@@ -33,3 +33,7 @@ Blocked by sync-qxxo (CRDT sync) — conflict resolution runs inside the sync en
 
 - `packages/sync/docs/conflict-resolution.md` — Full conflict resolution spec
 - `packages/sync/src/__tests__/conflict-resolution.test.ts` — Existing 14 tests
+
+## Summary of Changes
+
+All 4 children completed: conflict record persistence, post-merge validation engine, tombstone enforcement, and E2E tests. Delivered in feat/sync-conflict-resolution-and-offline-queue PR.

@@ -34,6 +34,7 @@ vi.mock("../../lib/system-ownership.js", () => ({
 // ── Import under test ────────────────────────────────────────────────
 
 const {
+  clearFieldDefCache,
   createFieldDefinition,
   listFieldDefinitions,
   getFieldDefinition,
@@ -83,6 +84,7 @@ describe("createFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("creates a field definition successfully", async () => {
@@ -105,7 +107,7 @@ describe("createFieldDefinition", () => {
     expect(result.version).toBe(1);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.created" }),
     );
   });
@@ -168,6 +170,7 @@ describe("listFieldDefinitions", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("returns empty page when no field definitions exist", async () => {
@@ -219,6 +222,7 @@ describe("getFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("returns field definition when found", async () => {
@@ -245,6 +249,7 @@ describe("updateFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("updates field definition successfully", async () => {
@@ -265,7 +270,7 @@ describe("updateFieldDefinition", () => {
     expect(result.version).toBe(2);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.updated" }),
     );
   });
@@ -342,6 +347,7 @@ describe("archiveFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("archives a field definition successfully", async () => {
@@ -353,7 +359,7 @@ describe("archiveFieldDefinition", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.archived" }),
     );
   });
@@ -377,6 +383,7 @@ describe("restoreFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("restores an archived field definition successfully", async () => {
@@ -393,7 +400,7 @@ describe("restoreFieldDefinition", () => {
     expect(result.archived).toBe(false);
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.restored" }),
     );
   });
@@ -417,6 +424,7 @@ describe("deleteFieldDefinition", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockAudit.mockClear();
+    clearFieldDefCache();
   });
 
   it("deletes a field definition with no dependents", async () => {
@@ -433,7 +441,7 @@ describe("deleteFieldDefinition", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.deleted" }),
     );
   });
@@ -504,7 +512,7 @@ describe("deleteFieldDefinition", () => {
     expect(chain.transaction).toHaveBeenCalled();
     expect(chain.delete).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({
         eventType: "field-definition.deleted",
         detail: expect.stringContaining("force"),
@@ -524,7 +532,7 @@ describe("deleteFieldDefinition", () => {
 
     expect(chain.transaction).toHaveBeenCalled();
     expect(mockAudit).toHaveBeenCalledWith(
-      expect.anything(),
+      chain,
       expect.objectContaining({ eventType: "field-definition.deleted" }),
     );
   });

@@ -59,4 +59,24 @@ describe("isAllowedOrigin", () => {
     mockEnv.ALLOWED_ORIGINS = "https://a.com, https://b.com , https://c.com";
     expect(isAllowedOrigin("https://b.com")).toBe(true);
   });
+
+  // ── Wildcard support ──────────────────────────────────────────
+
+  it("matches wildcard origin pattern", () => {
+    mockEnv.NODE_ENV = "production";
+    mockEnv.ALLOWED_ORIGINS = "*.example.com";
+    expect(isAllowedOrigin("https://app.example.com")).toBe(true);
+  });
+
+  it("rejects bare domain against wildcard", () => {
+    mockEnv.NODE_ENV = "production";
+    mockEnv.ALLOWED_ORIGINS = "*.example.com";
+    expect(isAllowedOrigin("https://example.com")).toBe(false);
+  });
+
+  it("rejects suffix injection against wildcard", () => {
+    mockEnv.NODE_ENV = "production";
+    mockEnv.ALLOWED_ORIGINS = "*.example.com";
+    expect(isAllowedOrigin("https://evilexample.com")).toBe(false);
+  });
 });

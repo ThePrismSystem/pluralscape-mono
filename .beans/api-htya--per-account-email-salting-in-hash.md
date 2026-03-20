@@ -1,11 +1,11 @@
 ---
 # api-htya
 title: Per-account email salting in hash
-status: todo
+status: scrapped
 type: task
 priority: normal
 created_at: 2026-03-18T15:57:46Z
-updated_at: 2026-03-19T11:39:42Z
+updated_at: 2026-03-20T18:37:13Z
 parent: api-765x
 ---
 
@@ -18,3 +18,5 @@ M10: Use per-account salts in email hashing instead of a global salt to improve 
 - Migration script generates salts for existing accounts and rehashes emails
 - Same email on different accounts produces different hashes
 - Integration tests: create two accounts with same email domain, verify different hashes; migration test
+
+## Reasons for Scrapping\n\nArchitecturally infeasible: per-account email salting creates a circular dependency. Login must hash the email to find the account, but needs the account's salt to hash. The existing global BLAKE2b pepper is already strong.
