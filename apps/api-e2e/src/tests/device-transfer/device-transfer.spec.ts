@@ -101,7 +101,7 @@ test.describe("Device transfer endpoints", () => {
       headers: authHeaders,
       data: { code: "00000000" },
     });
-    // Either 401 (expired error) or 404 (transfer no longer pending)
-    expect([401, 404]).toContain(finalRes.status());
+    // Transfer is expired, query returns no pending row → 404
+    expect(finalRes.status()).toBe(404);
   });
 });
