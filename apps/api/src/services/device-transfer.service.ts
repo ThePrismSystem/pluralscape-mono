@@ -1,16 +1,19 @@
 import {
+  DecryptionFailedError,
   PWHASH_SALT_BYTES,
   TRANSFER_TIMEOUT_MS,
+  assertAeadKey,
   assertPwhashSalt,
   decryptFromTransfer,
-  deriveTransferKey,
+  isValidTransferCode,
 } from "@pluralscape/crypto";
 import { deviceTransferRequests } from "@pluralscape/db/pg";
 import { createId, now } from "@pluralscape/types";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 
 import { deserializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
+import { deriveTransferKeyOffload } from "../lib/pwhash-offload.js";
 import { MAX_TRANSFER_CODE_ATTEMPTS } from "../routes/account/device-transfer.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
@@ -20,31 +23,19 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 // ── Error types ────────────────────────────────────────────────────────
 
 export class TransferValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "TransferValidationError";
-  }
+  override readonly name = "TransferValidationError" as const;
 }
 
 export class TransferNotFoundError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "TransferNotFoundError";
-  }
+  override readonly name = "TransferNotFoundError" as const;
 }
 
 export class TransferCodeError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "TransferCodeError";
-  }
+  override readonly name = "TransferCodeError" as const;
 }
 
 export class TransferExpiredError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "TransferExpiredError";
-  }
+  override readonly name = "TransferExpiredError" as const;
 }
 
 // ── Initiate transfer ────────────────────────────────────────────────
@@ -73,38 +64,44 @@ export async function initiateTransfer(
   input: InitiateTransferInput,
   audit: AuditWriter,
 ): Promise<InitiateTransferResult> {
-  const codeSalt = fromHex(input.codeSaltHex);
-  if (codeSalt.length !== PWHASH_SALT_BYTES) {
-    throw new TransferValidationError(
-      `codeSalt must be ${String(PWHASH_SALT_BYTES)} bytes, got ${String(codeSalt.length)}`,
-    );
+  let codeSalt: Uint8Array;
+  let encryptedKeyMaterial: Uint8Array;
+  try {
+    codeSalt = fromHex(input.codeSaltHex);
+    if (codeSalt.length !== PWHASH_SALT_BYTES) {
+      throw new TransferValidationError("Invalid code salt length");
+    }
+    encryptedKeyMaterial = fromHex(input.encryptedKeyMaterialHex);
+    // Validate the encrypted payload can be deserialized (nonce + ciphertext)
+    deserializeEncryptedPayload(encryptedKeyMaterial);
+  } catch (error) {
+    if (error instanceof TransferValidationError) throw error;
+    throw new TransferValidationError("Invalid input format", { cause: error });
   }
-
-  const encryptedKeyMaterial = fromHex(input.encryptedKeyMaterialHex);
-  // Validate the encrypted payload can be deserialized (nonce + ciphertext)
-  deserializeEncryptedPayload(encryptedKeyMaterial);
 
   const transferId = createId("dtr_");
   const createdAt = now();
   const expiresAt = (createdAt + TRANSFER_TIMEOUT_MS) as UnixMillis;
 
-  await db.insert(deviceTransferRequests).values({
-    id: transferId,
-    accountId,
-    sourceSessionId: sessionId,
-    targetSessionId: null,
-    status: "pending",
-    encryptedKeyMaterial,
-    codeSalt,
-    codeAttempts: 0,
-    createdAt,
-    expiresAt,
-  });
+  await db.transaction(async (tx) => {
+    await tx.insert(deviceTransferRequests).values({
+      id: transferId,
+      accountId,
+      sourceSessionId: sessionId,
+      targetSessionId: null,
+      status: "pending",
+      encryptedKeyMaterial,
+      codeSalt,
+      codeAttempts: 0,
+      createdAt,
+      expiresAt,
+    });
 
-  await audit(db, {
-    eventType: "auth.device-transfer-initiated",
-    actor: { kind: "account", id: accountId },
-    detail: `Transfer ${transferId} initiated`,
+    await audit(tx, {
+      eventType: "auth.device-transfer-initiated",
+      actor: { kind: "account", id: accountId },
+      detail: `Transfer ${transferId} initiated`,
+    });
   });
 
   return { transferId, expiresAt };
@@ -133,17 +130,26 @@ export async function completeTransfer(
   code: string,
   audit: AuditWriter,
 ): Promise<CompleteTransferResult> {
-  const currentTime = now();
+  // Validate code format early before any DB work
+  if (!isValidTransferCode(code)) {
+    throw new TransferValidationError("Invalid transfer code format");
+  }
 
+  // Select only the fields we need, use DB time for expiry comparison
   const [row] = await db
-    .select()
+    .select({
+      id: deviceTransferRequests.id,
+      encryptedKeyMaterial: deviceTransferRequests.encryptedKeyMaterial,
+      codeSalt: deviceTransferRequests.codeSalt,
+      codeAttempts: deviceTransferRequests.codeAttempts,
+    })
     .from(deviceTransferRequests)
     .where(
       and(
         eq(deviceTransferRequests.id, transferId),
         eq(deviceTransferRequests.accountId, accountId),
         eq(deviceTransferRequests.status, "pending"),
-        gt(deviceTransferRequests.expiresAt, currentTime),
+        gt(deviceTransferRequests.expiresAt, sql`now()`),
       ),
     )
     .limit(1);
@@ -160,45 +166,74 @@ export async function completeTransfer(
   const salt = row.codeSalt;
   assertPwhashSalt(salt);
 
-  // Derive the transfer key from the code and stored salt
-  let codeValid = false;
+  // Derive the transfer key from the code and stored salt (off main thread)
+  let codeCorrect = false;
   try {
-    const transferKey = deriveTransferKey(code, salt);
+    const transferKey = await deriveTransferKeyOffload(code, salt);
+    assertAeadKey(transferKey);
     const payload = deserializeEncryptedPayload(row.encryptedKeyMaterial);
-    // Attempt decryption to verify the code is correct
     decryptFromTransfer(payload, transferKey);
-    codeValid = true;
-  } catch {
-    // Decryption failed — wrong code
+    codeCorrect = true;
+  } catch (error) {
+    if (!(error instanceof DecryptionFailedError)) throw error;
+    // Decryption failed — wrong code, handled below
   }
 
-  if (!codeValid) {
-    const newAttempts = row.codeAttempts + 1;
-    if (newAttempts >= MAX_TRANSFER_CODE_ATTEMPTS) {
-      // Lock out the transfer
+  if (!codeCorrect) {
+    // Atomic counter increment with status guard to prevent TOCTOU race
+    const [updated] = await db
+      .update(deviceTransferRequests)
+      .set({ codeAttempts: sql`${deviceTransferRequests.codeAttempts} + 1` })
+      .where(
+        and(
+          eq(deviceTransferRequests.id, transferId),
+          eq(deviceTransferRequests.status, "pending"),
+        ),
+      )
+      .returning({ codeAttempts: deviceTransferRequests.codeAttempts });
+
+    if (!updated) {
+      throw new TransferNotFoundError("Transfer expired");
+    }
+
+    if (updated.codeAttempts >= MAX_TRANSFER_CODE_ATTEMPTS) {
       await db
         .update(deviceTransferRequests)
-        .set({ status: "expired", codeAttempts: newAttempts })
-        .where(eq(deviceTransferRequests.id, transferId));
-      throw new TransferExpiredError("Too many incorrect attempts, transfer expired");
+        .set({ status: "expired" })
+        .where(
+          and(
+            eq(deviceTransferRequests.id, transferId),
+            eq(deviceTransferRequests.status, "pending"),
+          ),
+        );
+      throw new TransferExpiredError("Too many incorrect attempts");
     }
-    await db
-      .update(deviceTransferRequests)
-      .set({ codeAttempts: newAttempts })
-      .where(eq(deviceTransferRequests.id, transferId));
+
     throw new TransferCodeError("Incorrect transfer code");
   }
 
-  // Success: mark approved and set target session
-  await db
-    .update(deviceTransferRequests)
-    .set({ status: "approved", targetSessionId: sessionId })
-    .where(eq(deviceTransferRequests.id, transferId));
+  // Success: atomically mark approved and set target session
+  await db.transaction(async (tx) => {
+    const [approved] = await tx
+      .update(deviceTransferRequests)
+      .set({ status: "approved", targetSessionId: sessionId })
+      .where(
+        and(
+          eq(deviceTransferRequests.id, transferId),
+          eq(deviceTransferRequests.status, "pending"),
+        ),
+      )
+      .returning({ id: deviceTransferRequests.id });
 
-  await audit(db, {
-    eventType: "auth.device-transfer-completed",
-    actor: { kind: "account", id: accountId },
-    detail: `Transfer ${transferId} completed`,
+    if (!approved) {
+      throw new TransferNotFoundError("Transfer already completed or expired");
+    }
+
+    await audit(tx, {
+      eventType: "auth.device-transfer-completed",
+      actor: { kind: "account", id: accountId },
+      detail: `Transfer ${transferId} completed`,
+    });
   });
 
   return { encryptedKeyMaterialHex: toHex(row.encryptedKeyMaterial) };
