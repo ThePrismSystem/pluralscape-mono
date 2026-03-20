@@ -1,3 +1,4 @@
+import type { UnixMillis } from "@pluralscape/types";
 import type { DocumentKeyType, SyncDocumentType } from "../document-types.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 
@@ -22,9 +23,9 @@ export interface SyncManifestEntry {
   /** Present for time-split documents (e.g. "2026-Q1", "2026-03", "2026"). */
   readonly timePeriod: string | null;
   /** Unix milliseconds when the document was created on the server. */
-  readonly createdAt: number;
+  readonly createdAt: UnixMillis;
   /** Unix milliseconds when the last change was received. */
-  readonly updatedAt: number;
+  readonly updatedAt: UnixMillis;
   /** Approximate current document size in bytes. */
   readonly sizeBytes: number;
   /** Current snapshot version (monotonically increasing). */

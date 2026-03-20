@@ -28,10 +28,16 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     Set<(changes: readonly EncryptedChangeEnvelope[]) => void>
   >();
   private readonly timeoutMs: number;
+  private readonly onError: ((message: string, error: unknown) => void) | undefined;
 
-  constructor(transport: SyncTransport, timeoutMs = REQUEST_TIMEOUT_MS) {
+  constructor(
+    transport: SyncTransport,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+    onError?: (message: string, error: unknown) => void,
+  ) {
     this.transport = transport;
     this.timeoutMs = timeoutMs;
+    this.onError = onError;
 
     transport.onMessage((msg) => {
       this.handleMessage(msg);
@@ -59,7 +65,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     });
 
     if (response.type === "SyncError") {
-      throw new Error(`SyncError: ${response.message}`);
+      throw new Error(`SyncError [${response.code}]: ${response.message}`);
     }
 
     if (response.type !== "ChangeAccepted") {
@@ -108,6 +114,9 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     if (response.type === "SyncError" && response.code === "VERSION_CONFLICT") {
       // Server already has a newer version — this is not an error condition
       // for the submitter since the goal (having a snapshot) is met.
+      if (this.onError) {
+        this.onError("Snapshot VERSION_CONFLICT (non-fatal, server has newer)", undefined);
+      }
       return;
     }
 
@@ -162,16 +171,16 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
               for (const cb of cbs) {
                 try {
                   cb(catchup.changes);
-                } catch {
-                  // Non-fatal
+                } catch (e) {
+                  this.onError?.("Subscriber callback error", e);
                 }
               }
             }
           }
         }
       }
-    }).catch(() => {
-      // Subscribe failure is non-fatal — engine handles catch-up in bootstrap
+    }).catch((err: unknown) => {
+      this.onError?.("Subscribe catch-up failed", err);
     });
 
     return {
@@ -187,6 +196,11 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         }
       },
     };
+  }
+
+  close(): void {
+    this.rejectAllPending(new Error("Adapter closed"));
+    this.transport.close();
   }
 
   async fetchManifest(systemId: string): Promise<SyncManifest> {
@@ -216,8 +230,8 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         for (const cb of callbacks) {
           try {
             cb(msg.changes);
-          } catch {
-            // One bad subscriber must not kill others
+          } catch (e) {
+            this.onError?.("DocumentUpdate callback error", e);
           }
         }
       }

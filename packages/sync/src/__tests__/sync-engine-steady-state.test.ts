@@ -26,6 +26,7 @@ import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
+import type { UnixMillis } from "@pluralscape/types";
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -62,8 +63,8 @@ const SYSTEM_CORE_MANIFEST: SyncManifest = {
       bucketId: null,
       channelId: null,
       timePeriod: null,
-      createdAt: 1000,
-      updatedAt: 1000,
+      createdAt: 1000 as UnixMillis,
+      updatedAt: 1000 as UnixMillis,
       sizeBytes: 0,
       snapshotVersion: 0,
       archived: false,
@@ -117,6 +118,7 @@ async function createBootstrappedEngine(
     sodium,
     profile: { profileType: "owner-full" },
     systemId: "sys_test",
+    onError: vi.fn(),
     ...overrides,
   });
   await engine.bootstrap();

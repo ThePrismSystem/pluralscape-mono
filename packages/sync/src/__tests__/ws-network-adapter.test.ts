@@ -158,6 +158,94 @@ describe("WsNetworkAdapter", () => {
     });
   });
 
+  describe("close", () => {
+    it("rejects pending requests and closes transport", () => {
+      const transport = new MockSyncTransport();
+      const adapter = new WsNetworkAdapter(transport);
+
+      adapter.close();
+
+      expect(transport.state).toBe("disconnected");
+    });
+
+    it("rejects in-flight requests on close", async () => {
+      const silentTransport: SyncTransport = {
+        state: "connected" as TransportState,
+        send: vi.fn().mockResolvedValue(undefined),
+        onMessage: vi.fn(),
+        close: vi.fn(),
+      };
+      const adapter = new WsNetworkAdapter(silentTransport, 5000);
+
+      const promise = adapter.fetchManifest("sys_test");
+      adapter.close();
+
+      await expect(promise).rejects.toThrow("Adapter closed");
+    });
+  });
+
+  describe("onError callback", () => {
+    it("reports DocumentUpdate callback errors via onError", async () => {
+      const transport = new MockSyncTransport();
+      const onError = vi.fn();
+      const adapter = new WsNetworkAdapter(transport, undefined, onError);
+
+      const docId = "doc_error";
+      const callbackError = new Error("Bad subscriber");
+
+      adapter.subscribe(docId, () => {
+        throw callbackError;
+      });
+
+      await adapter.submitChange(docId, {
+        documentId: docId,
+        ciphertext: new Uint8Array([1]),
+        nonce: nonce(1),
+        signature: sig(1),
+        authorPublicKey: pubkey(1),
+      });
+
+      await new Promise((r) => {
+        setTimeout(r, 50);
+      });
+
+      expect(onError).toHaveBeenCalledWith("DocumentUpdate callback error", callbackError);
+    });
+
+    it("reports VERSION_CONFLICT via onError", async () => {
+      const transport = new MockSyncTransport();
+      const onError = vi.fn();
+      const adapter = new WsNetworkAdapter(transport, undefined, onError);
+
+      const docId = "doc_snap";
+
+      // First snapshot succeeds
+      await adapter.submitSnapshot(docId, {
+        documentId: docId,
+        ciphertext: new Uint8Array([1]),
+        nonce: nonce(1),
+        signature: sig(1),
+        authorPublicKey: pubkey(1),
+        snapshotVersion: 2,
+      });
+
+      // Second with same version triggers VERSION_CONFLICT
+      await adapter.submitSnapshot(docId, {
+        documentId: docId,
+        ciphertext: new Uint8Array([2]),
+        nonce: nonce(2),
+        signature: sig(2),
+        authorPublicKey: pubkey(2),
+        snapshotVersion: 1,
+      });
+
+      expect(onError).toHaveBeenCalledWith(
+        "Snapshot VERSION_CONFLICT (non-fatal, server has newer)",
+        undefined,
+      );
+    });
+  });
+
   describe("transport disconnect", () => {
     it("close rejects all pending requests", async () => {
       const silentTransport: SyncTransport = {

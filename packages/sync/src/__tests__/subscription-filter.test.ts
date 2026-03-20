@@ -8,6 +8,7 @@ import type {
   OwnerLiteProfile,
   ReplicationProfile,
 } from "../replication-profiles.js";
+import type { UnixMillis } from "@pluralscape/types";
 
 function entry(
   overrides: Partial<SyncManifestEntry> & { docId: string; docType: SyncManifestEntry["docType"] },
@@ -17,8 +18,8 @@ function entry(
     bucketId: null,
     channelId: null,
     timePeriod: null,
-    createdAt: 1000,
-    updatedAt: 1000,
+    createdAt: 1000 as UnixMillis,
+    updatedAt: 1000 as UnixMillis,
     sizeBytes: 100,
     snapshotVersion: 1,
     archived: false,
@@ -118,7 +119,7 @@ describe("filterManifest — owner-lite", () => {
   });
 
   it("chat active channel in current period is active", () => {
-    const recentUpdate = NOW - 10 * 24 * 60 * 60 * 1000; // 10 days ago
+    const recentUpdate = (NOW - 10 * 24 * 60 * 60 * 1000) as UnixMillis; // 10 days ago
     const manifest = {
       documents: [
         entry({ docId: "chat-ch_a", docType: "chat", channelId: "ch_a", updatedAt: recentUpdate }),
@@ -129,7 +130,7 @@ describe("filterManifest — owner-lite", () => {
   });
 
   it("chat inactive channel goes to available", () => {
-    const oldUpdate = NOW - 60 * 24 * 60 * 60 * 1000; // 60 days ago
+    const oldUpdate = (NOW - 60 * 24 * 60 * 60 * 1000) as UnixMillis; // 60 days ago
     const manifest = {
       documents: [
         entry({ docId: "chat-ch_a", docType: "chat", channelId: "ch_a", updatedAt: oldUpdate }),
@@ -317,7 +318,7 @@ describe("filterManifest — friend edge cases", () => {
 describe("filterManifest — chat time-split edge cases", () => {
   it("chat current period but outside activity window goes to available", () => {
     const profile: OwnerLiteProfile = { profileType: "owner-lite", activeChannelWindowDays: 30 };
-    const oldUpdate = NOW - 60 * 24 * 60 * 60 * 1000; // 60 days ago
+    const oldUpdate = (NOW - 60 * 24 * 60 * 60 * 1000) as UnixMillis; // 60 days ago
     const manifest = {
       documents: [
         entry({

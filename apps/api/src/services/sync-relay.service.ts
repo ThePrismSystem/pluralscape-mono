@@ -10,6 +10,7 @@ import type {
   SyncManifestEntry,
   SyncRelayService,
 } from "@pluralscape/sync";
+import type { UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** PostgreSQL-backed implementation of SyncRelayService. */
@@ -180,8 +181,8 @@ export class PgSyncRelayService implements SyncRelayService {
       bucketId: row.bucketId ?? null,
       channelId: row.channelId ?? null,
       timePeriod: row.timePeriod,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      createdAt: row.createdAt as UnixMillis,
+      updatedAt: row.updatedAt as UnixMillis,
       sizeBytes: row.sizeBytes,
       snapshotVersion: row.snapshotVersion,
       archived: row.archived,

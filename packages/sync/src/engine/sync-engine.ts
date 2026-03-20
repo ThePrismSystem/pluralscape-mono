@@ -25,8 +25,8 @@ export interface SyncEngineConfig {
   readonly sodium: SodiumAdapter;
   readonly profile: ReplicationProfile;
   readonly systemId: string;
-  /** Optional error handler for non-fatal errors (hydration failures, incoming change errors). */
-  readonly onError?: (message: string, error: unknown) => void;
+  /** Error handler for non-fatal errors (hydration failures, incoming change errors). */
+  readonly onError: (message: string, error: unknown) => void;
 }
 
 /** Maximum changes to fetch per page during bootstrap. */
@@ -50,7 +50,7 @@ export class SyncEngine {
   private readonly sodium: SodiumAdapter;
   private readonly profile: ReplicationProfile;
   private readonly systemId: string;
-  private readonly onError: ((message: string, error: unknown) => void) | undefined;
+  private readonly onError: (message: string, error: unknown) => void;
 
   constructor(config: SyncEngineConfig) {
     this.networkAdapter = config.networkAdapter;
@@ -93,24 +93,24 @@ export class SyncEngine {
       const result = results[i];
       if (result && result.status === "rejected") {
         const entry = subscriptionSet.active[i];
-        this.onError?.(`Failed to hydrate document ${entry?.docId}`, result.reason);
+        this.onError(`Failed to hydrate document ${entry?.docId}`, result.reason);
       }
     }
 
     // 5. Subscribe for real-time updates
     for (const entry of subscriptionSet.active) {
-      if (!this.sessions.has(entry.docId)) continue; // Skip failed hydrations
       const session = this.sessions.get(entry.docId);
+      if (!session) continue; // Skip failed hydrations
       const sub = this.networkAdapter.subscribe(
         entry.docId,
         (changes) => {
           this.enqueueDocumentOperation(entry.docId, () =>
-            this.handleIncomingChanges(entry.docId, changes),
+            this.applyIncomingChanges(entry.docId, changes),
           ).catch((err: unknown) => {
-            this.onError?.(`Error handling incoming changes for ${entry.docId}`, err);
+            this.onError(`Error handling incoming changes for ${entry.docId}`, err);
           });
         },
-        session?.lastSyncedSeq,
+        session.lastSyncedSeq,
       );
       this.subscriptions.push(sub);
     }
@@ -118,7 +118,12 @@ export class SyncEngine {
 
   // ── Session access ──────────────────────────────────────────────────
 
-  /** Get a hydrated session by document ID. */
+  /**
+   * Get a hydrated session by document ID.
+   * Note: The generic type T is caller-asserted — the engine stores sessions
+   * as EncryptedSyncSession<unknown>. Callers must ensure T matches the
+   * actual document type for the given docId.
+   */
   getSession<T>(docId: string): EncryptedSyncSession<T> | undefined {
     return this.sessions.get(docId) as EncryptedSyncSession<T> | undefined;
   }
@@ -175,35 +180,15 @@ export class SyncEngine {
 
   /**
    * Handle incoming changes from server push (DocumentUpdate).
-   * Persists first, then applies to session.
+   * Routes through the per-document operation queue.
    */
   async handleIncomingChanges(
     docId: string,
     changes: readonly EncryptedChangeEnvelope[],
   ): Promise<void> {
-    const session = this.sessions.get(docId);
-    if (!session) return;
-
-    const currentSeq = session.lastSyncedSeq;
-
-    // Filter to only changes we haven't seen
-    const newChanges = changes.filter((c) => c.seq > currentSeq);
-    if (newChanges.length === 0) return;
-
-    // Persist atomically FIRST
-    if (this.storageAdapter.appendChanges) {
-      await this.storageAdapter.appendChanges(docId, newChanges);
-    } else {
-      for (const change of newChanges) {
-        await this.storageAdapter.appendChange(docId, change);
-      }
-    }
-
-    // THEN apply to session (has built-in rollback on crypto failure)
-    session.applyEncryptedChanges(newChanges);
-
-    // Update sync state to session's tracked seq
-    this.updateSyncState(docId, session.lastSyncedSeq);
+    return this.enqueueDocumentOperation(docId, () =>
+      this.applyIncomingChanges(docId, changes),
+    );
   }
 
   // ── Cleanup ─────────────────────────────────────────────────────────
@@ -221,8 +206,8 @@ export class SyncEngine {
     this.sessions.clear();
     this.syncStates.clear();
     this.documentQueues.clear();
-    this.networkAdapter.close?.();
-    this.storageAdapter.close?.();
+    try { this.networkAdapter.close?.(); } catch { /* best-effort */ }
+    try { this.storageAdapter.close?.(); } catch { /* best-effort */ }
   }
 
   // ── Private helpers ─────────────────────────────────────────────────
@@ -232,6 +217,44 @@ export class SyncEngine {
     const next = prev.then(op, op);
     this.documentQueues.set(docId, next.then(() => {}, () => {}));
     return next;
+  }
+
+  /**
+   * Apply incoming changes: apply to session first, then persist.
+   * If applyEncryptedChanges throws (crypto failure), data is NOT persisted
+   * to storage — the server will re-send on next connect.
+   */
+  private async applyIncomingChanges(
+    docId: string,
+    changes: readonly EncryptedChangeEnvelope[],
+  ): Promise<void> {
+    const session = this.sessions.get(docId);
+    if (!session) return;
+
+    const currentSeq = session.lastSyncedSeq;
+
+    // Filter to only changes we haven't seen
+    const newChanges = changes.filter((c) => c.seq > currentSeq);
+    if (newChanges.length === 0) return;
+
+    // Apply FIRST (has built-in rollback on crypto failure)
+    session.applyEncryptedChanges(newChanges);
+
+    // THEN persist (if this fails, data is still correct in memory; server will re-send)
+    await this.persistChanges(docId, newChanges);
+
+    // Update sync state to session's tracked seq
+    this.updateSyncState(docId, session.lastSyncedSeq);
+  }
+
+  private async persistChanges(docId: string, changes: readonly EncryptedChangeEnvelope[]): Promise<void> {
+    if (this.storageAdapter.appendChanges) {
+      await this.storageAdapter.appendChanges(docId, changes);
+    } else {
+      for (const change of changes) {
+        await this.storageAdapter.appendChange(docId, change);
+      }
+    }
   }
 
   private async hydrateDocument(docId: string, docType: SyncDocumentType): Promise<void> {
@@ -285,13 +308,7 @@ export class SyncEngine {
         session.applyEncryptedChanges(batch);
 
         // Persist batch
-        if (this.storageAdapter.appendChanges) {
-          await this.storageAdapter.appendChanges(docId, batch);
-        } else {
-          for (const change of batch) {
-            await this.storageAdapter.appendChange(docId, change);
-          }
-        }
+        await this.persistChanges(docId, batch);
 
         cursor = session.lastSyncedSeq;
       }
@@ -320,6 +337,10 @@ export class SyncEngine {
 
 // ── Utility ─────────────────────────────────────────────────────────
 
+/**
+ * Runs `fn` over `items` with bounded concurrency, returning settled results.
+ * Safe in single-threaded JS: `index++` is atomic within a synchronous tick.
+ */
 async function mapConcurrent<T, R>(
   items: T[],
   limit: number,

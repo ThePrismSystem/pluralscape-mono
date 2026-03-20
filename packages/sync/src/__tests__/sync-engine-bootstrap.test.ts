@@ -16,6 +16,7 @@ import type { DocumentKeyResolver } from "../document-key-resolver.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { DocumentKeys } from "../types.js";
 import type { AeadKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
+import type { UnixMillis } from "@pluralscape/types";
 
 // ── Mock factories ──────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ function createEngine(overrides: Partial<SyncEngineConfig> = {}): SyncEngine {
     sodium: mockSodium(),
     profile: { profileType: "owner-full" },
     systemId: "sys_test",
+    onError: vi.fn(),
     ...overrides,
   });
 }
@@ -101,8 +103,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000,
-          updatedAt: 1000,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
           sizeBytes: 100,
           snapshotVersion: 0,
           archived: false,
@@ -130,8 +132,7 @@ describe("SyncEngine bootstrap", () => {
     const engine = createEngine({ networkAdapter, storageAdapter });
     await engine.bootstrap();
 
-    // stale-doc-sys_old is not in manifest, but it's also not a valid doc ID
-    // so filterManifest won't put it in evict either. Let's use a real pattern
+    expect(storageAdapter.deleteDocument).toHaveBeenCalledWith("stale-doc-sys_old");
   });
 
   it("subscribes to active documents for real-time updates", async () => {
@@ -146,8 +147,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000,
-          updatedAt: 1000,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
           sizeBytes: 100,
           snapshotVersion: 0,
           archived: false,
@@ -178,8 +179,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000,
-          updatedAt: 1000,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
           sizeBytes: 0,
           snapshotVersion: 0,
           archived: false,
@@ -210,8 +211,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000,
-          updatedAt: 1000,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
           sizeBytes: 0,
           snapshotVersion: 0,
           archived: false,
