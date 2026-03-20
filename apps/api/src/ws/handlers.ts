@@ -30,6 +30,7 @@ import type {
   SyncRelayService,
   UnsubscribeRequest,
 } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Manifest ────────────────────────────────────────────────────────
 
@@ -38,7 +39,8 @@ export async function handleManifestRequest(
   message: ManifestRequest,
   relay: SyncRelayService,
 ): Promise<ManifestResponse> {
-  const manifest = await relay.getManifest(message.systemId);
+  // Safe cast: router validates message.systemId === state.systemId before dispatch
+  const manifest = await relay.getManifest(message.systemId as SystemId);
   return {
     type: "ManifestResponse",
     correlationId: message.correlationId,

@@ -14,7 +14,6 @@ import {
   handleDocumentLoad,
 } from "../../ws/handlers.js";
 
-
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { SyncConnectionState } from "../../ws/connection-state.js";
@@ -378,7 +377,7 @@ describe("handleFetchSnapshot", () => {
       docId,
     };
 
-    const result = await handleFetchSnapshot(message, relay.asService(), log);
+    const result = await handleFetchSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SnapshotResponse");
     expect(result.correlationId).toBe(correlationId);
@@ -420,7 +419,7 @@ describe("handleFetchChanges", () => {
       sinceSeq: 1,
     };
 
-    const result = await handleFetchChanges(message, relay.asService(), log);
+    const result = await handleFetchChanges(message, relay.asService());
 
     expect(result.type).toBe("ChangesResponse");
     expect(result.correlationId).toBe(correlationId);
@@ -550,7 +549,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService(), log);
+    const result = await handleSubmitSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SnapshotAccepted");
     expect(result.correlationId).toBe(correlationId);
@@ -574,7 +573,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService(), log);
+    const result = await handleSubmitSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SyncError");
     if (result.type === "SyncError") {
@@ -596,7 +595,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(docId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService(), log);
+    const result = await handleSubmitSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SyncError");
   });
@@ -613,7 +612,7 @@ describe("handleSubmitSnapshot", () => {
       snapshot: mockSnapshot(differentDocId, 1),
     };
 
-    const result = await handleSubmitSnapshot(message, relay.asService(), log);
+    const result = await handleSubmitSnapshot(message, relay.asService());
 
     expect(result.type).toBe("SnapshotAccepted");
 
