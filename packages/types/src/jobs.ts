@@ -18,7 +18,8 @@ export type JobType =
   | "sync-queue-cleanup"
   | "audit-log-cleanup"
   | "partition-maintenance"
-  | "sync-compaction";
+  | "sync-compaction"
+  | "device-transfer-cleanup";
 
 /** Current status of a background job. */
 export type JobStatus = "pending" | "running" | "completed" | "cancelled" | "dead-letter";
@@ -59,6 +60,7 @@ export interface JobPayloadMap {
     readonly documentId: string;
     readonly systemId: string;
   };
+  "device-transfer-cleanup": Record<string, unknown>;
 }
 
 /** Result of a completed or failed job. */

@@ -103,6 +103,7 @@ export {
   pgCleanupAllOrphanedTags,
   sqliteCleanupOrphanedTags,
   sqliteCleanupAllOrphanedTags,
+  pgCleanupDeviceTransfers,
 } from "./queries/index.js";
 
 // ── Views / Query Helpers ─────────────────────────────────────
