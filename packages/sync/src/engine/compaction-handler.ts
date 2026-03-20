@@ -40,6 +40,7 @@ export type CompactionResult =
       readonly compacted: true;
       readonly reason: CompactionReason;
       readonly newSnapshotVersion: number;
+      readonly localSaveFailed?: boolean;
     }
   | { readonly compacted: false; readonly reason: CompactionSkipReason };
 
@@ -95,18 +96,23 @@ export async function handleCompaction(
 
   // 5-6. Save locally and prune — wrapped in try/catch for partial failure resilience.
   // If relay submission succeeded but local save/prune fails, the snapshot is still on
-  // the server, so we still report success.
+  // the server, so we still report success but flag the local failure.
   try {
     await storageAdapter.saveSnapshot(documentId, snapshotEnvelope);
     await storageAdapter.pruneChangesBeforeSnapshot(documentId, lastSyncedSeq);
-  } catch {
-    // Local save/prune failed — relay still has the snapshot.
-    // Changes will be pruned on next compaction cycle.
+  } catch (error: unknown) {
+    console.warn("[CompactionHandler] local save/prune failed for", documentId, error);
+    return {
+      compacted: true,
+      reason: eligibility.reason,
+      newSnapshotVersion: newVersion,
+      localSaveFailed: true,
+    };
   }
 
   return {
     compacted: true,
-    reason: eligibility.reason as CompactionReason,
+    reason: eligibility.reason,
     newSnapshotVersion: newVersion,
   };
 }

@@ -215,6 +215,58 @@ describe("handleCompaction", () => {
     expect(envelope.snapshotVersion).toBe(1);
     expect(envelope.documentId).toBe("system-core-sys_test");
   });
+
+  it("returns localSaveFailed when local storage throws after relay succeeds", async () => {
+    const session = createSession();
+    const relay = new EncryptedRelay();
+    const relayService = relay.asService();
+    const storage = mockStorageAdapter();
+    storage.saveSnapshot = vi.fn().mockRejectedValue(new Error("disk full"));
+
+    const input: CompactionInput = {
+      documentId: "system-core-sys_test",
+      session,
+      changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
+      lastSyncedSeq: 200,
+      currentSizeBytes: 100,
+      currentSnapshotVersion: 0,
+    };
+
+    const result = await handleCompaction(input, relayService, storage);
+
+    expect(result.compacted).toBe(true);
+    if (!result.compacted) throw new Error("expected compacted");
+    expect(result.localSaveFailed).toBe(true);
+    expect(result.newSnapshotVersion).toBe(1);
+  });
+
+  it("logs warning when local save/prune fails", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const session = createSession();
+    const relay = new EncryptedRelay();
+    const relayService = relay.asService();
+    const storage = mockStorageAdapter();
+    storage.saveSnapshot = vi.fn().mockRejectedValue(new Error("disk full"));
+
+    const input: CompactionInput = {
+      documentId: "system-core-sys_test",
+      session,
+      changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
+      lastSyncedSeq: 0,
+      currentSizeBytes: 100,
+      currentSnapshotVersion: 0,
+    };
+
+    await handleCompaction(input, relayService, storage);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[CompactionHandler] local save/prune failed for",
+      "system-core-sys_test",
+      expect.any(Error),
+    );
+
+    warnSpy.mockRestore();
+  });
 });
 
 describe("compactionIdempotencyKey", () => {
