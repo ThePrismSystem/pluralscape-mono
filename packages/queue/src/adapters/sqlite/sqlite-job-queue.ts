@@ -22,6 +22,7 @@ import type {
   JobResult,
   JobStatus,
   JobType,
+  Logger,
   RetryPolicy,
   UnixMillis,
 } from "@pluralscape/types";
@@ -36,12 +37,15 @@ export class SqliteJobQueue implements JobQueue {
   private readonly retryPolicies = new Map<JobType, RetryPolicy>();
   private hooks: JobEventHooks = {};
   private readonly clock: () => UnixMillis;
+  private readonly logger: Logger | undefined;
 
   constructor(
     private readonly db: BetterSQLite3Database,
     clock?: () => UnixMillis,
+    options?: { logger?: Logger },
   ) {
     this.clock = clock ?? now;
+    this.logger = options?.logger;
   }
 
   enqueue<T extends JobType>(params: JobEnqueueParams<T>): Promise<JobDefinition> {
@@ -176,7 +180,7 @@ export class SqliteJobQueue implements JobQueue {
       .run();
 
     const updated = this.requireJob(jobId);
-    await fireHook(this.hooks, "onComplete", updated);
+    await fireHook(this.hooks, "onComplete", updated, undefined, this.logger);
     return updated;
   }
 
@@ -202,8 +206,8 @@ export class SqliteJobQueue implements JobQueue {
         .run();
 
       const updated = this.requireJob(jobId);
-      await fireHook(this.hooks, "onFail", updated, new Error(error));
-      await fireHook(this.hooks, "onDeadLetter", updated);
+      await fireHook(this.hooks, "onFail", updated, new Error(error), this.logger);
+      await fireHook(this.hooks, "onDeadLetter", updated, undefined, this.logger);
       return updated;
     }
 
@@ -222,7 +226,7 @@ export class SqliteJobQueue implements JobQueue {
       .run();
 
     const updated = this.requireJob(jobId);
-    await fireHook(this.hooks, "onFail", updated, new Error(error));
+    await fireHook(this.hooks, "onFail", updated, new Error(error), this.logger);
     return updated;
   }
 

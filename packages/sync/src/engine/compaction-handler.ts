@@ -12,6 +12,7 @@ import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { SyncRelayService } from "../relay-service.js";
 import type { EncryptedSyncSession } from "../sync-session.js";
 import type { CompactionConfig, StorageBudget } from "../types.js";
+import type { Logger } from "@pluralscape/types";
 
 /** Why a compaction was performed. */
 export type CompactionReason = "change-threshold" | "size-threshold" | "explicit";
@@ -59,6 +60,7 @@ export async function handleCompaction(
   input: CompactionInput,
   relayService: SyncRelayService,
   storageAdapter: SyncStorageAdapter,
+  logger?: Pick<Logger, "warn">,
 ): Promise<CompactionResult> {
   const {
     documentId,
@@ -101,7 +103,10 @@ export async function handleCompaction(
     await storageAdapter.saveSnapshot(documentId, snapshotEnvelope);
     await storageAdapter.pruneChangesBeforeSnapshot(documentId, lastSyncedSeq);
   } catch (error: unknown) {
-    console.warn("[CompactionHandler] local save/prune failed for", documentId, error);
+    logger?.warn("CompactionHandler: local save/prune failed", {
+      documentId,
+      error: String(error),
+    });
     return {
       compacted: true,
       reason: eligibility.reason,

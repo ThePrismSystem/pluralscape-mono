@@ -72,8 +72,8 @@ export default tseslint.config(
       // No swallowed errors
       "no-empty": "error",
 
-      // No console.log in production
-      "no-console": ["error", { allow: ["info", "warn", "error"] }],
+      // No console.* in production — use structured Logger interface
+      "no-console": "error",
 
       // Explicit return types on exports
       "@typescript-eslint/explicit-module-boundary-types": "error",
@@ -128,12 +128,15 @@ export default tseslint.config(
   {
     files: [
       "**/*.test.ts",
+      "**/*.test.tsx",
       "**/*.spec.ts",
       "**/*.integration.test.ts",
       "**/*.integration.spec.ts",
       "**/__tests__/**/*.ts",
+      "**/__tests__/**/*.tsx",
     ],
     rules: {
+      "no-console": "off",
       "@typescript-eslint/no-magic-numbers": "off",
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
@@ -151,6 +154,19 @@ export default tseslint.config(
     files: ["**/*.constants.ts"],
     rules: {
       "@typescript-eslint/no-magic-numbers": "off",
+    },
+  },
+  {
+    files: [
+      "**/*.bench.ts",
+      "**/scripts/**/*.ts",
+      "**/global-setup.ts",
+      "**/global-teardown.ts",
+      "**/migrate.ts",
+      "**/observability/job-logger.ts",
+    ],
+    rules: {
+      "no-console": "off",
     },
   },
   {

@@ -32,7 +32,7 @@ function wrapLevel(
 
 /**
  * Wraps a Pino logger instance into the AppLogger interface,
- * using the (message, data?) signature convention from JobLogger.
+ * using the (message, data?) signature convention from Logger.
  */
 function wrapPino(pinoInstance: pino.Logger): AppLogger {
   return {

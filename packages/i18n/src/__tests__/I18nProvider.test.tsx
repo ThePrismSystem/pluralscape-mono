@@ -67,8 +67,8 @@ describe("I18nProvider", () => {
     expect(screen.getByTestId("translated").textContent).toBe("Hello fallback");
   });
 
-  it("warn mode logs console.warn for missing keys", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("warn mode logs via injected logger for missing keys", () => {
+    const warnFn = vi.fn();
 
     function MissingKeyChild(): React.JSX.Element {
       const { t } = useTranslation("common");
@@ -76,12 +76,12 @@ describe("I18nProvider", () => {
     }
 
     render(
-      <I18nProvider config={makeConfig({ missingKeyMode: "warn" })}>
+      <I18nProvider config={makeConfig({ missingKeyMode: "warn", logger: { warn: warnFn } })}>
         <MissingKeyChild />
       </I18nProvider>,
     );
 
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("nonexistent"));
+    expect(warnFn).toHaveBeenCalledWith(expect.stringContaining("nonexistent"));
   });
 
   it("throw mode throws for missing keys", () => {

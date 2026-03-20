@@ -10,8 +10,7 @@ import { ACK_RETRY_DELAY_MS, MAX_ACK_RETRIES, pollBackoffMs } from "../../queue.
 import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
-import type { JobLogger } from "../../observability/job-logger.js";
-import type { JobDefinition, JobType, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobType, Logger, UnixMillis } from "@pluralscape/types";
 
 const DEFAULT_POLL_INTERVAL_MS = 100;
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000;
@@ -28,7 +27,7 @@ export class SqliteJobWorker implements JobWorker {
   private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
-  private readonly logger: JobLogger | undefined;
+  private readonly logger: Logger | undefined;
   private readonly clock: () => UnixMillis;
 
   private running = false;
@@ -47,7 +46,7 @@ export class SqliteJobWorker implements JobWorker {
     }: {
       pollIntervalMs?: number;
       shutdownTimeoutMs?: number;
-      logger?: JobLogger;
+      logger?: Logger;
       clock?: () => UnixMillis;
     } = {},
   ) {

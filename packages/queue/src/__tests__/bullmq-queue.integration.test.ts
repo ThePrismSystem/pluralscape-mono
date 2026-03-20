@@ -25,7 +25,7 @@ function nextQueueName(): string {
 
 function createQueue(
   clock?: () => UnixMillis,
-  options?: { logger?: import("../observability/job-logger.js").JobLogger },
+  options?: { logger?: import("@pluralscape/types").Logger },
 ): BullMQJobQueue {
   if (redis === null) throw new Error("Valkey not available");
   return new BullMQJobQueue(nextQueueName(), redis, clock, options);

@@ -21,7 +21,10 @@ interface I18nProviderProps {
  */
 export function I18nProvider({ config, children }: I18nProviderProps): React.JSX.Element {
   const instance = useMemo(() => {
-    const i18n = createI18nInstance({ missingKeyMode: config.missingKeyMode });
+    const i18n = createI18nInstance({
+      missingKeyMode: config.missingKeyMode,
+      logger: config.logger,
+    });
     i18n.use(initReactI18next);
     void i18n.init({
       lng: config.locale,

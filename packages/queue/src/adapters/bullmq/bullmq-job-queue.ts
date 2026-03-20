@@ -21,7 +21,6 @@ import { fromStoredData } from "./job-mapper.js";
 import type { StoredJobData } from "./job-mapper.js";
 import type { JobEventHooks } from "../../event-hooks.js";
 import type { JobQueue } from "../../job-queue.js";
-import type { JobLogger } from "../../observability/job-logger.js";
 import type { IdempotencyCheckResult, JobEnqueueParams, JobFilter } from "../../types.js";
 import type {
   JobDefinition,
@@ -29,6 +28,7 @@ import type {
   JobResult,
   JobStatus,
   JobType,
+  Logger,
   RetryPolicy,
   UnixMillis,
 } from "@pluralscape/types";
@@ -46,7 +46,7 @@ export class BullMQJobQueue implements JobQueue {
   private readonly retryPolicies = new Map<JobType, RetryPolicy>();
   private hooks: JobEventHooks = {};
   private readonly clock: () => UnixMillis;
-  private readonly logger: JobLogger | undefined;
+  private readonly logger: Logger | undefined;
   private readonly queue: Queue;
   private readonly fetchWorker: Worker;
   private readonly redis: IORedis;
@@ -58,7 +58,7 @@ export class BullMQJobQueue implements JobQueue {
     queueName: string,
     connection: IORedis,
     clock?: () => UnixMillis,
-    options?: { logger?: JobLogger },
+    options?: { logger?: Logger },
   ) {
     this.clock = clock ?? now;
     this.logger = options?.logger;

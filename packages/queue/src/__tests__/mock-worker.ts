@@ -12,8 +12,7 @@ import { delay } from "./helpers.js";
 import type { HeartbeatHandle } from "../heartbeat.js";
 import type { JobQueue } from "../job-queue.js";
 import type { JobHandler, JobWorker } from "../job-worker.js";
-import type { JobLogger } from "../observability/job-logger.js";
-import type { JobDefinition, JobType, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobType, Logger, UnixMillis } from "@pluralscape/types";
 
 /**
  * In-memory implementation of JobWorker for use in contract tests.
@@ -26,7 +25,7 @@ export class InMemoryJobWorker implements JobWorker {
   private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
-  private readonly logger: JobLogger | undefined;
+  private readonly logger: Logger | undefined;
   private readonly clock: () => UnixMillis;
 
   private running = false;
@@ -46,7 +45,7 @@ export class InMemoryJobWorker implements JobWorker {
     }: {
       pollIntervalMs?: number;
       shutdownTimeoutMs?: number;
-      logger?: JobLogger;
+      logger?: Logger;
       clock?: () => UnixMillis;
     } = {},
   ) {

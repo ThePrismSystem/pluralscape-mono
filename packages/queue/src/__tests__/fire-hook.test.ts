@@ -3,14 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { fireHook } from "../fire-hook.js";
 
 import type { JobEventHooks } from "../event-hooks.js";
-import type { JobLogger } from "../observability/job-logger.js";
-import type { JobDefinition, JobId } from "@pluralscape/types";
+import type { JobDefinition, JobId, Logger } from "@pluralscape/types";
 
 const fakeJob = { id: "job_test" as JobId, type: "sync-push" } as JobDefinition;
 
-function makeLogger(): { logger: JobLogger; errorFn: ReturnType<typeof vi.fn> } {
+function makeLogger(): { logger: Logger; errorFn: ReturnType<typeof vi.fn> } {
   const errorFn = vi.fn();
-  const logger: JobLogger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
+  const logger: Logger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
   return { logger, errorFn };
 }
 
@@ -77,26 +76,13 @@ describe("fireHook", () => {
     );
   });
 
-  it("calls console.warn when hook throws and no logger is provided", async () => {
+  it("silently swallows errors when no logger is provided", async () => {
     const hooks: JobEventHooks = {
       onDeadLetter: () => {
         throw new Error("oops");
       },
     };
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await fireHook(hooks, "onDeadLetter", fakeJob);
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("event=onDeadLetter"));
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("jobId=job_test"));
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("error=oops"));
-  });
-
-  it("calls console.warn when async hook rejects and no logger is provided", async () => {
-    const hooks: JobEventHooks = {
-      onComplete: () => Promise.reject(new Error("async boom")),
-    };
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await expect(fireHook(hooks, "onComplete", fakeJob)).resolves.toBeUndefined();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("error=async boom"));
+    await expect(fireHook(hooks, "onDeadLetter", fakeJob)).resolves.toBeUndefined();
   });
 
   it("requires error argument for onFail event (type-level check)", () => {

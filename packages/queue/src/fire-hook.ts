@@ -1,6 +1,5 @@
 import type { JobEventHooks } from "./event-hooks.js";
-import type { JobLogger } from "./observability/job-logger.js";
-import type { JobDefinition } from "@pluralscape/types";
+import type { JobDefinition, Logger } from "@pluralscape/types";
 
 /**
  * Dispatches a lifecycle hook, swallowing errors so they never propagate
@@ -11,21 +10,21 @@ export async function fireHook(
   event: "onFail",
   job: JobDefinition,
   error: Error,
-  logger?: JobLogger,
+  logger?: Logger,
 ): Promise<void>;
 export async function fireHook(
   hooks: JobEventHooks,
   event: "onComplete" | "onDeadLetter",
   job: JobDefinition,
   error?: undefined,
-  logger?: JobLogger,
+  logger?: Logger,
 ): Promise<void>;
 export async function fireHook(
   hooks: JobEventHooks,
   event: keyof JobEventHooks,
   job: JobDefinition,
   error?: Error,
-  logger?: JobLogger,
+  logger?: Logger,
 ): Promise<void> {
   try {
     if (event === "onComplete") {
@@ -37,10 +36,6 @@ export async function fireHook(
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    if (logger !== undefined) {
-      logger.error("hook.error", { event, jobId: job.id, error: message });
-    } else {
-      console.warn(`[queue] hook error: event=${event} jobId=${job.id} error=${message}`);
-    }
+    logger?.error("hook.error", { event, jobId: job.id, error: message });
   }
 }

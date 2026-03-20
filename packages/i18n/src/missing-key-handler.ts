@@ -1,6 +1,9 @@
+import type { Logger } from "@pluralscape/types";
+
 /** Creates a missing key handler for the given mode. */
 export function createMissingKeyHandler(
   mode: "warn" | "throw",
+  logger?: Pick<Logger, "warn">,
 ): (key: string, namespace: string) => void {
   if (mode === "throw") {
     return (key: string, namespace: string) => {
@@ -9,6 +12,6 @@ export function createMissingKeyHandler(
   }
 
   return (key: string, namespace: string) => {
-    console.warn(`Missing translation key: ${namespace}:${key}`);
+    logger?.warn(`Missing translation key: ${namespace}:${key}`);
   };
 }

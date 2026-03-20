@@ -14,8 +14,7 @@ import type { StoredJobData } from "./job-mapper.js";
 import type { HeartbeatHandle } from "../../heartbeat.js";
 import type { JobQueue } from "../../job-queue.js";
 import type { JobHandler, JobWorker } from "../../job-worker.js";
-import type { JobLogger } from "../../observability/job-logger.js";
-import type { JobDefinition, JobId, JobType, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobId, JobType, Logger, UnixMillis } from "@pluralscape/types";
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
 
@@ -37,7 +36,7 @@ export class BullMQJobWorker implements JobWorker {
   private readonly queue: JobQueue;
   private readonly pollIntervalMs: number;
   private readonly shutdownTimeoutMs: number;
-  private readonly logger: JobLogger | undefined;
+  private readonly logger: Logger | undefined;
   private readonly clock: () => UnixMillis;
 
   private worker: Worker | null = null;
@@ -55,7 +54,7 @@ export class BullMQJobWorker implements JobWorker {
     options?: {
       pollIntervalMs?: number;
       shutdownTimeoutMs?: number;
-      logger?: JobLogger;
+      logger?: Logger;
       clock?: () => UnixMillis;
     },
   ) {

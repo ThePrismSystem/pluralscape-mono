@@ -2,9 +2,13 @@ import i18next, { type i18n } from "i18next";
 
 import { createMissingKeyHandler } from "./missing-key-handler.js";
 
+import type { Logger } from "@pluralscape/types";
+
 export interface CreateI18nOptions {
   /** Missing key handling mode. Defaults to "warn". */
   readonly missingKeyMode?: "warn" | "throw";
+  /** Logger for missing key warnings. Only used when missingKeyMode is "warn". */
+  readonly logger?: Pick<Logger, "warn">;
 }
 
 /**
@@ -20,7 +24,7 @@ export function createI18nInstance(options?: CreateI18nOptions): i18n {
   instance.use({
     type: "3rdParty" as const,
     init(i18nInstance: i18n) {
-      const handler = createMissingKeyHandler(mode);
+      const handler = createMissingKeyHandler(mode, options?.logger);
       i18nInstance.options.saveMissing = true;
       i18nInstance.options.missingKeyHandler = (
         _lngs: readonly string[],

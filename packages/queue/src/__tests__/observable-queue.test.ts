@@ -6,11 +6,10 @@ import { ObservableJobQueue } from "../observability/observable-queue.js";
 import { dequeueOrFail, makeJobParams } from "./helpers.js";
 import { InMemoryJobQueue } from "./mock-queue.js";
 
-import type { JobLogger } from "../observability/job-logger.js";
-import type { UnixMillis } from "@pluralscape/types";
+import type { Logger, UnixMillis } from "@pluralscape/types";
 
 function makeLogger(): {
-  logger: JobLogger;
+  logger: Logger;
   info: ReturnType<typeof vi.fn>;
   warn: ReturnType<typeof vi.fn>;
   error: ReturnType<typeof vi.fn>;
@@ -18,7 +17,7 @@ function makeLogger(): {
   const info = vi.fn();
   const warn = vi.fn();
   const error = vi.fn();
-  const logger: JobLogger = { info, warn, error };
+  const logger: Logger = { info, warn, error };
   return { logger, info, warn, error };
 }
 

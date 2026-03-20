@@ -241,7 +241,7 @@ describe("handleCompaction", () => {
   });
 
   it("logs warning when local save/prune fails", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnFn = vi.fn();
     const session = createSession();
     const relay = new EncryptedRelay();
     const relayService = relay.asService();
@@ -257,15 +257,12 @@ describe("handleCompaction", () => {
       currentSnapshotVersion: 0,
     };
 
-    await handleCompaction(input, relayService, storage);
+    await handleCompaction(input, relayService, storage, { warn: warnFn });
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      "[CompactionHandler] local save/prune failed for",
-      "system-core-sys_test",
-      expect.any(Error),
+    expect(warnFn).toHaveBeenCalledWith(
+      "CompactionHandler: local save/prune failed",
+      expect.objectContaining({ documentId: "system-core-sys_test" }),
     );
-
-    warnSpy.mockRestore();
   });
 });
 

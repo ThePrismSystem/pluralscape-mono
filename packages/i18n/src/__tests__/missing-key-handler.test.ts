@@ -4,18 +4,25 @@ import { createMissingKeyHandler } from "../missing-key-handler.js";
 
 describe("createMissingKeyHandler", () => {
   describe("warn mode", () => {
-    it("logs a warning with the missing key details", () => {
-      const handler = createMissingKeyHandler("warn");
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    it("logs a warning via the provided logger", () => {
+      const warnFn = vi.fn();
+      const handler = createMissingKeyHandler("warn", { warn: warnFn });
 
       handler("greeting", "common");
 
-      expect(warnSpy).toHaveBeenCalledWith("Missing translation key: common:greeting");
+      expect(warnFn).toHaveBeenCalledWith("Missing translation key: common:greeting");
     });
 
     it("does not throw", () => {
+      const handler = createMissingKeyHandler("warn", { warn: vi.fn() });
+
+      expect(() => {
+        handler("greeting", "common");
+      }).not.toThrow();
+    });
+
+    it("is a no-op when no logger is provided", () => {
       const handler = createMissingKeyHandler("warn");
-      vi.spyOn(console, "warn").mockImplementation(() => {});
 
       expect(() => {
         handler("greeting", "common");

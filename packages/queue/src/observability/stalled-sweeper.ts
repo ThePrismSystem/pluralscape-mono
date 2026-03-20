@@ -1,12 +1,12 @@
 import type { JobQueue } from "../job-queue.js";
-import type { JobLogger } from "./job-logger.js";
+import type { Logger } from "@pluralscape/types";
 
 const DEFAULT_INTERVAL_MS = 30_000;
 const STALL_ERROR_MESSAGE = "Job stalled: heartbeat timeout exceeded";
 
 export interface StalledSweeperOptions {
   intervalMs?: number;
-  logger?: JobLogger;
+  logger?: Logger;
   /** Called after each sweep with the number of stalled jobs found. */
   onSweep?: (count: number) => void;
 }
@@ -18,7 +18,7 @@ export interface StalledSweeperOptions {
 export class StalledJobSweeper {
   private readonly queue: JobQueue;
   private readonly intervalMs: number;
-  private readonly logger: JobLogger | undefined;
+  private readonly logger: Logger | undefined;
   private readonly onSweep: ((count: number) => void) | undefined;
   private timer: ReturnType<typeof setInterval> | null = null;
   private sweeping = false;

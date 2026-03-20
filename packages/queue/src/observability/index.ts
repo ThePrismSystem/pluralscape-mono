@@ -3,7 +3,6 @@ export type { AlertConfig } from "./alerts.js";
 export { QueueHealthService } from "./health.js";
 export type { QueueHealthSummary } from "./health.js";
 export { DevConsoleLogger } from "./job-logger.js";
-export type { JobLogger } from "./job-logger.js";
 export { InMemoryJobMetrics } from "./job-metrics.js";
 export type { AggregateMetrics, JobMetrics, JobTypeMetrics } from "./job-metrics.js";
 export { ObservableJobQueue } from "./observable-queue.js";

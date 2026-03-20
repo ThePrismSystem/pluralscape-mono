@@ -4,6 +4,7 @@ declare function clearTimeout(id: number): void;
 import type { ClientMessage, ServerMessage, SyncTransport } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SyncManifest, SyncNetworkAdapter, SyncSubscription } from "./network-adapter.js";
+import type { Logger } from "@pluralscape/types";
 
 /** Distributive Omit that preserves union members. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
@@ -32,10 +33,16 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   >();
   private readonly lastSeqPerDoc = new Map<string, number>();
   private readonly timeoutMs: number;
+  private readonly logger?: Pick<Logger, "warn">;
 
-  constructor(transport: SyncTransport, timeoutMs = REQUEST_TIMEOUT_MS) {
+  constructor(
+    transport: SyncTransport,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+    logger?: Pick<Logger, "warn">,
+  ) {
     this.transport = transport;
     this.timeoutMs = timeoutMs;
+    this.logger = logger;
 
     transport.onMessage((msg) => {
       this.handleMessage(msg);
@@ -123,7 +130,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         documents: [{ docId: documentId, lastSyncedSeq: lastSeq, lastSnapshotVersion: 0 }],
       })
       .catch((err: unknown) => {
-        console.warn("Subscribe transport send failed:", err);
+        this.logger?.warn("Subscribe transport send failed", { error: String(err) });
         callbacks.delete(onChanges);
         if (callbacks.size === 0) this.subscriptions.delete(documentId);
       });
@@ -179,7 +186,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
           try {
             cb(msg.changes);
           } catch (err) {
-            console.warn("Subscriber callback error:", err);
+            this.logger?.warn("Subscriber callback error", { error: String(err) });
           }
         }
       }

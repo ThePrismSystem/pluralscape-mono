@@ -3,8 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ObservableJobWorker } from "../observability/observable-worker.js";
 
 import type { JobHandler, JobWorker } from "../job-worker.js";
-import type { JobLogger } from "../observability/job-logger.js";
-import type { JobDefinition, JobId, JobType } from "@pluralscape/types";
+import type { JobDefinition, JobId, JobType, Logger } from "@pluralscape/types";
 
 const fakeJob = {
   id: "job_test" as JobId,
@@ -12,7 +11,7 @@ const fakeJob = {
 } as JobDefinition;
 
 function makeLogger(): {
-  logger: JobLogger;
+  logger: Logger;
   info: ReturnType<typeof vi.fn>;
   warn: ReturnType<typeof vi.fn>;
   error: ReturnType<typeof vi.fn>;
