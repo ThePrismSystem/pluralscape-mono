@@ -90,7 +90,7 @@ export interface DeviceTransferRequest {
   readonly id: DeviceTransferRequestId;
   readonly accountId: AccountId;
   readonly sourceSessionId: SessionId;
-  readonly targetSessionId: SessionId;
+  readonly targetSessionId: SessionId | null;
   readonly createdAt: UnixMillis;
   readonly expiresAt: UnixMillis;
   readonly status: DeviceTransferStatus;

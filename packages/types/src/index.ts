@@ -621,6 +621,7 @@ export type {
 export type { RateLimitConfig, RateLimitCategory, ApiErrorCode } from "./api-constants.js";
 export {
   MS_PER_DAY,
+  MS_PER_HOUR,
   RATE_LIMITS,
   API_ERROR_CODES,
   PAGINATION,

@@ -131,7 +131,7 @@ describe("DeviceTransferRequest", () => {
     expectTypeOf<DeviceTransferRequest["id"]>().toEqualTypeOf<DeviceTransferRequestId>();
     expectTypeOf<DeviceTransferRequest["accountId"]>().toEqualTypeOf<AccountId>();
     expectTypeOf<DeviceTransferRequest["sourceSessionId"]>().toEqualTypeOf<SessionId>();
-    expectTypeOf<DeviceTransferRequest["targetSessionId"]>().toEqualTypeOf<SessionId>();
+    expectTypeOf<DeviceTransferRequest["targetSessionId"]>().toEqualTypeOf<SessionId | null>();
     expectTypeOf<DeviceTransferRequest["createdAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<DeviceTransferRequest["expiresAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<DeviceTransferRequest["status"]>().toEqualTypeOf<DeviceTransferStatus>();
