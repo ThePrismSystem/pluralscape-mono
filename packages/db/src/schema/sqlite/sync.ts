@@ -60,17 +60,21 @@ export const syncChanges = sqliteTable(
   ],
 );
 
-export const syncSnapshots = sqliteTable("sync_snapshots", {
-  documentId: text("document_id")
-    .primaryKey()
-    .references(() => syncDocuments.documentId, { onDelete: "cascade" }),
-  snapshotVersion: integer("snapshot_version").notNull(),
-  encryptedPayload: sqliteBinary("encrypted_payload").notNull(),
-  authorPublicKey: sqliteBinary("author_public_key").notNull(),
-  nonce: sqliteBinary("nonce").notNull(),
-  signature: sqliteBinary("signature").notNull(),
-  createdAt: sqliteTimestamp("created_at").notNull(),
-});
+export const syncSnapshots = sqliteTable(
+  "sync_snapshots",
+  {
+    documentId: text("document_id")
+      .primaryKey()
+      .references(() => syncDocuments.documentId, { onDelete: "cascade" }),
+    snapshotVersion: integer("snapshot_version").notNull(),
+    encryptedPayload: sqliteBinary("encrypted_payload").notNull(),
+    authorPublicKey: sqliteBinary("author_public_key").notNull(),
+    nonce: sqliteBinary("nonce").notNull(),
+    signature: sqliteBinary("signature").notNull(),
+    createdAt: sqliteTimestamp("created_at").notNull(),
+  },
+  (t) => [check("sync_snapshots_snapshot_version_check", sql`${t.snapshotVersion} >= 0`)],
+);
 
 export type SyncDocumentRow = InferSelectModel<typeof syncDocuments>;
 export type NewSyncDocument = InferInsertModel<typeof syncDocuments>;

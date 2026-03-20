@@ -144,7 +144,7 @@ export async function handleFetchChanges(
     type: "ChangesResponse",
     correlationId: message.correlationId,
     docId: message.docId,
-    changes: await relay.getEnvelopesSince(message.docId, message.sinceSeq, message.limit),
+    changes: await relay.getEnvelopesSince(message.docId, message.sinceSeq),
   };
 }
 

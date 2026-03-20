@@ -1346,7 +1346,8 @@ export const SQLITE_DDL = {
       author_public_key BLOB NOT NULL,
       nonce BLOB NOT NULL,
       signature BLOB NOT NULL,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      CHECK (snapshot_version >= 0)
     )
   `,
   syncSnapshotsIndexes: ``,

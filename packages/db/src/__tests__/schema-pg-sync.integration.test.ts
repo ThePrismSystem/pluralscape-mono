@@ -58,7 +58,7 @@ describe("PG sync schema", () => {
       encryptedPayload: new Uint8Array([0xde, 0xad, 0xbe, 0xef]),
       authorPublicKey: new Uint8Array(32).fill(0x01),
       nonce: new Uint8Array(24).fill(seq),
-      signature: new Uint8Array(64).fill(0x03),
+      signature: new Uint8Array(64).fill(0x77),
       createdAt: Date.now(),
     };
   }
@@ -71,7 +71,7 @@ describe("PG sync schema", () => {
       encryptedPayload: new Uint8Array([0xca, 0xfe, 0xba, 0xbe]),
       authorPublicKey: new Uint8Array(32).fill(0x02),
       nonce: new Uint8Array(24).fill(0xaa),
-      signature: new Uint8Array(64).fill(0x04),
+      signature: new Uint8Array(64).fill(0x88),
       createdAt: Date.now(),
     };
   }

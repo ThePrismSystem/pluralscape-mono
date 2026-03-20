@@ -1,4 +1,3 @@
-
 import type { SyncManifest } from "./adapters/network-adapter.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 import type { SystemId } from "@pluralscape/types";
@@ -18,7 +17,6 @@ export interface SyncRelayService {
   getEnvelopesSince(
     documentId: string,
     sinceSeq: number,
-    limit?: number,
   ): Promise<readonly EncryptedChangeEnvelope[]>;
 
   /** Submit an encrypted snapshot. Throws on version conflict. */

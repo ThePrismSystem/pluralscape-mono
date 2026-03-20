@@ -1,11 +1,12 @@
-import type { BucketId, ChannelId, SyncDocType, SyncKeyType, SystemId } from "@pluralscape/types";
+import type {
+  BucketId,
+  ChannelId,
+  SyncDocumentType,
+  DocumentKeyType,
+  SystemId,
+} from "@pluralscape/types";
 
-export type { SyncDocType as SyncDocumentType } from "@pluralscape/types";
-export type { SyncKeyType as DocumentKeyType } from "@pluralscape/types";
-
-// Local aliases for use in value-level type annotations below
-type SyncDocumentType = SyncDocType;
-type DocumentKeyType = SyncKeyType;
+export type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 
 /** Parsed components of a document ID. */
 export type ParsedDocumentId =

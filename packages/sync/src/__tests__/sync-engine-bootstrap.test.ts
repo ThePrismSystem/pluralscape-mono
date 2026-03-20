@@ -16,7 +16,7 @@ import type { DocumentKeyResolver } from "../document-key-resolver.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { DocumentKeys } from "../types.js";
 import type { AeadKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
-import type { UnixMillis } from "@pluralscape/types";
+import type { SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Mock factories ──────────────────────────────────────────────────
 
@@ -57,7 +57,7 @@ function mockStorageAdapter(overrides: Partial<SyncStorageAdapter> = {}): SyncSt
 }
 
 function mockNetworkAdapter(overrides: Partial<SyncNetworkAdapter> = {}): SyncNetworkAdapter {
-  const emptyManifest: SyncManifest = { systemId: "sys_test", documents: [] };
+  const emptyManifest: SyncManifest = { systemId: "sys_test" as SystemId, documents: [] };
   return {
     submitChange: vi.fn().mockResolvedValue({ seq: 1 }),
     fetchChangesSince: vi.fn().mockResolvedValue([]),
@@ -77,7 +77,7 @@ function createEngine(overrides: Partial<SyncEngineConfig> = {}): SyncEngine {
     keyResolver: mockKeyResolver(keys),
     sodium: mockSodium(),
     profile: { profileType: "owner-full" },
-    systemId: "sys_test",
+    systemId: "sys_test" as SystemId,
     onError: vi.fn(),
     ...overrides,
   });
@@ -94,7 +94,7 @@ describe("SyncEngine bootstrap", () => {
 
   it("hydrates documents from manifest", async () => {
     const manifest: SyncManifest = {
-      systemId: "sys_test",
+      systemId: "sys_test" as SystemId,
       documents: [
         {
           docId: "system-core-sys_test",
@@ -124,21 +124,23 @@ describe("SyncEngine bootstrap", () => {
   });
 
   it("evicts stale local documents not in manifest", async () => {
+    const deleteFn = vi.fn().mockResolvedValue(undefined);
     const storageAdapter = mockStorageAdapter({
       listDocuments: vi.fn().mockResolvedValue(["stale-doc-sys_old"]),
+      deleteDocument: deleteFn,
     });
     const networkAdapter = mockNetworkAdapter();
 
     const engine = createEngine({ networkAdapter, storageAdapter });
     await engine.bootstrap();
 
-    expect(storageAdapter.deleteDocument).toHaveBeenCalledWith("stale-doc-sys_old");
+    expect(deleteFn).toHaveBeenCalledWith("stale-doc-sys_old");
   });
 
   it("subscribes to active documents for real-time updates", async () => {
     const subscribeFn = vi.fn().mockReturnValue({ unsubscribe: vi.fn() });
     const manifest: SyncManifest = {
-      systemId: "sys_test",
+      systemId: "sys_test" as SystemId,
       documents: [
         {
           docId: "system-core-sys_test",
@@ -164,13 +166,13 @@ describe("SyncEngine bootstrap", () => {
     const engine = createEngine({ networkAdapter });
     await engine.bootstrap();
 
-    expect(subscribeFn).toHaveBeenCalledWith("system-core-sys_test", expect.any(Function), 0);
+    expect(subscribeFn).toHaveBeenCalledWith("system-core-sys_test", expect.any(Function));
   });
 
   it("fetches server changes during hydration", async () => {
     const fetchChangesSince = vi.fn().mockResolvedValue([]);
     const manifest: SyncManifest = {
-      systemId: "sys_test",
+      systemId: "sys_test" as SystemId,
       documents: [
         {
           docId: "system-core-sys_test",
@@ -196,13 +198,13 @@ describe("SyncEngine bootstrap", () => {
     const engine = createEngine({ networkAdapter });
     await engine.bootstrap();
 
-    expect(fetchChangesSince).toHaveBeenCalledWith("system-core-sys_test", 0, 1000);
+    expect(fetchChangesSince).toHaveBeenCalledWith("system-core-sys_test", 0);
   });
 
   it("disposes cleanly by unsubscribing all", async () => {
     const unsubscribe = vi.fn();
     const manifest: SyncManifest = {
-      systemId: "sys_test",
+      systemId: "sys_test" as SystemId,
       documents: [
         {
           docId: "system-core-sys_test",

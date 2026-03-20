@@ -12,7 +12,7 @@ import type {
   SyncManifestEntry,
   SyncRelayService,
 } from "@pluralscape/sync";
-import type { UnixMillis } from "@pluralscape/types";
+import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** PostgreSQL-backed implementation of SyncRelayService. */
@@ -23,7 +23,7 @@ export class PgSyncRelayService implements SyncRelayService {
     return await this.db.transaction(async (tx) => {
       const now = Date.now();
 
-      // Check for idempotent retry via dedup index
+      // Check dedup: if (documentId, authorPublicKey, nonce) already exists, return existing seq
       const [existing] = await tx
         .select({ seq: syncChanges.seq })
         .from(syncChanges)
@@ -73,38 +73,19 @@ export class PgSyncRelayService implements SyncRelayService {
   async getEnvelopesSince(
     documentId: string,
     sinceSeq: number,
-    limit?: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
-    let query = this.db
+    const rows = await this.db
       .select()
       .from(syncChanges)
       .where(and(eq(syncChanges.documentId, documentId), gt(syncChanges.seq, sinceSeq)))
       .orderBy(syncChanges.seq);
 
-    if (limit !== undefined) {
-      query = query.limit(limit);
-    }
-
-    const rows = await query;
-
-    return rows.map((row) => ({
-      ciphertext: row.encryptedPayload,
-      nonce: row.nonce as EncryptedChangeEnvelope["nonce"],
-      signature: row.signature as EncryptedChangeEnvelope["signature"],
-      authorPublicKey: row.authorPublicKey as EncryptedChangeEnvelope["authorPublicKey"],
-      documentId: row.documentId,
-      seq: row.seq,
-    }));
+    return rows.map((row) => this.mapChangeRow(row));
   }
 
   async submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void> {
     await this.db.transaction(async (tx) => {
-      // Check current version — lock the row to prevent TOCTOU races
-      const [doc] = await tx
-        .select({ snapshotVersion: syncDocuments.snapshotVersion })
-        .from(syncDocuments)
-        .where(eq(syncDocuments.documentId, envelope.documentId))
-        .for("update");
+      const now = Date.now();
 
       // Atomic conditional UPDATE eliminates TOCTOU race
       const [atomicResult] = await tx
@@ -155,7 +136,6 @@ export class PgSyncRelayService implements SyncRelayService {
             authorPublicKey: envelope.authorPublicKey,
             nonce: envelope.nonce,
             signature: envelope.signature,
-            createdAt: now,
           },
         });
     });
@@ -169,14 +149,7 @@ export class PgSyncRelayService implements SyncRelayService {
 
     if (!row) return null;
 
-    return {
-      ciphertext: row.encryptedPayload,
-      nonce: row.nonce as EncryptedSnapshotEnvelope["nonce"],
-      signature: row.signature as EncryptedSnapshotEnvelope["signature"],
-      authorPublicKey: row.authorPublicKey as EncryptedSnapshotEnvelope["authorPublicKey"],
-      documentId: row.documentId,
-      snapshotVersion: row.snapshotVersion,
-    };
+    return this.mapSnapshotRow(row);
   }
 
   async getManifest(systemId: SystemId): Promise<SyncManifest> {
@@ -189,11 +162,11 @@ export class PgSyncRelayService implements SyncRelayService {
       docId: row.documentId,
       docType: row.docType,
       keyType: row.keyType,
-      bucketId: row.bucketId ?? null,
-      channelId: row.channelId ?? null,
+      bucketId: row.bucketId as BucketId | null,
+      channelId: row.channelId as ChannelId | null,
       timePeriod: row.timePeriod,
-      createdAt: row.createdAt as UnixMillis,
-      updatedAt: row.updatedAt as UnixMillis,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
       sizeBytes: row.sizeBytes,
       snapshotVersion: row.snapshotVersion,
       archived: row.archived,

@@ -24,10 +24,6 @@ export interface SyncTransport {
   onMessage(handler: (message: ServerMessage) => void): void;
   /** Close the transport connection. */
   close(): void;
-  /** Register a handler for transport close events. */
-  onClose?(handler: (reason?: string) => void): void;
-  /** Register a handler for transport error events. */
-  onError?(handler: (error: Error) => void): void;
 }
 
 // ── Base ─────────────────────────────────────────────────────────────
@@ -160,8 +156,6 @@ export interface FetchChangesRequest extends SyncMessageBase {
   readonly docId: string;
   /** Server returns changes with seq strictly greater than this value. */
   readonly sinceSeq: number;
-  /** Maximum number of changes to return. Server may return fewer. */
-  readonly limit?: number;
 }
 
 /**

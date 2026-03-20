@@ -11,8 +11,6 @@ import type { SystemId } from "@pluralscape/types";
 export class MockSyncTransport implements SyncTransport {
   state: TransportState = "connected";
   private handler: ((msg: ServerMessage) => void) | null = null;
-  private closeHandler: ((reason?: string) => void) | null = null;
-  private errorHandler: ((error: Error) => void) | null = null;
   private readonly relay: EncryptedRelay;
   private readonly subscriptions = new Map<string, boolean>();
 
@@ -45,22 +43,8 @@ export class MockSyncTransport implements SyncTransport {
     this.handler = handler;
   }
 
-  onClose(handler: (reason?: string) => void): void {
-    this.closeHandler = handler;
-  }
-
-  onError(handler: (error: Error) => void): void {
-    this.errorHandler = handler;
-  }
-
   close(): void {
     this.state = "disconnected";
-    this.closeHandler?.("closed");
-  }
-
-  /** Simulate a transport error (for testing disconnect handling). */
-  simulateError(error: Error): void {
-    this.errorHandler?.(error);
   }
 
   /** Expose relay for test setup (pre-populating data). */
@@ -112,18 +96,13 @@ export class MockSyncTransport implements SyncTransport {
           snapshot: this.relay.getLatestSnapshot(message.docId),
         };
 
-      case "FetchChangesRequest": {
-        let changes = this.relay.getEnvelopesSince(message.docId, message.sinceSeq);
-        if (message.limit !== undefined) {
-          changes = changes.slice(0, message.limit);
-        }
+      case "FetchChangesRequest":
         return {
           type: "ChangesResponse",
           correlationId: message.correlationId,
           docId: message.docId,
-          changes,
+          changes: this.relay.getEnvelopesSince(message.docId, message.sinceSeq),
         };
-      }
 
       case "SubmitChangeRequest": {
         const seq = this.relay.submit({

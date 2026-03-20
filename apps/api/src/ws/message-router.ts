@@ -186,14 +186,15 @@ async function dispatchWithAccess<T extends { docId: string; correlationId: stri
   try {
     send(state, await handler(msg), log);
   } catch (err) {
-    log.error(`${messageType} handler threw`, {
+    log.error("Handler threw in dispatchWithAccess", {
       connectionId: state.connectionId,
+      messageType,
       docId: msg.docId,
       error: formatError(err),
     });
     send(
       state,
-      makeSyncError("INTERNAL_ERROR", "Internal server error", msg.correlationId, msg.docId),
+      makeSyncError("INTERNAL_ERROR", "Failed to process request", msg.correlationId, msg.docId),
       log,
     );
   }
@@ -349,15 +350,16 @@ export async function routeMessage(
         return;
       }
       try {
-        send(state, await handleManifestRequest(msg, relay), log);
+        const response = await handleManifestRequest(msg, relay);
+        if (!send(state, response, log)) return;
       } catch (err) {
-        log.error("ManifestRequest handler threw", {
+        log.error("handleManifestRequest threw", {
           connectionId: state.connectionId,
           error: formatError(err),
         });
         send(
           state,
-          makeSyncError("INTERNAL_ERROR", "Internal server error", msg.correlationId),
+          makeSyncError("INTERNAL_ERROR", "Failed to process manifest", msg.correlationId),
           log,
         );
       }
@@ -383,19 +385,22 @@ export async function routeMessage(
         // Denied docs get a PERMISSION_DENIED sent by checkAccess; continue with rest
       }
       try {
-        send(
+        const response = await handleSubscribeRequest(
+          { ...msg, documents: permitted },
           state,
-          await handleSubscribeRequest({ ...msg, documents: permitted }, state, manager, relay),
+          manager,
+          relay,
           log,
         );
+        if (!send(state, response, log)) return;
       } catch (err) {
-        log.error("SubscribeRequest handler threw", {
+        log.error("handleSubscribeRequest threw", {
           connectionId: state.connectionId,
           error: formatError(err),
         });
         send(
           state,
-          makeSyncError("INTERNAL_ERROR", "Internal server error", msg.correlationId),
+          makeSyncError("INTERNAL_ERROR", "Failed to process subscription", msg.correlationId),
           log,
         );
       }
@@ -537,14 +542,14 @@ export async function routeMessage(
         if (!send(state, snapshotResp, log)) return;
         send(state, changesResp, log);
       } catch (err) {
-        log.error("DocumentLoadRequest handler threw", {
+        log.error("handleDocumentLoad threw", {
           connectionId: state.connectionId,
           docId: msg.docId,
           error: formatError(err),
         });
         send(
           state,
-          makeSyncError("INTERNAL_ERROR", "Internal server error", msg.correlationId, msg.docId),
+          makeSyncError("INTERNAL_ERROR", "Failed to load document", msg.correlationId, msg.docId),
           log,
         );
       }

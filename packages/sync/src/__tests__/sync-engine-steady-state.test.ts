@@ -26,7 +26,7 @@ import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
-import type { UnixMillis } from "@pluralscape/types";
+import type { SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -54,7 +54,7 @@ afterAll(() => {
 });
 
 const SYSTEM_CORE_MANIFEST: SyncManifest = {
-  systemId: "sys_test",
+  systemId: "sys_test" as SystemId,
   documents: [
     {
       docId: "system-core-sys_test",
@@ -117,7 +117,7 @@ async function createBootstrappedEngine(
     keyResolver: createKeyResolver(),
     sodium,
     profile: { profileType: "owner-full" },
-    systemId: "sys_test",
+    systemId: "sys_test" as SystemId,
     onError: vi.fn(),
     ...overrides,
   });
@@ -204,7 +204,7 @@ describe("SyncEngine steady-state", () => {
       });
 
       const envelope = senderSession.change((d) => {
-        const doc = d as Record<string, unknown>;
+        const doc = d;
         (doc["items"] as Record<string, string>)["key1"] = "value1";
       });
 
@@ -233,10 +233,10 @@ describe("SyncEngine steady-state", () => {
       });
 
       const e1 = senderSession.change((d) => {
-        (d as Record<string, unknown>)["counter"] = 1;
+        d["counter"] = 1;
       });
       const e2 = senderSession.change((d) => {
-        (d as Record<string, unknown>)["counter"] = 2;
+        d["counter"] = 2;
       });
 
       const changes: EncryptedChangeEnvelope[] = [

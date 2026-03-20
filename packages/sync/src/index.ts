@@ -168,10 +168,6 @@ export type {
 } from "./replication-profiles.js";
 export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_PROFILE } from "./replication-profiles.js";
 
-// ── Sync engine ──────────────────────────────────────────────────────
-export { SyncEngine } from "./engine/index.js";
-export type { SyncEngineConfig } from "./engine/index.js";
-
 // ── Protocol messages ──────────────────────────────────────────────────
 export type {
   TransportState,
@@ -204,3 +200,7 @@ export type {
   SyncMessage,
 } from "./protocol.js";
 export { SYNC_PROTOCOL_VERSION } from "./protocol.js";
+
+// ── Sync engine ──────────────────────────────────────────────────────
+export { SyncEngine } from "./engine/index.js";
+export type { SyncEngineConfig } from "./engine/index.js";

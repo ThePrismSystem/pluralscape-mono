@@ -29,8 +29,8 @@ export interface SyncEngineConfig {
   readonly onError: (message: string, error: unknown) => void;
 }
 
-/** Maximum changes to fetch per page during bootstrap. */
-const BOOTSTRAP_FETCH_LIMIT = 1000;
+/** Maximum parallel document hydrations during bootstrap. */
+const HYDRATION_CONCURRENCY = 5;
 
 /**
  * Client-side sync engine.
@@ -84,16 +84,16 @@ export class SyncEngine {
     // 4. Hydrate each active document with bounded concurrency
     const results = await mapConcurrent(
       [...subscriptionSet.active],
-      5,
+      HYDRATION_CONCURRENCY,
       (entry) => this.hydrateDocument(entry.docId, entry.docType),
     );
 
     // Log failures but don't abort — partial bootstrap is better than none
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
-      if (result && result.status === "rejected") {
+      if (result?.status === "rejected") {
         const entry = subscriptionSet.active[i];
-        this.onError(`Failed to hydrate document ${entry?.docId}`, result.reason);
+        this.onError(`Failed to hydrate document ${entry?.docId ?? "unknown"}`, result.reason);
       }
     }
 
@@ -101,17 +101,13 @@ export class SyncEngine {
     for (const entry of subscriptionSet.active) {
       const session = this.sessions.get(entry.docId);
       if (!session) continue; // Skip failed hydrations
-      const sub = this.networkAdapter.subscribe(
-        entry.docId,
-        (changes) => {
-          this.enqueueDocumentOperation(entry.docId, () =>
-            this.applyIncomingChanges(entry.docId, changes),
-          ).catch((err: unknown) => {
-            this.onError(`Error handling incoming changes for ${entry.docId}`, err);
-          });
-        },
-        session.lastSyncedSeq,
-      );
+      const sub = this.networkAdapter.subscribe(entry.docId, (changes) => {
+        this.enqueueDocumentOperation(entry.docId, () =>
+          this.applyIncomingChanges(entry.docId, changes),
+        ).catch((err: unknown) => {
+          this.onError(`Error handling incoming changes for ${entry.docId}`, err);
+        });
+      });
       this.subscriptions.push(sub);
     }
   }
@@ -151,9 +147,6 @@ export class SyncEngine {
         throw new Error(`No active session for document: ${docId}`);
       }
 
-      // Save document state for rollback
-      const savedDoc = session.document;
-
       // Produce encrypted change (no seq yet)
       const envelope = session.change(changeFn);
 
@@ -169,8 +162,6 @@ export class SyncEngine {
 
         return sequenced.seq;
       } catch (error) {
-        // Rollback on failure
-        session.restoreDocument(savedDoc);
         throw error;
       }
     });
@@ -186,9 +177,7 @@ export class SyncEngine {
     docId: string,
     changes: readonly EncryptedChangeEnvelope[],
   ): Promise<void> {
-    return this.enqueueDocumentOperation(docId, () =>
-      this.applyIncomingChanges(docId, changes),
-    );
+    return this.enqueueDocumentOperation(docId, () => this.applyIncomingChanges(docId, changes));
   }
 
   // ── Cleanup ─────────────────────────────────────────────────────────
@@ -206,8 +195,16 @@ export class SyncEngine {
     this.sessions.clear();
     this.syncStates.clear();
     this.documentQueues.clear();
-    try { this.networkAdapter.close?.(); } catch { /* best-effort */ }
-    try { this.storageAdapter.close?.(); } catch { /* best-effort */ }
+    try {
+      (this.networkAdapter as { close?(): void }).close?.();
+    } catch {
+      /* best-effort */
+    }
+    try {
+      (this.storageAdapter as { close?(): void }).close?.();
+    } catch {
+      /* best-effort */
+    }
   }
 
   // ── Private helpers ─────────────────────────────────────────────────
@@ -215,7 +212,13 @@ export class SyncEngine {
   private enqueueDocumentOperation<T>(docId: string, op: () => Promise<T>): Promise<T> {
     const prev = this.documentQueues.get(docId) ?? Promise.resolve();
     const next = prev.then(op, op);
-    this.documentQueues.set(docId, next.then(() => {}, () => {}));
+    this.documentQueues.set(
+      docId,
+      next.then(
+        () => {},
+        () => {},
+      ),
+    );
     return next;
   }
 
@@ -247,7 +250,10 @@ export class SyncEngine {
     this.updateSyncState(docId, session.lastSyncedSeq);
   }
 
-  private async persistChanges(docId: string, changes: readonly EncryptedChangeEnvelope[]): Promise<void> {
+  private async persistChanges(
+    docId: string,
+    changes: readonly EncryptedChangeEnvelope[],
+  ): Promise<void> {
     if (this.storageAdapter.appendChanges) {
       await this.storageAdapter.appendChanges(docId, changes);
     } else {
@@ -299,20 +305,11 @@ export class SyncEngine {
       }
     }
 
-    // Fetch server changes with pagination
-    let cursor = session.lastSyncedSeq;
-    let hasMore = true;
-    while (hasMore) {
-      const batch = await this.networkAdapter.fetchChangesSince(docId, cursor, BOOTSTRAP_FETCH_LIMIT);
-      if (batch.length > 0) {
-        session.applyEncryptedChanges(batch);
-
-        // Persist batch
-        await this.persistChanges(docId, batch);
-
-        cursor = session.lastSyncedSeq;
-      }
-      hasMore = batch.length === BOOTSTRAP_FETCH_LIMIT;
+    // Fetch server changes since last known seq
+    const changes = await this.networkAdapter.fetchChangesSince(docId, session.lastSyncedSeq);
+    if (changes.length > 0) {
+      session.applyEncryptedChanges(changes);
+      await this.persistChanges(docId, changes);
     }
 
     this.sessions.set(docId, session);
@@ -346,7 +343,7 @@ async function mapConcurrent<T, R>(
   limit: number,
   fn: (item: T) => Promise<R>,
 ): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  const results = Array.from<PromiseSettledResult<R>>({ length: items.length });
   let index = 0;
 
   async function worker(): Promise<void> {

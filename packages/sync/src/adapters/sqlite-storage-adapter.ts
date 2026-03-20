@@ -126,103 +126,58 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
     };
   }
 
-  async loadSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
-    const row = this.driver
-      .prepare<SnapshotRow>("SELECT * FROM sync_local_snapshots WHERE document_id = ?")
-      .get(documentId);
-    return row ? rowToSnapshot(row) : null;
+  loadSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
+    const row = this.stmts.loadSnapshot.get(documentId);
+    return Promise.resolve(row ? rowToSnapshot(row) : null);
   }
 
-  async saveSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
-    this.driver
-      .prepare(
-        `INSERT OR REPLACE INTO sync_local_snapshots
-         (document_id, snapshot_version, ciphertext, nonce, signature, author_public_key)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        documentId,
-        snapshot.snapshotVersion,
-        snapshot.ciphertext,
-        snapshot.nonce,
-        snapshot.signature,
-        snapshot.authorPublicKey,
-      );
+  saveSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
+    this.stmts.saveSnapshot.run(
+      documentId,
+      snapshot.snapshotVersion,
+      snapshot.ciphertext,
+      snapshot.nonce,
+      snapshot.signature,
+      snapshot.authorPublicKey,
+    );
+    return Promise.resolve();
   }
 
-  async loadChangesSince(
+  loadChangesSince(
     documentId: string,
     sinceSeq: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
-    const rows = this.driver
-      .prepare<ChangeRow>(
-        `SELECT * FROM sync_local_changes
-         WHERE document_id = ? AND seq > ?
-         ORDER BY seq ASC`,
-      )
-      .all(documentId, sinceSeq);
-    return rows.map(rowToEnvelope);
+    const rows = this.stmts.loadChanges.all(documentId, sinceSeq);
+    return Promise.resolve(rows.map(rowToEnvelope));
   }
 
-  async appendChange(documentId: string, change: EncryptedChangeEnvelope): Promise<void> {
-    this.driver
-      .prepare(
-        `INSERT OR REPLACE INTO sync_local_changes
-         (document_id, seq, ciphertext, nonce, signature, author_public_key)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        documentId,
-        change.seq,
-        change.ciphertext,
-        change.nonce,
-        change.signature,
-        change.authorPublicKey,
-      );
+  appendChange(documentId: string, change: EncryptedChangeEnvelope): Promise<void> {
+    this.stmts.appendChange.run(
+      documentId,
+      change.seq,
+      change.ciphertext,
+      change.nonce,
+      change.signature,
+      change.authorPublicKey,
+    );
+    return Promise.resolve();
   }
 
-  async appendChanges(documentId: string, changes: readonly EncryptedChangeEnvelope[]): Promise<void> {
-    this.driver.transaction(() => {
-      for (const change of changes) {
-        this.driver
-          .prepare(
-            `INSERT OR REPLACE INTO sync_local_changes
-             (document_id, seq, ciphertext, nonce, signature, author_public_key)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-          )
-          .run(
-            documentId,
-            change.seq,
-            change.ciphertext,
-            change.nonce,
-            change.signature,
-            change.authorPublicKey,
-          );
-      }
-    });
+  pruneChangesBeforeSnapshot(documentId: string, snapshotVersion: number): Promise<void> {
+    this.stmts.pruneChanges.run(documentId, snapshotVersion);
+    return Promise.resolve();
   }
 
-  async pruneChangesBeforeSnapshot(documentId: string, snapshotVersion: number): Promise<void> {
-    this.driver
-      .prepare("DELETE FROM sync_local_changes WHERE document_id = ? AND seq <= ?")
-      .run(documentId, snapshotVersion);
+  listDocuments(): Promise<readonly string[]> {
+    const rows = this.stmts.listDocs.all();
+    return Promise.resolve(rows.map((r) => r.document_id));
   }
 
-  async listDocuments(): Promise<readonly string[]> {
-    const rows = this.driver
-      .prepare<DocIdRow>(
-        `SELECT document_id FROM sync_local_snapshots
-         UNION
-         SELECT DISTINCT document_id FROM sync_local_changes`,
-      )
-      .all();
-    return rows.map((r) => r.document_id);
-  }
-
-  async deleteDocument(documentId: string): Promise<void> {
+  deleteDocument(documentId: string): Promise<void> {
     this.driver.transaction(() => {
       this.stmts.deleteChanges.run(documentId);
       this.stmts.deleteSnapshots.run(documentId);
     });
+    return Promise.resolve();
   }
 }

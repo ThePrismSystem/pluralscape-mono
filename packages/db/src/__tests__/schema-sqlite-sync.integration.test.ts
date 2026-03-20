@@ -274,8 +274,6 @@ describe("SQLite sync schema", () => {
       const nonce = Buffer.from([0x11, 0x22, 0x33]);
       const signature = Buffer.alloc(64, 0x77);
 
-      const signature = Buffer.from([0x44, 0x55, 0x66]);
-
       db.insert(syncChanges)
         .values({
           id,
@@ -318,7 +316,7 @@ describe("SQLite sync schema", () => {
           encryptedPayload: makeChange(),
           authorPublicKey: makeChange(),
           nonce: makeChange(),
-          signature: Buffer.from([0x44, 0x55]),
+          signature: makeSig(),
           createdAt: now,
         })
         .run();
@@ -333,7 +331,7 @@ describe("SQLite sync schema", () => {
             encryptedPayload: makeChange(),
             authorPublicKey: makeChange(),
             nonce: makeChange(),
-            signature: Buffer.from([0x44, 0x55]),
+            signature: makeSig(),
             createdAt: now,
           })
           .run(),
@@ -358,7 +356,7 @@ describe("SQLite sync schema", () => {
           encryptedPayload: makeChange(),
           authorPublicKey: makeChange(),
           nonce: makeChange(),
-          signature: Buffer.from([0x44, 0x55]),
+          signature: makeSig(),
           createdAt: now,
         })
         .run();
@@ -371,7 +369,7 @@ describe("SQLite sync schema", () => {
           encryptedPayload: makeChange(),
           authorPublicKey: makeChange(),
           nonce: makeChange(),
-          signature: Buffer.from([0x44, 0x55]),
+          signature: makeSig(),
           createdAt: now,
         })
         .run();
@@ -398,7 +396,7 @@ describe("SQLite sync schema", () => {
           encryptedPayload: Buffer.from([0x01]),
           authorPublicKey: authorKey,
           nonce,
-          signature: Buffer.from([0x44, 0x55]),
+          signature: Buffer.alloc(64, 0x77),
           createdAt: now,
         })
         .run();
@@ -413,7 +411,7 @@ describe("SQLite sync schema", () => {
             encryptedPayload: Buffer.from([0x02]),
             authorPublicKey: authorKey,
             nonce,
-            signature: Buffer.from([0x44, 0x55]),
+            signature: Buffer.alloc(64, 0x77),
             createdAt: now,
           })
           .run(),
@@ -436,7 +434,7 @@ describe("SQLite sync schema", () => {
           encryptedPayload: buf,
           authorPublicKey: buf,
           nonce: buf,
-          signature: Buffer.from([0x44, 0x55]),
+          signature: Buffer.alloc(64, 0x77),
           createdAt: now,
         })
         .run();
@@ -462,8 +460,6 @@ describe("SQLite sync schema", () => {
       const authorKey = Buffer.from([0x10, 0x20, 0x30]);
       const nonce = Buffer.from([0xa1, 0xb2, 0xc3]);
       const signature = Buffer.alloc(64, 0x88);
-
-      const signature = Buffer.from([0x44, 0x55]);
 
       db.insert(syncSnapshots)
         .values({
@@ -508,7 +504,7 @@ describe("SQLite sync schema", () => {
           encryptedPayload: buf,
           authorPublicKey: buf,
           nonce: buf,
-          signature: Buffer.from([0x44, 0x55]),
+          signature: sig,
           createdAt: now,
         })
         .run();
@@ -526,7 +522,7 @@ describe("SQLite sync schema", () => {
              signature = excluded.signature,
              created_at = excluded.created_at`,
         )
-        .run(documentId, 2, Buffer.from([0x02]), buf, buf, Buffer.from([0x44, 0x55]), now + 1000);
+        .run(documentId, 2, Buffer.from([0x02]), buf, buf, sig, now + 1000);
 
       const rows = db
         .select()
@@ -553,7 +549,7 @@ describe("SQLite sync schema", () => {
           encryptedPayload: buf,
           authorPublicKey: buf,
           nonce: buf,
-          signature: Buffer.from([0x44, 0x55]),
+          signature: sig,
           createdAt: now,
         })
         .run();
@@ -567,7 +563,7 @@ describe("SQLite sync schema", () => {
             encryptedPayload: buf,
             authorPublicKey: buf,
             nonce: buf,
-            signature: Buffer.from([0x44, 0x55]),
+            signature: sig,
             createdAt: now,
           })
           .run(),
@@ -613,7 +609,7 @@ describe("SQLite sync schema", () => {
           encryptedPayload: buf,
           authorPublicKey: buf,
           nonce: buf,
-          signature: Buffer.from([0x44, 0x55]),
+          signature: sig,
           createdAt: now,
         })
         .run();

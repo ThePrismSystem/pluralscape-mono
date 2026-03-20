@@ -9,8 +9,7 @@
     "./sqlite": "./src/schema/sqlite/index.ts",
     "./columns/pg": "./src/columns/pg.ts",
     "./columns/sqlite": "./src/columns/sqlite.ts",
-    "./helpers": "./src/helpers/index.ts",
-    "./test-helpers": "./src/__tests__/helpers/pg-helpers.ts"
+    "./helpers": "./src/helpers/index.ts"
   },
   "dependencies": {
     "@pluralscape/crypto": "workspace:*",

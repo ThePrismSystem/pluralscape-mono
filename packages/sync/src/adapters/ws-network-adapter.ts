@@ -30,28 +30,15 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     string,
     Set<(changes: readonly EncryptedChangeEnvelope[]) => void>
   >();
+  private readonly lastSeqPerDoc = new Map<string, number>();
   private readonly timeoutMs: number;
-  private readonly onError: ((message: string, error: unknown) => void) | undefined;
 
-  constructor(
-    transport: SyncTransport,
-    timeoutMs = REQUEST_TIMEOUT_MS,
-    onError?: (message: string, error: unknown) => void,
-  ) {
+  constructor(transport: SyncTransport, timeoutMs = REQUEST_TIMEOUT_MS) {
     this.transport = transport;
     this.timeoutMs = timeoutMs;
-    this.onError = onError;
 
     transport.onMessage((msg) => {
       this.handleMessage(msg);
-    });
-
-    transport.onClose?.(() => {
-      this.rejectAllPending(new Error("Transport closed"));
-    });
-
-    transport.onError?.((error) => {
-      this.rejectAllPending(error);
     });
   }
 
@@ -65,15 +52,9 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       change,
     });
 
-    if (response.type === "SyncError") {
-      throw new Error(`SyncError [${response.code}]: ${response.message}`);
-    }
-
-    if (response.type !== "ChangeAccepted") {
-      throw new Error(`Unexpected response: ${response.type}`);
-    }
-
-    const seq = response.assignedSeq;
+    const accepted = this.expectResponse(response, "ChangeAccepted");
+    const seq = accepted.assignedSeq;
+    this.updateLastSeq(documentId, seq);
 
     return { ...change, documentId, seq };
   }
@@ -81,22 +62,16 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   async fetchChangesSince(
     documentId: string,
     sinceSeq: number,
-    limit?: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
     const response = await this.request({
       type: "FetchChangesRequest",
       docId: documentId,
       sinceSeq,
-      limit,
     });
 
-    if (response.type === "SyncError") {
-      throw new Error(`SyncError [${response.code}]: ${response.message}`);
-    }
-
-    if (response.type !== "ChangesResponse") {
-      throw new Error(`Unexpected response: ${response.type}`);
-    }
+    const changesResp = this.expectResponse(response, "ChangesResponse");
+    const last = changesResp.changes[changesResp.changes.length - 1];
+    if (last) this.updateLastSeq(documentId, last.seq);
 
     return changesResp.changes;
   }
@@ -108,13 +83,10 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       snapshot,
     });
 
-    if (response.type === "SyncError" && response.code === "VERSION_CONFLICT") {
-      // Server already has a newer version — this is not an error condition
-      // for the submitter since the goal (having a snapshot) is met.
-      if (this.onError) {
-        this.onError("Snapshot VERSION_CONFLICT (non-fatal, server has newer)", undefined);
-      }
-      return;
+    if (response.type === "SyncError") {
+      // Server already has a newer version — not an error for the submitter
+      if (response.code === "VERSION_CONFLICT") return;
+      throw new Error(`SyncError [${response.code}]: ${response.message}`);
     }
     if (response.type !== "SnapshotAccepted") {
       throw new Error(`Unexpected response: ${response.type}`);
@@ -127,21 +99,13 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       docId: documentId,
     });
 
-    if (response.type === "SyncError") {
-      throw new Error(`SyncError [${response.code}]: ${response.message}`);
-    }
-
-    if (response.type !== "SnapshotResponse") {
-      throw new Error(`Unexpected response: ${response.type}`);
-    }
-
-    return response.snapshot;
+    const snapshotResp = this.expectResponse(response, "SnapshotResponse");
+    return snapshotResp.snapshot;
   }
 
   subscribe(
     documentId: string,
     onChanges: (changes: readonly EncryptedChangeEnvelope[]) => void,
-    lastSyncedSeq?: number,
   ): SyncSubscription {
     let callbacks = this.subscriptions.get(documentId);
     if (!callbacks) {
@@ -150,32 +114,19 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     }
     callbacks.add(onChanges);
 
-    // Send SubscribeRequest and consume catch-up
-    const correlationId = crypto.randomUUID();
-    this.request<ServerMessage>({
-      type: "SubscribeRequest",
-      correlationId,
-      documents: [{ docId: documentId, lastSyncedSeq: lastSyncedSeq ?? 0, lastSnapshotVersion: 0 }],
-    }).then((response) => {
-      if (response.type === "SubscribeResponse") {
-        for (const catchup of response.catchup) {
-          if (catchup.changes.length > 0) {
-            const cbs = this.subscriptions.get(catchup.docId);
-            if (cbs) {
-              for (const cb of cbs) {
-                try {
-                  cb(catchup.changes);
-                } catch (e) {
-                  this.onError?.("Subscriber callback error", e);
-                }
-              }
-            }
-          }
-        }
-      }
-    }).catch((err: unknown) => {
-      this.onError?.("Subscribe catch-up failed", err);
-    });
+    // Send SubscribeRequest (fire-and-forget for subscribe)
+    const lastSeq = this.lastSeqPerDoc.get(documentId) ?? 0;
+    void this.transport
+      .send({
+        type: "SubscribeRequest",
+        correlationId: crypto.randomUUID(),
+        documents: [{ docId: documentId, lastSyncedSeq: lastSeq, lastSnapshotVersion: 0 }],
+      })
+      .catch((err: unknown) => {
+        console.warn("Subscribe transport send failed:", err);
+        callbacks.delete(onChanges);
+        if (callbacks.size === 0) this.subscriptions.delete(documentId);
+      });
 
     return {
       unsubscribe: () => {
@@ -196,22 +147,24 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     };
   }
 
-  close(): void {
-    this.rejectAllPending(new Error("Adapter closed"));
-    this.transport.close();
-  }
-
   async fetchManifest(systemId: string): Promise<SyncManifest> {
     const response = await this.request({
       type: "ManifestRequest",
       systemId,
     });
 
+    const manifestResp = this.expectResponse(response, "ManifestResponse");
+    return manifestResp.manifest;
+  }
+
+  private expectResponse<T extends ServerMessage["type"]>(
+    response: ServerMessage,
+    expectedType: T,
+  ): Extract<ServerMessage, { type: T }> {
     if (response.type === "SyncError") {
       throw new Error(`SyncError [${response.code}]: ${response.message}`);
     }
-
-    if (response.type !== "ManifestResponse") {
+    if (response.type !== expectedType) {
       throw new Error(`Unexpected response: ${response.type}`);
     }
     return response as Extract<ServerMessage, { type: T }>;
@@ -225,8 +178,8 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
         for (const cb of callbacks) {
           try {
             cb(msg.changes);
-          } catch (e) {
-            this.onError?.("DocumentUpdate callback error", e);
+          } catch (err) {
+            console.warn("Subscriber callback error:", err);
           }
         }
       }
@@ -272,11 +225,20 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     });
   }
 
-  private rejectAllPending(error: Error): void {
+  dispose(): void {
     for (const [, pending] of this.pending) {
       clearTimeout(pending.timer);
-      pending.reject(error);
+      pending.reject(new Error("Adapter disposed"));
     }
     this.pending.clear();
+    this.subscriptions.clear();
+    this.lastSeqPerDoc.clear();
+  }
+
+  private updateLastSeq(documentId: string, seq: number): void {
+    const current = this.lastSeqPerDoc.get(documentId) ?? 0;
+    if (seq > current) {
+      this.lastSeqPerDoc.set(documentId, seq);
+    }
   }
 }
