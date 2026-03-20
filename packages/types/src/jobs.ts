@@ -15,8 +15,10 @@ export type JobType =
   | "account-purge"
   | "bucket-key-rotation"
   | "report-generate"
+  | "sync-queue-cleanup"
   | "audit-log-cleanup"
-  | "partition-maintenance";
+  | "partition-maintenance"
+  | "sync-compaction";
 
 /** Current status of a background job. */
 export type JobStatus = "pending" | "running" | "completed" | "cancelled" | "dead-letter";
@@ -50,8 +52,13 @@ export interface JobPayloadMap {
   "account-purge": Record<string, unknown>;
   "bucket-key-rotation": Record<string, unknown>;
   "report-generate": Record<string, unknown>;
+  "sync-queue-cleanup": Record<string, unknown>;
   "audit-log-cleanup": Record<string, unknown>;
   "partition-maintenance": Record<string, unknown>;
+  "sync-compaction": {
+    readonly documentId: string;
+    readonly systemId: string;
+  };
 }
 
 /** Result of a completed or failed job. */

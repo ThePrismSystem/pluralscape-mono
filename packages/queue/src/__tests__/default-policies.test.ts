@@ -7,7 +7,7 @@ import { InMemoryJobQueue } from "./mock-queue.js";
 
 import type { JobType } from "@pluralscape/types";
 
-/** All 14 job types — must match the JobType union exactly. */
+/** All job types — must match the JobType union exactly. */
 const ALL_JOB_TYPES: readonly JobType[] = [
   "sync-push",
   "sync-pull",
@@ -21,8 +21,10 @@ const ALL_JOB_TYPES: readonly JobType[] = [
   "account-purge",
   "bucket-key-rotation",
   "report-generate",
+  "sync-queue-cleanup",
   "audit-log-cleanup",
   "partition-maintenance",
+  "sync-compaction",
 ] as const;
 
 describe("DEFAULT_RETRY_POLICIES", () => {
@@ -61,7 +63,7 @@ describe("DEFAULT_RETRY_POLICIES", () => {
 });
 
 describe("applyDefaultPolicies", () => {
-  it("sets all 14 policies on the queue", () => {
+  it("sets all 15 policies on the queue", () => {
     const queue = new InMemoryJobQueue();
     applyDefaultPolicies(queue);
 

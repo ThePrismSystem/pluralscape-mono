@@ -43,8 +43,10 @@ describe("JobType", () => {
         case "account-purge":
         case "bucket-key-rotation":
         case "report-generate":
+        case "sync-queue-cleanup":
         case "audit-log-cleanup":
         case "partition-maintenance":
+        case "sync-compaction":
           return type;
         default: {
           const _exhaustive: never = type;
@@ -129,7 +131,8 @@ describe("JobDefinition", () => {
     expectTypeOf<JobDefinition["systemId"]>().toEqualTypeOf<SystemId | null>();
     expectTypeOf<JobDefinition["type"]>().toEqualTypeOf<JobType>();
     expectTypeOf<JobDefinition["status"]>().toEqualTypeOf<JobStatus>();
-    expectTypeOf<JobDefinition["payload"]>().toEqualTypeOf<Readonly<Record<string, unknown>>>();
+    // Payload is a union (Record + sync-compaction specific type), just check it's an object
+    expectTypeOf<JobDefinition["payload"]>().toBeObject();
     expectTypeOf<JobDefinition["attempts"]>().toEqualTypeOf<number>();
     expectTypeOf<JobDefinition["maxAttempts"]>().toEqualTypeOf<number>();
     expectTypeOf<JobDefinition["nextRetryAt"]>().toEqualTypeOf<UnixMillis | null>();
