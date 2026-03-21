@@ -49,6 +49,7 @@ interface CheckInLike {
 interface FriendConnectionLike {
   status: Automerge.ImmutableString;
   assignedBuckets: Record<string, true>;
+  /** JSON-serialized object (e.g. `{"showMembers":true}`). Parse `.val` with JSON.parse(). */
   visibility: Automerge.ImmutableString;
 }
 
@@ -90,27 +91,17 @@ const ENTITY_FIELD_MAP: ReadonlyMap<string, string> = new Map(
  * entity that is currently archived. This ensures tombstone wins over concurrent
  * un-archive operations by making the archive the latest CRDT write.
  *
- * When `modifiedEntityTypes` is provided, only those entity types are scanned
- * instead of all lww-map/append-lww types, reducing work after targeted merges.
- *
  * Returns notifications and the correction envelope (if any mutations were applied).
  */
-function enforceTombstones(
-  session: EncryptedSyncSession<unknown>,
-  modifiedEntityTypes?: Set<string>,
-): {
+export function enforceTombstones(session: EncryptedSyncSession<unknown>): {
   notifications: ConflictNotification[];
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
 } {
   const notifications: ConflictNotification[] = [];
   const doc = session.document as DocRecord;
 
-  const lwwMapTypes = Object.entries(ENTITY_CRDT_STRATEGIES).filter(([entityType, strategy]) => {
-    const isArchivableStorage =
-      strategy.storageType === "lww-map" || strategy.storageType === "append-lww";
-    if (!isArchivableStorage) return false;
-    if (modifiedEntityTypes) return modifiedEntityTypes.has(entityType);
-    return true;
+  const lwwMapTypes = Object.entries(ENTITY_CRDT_STRATEGIES).filter(([, strategy]) => {
+    return strategy.storageType === "lww-map" || strategy.storageType === "append-lww";
   });
 
   const mutations: Array<{ fieldName: string; entityId: string; entityType: string }> = [];
@@ -229,12 +220,12 @@ function detectCyclesForField(
 }
 
 /**
- * DFS on groups/subsystems/innerWorldRegions parent chains.
+ * DFS on hierarchical entity parent chains (derived from strategies with parentField).
  * Break cycles by nulling the parent of the lowest-ID entity (deterministic).
  *
  * Returns cycle breaks and the correction envelope (if any mutations were applied).
  */
-function detectHierarchyCycles(session: EncryptedSyncSession<unknown>): {
+export function detectHierarchyCycles(session: EncryptedSyncSession<unknown>): {
   breaks: CycleBreak[];
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
 } {
@@ -246,14 +237,12 @@ function detectHierarchyCycles(session: EncryptedSyncSession<unknown>): {
     formerParentId: string;
   }> = [];
 
-  const collectClears = detectCyclesForField(doc, "groups", "parentGroupId");
-  allPendingClears.push(...collectClears);
-
-  const subsystemClears = detectCyclesForField(doc, "subsystems", "parentSubsystemId");
-  allPendingClears.push(...subsystemClears);
-
-  const regionClears = detectCyclesForField(doc, "innerWorldRegions", "parentRegionId");
-  allPendingClears.push(...regionClears);
+  for (const [, strategy] of Object.entries(ENTITY_CRDT_STRATEGIES)) {
+    if ("parentField" in strategy) {
+      const clears = detectCyclesForField(doc, strategy.fieldName, strategy.parentField);
+      allPendingClears.push(...clears);
+    }
+  }
 
   if (allPendingClears.length === 0) {
     return { breaks: [], envelope: null };
@@ -314,19 +303,23 @@ function collectSortOrderPatches<T extends SortableEntity>(
 }
 
 /**
- * For entities with sortOrder, detect ties and re-assign sequential values
- * by createdAt then id. Handles groups, memberPhotos, and fieldDefinitions.
+ * For entities with sortOrder (derived from strategies with hasSortOrder), detect ties
+ * and re-assign sequential values by createdAt then id.
  *
  * Returns patches and the correction envelope (if any mutations were applied).
  */
-function normalizeSortOrder(session: EncryptedSyncSession<unknown>): {
+export function normalizeSortOrder(session: EncryptedSyncSession<unknown>): {
   patches: SortOrderPatch[];
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
 } {
   const doc = session.document as DocRecord;
   const allPatches: Array<SortOrderPatch & { fieldName: string }> = [];
 
-  for (const fieldName of ["groups", "memberPhotos", "fieldDefinitions"]) {
+  const sortableFields = Object.values(ENTITY_CRDT_STRATEGIES)
+    .filter((s) => "hasSortOrder" in s)
+    .map((s) => s.fieldName);
+
+  for (const fieldName of sortableFields) {
     const entityMap = getEntityMap<SortableEntity>(doc, fieldName);
     if (entityMap) {
       allPatches.push(...collectSortOrderPatches(entityMap, fieldName));
@@ -362,7 +355,7 @@ function normalizeSortOrder(session: EncryptedSyncSession<unknown>): {
  *
  * Returns the count and the correction envelope (if any mutations were applied).
  */
-function normalizeCheckInRecord(session: EncryptedSyncSession<unknown>): {
+export function normalizeCheckInRecord(session: EncryptedSyncSession<unknown>): {
   count: number;
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
 } {
@@ -402,7 +395,7 @@ function normalizeCheckInRecord(session: EncryptedSyncSession<unknown>): {
  *
  * Returns the count and the correction envelope (if any mutations were applied).
  */
-function normalizeFriendConnection(session: EncryptedSyncSession<unknown>): {
+export function normalizeFriendConnection(session: EncryptedSyncSession<unknown>): {
   count: number;
   envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
 } {
@@ -446,46 +439,6 @@ function normalizeFriendConnection(session: EncryptedSyncSession<unknown>): {
   return { count: toFix.length, envelope };
 }
 
-/**
- * Extract modified entity types from Automerge change metadata.
- * Inspects the ops in recent changes to determine which top-level document
- * fields were touched, then maps those back to entity types.
- *
- * Returns undefined if extraction fails, signalling the caller to fall back
- * to a full scan.
- */
-function extractModifiedEntityTypes(
-  session: EncryptedSyncSession<unknown>,
-): Set<string> | undefined {
-  try {
-    const doc = session.document as Automerge.Doc<DocRecord>;
-    const changes = Automerge.getChanges(Automerge.init<DocRecord>(), doc);
-
-    if (changes.length === 0) return undefined;
-
-    const modifiedFields = new Set<string>();
-    for (const change of changes) {
-      const decoded = Automerge.decodeChange(change);
-      for (const op of decoded.ops) {
-        modifiedFields.add(op.key);
-      }
-    }
-
-    if (modifiedFields.size === 0) return undefined;
-
-    const modifiedTypes = new Set<string>();
-    for (const [entityType, strategy] of Object.entries(ENTITY_CRDT_STRATEGIES)) {
-      if (modifiedFields.has(strategy.fieldName)) {
-        modifiedTypes.add(entityType);
-      }
-    }
-
-    return modifiedTypes.size > 0 ? modifiedTypes : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 // ── Public API ──────────────────────────────────────────────────────
 
 /**
@@ -502,23 +455,22 @@ export function runAllValidations(
 
   const correctionEnvelopes: Omit<EncryptedChangeEnvelope, "seq">[] = [];
   const notifications: ConflictNotification[] = [];
+  const errors: Array<{ validator: string; error: unknown }> = [];
 
   let cycleBreaks: CycleBreak[] = [];
   let sortOrderPatches: SortOrderPatch[] = [];
   let checkInNormalizations = 0;
   let friendConnectionNormalizations = 0;
 
-  // Extract modified types for targeted tombstone enforcement
-  const modifiedEntityTypes = extractModifiedEntityTypes(session);
-
   // Always run tombstone enforcement first
   try {
-    const tombstoneResult = enforceTombstones(session, modifiedEntityTypes);
+    const tombstoneResult = enforceTombstones(session);
     if (tombstoneResult.envelope) {
       correctionEnvelopes.push(tombstoneResult.envelope);
     }
     notifications.push(...tombstoneResult.notifications);
   } catch (error) {
+    errors.push({ validator: "enforceTombstones", error });
     onError?.("Tombstone enforcement failed", error);
   }
 
@@ -540,6 +492,7 @@ export function runAllValidations(
         });
       }
     } catch (error) {
+      errors.push({ validator: "detectHierarchyCycles", error });
       onError?.("Cycle detection failed", error);
     }
 
@@ -560,6 +513,7 @@ export function runAllValidations(
         });
       }
     } catch (error) {
+      errors.push({ validator: "normalizeSortOrder", error });
       onError?.("Sort order normalization failed", error);
     }
   }
@@ -582,6 +536,7 @@ export function runAllValidations(
         });
       }
     } catch (error) {
+      errors.push({ validator: "normalizeCheckInRecord", error });
       onError?.("Check-in normalization failed", error);
     }
   }
@@ -604,6 +559,7 @@ export function runAllValidations(
         });
       }
     } catch (error) {
+      errors.push({ validator: "normalizeFriendConnection", error });
       onError?.("Friend connection normalization failed", error);
     }
   }
@@ -615,60 +571,9 @@ export function runAllValidations(
     friendConnectionNormalizations,
     correctionEnvelopes,
     notifications,
+    errors,
   };
 }
 
-// ── Thin class wrapper ──────────────────────────────────────────────
-// sync-engine.ts still instantiates PostMergeValidator. This wrapper
-// delegates to the module-level functions. Remove this class and update
-// sync-engine.ts to call runAllValidations() directly in a follow-up.
-
-export class PostMergeValidator {
-  enforceTombstones(
-    session: EncryptedSyncSession<unknown>,
-    modifiedEntityTypes?: Set<string>,
-  ): {
-    notifications: ConflictNotification[];
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    return enforceTombstones(session, modifiedEntityTypes);
-  }
-
-  detectHierarchyCycles(session: EncryptedSyncSession<unknown>): {
-    breaks: CycleBreak[];
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    return detectHierarchyCycles(session);
-  }
-
-  normalizeSortOrder(session: EncryptedSyncSession<unknown>): {
-    patches: SortOrderPatch[];
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    return normalizeSortOrder(session);
-  }
-
-  normalizeCheckInRecord(session: EncryptedSyncSession<unknown>): {
-    count: number;
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    return normalizeCheckInRecord(session);
-  }
-
-  normalizeFriendConnection(session: EncryptedSyncSession<unknown>): {
-    count: number;
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    return normalizeFriendConnection(session);
-  }
-
-  runAllValidations(
-    session: EncryptedSyncSession<unknown>,
-    onError?: (message: string, error: unknown) => void,
-  ): PostMergeValidationResult {
-    return runAllValidations(session, onError);
-  }
-}
-
-/** Exposed for testing: the derived field map from CRDT strategies. */
+/** Derived field map from CRDT strategies: entity type → document field name. */
 export { ENTITY_FIELD_MAP };

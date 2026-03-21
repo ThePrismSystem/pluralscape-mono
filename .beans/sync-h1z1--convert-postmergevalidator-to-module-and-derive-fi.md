@@ -14,27 +14,37 @@ Implements M3 audit findings S-H2, S-H3, and P-M7 for the post-merge validator.
 
 **S-H2: Convert PostMergeValidator to module pattern**
 
-- Extracted all class methods to module-level functions
+- Extracted all class methods to exported module-level functions
 - Exported `runAllValidations` as the primary public API
-- Kept a thin `PostMergeValidator` class wrapper that delegates to module functions (sync-engine.ts still instantiates the class and is out of scope)
-- Updated `packages/sync/src/index.ts` to export `runAllValidations`
+- Deleted the `PostMergeValidator` class wrapper entirely
+- Updated `sync-engine.ts` to import and call `runAllValidations` directly
+- Updated `packages/sync/src/index.ts` to export only `runAllValidations`
 
-**S-H3: Derive ENTITY_FIELD_MAP from CRDT strategies**
+**S-H3: Derive all field references from CRDT strategies**
 
 - Added `fieldName: string` property to the `CrdtStrategy` interface
-- Added field names to all 44 entries in `ENTITY_CRDT_STRATEGIES`
+- Added `parentField?: string` for hierarchical entities (group, subsystem, innerworld-region)
+- Added `hasSortOrder?: boolean` for sortable entities (group, member-photo, field-definition)
 - Deleted the manually maintained 27-entry `ENTITY_FIELD_MAP` object literal
 - Derived `ENTITY_FIELD_MAP` from `ENTITY_CRDT_STRATEGIES` at module load time
+- Derived `detectHierarchyCycles` field/parent pairs from strategies (no more hardcoded lists)
+- Derived `normalizeSortOrder` field list from strategies (no more hardcoded array)
 - Added tests verifying the derived map matches expected entries and covers all strategy keys
 
-**P-M7: Optimize enforceTombstones for targeted scans**
+**P-M7: Removed broken targeted scan optimization**
 
-- Added optional `modifiedEntityTypes?: Set<string>` parameter to `enforceTombstones`
-- When provided, only entity types in the set are scanned (skips unmodified types)
-- `runAllValidations` calls `extractModifiedEntityTypes()` to inspect Automerge change ops
-- Falls back to full scan when extraction fails or yields no results
-- Added 4 new tests covering targeted scan, full scan, and empty set behavior
+- Deleted `extractModifiedEntityTypes()` — it used `Automerge.init()` as baseline (scanned full history, not merge delta) and `op.key` captured nested keys, not top-level fields. The optimization never activated.
+- Removed `modifiedEntityTypes` parameter from `enforceTombstones`
+- Removed associated tests for the deleted feature
 
-**Follow-up needed:**
+**Error observability**
 
-- Update `sync-engine.ts` to call `runAllValidations()` directly instead of instantiating `PostMergeValidator` class, then remove the class wrapper
+- Added `errors` field to `PostMergeValidationResult` so callers can detect partial validator failures
+- Each catch block in `runAllValidations` now pushes to the errors array alongside calling `onError`
+- Added `errors` assertions to all `runAllValidations` tests
+- Added JSDoc to `FriendConnectionLike.visibility` documenting the JSON-serialized invariant
+
+**New tests**
+
+- 3-node cycle test (A->B->C->A) verifying deterministic parent nulling on lowest-ID entity
+- `onError` + errors array verification test

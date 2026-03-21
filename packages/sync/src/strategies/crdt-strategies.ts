@@ -29,6 +29,10 @@ export interface CrdtStrategy {
   readonly mutationSemantics: string;
   /** The field name used to store this entity type in the Automerge document. */
   readonly fieldName: string;
+  /** Parent reference field name, if this entity participates in hierarchy cycle detection. */
+  readonly parentField?: string;
+  /** Whether this entity has a sortOrder field that needs tie-breaking normalization. */
+  readonly hasSortOrder?: boolean;
 }
 
 /**
@@ -63,12 +67,15 @@ export const ENTITY_CRDT_STRATEGIES = {
     storageType: "lww-map",
     document: "system-core",
     fieldName: "memberPhotos",
+    hasSortOrder: true,
     mutationSemantics: "LWW per field — imageSource, sortOrder, caption, archived",
   },
   group: {
     storageType: "lww-map",
     document: "system-core",
     fieldName: "groups",
+    parentField: "parentGroupId",
+    hasSortOrder: true,
     mutationSemantics:
       "LWW per field — name, description, parentGroupId, imageSource, color, emoji, sortOrder, archived",
   },
@@ -76,6 +83,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     storageType: "lww-map",
     document: "system-core",
     fieldName: "subsystems",
+    parentField: "parentSubsystemId",
     mutationSemantics:
       "LWW per field — name, description, parentSubsystemId, architectureType, hasCore, discoveryStatus, visual, archived",
   },
@@ -108,6 +116,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     storageType: "lww-map",
     document: "system-core",
     fieldName: "fieldDefinitions",
+    hasSortOrder: true,
     mutationSemantics:
       "LWW per field — name, description, fieldType, options, required, sortOrder, archived",
   },
@@ -128,6 +137,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     storageType: "lww-map",
     document: "system-core",
     fieldName: "innerWorldRegions",
+    parentField: "parentRegionId",
     mutationSemantics:
       "LWW per field — name, description, parentRegionId, visual, boundaryData, accessType, gatekeeperMemberIds, archived",
   },

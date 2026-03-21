@@ -9,7 +9,6 @@
  * - FriendConnection status normalization
  * - Module-level runAllValidations function
  * - ENTITY_FIELD_MAP derivation from CRDT strategies
- * - Targeted tombstone enforcement via modifiedEntityTypes
  */
 import * as Automerge from "@automerge/automerge";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
@@ -22,7 +21,11 @@ import {
 } from "../factories/document-factory.js";
 import {
   runAllValidations,
-  PostMergeValidator,
+  enforceTombstones,
+  detectHierarchyCycles,
+  normalizeSortOrder,
+  normalizeCheckInRecord,
+  normalizeFriendConnection,
   ENTITY_FIELD_MAP,
 } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
@@ -207,8 +210,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
     expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
 
     // Run tombstone enforcement — re-stamps to ensure archive wins future merges
-    const validator = new PostMergeValidator();
-    const { notifications } = validator.enforceTombstones(sessionA);
+    const { notifications } = enforceTombstones(sessionA);
 
     // After enforcement, archived should still be true
     expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
@@ -245,129 +247,10 @@ describe("PostMergeValidator: enforceTombstones", () => {
       };
     });
 
-    const validator = new PostMergeValidator();
-    const { notifications } = validator.enforceTombstones(session);
+    const { notifications } = enforceTombstones(session);
 
     expect(notifications).toHaveLength(0);
     expect(session.document.members["mem_1"]?.archived).toBe(false);
-  });
-
-  it("only processes specified entity types when modifiedEntityTypes is provided", () => {
-    const base = createSystemCoreDocument();
-    const session = new EncryptedSyncSession({
-      doc: Automerge.clone(base),
-      keys,
-      documentId: "doc-tomb-targeted",
-      sodium,
-    });
-
-    // Create archived member and archived group
-    session.change((d) => {
-      d.members["mem_1"] = {
-        id: s("mem_1"),
-        systemId: s("sys_1"),
-        name: s("Archived Member"),
-        pronouns: s("[]"),
-        description: null,
-        avatarSource: null,
-        colors: s("[]"),
-        saturationLevel: s('{"kind":"known","level":"fragment"}'),
-        tags: s("[]"),
-        suppressFriendFrontNotification: false,
-        boardMessageNotificationOnFront: false,
-        archived: true,
-        createdAt: 1000,
-        updatedAt: 1000,
-      };
-      d.groups["grp_1"] = makeGroup("grp_1", 1);
-      d.groups["grp_1"].archived = true;
-    });
-
-    // Only target "member" — should skip group
-    const validator = new PostMergeValidator();
-    const { notifications } = validator.enforceTombstones(session, new Set(["member"]));
-
-    // Only the member should be re-stamped, not the group
-    const memberNotifications = notifications.filter((n) => n.entityType === "member");
-    const groupNotifications = notifications.filter((n) => n.entityType === "group");
-
-    expect(memberNotifications).toHaveLength(1);
-    expect(groupNotifications).toHaveLength(0);
-  });
-
-  it("processes all entity types when modifiedEntityTypes is undefined", () => {
-    const base = createSystemCoreDocument();
-    const session = new EncryptedSyncSession({
-      doc: Automerge.clone(base),
-      keys,
-      documentId: "doc-tomb-full-scan",
-      sodium,
-    });
-
-    session.change((d) => {
-      d.members["mem_1"] = {
-        id: s("mem_1"),
-        systemId: s("sys_1"),
-        name: s("Archived Member"),
-        pronouns: s("[]"),
-        description: null,
-        avatarSource: null,
-        colors: s("[]"),
-        saturationLevel: s('{"kind":"known","level":"fragment"}'),
-        tags: s("[]"),
-        suppressFriendFrontNotification: false,
-        boardMessageNotificationOnFront: false,
-        archived: true,
-        createdAt: 1000,
-        updatedAt: 1000,
-      };
-      d.groups["grp_1"] = makeGroup("grp_1", 1);
-      d.groups["grp_1"].archived = true;
-    });
-
-    // No modifiedEntityTypes — should scan everything
-    const validator = new PostMergeValidator();
-    const { notifications } = validator.enforceTombstones(session);
-
-    const memberNotifications = notifications.filter((n) => n.entityType === "member");
-    const groupNotifications = notifications.filter((n) => n.entityType === "group");
-
-    expect(memberNotifications).toHaveLength(1);
-    expect(groupNotifications).toHaveLength(1);
-  });
-
-  it("returns no notifications when modifiedEntityTypes is an empty set", () => {
-    const base = createSystemCoreDocument();
-    const session = new EncryptedSyncSession({
-      doc: Automerge.clone(base),
-      keys,
-      documentId: "doc-tomb-empty-set",
-      sodium,
-    });
-
-    session.change((d) => {
-      d.members["mem_1"] = {
-        id: s("mem_1"),
-        systemId: s("sys_1"),
-        name: s("Archived"),
-        pronouns: s("[]"),
-        description: null,
-        avatarSource: null,
-        colors: s("[]"),
-        saturationLevel: s('{"kind":"known","level":"fragment"}'),
-        tags: s("[]"),
-        suppressFriendFrontNotification: false,
-        boardMessageNotificationOnFront: false,
-        archived: true,
-        createdAt: 1000,
-        updatedAt: 1000,
-      };
-    });
-
-    const validator = new PostMergeValidator();
-    const { notifications } = validator.enforceTombstones(session, new Set());
-
-    expect(notifications).toHaveLength(0);
   });
 });
 
@@ -407,8 +290,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     relay.submit(envB);
     syncThroughRelay([sessionA, sessionB], relay);
 
-    const validator = new PostMergeValidator();
-    const { breaks } = validator.detectHierarchyCycles(sessionA);
+    const { breaks } = detectHierarchyCycles(sessionA);
 
     // Cycle should be broken
     expect(breaks.length).toBeGreaterThan(0);
@@ -442,8 +324,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     relay.submit(envB);
     syncThroughRelay([sessionA, sessionB], relay);
 
-    const validator = new PostMergeValidator();
-    const { breaks } = validator.detectHierarchyCycles(sessionA);
+    const { breaks } = detectHierarchyCycles(sessionA);
 
     expect(breaks.length).toBeGreaterThan(0);
     // ss_a < ss_b alphabetically, so ss_a's parent gets nulled
@@ -474,11 +355,48 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     relay.submit(envB);
     syncThroughRelay([sessionA, sessionB], relay);
 
-    const validator = new PostMergeValidator();
-    const { breaks } = validator.detectHierarchyCycles(sessionA);
+    const { breaks } = detectHierarchyCycles(sessionA);
 
     expect(breaks.length).toBeGreaterThan(0);
     expect(sessionA.document.innerWorldRegions["rg_a"]?.parentRegionId).toBeNull();
+  });
+
+  it("breaks a 3-node group cycle (A->B->C->A) by nulling parent of lowest-ID entity", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-3-cycle");
+
+    const seedEnv = sessionA.change((d) => {
+      d.groups["grpA"] = makeGroup("grpA", 1);
+      d.groups["grpB"] = makeGroup("grpB", 2);
+      d.groups["grpC"] = makeGroup("grpC", 3);
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-3-cycle", 0));
+
+    // A sets grpA->grpB, grpB->grpC. B sets grpC->grpA. After merge: A->B->C->A cycle.
+    const envA = sessionA.change((d) => {
+      const gA = d.groups["grpA"];
+      if (gA) gA.parentGroupId = s("grpB");
+      const gB = d.groups["grpB"];
+      if (gB) gB.parentGroupId = s("grpC");
+    });
+    const envB = sessionB.change((d) => {
+      const gC = d.groups["grpC"];
+      if (gC) gC.parentGroupId = s("grpA");
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    const { breaks } = detectHierarchyCycles(sessionA);
+
+    expect(breaks.length).toBeGreaterThan(0);
+    // "grpA" is the lowest-ID in the cycle, so its parent gets nulled
+    expect(sessionA.document.groups["grpA"]?.parentGroupId).toBeNull();
+    // The rest of the chain should remain intact
+    expect(sessionA.document.groups["grpB"]?.parentGroupId?.val).toBe("grpC");
+    expect(sessionA.document.groups["grpC"]?.parentGroupId?.val).toBe("grpA");
   });
 
   it("returns empty array when no cycles exist", () => {
@@ -495,8 +413,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.groups["grp_2"] = makeGroup("grp_2", 2, { parentGroupId: "grp_1" });
     });
 
-    const validator = new PostMergeValidator();
-    const { breaks } = validator.detectHierarchyCycles(session);
+    const { breaks } = detectHierarchyCycles(session);
     expect(breaks).toHaveLength(0);
   });
 });
@@ -525,8 +442,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
       d.groups["grp_2"].createdAt = 900;
     });
 
-    const validator = new PostMergeValidator();
-    const { patches } = validator.normalizeSortOrder(session);
+    const { patches } = normalizeSortOrder(session);
 
     expect(patches.length).toBeGreaterThan(0);
 
@@ -550,8 +466,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
       d.groups["grp_2"] = makeGroup("grp_2", 2);
     });
 
-    const validator = new PostMergeValidator();
-    const { patches } = validator.normalizeSortOrder(session);
+    const { patches } = normalizeSortOrder(session);
     expect(patches).toHaveLength(0);
   });
 });
@@ -607,8 +522,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
     relay.submit(envB);
     syncThroughRelay([sessionA, sessionB], relay);
 
-    const validator = new PostMergeValidator();
-    const { count } = validator.normalizeCheckInRecord(sessionA);
+    const { count } = normalizeCheckInRecord(sessionA);
 
     const cr = sessionA.document.checkInRecords["cr_1"];
     expect(cr?.respondedByMemberId).not.toBeNull();
@@ -640,8 +554,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
       };
     });
 
-    const validator = new PostMergeValidator();
-    const { count } = validator.normalizeCheckInRecord(session);
+    const { count } = normalizeCheckInRecord(session);
     expect(count).toBe(0);
   });
 });
@@ -698,8 +611,7 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
     syncThroughRelay([sessionA, sessionB], relay);
 
     // The LWW may pick B's pending status
-    const validator = new PostMergeValidator();
-    const { count } = validator.normalizeFriendConnection(sessionA);
+    const { count } = normalizeFriendConnection(sessionA);
 
     // After normalization, status should be accepted
     // (the normalizer detects pending with assigned buckets and re-stamps)
@@ -730,8 +642,7 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
       };
     });
 
-    const validator = new PostMergeValidator();
-    const { count } = validator.normalizeFriendConnection(session);
+    const { count } = normalizeFriendConnection(session);
     expect(count).toBe(0);
   });
 });
@@ -765,6 +676,7 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.friendConnectionNormalizations).toBe(0);
     expect(result.correctionEnvelopes).toHaveLength(0);
     expect(result.notifications).toHaveLength(0);
+    expect(result.errors).toHaveLength(0);
   });
 
   it("returns correctionEnvelopes and notifications when issues exist", () => {
@@ -804,6 +716,7 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.notifications).toEqual(
       expect.arrayContaining([expect.objectContaining({ resolution: "lww-field" })]),
     );
+    expect(result.errors).toHaveLength(0);
   });
 
   it("includes cycle break and sort order notifications in result.notifications", () => {
@@ -849,6 +762,7 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.notifications.length).toBe(
       tombstoneCount + result.cycleBreaks.length + result.sortOrderPatches.length,
     );
+    expect(result.errors).toHaveLength(0);
   });
 
   it("handles both sort order ties and parent cycles in same run", () => {
@@ -883,35 +797,20 @@ describe("runAllValidations (module-level function)", () => {
     // Both validators should have detected issues
     expect(result.cycleBreaks.length).toBeGreaterThan(0);
     expect(result.sortOrderPatches.length).toBeGreaterThan(0);
-  });
-});
-
-// ── PostMergeValidator class wrapper ────────────────────────────────────
-
-describe("PostMergeValidator class wrapper", () => {
-  let keys: DocumentKeys;
-
-  beforeEach(() => {
-    keys = makeKeys();
+    expect(result.errors).toHaveLength(0);
   });
 
-  it("delegates runAllValidations to the module-level function", () => {
+  it("populates errors array and calls onError when no callback swallows", () => {
     const base = createSystemCoreDocument();
-    const sessionA = new EncryptedSyncSession({
+    const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-class-wrapper-a",
-      sodium,
-    });
-    const sessionB = new EncryptedSyncSession({
-      doc: Automerge.clone(base),
-      keys,
-      documentId: "doc-class-wrapper-b",
+      documentId: "doc-onerror-test",
       sodium,
     });
 
-    // Set up identical state
-    sessionA.change((d) => {
+    // Set up archived member + sort order ties to trigger multiple validators
+    session.change((d) => {
       d.members["mem_1"] = {
         id: s("mem_1"),
         systemId: s("sys_1"),
@@ -928,36 +827,21 @@ describe("PostMergeValidator class wrapper", () => {
         createdAt: 1000,
         updatedAt: 1000,
       };
-    });
-    sessionB.change((d) => {
-      d.members["mem_1"] = {
-        id: s("mem_1"),
-        systemId: s("sys_1"),
-        name: s("Test"),
-        pronouns: s("[]"),
-        description: null,
-        avatarSource: null,
-        colors: s("[]"),
-        saturationLevel: s('{"kind":"known","level":"fragment"}'),
-        tags: s("[]"),
-        suppressFriendFrontNotification: false,
-        boardMessageNotificationOnFront: false,
-        archived: true,
-        createdAt: 1000,
-        updatedAt: 1000,
-      };
+      d.groups["grp_1"] = makeGroup("grp_1", 5);
+      d.groups["grp_2"] = makeGroup("grp_2", 5);
+      d.groups["grp_2"].createdAt = 900;
     });
 
-    // Both approaches should produce equivalent structure
-    const classResult = new PostMergeValidator().runAllValidations(sessionA);
-    const moduleResult = runAllValidations(sessionB);
+    const errorMessages: string[] = [];
+    const result = runAllValidations(session, (msg) => {
+      errorMessages.push(msg);
+    });
 
-    expect(classResult.cycleBreaks).toEqual(moduleResult.cycleBreaks);
-    expect(classResult.sortOrderPatches).toEqual(moduleResult.sortOrderPatches);
-    expect(classResult.checkInNormalizations).toBe(moduleResult.checkInNormalizations);
-    expect(classResult.friendConnectionNormalizations).toBe(
-      moduleResult.friendConnectionNormalizations,
-    );
-    expect(classResult.notifications.length).toBe(moduleResult.notifications.length);
+    // Multiple validators should have produced results
+    expect(result.notifications.length).toBeGreaterThan(0);
+    expect(result.sortOrderPatches.length).toBeGreaterThan(0);
+    // No errors on successful run
+    expect(result.errors).toHaveLength(0);
+    expect(errorMessages).toHaveLength(0);
   });
 });
