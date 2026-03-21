@@ -28,8 +28,20 @@ vi.mock("../../lib/session-auth.js", () => ({
   }),
 }));
 
+/**
+ * Chainable mock for `db.select().from().where().limit()`.
+ * `mockDbLimit` is the terminal mock that controls the returned rows.
+ */
+const mockDbLimit = vi.fn().mockResolvedValue([]);
+const mockDbChain = {
+  from: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  limit: mockDbLimit,
+};
+const mockDb = { select: vi.fn().mockReturnValue(mockDbChain) };
+
 vi.mock("../../lib/db.js", () => ({
-  getDb: vi.fn().mockResolvedValue({}),
+  getDb: vi.fn().mockImplementation(() => Promise.resolve(mockDb)),
 }));
 
 // ── Helpers ─────────────────────────────────────────────────────────
@@ -1217,6 +1229,97 @@ describe("message-router", () => {
       expect(subscribeResp).toBeDefined();
       expect(subscribeResp?.["correlationId"]).toBe("550e8400-e29b-41d4-a716-446655440000");
       expect(subscribeResp?.["catchup"]).toEqual([]);
+    });
+  });
+
+  describe("DB-backed document ownership (Sec-M1)", () => {
+    beforeEach(async () => {
+      await routeMessage(authRequest(), state, log, ctx);
+      const refreshed = manager.get("conn-1");
+      if (!refreshed) throw new Error("State not found after auth");
+      state = refreshed;
+      sent.length = 0;
+    });
+
+    afterEach(() => {
+      mockDbLimit.mockReset();
+      mockDbLimit.mockResolvedValue([]);
+    });
+
+    it("denies access when DB returns ownership by another system", async () => {
+      mockDbLimit.mockResolvedValueOnce([{ systemId: "sys_other" }]);
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-db-1" }),
+        state,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("PERMISSION_DENIED");
+    });
+
+    it("allows access when DB returns ownership by same system", async () => {
+      mockDbLimit.mockResolvedValueOnce([{ systemId: "sys_test" }]);
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-db-2" }),
+        state,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SnapshotResponse");
+    });
+
+    it("populates cache from DB result", async () => {
+      mockDbLimit.mockResolvedValueOnce([{ systemId: "sys_other" }]);
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-db-3" }),
+        state,
+        log,
+        ctx,
+      );
+
+      // Cache should now contain the ownership
+      expect(ctx.documentOwnership.get("doc-db-3")).toBe("sys_other");
+    });
+
+    it("skips DB lookup when cache already has ownership", async () => {
+      ctx.documentOwnership.set("doc-cached", "sys_test" as SystemId);
+
+      await routeMessage(
+        JSON.stringify({
+          type: "FetchSnapshotRequest",
+          correlationId: null,
+          docId: "doc-cached",
+        }),
+        state,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SnapshotResponse");
+    });
+
+    it("fails open when DB query throws", async () => {
+      mockDbLimit.mockRejectedValueOnce(new Error("DB connection lost"));
+
+      await routeMessage(
+        JSON.stringify({ type: "FetchSnapshotRequest", correlationId: null, docId: "doc-db-err" }),
+        state,
+        log,
+        ctx,
+      );
+
+      // Should succeed (fail-open) since we can't confirm ownership
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SnapshotResponse");
     });
   });
 });

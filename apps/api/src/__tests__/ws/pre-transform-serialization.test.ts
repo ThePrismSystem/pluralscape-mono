@@ -1,9 +1,9 @@
 /**
- * Tests for M10: Pre-transform serialization.
+ * Tests for serialization binary field handling.
  *
- * Verifies that transformBinaryFields recursively converts Uint8Array
- * fields to base64url strings before JSON.stringify, rather than using
- * a JSON replacer.
+ * Tests both the generic transformBinaryFields utility and the
+ * targeted BINARY_FIELD_PATHS approach used by serializeServerMessage
+ * (P-H4 optimization).
  */
 import { describe, expect, it } from "vitest";
 
@@ -92,8 +92,8 @@ describe("transformBinaryFields", () => {
   });
 });
 
-describe("serializeServerMessage (pre-transform)", () => {
-  it("produces identical output to replacer-based approach for messages with binary fields", () => {
+describe("serializeServerMessage (targeted binary field paths)", () => {
+  it("converts binary fields in SnapshotResponse via targeted paths", () => {
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId: crypto.randomUUID(),
@@ -195,5 +195,174 @@ describe("serializeServerMessage (pre-transform)", () => {
     const transformed = transformBinaryFields({ field: bytes }) as Record<string, unknown>;
 
     expect(transformed["field"]).toBe(directEncoding);
+  });
+
+  it("handles DocumentUpdate with binary fields in changes array", () => {
+    const docId = crypto.randomUUID();
+    const msg: ServerMessage = {
+      type: "DocumentUpdate",
+      correlationId: null,
+      docId,
+      changes: [
+        {
+          ciphertext: new Uint8Array([5, 6, 7]),
+          nonce: nonce(1),
+          signature: sig(2),
+          authorPublicKey: pubkey(3),
+          documentId: docId,
+          seq: 1,
+        },
+      ],
+    };
+
+    const serialized = serializeServerMessage(msg);
+    const parsed: unknown = JSON.parse(serialized);
+    const obj = parsed as Record<string, unknown>;
+    const changes = obj["changes"] as Record<string, unknown>[];
+    const firstChange = changes[0] as Record<string, unknown>;
+
+    expect(typeof firstChange["ciphertext"]).toBe("string");
+    expect(typeof firstChange["nonce"]).toBe("string");
+    expect(typeof firstChange["signature"]).toBe("string");
+    expect(typeof firstChange["authorPublicKey"]).toBe("string");
+    expect(base64urlToBytes(firstChange["ciphertext"] as string)).toEqual(
+      new Uint8Array([5, 6, 7]),
+    );
+    expect(firstChange["seq"]).toBe(1);
+  });
+
+  it("handles SubscribeResponse with catchup containing snapshots and changes", () => {
+    const docId = crypto.randomUUID();
+    const msg: ServerMessage = {
+      type: "SubscribeResponse",
+      correlationId: crypto.randomUUID(),
+      catchup: [
+        {
+          docId,
+          changes: [
+            {
+              ciphertext: new Uint8Array([1]),
+              nonce: nonce(1),
+              signature: sig(2),
+              authorPublicKey: pubkey(3),
+              documentId: docId,
+              seq: 1,
+            },
+          ],
+          snapshot: {
+            ciphertext: new Uint8Array([10]),
+            nonce: nonce(4),
+            signature: sig(5),
+            authorPublicKey: pubkey(6),
+            documentId: docId,
+            snapshotVersion: 1,
+          },
+        },
+      ],
+      droppedDocIds: [],
+    };
+
+    const serialized = serializeServerMessage(msg);
+    const parsed: unknown = JSON.parse(serialized);
+    const obj = parsed as Record<string, unknown>;
+    const catchup = obj["catchup"] as Array<Record<string, unknown>>;
+    const entry = catchup[0] as Record<string, unknown>;
+    const changes = entry["changes"] as Record<string, unknown>[];
+    const snapshot = entry["snapshot"] as Record<string, unknown>;
+
+    expect(typeof (changes[0] as Record<string, unknown>)["ciphertext"]).toBe("string");
+    expect(typeof snapshot["ciphertext"]).toBe("string");
+    expect(typeof snapshot["nonce"]).toBe("string");
+  });
+
+  it("handles SubscribeResponse with null snapshot in catchup", () => {
+    const docId = crypto.randomUUID();
+    const msg: ServerMessage = {
+      type: "SubscribeResponse",
+      correlationId: crypto.randomUUID(),
+      catchup: [
+        {
+          docId,
+          changes: [],
+          snapshot: null,
+        },
+      ],
+      droppedDocIds: [],
+    };
+
+    const serialized = serializeServerMessage(msg);
+    const parsed: unknown = JSON.parse(serialized);
+    const obj = parsed as Record<string, unknown>;
+    const catchup = obj["catchup"] as Array<Record<string, unknown>>;
+    const entry = catchup[0] as Record<string, unknown>;
+
+    expect(entry["snapshot"]).toBeNull();
+  });
+
+  it("handles SnapshotResponse with null snapshot", () => {
+    const msg: ServerMessage = {
+      type: "SnapshotResponse",
+      correlationId: crypto.randomUUID(),
+      docId: crypto.randomUUID(),
+      snapshot: null,
+    };
+
+    const serialized = serializeServerMessage(msg);
+    const parsed: unknown = JSON.parse(serialized);
+    const obj = parsed as Record<string, unknown>;
+
+    expect(obj["snapshot"]).toBeNull();
+  });
+
+  it("handles SyncError with no binary fields", () => {
+    const msg: ServerMessage = {
+      type: "SyncError",
+      correlationId: crypto.randomUUID(),
+      code: "INTERNAL_ERROR",
+      message: "test error",
+      docId: null,
+    };
+
+    const serialized = serializeServerMessage(msg);
+    const parsed: unknown = JSON.parse(serialized);
+    const obj = parsed as Record<string, unknown>;
+
+    expect(obj["type"]).toBe("SyncError");
+    expect(obj["code"]).toBe("INTERNAL_ERROR");
+  });
+
+  it("targeted approach produces same result as recursive for all message types", () => {
+    const docId = crypto.randomUUID();
+
+    // Test with ChangesResponse (has binary fields in array)
+    const msg: ServerMessage = {
+      type: "ChangesResponse",
+      correlationId: crypto.randomUUID(),
+      docId,
+      changes: [
+        {
+          ciphertext: new Uint8Array([10, 20, 30]),
+          nonce: nonce(1),
+          signature: sig(2),
+          authorPublicKey: pubkey(3),
+          documentId: docId,
+          seq: 1,
+        },
+        {
+          ciphertext: new Uint8Array([40, 50]),
+          nonce: nonce(4),
+          signature: sig(5),
+          authorPublicKey: pubkey(6),
+          documentId: docId,
+          seq: 2,
+        },
+      ],
+    };
+
+    const targeted = serializeServerMessage(msg);
+    const recursive = JSON.stringify(transformBinaryFields(msg));
+
+    // Both approaches should produce the same JSON
+    expect(JSON.parse(targeted)).toEqual(JSON.parse(recursive));
   });
 });
