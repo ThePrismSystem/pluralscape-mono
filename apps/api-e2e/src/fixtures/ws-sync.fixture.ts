@@ -14,7 +14,11 @@ import type { ServerMessage } from "@pluralscape/sync";
 
 export { SyncWsClient } from "./ws.fixture.js";
 export { createSyncCryptoContext, makeSignedChange, makeSignedSnapshot } from "./crypto.fixture.js";
-export type { WireChangePayload, WireSnapshotPayload, SyncCryptoContext } from "./crypto.fixture.js";
+export type {
+  WireChangePayload,
+  WireSnapshotPayload,
+  SyncCryptoContext,
+} from "./crypto.fixture.js";
 
 interface AuthenticatedWsClient {
   /** The connected and authenticated WebSocket client. */
@@ -73,4 +77,3 @@ export async function createAuthenticatedWsClient(
     throw err;
   }
 }
-
