@@ -223,10 +223,10 @@ DM Sans was selected for its light, airy quality that matches the ethereal mood 
 
 The visual language reinforces the project's verbal tone:
 
-- **Calm, not clinical**: The ethereal palette avoids sterile whites and harsh blues
-- **Inclusive, not childish**: Soft colors without being pastel-saccharine
-- **Empowering, not pitying**: The constellation metaphor frames plurality as a network of strength
-- **Private, not secretive**: Deep space blue feels sheltering, not hiding
+- **Calm**: The ethereal palette avoids sterile whites and harsh blues
+- **Inclusive**: Soft colors without being pastel-saccharine
+- **Empowering**: The constellation metaphor frames plurality as a network of strength
+- **Private**: Deep space blue feels sheltering instead of hiding
 
 ---
 

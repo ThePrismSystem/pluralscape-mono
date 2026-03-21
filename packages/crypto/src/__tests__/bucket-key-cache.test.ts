@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createBucketKeyCache } from "../bucket-key-cache.js";
 import { generateBucketKey } from "../bucket-keys.js";
@@ -291,11 +291,39 @@ describe("memory safety: memzero on versioned removal", () => {
   });
 });
 
+describe("same-reference safety", () => {
+  it("set() with same Uint8Array instance promotes without memzero", () => {
+    const key = generateBucketKey();
+    cache.set(bucket1, key);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.set(bucket1, key);
+    expect(memzeroSpy).not.toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+    expect(cache.get(bucket1)).toBe(key);
+  });
+
+  it("setVersioned() with same Uint8Array instance promotes without memzero", () => {
+    const key = generateBucketKey();
+    cache.setVersioned(bucket1, 1, key);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.setVersioned(bucket1, 1, key);
+    expect(memzeroSpy).not.toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+    expect(cache.getByVersion(bucket1, 1)).toBe(key);
+  });
+});
+
 describe("LRU eviction (maxSize)", () => {
   let lruCache: BucketKeyCache;
 
   beforeEach(() => {
     lruCache = createBucketKeyCache({ maxSize: 3 });
+  });
+
+  afterEach(() => {
+    lruCache.clearAll();
   });
 
   it("evicts oldest entry when exceeding maxSize", () => {

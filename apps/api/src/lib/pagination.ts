@@ -1,49 +1,69 @@
-import { CursorExpiredError, PAGINATION } from "@pluralscape/types";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+
+import { CursorInvalidError, PAGINATION, now } from "@pluralscape/types";
+
+import { HTTP_BAD_REQUEST } from "../http.constants.js";
 
 import { ApiHttpError } from "./api-error.js";
 
 import type { PaginatedResult, PaginationCursor } from "@pluralscape/types";
 
-/** HTTP 400 status code. */
-const HTTP_BAD_REQUEST = 400;
+/** HMAC key length in bytes (matches SHA-256 output). */
+const CURSOR_HMAC_KEY_BYTES = 32;
 
-/** Encode an entity ID into a time-stamped pagination cursor. */
+/** Per-process ephemeral key for cursor HMAC (invalidated on server restart). */
+const CURSOR_HMAC_KEY = randomBytes(CURSOR_HMAC_KEY_BYTES);
+
+/** Compute HMAC for cursor payload integrity. */
+function computeCursorMac(id: string, ts: number): Buffer {
+  return createHmac("sha256", CURSOR_HMAC_KEY)
+    .update(`${id}\0${String(ts)}`)
+    .digest();
+}
+
+/** Encode an entity ID into a time-stamped, HMAC-signed pagination cursor. */
 export function toCursor(id: string): PaginationCursor {
-  const payload = JSON.stringify({ id, ts: Date.now() });
+  const ts = now();
+  const mac = computeCursorMac(id, ts).toString("base64url");
+  const payload = JSON.stringify({ id, ts, mac });
   return Buffer.from(payload).toString("base64url") as PaginationCursor;
 }
 
 /**
  * Decode a pagination cursor back to the original entity ID.
- * Throws CursorExpiredError if the cursor is older than ttlMs or malformed.
+ * Throws CursorInvalidError with reason "malformed" for tampered/invalid cursors,
+ * or reason "expired" if the cursor is older than ttlMs.
  */
 export function fromCursor(cursor: PaginationCursor, ttlMs: number): string {
-  let json: string;
-  try {
-    json = Buffer.from(cursor, "base64url").toString("utf8");
-  } catch {
-    throw new CursorExpiredError("Malformed pagination cursor");
-  }
-
   let parsed: unknown;
   try {
+    const json = Buffer.from(cursor, "base64url").toString("utf8");
     parsed = JSON.parse(json) as unknown;
   } catch {
-    throw new CursorExpiredError("Malformed pagination cursor");
+    throw new CursorInvalidError("malformed", "Malformed pagination cursor");
   }
 
   if (
     typeof parsed !== "object" ||
     parsed === null ||
     typeof (parsed as Record<string, unknown>).id !== "string" ||
-    typeof (parsed as Record<string, unknown>).ts !== "number"
+    typeof (parsed as Record<string, unknown>).ts !== "number" ||
+    typeof (parsed as Record<string, unknown>).mac !== "string"
   ) {
-    throw new CursorExpiredError("Malformed pagination cursor");
+    throw new CursorInvalidError("malformed", "Malformed pagination cursor");
   }
 
-  const { id, ts } = parsed as { id: string; ts: number };
-  if (Date.now() - ts > ttlMs) {
-    throw new CursorExpiredError();
+  const { id, ts, mac } = parsed as { id: string; ts: number; mac: string };
+
+  // Verify HMAC integrity (timing-safe)
+  const expected = computeCursorMac(id, ts);
+  const received = Buffer.from(mac, "base64url");
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
+    throw new CursorInvalidError("malformed", "Malformed pagination cursor");
+  }
+
+  if (now() - ts > ttlMs) {
+    throw new CursorInvalidError("expired");
   }
 
   return id;
@@ -70,7 +90,7 @@ export function parseCursor(cursorParam: string | undefined): string | undefined
   try {
     return fromCursor(cursorParam as PaginationCursor, PAGINATION.cursorTtlMs);
   } catch (error: unknown) {
-    if (error instanceof CursorExpiredError) {
+    if (error instanceof CursorInvalidError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "INVALID_CURSOR", error.message);
     }
     throw error;

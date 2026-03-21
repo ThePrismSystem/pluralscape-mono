@@ -12,11 +12,21 @@ export interface PaginatedResult<T> {
 }
 
 /** Thrown when a pagination cursor is expired or malformed. */
-export class CursorExpiredError extends Error {
-  override readonly name = "CursorExpiredError" as const;
+export class CursorInvalidError extends Error {
+  override readonly name = "CursorInvalidError" as const;
+  readonly reason: "expired" | "malformed";
 
-  constructor(message = "Pagination cursor has expired", options?: ErrorOptions) {
-    super(message, options);
+  constructor(
+    reason: "expired" | "malformed" = "expired",
+    message?: string,
+    options?: ErrorOptions,
+  ) {
+    super(
+      message ??
+        (reason === "expired" ? "Pagination cursor has expired" : "Malformed pagination cursor"),
+      options,
+    );
+    this.reason = reason;
   }
 }
 

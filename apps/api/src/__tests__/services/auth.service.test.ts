@@ -1,3 +1,4 @@
+import { PAGINATION } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockEnv = vi.hoisted(() => ({
@@ -9,6 +10,7 @@ const mockEnv = vi.hoisted(() => ({
 vi.mock("../../env.js", () => ({ env: mockEnv }));
 
 import { PG_UNIQUE_VIOLATION } from "../../db.constants.js";
+import { fromCursor } from "../../lib/pagination.js";
 import { extractIpAddress, extractPlatform, extractUserAgent } from "../../lib/request-meta.js";
 import { CLIENT_PLATFORM_HEADER, DEFAULT_PLATFORM } from "../../routes/auth/auth.constants.js";
 import {
@@ -612,7 +614,11 @@ describe("auth service", () => {
 
       const result = await listSessions(db, "acct_123", undefined, 2);
       expect(result.sessions).toHaveLength(2);
-      expect(result.nextCursor).toBe("sess_2");
+      const { nextCursor } = result;
+      expect(nextCursor).not.toBeNull();
+      if (nextCursor) {
+        expect(fromCursor(nextCursor, PAGINATION.cursorTtlMs)).toBe("sess_2");
+      }
     });
 
     it("passes cursor as SQL condition (not in-memory filtering)", async () => {

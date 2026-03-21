@@ -76,7 +76,9 @@ export function createBucketKeyCache(options?: BucketKeyCacheOptions): BucketKey
     set(bucketId: BucketId, key: AeadKey): void {
       const existing = store.get(bucketId);
       if (existing !== undefined) {
-        getSodium().memzero(existing);
+        if (existing !== key) {
+          getSodium().memzero(existing);
+        }
         store.delete(bucketId);
       } else if (maxSize !== undefined && store.size >= maxSize) {
         evictOldest(store);
@@ -92,6 +94,7 @@ export function createBucketKeyCache(options?: BucketKeyCacheOptions): BucketKey
       }
     },
 
+    /** Check if a bucket key exists. Does NOT count as an LRU access — will not prevent eviction. */
     has(bucketId: BucketId): boolean {
       return store.has(bucketId);
     },
@@ -127,7 +130,9 @@ export function createBucketKeyCache(options?: BucketKeyCacheOptions): BucketKey
       const vk = versionKey(bucketId, keyVersion);
       const existing = versionedStore.get(vk);
       if (existing !== undefined) {
-        getSodium().memzero(existing);
+        if (existing !== key) {
+          getSodium().memzero(existing);
+        }
         versionedStore.delete(vk);
       } else if (versionedMaxSize !== undefined && versionedStore.size >= versionedMaxSize) {
         evictOldest(versionedStore);
