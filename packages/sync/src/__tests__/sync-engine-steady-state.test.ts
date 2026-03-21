@@ -446,15 +446,10 @@ describe("SyncEngine steady-state", () => {
 
       await engine.handleIncomingChanges("system-core-sys_test", [change]);
 
-      // Give the async persistence a tick to settle
-      await new Promise((resolve) => {
-        setTimeout(resolve, 10);
-      });
-
-      // saveConflicts may or may not have been called depending on whether
-      // there are actual conflicts to report — but the adapter was wired in
-      // The important thing is no errors were thrown
-      expect(conflictPersistenceAdapter).toBeDefined();
+      // Drain microtask queue — the fire-and-forget persistence promise chain
+      // (saveConflicts().catch(...)) should resolve without unhandled rejections
+      await Promise.resolve();
+      await Promise.resolve();
 
       engine.dispose();
     });
