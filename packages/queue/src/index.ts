@@ -6,7 +6,6 @@ export {
   DEFAULT_POLL_INTERVAL_MS,
   DEFAULT_SHUTDOWN_TIMEOUT_MS,
   DEFAULT_TIMEOUT_MS,
-  SHUTDOWN_POLL_MS,
 } from "./queue.constants.js";
 export type { IdempotencyCheckResult, JobEnqueueParams, JobFilter } from "./types.js";
 

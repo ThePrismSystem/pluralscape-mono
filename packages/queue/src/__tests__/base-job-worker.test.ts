@@ -17,6 +17,7 @@ class TestJobWorker extends BaseJobWorker {
   public pollCallCount = 0;
   public onStartCalled = false;
   public onStopCalled = false;
+  public pollShouldFail = false;
 
   /** Queued jobs that poll() will yield one at a time. */
   private pendingJobs: JobDefinition[] = [];
@@ -38,6 +39,12 @@ class TestJobWorker extends BaseJobWorker {
   protected override poll(): Promise<void> {
     this.pollCallCount++;
     if (this.shouldSkipPoll()) return Promise.resolve();
+
+    if (this.pollShouldFail) {
+      this.handlePollFailure(new Error("simulated poll error"));
+      return Promise.resolve();
+    }
+
     this.handlePollSuccess();
     const job = this.pendingJobs.shift();
     if (job === undefined) return Promise.resolve();
@@ -356,26 +363,158 @@ describe("BaseJobWorker", () => {
   // ── poll backoff helpers ──────────────────────────────────────────
 
   describe("handlePollFailure / handlePollSuccess", () => {
-    it("tracks consecutive failures and resets on success", async () => {
+    it("backs off after failures and recovers on success", async () => {
       const queue = stubQueue();
-      const currentTime = 1000 as UnixMillis;
-      const logger = mockLogger();
+      let clockValue = 1000 as UnixMillis;
+      const errorFn = vi.fn();
+      const logger: Logger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
       worker = new TestJobWorker(queue, {
         logger,
         pollIntervalMs: 50,
-        clock: () => currentTime,
+        clock: () => clockValue,
       });
       worker.registerHandler("sync-push" as JobType, noop);
+
+      // Start with failures enabled
+      worker.pollShouldFail = true;
       await worker.start();
 
       await vi.waitFor(() => {
-        expect(worker.pollCallCount).toBeGreaterThanOrEqual(2);
+        expect(worker.pollCallCount).toBeGreaterThanOrEqual(1);
       });
 
-      const countBefore = worker.pollCallCount;
+      // Verify error was logged
+      expect(errorFn).toHaveBeenCalledWith(
+        "worker.poll-failed",
+        expect.objectContaining({ error: "simulated poll error" }),
+      );
+
+      // Advance clock past backoff, poll again
+      const countAfterFirstFail = worker.pollCallCount;
+      clockValue = (clockValue + 500) as UnixMillis;
+
       await vi.waitFor(() => {
-        expect(worker.pollCallCount).toBeGreaterThan(countBefore);
+        expect(worker.pollCallCount).toBeGreaterThan(countAfterFirstFail);
+      });
+
+      // Disable failures and advance clock to allow recovery
+      worker.pollShouldFail = false;
+      const countBeforeRecovery = worker.pollCallCount;
+      clockValue = (clockValue + 2000) as UnixMillis;
+
+      await vi.waitFor(() => {
+        expect(worker.pollCallCount).toBeGreaterThan(countBeforeRecovery);
+      });
+
+      // After recovery, polls should continue without being skipped
+      const countAfterRecovery = worker.pollCallCount;
+      await vi.waitFor(() => {
+        expect(worker.pollCallCount).toBeGreaterThan(countAfterRecovery + 1);
       });
     });
+  });
+
+  // ── queue.fail delegation errors ──────────────────────────────────
+
+  describe("queue.fail delegation errors", () => {
+    it("logs worker.fail-delegation-error when queue.fail throws on no-handler path", async () => {
+      const failFn = vi.fn().mockRejectedValue(new Error("fail boom"));
+      const queue = stubQueue({ fail: failFn });
+      const errorFn = vi.fn();
+      const logger: Logger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
+      worker = new TestJobWorker(queue, { logger, pollIntervalMs: 50 });
+      worker.registerHandler("blob-upload" as JobType, noop);
+
+      const job = makeJob({ type: "sync-push" as JobType });
+      worker.feedJob(job);
+      await worker.start();
+
+      await vi.waitFor(() => {
+        expect(errorFn).toHaveBeenCalledWith(
+          "worker.fail-delegation-error",
+          expect.objectContaining({ jobId: job.id }),
+        );
+      });
+    });
+
+    it("logs worker.fail-delegation-error when queue.fail throws on handler-error path", async () => {
+      const failFn = vi.fn().mockRejectedValue(new Error("fail boom"));
+      const queue = stubQueue({ fail: failFn });
+      const errorFn = vi.fn();
+      const logger: Logger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
+      worker = new TestJobWorker(queue, { logger, pollIntervalMs: 50 });
+      worker.registerHandler("sync-push" as JobType, () =>
+        Promise.reject(new Error("handler error")),
+      );
+
+      const job = makeJob();
+      worker.feedJob(job);
+      await worker.start();
+
+      await vi.waitFor(() => {
+        expect(errorFn).toHaveBeenCalledWith(
+          "worker.fail-delegation-error",
+          expect.objectContaining({ jobId: job.id }),
+        );
+      });
+    });
+  });
+
+  // ── ack exhaustion fallback ───────────────────────────────────────
+
+  describe("ack exhaustion fallback", () => {
+    it("calls queue.fail as fallback after ack retry exhaustion", async () => {
+      const ackFn = vi.fn().mockRejectedValue(new Error("persistent failure"));
+      const failFn = vi.fn().mockResolvedValue({});
+      const logger = mockLogger();
+      const queue = stubQueue({ acknowledge: ackFn, fail: failFn });
+      worker = new TestJobWorker(queue, { logger, pollIntervalMs: 50 });
+      worker.registerHandler("sync-push" as JobType, noop);
+
+      const job = makeJob();
+      worker.feedJob(job);
+      await worker.start();
+
+      await vi.waitFor(() => {
+        expect(failFn).toHaveBeenCalledWith(
+          job.id,
+          expect.stringContaining("Acknowledge exhausted"),
+        );
+      });
+    });
+  });
+
+  // ── shutdown timeout ──────────────────────────────────────────────
+
+  describe("shutdown timeout", () => {
+    it("returns from stop() even when handler ignores abort signal", async () => {
+      const queue = stubQueue({ acknowledge: vi.fn().mockResolvedValue({}) });
+      worker = new TestJobWorker(queue, {
+        logger: mockLogger(),
+        pollIntervalMs: 50,
+        shutdownTimeoutMs: 50,
+      });
+
+      // Handler that never finishes and ignores abort
+      worker.registerHandler(
+        "sync-push" as JobType,
+        () =>
+          new Promise<void>(() => {
+            // intentionally never resolves
+          }),
+      );
+
+      const job = makeJob();
+      worker.feedJob(job);
+      await worker.start();
+
+      await vi.waitFor(() => {
+        expect(worker.getInFlightSize()).toBe(1);
+      });
+
+      // stop() should return after shutdownTimeoutMs even though handler is stuck
+      await worker.stop();
+      expect(worker.isRunning()).toBe(false);
+    }, 10_000);
   });
 });

@@ -24,7 +24,9 @@ import type { JobDefinition, JobId, JobType, Logger, UnixMillis } from "@plurals
  * Options shared by all BaseJobWorker subclasses.
  */
 export interface BaseJobWorkerOptions {
+  /** @default 100 (DEFAULT_POLL_INTERVAL_MS) */
   pollIntervalMs?: number;
+  /** @default 5000 (DEFAULT_SHUTDOWN_TIMEOUT_MS) */
   shutdownTimeoutMs?: number;
   logger: Logger;
   clock?: () => UnixMillis;
@@ -46,11 +48,11 @@ export abstract class BaseJobWorker implements JobWorker {
   protected readonly logger: Logger;
   protected readonly clock: () => UnixMillis;
 
-  protected running = false;
-  protected pollTimer: ReturnType<typeof setInterval> | null = null;
-  protected readonly inFlight = new Map<string, AbortController>();
-  protected consecutivePollFailures = 0;
-  protected nextPollAt = 0 as UnixMillis;
+  private running = false;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  protected readonly inFlight = new Map<JobId, AbortController>();
+  private consecutivePollFailures = 0;
+  private nextPollAt = 0 as UnixMillis;
 
   constructor(queue: JobQueue, options: BaseJobWorkerOptions) {
     this.queue = queue;
@@ -66,15 +68,14 @@ export abstract class BaseJobWorker implements JobWorker {
     this.handlers.set(type, handler as JobHandler);
   }
 
-  start(): Promise<void> {
-    if (this.running) return Promise.reject(new WorkerAlreadyRunningError());
-    if (this.handlers.size === 0) return Promise.reject(new NoHandlersRegisteredError());
+  async start(): Promise<void> {
+    if (this.running) throw new WorkerAlreadyRunningError();
+    if (this.handlers.size === 0) throw new NoHandlersRegisteredError();
     this.running = true;
-    this.onStart();
+    await this.onStart();
     this.pollTimer = setInterval(() => {
       void this.poll();
     }, this.pollIntervalMs);
-    return Promise.resolve();
   }
 
   async stop(): Promise<void> {
@@ -111,7 +112,7 @@ export abstract class BaseJobWorker implements JobWorker {
   // ── Template methods for subclasses ───────────────────────────────
 
   /** Called during start() before the poll timer begins. Override to initialise adapter resources. */
-  protected onStart(): void {
+  protected onStart(): void | Promise<void> {
     // default no-op
   }
 
@@ -212,6 +213,17 @@ export abstract class BaseJobWorker implements JobWorker {
               error: msg,
               attempts: ackAttempt,
             });
+            try {
+              await this.queue.fail(
+                job.id,
+                `Acknowledge exhausted after ${String(ackAttempt)} attempts: ${msg}`,
+              );
+            } catch (fallbackErr) {
+              this.logger.error("worker.fail-delegation-error", {
+                jobId: job.id,
+                error: extractErrorMessage(fallbackErr),
+              });
+            }
           } else {
             this.logger.warn("worker.acknowledge-retry", {
               jobId: job.id,

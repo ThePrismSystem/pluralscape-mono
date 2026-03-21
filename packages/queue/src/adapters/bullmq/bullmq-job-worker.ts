@@ -1,3 +1,4 @@
+import { extractErrorMessage } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 import { Worker } from "bullmq";
 
@@ -86,14 +87,40 @@ export class BullMQJobWorker extends BaseJobWorker {
       startedAt: this.clock(),
       lastHeartbeatAt: this.clock(),
     };
-    await bullmqJob.updateData(runningData);
+
+    try {
+      await bullmqJob.updateData(runningData);
+    } catch (err) {
+      this.logger.error("worker.update-data-failed", {
+        jobId,
+        error: extractErrorMessage(err),
+      });
+      try {
+        await this.queue.fail(jobId, `Failed to update job data: ${extractErrorMessage(err)}`);
+      } catch (failErr) {
+        this.logger.error("worker.fail-delegation-error", {
+          jobId,
+          error: extractErrorMessage(failErr),
+        });
+      }
+      return;
+    }
 
     const job: JobDefinition = fromStoredData(jobId, runningData);
 
     const heartbeatHandle: HeartbeatHandle = {
       heartbeat: async () => {
         const data = bullmqJob.data as StoredJobData;
-        await bullmqJob.updateData({ ...data, lastHeartbeatAt: this.clock() });
+        try {
+          await bullmqJob.updateData({ ...data, lastHeartbeatAt: this.clock() });
+        } catch (err) {
+          const msg = `Heartbeat failed for job "${jobId}": ${extractErrorMessage(err)}`;
+          this.logger.error("worker.heartbeat-update-failed", {
+            jobId,
+            error: extractErrorMessage(err),
+          });
+          throw new Error(msg, { cause: err });
+        }
       },
     };
 
