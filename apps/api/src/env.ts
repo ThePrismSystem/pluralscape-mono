@@ -17,7 +17,15 @@ export const env = createEnv({
     DISABLE_RATE_LIMIT: z
       .enum(["0", "1"])
       .default("0")
-      .transform((v) => v === "1"),
+      .transform((v) => {
+        if (v === "1" && isProduction) {
+          process.stderr.write(
+            "CRITICAL: DISABLE_RATE_LIMIT=1 is not allowed in production. Forcing rate limiting ON.\n",
+          );
+          return false;
+        }
+        return v === "1";
+      }),
     CORS_ORIGIN: z.string().optional(),
     ALLOWED_ORIGINS: z.string().optional(),
     EMAIL_HASH_PEPPER: z

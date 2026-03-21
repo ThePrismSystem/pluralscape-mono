@@ -267,6 +267,35 @@ describe("WsNetworkAdapter", () => {
         );
       });
     });
+
+    it("logs a warning when unsubscribe transport send fails", async () => {
+      const warnFn = vi.fn();
+      const transport: SyncTransport = {
+        state: "connected",
+        send: (msg) => {
+          if (msg.type === "UnsubscribeRequest") {
+            return Promise.reject(new Error("unsubscribe send failed"));
+          }
+          return Promise.resolve();
+        },
+        onMessage: () => {},
+        close: () => {},
+      };
+      const adapter = new WsNetworkAdapter(transport, 5_000, { warn: warnFn });
+
+      const sub = adapter.subscribe("doc-1", () => {});
+      sub.unsubscribe();
+
+      await vi.waitFor(() => {
+        expect(warnFn).toHaveBeenCalledWith(
+          "Unsubscribe send failed",
+          expect.objectContaining({
+            docId: "doc-1",
+            error: expect.any(String),
+          }),
+        );
+      });
+    });
   });
 
   describe("lastSeqPerDoc tracking", () => {

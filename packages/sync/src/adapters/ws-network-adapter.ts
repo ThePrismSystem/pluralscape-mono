@@ -161,8 +161,11 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
               correlationId: crypto.randomUUID(),
               docId: documentId,
             })
-            .catch(() => {
-              /* unsubscribe send failure is non-critical */
+            .catch((err: unknown) => {
+              this.logger?.warn("Unsubscribe send failed", {
+                docId: documentId,
+                error: String(err),
+              });
             });
         }
       },
