@@ -369,4 +369,52 @@ describe("EncryptedSyncSession — full integration", () => {
       relay.submitSnapshot(snapshotV3);
     }).not.toThrow();
   });
+
+  describe("M22 — sort skip for trivial arrays", () => {
+    it("applies empty envelope array without error", () => {
+      const session = makeSession(base, sharedKeys);
+      session.applyEncryptedChanges([]);
+      expect(session.lastSyncedSeq).toBe(0);
+    });
+
+    it("applies single envelope without copying/sorting", () => {
+      const sessionA = makeSession(base, sharedKeys);
+      const sessionB = makeSession(base, sharedKeys);
+
+      const envelope = sessionA.change((doc) => {
+        doc.members.push({ name: "SingleChange", pronouns: "they/them", description: "test" });
+      });
+      const seq = relay.submit(envelope);
+      const envelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
+
+      expect(envelopes).toHaveLength(1);
+      sessionB.applyEncryptedChanges(envelopes);
+      expect(sessionB.lastSyncedSeq).toBe(seq);
+      expect(sessionB.document.members).toHaveLength(1);
+    });
+
+    it("correctly sorts multiple out-of-order envelopes", () => {
+      const sessionA = makeSession(base, sharedKeys);
+      const sessionB = makeSession(base, sharedKeys);
+
+      const env1 = sessionA.change((doc) => {
+        doc.members.push({ name: "First", pronouns: "they/them", description: "1" });
+      });
+      relay.submit(env1);
+
+      const env2 = sessionA.change((doc) => {
+        doc.members.push({ name: "Second", pronouns: "they/them", description: "2" });
+      });
+      relay.submit(env2);
+
+      const envelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
+      // Reverse to simulate out-of-order delivery
+      const reversed = [...envelopes].reverse();
+      sessionB.applyEncryptedChanges(reversed);
+
+      expect(sessionB.document.members).toHaveLength(2);
+      expect(sessionB.document.members[0]?.name).toBe("First");
+      expect(sessionB.document.members[1]?.name).toBe("Second");
+    });
+  });
 });

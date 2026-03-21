@@ -11,6 +11,7 @@ import type { SystemId } from "@pluralscape/types";
 export class MockSyncTransport implements SyncTransport {
   state: TransportState = "connected";
   private handler: ((msg: ServerMessage) => void) | null = null;
+  private closeHandler: (() => void) | null = null;
   private readonly relay: EncryptedRelay;
   private readonly subscriptions = new Map<string, boolean>();
 
@@ -43,8 +44,13 @@ export class MockSyncTransport implements SyncTransport {
     this.handler = handler;
   }
 
+  onClose(handler: () => void): void {
+    this.closeHandler = handler;
+  }
+
   close(): void {
     this.state = "disconnected";
+    this.closeHandler?.();
   }
 
   /** Expose relay for test setup (pre-populating data). */

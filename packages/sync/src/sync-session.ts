@@ -6,6 +6,7 @@ import {
   encryptChange,
   encryptSnapshot,
 } from "./encrypted-sync.js";
+import { NoChangeProducedError } from "./errors.js";
 
 import type { EncryptedRelay } from "./relay.js";
 import type { DocumentKeys, EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
@@ -46,13 +47,14 @@ export class EncryptedSyncSession<T> {
     this.doc = Automerge.change(this.doc, fn);
     const lastChange = Automerge.getLastLocalChange(this.doc);
     if (!lastChange) {
-      throw new Error("Automerge.change produced no diff");
+      throw new NoChangeProducedError();
     }
     return encryptChange(lastChange, this.documentId, this.keys, this.sodium);
   }
 
   applyEncryptedChanges(envelopes: readonly EncryptedChangeEnvelope[]): void {
-    const sorted = [...envelopes].sort((a, b) => a.seq - b.seq);
+    // M22: Skip sort for trivial arrays (0 or 1 elements are already sorted)
+    const sorted = envelopes.length <= 1 ? envelopes : [...envelopes].sort((a, b) => a.seq - b.seq);
     const savedDoc = this.doc;
     const savedSeq = this.lastSyncedSeq_;
     try {
