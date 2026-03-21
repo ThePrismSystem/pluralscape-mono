@@ -1,4 +1,6 @@
-import { assertType, describe, expectTypeOf, it } from "vitest";
+import { assertType, describe, expect, expectTypeOf, it } from "vitest";
+
+import { toUnixMillis } from "../timestamps.js";
 
 import type { ISOTimestamp, UnixMillis } from "../timestamps.js";
 
@@ -21,6 +23,14 @@ describe("ISOTimestamp", () => {
 
   it("is assignable to string", () => {
     expectTypeOf<ISOTimestamp>().toExtend<string>();
+  });
+});
+
+describe("toUnixMillis", () => {
+  it("returns a branded UnixMillis from a number", () => {
+    const result = toUnixMillis(1000);
+    expect(result).toBe(1000);
+    expectTypeOf(result).toEqualTypeOf<UnixMillis>();
   });
 });
 

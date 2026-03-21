@@ -1,3 +1,5 @@
+import { toUnixMillis } from "./timestamps.js";
+
 import type { ISOTimestamp, UnixMillis } from "./timestamps.js";
 
 /** Creates a prefixed UUID as a branded string. Prefix must be non-empty and end with `_`. */
@@ -13,7 +15,7 @@ export function createId(prefix: string): string {
 
 /** Returns the current Unix timestamp in milliseconds as branded UnixMillis. */
 export function now(): UnixMillis {
-  return Date.now() as UnixMillis;
+  return toUnixMillis(Date.now());
 }
 
 /** Converts a branded UnixMillis to a branded ISOTimestamp string. */

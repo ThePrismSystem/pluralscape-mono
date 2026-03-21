@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -13,7 +14,7 @@ import {
   sqliteInsertSystem,
 } from "./helpers/sqlite-helpers.js";
 
-import type { JobId, JobResult, JobType, UnixMillis } from "@pluralscape/types";
+import type { JobId, JobResult, JobType } from "@pluralscape/types";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 
 const schema = { accounts, systems, jobs };
@@ -357,7 +358,7 @@ describe("SQLite jobs schema", () => {
       const result: JobResult = {
         success: true,
         message: "done",
-        completedAt: (now + 5000) as UnixMillis,
+        completedAt: toUnixMillis(now + 5000),
       };
 
       const inserted = db

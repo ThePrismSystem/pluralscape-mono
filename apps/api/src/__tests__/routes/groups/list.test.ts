@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { toCursor } from "../../../lib/pagination.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -58,7 +59,7 @@ describe("GET /systems/:id/groups", () => {
     vi.mocked(listGroups).mockResolvedValueOnce(EMPTY_PAGE);
 
     const app = createApp();
-    await app.request(`${SYS_URL}?cursor=grp_abc&limit=10`);
+    await app.request(`${SYS_URL}?cursor=${toCursor("grp_abc")}&limit=10`);
 
     expect(vi.mocked(listGroups)).toHaveBeenCalledWith(
       expect.anything(),

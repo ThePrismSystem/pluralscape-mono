@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { toCursor } from "../../../../lib/pagination.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -90,7 +91,9 @@ describe("GET /systems/:id/innerworld/regions", () => {
   it("respects query params (cursor, limit, includeArchived)", async () => {
     vi.mocked(listRegions).mockResolvedValueOnce(EMPTY_PAGE);
 
-    const res = await createApp().request(`${BASE_URL}?cursor=abc&limit=5&includeArchived=true`);
+    const res = await createApp().request(
+      `${BASE_URL}?cursor=${toCursor("abc")}&limit=5&includeArchived=true`,
+    );
 
     expect(res.status).toBe(200);
     expect(vi.mocked(listRegions)).toHaveBeenCalledOnce();

@@ -5,7 +5,7 @@ import { ApiHttpError } from "../../lib/api-error.js";
 import { createAuditWriter } from "../../lib/audit-writer.js";
 import { getDb } from "../../lib/db.js";
 import { parseIdParam } from "../../lib/id-param.js";
-import { parsePaginationLimit } from "../../lib/pagination.js";
+import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { wrapAction } from "../../lib/response.js";
 import { authMiddleware } from "../../middleware/auth.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
@@ -35,7 +35,7 @@ sessionsRoute.get("/sessions", async (c) => {
   const limitParam = c.req.query("limit");
   const limit = parsePaginationLimit(limitParam, DEFAULT_SESSION_LIMIT, MAX_SESSION_LIMIT);
 
-  const result = await listSessions(db, auth.accountId, cursor, limit);
+  const result = await listSessions(db, auth.accountId, parseCursor(cursor), limit);
   return c.json(result);
 });
 

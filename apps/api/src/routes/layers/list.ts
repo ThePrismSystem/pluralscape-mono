@@ -1,9 +1,9 @@
-import { ID_PREFIXES, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
-import { parsePaginationLimit } from "../../lib/pagination.js";
+import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
 import { listLayers } from "../../services/layer.service.js";
@@ -20,12 +20,6 @@ listRoute.get("/", async (c) => {
   const limit = parsePaginationLimit(c.req.query("limit"), DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT);
 
   const db = await getDb();
-  const result = await listLayers(
-    db,
-    systemId,
-    auth,
-    cursorParam ? toCursor(cursorParam) : undefined,
-    limit,
-  );
+  const result = await listLayers(db, systemId, auth, parseCursor(cursorParam), limit);
   return c.json(result);
 });

@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { QueueHealthService } from "../observability/health.js";
@@ -52,7 +53,7 @@ describe("QueueHealthService", () => {
   });
 
   it("counts stalled jobs", async () => {
-    let currentTime = 1000 as UnixMillis;
+    let currentTime = toUnixMillis(1000);
     const queue = new InMemoryJobQueue(mockLogger, () => currentTime);
     const metrics = new InMemoryJobMetrics();
     const service = new QueueHealthService(queue, metrics, undefined, () => currentTime);
@@ -60,7 +61,7 @@ describe("QueueHealthService", () => {
     await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
     await queue.dequeue();
 
-    currentTime = 7000 as UnixMillis;
+    currentTime = toUnixMillis(7000);
     const summary = await service.getSummary();
     expect(summary.stalledCount).toBe(1);
   });
@@ -92,7 +93,7 @@ describe("QueueHealthService", () => {
   });
 
   it("uses the injected clock for timestamp", async () => {
-    const fixedTime = 12345 as UnixMillis;
+    const fixedTime = toUnixMillis(12345);
     const { service } = makeHealth(undefined, () => fixedTime);
     const summary = await service.getSummary();
     expect(summary.timestamp).toBe(fixedTime);

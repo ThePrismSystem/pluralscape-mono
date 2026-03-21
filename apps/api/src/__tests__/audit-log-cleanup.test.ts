@@ -1,10 +1,11 @@
 import { AUDIT_LOG_RETENTION_DAYS } from "@pluralscape/db";
+import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createAuditLogCleanupHandler } from "../jobs/audit-log-cleanup.js";
 
 import type { JobHandlerContext } from "@pluralscape/queue";
-import type { JobDefinition, JobId, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 vi.mock("@pluralscape/db", async (importOriginal) => {
@@ -30,8 +31,8 @@ function stubJob(): JobDefinition<"audit-log-cleanup"> {
     nextRetryAt: null,
     error: null,
     result: null,
-    createdAt: 0 as UnixMillis,
-    startedAt: 0 as UnixMillis,
+    createdAt: toUnixMillis(0),
+    startedAt: toUnixMillis(0),
     completedAt: null,
     idempotencyKey: null,
     lastHeartbeatAt: null,

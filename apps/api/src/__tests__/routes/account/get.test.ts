@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,13 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type {
-  AccountId,
-  AccountType,
-  ApiErrorResponse,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { AccountId, AccountType, ApiErrorResponse, SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -52,8 +47,8 @@ describe("GET /account", () => {
       accountId: "acct_test" as AccountId,
       accountType: "system" as AccountType,
       systemId: "sys_test" as SystemId,
-      createdAt: 1000 as UnixMillis,
-      updatedAt: 2000 as UnixMillis,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(2000),
     };
     vi.mocked(getAccountInfo).mockResolvedValueOnce(mockInfo);
 

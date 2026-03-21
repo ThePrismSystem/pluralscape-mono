@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -5,7 +6,7 @@ import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
 import type { AuditWriter } from "../../lib/audit-writer.js";
 import type { AuthContext } from "../../lib/auth-context.js";
-import type { SystemId, UnixMillis } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -35,11 +36,15 @@ vi.mock("@pluralscape/db/pg", () => ({
   },
 }));
 
-vi.mock("@pluralscape/types", () => ({
-  ID_PREFIXES: { systemSettings: "sset_" },
-  createId: vi.fn().mockReturnValue("sset_new"),
-  now: vi.fn().mockReturnValue(1700000000000),
-}));
+vi.mock("@pluralscape/types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/types")>();
+  return {
+    ...actual,
+    ID_PREFIXES: { systemSettings: "sset_" },
+    createId: vi.fn().mockReturnValue("sset_new"),
+    now: vi.fn().mockReturnValue(1700000000000),
+  };
+});
 
 vi.mock("@pluralscape/validation", () => ({
   SetupCompleteBodySchema: {
@@ -125,7 +130,7 @@ describe("setup service", () => {
       chain.limit.mockResolvedValueOnce([{ id: "ss_abc" }]);
       vi.mocked(getRecoveryKeyStatus).mockResolvedValueOnce({
         hasActiveKey: true,
-        createdAt: 1700000000000 as UnixMillis,
+        createdAt: toUnixMillis(1700000000000),
       });
 
       const result = await getSetupStatus(db, SYSTEM_ID, AUTH);
@@ -308,7 +313,7 @@ describe("setup service", () => {
 
       vi.mocked(getRecoveryKeyStatus).mockResolvedValue({
         hasActiveKey: true,
-        createdAt: 1700000000000 as UnixMillis,
+        createdAt: toUnixMillis(1700000000000),
       });
     });
 

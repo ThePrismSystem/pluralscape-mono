@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BaseJobWorker } from "../adapters/base-job-worker.js";
@@ -9,7 +10,7 @@ import {
 
 import type { JobQueue } from "../job-queue.js";
 import type { JobHandler } from "../job-worker.js";
-import type { JobDefinition, JobId, JobType, Logger, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobId, JobType, Logger } from "@pluralscape/types";
 
 // ── Test double ─────────────────────────────────────────────────────
 
@@ -99,11 +100,11 @@ function makeJob(overrides: Partial<JobDefinition> = {}): JobDefinition {
     nextRetryAt: null,
     error: null,
     result: null,
-    createdAt: 1000 as UnixMillis,
-    startedAt: 1000 as UnixMillis,
+    createdAt: toUnixMillis(1000),
+    startedAt: toUnixMillis(1000),
     completedAt: null,
     idempotencyKey: null,
-    lastHeartbeatAt: 1000 as UnixMillis,
+    lastHeartbeatAt: toUnixMillis(1000),
     timeoutMs: 30_000,
     scheduledFor: null,
     priority: 0,
@@ -365,7 +366,7 @@ describe("BaseJobWorker", () => {
   describe("handlePollFailure / handlePollSuccess", () => {
     it("backs off after failures and recovers on success", async () => {
       const queue = stubQueue();
-      let clockValue = 1000 as UnixMillis;
+      let clockValue = toUnixMillis(1000);
       const errorFn = vi.fn();
       const logger: Logger = { info: vi.fn(), warn: vi.fn(), error: errorFn };
       worker = new TestJobWorker(queue, {
@@ -391,7 +392,7 @@ describe("BaseJobWorker", () => {
 
       // Advance clock past backoff, poll again
       const countAfterFirstFail = worker.pollCallCount;
-      clockValue = (clockValue + 500) as UnixMillis;
+      clockValue = toUnixMillis(clockValue + 500);
 
       await vi.waitFor(() => {
         expect(worker.pollCallCount).toBeGreaterThan(countAfterFirstFail);
@@ -400,7 +401,7 @@ describe("BaseJobWorker", () => {
       // Disable failures and advance clock to allow recovery
       worker.pollShouldFail = false;
       const countBeforeRecovery = worker.pollCallCount;
-      clockValue = (clockValue + 2000) as UnixMillis;
+      clockValue = toUnixMillis(clockValue + 2000);
 
       await vi.waitFor(() => {
         expect(worker.pollCallCount).toBeGreaterThan(countBeforeRecovery);

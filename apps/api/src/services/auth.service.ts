@@ -13,7 +13,7 @@ import {
   wrapMasterKey,
 } from "@pluralscape/crypto";
 import { accounts, authKeys, recoveryKeys, sessions, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
 import { LoginCredentialsSchema, RegistrationInputSchema } from "@pluralscape/validation";
 import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 
@@ -496,7 +496,7 @@ class LoginThrottledError extends Error {
 
   constructor(windowResetAt: number) {
     super("Too many failed login attempts");
-    this.windowResetAt = windowResetAt as UnixMillis;
+    this.windowResetAt = toUnixMillis(windowResetAt);
   }
 }
 

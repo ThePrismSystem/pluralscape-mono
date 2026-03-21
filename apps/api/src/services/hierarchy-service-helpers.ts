@@ -1,3 +1,4 @@
+import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { and, count, eq } from "drizzle-orm";
 
 import { HTTP_CONFLICT } from "../http.constants.js";
@@ -5,7 +6,7 @@ import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64 } from "../lib/encrypted-blob.js";
 
 import type { BaseHierarchyResult, DependentCheck } from "./hierarchy-service-types.js";
-import type { EncryptedBlob, SystemId, UnixMillis } from "@pluralscape/types";
+import type { EncryptedBlob, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Base field mapper ────────────────────────────────────────────
@@ -26,10 +27,10 @@ export function mapBaseFields(row: {
     systemId: row.systemId as SystemId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
     archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
   };
 }
 

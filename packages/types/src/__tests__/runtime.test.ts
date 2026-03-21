@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { createId, now, toISO } from "../runtime.js";
+import { toUnixMillis } from "../timestamps.js";
 
 import type { SystemId } from "../ids.js";
 import type { ISOTimestamp, UnixMillis } from "../timestamps.js";
@@ -54,7 +55,7 @@ describe("now", () => {
 
 describe("toISO", () => {
   it("produces a valid ISO 8601 string", () => {
-    const ms = 1704067200000 as UnixMillis; // 2024-01-01T00:00:00.000Z
+    const ms = toUnixMillis(1704067200000); // 2024-01-01T00:00:00.000Z
     const iso = toISO(ms);
     expect(iso).toBe("2024-01-01T00:00:00.000Z");
   });
@@ -66,7 +67,7 @@ describe("toISO", () => {
   });
 
   it("returns a branded ISOTimestamp", () => {
-    const ms = 0 as UnixMillis;
+    const ms = toUnixMillis(0);
     expectTypeOf(toISO(ms)).toEqualTypeOf<ISOTimestamp>();
   });
 });

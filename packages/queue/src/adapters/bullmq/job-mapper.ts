@@ -1,3 +1,5 @@
+import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+
 import type {
   JobDefinition,
   JobId,
@@ -5,7 +7,6 @@ import type {
   JobStatus,
   JobType,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 
 /**
@@ -42,16 +43,16 @@ export function fromStoredData(id: JobId, data: StoredJobData): JobDefinition {
     payload: data.payload as Readonly<Record<string, unknown>>,
     attempts: data.attempts,
     maxAttempts: data.maxAttempts,
-    nextRetryAt: (data.nextRetryAt ?? null) as UnixMillis | null,
+    nextRetryAt: toUnixMillisOrNull(data.nextRetryAt ?? null),
     error: data.error ?? null,
     result: data.result ?? null,
-    createdAt: data.createdAt as UnixMillis,
-    startedAt: (data.startedAt ?? null) as UnixMillis | null,
-    completedAt: (data.completedAt ?? null) as UnixMillis | null,
+    createdAt: toUnixMillis(data.createdAt),
+    startedAt: toUnixMillisOrNull(data.startedAt ?? null),
+    completedAt: toUnixMillisOrNull(data.completedAt ?? null),
     idempotencyKey: data.idempotencyKey ?? null,
-    lastHeartbeatAt: (data.lastHeartbeatAt ?? null) as UnixMillis | null,
+    lastHeartbeatAt: toUnixMillisOrNull(data.lastHeartbeatAt ?? null),
     timeoutMs: data.timeoutMs,
-    scheduledFor: (data.scheduledFor ?? null) as UnixMillis | null,
+    scheduledFor: toUnixMillisOrNull(data.scheduledFor ?? null),
     priority: data.priority,
   };
 }

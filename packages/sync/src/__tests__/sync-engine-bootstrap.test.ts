@@ -5,6 +5,7 @@
  * hydration from snapshots + changes, subscription setup.
  */
 import { SODIUM_CONSTANTS } from "@pluralscape/crypto";
+import { toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { SyncEngine } from "../engine/sync-engine.js";
@@ -17,7 +18,7 @@ import type { DocumentKeyResolver } from "../document-key-resolver.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { DocumentKeys } from "../types.js";
 import type { AeadKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
-import type { SystemId, UnixMillis } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Mock factories ──────────────────────────────────────────────────
 
@@ -139,8 +140,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000 as UnixMillis,
-          updatedAt: 1000 as UnixMillis,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           sizeBytes: 100,
           snapshotVersion: 0,
           lastSeq: 0,
@@ -206,8 +207,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000 as UnixMillis,
-          updatedAt: 1000 as UnixMillis,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           sizeBytes: 100,
           snapshotVersion: 0,
           lastSeq: 0,
@@ -239,8 +240,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000 as UnixMillis,
-          updatedAt: 1000 as UnixMillis,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           sizeBytes: 0,
           snapshotVersion: 0,
           lastSeq: 0,
@@ -272,8 +273,8 @@ describe("SyncEngine bootstrap", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000 as UnixMillis,
-          updatedAt: 1000 as UnixMillis,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           sizeBytes: 0,
           snapshotVersion: 0,
           lastSeq: 0,

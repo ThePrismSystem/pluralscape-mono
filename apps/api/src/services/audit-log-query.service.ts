@@ -1,4 +1,5 @@
 import { auditLog } from "@pluralscape/db/pg";
+import { toUnixMillis } from "@pluralscape/types";
 import { and, desc, eq, gt, like, lt, or } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST } from "../http.constants.js";
@@ -73,7 +74,7 @@ function toEntryResult(row: typeof auditLog.$inferSelect): AuditLogEntryResult {
   return {
     id: row.id as AuditLogEntryId,
     eventType: row.eventType,
-    timestamp: row.timestamp as UnixMillis,
+    timestamp: toUnixMillis(row.timestamp),
     actor: row.actor,
     detail: row.detail,
     ipAddress: row.ipAddress,

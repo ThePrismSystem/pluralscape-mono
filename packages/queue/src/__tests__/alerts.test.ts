@@ -1,13 +1,13 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { checkAlerts } from "../observability/alerts.js";
 
 import type { QueueHealthSummary } from "../observability/health.js";
-import type { UnixMillis } from "@pluralscape/types";
 
 function makeSummary(overrides: Partial<QueueHealthSummary> = {}): QueueHealthSummary {
   return {
-    timestamp: 1000 as UnixMillis,
+    timestamp: toUnixMillis(1000),
     pendingCount: 0,
     runningCount: 0,
     dlqDepth: 0,

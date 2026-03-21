@@ -1,5 +1,5 @@
 import { members, systems } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { UpdateSystemBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -20,7 +20,6 @@ import type {
   AccountId,
   EncryptedBlob,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -49,8 +48,8 @@ function toSystemProfileResult(row: {
     id: row.id as SystemId,
     encryptedData: encryptedBlobToBase64OrNull(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
   };
 }
 
@@ -59,7 +58,7 @@ function toSystemProfileResult(row: {
 export async function listSystems(
   db: PostgresJsDatabase,
   accountId: AccountId,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<SystemProfileResult>> {
   const effectiveLimit = Math.min(limit, MAX_PAGE_LIMIT);

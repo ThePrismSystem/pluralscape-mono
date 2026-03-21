@@ -52,8 +52,8 @@ const encryptedKeyMaterialHex = z
   })
   .transform((v) => v.toLowerCase());
 
-/** Transfer code: exactly 8 decimal digits. */
-const TRANSFER_CODE_DIGIT_COUNT = 8;
+/** Transfer code: exactly 10 decimal digits. */
+const TRANSFER_CODE_DIGIT_COUNT = 10;
 
 const code = z
   .string()

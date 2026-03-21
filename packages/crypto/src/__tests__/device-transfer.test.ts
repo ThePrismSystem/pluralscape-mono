@@ -19,9 +19,9 @@ beforeAll(setupSodium);
 afterAll(teardownSodium);
 
 describe("generateTransferCode", () => {
-  it("returns an 8-digit numeric string", () => {
+  it("returns a 10-digit numeric string", () => {
     const { verificationCode } = generateTransferCode();
-    expect(verificationCode).toMatch(/^\d{8}$/);
+    expect(verificationCode).toMatch(/^\d{10}$/);
   });
 
   it("two calls produce different codes", () => {
@@ -165,23 +165,23 @@ describe("encodeQRPayload / decodeQRPayload", () => {
 });
 
 describe("isValidTransferCode", () => {
-  it("accepts exactly 8 digits", () => {
-    expect(isValidTransferCode("12345678")).toBe(true);
-    expect(isValidTransferCode("00000000")).toBe(true);
-    expect(isValidTransferCode("99999999")).toBe(true);
+  it("accepts exactly 10 digits", () => {
+    expect(isValidTransferCode("1234567890")).toBe(true);
+    expect(isValidTransferCode("0000000000")).toBe(true);
+    expect(isValidTransferCode("9999999999")).toBe(true);
   });
 
-  it("rejects 7 digits (too short)", () => {
-    expect(isValidTransferCode("1234567")).toBe(false);
+  it("rejects 8 digits (too short)", () => {
+    expect(isValidTransferCode("12345678")).toBe(false);
   });
 
-  it("rejects 9 digits (too long)", () => {
-    expect(isValidTransferCode("123456789")).toBe(false);
+  it("rejects 11 digits (too long)", () => {
+    expect(isValidTransferCode("12345678901")).toBe(false);
   });
 
   it("rejects non-digit characters", () => {
-    expect(isValidTransferCode("1234567a")).toBe(false);
-    expect(isValidTransferCode("1234-678")).toBe(false);
+    expect(isValidTransferCode("123456789a")).toBe(false);
+    expect(isValidTransferCode("1234-67890")).toBe(false);
   });
 
   it("rejects empty string", () => {

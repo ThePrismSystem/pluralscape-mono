@@ -20,7 +20,7 @@ import type { HierarchyService, HierarchyServiceConfig } from "./hierarchy-servi
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
 import type { ArchivableEntityConfig } from "../lib/entity-lifecycle.js";
-import type { PaginatedResult, PaginationCursor, SystemId } from "@pluralscape/types";
+import type { PaginatedResult, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Factory ────────────────────────────────────────────────────────
@@ -140,7 +140,7 @@ export function createHierarchyService<
     db: PostgresJsDatabase,
     systemId: SystemId,
     auth: AuthContext,
-    cursor?: PaginationCursor,
+    cursor?: string,
     limit = DEFAULT_PAGE_LIMIT,
   ): Promise<PaginatedResult<TResult>> {
     assertSystemOwnership(systemId, auth);

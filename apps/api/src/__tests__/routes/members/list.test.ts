@@ -1,6 +1,6 @@
-import { toCursor } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { toCursor } from "../../../lib/pagination.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -110,10 +110,10 @@ describe("GET /systems/:systemId/members", () => {
     vi.mocked(listMembers).mockResolvedValueOnce(EMPTY_PAGE);
 
     const app = createApp();
-    await app.request(`/systems/${SYS_ID}/members?cursor=mem_abc&limit=10`);
+    await app.request(`/systems/${SYS_ID}/members?cursor=${toCursor("mem_abc")}&limit=10`);
 
     expect(vi.mocked(listMembers)).toHaveBeenCalledWith(expect.anything(), SYS_ID, MOCK_AUTH, {
-      cursor: toCursor("mem_abc"),
+      cursor: "mem_abc",
       limit: 10,
       includeArchived: false,
     });

@@ -14,7 +14,7 @@ import {
   sideSystemMemberships,
   subsystemMemberships,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   CreateMemberBodySchema,
   DuplicateMemberBodySchema,
@@ -41,7 +41,6 @@ import type {
   GroupId,
   MemberId,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -77,10 +76,10 @@ function toMemberResult(row: {
     systemId: row.systemId as SystemId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
     archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
   };
 }
 
@@ -138,7 +137,7 @@ export async function listMembers(
   systemId: SystemId,
   auth: AuthContext,
   opts?: {
-    cursor?: PaginationCursor;
+    cursor?: string;
     limit?: number;
     includeArchived?: boolean;
   },
@@ -745,7 +744,7 @@ export async function listAllMemberMemberships(
       groupId: r.groupId as GroupId,
       memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
-      createdAt: r.createdAt as UnixMillis,
+      createdAt: toUnixMillis(r.createdAt),
     })),
     subsystems: subsystemRows.map((r) => ({
       id: r.id,
@@ -753,7 +752,7 @@ export async function listAllMemberMemberships(
       memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
       encryptedData: encryptedBlobToBase64(r.encryptedData),
-      createdAt: r.createdAt as UnixMillis,
+      createdAt: toUnixMillis(r.createdAt),
     })),
     sideSystems: sideSystemRows.map((r) => ({
       id: r.id,
@@ -761,7 +760,7 @@ export async function listAllMemberMemberships(
       memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
       encryptedData: encryptedBlobToBase64(r.encryptedData),
-      createdAt: r.createdAt as UnixMillis,
+      createdAt: toUnixMillis(r.createdAt),
     })),
     layers: layerRows.map((r) => ({
       id: r.id,
@@ -769,7 +768,7 @@ export async function listAllMemberMemberships(
       memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
       encryptedData: encryptedBlobToBase64(r.encryptedData),
-      createdAt: r.createdAt as UnixMillis,
+      createdAt: toUnixMillis(r.createdAt),
     })),
   };
 }

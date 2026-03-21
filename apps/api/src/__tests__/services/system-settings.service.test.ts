@@ -29,9 +29,10 @@ vi.mock("@pluralscape/db/pg", () => ({
   systems: { id: "id", accountId: "accountId", archived: "archived" },
 }));
 
-vi.mock("@pluralscape/types", () => ({
-  now: vi.fn().mockReturnValue(1700000000000),
-}));
+vi.mock("@pluralscape/types", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@pluralscape/types")>();
+  return { ...actual, now: vi.fn().mockReturnValue(1700000000000) };
+});
 
 vi.mock("@pluralscape/validation", () => ({
   UpdateSystemSettingsBodySchema: {

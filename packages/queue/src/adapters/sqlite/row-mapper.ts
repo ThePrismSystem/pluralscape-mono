@@ -1,5 +1,7 @@
+import { toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
+
 import type { JobRow } from "@pluralscape/db/sqlite";
-import type { JobDefinition, SystemId, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, SystemId } from "@pluralscape/types";
 
 /**
  * Converts a Drizzle job row into a `JobDefinition`.
@@ -16,16 +18,16 @@ export function rowToJob(row: JobRow): JobDefinition {
     payload: (row.payload ?? {}) as Readonly<Record<string, unknown>>,
     attempts: row.attempts,
     maxAttempts: row.maxAttempts,
-    nextRetryAt: (row.nextRetryAt ?? null) as UnixMillis | null,
+    nextRetryAt: toUnixMillisOrNull(row.nextRetryAt ?? null),
     error: row.error ?? null,
     result: row.result ?? null,
-    createdAt: row.createdAt as UnixMillis,
-    startedAt: (row.startedAt ?? null) as UnixMillis | null,
-    completedAt: (row.completedAt ?? null) as UnixMillis | null,
+    createdAt: toUnixMillis(row.createdAt),
+    startedAt: toUnixMillisOrNull(row.startedAt ?? null),
+    completedAt: toUnixMillisOrNull(row.completedAt ?? null),
     idempotencyKey: row.idempotencyKey ?? null,
-    lastHeartbeatAt: (row.lastHeartbeatAt ?? null) as UnixMillis | null,
+    lastHeartbeatAt: toUnixMillisOrNull(row.lastHeartbeatAt ?? null),
     timeoutMs: row.timeoutMs,
-    scheduledFor: (row.scheduledFor ?? null) as UnixMillis | null,
+    scheduledFor: toUnixMillisOrNull(row.scheduledFor ?? null),
     priority: row.priority,
   };
 }

@@ -11,6 +11,8 @@ import {
   ROTATION_STATES,
   createId,
   now,
+  toUnixMillis,
+  toUnixMillisOrNull,
 } from "@pluralscape/types";
 import {
   ClaimChunkBodySchema,
@@ -35,7 +37,6 @@ import type {
   RotationItemStatus,
   RotationState,
   SystemId,
-  UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -48,8 +49,8 @@ function toRotationResult(row: typeof bucketKeyRotations.$inferSelect): BucketKe
     fromKeyVersion: row.fromKeyVersion,
     toKeyVersion: row.toKeyVersion,
     state: row.state,
-    initiatedAt: row.initiatedAt as UnixMillis,
-    completedAt: row.completedAt as UnixMillis | null,
+    initiatedAt: toUnixMillis(row.initiatedAt),
+    completedAt: toUnixMillisOrNull(row.completedAt),
     totalItems: row.totalItems,
     completedItems: row.completedItems,
     failedItems: row.failedItems,
@@ -64,8 +65,8 @@ function toItemResult(row: typeof bucketRotationItems.$inferSelect): BucketRotat
     entityId: row.entityId,
     status: row.status,
     claimedBy: row.claimedBy,
-    claimedAt: row.claimedAt as UnixMillis | null,
-    completedAt: row.completedAt as UnixMillis | null,
+    claimedAt: toUnixMillisOrNull(row.claimedAt),
+    completedAt: toUnixMillisOrNull(row.completedAt),
     attempts: row.attempts,
   };
 }
@@ -253,7 +254,7 @@ export async function claimRotationChunk(
   }
 
   const timestamp = now();
-  const staleThreshold = (timestamp - KEY_ROTATION.staleClaimTimeoutMs) as UnixMillis;
+  const staleThreshold = toUnixMillis(timestamp - KEY_ROTATION.staleClaimTimeoutMs);
 
   // Reclaim stale items
   await db

@@ -1,24 +1,18 @@
 import { groupMemberships, groups, members } from "@pluralscape/db/pg";
-import { now, toCursor } from "@pluralscape/types";
+import { now, toUnixMillis } from "@pluralscape/types";
 import { AddGroupMemberBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
 import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
+import { toCursor } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 import { throwOnUniqueViolation } from "../lib/unique-violation.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type {
-  GroupId,
-  MemberId,
-  PaginatedResult,
-  PaginationCursor,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { GroupId, MemberId, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -42,7 +36,7 @@ function toMembershipResult(row: {
     groupId: row.groupId as GroupId,
     memberId: row.memberId as MemberId,
     systemId: row.systemId as SystemId,
-    createdAt: row.createdAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
   };
 }
 
@@ -165,7 +159,7 @@ export async function listGroupMembers(
   systemId: SystemId,
   groupId: GroupId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(systemId, auth);
@@ -224,7 +218,7 @@ export async function listMemberGroupMemberships(
   systemId: SystemId,
   memberId: MemberId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<GroupMembershipResult>> {
   assertSystemOwnership(systemId, auth);

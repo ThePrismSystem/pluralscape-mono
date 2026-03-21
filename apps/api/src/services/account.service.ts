@@ -9,7 +9,7 @@ import {
   wrapMasterKey,
 } from "@pluralscape/crypto";
 import { accounts, sessions, systems } from "@pluralscape/db/pg";
-import { now } from "@pluralscape/types";
+import { now, toUnixMillis } from "@pluralscape/types";
 import { ChangeEmailSchema, ChangePasswordSchema } from "@pluralscape/validation";
 import { and, eq, ne } from "drizzle-orm";
 
@@ -71,8 +71,8 @@ export async function getAccountInfo(
     accountId: row.accountId as AccountId,
     accountType: row.accountType,
     systemId,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
   };
 }
 

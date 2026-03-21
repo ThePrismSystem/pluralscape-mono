@@ -64,8 +64,8 @@ const VALID_SALT_HEX = "aa".repeat(16);
 /** Minimal valid encrypted key material: 40 bytes (nonce 24 + tag 16) as 80 hex chars. */
 const VALID_ENCRYPTED_HEX = "bb".repeat(40);
 
-/** Valid 8-digit transfer code. */
-const VALID_CODE = "12345678";
+/** Valid 10-digit transfer code. */
+const VALID_CODE = "1234567890";
 
 // ── Tests ────────────────────────────────────────────────────────
 

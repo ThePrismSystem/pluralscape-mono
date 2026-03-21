@@ -1,5 +1,5 @@
 import { innerworldEntities, innerworldRegions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateEntityBodySchema, UpdateEntityBodySchema } from "@pluralscape/validation";
 import { and, eq, gt, sql } from "drizzle-orm";
 
@@ -23,7 +23,6 @@ import type {
   InnerWorldEntityId,
   InnerWorldRegionId,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -62,10 +61,10 @@ function toEntityResult(row: {
     regionId: row.regionId as InnerWorldRegionId | null,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
     archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
   };
 }
 
@@ -144,7 +143,7 @@ export async function listEntities(
   systemId: SystemId,
   auth: AuthContext,
   opts?: {
-    cursor?: PaginationCursor;
+    cursor?: string;
     limit?: number;
     regionId?: InnerWorldRegionId;
     includeArchived?: boolean;

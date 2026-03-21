@@ -1,5 +1,5 @@
 import { lifecycleEvents } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import {
   CreateLifecycleEventBodySchema,
   validateLifecycleMetadata,
@@ -61,8 +61,8 @@ function toLifecycleEventResult(row: {
     id: row.id as LifecycleEventId,
     systemId: row.systemId as SystemId,
     eventType: row.eventType,
-    occurredAt: row.occurredAt as UnixMillis,
-    recordedAt: row.recordedAt as UnixMillis,
+    occurredAt: toUnixMillis(row.occurredAt),
+    recordedAt: toUnixMillis(row.recordedAt),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     plaintextMetadata: row.plaintextMetadata ?? null,
   };

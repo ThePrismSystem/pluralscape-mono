@@ -1,9 +1,10 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import type { JobHandlerContext } from "@pluralscape/queue";
 import type { ConflictPersistenceAdapter } from "@pluralscape/sync";
 import type { OfflineQueueAdapter } from "@pluralscape/sync/adapters";
-import type { JobDefinition, JobId, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobId } from "@pluralscape/types";
 
 // ── Mock deps ────────────────────────────────────────────────────────
 
@@ -56,8 +57,8 @@ function stubJob(): JobDefinition<"sync-queue-cleanup"> {
     nextRetryAt: null,
     error: null,
     result: null,
-    createdAt: 0 as UnixMillis,
-    startedAt: 0 as UnixMillis,
+    createdAt: toUnixMillis(0),
+    startedAt: toUnixMillis(0),
     completedAt: null,
     idempotencyKey: null,
     lastHeartbeatAt: null,

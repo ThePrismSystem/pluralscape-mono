@@ -19,7 +19,6 @@ import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EncryptedBlob,
   PaginatedResult,
-  PaginationCursor,
   SubsystemId,
   SystemId,
   UnixMillis,
@@ -192,7 +191,7 @@ export const listSubsystems: (
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
 ) => Promise<PaginatedResult<SubsystemResult>> = subsystemHierarchy.list;
 

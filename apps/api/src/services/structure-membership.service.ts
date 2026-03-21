@@ -7,7 +7,7 @@ import {
   subsystemMemberships,
   subsystems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { AddStructureMembershipBodySchema } from "@pluralscape/validation";
 import { and, eq, gt } from "drizzle-orm";
 
@@ -29,7 +29,6 @@ import type {
   AuditEventType,
   EncryptedBlob,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -79,7 +78,7 @@ interface MembershipEntityConfig {
     db: PostgresJsDatabase,
     entityId: string,
     systemId: SystemId,
-    cursor: PaginationCursor | undefined,
+    cursor: string | undefined,
     limit: number,
   ) => Promise<NormalizedRow[]>;
 }
@@ -92,7 +91,7 @@ function toMembershipResult(row: NormalizedRow): StructureMembershipResult {
     entityId: row.entityId,
     systemId: row.systemId as SystemId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
-    createdAt: row.createdAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
   };
 }
 
@@ -382,7 +381,7 @@ async function listMembershipsGeneric(
   entityId: string,
   auth: AuthContext,
   cfg: MembershipEntityConfig,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
   assertSystemOwnership(systemId, auth);
@@ -488,7 +487,7 @@ export function listSubsystemMemberships(
   systemId: SystemId,
   subsystemId: string,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
   return listMembershipsGeneric(
@@ -507,7 +506,7 @@ export function listSideSystemMemberships(
   systemId: SystemId,
   sideSystemId: string,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
   return listMembershipsGeneric(
@@ -526,7 +525,7 @@ export function listLayerMemberships(
   systemId: SystemId,
   layerId: string,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
 ): Promise<PaginatedResult<StructureMembershipResult>> {
   return listMembershipsGeneric(db, systemId, layerId, auth, ENTITY_CONFIGS.layer, cursor, limit);

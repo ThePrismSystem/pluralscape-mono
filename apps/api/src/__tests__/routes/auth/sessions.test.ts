@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { toCursor } from "../../../lib/pagination.js";
 import {
   mockAuditWriterFactory,
   mockDbFactory,
@@ -124,7 +125,7 @@ describe("sessions route", () => {
       });
 
       const app = createApp();
-      const res = await app.request("/auth/sessions?cursor=sess_abc&limit=10");
+      const res = await app.request(`/auth/sessions?cursor=${toCursor("sess_abc")}&limit=10`);
 
       expect(res.status).toBe(200);
       expect(vi.mocked(listSessions)).toHaveBeenCalledWith({}, "acct_test", "sess_abc", 10);

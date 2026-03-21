@@ -1,4 +1,3 @@
-import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -184,7 +183,7 @@ describe("listMembers", () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.hasMore).toBe(true);
-    expect(result.nextCursor).toBe("mem_a");
+    expect(result.nextCursor).not.toBeNull();
   });
 
   it("caps limit to MAX_MEMBER_LIMIT", async () => {
@@ -211,7 +210,7 @@ describe("listMembers", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await listMembers(db, SYSTEM_ID, AUTH, { cursor: toCursor("mem_cursor-id") });
+    await listMembers(db, SYSTEM_ID, AUTH, { cursor: "mem_cursor-id" });
 
     expect(chain.where).toHaveBeenCalled();
   });

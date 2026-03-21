@@ -1,7 +1,16 @@
-import { toCursor } from "@pluralscape/types";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { CursorExpiredError } from "@pluralscape/types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildPaginatedResult, parsePaginationLimit } from "../../lib/pagination.js";
+import { ApiHttpError } from "../../lib/api-error.js";
+import {
+  buildPaginatedResult,
+  fromCursor,
+  parseCursor,
+  parsePaginationLimit,
+  toCursor,
+} from "../../lib/pagination.js";
+
+import type { PaginationCursor } from "@pluralscape/types";
 
 describe("parsePaginationLimit", () => {
   afterEach(() => {
@@ -101,7 +110,10 @@ describe("buildPaginatedResult", () => {
     expect(result.items).toHaveLength(2);
     expect(result.items[1]).toEqual({ id: "b", name: "Bob" });
     expect(result.hasMore).toBe(true);
-    expect(result.nextCursor).toEqual(toCursor("b"));
+    expect(result.nextCursor).not.toBeNull();
+    if (result.nextCursor) {
+      expect(fromCursor(result.nextCursor, 86_400_000)).toBe("b");
+    }
   });
 
   it("applies mapper to each row", () => {
@@ -112,5 +124,98 @@ describe("buildPaginatedResult", () => {
     });
     const result = buildPaginatedResult(rows, 5, mapper);
     expect(result.items).toEqual([{ id: "x", doubled: 84 }]);
+  });
+});
+
+describe("toCursor / fromCursor", () => {
+  const TTL_MS = 86_400_000; // 24 hours
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-15T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("round-trips an ID", () => {
+    const cursor = toCursor("mem_abc123");
+    const id = fromCursor(cursor, TTL_MS);
+    expect(id).toBe("mem_abc123");
+  });
+
+  it("produces a base64url-encoded string", () => {
+    const cursor = toCursor("test-id");
+    expect(cursor).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it("throws CursorExpiredError for expired cursor", () => {
+    const cursor = toCursor("test-id");
+    vi.advanceTimersByTime(TTL_MS + 1);
+    expect(() => fromCursor(cursor, TTL_MS)).toThrow(CursorExpiredError);
+  });
+
+  it("accepts cursor just within TTL", () => {
+    const cursor = toCursor("test-id");
+    vi.advanceTimersByTime(TTL_MS - 1);
+    expect(fromCursor(cursor, TTL_MS)).toBe("test-id");
+  });
+
+  it("throws CursorExpiredError for malformed base64", () => {
+    expect(() => fromCursor("!!!not-valid!!!" as PaginationCursor, TTL_MS)).toThrow(
+      CursorExpiredError,
+    );
+  });
+
+  it("throws CursorExpiredError for valid base64 but invalid JSON", () => {
+    const notJson = Buffer.from("not json").toString("base64url") as PaginationCursor;
+    expect(() => fromCursor(notJson, TTL_MS)).toThrow(CursorExpiredError);
+  });
+
+  it("throws CursorExpiredError for JSON missing required fields", () => {
+    const missingId = Buffer.from(JSON.stringify({ ts: Date.now() })).toString(
+      "base64url",
+    ) as PaginationCursor;
+    expect(() => fromCursor(missingId, TTL_MS)).toThrow(CursorExpiredError);
+  });
+});
+
+describe("parseCursor", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-15T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns undefined for undefined input", () => {
+    expect(parseCursor(undefined)).toBeUndefined();
+  });
+
+  it("returns undefined for empty string", () => {
+    expect(parseCursor("")).toBeUndefined();
+  });
+
+  it("returns decoded ID for valid cursor", () => {
+    const cursor = toCursor("sys_abc");
+    expect(parseCursor(cursor)).toBe("sys_abc");
+  });
+
+  it("throws ApiHttpError INVALID_CURSOR for malformed cursor", () => {
+    expect(() => parseCursor("garbage")).toThrow(ApiHttpError);
+    try {
+      parseCursor("garbage");
+    } catch (error: unknown) {
+      expect((error as ApiHttpError).code).toBe("INVALID_CURSOR");
+    }
+  });
+
+  it("throws ApiHttpError INVALID_CURSOR for expired cursor", () => {
+    const cursor = toCursor("sys_abc");
+    vi.advanceTimersByTime(86_400_001);
+    expect(() => parseCursor(cursor)).toThrow(ApiHttpError);
   });
 });

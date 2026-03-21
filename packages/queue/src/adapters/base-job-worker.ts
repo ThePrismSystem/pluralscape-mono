@@ -1,4 +1,4 @@
-import { extractErrorMessage } from "@pluralscape/types";
+import { extractErrorMessage, toUnixMillis } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 
 import {
@@ -52,7 +52,7 @@ export abstract class BaseJobWorker implements JobWorker {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   protected readonly inFlight = new Map<JobId, AbortController>();
   private consecutivePollFailures = 0;
-  private nextPollAt = 0 as UnixMillis;
+  private nextPollAt = toUnixMillis(0);
 
   constructor(queue: JobQueue, options: BaseJobWorkerOptions) {
     this.queue = queue;
@@ -144,7 +144,7 @@ export abstract class BaseJobWorker implements JobWorker {
    */
   protected handlePollFailure(err: unknown): void {
     this.consecutivePollFailures++;
-    this.nextPollAt = (this.clock() + pollBackoffMs(this.consecutivePollFailures)) as UnixMillis;
+    this.nextPollAt = toUnixMillis(this.clock() + pollBackoffMs(this.consecutivePollFailures));
     this.logger.error("worker.poll-failed", { error: extractErrorMessage(err) });
   }
 

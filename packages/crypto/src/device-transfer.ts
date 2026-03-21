@@ -2,16 +2,16 @@
  * Device transfer protocol — transfers encrypted master key between devices.
  *
  * Security model:
- * - Verification code: 8 decimal digits (~26.5 bits entropy)
+ * - Verification code: 10 decimal digits (~33.2 bits entropy)
  * - Protected by Argon2id mobile profile (32 MiB / 2 iterations) to slow brute force
  * - Transfer sessions expire after 5 minutes (TRANSFER_TIMEOUT_MS)
  * - QR payload includes cleartext verification code for convenience — security relies
  *   on physical proximity to the source device's screen (single-factor)
  * - To enable two-factor verification, remove `code` from QR payload and require
  *   separate manual entry on the target device
- * - Offline brute force of the full code space is theoretically feasible (~28 hours
- *   on a single 2024-era GPU per hashcat benchmarks) but mitigated by the 5-minute
- *   server-side timeout for online attacks
+ * - Offline brute force of the full code space is computationally expensive
+ *   (~2,800 hours on a single 2024-era GPU per hashcat benchmarks) and mitigated
+ *   by the 5-minute server-side timeout for online attacks
  */
 
 import { KDF_KEY_BYTES, PWHASH_SALT_BYTES } from "./crypto.constants.js";
@@ -26,22 +26,25 @@ import type { EncryptedPayload } from "./symmetric.js";
 import type { AeadKey, KdfMasterKey, PwhashSalt } from "./types.js";
 
 /** Number of digits in a transfer code. */
-const TRANSFER_CODE_LENGTH = 8;
+const TRANSFER_CODE_LENGTH = 10;
 
-/** Number of random bytes used to generate a transfer code. */
-const TRANSFER_CODE_RANDOM_BYTES = 4;
+/** Number of random bytes used to generate a transfer code (8 bytes for BigInt range). */
+const TRANSFER_CODE_RANDOM_BYTES = 8;
 
-/** Maximum decimal value of the transfer code (10^8). */
-const TRANSFER_CODE_MAX = 100_000_000;
+/** Maximum decimal value of the transfer code (10^10). */
+const TRANSFER_CODE_MAX = 10_000_000_000n;
 
 /** Transfer sessions expire after 5 minutes. */
 export const TRANSFER_TIMEOUT_MS = 300_000;
 
-/** Transfer code validation pattern — exactly 8 decimal digits. */
-const TRANSFER_CODE_PATTERN = /^\d{8}$/;
+/** Transfer code validation pattern — exactly 10 decimal digits. */
+const TRANSFER_CODE_PATTERN = /^\d{10}$/;
 
-/** Maximum uint32 value + 1 (2^32). */
-const UINT32_RANGE = 0x100000000;
+/** Multiplier to combine two uint32 values into a 64-bit BigInt (2^32). */
+const UINT32_MULTIPLIER = 0x100000000n;
+
+/** Byte offset for the second uint32 in an 8-byte buffer. */
+const UINT32_HI_BYTE_OFFSET = 4;
 
 /** Number of random bytes for UUID v4 generation. */
 const UUID_RANDOM_BYTES = 16;
@@ -75,7 +78,7 @@ const UUID_SECTION_5_END = 16;
 
 /** Result of initiating a device transfer. */
 export interface TransferInitiation {
-  /** 8-digit numeric verification code shown to the user. */
+  /** 10-digit numeric verification code shown to the user. */
   readonly verificationCode: string;
   /** Salt used to derive the transfer key via Argon2id. */
   readonly codeSalt: PwhashSalt;
@@ -93,13 +96,16 @@ export interface DecodedQRPayload {
 // ── Internal helpers ────────────────────────────────────────────────────────
 
 /** Generate an unbiased random integer in [0, TRANSFER_CODE_MAX) via rejection sampling. */
-function generateUniformCode(): number {
+function generateUniformCode(): bigint {
   const adapter = getSodium();
-  const maxUnbiased = Math.floor(UINT32_RANGE / TRANSFER_CODE_MAX) * TRANSFER_CODE_MAX;
+  const uint64Range = UINT32_MULTIPLIER * UINT32_MULTIPLIER; // 2^64
+  const maxUnbiased = (uint64Range / TRANSFER_CODE_MAX) * TRANSFER_CODE_MAX;
   for (;;) {
     const rawBytes = adapter.randomBytes(TRANSFER_CODE_RANDOM_BYTES);
     const view = new DataView(rawBytes.buffer, rawBytes.byteOffset, rawBytes.byteLength);
-    const value = view.getUint32(0, true);
+    const hi = BigInt(view.getUint32(0, true));
+    const lo = BigInt(view.getUint32(UINT32_HI_BYTE_OFFSET, true));
+    const value = hi * UINT32_MULTIPLIER + lo;
     if (value < maxUnbiased) return value % TRANSFER_CODE_MAX;
   }
 }
@@ -147,7 +153,7 @@ function isQRPayloadShape(v: unknown): v is { requestId: string; code: string; s
 export function generateTransferCode(): TransferInitiation {
   const adapter = getSodium();
   const codeSalt = adapter.randomBytes(PWHASH_SALT_BYTES) as PwhashSalt;
-  const verificationCode = String(generateUniformCode()).padStart(TRANSFER_CODE_LENGTH, "0");
+  const verificationCode = generateUniformCode().toString().padStart(TRANSFER_CODE_LENGTH, "0");
   const requestId = generateUUIDv4();
   return { verificationCode, codeSalt, requestId };
 }
@@ -155,8 +161,8 @@ export function generateTransferCode(): TransferInitiation {
 /**
  * Derive a symmetric transfer key from a transfer code and salt using Argon2id.
  *
- * Argon2id is used (rather than HKDF) because the transfer code has only ~26.5 bits
- * of entropy (8 decimal digits), making brute-force expensive.
+ * Argon2id is used (rather than HKDF) because the transfer code has only ~33.2 bits
+ * of entropy (10 decimal digits), making brute-force expensive.
  *
  * Both devices must call this with the same code and salt to obtain the same key.
  */

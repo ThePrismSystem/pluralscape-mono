@@ -7,6 +7,7 @@
  *
  * The factory function is called before each test to produce a fresh, empty queue.
  */
+import { toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -18,7 +19,7 @@ import {
 import { dequeueOrFail, makeJobParams, testSystemId } from "./helpers.js";
 
 import type { JobQueue } from "../job-queue.js";
-import type { JobId, JobType, RetryPolicy, UnixMillis } from "@pluralscape/types";
+import type { JobId, JobType, RetryPolicy } from "@pluralscape/types";
 
 const GHOST_JOB_ID = "job_ghost" as JobId;
 
@@ -55,7 +56,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
     describe("scheduled jobs", () => {
       it("does not dequeue a job before its scheduledFor time", async () => {
         const queue = factory();
-        const futureTime = (Date.now() + 60_000) as UnixMillis;
+        const futureTime = toUnixMillis(Date.now() + 60_000);
         await queue.enqueue(makeJobParams({ scheduledFor: futureTime }));
         const dequeued = await queue.dequeue();
         expect(dequeued).toBeNull();
@@ -63,7 +64,7 @@ export function runJobQueueContract(factory: () => JobQueue): void {
 
       it("dequeues a job once its scheduledFor time has passed", async () => {
         const queue = factory();
-        const pastTime = (Date.now() - 1000) as UnixMillis;
+        const pastTime = toUnixMillis(Date.now() - 1000);
         const job = await queue.enqueue(makeJobParams({ scheduledFor: pastTime }));
         const dequeued = await queue.dequeue();
         expect(dequeued?.id).toBe(job.id);

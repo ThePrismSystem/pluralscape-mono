@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { InMemoryJobMetrics } from "../observability/job-metrics.js";
@@ -44,7 +45,7 @@ describe("ObservableJobQueue", () => {
   });
 
   it("records complete metric and logs on acknowledge", async () => {
-    let t = 1000 as UnixMillis;
+    let t = toUnixMillis(1000);
     const clock = (): UnixMillis => t;
     const { inner, metrics, info, queue } = makeObservable(clock);
 
@@ -53,7 +54,7 @@ describe("ObservableJobQueue", () => {
     const running = await inner.dequeue();
     if (running === null) throw new Error("Expected a running job");
 
-    t = 1500 as UnixMillis;
+    t = toUnixMillis(1500);
     await queue.acknowledge(running.id, {});
 
     expect(metrics.getTypeMetrics("sync-push").completed).toBe(1);

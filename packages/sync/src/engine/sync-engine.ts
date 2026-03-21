@@ -5,6 +5,7 @@
  * and outbound change submission. Uses EncryptedSyncSession for CRDT
  * operations and the adapter interfaces for I/O.
  */
+import { NoActiveSessionError } from "../errors.js";
 import { createDocument } from "../factories/document-factory.js";
 import { mapConcurrent } from "../map-concurrent.js";
 import { replayOfflineQueue } from "../offline-queue-manager.js";
@@ -225,7 +226,7 @@ export class SyncEngine {
     return this.enqueueDocumentOperation(docId, async () => {
       const session = this.sessions.get(docId);
       if (!session) {
-        throw new Error(`No active session for document: ${docId}`);
+        throw new NoActiveSessionError(docId);
       }
 
       // Produce encrypted change (no seq yet)

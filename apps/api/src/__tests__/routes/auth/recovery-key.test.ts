@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, UnixMillis } from "@pluralscape/types";
+import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -60,7 +61,7 @@ describe("GET /auth/recovery-key/status", () => {
   it("returns status with active key", async () => {
     vi.mocked(getRecoveryKeyStatus).mockResolvedValueOnce({
       hasActiveKey: true,
-      createdAt: 1000 as UnixMillis,
+      createdAt: toUnixMillis(1000),
     });
 
     const app = createApp();
@@ -90,7 +91,7 @@ describe("GET /auth/recovery-key/status", () => {
   it("passes account ID from auth context to service", async () => {
     vi.mocked(getRecoveryKeyStatus).mockResolvedValueOnce({
       hasActiveKey: true,
-      createdAt: 1000 as UnixMillis,
+      createdAt: toUnixMillis(1000),
     });
 
     const app = createApp();

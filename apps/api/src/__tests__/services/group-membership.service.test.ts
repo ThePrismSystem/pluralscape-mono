@@ -1,4 +1,3 @@
-import { toCursor } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "../helpers/mock-db.js";
@@ -224,7 +223,7 @@ describe("listMemberGroupMemberships", () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.hasMore).toBe(true);
-    expect(result.nextCursor).toBe("grp_group-1");
+    expect(result.nextCursor).not.toBeNull();
   });
 
   it("applies cursor filter when cursor provided", async () => {
@@ -234,13 +233,7 @@ describe("listMemberGroupMemberships", () => {
     // membership list with cursor applied
     chain.limit.mockResolvedValueOnce([makeMembershipRow({ groupId: "grp_group-3" })]);
 
-    const result = await listMemberGroupMemberships(
-      db,
-      SYSTEM_ID,
-      MEMBER_ID,
-      AUTH,
-      toCursor("grp_group-2"),
-    );
+    const result = await listMemberGroupMemberships(db, SYSTEM_ID, MEMBER_ID, AUTH, "grp_group-2");
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0]?.groupId).toBe("grp_group-3");

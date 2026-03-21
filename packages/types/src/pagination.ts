@@ -11,9 +11,13 @@ export interface PaginatedResult<T> {
   readonly totalCount: number | null;
 }
 
-/** Cast a branded ID to a PaginationCursor for use as a pagination token. */
-export function toCursor(id: string): PaginationCursor {
-  return id as PaginationCursor;
+/** Thrown when a pagination cursor is expired or malformed. */
+export class CursorExpiredError extends Error {
+  override readonly name = "CursorExpiredError" as const;
+
+  constructor(message = "Pagination cursor has expired", options?: ErrorOptions) {
+    super(message, options);
+  }
 }
 
 /** Parameters for offset-based pagination. */

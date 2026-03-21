@@ -1,9 +1,9 @@
-import { ID_PREFIXES, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { getDb } from "../../lib/db.js";
 import { requireIdParam } from "../../lib/id-param.js";
-import { parsePaginationLimit } from "../../lib/pagination.js";
+import { parseCursor, parsePaginationLimit } from "../../lib/pagination.js";
 import { filterFields, parseSparseFields } from "../../lib/sparse-fieldset.js";
 import { createCategoryRateLimiter } from "../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../service.constants.js";
@@ -36,13 +36,7 @@ listRoute.get("/", async (c) => {
   const fields = parseSparseFields(c.req.query("fields"), GROUP_FIELDS);
 
   const db = await getDb();
-  const result = await listGroups(
-    db,
-    systemId,
-    auth,
-    cursorParam ? toCursor(cursorParam) : undefined,
-    limit,
-  );
+  const result = await listGroups(db, systemId, auth, parseCursor(cursorParam), limit);
 
   if (!fields) return c.json(result);
 

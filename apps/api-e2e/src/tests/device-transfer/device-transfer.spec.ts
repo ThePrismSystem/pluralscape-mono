@@ -64,7 +64,7 @@ test.describe("Device transfer endpoints", () => {
     // Try to complete with wrong code
     const completeRes = await request.post(`/v1/account/device-transfer/${transferId}/complete`, {
       headers: authHeaders,
-      data: { code: "00000000" },
+      data: { code: "0000000000" },
     });
     expect(completeRes.status()).toBe(401);
   });
@@ -75,7 +75,7 @@ test.describe("Device transfer endpoints", () => {
   }) => {
     const res = await request.post("/v1/account/device-transfer/dtr_nonexistent/complete", {
       headers: authHeaders,
-      data: { code: "12345678" },
+      data: { code: "1234567890" },
     });
     expect(res.status()).toBe(404);
   });
@@ -94,7 +94,7 @@ test.describe("Device transfer endpoints", () => {
     for (let i = 0; i < 5; i++) {
       const res = await request.post(`/v1/account/device-transfer/${transferId}/complete`, {
         headers: authHeaders,
-        data: { code: "00000000" },
+        data: { code: "0000000000" },
       });
       expect(res.status()).toBe(401);
     }
@@ -102,7 +102,7 @@ test.describe("Device transfer endpoints", () => {
     // 6th attempt should also fail (transfer is now expired)
     const finalRes = await request.post(`/v1/account/device-transfer/${transferId}/complete`, {
       headers: authHeaders,
-      data: { code: "00000000" },
+      data: { code: "0000000000" },
     });
     // Transfer is expired, query returns no pending row → 404
     expect(finalRes.status()).toBe(404);
