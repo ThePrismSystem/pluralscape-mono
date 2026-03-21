@@ -11,7 +11,6 @@
 
 - ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Second-pass zero-knowledge hardening for member-identifying columns ([db-jpjm](.beans/db-jpjm--second-pass-zero-knowledge-hardening-for-member-id.md))
 - ![feature](https://img.shields.io/badge/feature-0e8a16?style=flat-square) Official client SDKs ([ps-pzai](.beans/ps-pzai--official-client-sdks.md))
-- ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) M3 completion documentation update ([ps-itqv](.beans/ps-itqv--m3-completion-documentation-update.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Document webhook secret rotation procedure ([api-4pl2](.beans/api-4pl2--document-webhook-secret-rotation-procedure.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Audit and fix N+1 query patterns in API routes ([api-628l](.beans/api-628l--audit-and-fix-n1-query-patterns-in-api-routes.md))
 - ![task](https://img.shields.io/badge/task-1d76db?style=flat-square) Wire audit log cleanup job scheduling ([api-enp2](.beans/api-enp2--wire-audit-log-cleanup-job-scheduling.md))

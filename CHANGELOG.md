@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+The format is loosely based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), using milestone headers instead of version numbers during pre-production development.
 
 ## [Unreleased]
 
@@ -52,7 +52,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Lifecycle events — type-specific validation (ADR 026), cursor-based pagination
 - Audit log — query endpoint with resourceType filtering, PII cleanup scheduling
 - OpenAPI 3.1 specification — 155 operations across 20 route domains with client-side plaintext schemas for E2E encryption
-- ADR 023: Zod-type alignment
 
 ### Fixed
 
@@ -67,7 +66,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Community files: Code of Conduct, Contributing guide, Security policy
 - PR template with review checklist
 - `.gitignore`, `.editorconfig`
-- Architecture Decision Records (ADRs 001-022):
+- Architecture Decision Records (ADRs 001-023):
   - ADR 001: AGPL-3.0 license
   - ADR 002: Frontend framework (Expo / React Native)
   - ADR 003: API framework (Hono + tRPC + REST on Bun)
@@ -90,6 +89,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - ADR 020: RLS denormalization (cached system_id/account_id)
   - ADR 021: Non-system account model (viewer accounts)
   - ADR 022: System structure snapshots
+  - ADR 023: Zod-type alignment — strategy for keeping Zod schemas synchronized with TypeScript types
 - Encryption architecture research (`docs/planning/encryption-research.md`)
 - Audits:
   - License compatibility audit (`docs/audits/001-license-compatibility.md`)

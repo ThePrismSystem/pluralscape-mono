@@ -12,50 +12,18 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), and 3 (Sync and Real-Time) are complete. The full REST API is implemented with 155 operations across 20 route domains, documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
 
-Milestone 3 delivered:
-
-- Encrypted CRDT sync — Automerge relay, sync sessions, document topology, subscription profiles
-- WebSocket sync server — binary protocol, bounded subscriptions, auth timeout, graceful shutdown
-- SSE notification stream — heartbeat, reconnect replay, per-account fan-out
-- Offline queue and replay — batched drain, causal ordering, exponential backoff
-- Conflict resolution — post-merge validation, cycle detection, sort-order repair
-- Multi-device key transfer — device transfer protocol, code entropy, attempt limiting
-- Valkey pub/sub adapter — cross-instance fan-out, auto-resubscribe on reconnect
-- E2E test suite — Playwright, 51 tests covering auth, sync, SSE, device transfer, members
-- Security audit remediation — 42 HIGH+MEDIUM findings, 28 LOW-severity findings, M2 scorecard remediation
-
-See the full [milestone roadmap](docs/planning/milestones.md) and [feature specification](docs/planning/features.md).
+Milestone 3 delivered encrypted CRDT sync, WebSocket/SSE transport, offline queue with replay, conflict resolution, multi-device key transfer, a Playwright E2E suite, and comprehensive security audit remediation. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
 
 ## Test Suite
 
-5,499 tests across 380 test files + 51 E2E tests — all passing.
-
-| Metric     | Coverage |
-| ---------- | -------- |
-| Statements | 94.82%   |
-| Branches   | 84.16%   |
-| Functions  | 94.57%   |
-| Lines      | 95.22%   |
-
-Coverage by package:
-
-| Package                   | Statements | Notes                                                           |
-| ------------------------- | ---------- | --------------------------------------------------------------- |
-| `@pluralscape/types`      | 100%       | Runtime validators and API constants fully covered              |
-| `@pluralscape/db`         | 100%       | Schema, helpers, RLS, and views                                 |
-| `@pluralscape/queue`      | 100%       | Job queue, retry policies, DLQ, observability                   |
-| `@pluralscape/storage`    | 100%       | S3 + filesystem adapters, quota management, lifecycle           |
-| `@pluralscape/validation` | 100%       | Shared Zod schemas with contract tests                          |
-| `@pluralscape/crypto`     | 98.70%     | Full coverage across all crypto operations                      |
-| `@pluralscape/sync`       | 95.98%     | Encrypted CRDT relay and session management                     |
-| `@pluralscape/i18n`       | 95.20%     | Locale formatting, nomenclature, and React integration          |
-| `@pluralscape/api`        | 94.44%     | 25 service modules, 90+ route handlers, middleware, auth, audit |
+Unit and integration tests run via Vitest; E2E tests via Playwright (`apps/api-e2e`). Coverage is enforced in CI — run `pnpm test:coverage` for a current report.
 
 ```bash
 pnpm test              # Run all tests
 pnpm test:unit         # Unit tests only
 pnpm test:integration  # Integration tests only
 pnpm test:coverage     # Tests with coverage report
+pnpm test:e2e          # E2E tests (Playwright)
 ```
 
 ## Values
