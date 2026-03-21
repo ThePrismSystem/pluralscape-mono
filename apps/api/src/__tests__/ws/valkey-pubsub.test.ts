@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ValkeyPubSub } from "../../ws/valkey-pubsub.js";
 
-import type { PubSubClient, PubSubClientFactory } from "../../ws/valkey-pubsub.js";
+import type { PubSubClient, PubSubClientFactory, PubSubLogger } from "../../ws/valkey-pubsub.js";
 
 // ── Mock helpers ────────────────────────────────────────────────────
 
@@ -73,12 +73,20 @@ function pub(): MockRedisInstance {
 
 // ── Tests ───────────────────────────────────────────────────────────
 
+const mockLogger: PubSubLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+};
+
 describe("ValkeyPubSub", () => {
   let pubsub: ValkeyPubSub;
 
   beforeEach(() => {
     mocks = [];
-    pubsub = new ValkeyPubSub("server-1");
+    vi.clearAllMocks();
+    pubsub = new ValkeyPubSub("server-1", mockLogger);
   });
 
   afterEach(async () => {

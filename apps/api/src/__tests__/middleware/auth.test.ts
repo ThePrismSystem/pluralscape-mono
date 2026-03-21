@@ -332,7 +332,8 @@ describe("authMiddleware", () => {
     // Request should still succeed — fire-and-forget error is caught
     expect(res.status).toBe(200);
 
-    // Wait for the microtask to complete
+    // Flush fire-and-forget promise — no fake timers here since the
+    // delay is waiting for a real async void operation to settle.
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(mockLogError).toHaveBeenCalledWith(

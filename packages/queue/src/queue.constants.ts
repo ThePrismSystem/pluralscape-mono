@@ -37,6 +37,9 @@ export const SHUTDOWN_POLL_MS = 10;
 /** Cron expression for daily audit log cleanup (03:00 UTC). */
 export const AUDIT_LOG_CLEANUP_CRON = "0 3 * * *";
 
+/** Radix for base-36 encoding of job worker tokens. */
+export const BASE_36 = 36;
+
 /** Calculates backoff delay for poll failures using exponential backoff with cap. */
 export function pollBackoffMs(consecutiveFailures: number): number {
   if (consecutiveFailures <= 0) return 0;

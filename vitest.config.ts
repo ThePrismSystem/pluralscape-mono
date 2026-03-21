@@ -101,6 +101,8 @@ export default defineConfig({
         "packages/queue/src/adapters/bullmq/**/*.ts",
         // storage: interface-only files (no executable code)
         "packages/storage/src/interface.ts",
+        // sync: Bun-only adapters — produce 0% coverage in Node-based vitest
+        "packages/sync/src/adapters/sqlite-driver.ts",
       ],
       reporter: ["text", "lcov", "html"],
       reportsDirectory: "./coverage",

@@ -86,6 +86,11 @@ export async function initiateTransfer(
 
   const transferId = createId("dtr_");
   const createdAt = now();
+  // Security: expired transfer records retain their encrypted key material in
+  // the DB until completeTransfer's WHERE clause filters them out by expiresAt.
+  // A periodic cleanup job (or shorter TTL with eager wipe) is a future
+  // optimization — the risk is minimal since the key material is encrypted
+  // under the Argon2id-derived transfer key, which is never stored.
   const expiresAt = (createdAt + TRANSFER_TIMEOUT_MS) as UnixMillis;
 
   await db.transaction(async (tx) => {

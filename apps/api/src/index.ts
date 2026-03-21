@@ -149,6 +149,7 @@ async function start(): Promise<void> {
     const { ValkeyPubSub } = await import("./ws/valkey-pubsub.js");
     const notifyPubSub = new ValkeyPubSub(
       "notify-" + crypto.randomUUID().slice(0, NOTIFY_SERVER_ID_SUFFIX_LENGTH),
+      logger,
     );
     const connected = await notifyPubSub.connect(valkeyUrl);
     if (connected) {

@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { replayOfflineQueue } from "../offline-queue-manager.js";
+import { DRAIN_BATCH_SIZE } from "../sync.constants.js";
 
 import { nonce, pubkey, sig } from "./test-crypto-helpers.js";
 
@@ -315,6 +316,44 @@ describe("replayOfflineQueue", () => {
     expect(result.skipped).toBe(1); // e3 skipped due to causal dependency
 
     vi.useRealTimers();
+  });
+
+  it("drains multiple batches when queue exceeds DRAIN_BATCH_SIZE", async () => {
+    // Build a full batch (DRAIN_BATCH_SIZE entries) + a partial second batch
+    const fullBatch: OfflineQueueEntry[] = [];
+    for (let i = 0; i < DRAIN_BATCH_SIZE; i++) {
+      fullBatch.push(makeEntry(`e-full-${String(i)}`, "doc_a", i));
+    }
+    const partialBatch: OfflineQueueEntry[] = [
+      makeEntry("e-partial-0", "doc_a", DRAIN_BATCH_SIZE),
+      makeEntry("e-partial-1", "doc_a", DRAIN_BATCH_SIZE + 1),
+    ];
+
+    let drainCallCount = 0;
+    const drainUnsynced = vi.fn().mockImplementation(() => {
+      drainCallCount++;
+      if (drainCallCount === 1) return Promise.resolve(fullBatch);
+      return Promise.resolve(partialBatch);
+    });
+
+    const offlineQueueAdapter: OfflineQueueAdapter = {
+      enqueue: vi.fn().mockResolvedValue("mock-id"),
+      drainUnsynced,
+      markSynced: vi.fn().mockResolvedValue(undefined),
+      deleteConfirmed: vi.fn().mockResolvedValue(0),
+    };
+
+    const result = await replayOfflineQueue({
+      offlineQueueAdapter,
+      networkAdapter: mockNetworkAdapter(),
+      storageAdapter: mockStorageAdapter(),
+      onError: vi.fn(),
+    });
+
+    expect(drainUnsynced).toHaveBeenCalledTimes(2);
+    expect(result.replayed).toBe(DRAIN_BATCH_SIZE + 2);
+    expect(result.failed).toBe(0);
+    expect(result.skipped).toBe(0);
   });
 
   it("propagates error when drainUnsynced throws", async () => {

@@ -7,11 +7,22 @@
  *
  * On reconnect, automatically resubscribes to all active channels since
  * Valkey drops subscriptions when the connection is lost.
+ *
+ * Security: Valkey pub/sub messages are trusted — they travel over the
+ * internal network between the API server and Valkey. No authentication
+ * or integrity layer is applied to individual messages. If the deployment
+ * boundary changes (e.g. Valkey exposed to untrusted networks), message
+ * signing should be added.
  */
-import { logger } from "../lib/logger.js";
-
 import { WS_VALKEY_CONNECT_TIMEOUT_MS } from "./ws.constants.js";
 import { formatError } from "./ws.utils.js";
+
+import type { Logger } from "@pluralscape/types";
+
+/** Logger interface for pub/sub — extends base Logger with debug level. */
+export type PubSubLogger = Logger & {
+  debug(msg: string, obj?: Record<string, unknown>): void;
+};
 
 /** Minimal ioredis-compatible interface for pub/sub operations. */
 export interface PubSubClient {
@@ -38,9 +49,11 @@ export class ValkeyPubSub {
   private readonly handlers = new Map<string, Set<(message: string) => void>>();
   private readonly activeChannels = new Set<string>();
   private readonly serverId: string;
+  private readonly logger: PubSubLogger;
 
-  constructor(serverId: string) {
+  constructor(serverId: string, logger: PubSubLogger) {
     this.serverId = serverId;
+    this.logger = logger;
   }
 
   /**
@@ -75,10 +88,10 @@ export class ValkeyPubSub {
 
       // Prevent unhandled 'error' events from crashing the process
       this.subscriber.on("error", (err: unknown) => {
-        logger.warn("Valkey subscriber error", { error: formatError(err) });
+        this.logger.warn("Valkey subscriber error", { error: formatError(err) });
       });
       this.publisher.on("error", (err: unknown) => {
-        logger.warn("Valkey publisher error", { error: formatError(err) });
+        this.logger.warn("Valkey publisher error", { error: formatError(err) });
       });
 
       // Wire up message delivery
@@ -90,7 +103,7 @@ export class ValkeyPubSub {
           try {
             handler(message);
           } catch (err) {
-            logger.error("Valkey pub/sub handler error", {
+            this.logger.error("Valkey pub/sub handler error", {
               channel,
               error: formatError(err),
             });
@@ -103,10 +116,10 @@ export class ValkeyPubSub {
         void this.resubscribeAll();
       });
 
-      logger.info("Valkey pub/sub connected", { serverId: this.serverId });
+      this.logger.info("Valkey pub/sub connected", { serverId: this.serverId });
       return true;
     } catch (err) {
-      logger.warn("Failed to connect Valkey pub/sub, using local-only delivery", {
+      this.logger.warn("Failed to connect Valkey pub/sub, using local-only delivery", {
         error: formatError(err),
       });
       this.subscriber = null;
@@ -122,7 +135,7 @@ export class ValkeyPubSub {
       await this.publisher.publish(channel, message);
       return true;
     } catch (err) {
-      logger.warn("Valkey publish failed", {
+      this.logger.warn("Valkey publish failed", {
         channel,
         error: formatError(err),
       });
@@ -153,7 +166,7 @@ export class ValkeyPubSub {
           if (channelHandlers.size === 0) {
             this.handlers.delete(channel);
           }
-          logger.warn("Valkey subscribe failed", {
+          this.logger.warn("Valkey subscribe failed", {
             channel,
             error: formatError(err),
           });
@@ -188,7 +201,7 @@ export class ValkeyPubSub {
           this.activeChannels.delete(channel);
         } catch (err) {
           // Leave activeChannels intact so reconnect logic can retry
-          logger.warn("Valkey unsubscribe failed", {
+          this.logger.warn("Valkey unsubscribe failed", {
             channel,
             error: formatError(err),
           });
@@ -204,7 +217,7 @@ export class ValkeyPubSub {
     if (this.activeChannels.size === 0) return;
 
     const channels = [...this.activeChannels];
-    logger.info("Valkey subscriber reconnected, resubscribing", {
+    this.logger.info("Valkey subscriber reconnected, resubscribing", {
       channels: channels.length,
     });
 
@@ -223,15 +236,15 @@ export class ValkeyPubSub {
         } else {
           failed++;
           // Do NOT delete from activeChannels — next reconnect will retry
-          logger.warn("Valkey resubscribe failed for channel", {
+          this.logger.warn("Valkey resubscribe failed for channel", {
             error: formatError(result.reason),
           });
         }
       }
-      logger.info("Valkey resubscription complete", { succeeded, failed });
+      this.logger.info("Valkey resubscription complete", { succeeded, failed });
     } catch (err: unknown) {
       // I9: Catch errors from the processing itself
-      logger.error("Valkey resubscription processing error", {
+      this.logger.error("Valkey resubscription processing error", {
         error: formatError(err),
       });
     }
@@ -244,14 +257,14 @@ export class ValkeyPubSub {
     try {
       if (this.subscriber) await this.subscriber.disconnect();
     } catch (err) {
-      logger.debug("Valkey subscriber already disconnected", {
+      this.logger.debug("Valkey subscriber already disconnected", {
         error: formatError(err),
       });
     }
     try {
       if (this.publisher) await this.publisher.disconnect();
     } catch (err) {
-      logger.debug("Valkey publisher already disconnected", {
+      this.logger.debug("Valkey publisher already disconnected", {
         error: formatError(err),
       });
     }

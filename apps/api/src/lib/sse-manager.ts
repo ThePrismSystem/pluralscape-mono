@@ -25,6 +25,11 @@ export interface SseEvent {
  * Uses head/tail indices for O(1) push and eviction.
  * Thread-safety note: designed for single-threaded JS runtimes.
  * Each account should have its own buffer instance.
+ *
+ * The monotonic event counter (`nextId`) resets to 1 on server restart.
+ * Clients detect this via Last-Event-ID: if the client's ID >= the server's
+ * nextId, the server was restarted and a `full-sync` event is sent instead
+ * of attempting replay.
  */
 export class SseEventBuffer {
   private readonly ring: (SseEvent | null)[];
@@ -66,6 +71,10 @@ export class SseEventBuffer {
 
   /**
    * Get all events after the given Last-Event-ID within the replay window.
+   *
+   * Uses a linear scan over the ring buffer. This is acceptable because the
+   * buffer is capped at SSE_REPLAY_BUFFER_SIZE (100 entries).
+   *
    * Returns null if:
    * - The ID is too old (outside the buffer) — client missed evicted events
    * - The target ID >= nextId — client has IDs from a previous server instance (restart)

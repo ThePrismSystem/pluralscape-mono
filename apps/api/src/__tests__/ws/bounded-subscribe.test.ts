@@ -202,6 +202,7 @@ describe("bounded subscribe concurrency", () => {
       async getEnvelopesSince() {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
+        // Intentional real delay to simulate async I/O and measure concurrency
         await new Promise<void>((r) => setTimeout(r, 1));
         inFlight--;
         return { envelopes: [], hasMore: false };

@@ -6,11 +6,7 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {
-    "@tanstack/react-query": "^5.66.9",
-    "@trpc/client": "11.14.0",
-    "@trpc/react-query": "11.14.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@pluralscape/eslint-config": "workspace:*",
     "@pluralscape/tsconfig": "workspace:*",
