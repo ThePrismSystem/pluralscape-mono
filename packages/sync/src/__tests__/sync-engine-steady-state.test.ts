@@ -69,6 +69,7 @@ const SYSTEM_CORE_MANIFEST: SyncManifest = {
       updatedAt: 1000 as UnixMillis,
       sizeBytes: 0,
       snapshotVersion: 0,
+      lastSeq: 0,
       archived: false,
     },
   ],

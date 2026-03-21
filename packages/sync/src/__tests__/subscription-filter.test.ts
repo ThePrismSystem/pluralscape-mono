@@ -27,6 +27,7 @@ function entry(
     updatedAt: 1000,
     sizeBytes: 100,
     snapshotVersion: 1,
+    lastSeq: 1,
     archived: false,
     ...overrides,
   };

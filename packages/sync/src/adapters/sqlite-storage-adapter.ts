@@ -157,6 +157,23 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
     return Promise.resolve();
   }
 
+  appendChanges(documentId: string, changes: readonly EncryptedChangeEnvelope[]): Promise<void> {
+    if (changes.length === 0) return Promise.resolve();
+    this.driver.transaction(() => {
+      for (const change of changes) {
+        this.stmts.appendChange.run(
+          documentId,
+          change.seq,
+          change.ciphertext,
+          change.nonce,
+          change.signature,
+          change.authorPublicKey,
+        );
+      }
+    });
+    return Promise.resolve();
+  }
+
   pruneChangesBeforeSnapshot(documentId: string, snapshotVersion: number): Promise<void> {
     this.stmts.pruneChanges.run(documentId, snapshotVersion);
     return Promise.resolve();
