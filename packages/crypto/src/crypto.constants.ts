@@ -106,16 +106,19 @@ export const SAFETY_NUMBER_VERSION = 1;
 /**
  * Number of BLAKE2b iterations used to compute a safety number fingerprint.
  *
- * Follows the Signal protocol's safety number specification: 5200 iterations
- * ensures sufficient computational cost for fingerprint derivation while
- * remaining fast enough for interactive use.
- *
- * @see https://signal.org/docs/specifications/safety-number/
+ * Inspired by the Signal protocol's safety number design, which uses 5200
+ * iterations of SHA-512. This implementation substitutes BLAKE2b for SHA-512
+ * but retains the same iteration count for comparable computational cost.
  */
 export const SAFETY_NUMBER_ITERATIONS = 5200;
 
 /** Output length in bytes for each user's fingerprint before digit encoding. */
 export const SAFETY_NUMBER_HASH_BYTES = 30;
+
+// ── Hex Encoding ────────────────────────────────────────────────────
+
+/** Radix for hexadecimal parsing/formatting. */
+export const HEX_RADIX = 16;
 
 /** All sodium constants as a single frozen object. */
 export const SODIUM_CONSTANTS = Object.freeze({

@@ -43,10 +43,11 @@ import type {
 import type { SodiumAdapter, SodiumConstants } from "./interface.js";
 
 /**
- * Minimal interface for the underlying sodium library.
+ * Common subset of `libsodium-wrappers-sumo` and `react-native-libsodium`
+ * for the methods used by BaseSodiumAdapter.
  *
- * Both `libsodium-wrappers-sumo` and `react-native-libsodium` conform to
- * this shape for the methods used by BaseSodiumAdapter.
+ * Methods available only in WASM (e.g. `crypto_pwhash_str`, `crypto_sign_seed_keypair`,
+ * `memzero`) are not included — subclasses access those via concrete types.
  */
 export interface SodiumLib {
   readonly crypto_pwhash_ALG_ARGON2ID13: number;
@@ -125,6 +126,7 @@ export interface SodiumLib {
  * - `init()` — load and initialize the platform sodium library
  * - `lib()` — return the initialized sodium library (throw CryptoNotReadyError if not ready)
  * - `isReady()` — whether init() has completed
+ * - `supportsSecureMemzero` — whether the platform supports secure memory zeroing
  * - `memzero()` — platform-specific secure memory zeroing
  * - `signSeedKeypair()` — RN throws UnsupportedOperationError
  * - `pwhashStr()` — WASM normalizes Uint8Array/string, RN throws
@@ -254,9 +256,9 @@ export abstract class BaseSodiumAdapter implements SodiumAdapter {
     try {
       return sodium.crypto_sign_verify_detached(signature, message, publicKey);
     } catch (error: unknown) {
-      // After input validation, libsodium throws Error for invalid signatures.
-      // Rethrow non-Error exceptions to avoid swallowing system failures.
-      if (error instanceof Error && error.message.includes("incorrect signature")) {
+      // After input validation, any Error from libsodium indicates an invalid
+      // signature. Non-Error exceptions (system failures) are rethrown.
+      if (error instanceof Error) {
         return false;
       }
       throw error;

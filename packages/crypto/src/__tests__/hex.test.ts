@@ -62,11 +62,8 @@ describe("hex module", () => {
       expect(fromHex(toHex(original))).toEqual(original);
     });
 
-    it("round-trips 32-byte key-sized buffer", () => {
-      const original = new Uint8Array(32);
-      for (let i = 0; i < original.length; i++) {
-        original[i] = i * 8;
-      }
+    it("round-trips longer buffer", () => {
+      const original = Uint8Array.from({ length: 32 }, (_, i) => i * 8);
       expect(fromHex(toHex(original))).toEqual(original);
     });
   });

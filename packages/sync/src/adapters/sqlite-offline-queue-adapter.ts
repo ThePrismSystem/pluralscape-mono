@@ -4,9 +4,7 @@
  * Follows the same pattern as SqliteStorageAdapter: prepared statements,
  * SqliteDriver abstraction, DDL in constructor.
  */
-import { assertAeadNonce, assertSignPublicKey, assertSignature } from "@pluralscape/crypto";
-
-import { toUint8Array } from "./sqlite-utils.js";
+import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
 
 import type { EncryptedChangeEnvelope } from "../types.js";
 import type { OfflineQueueAdapter, OfflineQueueEntry } from "./offline-queue-adapter.js";
@@ -46,21 +44,14 @@ CREATE INDEX IF NOT EXISTS sync_offline_queue_unsynced_idx
   ON sync_offline_queue (synced_at) WHERE synced_at IS NULL`;
 
 function rowToEntry(row: QueueRow): OfflineQueueEntry {
-  const nonce = toUint8Array(row.nonce);
-  assertAeadNonce(nonce);
-  const signature = toUint8Array(row.signature);
-  assertSignature(signature);
-  const authorPublicKey = toUint8Array(row.author_public_key);
-  assertSignPublicKey(authorPublicKey);
+  const blobs = assertEnvelopeBlobs(row);
   return {
     id: row.id,
     documentId: row.document_id,
     envelope: {
       documentId: row.document_id,
       ciphertext: toUint8Array(row.ciphertext),
-      nonce,
-      signature,
-      authorPublicKey,
+      ...blobs,
     },
     enqueuedAt: row.enqueued_at,
     syncedAt: row.synced_at,

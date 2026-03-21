@@ -1,6 +1,12 @@
+import {
+  AEAD_NONCE_BYTES,
+  InvalidInputError,
+  SIGN_BYTES,
+  SIGN_PUBLIC_KEY_BYTES,
+} from "@pluralscape/crypto";
 import { describe, expect, it } from "vitest";
 
-import { toUint8Array } from "../sqlite-utils.js";
+import { assertEnvelopeBlobs, toUint8Array } from "../sqlite-utils.js";
 
 describe("toUint8Array", () => {
   it("returns same reference for plain Uint8Array", () => {
@@ -33,5 +39,53 @@ describe("toUint8Array", () => {
     const buf = Buffer.from([0, 127, 128, 255]);
     const result = toUint8Array(buf);
     expect(result).toEqual(new Uint8Array([0, 127, 128, 255]));
+  });
+});
+
+describe("assertEnvelopeBlobs", () => {
+  function validRow() {
+    return {
+      nonce: new Uint8Array(AEAD_NONCE_BYTES),
+      signature: new Uint8Array(SIGN_BYTES),
+      author_public_key: new Uint8Array(SIGN_PUBLIC_KEY_BYTES),
+    };
+  }
+
+  it("returns asserted blobs for valid row", () => {
+    const row = validRow();
+    const result = assertEnvelopeBlobs(row);
+    expect(result.nonce).toHaveLength(AEAD_NONCE_BYTES);
+    expect(result.signature).toHaveLength(SIGN_BYTES);
+    expect(result.authorPublicKey).toHaveLength(SIGN_PUBLIC_KEY_BYTES);
+  });
+
+  it("normalises Buffer subclasses to plain Uint8Array", () => {
+    const row = {
+      nonce: Buffer.alloc(AEAD_NONCE_BYTES),
+      signature: Buffer.alloc(SIGN_BYTES),
+      author_public_key: Buffer.alloc(SIGN_PUBLIC_KEY_BYTES),
+    };
+    const result = assertEnvelopeBlobs(row);
+    expect(result.nonce.constructor).toBe(Uint8Array);
+    expect(result.signature.constructor).toBe(Uint8Array);
+    expect(result.authorPublicKey.constructor).toBe(Uint8Array);
+  });
+
+  it("throws InvalidInputError for wrong-length nonce", () => {
+    const row = validRow();
+    row.nonce = new Uint8Array(10);
+    expect(() => assertEnvelopeBlobs(row)).toThrow(InvalidInputError);
+  });
+
+  it("throws InvalidInputError for wrong-length signature", () => {
+    const row = validRow();
+    row.signature = new Uint8Array(10);
+    expect(() => assertEnvelopeBlobs(row)).toThrow(InvalidInputError);
+  });
+
+  it("throws InvalidInputError for wrong-length author public key", () => {
+    const row = validRow();
+    row.author_public_key = new Uint8Array(10);
+    expect(() => assertEnvelopeBlobs(row)).toThrow(InvalidInputError);
   });
 });

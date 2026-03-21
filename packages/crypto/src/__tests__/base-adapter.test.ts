@@ -20,13 +20,8 @@ import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 
 import type { BoxNonce, PwhashSalt, Signature } from "../types.js";
 
-function toBytes(s: string): Uint8Array {
-  return Uint8Array.from(Array.from(s, (c) => c.charCodeAt(0)));
-}
-
-function fromBytes(b: Uint8Array): string {
-  return String.fromCharCode(...b);
-}
+const enc = new TextEncoder();
+const dec = new TextDecoder();
 
 describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
   let adapter: WasmSodiumAdapter;
@@ -41,25 +36,25 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
   describe("aeadEncrypt/aeadDecrypt (shared)", () => {
     it("encrypt/decrypt roundtrip", () => {
       const key = adapter.aeadKeygen();
-      const plaintext = toBytes("base adapter test");
+      const plaintext = enc.encode("base adapter test");
       const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, null, key);
       const decrypted = adapter.aeadDecrypt(ciphertext, nonce, null, key);
-      expect(fromBytes(decrypted)).toBe("base adapter test");
+      expect(dec.decode(decrypted)).toBe("base adapter test");
     });
 
     it("roundtrip with additional data", () => {
       const key = adapter.aeadKeygen();
-      const plaintext = toBytes("secret data");
-      const ad = toBytes("context info");
+      const plaintext = enc.encode("secret data");
+      const ad = enc.encode("context info");
       const { ciphertext, nonce } = adapter.aeadEncrypt(plaintext, ad, key);
       const decrypted = adapter.aeadDecrypt(ciphertext, nonce, ad, key);
-      expect(fromBytes(decrypted)).toBe("secret data");
+      expect(dec.decode(decrypted)).toBe("secret data");
     });
 
     it("fails with wrong key", () => {
       const key1 = adapter.aeadKeygen();
       const key2 = adapter.aeadKeygen();
-      const { ciphertext, nonce } = adapter.aeadEncrypt(toBytes("data"), null, key1);
+      const { ciphertext, nonce } = adapter.aeadEncrypt(enc.encode("data"), null, key1);
       expect(() => adapter.aeadDecrypt(ciphertext, nonce, null, key2)).toThrow(
         DecryptionFailedError,
       );
@@ -67,14 +62,14 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
 
     it("rejects invalid key length", () => {
       const badKey = new Uint8Array(16);
-      expect(() => adapter.aeadEncrypt(toBytes("data"), null, badKey as never)).toThrow(
+      expect(() => adapter.aeadEncrypt(enc.encode("data"), null, badKey as never)).toThrow(
         InvalidInputError,
       );
     });
 
     it("nonce has correct length", () => {
       const key = adapter.aeadKeygen();
-      const { nonce } = adapter.aeadEncrypt(toBytes("data"), null, key);
+      const { nonce } = adapter.aeadEncrypt(enc.encode("data"), null, key);
       expect(nonce).toHaveLength(AEAD_NONCE_BYTES);
     });
   });
@@ -111,10 +106,10 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
       const alice = adapter.boxKeypair();
       const bob = adapter.boxKeypair();
       const nonce = adapter.randomBytes(BOX_NONCE_BYTES) as BoxNonce;
-      const plaintext = toBytes("hello bob");
+      const plaintext = enc.encode("hello bob");
       const ciphertext = adapter.boxEasy(plaintext, nonce, bob.publicKey, alice.secretKey);
       const decrypted = adapter.boxOpenEasy(ciphertext, nonce, alice.publicKey, bob.secretKey);
-      expect(fromBytes(decrypted)).toBe("hello bob");
+      expect(dec.decode(decrypted)).toBe("hello bob");
     });
 
     it("fails with wrong recipient key", () => {
@@ -122,7 +117,12 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
       const bob = adapter.boxKeypair();
       const eve = adapter.boxKeypair();
       const nonce = adapter.randomBytes(BOX_NONCE_BYTES) as BoxNonce;
-      const ciphertext = adapter.boxEasy(toBytes("secret"), nonce, bob.publicKey, alice.secretKey);
+      const ciphertext = adapter.boxEasy(
+        enc.encode("secret"),
+        nonce,
+        bob.publicKey,
+        alice.secretKey,
+      );
       expect(() => adapter.boxOpenEasy(ciphertext, nonce, alice.publicKey, eve.secretKey)).toThrow(
         DecryptionFailedError,
       );
@@ -142,7 +142,7 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
   describe("signDetached/signVerifyDetached (shared)", () => {
     it("sign and verify roundtrip", () => {
       const kp = adapter.signKeypair();
-      const message = toBytes("important message");
+      const message = enc.encode("important message");
       const signature = adapter.signDetached(message, kp.secretKey);
       expect(signature).toHaveLength(SIGN_BYTES);
       expect(adapter.signVerifyDetached(signature, message, kp.publicKey)).toBe(true);
@@ -150,7 +150,7 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
 
     it("returns false for invalid signature", () => {
       const kp = adapter.signKeypair();
-      const message = toBytes("data");
+      const message = enc.encode("data");
       const badSig = adapter.randomBytes(SIGN_BYTES) as Signature;
       expect(adapter.signVerifyDetached(badSig, message, kp.publicKey)).toBe(false);
     });
@@ -160,7 +160,7 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
 
   describe("pwhash (shared)", () => {
     it("derives a key of requested length", () => {
-      const password = toBytes("password123");
+      const password = enc.encode("password123");
       const salt = adapter.randomBytes(PWHASH_SALT_BYTES) as PwhashSalt;
       const derived = adapter.pwhash(
         32,
@@ -196,7 +196,7 @@ describe("BaseSodiumAdapter (via WasmSodiumAdapter)", () => {
 
   describe("genericHash (shared)", () => {
     it("produces consistent output", () => {
-      const message = toBytes("test");
+      const message = enc.encode("test");
       const hash1 = adapter.genericHash(32, message);
       const hash2 = adapter.genericHash(32, message);
       expect(hash1).toEqual(hash2);

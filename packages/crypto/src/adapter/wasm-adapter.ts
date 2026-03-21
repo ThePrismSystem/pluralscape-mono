@@ -4,7 +4,6 @@ import { assertSignSeed } from "../validation.js";
 import { BaseSodiumAdapter } from "./base-adapter.js";
 
 import type { SignKeypair, SignPublicKey, SignSecretKey } from "../types.js";
-import type { SodiumLib } from "./base-adapter.js";
 import type libsodiumSumo from "libsodium-wrappers-sumo";
 
 /**
@@ -30,7 +29,7 @@ export class WasmSodiumAdapter extends BaseSodiumAdapter {
     return this.sodium !== null;
   }
 
-  protected lib(): SodiumLib {
+  protected override lib(): typeof libsodiumSumo {
     if (this.sodium === null) {
       throw new CryptoNotReadyError("WasmSodiumAdapter not initialized. Call init() first.");
     }
@@ -42,12 +41,12 @@ export class WasmSodiumAdapter extends BaseSodiumAdapter {
   signSeedKeypair(seed: Uint8Array): SignKeypair {
     assertSignSeed(seed);
     const sodium = this.lib();
-    const kp = (sodium as typeof libsodiumSumo).crypto_sign_seed_keypair(seed);
+    const kp = sodium.crypto_sign_seed_keypair(seed);
     return { publicKey: kp.publicKey as SignPublicKey, secretKey: kp.privateKey as SignSecretKey };
   }
 
   pwhashStr(password: Uint8Array, opsLimit: number, memLimit: number): string {
-    const sodium = this.lib() as typeof libsodiumSumo;
+    const sodium = this.lib();
     // Type defs report Uint8Array but runtime returns a null-terminated ASCII string.
     // Handle both cases: decode Uint8Array or strip null terminator from string.
     const result: Uint8Array | string = sodium.crypto_pwhash_str(password, opsLimit, memLimit) as
@@ -60,14 +59,14 @@ export class WasmSodiumAdapter extends BaseSodiumAdapter {
   }
 
   pwhashStrVerify(hash: string, password: Uint8Array): boolean {
-    const sodium = this.lib() as typeof libsodiumSumo;
+    const sodium = this.lib();
     return sodium.crypto_pwhash_str_verify(hash, password);
   }
 
   // ── Memory ────────────────────────────────────────────────────────
 
   memzero(buffer: Uint8Array): void {
-    const sodium = this.lib() as typeof libsodiumSumo;
+    const sodium = this.lib();
     sodium.memzero(buffer);
   }
 }

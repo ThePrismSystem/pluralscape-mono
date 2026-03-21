@@ -1,6 +1,4 @@
-import { assertAeadNonce, assertSignPublicKey, assertSignature } from "@pluralscape/crypto";
-
-import { toUint8Array } from "./sqlite-utils.js";
+import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
 
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SqliteDriver, SqliteStatement } from "./sqlite-driver.js";
@@ -50,36 +48,22 @@ CREATE TABLE IF NOT EXISTS sync_local_changes (
 )`;
 
 function rowToEnvelope(row: ChangeRow): EncryptedChangeEnvelope {
-  const nonce = toUint8Array(row.nonce);
-  assertAeadNonce(nonce);
-  const signature = toUint8Array(row.signature);
-  assertSignature(signature);
-  const authorPublicKey = toUint8Array(row.author_public_key);
-  assertSignPublicKey(authorPublicKey);
+  const blobs = assertEnvelopeBlobs(row);
   return {
     documentId: row.document_id,
     seq: row.seq,
     ciphertext: toUint8Array(row.ciphertext),
-    nonce,
-    signature,
-    authorPublicKey,
+    ...blobs,
   };
 }
 
 function rowToSnapshot(row: SnapshotRow): EncryptedSnapshotEnvelope {
-  const nonce = toUint8Array(row.nonce);
-  assertAeadNonce(nonce);
-  const signature = toUint8Array(row.signature);
-  assertSignature(signature);
-  const authorPublicKey = toUint8Array(row.author_public_key);
-  assertSignPublicKey(authorPublicKey);
+  const blobs = assertEnvelopeBlobs(row);
   return {
     documentId: row.document_id,
     snapshotVersion: row.snapshot_version,
     ciphertext: toUint8Array(row.ciphertext),
-    nonce,
-    signature,
-    authorPublicKey,
+    ...blobs,
   };
 }
 
