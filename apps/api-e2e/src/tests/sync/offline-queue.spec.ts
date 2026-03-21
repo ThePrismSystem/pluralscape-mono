@@ -5,14 +5,10 @@
  * through the real WebSocket sync server.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
+import { makeTestChange } from "../../fixtures/ws-sync.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { ChangeAccepted } from "@pluralscape/sync";
-
-/** Generate a base64url string that decodes to exactly `n` bytes. */
-function base64urlOfLength(n: number, fill = 0): string {
-  return Buffer.from(new Uint8Array(n).fill(fill)).toString("base64url");
-}
 
 test.describe("Sync offline queue E2E", () => {
   test("submit change, disconnect, reconnect, verify change retrievable", async ({
@@ -35,13 +31,7 @@ test.describe("Sync offline queue E2E", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
-      const change = {
-        ciphertext: base64urlOfLength(32, 1),
-        nonce: base64urlOfLength(24, 2),
-        signature: base64urlOfLength(64, 3),
-        authorPublicKey: base64urlOfLength(32, 4),
-        documentId: docId,
-      };
+      const change = makeTestChange(docId);
       const accepted = await ws1.submitChange(docId, change);
       expect(accepted.type).toBe("ChangeAccepted");
       expect((accepted as ChangeAccepted).assignedSeq).toBe(1);
@@ -90,13 +80,7 @@ test.describe("Sync offline queue E2E", () => {
       await ws.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
       // Submit the same change twice (same nonce + authorPublicKey + documentId)
-      const change = {
-        ciphertext: base64urlOfLength(32, 50),
-        nonce: base64urlOfLength(24, 51),
-        signature: base64urlOfLength(64, 52),
-        authorPublicKey: base64urlOfLength(32, 53),
-        documentId: docId,
-      };
+      const change = makeTestChange(docId, 49);
 
       const accepted1 = await ws.submitChange(docId, change);
       expect(accepted1.type).toBe("ChangeAccepted");

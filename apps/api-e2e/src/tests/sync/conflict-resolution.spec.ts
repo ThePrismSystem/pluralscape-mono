@@ -5,33 +5,10 @@
  * real WebSocket sync server.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
+import { makeTestChange } from "../../fixtures/ws-sync.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { ChangeAccepted, DocumentUpdate, SubscribeResponse } from "@pluralscape/sync";
-
-/** Generate a base64url string that decodes to exactly `n` bytes. */
-function base64urlOfLength(n: number, fill = 0): string {
-  return Buffer.from(new Uint8Array(n).fill(fill)).toString("base64url");
-}
-
-function makeChange(
-  docId: string,
-  fill: number,
-): {
-  ciphertext: string;
-  nonce: string;
-  signature: string;
-  authorPublicKey: string;
-  documentId: string;
-} {
-  return {
-    ciphertext: base64urlOfLength(32, fill),
-    nonce: base64urlOfLength(24, fill),
-    signature: base64urlOfLength(64, fill),
-    authorPublicKey: base64urlOfLength(32, fill),
-    documentId: docId,
-  };
-}
 
 test.describe("Sync conflict resolution E2E", () => {
   test("two-client convergence: both clients submit changes and receive updates", async ({
@@ -63,7 +40,7 @@ test.describe("Sync conflict resolution E2E", () => {
       await ws2.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
       // Client 1 submits a change
-      const change1 = makeChange(docId, 10);
+      const change1 = makeTestChange(docId, 10);
       const accepted1 = await ws1.submitChange(docId, change1);
       expect(accepted1.type).toBe("ChangeAccepted");
       expect((accepted1 as ChangeAccepted).assignedSeq).toBe(1);
@@ -74,7 +51,7 @@ test.describe("Sync conflict resolution E2E", () => {
       expect((update1 as DocumentUpdate).docId).toBe(docId);
 
       // Client 2 submits a change
-      const change2 = makeChange(docId, 20);
+      const change2 = makeTestChange(docId, 20);
       const accepted2 = await ws2.submitChange(docId, change2);
       expect(accepted2.type).toBe("ChangeAccepted");
       expect((accepted2 as ChangeAccepted).assignedSeq).toBe(2);
@@ -126,7 +103,7 @@ test.describe("Sync conflict resolution E2E", () => {
       await ws2.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
       // Client 1 submits a change (simulating an archive operation)
-      const archiveChange = makeChange(docId, 30);
+      const archiveChange = makeTestChange(docId, 30);
       const accepted = await ws1.submitChange(docId, archiveChange);
       expect(accepted.type).toBe("ChangeAccepted");
 

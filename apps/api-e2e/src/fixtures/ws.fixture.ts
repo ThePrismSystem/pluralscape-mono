@@ -9,7 +9,7 @@ import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 import type { ClientMessage, ServerMessage } from "@pluralscape/sync";
 
 /** Byte lengths for crypto fields in wire format test data. */
-const CIPHERTEXT_TEST_BYTES = 64;
+const CIPHERTEXT_TEST_BYTES = 32;
 const NONCE_BYTES = 24;
 const SIGNATURE_BYTES = 64;
 const PUBLIC_KEY_BYTES = 32;
@@ -25,8 +25,17 @@ const WS_URL = `ws://localhost:${String(E2E_PORT)}/v1/sync/ws`;
 const DEFAULT_TIMEOUT_MS = 5_000;
 
 /** Generate a base64url string that decodes to exactly `n` bytes of the given fill value. */
-function base64urlOfLength(n: number, fill = 0): string {
+export function base64urlOfLength(n: number, fill = 0): string {
   return Buffer.from(new Uint8Array(n).fill(fill)).toString("base64url");
+}
+
+/** Wire-format change payload with base64url-encoded binary fields. */
+export interface WireChangePayload {
+  ciphertext: string;
+  nonce: string;
+  signature: string;
+  authorPublicKey: string;
+  documentId: string;
 }
 
 /** Thin wrapper around WebSocket with typed sync protocol methods. */
@@ -35,6 +44,7 @@ export class SyncWsClient {
   private readonly messageQueue: ServerMessage[] = [];
   private readonly waiters: Array<{
     resolve: (msg: ServerMessage) => void;
+    reject: (err: Error) => void;
     type: string | null;
   }> = [];
 
@@ -103,6 +113,10 @@ export class SyncWsClient {
           clearTimeout(timer);
           resolve(msg);
         },
+        reject: (err) => {
+          clearTimeout(timer);
+          reject(err);
+        },
         type,
       });
     });
@@ -134,16 +148,7 @@ export class SyncWsClient {
   }
 
   /** Send SubmitChangeRequest (wire format with base64url strings) and wait for response. */
-  async submitChange(
-    docId: string,
-    change: {
-      ciphertext: string;
-      nonce: string;
-      signature: string;
-      authorPublicKey: string;
-      documentId: string;
-    },
-  ): Promise<ServerMessage> {
+  async submitChange(docId: string, change: WireChangePayload): Promise<ServerMessage> {
     // Send raw JSON — wire format uses base64url strings, not Uint8Array
     this.sendRaw(
       JSON.stringify({
@@ -191,7 +196,11 @@ export class SyncWsClient {
       this.ws = null;
     }
     this.messageQueue.length = 0;
+    const pendingWaiters = [...this.waiters];
     this.waiters.length = 0;
+    for (const w of pendingWaiters) {
+      w.reject(new Error("WebSocket closed"));
+    }
   }
 
   get readyState(): number {
