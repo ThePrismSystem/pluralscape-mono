@@ -142,8 +142,14 @@ export class InMemoryJobWorker implements JobWorker {
     try {
       const handler = this.handlers.get(job.type);
       if (handler === undefined) {
-        // No handler registered for this type — fail it
-        await this.queue.fail(job.id, `No handler registered for job type "${job.type}"`);
+        try {
+          await this.queue.fail(job.id, `No handler registered for job type "${job.type}"`);
+        } catch (err) {
+          this.logger.error("worker.fail-delegation-error", {
+            jobId: job.id,
+            error: extractErrorMessage(err),
+          });
+        }
         return;
       }
 
@@ -155,7 +161,7 @@ export class InMemoryJobWorker implements JobWorker {
         try {
           await this.queue.fail(job.id, message);
         } catch (failErr) {
-          this.logger.error("worker.fail-failed", {
+          this.logger.error("worker.fail-delegation-error", {
             jobId: job.id,
             error: extractErrorMessage(failErr),
           });
