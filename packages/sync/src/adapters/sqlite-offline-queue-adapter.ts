@@ -4,10 +4,11 @@
  * Follows the same pattern as SqliteStorageAdapter: prepared statements,
  * SqliteDriver abstraction, DDL in constructor.
  */
+import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
+
+import type { EncryptedChangeEnvelope } from "../types.js";
 import type { OfflineQueueAdapter, OfflineQueueEntry } from "./offline-queue-adapter.js";
 import type { SqliteDriver, SqliteStatement } from "./sqlite-driver.js";
-import type { EncryptedChangeEnvelope } from "../types.js";
-import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 
 interface QueueRow {
   id: string;
@@ -42,20 +43,15 @@ const CREATE_QUEUE_INDEX = `
 CREATE INDEX IF NOT EXISTS sync_offline_queue_unsynced_idx
   ON sync_offline_queue (synced_at) WHERE synced_at IS NULL`;
 
-function toUint8Array(buf: Uint8Array): Uint8Array {
-  return buf.constructor === Uint8Array ? buf : new Uint8Array(buf);
-}
-
 function rowToEntry(row: QueueRow): OfflineQueueEntry {
+  const blobs = assertEnvelopeBlobs(row);
   return {
     id: row.id,
     documentId: row.document_id,
     envelope: {
       documentId: row.document_id,
       ciphertext: toUint8Array(row.ciphertext),
-      nonce: toUint8Array(row.nonce) as AeadNonce,
-      signature: toUint8Array(row.signature) as Signature,
-      authorPublicKey: toUint8Array(row.author_public_key) as SignPublicKey,
+      ...blobs,
     },
     enqueuedAt: row.enqueued_at,
     syncedAt: row.synced_at,
