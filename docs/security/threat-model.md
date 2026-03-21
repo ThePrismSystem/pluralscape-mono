@@ -55,7 +55,7 @@ The following must be enforced in all deployment configurations (Docker Compose,
 
 **Finding**: The sync relay uses Trust On First Use (TOFU) for document ownership binding. Before a document's first write, document metadata (existence, timing, sizes) is observable by any authenticated WebSocket connection that knows or guesses a document ID.
 
-**Current state**: The `documentOwnership` map in the WebSocket message router (see `apps/api/src/ws/message-router.ts`) binds a document ID to a system ID on the first write operation. Until that binding occurs, any authenticated connection can subscribe to a document ID and observe updates. The ownership map is ephemeral (in-memory, lost on server restart).
+**Current state**: The `RouterContext.documentOwnership` field in the WebSocket message router (see `apps/api/src/ws/message-router.ts`) is a per-process `Map<string, SystemId>` that binds a document ID to a system ID on the first write operation. Until that binding occurs, any authenticated connection can subscribe to a document ID and observe updates. The ownership map is ephemeral (in-memory, lost on server restart).
 
 **Why this is acceptable for now**:
 
@@ -95,14 +95,14 @@ This check should apply to both subscribe requests and snapshot/change fetch ope
 
 Online attacks are well-mitigated by multiple overlapping controls:
 
-| Control          | Detail                                                                                                                                   |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Attempt limiting | Maximum 5 incorrect attempts per transfer session (`MAX_TRANSFER_CODE_ATTEMPTS`). After 5 failures, the transfer is expired server-side. |
-| Rate limiting    | Device transfer category is rate-limited (10 requests per 60 seconds per the API specification).                                         |
-| Session timeout  | Transfer sessions expire after 5 minutes (`TRANSFER_TIMEOUT_MS = 300_000`). The server destroys the encrypted payload after expiry.      |
-| KDF cost         | Each attempt requires a full Argon2id computation (~250ms on mobile hardware), preventing rapid local enumeration.                       |
+| Control          | Detail                                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Attempt limiting | Maximum 5 incorrect attempts per transfer session (`MAX_TRANSFER_CODE_ATTEMPTS`). After 5 failures, the transfer is expired server-side.                                                          |
+| Rate limiting    | Initiation is limited to 3 per hour per account (`TRANSFER_INITIATION_LIMIT`). Completion is limited to 5 attempts per transfer session (`MAX_TRANSFER_CODE_ATTEMPTS` per `TRANSFER_TIMEOUT_MS`). |
+| Session timeout  | Transfer sessions expire after 5 minutes (`TRANSFER_TIMEOUT_MS = 300_000`). The server destroys the encrypted payload after expiry.                                                               |
+| KDF cost         | Each attempt requires a full Argon2id computation (~250ms on mobile hardware), preventing rapid local enumeration.                                                                                |
 
-At 5 attempts per transfer and 3 transfer initiations possible per hour (given the rate limit window), an online attacker can test at most 15 codes per hour — exhausting the 10^8 keyspace would take approximately 760,000 years.
+At 5 attempts per transfer and 3 transfer initiations possible per hour (the account-level initiation limit), an online attacker can test at most 15 codes per hour — exhausting the 10^8 keyspace would take approximately 760,000 years.
 
 #### Offline brute-force exposure
 
@@ -112,7 +112,7 @@ If an attacker exfiltrates the transfer session data from the database (the Argo
 
 - Keyspace: 10^8 (100 million combinations)
 - Argon2id mobile profile: 2 iterations, 32 MiB memory
-- Estimated throughput on 4x RTX 4090: ~1,000 hashes/second (per hashcat benchmarks for Argon2id with 32 MiB)
+- Estimated throughput on 4x RTX 4090: ~1,000 hashes/second (per hashcat benchmarks for Argon2id with 32 MiB, as of 2026 — revisit as GPU capabilities evolve)
 - Time to exhaustion: approximately 28 hours
 
 **Mitigating factors**: This attack requires database access (a severe compromise on its own) and only captures transfers that are in-flight during the 5-minute window. Under normal operation, transfer sessions are ephemeral.
@@ -123,7 +123,7 @@ If an attacker exfiltrates the transfer session data from the database (the Argo
 
 2. **Delete transfer records after completion or expiry**: Completed and expired transfer sessions should be purged from the database immediately, eliminating the persistent ciphertext that enables offline attack. The cleanup job should zero the encrypted payload and salt columns, then delete the row.
 
-3. **Consider server KDF profile**: Using the server Argon2id profile (3 iterations, 64 MiB) instead of the mobile profile would roughly double the offline brute-force cost. The trade-off is slower transfer completion on low-end mobile devices.
+3. **Consider server KDF profile**: Using the server Argon2id profile (4 iterations, 64 MiB) instead of the mobile profile would increase the offline brute-force cost by approximately 4× (iterations double from 2 to 4 and memory doubles from 32 to 64 MiB). The trade-off is slower transfer completion on low-end mobile devices.
 
 ### QR Payload — L6
 
@@ -155,6 +155,16 @@ With this change, capturing the QR code alone is insufficient to complete a tran
 
 This should be implemented before production. The change is backward-compatible: the `decodeQRPayload` function can accept payloads with or without the `code` field, falling back to requiring manual entry when the code is absent.
 
+## Out of Scope
+
+The following areas were assessed during the audit but are not covered by this document. They are governed by their respective ADRs.
+
+| Area             | ADR     | Summary                                                                                                                                    |
+| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Session security | ADR 013 | Hybrid token model with metadata/crypto key separation; zero-knowledge revocation without server-side key material                         |
+| Blob storage     | ADR 009 | S3-compatible storage with mandatory client-side encryption; presigned URLs for upload/download; server never holds plaintext blob content |
+| Key recovery     | ADR 011 | Recovery key shown once at registration; permanent data loss without recovery key or active device by design                               |
+
 ---
 
 ## Recommendations
@@ -173,11 +183,11 @@ Prioritized list of pre-production security tasks, ordered by severity and imple
 
 ### Priority 2 — Post-launch hardening
 
-| Finding | Action                                                                                                              | Effort |
-| ------- | ------------------------------------------------------------------------------------------------------------------- | ------ |
-| M2      | Add HMAC-signed envelopes to Valkey pub/sub messages to prevent message injection by a Valkey-compromised attacker. | Medium |
-| M2      | Encrypt BullMQ job payloads containing metadata (account IDs, system IDs) at the application layer.                 | Medium |
-| M4      | Evaluate switching to server Argon2id profile for transfer KDF, benchmarking impact on low-end mobile devices.      | Low    |
+| Finding | Action                                                                                                                                | Effort |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| M2      | Add HMAC-signed envelopes to Valkey pub/sub messages to prevent message injection by a Valkey-compromised attacker.                   | Medium |
+| M2      | Encrypt BullMQ job payloads containing metadata (account IDs, system IDs) at the application layer.                                   | Medium |
+| M4      | Evaluate switching to server Argon2id profile (4 iterations, 64 MiB) for transfer KDF, benchmarking impact on low-end mobile devices. | Low    |
 
 ### References
 
@@ -186,6 +196,6 @@ Prioritized list of pre-production security tasks, ordered by severity and imple
 - ADR 010: Background Jobs (BullMQ with Valkey)
 - ADR 013: API Authentication with E2E Encryption
 - ADR 024: Device Transfer Code Entropy Trade-off
-- `packages/crypto/src/device-transfer.ts` (transfer protocol implementation)
+- `packages/crypto/src/device-transfer.ts` (transfer protocol implementation, `TRANSFER_TIMEOUT_MS`)
 - `apps/api/src/ws/message-router.ts` (TOFU document ownership)
-- `apps/api/src/routes/account/device-transfer.constants.ts` (attempt limits)
+- `apps/api/src/routes/account/device-transfer.constants.ts` (`MAX_TRANSFER_CODE_ATTEMPTS`, `TRANSFER_INITIATION_LIMIT`)

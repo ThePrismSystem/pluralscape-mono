@@ -50,6 +50,12 @@ export interface RateLimitConfig {
 const RATE_LIMIT_GLOBAL = 100;
 const RATE_LIMIT_AUTH_HEAVY = 5;
 const RATE_LIMIT_AUTH_LIGHT = 20;
+/**
+ * Specification-level default for the device transfer category.
+ * The device-transfer route uses purpose-specific rate limiters instead
+ * (TRANSFER_INITIATION_LIMIT and MAX_TRANSFER_CODE_ATTEMPTS in their
+ * respective modules). Retained for API specification completeness.
+ */
 const RATE_LIMIT_DEVICE_TRANSFER = 10;
 const RATE_LIMIT_WRITE = 60;
 const RATE_LIMIT_READ_DEFAULT = 60;

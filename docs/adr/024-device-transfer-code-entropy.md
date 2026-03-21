@@ -41,7 +41,7 @@ The transfer code must be manually transcribed between two devices (e.g., read f
 If the threat model evolves, consider:
 
 - Increase code length to 10-12 digits (tradeoff: higher transcription error rate)
-- Use server KDF profile (3 iterations, 64 MiB) instead of mobile profile
+- Use server KDF profile (4 iterations, 64 MiB) instead of mobile profile
 - Add attempt limiting directly on the relay (currently only rate-limited)
 - Implement QR code scanning as an alternative to manual entry (eliminates transcription entirely)
 - Channel binding to prevent relay MITM
