@@ -98,10 +98,10 @@ export async function handleSubscribeRequest(
           const hasNewerSnapshot =
             snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
 
-          if (changes.length > 0 || hasNewerSnapshot) {
+          if (changes.envelopes.length > 0 || hasNewerSnapshot) {
             return {
               docId: entry.docId,
-              changes,
+              changes: changes.envelopes,
               snapshot: hasNewerSnapshot ? snapshot : null,
             };
           }

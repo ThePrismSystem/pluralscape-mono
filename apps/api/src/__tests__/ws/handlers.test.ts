@@ -182,7 +182,7 @@ describe("handleSubscribeRequest", () => {
     const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
     // Submit a change so catchup has data
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const correlationId = crypto.randomUUID();
     const message: SubscribeRequest = {
@@ -210,8 +210,8 @@ describe("handleSubscribeRequest", () => {
     const auth = mockAuth();
     const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
-    relay.submitSnapshot(mockSnapshot(docId, 1));
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submitSnapshot(mockSnapshot(docId, 1));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const message: SubscribeRequest = {
       type: "SubscribeRequest",
@@ -236,7 +236,7 @@ describe("handleSubscribeRequest", () => {
     const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
     // Submit and then subscribe with the current seq
-    const seq = relay.submit(mockChangeWithoutSeq(docId));
+    const seq = await relay.submit(mockChangeWithoutSeq(docId));
 
     const message: SubscribeRequest = {
       type: "SubscribeRequest",
@@ -284,7 +284,7 @@ describe("handleSubscribeRequest", () => {
 
     // Now subscribe to one more doc that has data
     const extraDocId = crypto.randomUUID();
-    relay.submit(mockChangeWithoutSeq(extraDocId));
+    await relay.submit(mockChangeWithoutSeq(extraDocId));
 
     const message: SubscribeRequest = {
       type: "SubscribeRequest",
@@ -308,7 +308,7 @@ describe("handleSubscribeRequest", () => {
     const auth = mockAuth();
     const state = createAuthenticatedState(manager, connId, auth, systemId as SystemId);
 
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const message: SubscribeRequest = {
       type: "SubscribeRequest",
@@ -384,7 +384,7 @@ describe("handleFetchSnapshot", () => {
     const docId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
 
-    relay.submitSnapshot(mockSnapshot(docId, 1));
+    await relay.submitSnapshot(mockSnapshot(docId, 1));
 
     const message: FetchSnapshotRequest = {
       type: "FetchSnapshotRequest",
@@ -423,9 +423,9 @@ describe("handleFetchChanges", () => {
     const docId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
 
-    relay.submit(mockChangeWithoutSeq(docId));
-    relay.submit(mockChangeWithoutSeq(docId));
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const message: FetchChangesRequest = {
       type: "FetchChangesRequest",
@@ -448,7 +448,7 @@ describe("handleFetchChanges", () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const message: FetchChangesRequest = {
       type: "FetchChangesRequest",
@@ -575,9 +575,9 @@ describe("handleSubmitChange", () => {
     expect(result.sequencedEnvelope.documentId).toBe(requestDocId);
 
     // Verify the relay stored it under the request docId
-    const stored = relay.getEnvelopesSince(requestDocId, 0);
-    expect(stored).toHaveLength(1);
-    expect(stored[0]?.documentId).toBe(requestDocId);
+    const storedResult = await relay.getEnvelopesSince(requestDocId, 0);
+    expect(storedResult.envelopes).toHaveLength(1);
+    expect(storedResult.envelopes[0]?.documentId).toBe(requestDocId);
   });
 });
 
@@ -609,7 +609,7 @@ describe("handleSubmitSnapshot", () => {
     const docId = crypto.randomUUID();
 
     // Submit version 2 first
-    relay.submitSnapshot(mockSnapshot(docId, 2));
+    await relay.submitSnapshot(mockSnapshot(docId, 2));
 
     const message: SubmitSnapshotRequest = {
       type: "SubmitSnapshotRequest",
@@ -631,7 +631,7 @@ describe("handleSubmitSnapshot", () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
-    relay.submitSnapshot(mockSnapshot(docId, 1));
+    await relay.submitSnapshot(mockSnapshot(docId, 1));
 
     const message: SubmitSnapshotRequest = {
       type: "SubmitSnapshotRequest",
@@ -662,7 +662,7 @@ describe("handleSubmitSnapshot", () => {
     expect(result.type).toBe("SnapshotAccepted");
 
     // Verify the relay stored it under the request docId
-    const stored = relay.getLatestSnapshot(requestDocId);
+    const stored = await relay.getLatestSnapshot(requestDocId);
     expect(stored).not.toBeNull();
     expect(stored?.documentId).toBe(requestDocId);
   });
@@ -674,9 +674,9 @@ describe("handleDocumentLoad", () => {
     const docId = crypto.randomUUID();
     const correlationId = crypto.randomUUID();
 
-    relay.submitSnapshot(mockSnapshot(docId, 1));
-    relay.submit(mockChangeWithoutSeq(docId));
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submitSnapshot(mockSnapshot(docId, 1));
+    await relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const message: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
@@ -707,7 +707,7 @@ describe("handleDocumentLoad", () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const message: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
@@ -749,9 +749,9 @@ describe("handleDocumentLoad", () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
-    relay.submit(mockChangeWithoutSeq(docId));
-    relay.submit(mockChangeWithoutSeq(docId));
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const message: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
