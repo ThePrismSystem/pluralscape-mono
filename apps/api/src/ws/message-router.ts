@@ -4,7 +4,11 @@
  * Implements a state machine that dispatches incoming JSON messages
  * to the appropriate handler based on the connection phase and message type.
  */
+import { syncDocuments } from "@pluralscape/db/pg";
 import { EncryptedRelay } from "@pluralscape/sync";
+import { eq, inArray } from "drizzle-orm";
+
+import { getDb } from "../lib/db.js";
 
 import { handleAuthenticate } from "./auth-handler.js";
 import { broadcastDocumentUpdate } from "./broadcast.js";
@@ -31,7 +35,7 @@ import {
 import { formatError, makeSyncError } from "./ws.utils.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
-import type { AuthenticatedState, SyncConnectionState } from "./connection-state.js";
+import type { SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { ServerMessage, SyncRelayService } from "@pluralscape/sync";
@@ -44,12 +48,9 @@ import type { ZodType } from "zod";
 export interface RouterContext {
   readonly relay: SyncRelayService;
   /**
-   * TOFU (Trust On First Use) document ownership.
-   *
-   * Safe because: the relay is ephemeral (in-memory, lost on restart), all data
-   * is E2E encrypted (server is zero-knowledge), and ownership only binds on
-   * first write. The real protection is that eviction cleanup
-   * (removeSubscriptionsForDoc) prevents cross-system broadcast leaks.
+   * Hot cache for document ownership. DB (sync_documents.system_id) is
+   * the source of truth; the cache is populated on first access and
+   * updated on writes.
    */
   readonly documentOwnership: Map<string, SystemId>;
   readonly manager: ConnectionManager;
@@ -150,91 +151,50 @@ function parseMessage<T>(
   return result.data;
 }
 
-/** Check document access (inline — single caller). Returns false and sends PERMISSION_DENIED on failure. */
-function checkAccess(
+/**
+ * Check document access. Returns false and sends PERMISSION_DENIED on failure.
+ *
+ * Sec-M1: Uses in-memory cache as hot path; falls back to DB
+ * (sync_documents.system_id) on cache miss to survive server restarts.
+ */
+async function checkAccess(
   docId: string,
   systemId: SystemId,
   correlationId: string | null,
   state: SyncConnectionState,
   log: AppLogger,
   ownership: Map<string, SystemId>,
-): boolean {
-  const owner = ownership.get(docId);
+): Promise<boolean> {
+  let owner = ownership.get(docId);
+
+  // Cache miss — check DB for persisted ownership
+  if (owner === undefined) {
+    try {
+      const db = await getDb();
+      const [row] = await db
+        .select({ systemId: syncDocuments.systemId })
+        .from(syncDocuments)
+        .where(eq(syncDocuments.documentId, docId))
+        .limit(1);
+      if (row) {
+        owner = row.systemId as SystemId;
+        ownership.set(docId, owner);
+      }
+    } catch (err) {
+      log.error("Failed to query document ownership from DB — failing open", {
+        docId,
+        error: formatError(err),
+      });
+      // Fail open: the in-memory relay is still the primary gate, and
+      // E2E encryption prevents data exposure regardless
+    }
+  }
+
   if (owner !== undefined && owner !== systemId) {
     send(state, makeSyncError("PERMISSION_DENIED", "Access denied", correlationId, docId), log);
     return false;
   }
   return true;
-}
-
-/**
- * Parse → access check → dispatch helper for single-doc operations.
- *
- * M16: Extended with optional `onSuccess` callback that runs after the response
- * is successfully sent. Used by submit operations to set ownership and broadcast.
- *
- * The handler returns `{ response, context? }`. The optional `context` value is
- * forwarded to `onSuccess`, eliminating shared mutable closures between handler
- * and callback. `onSuccess` runs in its own try/catch (log-only) to prevent
- * double-response if the callback throws after the success response was sent.
- */
-async function dispatchWithAccess<
-  T extends { docId: string; correlationId: string | null },
-  C = void,
->(
-  schema: ZodType<T>,
-  parsed: unknown,
-  state: AuthenticatedState,
-  messageType: string,
-  log: AppLogger,
-  ownership: Map<string, SystemId>,
-  handler: (msg: T) => Promise<{ response: ServerMessage; context?: C }>,
-  onSuccess?: (msg: T, response: ServerMessage, context: C | undefined) => void,
-): Promise<void> {
-  const msg = parseMessage(schema, parsed, state, messageType, log);
-  if (!msg) return;
-  if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, ownership)) return;
-
-  let response: ServerMessage;
-  let context: C | undefined;
-  try {
-    const result = await handler(msg);
-    response = result.response;
-    context = result.context;
-  } catch (err) {
-    log.error("Handler threw in dispatchWithAccess", {
-      connectionId: state.connectionId,
-      messageType,
-      docId: msg.docId,
-      error: formatError(err),
-    });
-    send(
-      state,
-      makeSyncError(
-        "INTERNAL_ERROR",
-        `Failed to process ${messageType}`,
-        msg.correlationId,
-        msg.docId,
-      ),
-      log,
-    );
-    return;
-  }
-
-  if (!send(state, response, log)) return;
-
-  if (onSuccess) {
-    try {
-      onSuccess(msg, response, context);
-    } catch (err) {
-      log.error("onSuccess threw in dispatchWithAccess", {
-        connectionId: state.connectionId,
-        messageType,
-        docId: msg.docId,
-        error: formatError(err),
-      });
-    }
-  }
 }
 
 // ── Router ──────────────────────────────────────────────────────────
@@ -412,10 +372,41 @@ export async function routeMessage(
       );
       if (!msg) return;
       // I17: Check each doc individually; subscribe permitted ones, deny denied ones
+      // Pre-warm ownership cache in a single batch query to avoid N sequential DB hits
+      const uncachedDocIds = msg.documents
+        .map((e) => e.docId)
+        .filter((id) => !documentOwnership.has(id));
+      if (uncachedDocIds.length > 0) {
+        try {
+          const db = await getDb();
+          const rows = await db
+            .select({
+              documentId: syncDocuments.documentId,
+              systemId: syncDocuments.systemId,
+            })
+            .from(syncDocuments)
+            .where(inArray(syncDocuments.documentId, uncachedDocIds));
+          for (const row of rows) {
+            documentOwnership.set(row.documentId, row.systemId as SystemId);
+          }
+        } catch (err) {
+          log.error("Failed to batch-query document ownership from DB", {
+            error: formatError(err),
+          });
+          // Fail open — individual checkAccess calls will also fail open on cache miss
+        }
+      }
       const permitted: typeof msg.documents = [];
       for (const entry of msg.documents) {
         if (
-          checkAccess(entry.docId, state.systemId, msg.correlationId, state, log, documentOwnership)
+          await checkAccess(
+            entry.docId,
+            state.systemId,
+            msg.correlationId,
+            state,
+            log,
+            documentOwnership,
+          )
         ) {
           permitted.push(entry);
         }
@@ -456,79 +447,200 @@ export async function routeMessage(
       break;
     }
     case "FetchSnapshotRequest": {
-      await dispatchWithAccess(
+      const msg = parseMessage(
         CLIENT_MESSAGE_SCHEMAS.FetchSnapshotRequest,
         parsed,
         state,
         messageType,
         log,
-        documentOwnership,
-        async (msg) => ({ response: await handleFetchSnapshot(msg, relay) }),
       );
+      if (!msg) return;
+      if (
+        !(await checkAccess(
+          msg.docId,
+          state.systemId,
+          msg.correlationId,
+          state,
+          log,
+          documentOwnership,
+        ))
+      )
+        return;
+      try {
+        const response = await handleFetchSnapshot(msg, relay);
+        send(state, response, log);
+      } catch (err) {
+        log.error("handleFetchSnapshot threw", {
+          connectionId: state.connectionId,
+          docId: msg.docId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError(
+            "INTERNAL_ERROR",
+            "Failed to process FetchSnapshotRequest",
+            msg.correlationId,
+            msg.docId,
+          ),
+          log,
+        );
+      }
       break;
     }
     case "FetchChangesRequest": {
-      await dispatchWithAccess(
+      const msg = parseMessage(
         CLIENT_MESSAGE_SCHEMAS.FetchChangesRequest,
         parsed,
         state,
         messageType,
         log,
-        documentOwnership,
-        async (msg) => ({ response: await handleFetchChanges(msg, relay) }),
       );
+      if (!msg) return;
+      if (
+        !(await checkAccess(
+          msg.docId,
+          state.systemId,
+          msg.correlationId,
+          state,
+          log,
+          documentOwnership,
+        ))
+      )
+        return;
+      try {
+        const response = await handleFetchChanges(msg, relay);
+        send(state, response, log);
+      } catch (err) {
+        log.error("handleFetchChanges threw", {
+          connectionId: state.connectionId,
+          docId: msg.docId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError(
+            "INTERNAL_ERROR",
+            "Failed to process FetchChangesRequest",
+            msg.correlationId,
+            msg.docId,
+          ),
+          log,
+        );
+      }
       break;
     }
     case "SubmitChangeRequest": {
-      // M16: Use dispatchWithAccess with onSuccess for ownership + broadcast
-      await dispatchWithAccess(
+      const msg = parseMessage(
         CLIENT_MESSAGE_SCHEMAS.SubmitChangeRequest,
         parsed,
         state,
         messageType,
         log,
-        documentOwnership,
-        async (msg) => {
-          const result = await handleSubmitChange(msg, relay);
-          if (result.type === "SyncError") {
-            return { response: result };
-          }
-          return { response: result.response, context: result.sequencedEnvelope };
-        },
-        (msg, response, sequencedEnvelope) => {
-          if (response.type === "SyncError" || !sequencedEnvelope) return;
+      );
+      if (!msg) return;
+      if (
+        !(await checkAccess(
+          msg.docId,
+          state.systemId,
+          msg.correlationId,
+          state,
+          log,
+          documentOwnership,
+        ))
+      )
+        return;
+      try {
+        const result = await handleSubmitChange(msg, relay);
+        if (result.type === "SyncError") {
+          send(state, result, log);
+          return;
+        }
+        if (!send(state, result.response, log)) return;
+        // Post-success: set ownership and broadcast to other subscribers
+        try {
           documentOwnership.set(msg.docId, state.systemId);
           broadcastDocumentUpdate(
             {
               type: "DocumentUpdate",
               correlationId: null,
               docId: msg.docId,
-              changes: [sequencedEnvelope],
+              changes: [result.sequencedEnvelope],
             },
             state.connectionId,
             manager,
             log,
           );
-        },
-      );
+        } catch (err) {
+          log.error("Post-submit side-effect failed for SubmitChangeRequest", {
+            connectionId: state.connectionId,
+            docId: msg.docId,
+            error: formatError(err),
+          });
+        }
+      } catch (err) {
+        log.error("handleSubmitChange threw", {
+          connectionId: state.connectionId,
+          docId: msg.docId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError(
+            "INTERNAL_ERROR",
+            "Failed to process SubmitChangeRequest",
+            msg.correlationId,
+            msg.docId,
+          ),
+          log,
+        );
+      }
       break;
     }
     case "SubmitSnapshotRequest": {
-      // M16: Use dispatchWithAccess with onSuccess for conditional ownership
-      await dispatchWithAccess(
+      const msg = parseMessage(
         CLIENT_MESSAGE_SCHEMAS.SubmitSnapshotRequest,
         parsed,
         state,
         messageType,
         log,
-        documentOwnership,
-        async (msg) => ({ response: await handleSubmitSnapshot(msg, relay) }),
-        (msg, response) => {
-          if (response.type !== "SyncError") {
-            documentOwnership.set(msg.docId, state.systemId);
-          }
-        },
       );
+      if (!msg) return;
+      if (
+        !(await checkAccess(
+          msg.docId,
+          state.systemId,
+          msg.correlationId,
+          state,
+          log,
+          documentOwnership,
+        ))
+      )
+        return;
+      try {
+        const response = await handleSubmitSnapshot(msg, relay);
+        if (!send(state, response, log)) return;
+        // Post-success: set ownership only on non-error responses
+        if (response.type !== "SyncError") {
+          documentOwnership.set(msg.docId, state.systemId);
+        }
+      } catch (err) {
+        log.error("handleSubmitSnapshot threw", {
+          connectionId: state.connectionId,
+          docId: msg.docId,
+          error: formatError(err),
+        });
+        send(
+          state,
+          makeSyncError(
+            "INTERNAL_ERROR",
+            "Failed to process SubmitSnapshotRequest",
+            msg.correlationId,
+            msg.docId,
+          ),
+          log,
+        );
+      }
       break;
     }
     case "DocumentLoadRequest": {
@@ -540,7 +652,16 @@ export async function routeMessage(
         log,
       );
       if (!msg) return;
-      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
+      if (
+        !(await checkAccess(
+          msg.docId,
+          state.systemId,
+          msg.correlationId,
+          state,
+          log,
+          documentOwnership,
+        ))
+      )
         return;
       try {
         const [snapshotResp, changesResp] = await handleDocumentLoad(msg, relay);
