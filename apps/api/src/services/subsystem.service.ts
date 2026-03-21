@@ -12,7 +12,8 @@ import { HTTP_BAD_REQUEST } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { detectAncestorCycle } from "../lib/hierarchy.js";
 
-import { createHierarchyService, mapBaseFields } from "./hierarchy-service-factory.js";
+import { createHierarchyService } from "./hierarchy-service-factory.js";
+import { mapBaseFields } from "./hierarchy-service-helpers.js";
 
 import type { AuthContext } from "../lib/auth-context.js";
 import type {

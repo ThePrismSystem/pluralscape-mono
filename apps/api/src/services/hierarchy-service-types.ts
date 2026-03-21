@@ -39,8 +39,9 @@ export interface DependentCheck {
   /** Human-readable label for error messages. */
   readonly label: string;
   /**
-   * Whether this check filters on archived=false. True for child entity checks
-   * (only active children block delete), false for junction/link tables.
+   * Optional column reference for archive filtering. When provided, adds an
+   * `= false` condition to exclude archived rows. Use for child entity checks
+   * (only active children block delete); omit for junction/link tables.
    */
   readonly filterArchived?: AnyPgColumn;
 }

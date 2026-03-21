@@ -62,10 +62,12 @@ export async function checkDependents(
 
   const counts: { label: string; count: number }[] = [];
   results.forEach((rows, i) => {
+    // Type-narrowing guard: always defined since results comes from mapping dependentChecks
     const dep = dependentChecks[i];
     if (!dep) {
       throw new Error("Unexpected: results/dependentChecks length mismatch");
     }
+    // Type-narrowing guard: count() always returns a row
     const [result] = rows;
     if (!result) {
       throw new Error("Unexpected: count query returned no rows");
