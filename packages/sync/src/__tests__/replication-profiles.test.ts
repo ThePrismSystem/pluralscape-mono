@@ -120,6 +120,7 @@ describe("SubscriptionSet", () => {
       updatedAt: Date.now(),
       sizeBytes: 1024,
       snapshotVersion: 1,
+      lastSeq: 1,
       archived: false,
     };
 

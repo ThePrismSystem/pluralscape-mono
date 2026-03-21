@@ -3,7 +3,7 @@
  * Safe in single-threaded JS: `index++` is atomic within a synchronous tick.
  */
 export async function mapConcurrent<T, R>(
-  items: T[],
+  items: readonly T[],
   limit: number,
   fn: (item: T) => Promise<R>,
 ): Promise<PromiseSettledResult<R>[]> {

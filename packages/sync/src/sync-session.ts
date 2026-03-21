@@ -58,7 +58,7 @@ export class EncryptedSyncSession<T> {
     const savedDoc = this.doc;
     const savedSeq = this.lastSyncedSeq_;
     try {
-      // P-M1: Batch decrypt all changes first, then apply in a single Automerge call
+      // Batch decrypt all changes first, then apply in a single Automerge call
       const decrypted: Uint8Array[] = [];
       let maxSeq = this.lastSyncedSeq_;
       for (const envelope of sorted) {

@@ -19,6 +19,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
 import { SyncEngine, submitCorrectionEnvelopes } from "../engine/sync-engine.js";
+import { PostMergeValidator } from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
@@ -28,7 +29,7 @@ import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapt
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
-import type { EncryptedChangeEnvelope } from "../types.js";
+import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
 import type { SystemId, UnixMillis } from "@pluralscape/types";
 
@@ -71,6 +72,7 @@ const SYSTEM_CORE_MANIFEST: SyncManifest = {
       updatedAt: 1000 as UnixMillis,
       sizeBytes: 0,
       snapshotVersion: 0,
+      lastSeq: 0,
       archived: false,
     },
   ],
@@ -239,6 +241,7 @@ describe("P-M2: skip redundant hydration", () => {
           updatedAt: 1000 as UnixMillis,
           sizeBytes: 100,
           snapshotVersion: 5,
+          lastSeq: 5,
           archived: false,
         },
       ],
@@ -294,6 +297,7 @@ describe("P-M2: skip redundant hydration", () => {
           updatedAt: 1000 as UnixMillis,
           sizeBytes: 100,
           snapshotVersion: 10,
+          lastSeq: 10,
           archived: false,
         },
       ],
@@ -323,6 +327,76 @@ describe("P-M2: skip redundant hydration", () => {
     await engine.bootstrap();
 
     // Server fetch calls should happen since manifest has newer version
+    expect(fetchLatestSnapshot).toHaveBeenCalledWith("system-core-sys_test");
+    expect(fetchChangesSince).toHaveBeenCalled();
+
+    engine.dispose();
+  });
+
+  it("always fetches when manifest reports version 0 even with local data", async () => {
+    const keyResolver = createKeyResolver();
+    const keys = keyResolver.resolveKeys("system-core-sys_test");
+
+    // Create a local snapshot at version 5
+    const doc = Automerge.from<Record<string, unknown>>({ items: {} });
+    const tempSession = new EncryptedSyncSession({
+      doc,
+      keys,
+      documentId: "system-core-sys_test",
+      sodium,
+    });
+    const snapshot = tempSession.createSnapshot(5);
+
+    // Manifest reports version 0 — server has never snapshotted
+    const manifest: SyncManifest = {
+      systemId: "sys_test" as SystemId,
+      documents: [
+        {
+          docId: "system-core-sys_test",
+          docType: "system-core",
+          keyType: "derived",
+          bucketId: null,
+          channelId: null,
+          timePeriod: null,
+          createdAt: 1000 as UnixMillis,
+          updatedAt: 1000 as UnixMillis,
+          sizeBytes: 0,
+          snapshotVersion: 0,
+          lastSeq: 0,
+          archived: false,
+        },
+      ],
+    };
+
+    const fetchLatestSnapshot = vi.fn().mockResolvedValue(null);
+    const fetchChangesSince = vi.fn().mockResolvedValue([]);
+    const networkAdapter: SyncNetworkAdapter = {
+      submitChange: vi.fn().mockResolvedValue({ seq: 1 }),
+      fetchChangesSince,
+      submitSnapshot: vi.fn().mockResolvedValue(undefined),
+      fetchLatestSnapshot,
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+      fetchManifest: vi.fn().mockResolvedValue(manifest),
+    };
+
+    const storageAdapter = mockStorageAdapter({
+      loadSnapshot: vi.fn().mockResolvedValue(snapshot),
+      loadChangesSince: vi.fn().mockResolvedValue([]),
+    });
+
+    const engine = new SyncEngine({
+      networkAdapter,
+      storageAdapter,
+      keyResolver: createKeyResolver(),
+      sodium,
+      profile: { profileType: "owner-full" },
+      systemId: "sys_test" as SystemId,
+      onError: vi.fn(),
+    });
+
+    await engine.bootstrap();
+
+    // Version 0 means never skip — both fetches should happen
     expect(fetchLatestSnapshot).toHaveBeenCalledWith("system-core-sys_test");
     expect(fetchChangesSince).toHaveBeenCalled();
 
@@ -429,8 +503,10 @@ describe("P-M4: operation promise cleanup", () => {
       setTimeout(resolve, 0);
     });
 
-    // After the operation completes and microtasks drain, the queue should be cleaned up
-    // We can verify indirectly: the engine should still work (no stale promises)
+    // After the operation completes and microtasks drain, the queue entry should be removed
+    expect(engine.pendingOperationCount).toBe(0);
+
+    // Engine should still work with the cleaned-up queue
     const seq2 = await engine.applyLocalChange("system-core-sys_test", (doc) => {
       const d = doc as Record<string, Record<string, unknown>>;
       d["_cleanup_test2"] = { value: "test2" };
@@ -484,6 +560,68 @@ describe("P-M5: conflict retry buffer cap", () => {
     const state = engine.getSyncState("system-core-sys_test");
     expect(state?.lastSyncedSeq).toBe(5);
 
+    engine.dispose();
+  });
+
+  it("drops oldest entries when buffer exceeds the configured cap", async () => {
+    const saveConflicts = vi.fn().mockRejectedValue(new Error("DB unavailable"));
+    const onError = vi.fn();
+    const keyResolver = createKeyResolver();
+    const keys = keyResolver.resolveKeys("system-core-sys_test");
+
+    const doc = Automerge.from<Record<string, unknown>>({ items: {} });
+    const senderSession = new EncryptedSyncSession({
+      doc,
+      keys,
+      documentId: "system-core-sys_test",
+      sodium,
+    });
+
+    // Inject fake conflict notifications so persistConflicts accumulates entries
+    const fakeNotification: ConflictNotification = {
+      entityType: "test",
+      entityId: "test-1",
+      fieldName: "value",
+      resolution: "lww-field",
+      detectedAt: Date.now(),
+      summary: "test conflict",
+    };
+    const validationSpy = vi
+      .spyOn(PostMergeValidator.prototype, "runAllValidations")
+      .mockReturnValue({
+        cycleBreaks: [],
+        sortOrderPatches: [],
+        checkInNormalizations: 0,
+        friendConnectionNormalizations: 0,
+        correctionEnvelopes: [],
+        notifications: [fakeNotification],
+      });
+
+    const engine = await createBootstrappedEngine({
+      conflictPersistenceAdapter: { saveConflicts, deleteOlderThan: vi.fn().mockResolvedValue(0) },
+      onError,
+      maxConflictRetryBatches: 3,
+    });
+
+    // Each handleIncomingChanges triggers persistConflicts with 1 fake notification.
+    // With a failing adapter, each call accumulates 1 net entry in the buffer.
+    // After 4 calls, buffer has 4 entries; cap of 3 triggers and drops 1 oldest.
+    for (let i = 1; i <= 4; i++) {
+      const env = senderSession.change((d) => {
+        const items = d as Record<string, Record<string, number>>;
+        const inner = items["items"];
+        if (inner) inner[`cap_key${String(i)}`] = i;
+      });
+      await engine.handleIncomingChanges("system-core-sys_test", [{ ...env, seq: i }]);
+    }
+
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining("dropped 1 oldest entries"), null);
+
+    // Engine still functions
+    const state = engine.getSyncState("system-core-sys_test");
+    expect(state?.lastSyncedSeq).toBe(4);
+
+    validationSpy.mockRestore();
     engine.dispose();
   });
 });
@@ -554,5 +692,60 @@ describe("P-M8: bounded concurrency for correction envelopes", () => {
     // All 10 should be persisted
     expect(appendChange).toHaveBeenCalledTimes(10);
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("persists only successful submissions and reports failures", async () => {
+    let callCount = 0;
+
+    const submitChange = vi
+      .fn()
+      .mockImplementation((_docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
+        callCount++;
+        const seq = callCount;
+        // Even-numbered calls fail
+        if (seq % 2 === 0) {
+          return Promise.reject(new Error(`Submit failed for seq ${String(seq)}`));
+        }
+        return Promise.resolve({ ...change, seq });
+      });
+
+    const onError = vi.fn();
+    const appendChange = vi.fn().mockResolvedValue(undefined);
+    const storageAdapter = mockStorageAdapter({ appendChange });
+
+    const networkAdapter: SyncNetworkAdapter = {
+      submitChange,
+      fetchChangesSince: vi.fn().mockResolvedValue([]),
+      submitSnapshot: vi.fn().mockResolvedValue(undefined),
+      fetchLatestSnapshot: vi.fn().mockResolvedValue(null),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+      fetchManifest: vi.fn().mockResolvedValue(SYSTEM_CORE_MANIFEST),
+    };
+
+    const envelopes: Omit<EncryptedChangeEnvelope, "seq">[] = [];
+    for (let i = 1; i <= 6; i++) {
+      envelopes.push({
+        documentId: "doc_a",
+        ciphertext: new Uint8Array([i]),
+        nonce: nonce(i),
+        signature: sig(i),
+        authorPublicKey: pubkey(1),
+      });
+    }
+
+    await submitCorrectionEnvelopes(
+      { networkAdapter, storageAdapter, onError },
+      "doc_a",
+      envelopes,
+    );
+
+    // All 6 should be attempted
+    expect(submitChange).toHaveBeenCalledTimes(6);
+
+    // 3 fail (even-numbered), 3 succeed (odd-numbered)
+    expect(onError).toHaveBeenCalledTimes(3);
+
+    // Only successful submissions should be persisted
+    expect(appendChange).toHaveBeenCalledTimes(3);
   });
 });

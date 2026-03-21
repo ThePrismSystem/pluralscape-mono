@@ -38,6 +38,8 @@ export interface SyncEngineConfig {
   readonly conflictPersistenceAdapter?: ConflictPersistenceAdapter;
   /** Optional adapter for offline queue persistence. When provided, local changes are enqueued before server submission. */
   readonly offlineQueueAdapter?: OfflineQueueAdapter;
+  /** Maximum failed conflict persistence batches to retain for retry. Defaults to 100. */
+  readonly maxConflictRetryBatches?: number;
 }
 
 /** Maximum parallel document hydrations during bootstrap. */
@@ -82,6 +84,11 @@ export class SyncEngine {
     }
   }
 
+  /** Number of documents with in-flight queued operations. */
+  get pendingOperationCount(): number {
+    return this.documentQueues.size;
+  }
+
   // ── Bootstrap ───────────────────────────────────────────────────────
 
   /**
@@ -102,10 +109,8 @@ export class SyncEngine {
     }
 
     // 4. Hydrate each active document with bounded concurrency
-    const results = await mapConcurrent(
-      [...subscriptionSet.active],
-      HYDRATION_CONCURRENCY,
-      (entry) => this.hydrateDocument(entry.docId, entry.docType, entry.snapshotVersion),
+    const results = await mapConcurrent(subscriptionSet.active, HYDRATION_CONCURRENCY, (entry) =>
+      this.hydrateDocument(entry.docId, entry.docType, entry.snapshotVersion, entry.lastSeq),
     );
 
     // Log failures but don't abort — partial bootstrap is better than none
@@ -287,13 +292,13 @@ export class SyncEngine {
   private enqueueDocumentOperation<T>(docId: string, op: () => Promise<T>): Promise<T> {
     const prev = this.documentQueues.get(docId) ?? Promise.resolve();
     const next = prev.then(op, op);
-    // P-M4: Track the void-wrapped promise so we can clean up after resolution
+    // Store void-wrapped version and schedule cleanup after resolution
     const voidPromise = next.then(
       () => {},
       () => {},
     );
     this.documentQueues.set(docId, voidPromise);
-    // Clean up the map entry if it still points to this promise (identity check avoids race)
+    // Remove the queue entry once settled, unless a newer operation replaced it
     void voidPromise.then(() => {
       if (this.documentQueues.get(docId) === voidPromise) {
         this.documentQueues.delete(docId);
@@ -350,6 +355,7 @@ export class SyncEngine {
     docId: string,
     docType: SyncDocumentType,
     manifestSnapshotVersion?: number,
+    manifestLastSeq?: number,
   ): Promise<void> {
     const keys = this.config.keyResolver.resolveKeys(docId);
 
@@ -357,24 +363,25 @@ export class SyncEngine {
     const localSnapshot = await this.config.storageAdapter.loadSnapshot(docId);
     const localChanges = await this.config.storageAdapter.loadChangesSince(docId, 0);
 
-    // P-M2: Determine local high-water mark from snapshot + changes
+    // Determine local high-water marks from snapshot + changes
     const localSnapshotSeq = localSnapshot?.snapshotVersion ?? 0;
     const localMaxSeq =
       localChanges.length > 0
         ? Math.max(localSnapshotSeq, localChanges[localChanges.length - 1]?.seq ?? 0)
         : localSnapshotSeq;
-    const serverManifestVersion = manifestSnapshotVersion ?? 0;
+    const serverSnapshotVer = manifestSnapshotVersion ?? 0;
+    const serverLastSeq = manifestLastSeq ?? 0;
 
-    // P-M2: Skip server fetch if local state already matches or exceeds manifest.
-    // Only skip when the manifest reports a positive snapshot version — version 0
-    // means the server may have unsnapshot changes we haven't seen.
-    const localUpToDate =
-      serverManifestVersion > 0 &&
-      localSnapshotSeq >= serverManifestVersion &&
-      localMaxSeq >= serverManifestVersion;
+    // Skip snapshot fetch when local snapshot already matches or exceeds
+    // the server's snapshot version. Version 0 means never snapshotted — always fetch.
+    const snapshotUpToDate = serverSnapshotVer > 0 && localSnapshotSeq >= serverSnapshotVer;
 
-    // Try fetching from server (skip if local is up to date)
-    const serverSnapshot = localUpToDate
+    // Skip change fetch when local high-water mark matches or exceeds the
+    // server's last change seq. Seq 0 means no changes recorded — always fetch.
+    const changesUpToDate = serverLastSeq > 0 && localMaxSeq >= serverLastSeq;
+
+    // Try fetching from server (skip if local snapshot is current)
+    const serverSnapshot = snapshotUpToDate
       ? null
       : await this.config.networkAdapter.fetchLatestSnapshot(docId);
     const serverSnapshotSeq = serverSnapshot?.snapshotVersion ?? 0;
@@ -409,8 +416,8 @@ export class SyncEngine {
       }
     }
 
-    // Fetch server changes since last known seq (skip if local is up to date)
-    if (!localUpToDate) {
+    // Fetch server changes since last known seq (skip if local is current)
+    if (!changesUpToDate) {
       const changes = await this.config.networkAdapter.fetchChangesSince(
         docId,
         session.lastSyncedSeq,
@@ -482,12 +489,13 @@ export class SyncEngine {
       }
     }
 
-    // P-M5: Cap the retry buffer to prevent unbounded growth
-    if (this.failedConflictPersistence.length > MAX_CONFLICT_RETRY_BATCHES) {
-      const dropped = this.failedConflictPersistence.length - MAX_CONFLICT_RETRY_BATCHES;
+    // Cap the retry buffer to prevent unbounded growth
+    const cap = this.config.maxConflictRetryBatches ?? MAX_CONFLICT_RETRY_BATCHES;
+    if (this.failedConflictPersistence.length > cap) {
+      const dropped = this.failedConflictPersistence.length - cap;
       this.failedConflictPersistence = this.failedConflictPersistence.slice(dropped);
       this.config.onError(
-        `Conflict retry buffer exceeded cap (${String(MAX_CONFLICT_RETRY_BATCHES)}), dropped ${String(dropped)} oldest entries`,
+        `Conflict retry buffer exceeded cap (${String(cap)}), dropped ${String(dropped)} oldest entries`,
         null,
       );
     }
@@ -522,9 +530,9 @@ export async function submitCorrectionEnvelopes(
 ): Promise<void> {
   if (envelopes.length === 0) return;
 
-  // P-M8: Phase 1 — Submit to network with bounded concurrency
+  // Phase 1: Submit to network with bounded concurrency
   const submitResults = await mapConcurrent(
-    [...envelopes],
+    envelopes,
     CORRECTION_ENVELOPE_CONCURRENCY,
     (envelope) => config.networkAdapter.submitChange(docId, envelope),
   );

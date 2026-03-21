@@ -192,6 +192,7 @@ export class PgSyncRelayService implements SyncRelayService {
       updatedAt: row.updatedAt,
       sizeBytes: row.sizeBytes,
       snapshotVersion: row.snapshotVersion,
+      lastSeq: row.lastSeq,
       archived: row.archived,
     }));
 

@@ -30,6 +30,8 @@ export interface SyncManifestEntry {
   readonly sizeBytes: number;
   /** Current snapshot version (monotonically increasing). */
   readonly snapshotVersion: number;
+  /** Highest change sequence number for this document (monotonically increasing). */
+  readonly lastSeq: number;
   /** Whether the document is archived (cold — no active writes for 90+ days). */
   readonly archived: boolean;
 }
