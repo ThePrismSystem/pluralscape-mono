@@ -1,6 +1,6 @@
 ---
 # ps-rmth
-title: 'SSE stream: wrap module-level state in class or factory'
+title: "SSE stream: wrap module-level state in class or factory"
 status: todo
 type: task
 created_at: 2026-03-21T02:57:09Z

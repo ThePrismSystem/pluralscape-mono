@@ -57,8 +57,8 @@ describe("PG pool configuration", () => {
   });
 
   afterEach(() => {
-    vi.doUnmock("postgres");
-    vi.doUnmock("drizzle-orm/postgres-js");
+    vi.resetModules();
+    vi.restoreAllMocks();
   });
 
   it("forwards custom pool options to postgres()", async () => {

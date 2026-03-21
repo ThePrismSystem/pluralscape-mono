@@ -1,6 +1,6 @@
 ---
 # ps-i3xl
-title: 'M3 audit: low-severity remediation'
+title: "M3 audit: low-severity remediation"
 status: todo
 type: epic
 created_at: 2026-03-21T02:56:19Z
