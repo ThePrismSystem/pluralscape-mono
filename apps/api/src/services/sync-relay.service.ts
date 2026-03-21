@@ -1,6 +1,6 @@
 import { assertAeadNonce, assertSignature, assertSignPublicKey } from "@pluralscape/crypto";
 import { syncChanges, syncDocuments, syncSnapshots } from "@pluralscape/db/pg";
-import { SnapshotVersionConflictError } from "@pluralscape/sync";
+import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscape/sync";
 import { createId, ID_PREFIXES } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
@@ -23,7 +23,55 @@ export class PgSyncRelayService implements SyncRelayService {
     return await this.db.transaction(async (tx) => {
       const now = Date.now();
 
-      // Check dedup: if (documentId, authorPublicKey, nonce) already exists, return existing seq
+      // M8: Atomically increment last_seq and get the new value (query 1 of 2)
+      const [updated] = await tx
+        .update(syncDocuments)
+        .set({
+          lastSeq: sql`${syncDocuments.lastSeq} + 1`,
+          updatedAt: now,
+        })
+        .where(eq(syncDocuments.documentId, envelope.documentId))
+        .returning({ lastSeq: syncDocuments.lastSeq });
+
+      if (!updated) {
+        throw new DocumentNotFoundError(envelope.documentId);
+      }
+
+      const seq = updated.lastSeq;
+
+      // M8: INSERT with ON CONFLICT DO NOTHING combines insert + dedup (query 2 of 2)
+      // If (documentId, authorPublicKey, nonce) already exists, no row is returned.
+      const [inserted] = await tx
+        .insert(syncChanges)
+        .values({
+          id: createId(ID_PREFIXES.syncChange),
+          documentId: envelope.documentId,
+          seq,
+          encryptedPayload: envelope.ciphertext,
+          authorPublicKey: envelope.authorPublicKey,
+          nonce: envelope.nonce,
+          signature: envelope.signature,
+          createdAt: now,
+        })
+        .onConflictDoNothing({
+          target: [syncChanges.documentId, syncChanges.authorPublicKey, syncChanges.nonce],
+        })
+        .returning({ seq: syncChanges.seq });
+
+      if (inserted) {
+        return inserted.seq;
+      }
+
+      // Dedup hit: we incremented last_seq but the insert was a no-op.
+      // Roll back the increment and return the existing seq.
+      await tx
+        .update(syncDocuments)
+        .set({
+          lastSeq: sql`${syncDocuments.lastSeq} - 1`,
+          updatedAt: now,
+        })
+        .where(eq(syncDocuments.documentId, envelope.documentId));
+
       const [existing] = await tx
         .select({ seq: syncChanges.seq })
         .from(syncChanges)
@@ -35,38 +83,11 @@ export class PgSyncRelayService implements SyncRelayService {
           ),
         );
 
-      if (existing) {
-        return existing.seq;
+      if (!existing) {
+        throw new DocumentNotFoundError(envelope.documentId);
       }
 
-      // Atomically increment last_seq and get the new value
-      const [updated] = await tx
-        .update(syncDocuments)
-        .set({
-          lastSeq: sql`${syncDocuments.lastSeq} + 1`,
-          updatedAt: now,
-        })
-        .where(eq(syncDocuments.documentId, envelope.documentId))
-        .returning({ lastSeq: syncDocuments.lastSeq });
-
-      if (!updated) {
-        throw new Error(`Document not found: ${envelope.documentId}`);
-      }
-
-      const seq = updated.lastSeq;
-
-      await tx.insert(syncChanges).values({
-        id: createId(ID_PREFIXES.syncChange),
-        documentId: envelope.documentId,
-        seq,
-        encryptedPayload: envelope.ciphertext,
-        authorPublicKey: envelope.authorPublicKey,
-        nonce: envelope.nonce,
-        signature: envelope.signature,
-        createdAt: now,
-      });
-
-      return seq;
+      return existing.seq;
     });
   }
 
@@ -110,7 +131,7 @@ export class PgSyncRelayService implements SyncRelayService {
           .where(eq(syncDocuments.documentId, envelope.documentId));
 
         if (!doc) {
-          throw new Error(`Document not found: ${envelope.documentId}`);
+          throw new DocumentNotFoundError(envelope.documentId);
         }
 
         throw new SnapshotVersionConflictError(envelope.snapshotVersion, doc.snapshotVersion);

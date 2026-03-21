@@ -100,39 +100,7 @@ export class ValkeyPubSub {
 
       // Auto-resubscribe on reconnect (Valkey drops subscriptions on disconnect)
       this.subscriber.on("ready", () => {
-        if (this.activeChannels.size > 0) {
-          const channels = [...this.activeChannels];
-          logger.info("Valkey subscriber reconnected, resubscribing", {
-            channels: channels.length,
-          });
-          void Promise.allSettled(
-            channels.map(async (channel) => {
-              await this.subscriber?.subscribe(channel);
-            }),
-          )
-            .then((results) => {
-              let succeeded = 0;
-              let failed = 0;
-              for (const result of results) {
-                if (result.status === "fulfilled") {
-                  succeeded++;
-                } else {
-                  failed++;
-                  // Do NOT delete from activeChannels — next reconnect will retry
-                  logger.warn("Valkey resubscribe failed for channel", {
-                    error: formatError(result.reason),
-                  });
-                }
-              }
-              logger.info("Valkey resubscription complete", { succeeded, failed });
-            })
-            // I9: Catch errors from the .then() handler itself
-            .catch((err: unknown) => {
-              logger.error("Valkey resubscription processing error", {
-                error: formatError(err),
-              });
-            });
-        }
+        void this.resubscribeAll();
       });
 
       logger.info("Valkey pub/sub connected", { serverId: this.serverId });
@@ -228,6 +196,44 @@ export class ValkeyPubSub {
       } else {
         this.activeChannels.delete(channel);
       }
+    }
+  }
+
+  /** L9: Resubscribe to all active channels after reconnection. */
+  private async resubscribeAll(): Promise<void> {
+    if (this.activeChannels.size === 0) return;
+
+    const channels = [...this.activeChannels];
+    logger.info("Valkey subscriber reconnected, resubscribing", {
+      channels: channels.length,
+    });
+
+    try {
+      const results = await Promise.allSettled(
+        channels.map(async (channel) => {
+          await this.subscriber?.subscribe(channel);
+        }),
+      );
+
+      let succeeded = 0;
+      let failed = 0;
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          succeeded++;
+        } else {
+          failed++;
+          // Do NOT delete from activeChannels — next reconnect will retry
+          logger.warn("Valkey resubscribe failed for channel", {
+            error: formatError(result.reason),
+          });
+        }
+      }
+      logger.info("Valkey resubscription complete", { succeeded, failed });
+    } catch (err: unknown) {
+      // I9: Catch errors from the processing itself
+      logger.error("Valkey resubscription processing error", {
+        error: formatError(err),
+      });
     }
   }
 

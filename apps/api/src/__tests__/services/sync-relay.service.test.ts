@@ -1,4 +1,4 @@
-import { SnapshotVersionConflictError } from "@pluralscape/sync";
+import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscape/sync";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PgSyncRelayService } from "../../services/sync-relay.service.js";
@@ -52,16 +52,14 @@ describe("PgSyncRelayService", () => {
   });
 
   describe("submit", () => {
-    it("increments lastSeq and inserts change with signature", async () => {
+    it("increments lastSeq and inserts change with ON CONFLICT", async () => {
       const { db, chain } = mockDb();
       const service = new PgSyncRelayService(db);
 
-      // Dedup check returns empty (no existing)
-      chain.where.mockReturnValueOnce([]);
-      // UPDATE returning
+      // UPDATE .set().where().returning() -> new seq
       chain.returning.mockResolvedValueOnce([{ lastSeq: 5 }]);
-      // INSERT returning
-      chain.returning.mockResolvedValueOnce([]);
+      // INSERT .values().onConflictDoNothing().returning() -> inserted row
+      chain.returning.mockResolvedValueOnce([{ seq: 5 }]);
 
       const envelope = makeEnvelope("doc-1");
       const seq = await service.submit(envelope);
@@ -69,26 +67,35 @@ describe("PgSyncRelayService", () => {
       expect(seq).toBe(5);
     });
 
-    it("throws when document not found", async () => {
+    it("throws DocumentNotFoundError when document not found", async () => {
       const { db, chain } = mockDb();
       const service = new PgSyncRelayService(db);
 
-      // Dedup check returns empty
-      chain.where.mockReturnValueOnce([]);
-      // UPDATE returning (no rows)
+      // UPDATE returning (no rows — document not found)
       chain.returning.mockResolvedValueOnce([]);
 
       await expect(service.submit(makeEnvelope("missing-doc"))).rejects.toThrow(
-        "Document not found",
+        DocumentNotFoundError,
       );
     });
 
-    it("returns existing seq on dedup match", async () => {
+    it("returns existing seq on dedup hit (ON CONFLICT DO NOTHING)", async () => {
       const { db, chain } = mockDb();
       const service = new PgSyncRelayService(db);
 
-      // Dedup check returns existing row
-      chain.where.mockReturnValueOnce([{ seq: 3 }]);
+      // Call order for .where():
+      // 1. update().set().where().returning() -> chain (for returning chaining)
+      // 2. update().set().where() -> chain (rollback, no returning)
+      // 3. select().from().where() -> [{ seq: 3 }] (the SELECT result)
+      chain.where
+        .mockReturnValueOnce(chain) // 1st: initial UPDATE where
+        .mockReturnValueOnce(chain) // 2nd: rollback UPDATE where
+        .mockResolvedValueOnce([{ seq: 3 }]); // 3rd: SELECT where
+
+      // Call order for .returning():
+      // 1. update .returning() -> [{ lastSeq: 4 }]
+      // 2. insert .returning() -> [] (dedup hit, ON CONFLICT DO NOTHING)
+      chain.returning.mockResolvedValueOnce([{ lastSeq: 4 }]).mockResolvedValueOnce([]);
 
       const seq = await service.submit(makeEnvelope("doc-1"));
 
@@ -164,7 +171,7 @@ describe("PgSyncRelayService", () => {
       );
     });
 
-    it("throws when document not found", async () => {
+    it("throws DocumentNotFoundError when document not found", async () => {
       const { db, chain } = mockDb();
       const service = new PgSyncRelayService(db);
 
@@ -175,7 +182,7 @@ describe("PgSyncRelayService", () => {
       chain.where.mockResolvedValueOnce([]);
 
       await expect(service.submitSnapshot(makeSnapshotEnvelope("missing", 1))).rejects.toThrow(
-        "Document not found",
+        DocumentNotFoundError,
       );
     });
   });

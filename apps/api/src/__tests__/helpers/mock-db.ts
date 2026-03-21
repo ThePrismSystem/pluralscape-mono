@@ -21,6 +21,7 @@ export interface MockChain {
   delete: ReturnType<typeof vi.fn>;
   transaction: ReturnType<typeof vi.fn>;
   for: ReturnType<typeof vi.fn>;
+  onConflictDoNothing: ReturnType<typeof vi.fn>;
 }
 
 /** Build a mock Drizzle DB with chainable select/insert/update/delete methods. */
@@ -42,6 +43,7 @@ export function mockDb(overrides?: Partial<MockChain>): {
     delete: vi.fn(),
     transaction: vi.fn(),
     for: vi.fn(),
+    onConflictDoNothing: vi.fn(),
     ...overrides,
   };
 
@@ -58,6 +60,7 @@ export function mockDb(overrides?: Partial<MockChain>): {
   chain.set.mockReturnValue(chain);
   chain.delete.mockReturnValue(chain);
   chain.for.mockReturnValue(chain);
+  chain.onConflictDoNothing.mockReturnValue(chain);
   // transaction passes the chain as tx and awaits the callback
   chain.transaction = vi
     .fn()

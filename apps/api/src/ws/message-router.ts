@@ -34,7 +34,7 @@ import type { ConnectionManager } from "./connection-manager.js";
 import type { AuthenticatedState, SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
-import type { ServerMessage, SyncRelayService } from "@pluralscape/sync";
+import type { EncryptedChangeEnvelope, ServerMessage, SyncRelayService } from "@pluralscape/sync";
 import type { SystemId } from "@pluralscape/types";
 import type { ZodType } from "zod";
 
@@ -168,8 +168,10 @@ function checkAccess(
 }
 
 /**
- * Parse → access check → dispatch helper for single-doc read operations.
- * Reduces duplication in FetchSnapshot and FetchChanges cases.
+ * Parse → access check → dispatch helper for single-doc operations.
+ *
+ * M16: Extended with optional `onSuccess` callback that runs after the response
+ * is successfully sent. Used by submit operations to set ownership and broadcast.
  */
 async function dispatchWithAccess<T extends { docId: string; correlationId: string | null }>(
   schema: ZodType<T>,
@@ -179,12 +181,15 @@ async function dispatchWithAccess<T extends { docId: string; correlationId: stri
   log: AppLogger,
   ownership: Map<string, SystemId>,
   handler: (msg: T) => Promise<ServerMessage>,
+  onSuccess?: (msg: T, response: ServerMessage) => void,
 ): Promise<void> {
   const msg = parseMessage(schema, parsed, state, messageType, log);
   if (!msg) return;
   if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, ownership)) return;
   try {
-    send(state, await handler(msg), log);
+    const response = await handler(msg);
+    if (!send(state, response, log)) return;
+    onSuccess?.(msg, response);
   } catch (err) {
     log.error("Handler threw in dispatchWithAccess", {
       connectionId: state.connectionId,
@@ -330,6 +335,8 @@ export async function routeMessage(
   }
 
   // 6. Validate and dispatch using helpers
+  // Closure variable for SubmitChangeRequest broadcast envelope
+  let submitChangeEnvelope: EncryptedChangeEnvelope = undefined as never;
   switch (messageType) {
     case "ManifestRequest": {
       const msg = parseMessage(
@@ -443,86 +450,53 @@ export async function routeMessage(
       break;
     }
     case "SubmitChangeRequest": {
-      const msg = parseMessage(
+      // M16: Use dispatchWithAccess with onSuccess for ownership + broadcast
+      await dispatchWithAccess(
         CLIENT_MESSAGE_SCHEMAS.SubmitChangeRequest,
         parsed,
         state,
         messageType,
         log,
-      );
-      if (!msg) return;
-      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
-        return;
-      // I15: Wrap handler in try/catch to send SyncError on unexpected failure
-      let response;
-      let sequencedEnvelope;
-      try {
-        const result = await handleSubmitChange(msg, relay);
-        response = result.response;
-        sequencedEnvelope = result.sequencedEnvelope;
-      } catch (err) {
-        log.error("handleSubmitChange threw", {
-          connectionId: state.connectionId,
-          docId: msg.docId,
-          error: formatError(err),
-        });
-        send(
-          state,
-          makeSyncError("INTERNAL_ERROR", "Failed to process change", msg.correlationId, msg.docId),
-          log,
-        );
-        return;
-      }
-      // I7: Check send succeeded before broadcasting
-      if (!send(state, response, log)) return;
-      documentOwnership.set(msg.docId, state.systemId);
-      broadcastDocumentUpdate(
-        {
-          type: "DocumentUpdate",
-          correlationId: null,
-          docId: msg.docId,
-          changes: [sequencedEnvelope],
+        documentOwnership,
+        async (msg) => {
+          const result = await handleSubmitChange(msg, relay);
+          // Stash sequenced envelope for broadcast in onSuccess via closure
+          submitChangeEnvelope = result.sequencedEnvelope;
+          return result.response;
         },
-        state.connectionId,
-        manager,
-        log,
+        (msg) => {
+          documentOwnership.set(msg.docId, state.systemId);
+          broadcastDocumentUpdate(
+            {
+              type: "DocumentUpdate",
+              correlationId: null,
+              docId: msg.docId,
+              changes: [submitChangeEnvelope],
+            },
+            state.connectionId,
+            manager,
+            log,
+          );
+        },
       );
       break;
     }
     case "SubmitSnapshotRequest": {
-      const msg = parseMessage(
+      // M16: Use dispatchWithAccess with onSuccess for conditional ownership
+      await dispatchWithAccess(
         CLIENT_MESSAGE_SCHEMAS.SubmitSnapshotRequest,
         parsed,
         state,
         messageType,
         log,
+        documentOwnership,
+        (msg) => handleSubmitSnapshot(msg, relay),
+        (msg, response) => {
+          if (response.type !== "SyncError") {
+            documentOwnership.set(msg.docId, state.systemId);
+          }
+        },
       );
-      if (!msg) return;
-      if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, documentOwnership))
-        return;
-      try {
-        const response = await handleSubmitSnapshot(msg, relay);
-        if (!send(state, response, log)) return;
-        if (response.type !== "SyncError") {
-          documentOwnership.set(msg.docId, state.systemId);
-        }
-      } catch (err) {
-        log.error("handleSubmitSnapshot threw", {
-          connectionId: state.connectionId,
-          docId: msg.docId,
-          error: formatError(err),
-        });
-        send(
-          state,
-          makeSyncError(
-            "INTERNAL_ERROR",
-            "Failed to process snapshot",
-            msg.correlationId,
-            msg.docId,
-          ),
-          log,
-        );
-      }
       break;
     }
     case "DocumentLoadRequest": {

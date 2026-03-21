@@ -33,6 +33,16 @@ export {
   SignatureVerificationError,
 } from "./encrypted-sync.js";
 
+export {
+  SyncProtocolError,
+  UnexpectedResponseError,
+  SyncTimeoutError,
+  AdapterDisposedError,
+  NoChangeProducedError,
+  UnsupportedDocumentTypeError,
+  DocumentNotFoundError,
+} from "./errors.js";
+
 export type { SyncRelayService } from "./relay-service.js";
 export { EncryptedRelay, SnapshotVersionConflictError } from "./relay.js";
 export type { RelayDocumentState, RelayOptions } from "./relay.js";

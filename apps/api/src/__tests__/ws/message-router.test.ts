@@ -750,7 +750,7 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("INTERNAL_ERROR");
-      expect(resp["message"]).toBe("Failed to process snapshot");
+      expect(resp["message"]).toBe("Failed to process request");
     });
 
     it("sends INTERNAL_ERROR when handleManifestRequest throws", async () => {
@@ -851,7 +851,7 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("INTERNAL_ERROR");
-      expect(resp["message"]).toBe("Failed to process change");
+      expect(resp["message"]).toBe("Failed to process request");
     });
 
     it("sends INTERNAL_ERROR when handleDocumentLoad throws", async () => {

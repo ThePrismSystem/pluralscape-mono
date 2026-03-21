@@ -1,6 +1,13 @@
 declare function setTimeout(fn: () => void, ms: number): number;
 declare function clearTimeout(id: number): void;
 
+import {
+  AdapterDisposedError,
+  SyncProtocolError,
+  SyncTimeoutError,
+  UnexpectedResponseError,
+} from "../errors.js";
+
 import type { ClientMessage, ServerMessage, SyncTransport } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SyncManifest, SyncNetworkAdapter, SyncSubscription } from "./network-adapter.js";
@@ -23,6 +30,8 @@ interface PendingRequest<T> {
  *
  * Maps adapter methods to client/server message pairs using correlation IDs.
  * Supports subscriptions with real-time DocumentUpdate pushes.
+ *
+ * Auto-disposes when the underlying transport closes or errors.
  */
 export class WsNetworkAdapter implements SyncNetworkAdapter {
   private readonly transport: SyncTransport;
@@ -34,6 +43,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   private readonly lastSeqPerDoc = new Map<string, number>();
   private readonly timeoutMs: number;
   private readonly logger?: Pick<Logger, "warn">;
+  private disposed = false;
 
   constructor(
     transport: SyncTransport,
@@ -47,6 +57,13 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     transport.onMessage((msg) => {
       this.handleMessage(msg);
     });
+
+    // M12: Auto-dispose when transport closes or errors
+    if ("onClose" in transport && typeof transport.onClose === "function") {
+      (transport as SyncTransport & { onClose: (handler: () => void) => void }).onClose(() => {
+        this.dispose();
+      });
+    }
   }
 
   async submitChange(
@@ -93,10 +110,10 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     if (response.type === "SyncError") {
       // Server already has a newer version — not an error for the submitter
       if (response.code === "VERSION_CONFLICT") return;
-      throw new Error(`SyncError [${response.code}]: ${response.message}`);
+      throw new SyncProtocolError(response.code, response.message, response.docId);
     }
     if (response.type !== "SnapshotAccepted") {
-      throw new Error(`Unexpected response: ${response.type}`);
+      throw new UnexpectedResponseError("SnapshotAccepted", response.type);
     }
   }
 
@@ -164,20 +181,28 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     return manifestResp.manifest;
   }
 
+  /** Whether this adapter has been disposed. */
+  get isDisposed(): boolean {
+    return this.disposed;
+  }
+
   private expectResponse<T extends ServerMessage["type"]>(
     response: ServerMessage,
     expectedType: T,
   ): Extract<ServerMessage, { type: T }> {
     if (response.type === "SyncError") {
-      throw new Error(`SyncError [${response.code}]: ${response.message}`);
+      throw new SyncProtocolError(response.code, response.message, response.docId);
     }
     if (response.type !== expectedType) {
-      throw new Error(`Unexpected response: ${response.type}`);
+      throw new UnexpectedResponseError(expectedType, response.type);
     }
     return response as Extract<ServerMessage, { type: T }>;
   }
 
   private handleMessage(msg: ServerMessage): void {
+    // M12: Guard against calls after dispose
+    if (this.disposed) return;
+
     // Server-pushed DocumentUpdate — dispatch to subscribers
     if (msg.type === "DocumentUpdate") {
       const callbacks = this.subscriptions.get(msg.docId);
@@ -215,7 +240,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     return new Promise<ServerMessage>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(correlationId);
-        reject(new Error(`Request timed out: ${message.type}`));
+        reject(new SyncTimeoutError(message.type));
       }, this.timeoutMs);
 
       this.pending.set(correlationId, {
@@ -233,9 +258,12 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   }
 
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
+
     for (const [, pending] of this.pending) {
       clearTimeout(pending.timer);
-      pending.reject(new Error("Adapter disposed"));
+      pending.reject(new AdapterDisposedError());
     }
     this.pending.clear();
     this.subscriptions.clear();

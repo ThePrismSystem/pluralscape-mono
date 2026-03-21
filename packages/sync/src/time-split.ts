@@ -1,6 +1,7 @@
 import * as Automerge from "@automerge/automerge";
 
 import { parseDocumentId } from "./document-types.js";
+import { UnsupportedDocumentTypeError } from "./errors.js";
 import {
   createChatDocument,
   createFrontingDocument,
@@ -68,7 +69,7 @@ export function computeNewDocumentId(parsed: ParsedDocumentId, timePeriod: strin
     case "system-core":
     case "privacy-config":
     case "bucket":
-      throw new Error(`Document type "${parsed.documentType}" does not support time-splitting`);
+      throw new UnsupportedDocumentTypeError(parsed.documentType, "time-splitting");
     default: {
       const _exhaustive: never = parsed;
       throw new Error(`Unknown document type: ${String(_exhaustive)}`);
@@ -117,7 +118,7 @@ export function splitDocument<T>(
   const resolved = resolveTimeSplitConfig(docId);
   if (!resolved) {
     const parsed = parseDocumentId(docId);
-    throw new Error(`Document type "${parsed.documentType}" does not support time-splitting`);
+    throw new UnsupportedDocumentTypeError(parsed.documentType, "time-splitting");
   }
 
   const { parsed, config } = resolved;

@@ -1,6 +1,7 @@
 import { deriveSyncEncryptionKey } from "@pluralscape/crypto";
 
 import { parseDocumentId } from "./document-types.js";
+import { AdapterDisposedError } from "./errors.js";
 
 import type { DocumentKeys } from "./types.js";
 import type {
@@ -75,7 +76,7 @@ export class DocumentKeyResolver {
   /** Resolve a document ID to the encryption key and signing keys for sync. */
   resolveKeys(documentId: string): DocumentKeys {
     if (this.disposed) {
-      throw new Error("DocumentKeyResolver has been disposed");
+      throw new AdapterDisposedError("DocumentKeyResolver has been disposed");
     }
 
     const parsed = parseDocumentId(documentId);

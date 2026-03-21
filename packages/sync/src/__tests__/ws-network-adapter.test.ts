@@ -281,4 +281,90 @@ describe("WsNetworkAdapter", () => {
       expect(received.length).toBeGreaterThan(0);
     });
   });
+
+  describe("auto-dispose on transport close (M12)", () => {
+    /** Helper to create a transport with onClose support and capture the handler. */
+    function createClosableTransport(): {
+      transport: SyncTransport & { onClose: (handler: () => void) => void };
+      triggerClose: () => void;
+      triggerMessage: (msg: ServerMessage) => void;
+    } {
+      const handlers: { close: (() => void)[]; message: ((msg: ServerMessage) => void)[] } = {
+        close: [],
+        message: [],
+      };
+      const transport: SyncTransport & { onClose: (handler: () => void) => void } = {
+        state: "connected",
+        send: () => Promise.resolve(),
+        onMessage: (handler) => {
+          handlers.message.push(handler);
+        },
+        close: () => {},
+        onClose: (handler) => {
+          handlers.close.push(handler);
+        },
+      };
+      return {
+        transport,
+        triggerClose: () => {
+          for (const h of handlers.close) h();
+        },
+        triggerMessage: (msg) => {
+          for (const h of handlers.message) h(msg);
+        },
+      };
+    }
+
+    it("disposes adapter when transport onClose fires", () => {
+      const { transport, triggerClose } = createClosableTransport();
+      const adapter = new WsNetworkAdapter(transport);
+
+      expect(adapter.isDisposed).toBe(false);
+
+      triggerClose();
+
+      expect(adapter.isDisposed).toBe(true);
+    });
+
+    it("rejects pending requests when transport closes", async () => {
+      const { transport, triggerClose } = createClosableTransport();
+      const adapter = new WsNetworkAdapter(transport, 30_000);
+
+      const pending = adapter.fetchManifest("sys-1");
+      triggerClose();
+
+      await expect(pending).rejects.toThrow("Adapter disposed");
+    });
+
+    it("ignores messages after dispose", () => {
+      const { transport, triggerClose, triggerMessage } = createClosableTransport();
+      const adapter = new WsNetworkAdapter(transport);
+      const received: EncryptedChangeEnvelope[][] = [];
+      adapter.subscribe("doc-1", (changes) => {
+        received.push([...changes]);
+      });
+
+      triggerClose();
+
+      // Send a message after dispose — should be ignored
+      triggerMessage({
+        type: "DocumentUpdate",
+        correlationId: null,
+        docId: "doc-1",
+        changes: [],
+      });
+
+      expect(received).toHaveLength(0);
+    });
+
+    it("is idempotent — double dispose does not throw", () => {
+      const transport = new MockSyncTransport();
+      const adapter = new WsNetworkAdapter(transport);
+
+      adapter.dispose();
+      adapter.dispose();
+
+      expect(adapter.isDisposed).toBe(true);
+    });
+  });
 });
