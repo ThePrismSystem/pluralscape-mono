@@ -15,7 +15,7 @@ import {
   initSodium,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
 import { SyncEngine, submitCorrectionEnvelopes } from "../engine/sync-engine.js";
@@ -56,6 +56,10 @@ afterAll(() => {
   bucketKeyCache.clearAll();
   sodium.memzero(signingKeys.secretKey);
   sodium.memzero(masterKey);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 const SYSTEM_CORE_MANIFEST: SyncManifest = {
@@ -586,7 +590,7 @@ describe("P-M5: conflict retry buffer cap", () => {
       detectedAt: Date.now(),
       summary: "test conflict",
     };
-    const validationSpy = vi.spyOn(postMergeValidator, "runAllValidations").mockReturnValue({
+    vi.spyOn(postMergeValidator, "runAllValidations").mockReturnValue({
       cycleBreaks: [],
       sortOrderPatches: [],
       checkInNormalizations: 0,
@@ -620,10 +624,13 @@ describe("P-M5: conflict retry buffer cap", () => {
     const state = engine.getSyncState("system-core-sys_test");
     expect(state?.lastSyncedSeq).toBe(4);
 
-    validationSpy.mockRestore();
     engine.dispose();
   });
 });
+
+// P-M6 (dedup key optimization) is covered by relay-hardening tests.
+// P-M7 (removed broken targeted scan) is verified by the absence of
+// extractModifiedEntityTypes and its tests — no regression test needed.
 
 // ── P-M8: Bounded concurrency for envelope processing ─────────────
 

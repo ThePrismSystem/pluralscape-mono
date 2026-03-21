@@ -107,7 +107,14 @@ async function replayDocument(
     } else {
       failed++;
       // Skip remaining entries for this document (causal dependency)
-      skipped += docEntries.length - i - 1;
+      const remaining = docEntries.length - i - 1;
+      if (remaining > 0) {
+        skipped += remaining;
+        config.onError(
+          `Skipping ${String(remaining)} causally-dependent entries for document ${entry.documentId} after entry ${entry.id} failed`,
+          null,
+        );
+      }
       break;
     }
   }
@@ -129,6 +136,15 @@ async function replayEntry(
 
       return true;
     } catch (error) {
+      // Non-retriable errors (4xx except 408/429) fail immediately
+      if (!isRetriableError(error)) {
+        config.onError(
+          `Replay permanently failed for entry ${entry.id}: non-retriable error`,
+          error,
+        );
+        return false;
+      }
+
       config.onError(
         `Replay failed for entry ${entry.id} (attempt ${String(attempt + 1)}/${String(MAX_RETRIES_PER_ENTRY)})`,
         error,
@@ -144,6 +160,34 @@ async function replayEntry(
   }
 
   return false;
+}
+
+/** Lowest HTTP status code in the client-error range. */
+const HTTP_CLIENT_ERROR_MIN = 400;
+
+/** Lowest HTTP status code in the server-error range (end of client range). */
+const HTTP_SERVER_ERROR_MIN = 500;
+
+/** HTTP 408 Request Timeout — retriable despite being a 4xx. */
+const HTTP_REQUEST_TIMEOUT = 408;
+
+/** HTTP 429 Too Many Requests — retriable despite being a 4xx. */
+const HTTP_TOO_MANY_REQUESTS = 429;
+
+function isRetriableError(error: unknown): boolean {
+  if (error && typeof error === "object" && "status" in error) {
+    const status = (error as { status: number }).status;
+    // 4xx errors are generally not retriable, except timeouts and rate limiting
+    if (
+      status >= HTTP_CLIENT_ERROR_MIN &&
+      status < HTTP_SERVER_ERROR_MIN &&
+      status !== HTTP_REQUEST_TIMEOUT &&
+      status !== HTTP_TOO_MANY_REQUESTS
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function sleep(ms: number): Promise<void> {

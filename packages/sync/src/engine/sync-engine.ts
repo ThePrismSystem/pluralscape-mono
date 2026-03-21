@@ -144,16 +144,22 @@ export class SyncEngine {
         onError: this.config.onError,
       });
 
-      // Load newly-persisted changes into in-memory sessions
+      // Load newly-persisted changes into in-memory sessions.
+      // Routed through the document operation queue to serialize with
+      // concurrent real-time pushes from active subscriptions.
       if (result.replayed > 0) {
-        for (const [docId, session] of this.sessions) {
-          const changes = await this.config.storageAdapter.loadChangesSince(
-            docId,
-            session.lastSyncedSeq,
-          );
-          if (changes.length > 0) {
-            session.applyEncryptedChanges(changes);
-          }
+        for (const [docId] of this.sessions) {
+          await this.enqueueDocumentOperation(docId, async () => {
+            const session = this.sessions.get(docId);
+            if (!session) return;
+            const changes = await this.config.storageAdapter.loadChangesSince(
+              docId,
+              session.lastSyncedSeq,
+            );
+            if (changes.length > 0) {
+              session.applyEncryptedChanges(changes);
+            }
+          });
         }
       }
 
@@ -268,14 +274,24 @@ export class SyncEngine {
     this.documentQueues.clear();
     if (typeof this.config.networkAdapter.close === "function") {
       try {
-        void this.config.networkAdapter.close();
+        const result = this.config.networkAdapter.close();
+        if (result instanceof Promise) {
+          result.catch((error: unknown) => {
+            this.config.onError("Failed to close network adapter during dispose", error);
+          });
+        }
       } catch (error) {
         this.config.onError("Failed to close network adapter during dispose", error);
       }
     }
     if (typeof this.config.storageAdapter.close === "function") {
       try {
-        void this.config.storageAdapter.close();
+        const result = this.config.storageAdapter.close();
+        if (result instanceof Promise) {
+          result.catch((error: unknown) => {
+            this.config.onError("Failed to close storage adapter during dispose", error);
+          });
+        }
       } catch (error) {
         this.config.onError("Failed to close storage adapter during dispose", error);
       }

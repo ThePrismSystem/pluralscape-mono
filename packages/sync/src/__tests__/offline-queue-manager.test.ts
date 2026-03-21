@@ -316,4 +316,22 @@ describe("replayOfflineQueue", () => {
 
     vi.useRealTimers();
   });
+
+  it("propagates error when drainUnsynced throws", async () => {
+    const error = new Error("DB connection lost");
+    const offlineQueueAdapter: OfflineQueueAdapter = {
+      enqueue: vi.fn(),
+      drainUnsynced: vi.fn().mockRejectedValue(error),
+      markSynced: vi.fn(),
+      deleteConfirmed: vi.fn(),
+    };
+    await expect(
+      replayOfflineQueue({
+        offlineQueueAdapter,
+        networkAdapter: mockNetworkAdapter(),
+        storageAdapter: mockStorageAdapter(),
+        onError: vi.fn(),
+      }),
+    ).rejects.toThrow("DB connection lost");
+  });
 });

@@ -20,6 +20,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
 import { SyncEngine } from "../engine/sync-engine.js";
+import * as postMergeValidator from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
@@ -27,7 +28,7 @@ import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapt
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
-import type { EncryptedChangeEnvelope } from "../types.js";
+import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
 import type { SystemId, UnixMillis } from "@pluralscape/types";
 
@@ -170,25 +171,23 @@ describe("SyncEngine edge cases", () => {
         (d as Record<string, Record<string, string>>)["items"] = { key1: "value1" };
       });
 
-      let submitCount = 0;
       const networkAdapter = relayNetworkAdapter(relay);
       networkAdapter.submitChange = vi
         .fn()
-        .mockImplementation((_docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
-          submitCount++;
-          if (submitCount <= 3) {
-            // First entry always fails (3 retries)
+        .mockImplementation((docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
+          if (docId === "doc-fail") {
             return Promise.reject(new Error("Network error"));
           }
-          // Second entry succeeds
+          // doc-succeed gets through
           const seq = relay.submit(change);
           return Promise.resolve({ ...change, seq });
         });
 
+      const markSynced = vi.fn().mockResolvedValue(undefined);
       const drainUnsynced = vi.fn().mockResolvedValue([
         {
           id: "oq_fail_1",
-          documentId: "system-core-sys_test",
+          documentId: "doc-fail",
           envelope,
           enqueuedAt: 1000,
           syncedAt: null,
@@ -196,7 +195,7 @@ describe("SyncEngine edge cases", () => {
         },
         {
           id: "oq_ok_2",
-          documentId: "system-core-sys_test",
+          documentId: "doc-succeed",
           envelope,
           enqueuedAt: 2000,
           syncedAt: null,
@@ -216,7 +215,7 @@ describe("SyncEngine edge cases", () => {
         offlineQueueAdapter: {
           enqueue: vi.fn().mockResolvedValue("mock-id"),
           drainUnsynced,
-          markSynced: vi.fn().mockResolvedValue(undefined),
+          markSynced,
           deleteConfirmed: vi.fn().mockResolvedValue(0),
         },
       });
@@ -230,8 +229,18 @@ describe("SyncEngine edge cases", () => {
       await vi.advanceTimersByTimeAsync(10_000);
       await bootstrapPromise;
 
-      // onError should have been called for the failures
-      expect(onError).toHaveBeenCalled();
+      // Retry failure messages should have been logged for doc-fail
+      const retryErrors = onError.mock.calls.filter(
+        (call: unknown[]) =>
+          typeof call[0] === "string" && (call[0]).includes("oq_fail_1"),
+      );
+      expect(retryErrors.length).toBeGreaterThanOrEqual(1);
+
+      // Aggregate summary should report 1 failed, 0 skipped (different documents)
+      expect(onError).toHaveBeenCalledWith(expect.stringContaining("1 failed, 0 skipped"), null);
+
+      // The succeeding entry should have been marked synced
+      expect(markSynced).toHaveBeenCalledWith("oq_ok_2", expect.any(Number));
 
       engine.dispose();
       vi.useRealTimers();
@@ -263,6 +272,26 @@ describe("SyncEngine edge cases", () => {
         deleteOlderThan: vi.fn().mockResolvedValue(0),
       };
 
+      // Stub runAllValidations to produce a fake notification so
+      // persistConflicts is reliably triggered
+      const fakeNotification: ConflictNotification = {
+        entityType: "test",
+        entityId: "test-1",
+        fieldName: "value",
+        resolution: "lww-field",
+        detectedAt: Date.now(),
+        summary: "test conflict",
+      };
+      vi.spyOn(postMergeValidator, "runAllValidations").mockReturnValue({
+        cycleBreaks: [],
+        sortOrderPatches: [],
+        checkInNormalizations: 0,
+        friendConnectionNormalizations: 0,
+        correctionEnvelopes: [],
+        notifications: [fakeNotification],
+        errors: [],
+      });
+
       const onError = vi.fn();
       const engine = await createBootstrappedEngine({
         conflictPersistenceAdapter,
@@ -272,9 +301,13 @@ describe("SyncEngine edge cases", () => {
       // Apply incoming changes - should not throw even if persistence fails
       await engine.handleIncomingChanges("system-core-sys_test", [change]);
 
-      // The error handler may or may not be called depending on whether
-      // post-merge validation produces conflicts. The key assertion is
-      // that the operation completes without throwing.
+      // saveConflicts was called with the fake notification
+      expect(saveConflicts).toHaveBeenCalled();
+      // Error was reported via onError
+      expect(onError).toHaveBeenCalledWith("Failed to persist conflict records", expect.any(Error));
+      // Engine remains functional
+      expect(engine.getActiveDocIds()).toContain("system-core-sys_test");
+
       engine.dispose();
     });
   });
@@ -400,6 +433,68 @@ describe("SyncEngine edge cases", () => {
         (call: unknown[]) => typeof call[0] === "string" && call[0].includes("close"),
       );
       expect(closeErrors).toHaveLength(0);
+    });
+
+    it("catches async rejection from close() and reports via onError", async () => {
+      const closeError = new Error("Async close failed");
+      const networkClose = vi.fn().mockRejectedValue(closeError);
+
+      const relay = new EncryptedRelay();
+      const networkAdapter = relayNetworkAdapter(relay);
+      networkAdapter.close = networkClose;
+
+      const onError = vi.fn();
+      const engine = await createBootstrappedEngine({
+        networkAdapter,
+        onError,
+      });
+
+      engine.dispose();
+
+      // Wait for the async rejection to be caught
+      await vi.waitFor(() => {
+        expect(onError).toHaveBeenCalledWith(
+          "Failed to close network adapter during dispose",
+          closeError,
+        );
+      });
+    });
+  });
+
+  describe("applyLocalChange with network failure", () => {
+    it("enqueues locally and propagates network error to caller", async () => {
+      const enqueue = vi.fn().mockResolvedValue("oq_1");
+      const offlineQueueAdapter = {
+        enqueue,
+        drainUnsynced: vi.fn().mockResolvedValue([]),
+        markSynced: vi.fn().mockResolvedValue(undefined),
+        deleteConfirmed: vi.fn().mockResolvedValue(0),
+      };
+
+      const networkError = new Error("Connection refused");
+      const relay = new EncryptedRelay();
+      const networkAdapter = relayNetworkAdapter(relay);
+      networkAdapter.submitChange = vi.fn().mockRejectedValue(networkError);
+
+      const onError = vi.fn();
+      const engine = await createBootstrappedEngine({
+        networkAdapter,
+        offlineQueueAdapter,
+        onError,
+      });
+
+      // applyLocalChange should reject with the network error
+      await expect(
+        engine.applyLocalChange("system-core-sys_test", (doc) => {
+          const d = doc as Record<string, Record<string, string>>;
+          d["test_key"] = { value: "test" };
+        }),
+      ).rejects.toThrow("Connection refused");
+
+      // Entry was enqueued before the network failure
+      expect(enqueue).toHaveBeenCalledTimes(1);
+
+      engine.dispose();
     });
   });
 });
