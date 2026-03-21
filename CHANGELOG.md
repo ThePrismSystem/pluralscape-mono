@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded pnpm from 9.x to 10.x with `onlyBuiltDependencies` configuration
+
+## Milestone 3: Sync and Real-Time
+
+### Added
+
+- Encrypted CRDT sync (`packages/sync`) — Automerge relay with encrypted sync payloads, sync session management, document topology, subscription profiles
+- WebSocket sync server — binary protocol, bounded subscriptions, auth timeout, graceful shutdown
+- SSE notification stream — heartbeat, reconnect replay, per-account fan-out, idle timeout handling
+- Offline queue and replay — batched drain, causal ordering, exponential backoff, cryptographic confirmation before clearing local data
+- Conflict resolution engine — post-merge validation, hierarchy cycle detection, sort-order repair
+- Multi-device key transfer — device transfer protocol, code entropy (ADR 024), attempt limiting, transfer session cleanup job
+- Valkey pub/sub adapter — cross-instance fan-out, auto-resubscribe on reconnect
+- E2E test suite (`apps/api-e2e`) — Playwright, 51 tests covering auth, sync, SSE, device transfer, members
+- ADR 024: Device transfer code entropy
+- ADR 025: Webhook secret storage (T3 plaintext)
+- ADR 026: Lifecycle event type-specific validation
+
+### Fixed
+
+- M2 audit scorecard remediation — timing side-channels, structured logging, response envelope standardization, DRY violations
+- M3 comprehensive audit remediation — 42 HIGH+MEDIUM findings across 12 parallel worktree PRs
+- M3 low-severity audit remediation — 28 findings across security, performance, and code quality
+- SSE idle timeout handling for signed envelopes in E2E tests
+- Client-factory PG pool mock test stabilization
+
+## Milestone 2: API Core
+
+### Added
+
+- Auth system — registration, login, session management, recovery key backup/regeneration, password reset via recovery key, biometric token enrollment, session token hashing (ADR 013, ADR 021)
+- Member CRUD — full lifecycle (create, read, update, archive, restore, duplicate, permanent delete), member photos, custom field values, member-centric membership queries
+- Groups and folders — CRUD, hierarchical nesting, membership management, group copy, cycle detection
+- Custom fronts — CRUD with archive/restore
+- System settings — CRUD with encrypted data and PIN verification
+- Initial setup wizard — multi-step onboarding (profile, nomenclature, completion)
+- System structure data model — subsystems, side-systems, layers, relationships, structure links, structure memberships with generic CRUD extraction
+- Media upload pipeline — presigned upload/download URLs, blob confirmation, lifecycle management, orphan cleanup (ADR 009)
+- Per-category rate limit middleware — read/write/auth/sensitive categories with Valkey-backed distributed store
+- Key rotation API endpoints — initiate, claim, complete-chunk, progress tracking (ADR 014)
+- Innerworld CRUD — regions, entities, canvas with archive/restore/delete
+- Lifecycle events — type-specific validation (ADR 026), cursor-based pagination
+- Audit log — query endpoint with resourceType filtering, PII cleanup scheduling
+- OpenAPI 3.1 specification — 155 operations across 20 route domains with client-side plaintext schemas for E2E encryption
+- ADR 023: Zod-type alignment
+
+### Fixed
+
+- API comprehensive audit remediation — 36-issue audit across security, ownership, testing, and code quality; executed via 7 parallel worktree PRs
+
+## Milestones 0-1: Foundation and Data Layer
+
 ### Added
 
 - Core values (`VALUES.md`)
@@ -13,7 +67,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Community files: Code of Conduct, Contributing guide, Security policy
 - PR template with review checklist
 - `.gitignore`, `.editorconfig`
-- Architecture Decision Records (22 total):
+- Architecture Decision Records (ADRs 001-022):
   - ADR 001: AGPL-3.0 license
   - ADR 002: Frontend framework (Expo / React Native)
   - ADR 003: API framework (Hono + tRPC + REST on Bun)
@@ -51,7 +105,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `@pluralscape/validation` package — shared Zod validation schemas with branded type predicates (NaN/Infinity rejection) and contract tests ensuring type-schema alignment
 - API foundation (`apps/api`) — Hono server on Bun with CORS configuration, security headers (HSTS, CSP, etc.), in-memory rate limiting middleware, structured error handling with `ApiErrorResponse` format, and middleware composition tests
 - API specification (`docs/planning/api-specification.md`) — concrete operational constants for rate limits (12 categories), pagination (cursor + offset), session timeouts, retry policies, error codes, friend code tiers, audit retention, and blob size limits
-- Test framework — Vitest workspace configuration with coverage enforcement, test factories, and shared utilities (2,603 tests across 152 files)
+- Test framework — Vitest workspace configuration with coverage enforcement, test factories, and shared utilities
 - Database schema hardening — 29 optimization tasks: performance indexes (composites, partials, covering), non-critical encryption (API keys, sessions, webhooks, wiki slugs), sync queue fixes, full-text search, and varchar right-sizing
 - RLS policy bootstrapping — row-level security policies for all tenant-scoped tables with session-based isolation
 - SQLCipher encryption-at-rest — encrypted SQLite for self-hosted deployments
@@ -59,7 +113,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Entity archival support — archived/archived_at columns across all non-audit entity types with consistency checks and partial indexes
 - Entity archival FK audit (`docs/audits/011-entity-archival-fk-audit.md`) — complete FK dependency map for 26+ archivable entities
 - 12 future feature specifications (`docs/future-features/`) — widgets, cosmetics, client SDKs, onboarding, linked fronting, outtrigger analytics, traumaversary tracking, therapist reports, journal custom fields, journal fronting context, member templates, custom lifecycle events
-- ADR 023: Zod-type alignment — strategy for keeping Zod schemas synchronized with TypeScript types
 - Blob metadata, notification, and webhook integration tests (PG + SQLite)
 - Work tracking with beans (CLI-based issue tracker committed alongside code)
 - Roadmap generation from beans (`pnpm roadmap`)

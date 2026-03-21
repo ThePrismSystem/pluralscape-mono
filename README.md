@@ -8,38 +8,34 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-2 complete, starting Milestone 3 (Sync and Real-Time).**
+**Active development — Milestones 0-3 complete, starting Milestone 4 (Fronting Engine).**
 
-Milestones 0 (infrastructure), 1 (data layer), and 2 (API Core) are complete. The full REST API is implemented with 155 operations across 20 route domains, documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
+Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), and 3 (Sync and Real-Time) are complete. The full REST API is implemented with 155 operations across 20 route domains, documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
 
-Milestone 2 delivered:
+Milestone 3 delivered:
 
-- Auth system — registration, login, session management, recovery key backup/regeneration, password reset via recovery key, biometric token enrollment
-- Member CRUD — full lifecycle with photos, custom field values, membership queries
-- Groups and folders — CRUD, hierarchical nesting, membership management, group copy, cycle detection
-- Custom fronts, system settings, initial setup wizard, nomenclature
-- System structure — subsystems, side-systems, layers, relationships, structure links, structure memberships
-- Media upload pipeline — presigned upload/download URLs, blob confirmation, lifecycle management
-- Per-category rate limiting with Valkey-backed distributed store
-- Key rotation API — initiate, claim, complete-chunk, progress tracking
-- Innerworld CRUD — regions, entities, canvas
-- Lifecycle events with type-specific validation
-- Audit log with query filtering and PII cleanup scheduling
-- Security audit remediation — 52 issues across security, ownership, testing, and code quality
-- OpenAPI 3.1 specification with client-side plaintext schemas for E2E encryption
+- Encrypted CRDT sync — Automerge relay, sync sessions, document topology, subscription profiles
+- WebSocket sync server — binary protocol, bounded subscriptions, auth timeout, graceful shutdown
+- SSE notification stream — heartbeat, reconnect replay, per-account fan-out
+- Offline queue and replay — batched drain, causal ordering, exponential backoff
+- Conflict resolution — post-merge validation, cycle detection, sort-order repair
+- Multi-device key transfer — device transfer protocol, code entropy, attempt limiting
+- Valkey pub/sub adapter — cross-instance fan-out, auto-resubscribe on reconnect
+- E2E test suite — Playwright, 51 tests covering auth, sync, SSE, device transfer, members
+- Security audit remediation — 42 HIGH+MEDIUM findings, 28 LOW-severity findings, M2 scorecard remediation
 
 See the full [milestone roadmap](docs/planning/milestones.md) and [feature specification](docs/planning/features.md).
 
 ## Test Suite
 
-4,258 tests across 316 test files — all passing.
+5,499 tests across 380 test files + 51 E2E tests — all passing.
 
 | Metric     | Coverage |
 | ---------- | -------- |
-| Statements | 94.64%   |
-| Branches   | 84.30%   |
-| Functions  | 93.87%   |
-| Lines      | 94.82%   |
+| Statements | 94.82%   |
+| Branches   | 84.16%   |
+| Functions  | 94.57%   |
+| Lines      | 95.22%   |
 
 Coverage by package:
 
@@ -75,6 +71,7 @@ This is a **pnpm monorepo** orchestrated by [Turborepo](https://turbo.build).
 ```
 apps/
   api/             Hono on Bun — tRPC (internal) + REST (public)
+  api-e2e/         E2E test suite (Playwright)
   mobile/          Expo (React Native) — web, iOS, Android
 
 packages/
@@ -102,7 +99,7 @@ ui-design/
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
   openapi.yaml     Bundled single-file OpenAPI spec (generated)
-  adr/             Architecture Decision Records (23 accepted)
+  adr/             Architecture Decision Records (26 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
   future-features/ Unscheduled feature design documents
@@ -162,7 +159,7 @@ See the complete [feature specification](docs/planning/features.md).
 ### Prerequisites
 
 - [Bun](https://bun.sh) (runtime)
-- [pnpm](https://pnpm.io) 9.x (package manager)
+- [pnpm](https://pnpm.io) 10.x (package manager)
 - [Node.js](https://nodejs.org) 18+ (for tooling compatibility)
 - PostgreSQL 15+ (for integration tests)
 
@@ -188,6 +185,7 @@ pnpm test              # Run all tests
 pnpm test:unit         # Unit tests only
 pnpm test:integration  # Integration tests only
 pnpm test:coverage     # Tests with coverage report
+pnpm test:e2e          # E2E tests (Playwright)
 pnpm clean             # Clean build artifacts
 pnpm roadmap           # Generate docs/roadmap.md from beans
 pnpm codeql            # Run CodeQL security analysis
