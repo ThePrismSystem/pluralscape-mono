@@ -154,8 +154,8 @@ export type { OfflineQueueAdapter, OfflineQueueEntry } from "./adapters/offline-
 export { SqliteOfflineQueueAdapter } from "./adapters/sqlite-offline-queue-adapter.js";
 
 // ── Offline queue management ─────────────────────────────────────────
-export { OfflineQueueManager } from "./offline-queue-manager.js";
-export type { ReplayResult, OfflineQueueManagerConfig } from "./offline-queue-manager.js";
+export { replayOfflineQueue } from "./offline-queue-manager.js";
+export type { ReplayResult, ReplayOfflineQueueConfig } from "./offline-queue-manager.js";
 
 // ── Compaction & document lifecycle ───────────────────────────────────
 export { checkCompactionEligibility, LazyDocumentSizeTracker } from "./compaction.js";

@@ -7,10 +7,15 @@
  */
 import { createDocument } from "../factories/document-factory.js";
 import { mapConcurrent } from "../map-concurrent.js";
-import { OfflineQueueManager } from "../offline-queue-manager.js";
+import { replayOfflineQueue } from "../offline-queue-manager.js";
 import { runAllValidations } from "../post-merge-validator.js";
 import { filterManifest } from "../subscription-filter.js";
 import { EncryptedSyncSession } from "../sync-session.js";
+import {
+  CORRECTION_ENVELOPE_CONCURRENCY,
+  HYDRATION_CONCURRENCY,
+  MAX_CONFLICT_RETRY_BATCHES,
+} from "../sync.constants.js";
 
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { OfflineQueueAdapter } from "../adapters/offline-queue-adapter.js";
@@ -18,6 +23,7 @@ import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { DocumentKeyResolver } from "../document-key-resolver.js";
 import type { SyncDocumentType } from "../document-types.js";
+import type { ReplayResult } from "../offline-queue-manager.js";
 import type { DocumentSyncState, ReplicationProfile } from "../replication-profiles.js";
 import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -42,15 +48,6 @@ export interface SyncEngineConfig {
   readonly maxConflictRetryBatches?: number;
 }
 
-/** Maximum parallel document hydrations during bootstrap. */
-const HYDRATION_CONCURRENCY = 5;
-
-/** Maximum number of failed conflict persistence batches retained for retry. */
-const MAX_CONFLICT_RETRY_BATCHES = 100;
-
-/** Maximum parallel correction envelope submissions. */
-const CORRECTION_ENVELOPE_CONCURRENCY = 5;
-
 /**
  * Client-side sync engine.
  *
@@ -64,7 +61,6 @@ export class SyncEngine {
   private readonly documentQueues = new Map<string, Promise<void>>();
 
   private readonly config: SyncEngineConfig;
-  private readonly offlineQueueManager?: OfflineQueueManager;
   private failedConflictPersistence: Array<{
     documentId: string;
     notifications: readonly ConflictNotification[];
@@ -72,15 +68,6 @@ export class SyncEngine {
 
   constructor(config: SyncEngineConfig) {
     this.config = config;
-
-    if (config.offlineQueueAdapter) {
-      this.offlineQueueManager = new OfflineQueueManager({
-        offlineQueueAdapter: config.offlineQueueAdapter,
-        networkAdapter: config.networkAdapter,
-        storageAdapter: config.storageAdapter,
-        onError: config.onError,
-      });
-    }
   }
 
   /** Number of documents with in-flight queued operations. */
@@ -147,10 +134,15 @@ export class SyncEngine {
    * Called automatically at end of bootstrap and can be called manually.
    */
   async replayOfflineQueue(): Promise<void> {
-    if (!this.offlineQueueManager) return;
+    if (!this.config.offlineQueueAdapter) return;
 
     try {
-      const result = await this.offlineQueueManager.replay();
+      const result: ReplayResult = await replayOfflineQueue({
+        offlineQueueAdapter: this.config.offlineQueueAdapter,
+        networkAdapter: this.config.networkAdapter,
+        storageAdapter: this.config.storageAdapter,
+        onError: this.config.onError,
+      });
 
       // Load newly-persisted changes into in-memory sessions
       if (result.replayed > 0) {
@@ -274,15 +266,19 @@ export class SyncEngine {
     this.sessions.clear();
     this.syncStates.clear();
     this.documentQueues.clear();
-    try {
-      (this.config.networkAdapter as { close?(): void }).close?.();
-    } catch (error) {
-      this.config.onError("Failed to close network adapter during dispose", error);
+    if (typeof this.config.networkAdapter.close === "function") {
+      try {
+        void this.config.networkAdapter.close();
+      } catch (error) {
+        this.config.onError("Failed to close network adapter during dispose", error);
+      }
     }
-    try {
-      (this.config.storageAdapter as { close?(): void }).close?.();
-    } catch (error) {
-      this.config.onError("Failed to close storage adapter during dispose", error);
+    if (typeof this.config.storageAdapter.close === "function") {
+      try {
+        void this.config.storageAdapter.close();
+      } catch (error) {
+        this.config.onError("Failed to close storage adapter during dispose", error);
+      }
     }
   }
 

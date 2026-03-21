@@ -118,4 +118,7 @@ export interface SyncNetworkAdapter {
 
   /** Release resources (pending requests, timers, subscriptions). Optional. */
   dispose?(): void;
+
+  /** Close the underlying transport (e.g. WebSocket, HTTP client). Optional. */
+  close?(): void | Promise<void>;
 }

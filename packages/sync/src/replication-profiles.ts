@@ -1,3 +1,5 @@
+import { DEFAULT_ACTIVE_CHANNEL_WINDOW_DAYS } from "./sync.constants.js";
+
 import type { SyncManifestEntry } from "./adapters/network-adapter.js";
 
 // ── Replication profile types ────────────────────────────────────────
@@ -106,5 +108,5 @@ export const DEFAULT_OWNER_FULL_PROFILE: OwnerFullProfile = {
 /** Default owner-lite configuration: 30-day active channel window. */
 export const DEFAULT_OWNER_LITE_PROFILE: OwnerLiteProfile = {
   profileType: "owner-lite",
-  activeChannelWindowDays: 30,
+  activeChannelWindowDays: DEFAULT_ACTIVE_CHANNEL_WINDOW_DAYS,
 } as const;

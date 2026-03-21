@@ -67,5 +67,5 @@ export interface SyncStorageAdapter {
    * Releases any resources held by the adapter (e.g. database connections).
    * Optional — not all adapters require explicit cleanup.
    */
-  close?(): void;
+  close?(): void | Promise<void>;
 }

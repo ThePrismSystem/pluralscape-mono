@@ -1,5 +1,11 @@
 import * as Automerge from "@automerge/automerge";
 
+import {
+  DEFAULT_BACKGROUND_GRACE_SECONDS,
+  DEFAULT_FONT_SCALE,
+  DEFAULT_LOCK_TIMEOUT_MINUTES,
+} from "../sync.constants.js";
+
 import type { SyncDocumentType } from "../document-types.js";
 import type { BucketProjectionDocument } from "../schemas/bucket.js";
 import type { ChatDocument } from "../schemas/chat.js";
@@ -47,15 +53,15 @@ export function createSystemCoreDocument(): Automerge.Doc<SystemCoreDocument> {
       id: s(""),
       systemId: s(""),
       theme: s("system"),
-      fontScale: 1,
+      fontScale: DEFAULT_FONT_SCALE,
       locale: null,
       defaultBucketId: null,
       appLock: s(
         JSON.stringify({
           pinEnabled: false,
           biometricEnabled: false,
-          lockTimeout: 5,
-          backgroundGraceSeconds: 60,
+          lockTimeout: DEFAULT_LOCK_TIMEOUT_MINUTES,
+          backgroundGraceSeconds: DEFAULT_BACKGROUND_GRACE_SECONDS,
         }),
       ),
       notifications: s(

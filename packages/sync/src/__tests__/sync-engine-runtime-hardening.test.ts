@@ -19,7 +19,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
 import { SyncEngine, submitCorrectionEnvelopes } from "../engine/sync-engine.js";
-import { PostMergeValidator } from "../post-merge-validator.js";
+import * as postMergeValidator from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
@@ -586,16 +586,15 @@ describe("P-M5: conflict retry buffer cap", () => {
       detectedAt: Date.now(),
       summary: "test conflict",
     };
-    const validationSpy = vi
-      .spyOn(PostMergeValidator.prototype, "runAllValidations")
-      .mockReturnValue({
-        cycleBreaks: [],
-        sortOrderPatches: [],
-        checkInNormalizations: 0,
-        friendConnectionNormalizations: 0,
-        correctionEnvelopes: [],
-        notifications: [fakeNotification],
-      });
+    const validationSpy = vi.spyOn(postMergeValidator, "runAllValidations").mockReturnValue({
+      cycleBreaks: [],
+      sortOrderPatches: [],
+      checkInNormalizations: 0,
+      friendConnectionNormalizations: 0,
+      correctionEnvelopes: [],
+      notifications: [fakeNotification],
+      errors: [],
+    });
 
     const engine = await createBootstrappedEngine({
       conflictPersistenceAdapter: { saveConflicts, deleteOlderThan: vi.fn().mockResolvedValue(0) },

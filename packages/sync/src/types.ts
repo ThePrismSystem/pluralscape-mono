@@ -2,6 +2,7 @@ import {
   BUCKET_SIZE_LIMIT_BYTES,
   CHAT_SIZE_LIMIT_BYTES,
   CHAT_SPLIT_THRESHOLD_BYTES,
+  DEFAULT_COMPACTION_CHANGE_THRESHOLD,
   DEFAULT_COMPACTION_SIZE_BYTES,
   DEFAULT_STORAGE_BUDGET_BYTES,
   FRONTING_SIZE_LIMIT_BYTES,
@@ -51,7 +52,7 @@ export interface CompactionConfig {
 
 /** Default compaction configuration: 200 changes or 1 MiB size increase. */
 export const DEFAULT_COMPACTION_CONFIG: CompactionConfig = {
-  changeThreshold: 200,
+  changeThreshold: DEFAULT_COMPACTION_CHANGE_THRESHOLD,
   sizeThresholdBytes: DEFAULT_COMPACTION_SIZE_BYTES,
 } as const;
 
