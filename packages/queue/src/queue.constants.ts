@@ -25,6 +25,15 @@ export const MAX_ACK_RETRIES = 3;
 /** Delay in ms between acknowledge retry attempts. */
 export const ACK_RETRY_DELAY_MS = 50;
 
+/** Default interval in milliseconds between poll ticks for polling-based workers. */
+export const DEFAULT_POLL_INTERVAL_MS = 100;
+
+/** Default timeout in milliseconds for graceful shutdown to wait for in-flight jobs. */
+export const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000;
+
+/** Interval in milliseconds between checks for in-flight job completion during shutdown. */
+export const SHUTDOWN_POLL_MS = 10;
+
 /** Cron expression for daily audit log cleanup (03:00 UTC). */
 export const AUDIT_LOG_CLEANUP_CRON = "0 3 * * *";
 
