@@ -59,12 +59,12 @@ function mockSodium(): SodiumAdapter {
 function mockKeys(): DocumentKeys {
   // Two-step cast through intermediate variables (same pattern as test-crypto-helpers)
   const encKey: unknown = new Uint8Array(32).fill(0xaa);
-  const privKey: unknown = new Uint8Array(64).fill(0xcc);
+  const secKey: unknown = new Uint8Array(64).fill(0xcc);
   return {
     encryptionKey: encKey as AeadKey,
     signingKeys: {
       publicKey: pubkey(0xbb),
-      privateKey: privKey,
+      secretKey: secKey,
     } as SignKeypair,
   };
 }

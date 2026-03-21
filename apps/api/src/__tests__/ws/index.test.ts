@@ -11,12 +11,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Types for captured handler ──────────────────────────────────────
 
-/** Simplified handler interface matching the shape returned by upgradeWebSocket factories. */
+/**
+ * Simplified handler interface for the WebSocket lifecycle callbacks.
+ * Uses Record to avoid coupling with the WSContext type from hono/ws.
+ */
 interface WsHandler {
-  onOpen?: (evt: Event, ws: never) => void;
-  onMessage?: (evt: MessageEvent) => void;
+  onOpen?: (...args: unknown[]) => void;
+  onMessage?: (evt: { data: unknown }) => void;
   onClose?: () => void;
-  onError?: (evt: Event) => void;
+  onError?: (evt: unknown) => void;
 }
 
 // ── Mocks ───────────────────────────────────────────────────────────
