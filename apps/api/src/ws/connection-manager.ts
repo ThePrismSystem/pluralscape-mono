@@ -217,7 +217,7 @@ export class ConnectionManager {
 
   /** Check if a new unauthenticated connection can be accepted. */
   canAcceptUnauthenticated(limit: number): boolean {
-    return this.unauthCount < limit;
+    return !this.shuttingDown && this.unauthCount < limit;
   }
 
   /** Get the number of connections for an account. */
@@ -225,8 +225,8 @@ export class ConnectionManager {
     return this.accountIndex.get(accountId)?.size ?? 0;
   }
 
-  /** Close all connections and reset state. */
-  closeAll(code: number, reason: string, log?: Pick<AppLogger, "debug">): void {
+  /** Send close frames to all tracked connections. Does not clear maps. */
+  private _closeConnections(code: number, reason: string, log?: Pick<AppLogger, "debug">): void {
     for (const state of this.connections.values()) {
       if (state.authTimeoutHandle !== null) {
         clearTimeout(state.authTimeoutHandle);
@@ -234,12 +234,17 @@ export class ConnectionManager {
       try {
         state.ws.close(code, reason);
       } catch (err) {
-        log?.debug("Failed to close WebSocket during closeAll", {
+        log?.debug("Failed to close WebSocket", {
           connectionId: state.connectionId,
           error: formatError(err),
         });
       }
     }
+  }
+
+  /** Close all connections and reset state. */
+  closeAll(code: number, reason: string, log?: Pick<AppLogger, "debug">): void {
+    this._closeConnections(code, reason, log);
     this.connections.clear();
     this.accountIndex.clear();
     this.docIndex.clear();
@@ -267,19 +272,7 @@ export class ConnectionManager {
     }
 
     // Phase 2: Send close frame to all connections
-    for (const state of this.connections.values()) {
-      if (state.authTimeoutHandle !== null) {
-        clearTimeout(state.authTimeoutHandle);
-      }
-      try {
-        state.ws.close(WS_CLOSE_GOING_AWAY, "Server shutting down");
-      } catch (err) {
-        log?.debug("Failed to close WebSocket during graceful shutdown", {
-          connectionId: state.connectionId,
-          error: formatError(err),
-        });
-      }
-    }
+    this._closeConnections(WS_CLOSE_GOING_AWAY, "Server shutting down", log);
 
     // Phase 3: Wait for connections to drain or timeout
     const drainStart = Date.now();
@@ -294,6 +287,7 @@ export class ConnectionManager {
       log?.debug("Force-closing remaining connections after graceful shutdown timeout", {
         remaining: this.connections.size,
       });
+      this._closeConnections(WS_CLOSE_GOING_AWAY, "Server shutting down", log);
     }
     this.connections.clear();
     this.accountIndex.clear();

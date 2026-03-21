@@ -19,13 +19,14 @@ function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi
   return { close: vi.fn(), send: vi.fn() };
 }
 
-function mockAuth(accountId = "acct_test" as AccountId): AuthContext {
+function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContext {
+  const systemId = crypto.randomUUID() as SystemId;
   return {
     accountId,
-    systemId: "sys_test" as SystemId,
-    sessionId: "sess_test" as SessionId,
+    systemId,
+    sessionId: crypto.randomUUID() as SessionId,
     accountType: "system",
-    ownedSystemIds: new Set(["sys_test" as SystemId]),
+    ownedSystemIds: new Set([systemId]),
   };
 }
 
@@ -49,6 +50,8 @@ describe("graceful shutdown", () => {
 
     // After shutdown starts, isShuttingDown should be true
     expect(manager.isShuttingDown).toBe(true);
+    // canAcceptUnauthenticated should reject even with a high limit
+    expect(manager.canAcceptUnauthenticated(1000)).toBe(false);
 
     await shutdownPromise;
   });
@@ -57,9 +60,10 @@ describe("graceful shutdown", () => {
     manager = new ConnectionManager();
     const ws1 = mockWs();
     const ws2 = mockWs();
+    const auth = mockAuth();
     manager.reserveUnauthSlot();
     manager.register("conn-1", ws1 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
     manager.reserveUnauthSlot();
     manager.register("conn-2", ws2 as never, Date.now());
 
@@ -72,9 +76,10 @@ describe("graceful shutdown", () => {
   it("clears all state after shutdown completes", async () => {
     manager = new ConnectionManager();
     const ws1 = mockWs();
+    const auth = mockAuth();
     manager.reserveUnauthSlot();
     manager.register("conn-1", ws1 as never, Date.now());
-    manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+    manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
     manager.addSubscription("conn-1", "doc-a");
 
     await manager.gracefulShutdown(1_000);
@@ -82,7 +87,7 @@ describe("graceful shutdown", () => {
     expect(manager.activeCount).toBe(0);
     expect(manager.unauthenticatedCount).toBe(0);
     expect(manager.getSubscribers("doc-a").size).toBe(0);
-    expect(manager.getByAccount("acct_test").size).toBe(0);
+    expect(manager.getByAccount(auth.accountId).size).toBe(0);
   });
 
   it("completes even when ws.close() throws", async () => {

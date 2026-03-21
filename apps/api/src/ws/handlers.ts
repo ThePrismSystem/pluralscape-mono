@@ -89,21 +89,31 @@ export async function handleSubscribeRequest(
     const batch = permitted.slice(i, i + WS_SUBSCRIBE_CONCURRENCY);
     const batchResults = await Promise.all(
       batch.map(async (entry): Promise<DocumentCatchup | null> => {
-        const [changes, snapshot] = await Promise.all([
-          relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
-          relay.getLatestSnapshot(entry.docId),
-        ]);
-        const hasNewerSnapshot =
-          snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
+        try {
+          const [changes, snapshot] = await Promise.all([
+            relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+            relay.getLatestSnapshot(entry.docId),
+          ]);
+          const hasNewerSnapshot =
+            snapshot !== null && snapshot.snapshotVersion > entry.lastSnapshotVersion;
 
-        if (changes.length > 0 || hasNewerSnapshot) {
-          return {
+          if (changes.length > 0 || hasNewerSnapshot) {
+            return {
+              docId: entry.docId,
+              changes,
+              snapshot: hasNewerSnapshot ? snapshot : null,
+            };
+          }
+          return null;
+        } catch (err) {
+          log.error("Failed to fetch catchup for document", {
             docId: entry.docId,
-            changes,
-            snapshot: hasNewerSnapshot ? snapshot : null,
-          };
+            error: err instanceof Error ? err.message : String(err),
+          });
+          droppedDocIds.push(entry.docId);
+          manager.removeSubscription(state.connectionId, entry.docId);
+          return null;
         }
-        return null;
       }),
     );
     catchupResults.push(...batchResults);

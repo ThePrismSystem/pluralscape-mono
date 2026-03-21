@@ -15,7 +15,11 @@ import { WS_SUBSCRIBE_CONCURRENCY } from "../../ws/ws.constants.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
-import type { EncryptedChangeEnvelope, SubscribeRequest } from "@pluralscape/sync";
+import type {
+  EncryptedChangeEnvelope,
+  SubscribeRequest,
+  SyncRelayService,
+} from "@pluralscape/sync";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 // ── Test helpers ──────────────────────────────────────────────────────
@@ -187,5 +191,51 @@ describe("bounded subscribe concurrency", () => {
     const result = await handleSubscribeRequest(message, state, manager, relay.asService(), log);
 
     expect(result.catchup).toHaveLength(docCount);
+  });
+
+  it("limits concurrent relay calls to WS_SUBSCRIBE_CONCURRENCY", async () => {
+    manager = new ConnectionManager();
+    const connId = crypto.randomUUID();
+    const auth = mockAuth();
+    const log = mockLog();
+
+    manager.reserveUnauthSlot();
+    manager.register(connId, mockWs() as never, Date.now());
+    manager.authenticate(connId, auth, auth.systemId as SystemId, "owner-full");
+    const state = manager.get(connId);
+    if (!state) throw new Error("Connection not found");
+
+    // Create enough docs to span multiple batches
+    const docCount = WS_SUBSCRIBE_CONCURRENCY * 3;
+    const docIds = Array.from({ length: docCount }, () => crypto.randomUUID());
+
+    // Track concurrency via getEnvelopesSince calls
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    const mockRelay: SyncRelayService = {
+      async getEnvelopesSince() {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise<void>((r) => setTimeout(r, 1));
+        inFlight--;
+        return [];
+      },
+      getLatestSnapshot: () => Promise.resolve(null),
+      submit: () => Promise.resolve(1),
+      submitSnapshot: () => Promise.resolve(),
+      getManifest: (systemId) => Promise.resolve({ systemId, documents: [] }),
+    };
+
+    const message: SubscribeRequest = {
+      type: "SubscribeRequest",
+      correlationId: crypto.randomUUID(),
+      documents: docIds.map((docId) => ({ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 })),
+    };
+
+    await handleSubscribeRequest(message, state, manager, mockRelay, log);
+
+    expect(maxInFlight).toBeLessThanOrEqual(WS_SUBSCRIBE_CONCURRENCY);
+    expect(maxInFlight).toBeGreaterThan(0);
   });
 });

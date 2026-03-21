@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { SSE_MAX_CONNECTIONS_PER_ACCOUNT } from "../../../lib/sse.constants.js";
 import { mockAuthFactory, mockRateLimitFactory } from "../../helpers/common-route-mocks.js";
-import { createRouteApp } from "../../helpers/route-test-setup.js";
+import { createRouteApp, MOCK_AUTH } from "../../helpers/route-test-setup.js";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ vi.mock("../../../lib/logger.js", async (importOriginal) => {
 
 // ── Import after mocks ──────────────────────────────────────────
 
-const { notificationsRoutes, _resetSseStateForTesting } =
+const { notificationsRoutes, _resetSseStateForTesting, _addMockStreamForTesting } =
   await import("../../../routes/notifications/stream.js");
 const { logger } = await import("../../../lib/logger.js");
 
@@ -78,5 +79,20 @@ describe("GET /notifications/stream", () => {
     expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(
       "SSE: no pub/sub configured, stream will only receive heartbeats",
     );
+  });
+
+  it("returns 429 when SSE connection limit is exceeded", async () => {
+    const app = createApp();
+
+    // Fill up to the limit for the mock auth account
+    for (let i = 0; i < SSE_MAX_CONNECTIONS_PER_ACCOUNT; i++) {
+      _addMockStreamForTesting(MOCK_AUTH.accountId);
+    }
+
+    const res = await app.request("/notifications/stream");
+
+    expect(res.status).toBe(429);
+    const body = (await res.json()) as { error: string; message: string };
+    expect(body.error).toBe("TOO_MANY_STREAMS");
   });
 });

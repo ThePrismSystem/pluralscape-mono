@@ -58,10 +58,9 @@ notificationsRoutes.get("/stream", (c) => {
   const auth = c.get("auth");
   const accountId = auth.accountId;
   const lastEventId = c.req.header("Last-Event-ID");
-  const state = getOrCreateState(accountId);
-
   // M1: Enforce per-account SSE connection limit
-  if (state.streams.size >= SSE_MAX_CONNECTIONS_PER_ACCOUNT) {
+  const existingStreams = accountStates.get(accountId)?.streams.size ?? 0;
+  if (existingStreams >= SSE_MAX_CONNECTIONS_PER_ACCOUNT) {
     return c.json(
       {
         error: "TOO_MANY_STREAMS",
@@ -71,6 +70,7 @@ notificationsRoutes.get("/stream", (c) => {
     );
   }
 
+  const state = getOrCreateState(accountId);
   const pubsub = getNotificationPubSub();
   const channel = `${SSE_CHANNEL_PREFIX}${accountId}`;
 

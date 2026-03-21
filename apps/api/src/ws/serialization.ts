@@ -22,8 +22,8 @@ export function bytesToBase64url(input: Uint8Array): string {
 }
 
 /**
- * Recursively walk an object tree, converting all Uint8Array fields
- * to base64url strings in-place on a shallow copy.
+ * Recursively walk an object tree, returning a deep copy with all
+ * Uint8Array fields converted to base64url strings.
  *
  * Returns primitives, null, and non-object values unchanged.
  */
