@@ -103,14 +103,14 @@ export class EncryptedSyncSession<T> {
   }
 }
 
-export function syncThroughRelay<T>(
+export async function syncThroughRelay<T>(
   sessions: readonly EncryptedSyncSession<T>[],
   relay: EncryptedRelay,
-): void {
+): Promise<void> {
   for (const session of sessions) {
-    const envelopes = relay.getEnvelopesSince(session.documentId, session.lastSyncedSeq);
-    if (envelopes.length > 0) {
-      session.applyEncryptedChanges(envelopes);
+    const result = await relay.getEnvelopesSince(session.documentId, session.lastSyncedSeq);
+    if (result.envelopes.length > 0) {
+      session.applyEncryptedChanges(result.envelopes);
     }
   }
 }

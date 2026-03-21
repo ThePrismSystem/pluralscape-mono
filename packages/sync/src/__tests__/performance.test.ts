@@ -59,7 +59,7 @@ describe("performance", () => {
   it(
     `merges ${String(CHANGES_THRESHOLD)} encrypted changes in under ${String(MERGE_TIME_LIMIT_MS)}ms`,
     { timeout: 15000 },
-    () => {
+    async () => {
       const resolver = DocumentKeyResolver.create({
         masterKey,
         signingKeys,
@@ -104,7 +104,7 @@ describe("performance", () => {
               updatedAt: i,
             };
           });
-          relay.submit(envelope);
+          await relay.submit(envelope);
         }
 
         // Consumer: merge all changes and measure the time
@@ -115,8 +115,9 @@ describe("performance", () => {
           sodium,
         });
 
+        const result = await relay.getEnvelopesSince(docId, 0);
         const start = Date.now();
-        consumer.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+        consumer.applyEncryptedChanges(result.envelopes);
         const elapsed = Date.now() - start;
 
         expect(
@@ -134,7 +135,7 @@ describe("performance", () => {
     },
   );
 
-  it("document size grows sub-linearly after snapshot compaction", () => {
+  it("document size grows sub-linearly after snapshot compaction", async () => {
     // Verify that a snapshot is significantly smaller than the raw change log.
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
@@ -170,14 +171,17 @@ describe("performance", () => {
             updatedAt: i,
           };
         });
-        relay.submit(envelope);
+        await relay.submit(envelope);
       }
 
       // Snapshot is a single compressed representation of current state
       const snapshotEnvelope = session.createSnapshot(N);
-      const changeEnvelopes = relay.getEnvelopesSince(docId, 0);
+      const changeResult = await relay.getEnvelopesSince(docId, 0);
 
-      const totalChangesBytes = changeEnvelopes.reduce((acc, e) => acc + e.ciphertext.length, 0);
+      const totalChangesBytes = changeResult.envelopes.reduce(
+        (acc, e) => acc + e.ciphertext.length,
+        0,
+      );
       const snapshotBytes = snapshotEnvelope.ciphertext.length;
 
       // Snapshot should be smaller than the sum of all change ciphertexts

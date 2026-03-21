@@ -5,7 +5,12 @@
  * into a single module for import simplicity.
  */
 import { getSodium, InvalidInputError } from "@pluralscape/crypto";
-import { SnapshotVersionConflictError, verifyEnvelopeSignature } from "@pluralscape/sync";
+import {
+  EnvelopeLimitExceededError,
+  SnapshotSizeLimitExceededError,
+  SnapshotVersionConflictError,
+  verifyEnvelopeSignature,
+} from "@pluralscape/sync";
 
 import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
 
@@ -225,10 +230,24 @@ export async function handleSubmitChange(
     }
   }
 
-  const assignedSeq = await relay.submit({
-    ...message.change,
-    documentId: message.docId,
-  });
+  let assignedSeq: number;
+  try {
+    assignedSeq = await relay.submit({
+      ...message.change,
+      documentId: message.docId,
+    });
+  } catch (err) {
+    if (err instanceof EnvelopeLimitExceededError) {
+      return {
+        type: "SyncError",
+        correlationId: message.correlationId,
+        code: "QUOTA_EXCEEDED",
+        message: "Document envelope limit exceeded; compact before submitting more changes",
+        docId: message.docId,
+      };
+    }
+    throw err;
+  }
 
   return {
     type: "SubmitChangeResult",
@@ -266,6 +285,15 @@ export async function handleSubmitSnapshot(
         correlationId: message.correlationId,
         code: "VERSION_CONFLICT",
         message: "Snapshot version is not newer than current version",
+        docId: message.docId,
+      };
+    }
+    if (err instanceof SnapshotSizeLimitExceededError) {
+      return {
+        type: "SyncError",
+        correlationId: message.correlationId,
+        code: "QUOTA_EXCEEDED",
+        message: "Snapshot exceeds maximum allowed size",
         docId: message.docId,
       };
     }

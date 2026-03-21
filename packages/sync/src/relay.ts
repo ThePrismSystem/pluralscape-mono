@@ -1,12 +1,20 @@
-import { toHex } from "@pluralscape/crypto";
+import { AEAD_NONCE_BYTES, SIGN_PUBLIC_KEY_BYTES } from "@pluralscape/crypto";
 
 import {
   RELAY_MAX_ENVELOPES_PER_DOCUMENT,
   RELAY_MAX_SNAPSHOT_SIZE_BYTES,
 } from "./relay.constants.js";
 
-import type { SyncRelayService } from "./relay-service.js";
+import type { SyncManifest } from "./adapters/network-adapter.js";
+import type { PaginatedEnvelopes, SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
+import type { SystemId } from "@pluralscape/types";
+
+/**
+ * Number of bytes in the composite dedup key buffer.
+ * authorPublicKey (32 bytes Ed25519) + nonce (24 bytes XChaCha20).
+ */
+const DEDUP_KEY_BUFFER_BYTES = SIGN_PUBLIC_KEY_BYTES + AEAD_NONCE_BYTES;
 
 /** Thrown when a snapshot submission has a version not newer than the current one. */
 export class SnapshotVersionConflictError extends Error {
@@ -76,13 +84,13 @@ export interface RelayOptions {
   readonly maxDocuments?: number;
   /** Maximum number of change envelopes per document. Default: RELAY_MAX_ENVELOPES_PER_DOCUMENT (10,000). */
   readonly maxEnvelopesPerDocument?: number;
-  /** Maximum size in bytes for a single snapshot ciphertext. Default: Infinity (no limit). */
+  /** Maximum size in bytes for a single snapshot ciphertext. Default: RELAY_MAX_SNAPSHOT_SIZE_BYTES (50 MiB). */
   readonly maxSnapshotSizeBytes?: number;
   /** Called when a document is evicted from the relay. */
   readonly onEvict?: (documentId: string) => void;
 }
 
-export class EncryptedRelay {
+export class EncryptedRelay implements SyncRelayService {
   private readonly documents = new Map<string, EncryptedChangeEnvelope[]>();
   private readonly snapshots = new Map<string, EncryptedSnapshotEnvelope>();
   /**
@@ -91,8 +99,11 @@ export class EncryptedRelay {
    */
   private readonly accessOrder = new Map<string, true>();
   private readonly seqCounters = new Map<string, number>();
-  /** Nonce-based dedup index: (documentId, authorPublicKey, nonce) -> assigned seq. */
-  private readonly dedupIndex = new Map<string, number>();
+  /** Nonce-based dedup index: compositeKey(authorPublicKey, nonce) -> { documentId, seq }. */
+  private readonly dedupIndex = new Map<
+    string,
+    { readonly documentId: string; readonly seq: number }
+  >();
   /** Secondary index: documentId -> Set of dedup keys for O(k) eviction cleanup. */
   private readonly dedupByDoc = new Map<string, Set<string>>();
   private readonly maxDocuments: number;
@@ -108,12 +119,23 @@ export class EncryptedRelay {
     this.onEvict = options?.onEvict;
   }
 
-  submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): number {
-    // Dedup: if (documentId, authorPublicKey, nonce) already submitted, return existing seq
-    const dedupKey = this.buildDedupKey(envelope);
-    const existingSeq = this.dedupIndex.get(dedupKey);
-    if (existingSeq !== undefined) {
-      return existingSeq;
+  submit(envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<number> {
+    // Dedup: if (authorPublicKey, nonce) already submitted for this document, return existing seq
+    const dedupKey = buildDedupKey(envelope);
+    const existing = this.dedupIndex.get(dedupKey);
+    if (existing?.documentId === envelope.documentId) {
+      return Promise.resolve(existing.seq);
+    }
+
+    // Cross-document key collision: clean up the stale dedupByDoc reference
+    // before overwriting. Astronomically unlikely with random 24-byte nonces,
+    // but keeps the secondary index consistent.
+    if (existing) {
+      const oldDocKeys = this.dedupByDoc.get(existing.documentId);
+      if (oldDocKeys) {
+        oldDocKeys.delete(dedupKey);
+        if (oldDocKeys.size === 0) this.dedupByDoc.delete(existing.documentId);
+      }
     }
 
     // Evict LRU documents first so stale docs don't block limit checks
@@ -122,7 +144,9 @@ export class EncryptedRelay {
     // Enforce per-document envelope limit (checked after eviction so LRU cleanup always runs)
     const docEnvelopes = this.documents.get(envelope.documentId);
     if (docEnvelopes && docEnvelopes.length >= this.maxEnvelopesPerDocument) {
-      throw new EnvelopeLimitExceededError(envelope.documentId, this.maxEnvelopesPerDocument);
+      return Promise.reject(
+        new EnvelopeLimitExceededError(envelope.documentId, this.maxEnvelopesPerDocument),
+      );
     }
 
     const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
@@ -138,7 +162,7 @@ export class EncryptedRelay {
     envelopes.push(withSeq);
 
     // Update both dedup indexes
-    this.dedupIndex.set(dedupKey, seq);
+    this.dedupIndex.set(dedupKey, { documentId: envelope.documentId, seq });
     let docDedupKeys = this.dedupByDoc.get(envelope.documentId);
     if (!docDedupKeys) {
       docDedupKeys = new Set();
@@ -148,14 +172,23 @@ export class EncryptedRelay {
 
     this.touch(envelope.documentId);
 
-    return seq;
+    return Promise.resolve(seq);
   }
 
-  /** Return envelopes since a given seq using binary search + slice (O(log n)). */
-  getEnvelopesSince(documentId: string, sinceSeq: number): readonly EncryptedChangeEnvelope[] {
+  /**
+   * Return envelopes since a given seq using binary search + slice (O(log n)).
+   *
+   * When `limit` is provided, results are capped. `hasMore` indicates whether
+   * additional envelopes exist beyond the returned page.
+   */
+  getEnvelopesSince(
+    documentId: string,
+    sinceSeq: number,
+    limit?: number,
+  ): Promise<PaginatedEnvelopes> {
     const docEnvelopes = this.documents.get(documentId);
     if (!docEnvelopes) {
-      return [];
+      return Promise.resolve({ envelopes: [], hasMore: false });
     }
     this.touch(documentId);
 
@@ -171,55 +204,62 @@ export class EncryptedRelay {
         high = mid;
       }
     }
-    return docEnvelopes.slice(low);
+
+    const all = docEnvelopes.slice(low);
+    if (limit !== undefined && all.length > limit) {
+      return Promise.resolve({ envelopes: all.slice(0, limit), hasMore: true });
+    }
+    return Promise.resolve({ envelopes: all, hasMore: false });
   }
 
-  submitSnapshot(envelope: EncryptedSnapshotEnvelope): void {
+  submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void> {
     this.evictIfNeeded(envelope.documentId);
     if (envelope.ciphertext.byteLength > this.maxSnapshotSizeBytes) {
-      throw new SnapshotSizeLimitExceededError(
-        envelope.documentId,
-        envelope.ciphertext.byteLength,
-        this.maxSnapshotSizeBytes,
+      return Promise.reject(
+        new SnapshotSizeLimitExceededError(
+          envelope.documentId,
+          envelope.ciphertext.byteLength,
+          this.maxSnapshotSizeBytes,
+        ),
       );
     }
     const existing = this.snapshots.get(envelope.documentId);
     if (existing && existing.snapshotVersion >= envelope.snapshotVersion) {
-      throw new SnapshotVersionConflictError(envelope.snapshotVersion, existing.snapshotVersion);
+      return Promise.reject(
+        new SnapshotVersionConflictError(envelope.snapshotVersion, existing.snapshotVersion),
+      );
     }
     this.snapshots.set(envelope.documentId, envelope);
+
+    // Prune dedup entries for all changes up to the document's current seq.
+    // Snapshot acceptance means these changes are subsumed; their dedup entries can be freed.
+    const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
+    this.pruneDedupForDocument(envelope.documentId, currentSeq);
+
     this.touch(envelope.documentId);
+    return Promise.resolve();
   }
 
-  getLatestSnapshot(documentId: string): EncryptedSnapshotEnvelope | null {
+  getLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
     const snapshot = this.snapshots.get(documentId) ?? null;
     if (snapshot !== null || this.documents.has(documentId)) {
       this.touch(documentId);
     }
-    return snapshot;
+    return Promise.resolve(snapshot);
   }
 
-  /** Wrap this relay as an async SyncRelayService for use with WS handlers. */
+  /**
+   * Returns an empty manifest. The in-memory relay does not track the document
+   * metadata (docType, keyType, bucketId, etc.) required by SyncManifestEntry,
+   * so it cannot produce a meaningful manifest. Production uses PgSyncRelayService.
+   */
+  getManifest(systemId: SystemId): Promise<SyncManifest> {
+    return Promise.resolve({ documents: [], systemId });
+  }
+
+  /** Returns `this` — kept for call-site compatibility while callers migrate. */
   asService(): SyncRelayService {
-    return {
-      submit: (envelope) => Promise.resolve(this.submit(envelope)),
-      getEnvelopesSince: (documentId, sinceSeq, limit) => {
-        const all = this.getEnvelopesSince(documentId, sinceSeq);
-        if (limit !== undefined && all.length > limit) {
-          return Promise.resolve({
-            envelopes: all.slice(0, limit),
-            hasMore: true,
-          });
-        }
-        return Promise.resolve({ envelopes: all, hasMore: false });
-      },
-      submitSnapshot: (envelope) => {
-        this.submitSnapshot(envelope);
-        return Promise.resolve();
-      },
-      getLatestSnapshot: (d) => Promise.resolve(this.getLatestSnapshot(d)),
-      getManifest: (id) => Promise.resolve({ documents: [], systemId: id }),
-    };
+    return this;
   }
 
   inspectStorage(documentId: string): RelayDocumentState | undefined {
@@ -233,9 +273,29 @@ export class EncryptedRelay {
     };
   }
 
-  /** Build a composite dedup key from (documentId, authorPublicKey, nonce). */
-  private buildDedupKey(envelope: Omit<EncryptedChangeEnvelope, "seq">): string {
-    return `${envelope.documentId}:${toHex(envelope.authorPublicKey)}:${toHex(envelope.nonce)}`;
+  /**
+   * Prune dedup entries for a document where the associated seq is <= upToSeq.
+   *
+   * Called after a snapshot is accepted: all changes up to the document's
+   * current seq are subsumed by the snapshot and their dedup entries can be freed.
+   */
+  private pruneDedupForDocument(documentId: string, upToSeq: number): void {
+    const docDedupKeys = this.dedupByDoc.get(documentId);
+    if (!docDedupKeys) return;
+
+    // Safe: ES2015 Set iterator handles mid-loop deletion (deleted elements are skipped).
+    for (const key of docDedupKeys) {
+      const entry = this.dedupIndex.get(key);
+      if (entry && entry.seq <= upToSeq) {
+        this.dedupIndex.delete(key);
+        docDedupKeys.delete(key);
+      }
+    }
+
+    // Clean up the secondary index if all entries were pruned
+    if (docDedupKeys.size === 0) {
+      this.dedupByDoc.delete(documentId);
+    }
   }
 
   /** Move documentId to end of insertion order (most-recently-used). O(1). */
@@ -276,4 +336,26 @@ export class EncryptedRelay {
       this.onEvict?.(oldestId);
     }
   }
+}
+
+/**
+ * Build a composite dedup key from (authorPublicKey, nonce).
+ *
+ * Instead of hex-encoding each field and string-concatenating with delimiters,
+ * copies the two fixed-size byte arrays into a single buffer and encodes
+ * to base64. This avoids the per-byte hex loop and produces a shorter key.
+ */
+function buildDedupKey(envelope: Omit<EncryptedChangeEnvelope, "seq">): string {
+  const buf = new Uint8Array(DEDUP_KEY_BUFFER_BYTES);
+  buf.set(envelope.authorPublicKey, 0);
+  buf.set(envelope.nonce, SIGN_PUBLIC_KEY_BYTES);
+  return bufferToBase64(buf);
+}
+
+/**
+ * Encode a Uint8Array to base64. Uses built-in `btoa` which is
+ * available in all modern runtimes (Bun, Node 16+, browsers).
+ */
+function bufferToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
 }

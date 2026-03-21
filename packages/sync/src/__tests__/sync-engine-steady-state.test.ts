@@ -96,12 +96,13 @@ function relayNetworkAdapter(relay: EncryptedRelay): SyncNetworkAdapter {
   return {
     submitChange: vi
       .fn()
-      .mockImplementation((_docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
-        const seq = relay.submit(change);
-        return Promise.resolve({ ...change, seq });
+      .mockImplementation(async (_docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
+        const seq = await relay.submit(change);
+        return { ...change, seq };
       }),
-    fetchChangesSince: vi.fn().mockImplementation((docId: string, sinceSeq: number) => {
-      return Promise.resolve(relay.getEnvelopesSince(docId, sinceSeq));
+    fetchChangesSince: vi.fn().mockImplementation(async (docId: string, sinceSeq: number) => {
+      const result = await relay.getEnvelopesSince(docId, sinceSeq);
+      return result.envelopes;
     }),
     submitSnapshot: vi.fn().mockResolvedValue(undefined),
     fetchLatestSnapshot: vi.fn().mockResolvedValue(null),

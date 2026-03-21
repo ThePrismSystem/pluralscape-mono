@@ -96,7 +96,7 @@ describe("bounded subscribe concurrency", () => {
     for (let i = 0; i < docCount; i++) {
       const docId = crypto.randomUUID();
       docIds.push(docId);
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
     }
 
     const message: SubscribeRequest = {
@@ -131,7 +131,7 @@ describe("bounded subscribe concurrency", () => {
     for (let i = 0; i < WS_SUBSCRIBE_CONCURRENCY; i++) {
       const docId = crypto.randomUUID();
       docIds.push(docId);
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
     }
 
     const message: SubscribeRequest = {
@@ -164,7 +164,7 @@ describe("bounded subscribe concurrency", () => {
     for (let i = 0; i < docCount; i++) {
       const docId = crypto.randomUUID();
       docIds.push(docId);
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
     }
 
     const message: SubscribeRequest = {

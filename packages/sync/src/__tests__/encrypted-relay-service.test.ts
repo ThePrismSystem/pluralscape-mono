@@ -1,5 +1,5 @@
 /**
- * Tests for EncryptedRelay.asService() wrapper.
+ * Tests for EncryptedRelay implementing SyncRelayService directly.
  */
 import { describe, expect, it } from "vitest";
 
@@ -43,70 +43,82 @@ function mockSnapshot(docId: string, version: number): EncryptedSnapshotEnvelope
   };
 }
 
-describe("EncryptedRelay.asService()", () => {
-  it("submit delegates and returns a seq number", async () => {
+describe("EncryptedRelay as SyncRelayService", () => {
+  it("submit returns a seq number", async () => {
     const relay = new EncryptedRelay();
-    const service = relay.asService();
     const docId = "test-doc-1";
 
-    const seq = await service.submit(mockChange(docId));
+    const seq = await relay.submit(mockChange(docId));
 
     expect(seq).toBe(1);
-    expect(relay.getEnvelopesSince(docId, 0)).toHaveLength(1);
+    const result = await relay.getEnvelopesSince(docId, 0);
+    expect(result.envelopes).toHaveLength(1);
   });
 
-  it("getEnvelopesSince delegates correctly", async () => {
+  it("getEnvelopesSince returns paginated results", async () => {
     const relay = new EncryptedRelay();
-    const service = relay.asService();
     const docId = "test-doc-2";
 
-    relay.submit(mockChange(docId));
-    relay.submit({ ...mockChange(docId), nonce: nonce(0x11) });
+    await relay.submit(mockChange(docId));
+    await relay.submit({ ...mockChange(docId), nonce: nonce(0x11) });
 
-    const result = await service.getEnvelopesSince(docId, 1);
+    const result = await relay.getEnvelopesSince(docId, 1);
     expect(result.envelopes).toHaveLength(1);
     expect(result.envelopes[0]?.seq).toBe(2);
     expect(result.hasMore).toBe(false);
   });
 
-  it("submitSnapshot delegates correctly", async () => {
+  it("getEnvelopesSince respects limit parameter", async () => {
     const relay = new EncryptedRelay();
-    const service = relay.asService();
+    const docId = "test-doc-paginate";
+
+    await relay.submit(mockChange(docId));
+    await relay.submit({ ...mockChange(docId), nonce: nonce(0x11) });
+    await relay.submit({ ...mockChange(docId), nonce: nonce(0x22) });
+
+    const result = await relay.getEnvelopesSince(docId, 0, 2);
+    expect(result.envelopes).toHaveLength(2);
+    expect(result.hasMore).toBe(true);
+
+    const resultAll = await relay.getEnvelopesSince(docId, 0);
+    expect(resultAll.envelopes).toHaveLength(3);
+    expect(resultAll.hasMore).toBe(false);
+  });
+
+  it("submitSnapshot works directly", async () => {
+    const relay = new EncryptedRelay();
     const docId = "test-doc-3";
 
-    await service.submitSnapshot(mockSnapshot(docId, 1));
+    await relay.submitSnapshot(mockSnapshot(docId, 1));
 
-    const snapshot = relay.getLatestSnapshot(docId);
+    const snapshot = await relay.getLatestSnapshot(docId);
     expect(snapshot).not.toBeNull();
     expect(snapshot?.snapshotVersion).toBe(1);
   });
 
-  it("getLatestSnapshot delegates correctly", async () => {
+  it("getLatestSnapshot works directly", async () => {
     const relay = new EncryptedRelay();
-    const service = relay.asService();
     const docId = "test-doc-4";
 
-    relay.submitSnapshot(mockSnapshot(docId, 5));
+    await relay.submitSnapshot(mockSnapshot(docId, 5));
 
-    const snapshot = await service.getLatestSnapshot(docId);
+    const snapshot = await relay.getLatestSnapshot(docId);
     expect(snapshot).not.toBeNull();
     expect(snapshot?.snapshotVersion).toBe(5);
   });
 
   it("getManifest returns the requested systemId", async () => {
     const relay = new EncryptedRelay();
-    const service = relay.asService();
 
-    const manifest = await service.getManifest("sys_other" as SystemId);
+    const manifest = await relay.getManifest("sys_other" as SystemId);
     expect(manifest.systemId).toBe("sys_other");
     expect(manifest.documents).toEqual([]);
   });
 
-  it("getManifest works when asService is called without a systemId", async () => {
+  it("getManifest returns empty documents for any systemId", async () => {
     const relay = new EncryptedRelay();
-    const service = relay.asService();
 
-    const manifest = await service.getManifest("sys_test" as SystemId);
+    const manifest = await relay.getManifest("sys_test" as SystemId);
     expect(manifest.systemId).toBe("sys_test");
   });
 });

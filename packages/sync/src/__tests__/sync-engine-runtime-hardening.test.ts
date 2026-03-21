@@ -19,7 +19,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
 import { SyncEngine, submitCorrectionEnvelopes } from "../engine/sync-engine.js";
-import * as postMergeValidator from "../post-merge-validator.js";
+import * as PostMergeValidatorModule from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
@@ -590,7 +590,7 @@ describe("P-M5: conflict retry buffer cap", () => {
       detectedAt: Date.now(),
       summary: "test conflict",
     };
-    vi.spyOn(postMergeValidator, "runAllValidations").mockReturnValue({
+    const validationSpy = vi.spyOn(PostMergeValidatorModule, "runAllValidations").mockReturnValue({
       cycleBreaks: [],
       sortOrderPatches: [],
       checkInNormalizations: 0,

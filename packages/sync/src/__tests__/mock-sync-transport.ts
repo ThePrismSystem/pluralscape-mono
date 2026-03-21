@@ -2,7 +2,11 @@
  * In-memory SyncTransport wired to an EncryptedRelay.
  * Used by WsNetworkAdapter contract tests to avoid real WebSocket connections.
  */
-import { EncryptedRelay } from "../relay.js";
+import {
+  EncryptedRelay,
+  SnapshotSizeLimitExceededError,
+  SnapshotVersionConflictError,
+} from "../relay.js";
 
 import type { ClientMessage, ServerMessage, SyncTransport, TransportState } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
@@ -24,10 +28,9 @@ export class MockSyncTransport implements SyncTransport {
       return Promise.reject(new Error("Transport not connected"));
     }
     // Process message and generate response
-    const response = this.processMessage(message);
-    if (response) {
-      // Deliver response asynchronously (simulates network)
-      void Promise.resolve().then(() => {
+    void this.processMessage(message).then((response) => {
+      if (response) {
+        // Deliver response asynchronously (simulates network)
         if (Array.isArray(response)) {
           for (const msg of response) {
             this.handler?.(msg);
@@ -35,8 +38,8 @@ export class MockSyncTransport implements SyncTransport {
         } else {
           this.handler?.(response);
         }
-      });
-    }
+      }
+    });
     return Promise.resolve();
   }
 
@@ -58,7 +61,9 @@ export class MockSyncTransport implements SyncTransport {
     return this.relay;
   }
 
-  private processMessage(message: ClientMessage): ServerMessage | ServerMessage[] | null {
+  private async processMessage(
+    message: ClientMessage,
+  ): Promise<ServerMessage | ServerMessage[] | null> {
     switch (message.type) {
       case "AuthenticateRequest":
         return {
@@ -75,20 +80,26 @@ export class MockSyncTransport implements SyncTransport {
           manifest: { systemId: message.systemId as SystemId, documents: [] },
         };
 
-      case "SubscribeRequest":
+      case "SubscribeRequest": {
         for (const entry of message.documents) {
           this.subscriptions.set(entry.docId, true);
+        }
+        const catchup = [];
+        for (const entry of message.documents) {
+          const result = await this.relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq);
+          catchup.push({
+            docId: entry.docId,
+            changes: result.envelopes,
+            snapshot: null,
+          });
         }
         return {
           type: "SubscribeResponse",
           correlationId: message.correlationId,
-          catchup: message.documents.map((entry) => ({
-            docId: entry.docId,
-            changes: this.relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
-            snapshot: null,
-          })),
+          catchup,
           droppedDocIds: [],
         };
+      }
 
       case "UnsubscribeRequest":
         this.subscriptions.delete(message.docId);
@@ -99,19 +110,21 @@ export class MockSyncTransport implements SyncTransport {
           type: "SnapshotResponse",
           correlationId: message.correlationId,
           docId: message.docId,
-          snapshot: this.relay.getLatestSnapshot(message.docId),
+          snapshot: await this.relay.getLatestSnapshot(message.docId),
         };
 
-      case "FetchChangesRequest":
+      case "FetchChangesRequest": {
+        const changesResult = await this.relay.getEnvelopesSince(message.docId, message.sinceSeq);
         return {
           type: "ChangesResponse",
           correlationId: message.correlationId,
           docId: message.docId,
-          changes: this.relay.getEnvelopesSince(message.docId, message.sinceSeq),
+          changes: changesResult.envelopes,
         };
+      }
 
       case "SubmitChangeRequest": {
-        const seq = this.relay.submit({
+        const seq = await this.relay.submit({
           ...message.change,
           documentId: message.docId,
         });
@@ -147,39 +160,53 @@ export class MockSyncTransport implements SyncTransport {
             ...message.snapshot,
             documentId: message.docId,
           };
-          this.relay.submitSnapshot(snapshot);
+          await this.relay.submitSnapshot(snapshot);
           return {
             type: "SnapshotAccepted",
             correlationId: message.correlationId,
             docId: message.docId,
             snapshotVersion: message.snapshot.snapshotVersion,
           };
-        } catch {
-          return {
-            type: "SyncError",
-            correlationId: message.correlationId,
-            code: "VERSION_CONFLICT",
-            message: "Snapshot version conflict",
-            docId: message.docId,
-          };
+        } catch (err) {
+          if (err instanceof SnapshotVersionConflictError) {
+            return {
+              type: "SyncError",
+              correlationId: message.correlationId,
+              code: "VERSION_CONFLICT",
+              message: "Snapshot version conflict",
+              docId: message.docId,
+            };
+          }
+          if (err instanceof SnapshotSizeLimitExceededError) {
+            return {
+              type: "SyncError",
+              correlationId: message.correlationId,
+              code: "QUOTA_EXCEEDED",
+              message: "Snapshot exceeds maximum allowed size",
+              docId: message.docId,
+            };
+          }
+          throw err;
         }
       }
 
-      case "DocumentLoadRequest":
+      case "DocumentLoadRequest": {
+        const loadChanges = await this.relay.getEnvelopesSince(message.docId, 0);
         return [
           {
             type: "SnapshotResponse",
             correlationId: message.correlationId,
             docId: message.docId,
-            snapshot: this.relay.getLatestSnapshot(message.docId),
+            snapshot: await this.relay.getLatestSnapshot(message.docId),
           },
           {
             type: "ChangesResponse",
             correlationId: message.correlationId,
             docId: message.docId,
-            changes: this.relay.getEnvelopesSince(message.docId, 0),
+            changes: loadChanges.envelopes,
           },
         ];
+      }
 
       default:
         return null;

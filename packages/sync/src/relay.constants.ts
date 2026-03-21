@@ -1,3 +1,5 @@
+import { MiB } from "./sync.constants.js";
+
 /**
  * Maximum number of change envelopes stored per document before the relay
  * rejects further submissions and instructs the client to compact.
@@ -10,8 +12,8 @@ export const RELAY_MAX_ENVELOPES_PER_DOCUMENT = 10_000;
 /**
  * Default maximum size in bytes for a single snapshot ciphertext.
  *
- * Defaults to Infinity (no limit) for backward compatibility.
- * Set a finite value via `RelayOptions.maxSnapshotSizeBytes` to cap
- * memory usage from large snapshot blobs.
+ * Snapshots beyond this size are rejected to prevent memory exhaustion
+ * from oversized blobs. 50 MiB is well above the largest document
+ * size limit (journal at 50 MiB) and accounts for AEAD overhead.
  */
-export const RELAY_MAX_SNAPSHOT_SIZE_BYTES = Infinity;
+export const RELAY_MAX_SNAPSHOT_SIZE_BYTES = 50 * MiB;

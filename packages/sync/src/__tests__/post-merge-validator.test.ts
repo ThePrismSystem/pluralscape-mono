@@ -160,7 +160,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
     keys = makeKeys();
   });
 
-  it("re-stamps archived = true when entity is archived post-merge to ensure tombstone wins future merges", () => {
+  it("re-stamps archived = true when entity is archived post-merge to ensure tombstone wins future merges", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-enforce");
 
@@ -183,8 +183,9 @@ describe("PostMergeValidator: enforceTombstones", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-enforce", 0));
+    await relay.submit(seedEnv);
+    const _r1 = await relay.getEnvelopesSince("doc-tomb-enforce", 0);
+    sessionB.applyEncryptedChanges(_r1.envelopes);
 
     // A archives. B makes an unrelated edit concurrently (does not un-archive).
     const envA = sessionA.change((d) => {
@@ -202,9 +203,9 @@ describe("PostMergeValidator: enforceTombstones", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // After merge, entity should be archived (A's archive + B's edit both apply)
     expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
@@ -265,7 +266,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     keys = makeKeys();
   });
 
-  it("breaks a group cycle by nulling parent of lowest-ID entity", () => {
+  it("breaks a group cycle by nulling parent of lowest-ID entity", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cycle-fix");
 
@@ -273,8 +274,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.groups["groupA"] = makeGroup("groupA", 1);
       d.groups["groupB"] = makeGroup("groupB", 2);
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cycle-fix", 0));
+    await relay.submit(seedEnv);
+    const _r2 = await relay.getEnvelopesSince("doc-cycle-fix", 0);
+    sessionB.applyEncryptedChanges(_r2.envelopes);
 
     // Create mutual parent cycle
     const envA = sessionA.change((d) => {
@@ -286,9 +288,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       if (g) g.parentGroupId = s("groupA");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const { breaks } = detectHierarchyCycles(sessionA);
 
@@ -300,7 +302,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     expect(sessionA.document.groups["groupB"]?.parentGroupId?.val).toBe("groupA");
   });
 
-  it("breaks subsystem cycles", () => {
+  it("breaks subsystem cycles", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-ss-cycle");
 
@@ -308,8 +310,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.subsystems["ss_a"] = makeSubsystem("ss_a");
       d.subsystems["ss_b"] = makeSubsystem("ss_b");
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-ss-cycle", 0));
+    await relay.submit(seedEnv);
+    const _r3 = await relay.getEnvelopesSince("doc-ss-cycle", 0);
+    sessionB.applyEncryptedChanges(_r3.envelopes);
 
     const envA = sessionA.change((d) => {
       const ss = d.subsystems["ss_a"];
@@ -320,9 +323,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       if (ss) ss.parentSubsystemId = s("ss_a");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const { breaks } = detectHierarchyCycles(sessionA);
 
@@ -331,7 +334,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     expect(sessionA.document.subsystems["ss_a"]?.parentSubsystemId).toBeNull();
   });
 
-  it("breaks innerworld region cycles", () => {
+  it("breaks innerworld region cycles", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-rg-cycle");
 
@@ -339,8 +342,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.innerWorldRegions["rg_a"] = makeRegion("rg_a");
       d.innerWorldRegions["rg_b"] = makeRegion("rg_b");
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-rg-cycle", 0));
+    await relay.submit(seedEnv);
+    const _r4 = await relay.getEnvelopesSince("doc-rg-cycle", 0);
+    sessionB.applyEncryptedChanges(_r4.envelopes);
 
     const envA = sessionA.change((d) => {
       const rg = d.innerWorldRegions["rg_a"];
@@ -351,9 +355,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       if (rg) rg.parentRegionId = s("rg_a");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const { breaks } = detectHierarchyCycles(sessionA);
 
@@ -361,7 +365,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     expect(sessionA.document.innerWorldRegions["rg_a"]?.parentRegionId).toBeNull();
   });
 
-  it("breaks a 3-node group cycle (A->B->C->A) by nulling parent of lowest-ID entity", () => {
+  it("breaks a 3-node group cycle (A->B->C->A) by nulling parent of lowest-ID entity", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-3-cycle");
 
@@ -370,8 +374,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.groups["grpB"] = makeGroup("grpB", 2);
       d.groups["grpC"] = makeGroup("grpC", 3);
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-3-cycle", 0));
+    await relay.submit(seedEnv);
+    const seedResult = await relay.getEnvelopesSince("doc-3-cycle", 0);
+    sessionB.applyEncryptedChanges(seedResult.envelopes);
 
     // A sets grpA->grpB, grpB->grpC. B sets grpC->grpA. After merge: A->B->C->A cycle.
     const envA = sessionA.change((d) => {
@@ -385,9 +390,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       if (gC) gC.parentGroupId = s("grpA");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const { breaks } = detectHierarchyCycles(sessionA);
 
@@ -482,7 +487,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
     keys = makeKeys();
   });
 
-  it("sets dismissed = false when respondedByMemberId is set and dismissed is true", () => {
+  it("sets dismissed = false when respondedByMemberId is set and dismissed is true", async () => {
     const base = createFrontingDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-checkin-norm");
 
@@ -500,8 +505,9 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-checkin-norm", 0));
+    await relay.submit(seedEnv);
+    const _r5 = await relay.getEnvelopesSince("doc-checkin-norm", 0);
+    sessionB.applyEncryptedChanges(_r5.envelopes);
 
     // A responds, B dismisses concurrently
     const envA = sessionA.change((d) => {
@@ -518,9 +524,9 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const { count } = normalizeCheckInRecord(sessionA);
 
@@ -570,7 +576,7 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
     keys = makeKeys();
   });
 
-  it("re-stamps accepted when status reverted to pending from accepted", () => {
+  it("re-stamps accepted when status reverted to pending from accepted", async () => {
     const base = createPrivacyConfigDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-friend-norm");
 
@@ -590,8 +596,9 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
       // Add a bucket assignment as evidence of prior acceptance
       d.friendConnections["fc_1"].assignedBuckets["bkt_1"] = true;
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-friend-norm", 0));
+    await relay.submit(seedEnv);
+    const _r6 = await relay.getEnvelopesSince("doc-friend-norm", 0);
+    sessionB.applyEncryptedChanges(_r6.envelopes);
 
     // B sets status to pending while A keeps accepted
     const envA = sessionA.change((d) => {
@@ -606,9 +613,9 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // The LWW may pick B's pending status
     const { count } = normalizeFriendConnection(sessionA);
@@ -719,7 +726,7 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it("includes cycle break and sort order notifications in result.notifications", () => {
+  it("includes cycle break and sort order notifications in result.notifications", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-notif-test");
 
@@ -728,8 +735,9 @@ describe("runAllValidations (module-level function)", () => {
       d.groups["grpB"] = makeGroup("grpB", 5);
       d.groups["grpC"] = makeGroup("grpC", 3);
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-notif-test", 0));
+    await relay.submit(seedEnv);
+    const _r7 = await relay.getEnvelopesSince("doc-notif-test", 0);
+    sessionB.applyEncryptedChanges(_r7.envelopes);
 
     const envA = sessionA.change((d) => {
       const g = d.groups["grpA"];
@@ -740,9 +748,9 @@ describe("runAllValidations (module-level function)", () => {
       if (g) g.parentGroupId = s("grpA");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const result = runAllValidations(sessionA);
 
@@ -765,7 +773,7 @@ describe("runAllValidations (module-level function)", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it("handles both sort order ties and parent cycles in same run", () => {
+  it("handles both sort order ties and parent cycles in same run", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-multi-validator");
 
@@ -775,8 +783,9 @@ describe("runAllValidations (module-level function)", () => {
       d.groups["grpB"] = makeGroup("grpB", 5); // tie with grpA
       d.groups["grpC"] = makeGroup("grpC", 3);
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-multi-validator", 0));
+    await relay.submit(seedEnv);
+    const _r8 = await relay.getEnvelopesSince("doc-multi-validator", 0);
+    sessionB.applyEncryptedChanges(_r8.envelopes);
 
     // Create a cycle between grpA and grpC
     const envA = sessionA.change((d) => {
@@ -788,9 +797,9 @@ describe("runAllValidations (module-level function)", () => {
       if (g) g.parentGroupId = s("grpA");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const result = runAllValidations(sessionA);
 
