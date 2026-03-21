@@ -56,7 +56,7 @@ describe("getEmailHashPepper", () => {
 
   it("throws for invalid hex characters", () => {
     mockEnv.EMAIL_HASH_PEPPER = "z".repeat(64);
-    expect(() => getEmailHashPepper()).toThrow("EMAIL_HASH_PEPPER must be a valid hex string");
+    expect(() => getEmailHashPepper()).toThrow("Invalid hex string");
   });
 });
 

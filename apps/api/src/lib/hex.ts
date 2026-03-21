@@ -1,13 +1,13 @@
 /**
  * Hex encoding/decoding utilities.
  *
- * Mirrors the canonical implementation in @pluralscape/crypto/hex.
+ * Mirrors the canonical implementation in @pluralscape/crypto.
  * Kept as a local module because many API service tests vi.mock("@pluralscape/crypto")
  * which replaces the entire module (including constants), breaking any
  * imports from it.
  */
 
-/** Radix for hexadecimal encoding (base 16). */
+/** Radix for hexadecimal parsing/formatting. */
 const HEX_RADIX = 16;
 
 /** Number of hex characters per byte. */
