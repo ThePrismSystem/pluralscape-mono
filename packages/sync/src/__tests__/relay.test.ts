@@ -2,7 +2,12 @@ import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { encryptChange, encryptSnapshot } from "../encrypted-sync.js";
-import { EncryptedRelay } from "../relay.js";
+import { RELAY_MAX_SNAPSHOT_SIZE_BYTES } from "../relay.constants.js";
+import {
+  EncryptedRelay,
+  EnvelopeLimitExceededError,
+  SnapshotSizeLimitExceededError,
+} from "../relay.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -281,6 +286,209 @@ describe("EncryptedRelay", () => {
       const c3 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
       limitedRelay.submit(c3);
       expect(limitedRelay.getEnvelopesSince("doc-a", 0)[0]?.seq).toBe(1);
+    });
+  });
+
+  describe("per-document envelope limit (H1)", () => {
+    it("rejects submission when envelope count exceeds configured limit", () => {
+      const maxEnvelopes = 3;
+      const limitedRelay = new EncryptedRelay({ maxEnvelopesPerDocument: maxEnvelopes });
+
+      // Submit up to the limit — should succeed
+      for (let i = 0; i < maxEnvelopes; i++) {
+        const envelope = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
+        limitedRelay.submit(envelope);
+      }
+
+      // One more should throw
+      const overflow = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
+      expect(() => limitedRelay.submit(overflow)).toThrow(EnvelopeLimitExceededError);
+    });
+
+    it("includes documentId and limit in the error", () => {
+      const maxEnvelopes = 2;
+      const limitedRelay = new EncryptedRelay({ maxEnvelopesPerDocument: maxEnvelopes });
+
+      for (let i = 0; i < maxEnvelopes; i++) {
+        const envelope = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
+        limitedRelay.submit(envelope);
+      }
+
+      const overflow = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
+      try {
+        limitedRelay.submit(overflow);
+        expect.unreachable("should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(EnvelopeLimitExceededError);
+        const error = err as EnvelopeLimitExceededError;
+        expect(error.documentId).toBe(DOCUMENT_ID);
+        expect(error.limit).toBe(maxEnvelopes);
+        expect(error.message).toContain("compact");
+      }
+    });
+
+    it("uses default limit from constants when not explicitly configured", () => {
+      const defaultRelay = new EncryptedRelay();
+      // Submit one envelope — should succeed (well below default limit)
+      const envelope = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
+      const seq = defaultRelay.submit(envelope);
+      expect(seq).toBe(1);
+    });
+
+    it("enforces limits independently per document", () => {
+      const maxEnvelopes = 2;
+      const limitedRelay = new EncryptedRelay({ maxEnvelopesPerDocument: maxEnvelopes });
+
+      // Fill doc-a to the limit
+      for (let i = 0; i < maxEnvelopes; i++) {
+        const envelope = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+        limitedRelay.submit(envelope);
+      }
+
+      // doc-b should still accept envelopes
+      const envelopeB = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      expect(limitedRelay.submit(envelopeB)).toBe(1);
+
+      // doc-a should still be rejected
+      const overflowA = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      expect(() => limitedRelay.submit(overflowA)).toThrow(EnvelopeLimitExceededError);
+    });
+
+    it("dedup resubmission does not count toward limit", () => {
+      const maxEnvelopes = 2;
+      const limitedRelay = new EncryptedRelay({ maxEnvelopesPerDocument: maxEnvelopes });
+
+      const e1 = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
+      const e2 = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
+
+      limitedRelay.submit(e1);
+      limitedRelay.submit(e2);
+
+      // Re-submit e1 (dedup) — should return existing seq, not throw
+      const dedupSeq = limitedRelay.submit(e1);
+      expect(dedupSeq).toBe(1);
+    });
+  });
+
+  describe("secondary dedup index (M9)", () => {
+    it("evicts and resets document state including dedup entries", () => {
+      const evicted: string[] = [];
+      const limitedRelay = new EncryptedRelay({
+        maxDocuments: 1,
+        onEvict: (docId) => {
+          evicted.push(docId);
+        },
+      });
+
+      // Submit multiple envelopes for doc-a
+      for (let i = 0; i < 5; i++) {
+        const envelope = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+        limitedRelay.submit(envelope);
+      }
+
+      // Evict doc-a by submitting to doc-b
+      const cb = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      limitedRelay.submit(cb);
+
+      expect(evicted).toEqual(["doc-a"]);
+
+      // After eviction, resubmitting an envelope for doc-a gets seq 1 (fresh doc)
+      // This confirms dedup entries were cleaned — old nonces no longer recognized
+      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      limitedRelay.submit(c1);
+      expect(limitedRelay.getEnvelopesSince("doc-a", 0)[0]?.seq).toBe(1);
+    });
+
+    it("keeps dedup entries for non-evicted documents intact", () => {
+      const limitedRelay = new EncryptedRelay({ maxDocuments: 2 });
+
+      // Submit envelopes for doc-a and doc-b
+      const ea = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      limitedRelay.submit(ea);
+      const eb = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      limitedRelay.submit(eb);
+
+      // Evict doc-a by submitting to doc-c
+      const ec = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      limitedRelay.submit(ec);
+
+      // doc-b dedup should still work — resubmit returns existing seq
+      const dedupSeq = limitedRelay.submit(eb);
+      expect(dedupSeq).toBe(1);
+    });
+
+    it("secondary index stays in sync after multiple evictions", () => {
+      const evicted: string[] = [];
+      const limitedRelay = new EncryptedRelay({
+        maxDocuments: 1,
+        onEvict: (docId) => {
+          evicted.push(docId);
+        },
+      });
+
+      // Chain of evictions: doc-a → doc-b → doc-c
+      const ca = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      limitedRelay.submit(ca);
+
+      const cb = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      limitedRelay.submit(cb);
+
+      const cc = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      limitedRelay.submit(cc);
+
+      expect(evicted).toEqual(["doc-a", "doc-b"]);
+
+      // doc-c dedup should work
+      const dedupSeq = limitedRelay.submit(cc);
+      expect(dedupSeq).toBe(1);
+
+      // Re-creating evicted docs should get fresh seqs
+      const newA = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      limitedRelay.submit(newA);
+      expect(limitedRelay.getEnvelopesSince("doc-a", 0)[0]?.seq).toBe(1);
+    });
+  });
+
+  describe("snapshot size limit", () => {
+    it("rejects snapshot exceeding configured size limit", () => {
+      const limitedRelay = new EncryptedRelay({ maxSnapshotSizeBytes: 64 });
+      // 512 bytes of plaintext will produce ciphertext well over 64 bytes
+      const snapshot = encryptSnapshot(sodium.randomBytes(512), DOCUMENT_ID, 1, keys, sodium);
+      expect(() => {
+        limitedRelay.submitSnapshot(snapshot);
+      }).toThrow(SnapshotSizeLimitExceededError);
+    });
+
+    it("accepts snapshot within size limit", () => {
+      // Large limit to accommodate AEAD overhead on small plaintext
+      const limitedRelay = new EncryptedRelay({ maxSnapshotSizeBytes: 4096 });
+      const snapshot = encryptSnapshot(sodium.randomBytes(16), DOCUMENT_ID, 1, keys, sodium);
+      limitedRelay.submitSnapshot(snapshot);
+      expect(limitedRelay.getLatestSnapshot(DOCUMENT_ID)).toEqual(snapshot);
+    });
+
+    it("includes documentId, sizeBytes, and limit in the error", () => {
+      const limitedRelay = new EncryptedRelay({ maxSnapshotSizeBytes: 64 });
+      const snapshot = encryptSnapshot(sodium.randomBytes(512), DOCUMENT_ID, 1, keys, sodium);
+      try {
+        limitedRelay.submitSnapshot(snapshot);
+        expect.unreachable("should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(SnapshotSizeLimitExceededError);
+        const error = err as SnapshotSizeLimitExceededError;
+        expect(error.documentId).toBe(DOCUMENT_ID);
+        expect(error.sizeBytes).toBe(snapshot.ciphertext.byteLength);
+        expect(error.limit).toBe(64);
+      }
+    });
+
+    it("no size limit by default", () => {
+      const defaultRelay = new EncryptedRelay();
+      // Large snapshot should be accepted without error
+      const snapshot = encryptSnapshot(sodium.randomBytes(1024), DOCUMENT_ID, 1, keys, sodium);
+      defaultRelay.submitSnapshot(snapshot);
+      expect(defaultRelay.getLatestSnapshot(DOCUMENT_ID)).toEqual(snapshot);
+      expect(RELAY_MAX_SNAPSHOT_SIZE_BYTES).toBe(Infinity);
     });
   });
 });

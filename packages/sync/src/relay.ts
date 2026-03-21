@@ -1,3 +1,8 @@
+import {
+  RELAY_MAX_ENVELOPES_PER_DOCUMENT,
+  RELAY_MAX_SNAPSHOT_SIZE_BYTES,
+} from "./relay.constants.js";
+
 import type { SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 
@@ -24,6 +29,47 @@ export class SnapshotVersionConflictError extends Error {
   }
 }
 
+/**
+ * Thrown when a document exceeds its per-document envelope limit.
+ * The client should compact the document and retry.
+ */
+export class EnvelopeLimitExceededError extends Error {
+  override readonly name = "EnvelopeLimitExceededError" as const;
+  readonly documentId: string;
+  readonly limit: number;
+
+  constructor(documentId: string, limit: number, options?: ErrorOptions) {
+    super(
+      `Document "${documentId}" has reached the envelope limit of ${String(limit)}. ` +
+        `Please compact the document and retry.`,
+      options,
+    );
+    this.documentId = documentId;
+    this.limit = limit;
+  }
+}
+
+/**
+ * Thrown when a snapshot's ciphertext exceeds the configured size limit.
+ */
+export class SnapshotSizeLimitExceededError extends Error {
+  override readonly name = "SnapshotSizeLimitExceededError" as const;
+  readonly documentId: string;
+  readonly sizeBytes: number;
+  readonly limit: number;
+
+  constructor(documentId: string, sizeBytes: number, limit: number, options?: ErrorOptions) {
+    super(
+      `Snapshot for document "${documentId}" is ${String(sizeBytes)} bytes, ` +
+        `exceeding the limit of ${String(limit)} bytes.`,
+      options,
+    );
+    this.documentId = documentId;
+    this.sizeBytes = sizeBytes;
+    this.limit = limit;
+  }
+}
+
 export interface RelayDocumentState {
   readonly envelopes: readonly EncryptedChangeEnvelope[];
   readonly snapshot: EncryptedSnapshotEnvelope | null;
@@ -33,6 +79,10 @@ export interface RelayDocumentState {
 export interface RelayOptions {
   /** Maximum number of documents before LRU eviction. Default: Infinity (no limit). */
   readonly maxDocuments?: number;
+  /** Maximum number of change envelopes per document. Default: RELAY_MAX_ENVELOPES_PER_DOCUMENT (10,000). */
+  readonly maxEnvelopesPerDocument?: number;
+  /** Maximum size in bytes for a single snapshot ciphertext. Default: Infinity (no limit). */
+  readonly maxSnapshotSizeBytes?: number;
   /** Called when a document is evicted from the relay. */
   readonly onEvict?: (documentId: string) => void;
 }
@@ -46,13 +96,20 @@ export class EncryptedRelay {
    */
   private readonly accessOrder = new Map<string, true>();
   private readonly seqCounters = new Map<string, number>();
-  /** Nonce-based dedup index: (documentId, authorPublicKey, nonce) → assigned seq. */
+  /** Nonce-based dedup index: (documentId, authorPublicKey, nonce) -> assigned seq. */
   private readonly dedupIndex = new Map<string, number>();
+  /** Secondary index: documentId -> Set of dedup keys for O(k) eviction cleanup. */
+  private readonly dedupByDoc = new Map<string, Set<string>>();
   private readonly maxDocuments: number;
+  private readonly maxEnvelopesPerDocument: number;
+  private readonly maxSnapshotSizeBytes: number;
   private readonly onEvict?: (documentId: string) => void;
 
   constructor(options?: RelayOptions) {
     this.maxDocuments = options?.maxDocuments ?? Infinity;
+    this.maxEnvelopesPerDocument =
+      options?.maxEnvelopesPerDocument ?? RELAY_MAX_ENVELOPES_PER_DOCUMENT;
+    this.maxSnapshotSizeBytes = options?.maxSnapshotSizeBytes ?? RELAY_MAX_SNAPSHOT_SIZE_BYTES;
     this.onEvict = options?.onEvict;
   }
 
@@ -64,20 +121,36 @@ export class EncryptedRelay {
       return existingSeq;
     }
 
+    // Evict LRU documents first so stale docs don't block limit checks
     this.evictIfNeeded(envelope.documentId);
+
+    // Enforce per-document envelope limit (checked after eviction so LRU cleanup always runs)
+    const docEnvelopes = this.documents.get(envelope.documentId);
+    if (docEnvelopes && docEnvelopes.length >= this.maxEnvelopesPerDocument) {
+      throw new EnvelopeLimitExceededError(envelope.documentId, this.maxEnvelopesPerDocument);
+    }
 
     const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
     const seq = currentSeq + 1;
     this.seqCounters.set(envelope.documentId, seq);
     const withSeq: EncryptedChangeEnvelope = { ...envelope, seq };
 
-    let docEnvelopes = this.documents.get(envelope.documentId);
-    if (!docEnvelopes) {
-      docEnvelopes = [];
-      this.documents.set(envelope.documentId, docEnvelopes);
+    let envelopes = docEnvelopes;
+    if (!envelopes) {
+      envelopes = [];
+      this.documents.set(envelope.documentId, envelopes);
     }
-    docEnvelopes.push(withSeq);
+    envelopes.push(withSeq);
+
+    // Update both dedup indexes
     this.dedupIndex.set(dedupKey, seq);
+    let docDedupKeys = this.dedupByDoc.get(envelope.documentId);
+    if (!docDedupKeys) {
+      docDedupKeys = new Set();
+      this.dedupByDoc.set(envelope.documentId, docDedupKeys);
+    }
+    docDedupKeys.add(dedupKey);
+
     this.touch(envelope.documentId);
 
     return seq;
@@ -108,6 +181,13 @@ export class EncryptedRelay {
 
   submitSnapshot(envelope: EncryptedSnapshotEnvelope): void {
     this.evictIfNeeded(envelope.documentId);
+    if (envelope.ciphertext.byteLength > this.maxSnapshotSizeBytes) {
+      throw new SnapshotSizeLimitExceededError(
+        envelope.documentId,
+        envelope.ciphertext.byteLength,
+        this.maxSnapshotSizeBytes,
+      );
+    }
     const existing = this.snapshots.get(envelope.documentId);
     if (existing && existing.snapshotVersion >= envelope.snapshotVersion) {
       throw new SnapshotVersionConflictError(envelope.snapshotVersion, existing.snapshotVersion);
@@ -178,11 +258,13 @@ export class EncryptedRelay {
     }
 
     if (oldestId !== null) {
-      // Clean up dedup entries for the evicted document
-      for (const key of this.dedupIndex.keys()) {
-        if (key.startsWith(`${oldestId}:`)) {
+      // O(k) dedup cleanup via secondary index instead of O(n) startsWith scan
+      const docDedupKeys = this.dedupByDoc.get(oldestId);
+      if (docDedupKeys) {
+        for (const key of docDedupKeys) {
           this.dedupIndex.delete(key);
         }
+        this.dedupByDoc.delete(oldestId);
       }
       this.documents.delete(oldestId);
       this.snapshots.delete(oldestId);
