@@ -1,8 +1,7 @@
 // @pluralscape/sync — Encrypted CRDT sync over relay
 //
 // Root barrel exports core types, session, engine, document factory, and
-// commonly used protocol types. Specialised exports live behind sub-entry
-// points:
+// protocol messages. Specialized exports live behind sub-entry points:
 //   @pluralscape/sync/adapters  — storage/network adapters and SQLite drivers
 //   @pluralscape/sync/schemas   — CRDT document schema types
 //   @pluralscape/sync/protocol  — full protocol message taxonomy
@@ -102,10 +101,6 @@ export {
 // ── Post-merge validation ────────────────────────────────────────────
 export { runAllValidations } from "./post-merge-validator.js";
 export type { ConflictPersistenceAdapter, PersistedConflict } from "./conflict-persistence.js";
-
-// ── Adapter interfaces (commonly used subset) ────────────────────────
-export type { SyncManifest, SyncManifestEntry } from "./adapters/network-adapter.js";
-export type { OfflineQueueAdapter, OfflineQueueEntry } from "./adapters/offline-queue-adapter.js";
 
 // ── Offline queue management ─────────────────────────────────────────
 export { replayOfflineQueue } from "./offline-queue-manager.js";

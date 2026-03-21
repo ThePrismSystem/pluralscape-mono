@@ -7,7 +7,8 @@
 import { SYNC_CONFLICTS_RETENTION_MS, SYNC_QUEUE_RETENTION_MS } from "./jobs.constants.js";
 
 import type { JobHandler } from "@pluralscape/queue";
-import type { ConflictPersistenceAdapter, OfflineQueueAdapter } from "@pluralscape/sync";
+import type { ConflictPersistenceAdapter } from "@pluralscape/sync";
+import type { OfflineQueueAdapter } from "@pluralscape/sync/adapters";
 
 /**
  * Creates a job handler for the `sync-queue-cleanup` job type.

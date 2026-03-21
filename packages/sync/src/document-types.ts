@@ -10,12 +10,7 @@ export type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 
 /** Entity ID type per document type for branded casting. */
 type EntityIdForDocType = {
-  "system-core": SystemId;
-  fronting: SystemId;
-  chat: ChannelId;
-  journal: SystemId;
-  "privacy-config": SystemId;
-  bucket: BucketId;
+  [K in SyncDocumentType]: K extends "chat" ? ChannelId : K extends "bucket" ? BucketId : SystemId;
 };
 
 /** Parsed components of a document ID. */
@@ -147,7 +142,7 @@ export function parseDocumentId(documentId: string): ParsedDocumentId {
         documentType: config.documentType,
         keyType: config.keyType,
         entityId: entityId as EntityIdForDocType[typeof config.documentType],
-        timePeriod: config.timeSplitPattern ? timePeriod : null,
+        timePeriod,
       } as ParsedDocumentId;
     }
   }

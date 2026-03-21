@@ -157,6 +157,24 @@ describe("parseDocumentId", () => {
       expect(() => parseDocumentId("fronting-2024-Q1")).toThrow(InvalidDocumentIdError);
     });
 
+    it("treats invalid month 00 as part of entity ID (no time split)", () => {
+      const result = parseDocumentId("chat-ch_x-2026-00");
+      expect(result.documentType).toBe("chat");
+      expect(result.entityId).toBe("ch_x-2026-00");
+      expect(result.timePeriod).toBeNull();
+    });
+
+    it("treats invalid month 13 as part of entity ID (no time split)", () => {
+      const result = parseDocumentId("chat-ch_x-2026-13");
+      expect(result.documentType).toBe("chat");
+      expect(result.entityId).toBe("ch_x-2026-13");
+      expect(result.timePeriod).toBeNull();
+    });
+
+    it("throws on empty entity after time-period stripping", () => {
+      expect(() => parseDocumentId("chat--2026-03")).toThrow(InvalidDocumentIdError);
+    });
+
     it("includes the invalid document ID in the error message", () => {
       expect(() => parseDocumentId("bad-id")).toThrow(InvalidDocumentIdError);
       expect(() => parseDocumentId("bad-id")).toThrow(/bad-id/);
