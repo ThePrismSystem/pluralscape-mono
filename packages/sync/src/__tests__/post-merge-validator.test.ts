@@ -7,6 +7,9 @@
  * - Sort order normalization
  * - CheckInRecord normalization
  * - FriendConnection status normalization
+ * - Module-level runAllValidations function
+ * - ENTITY_FIELD_MAP derivation from CRDT strategies
+ * - Targeted tombstone enforcement via modifiedEntityTypes
  */
 import * as Automerge from "@automerge/automerge";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
@@ -17,8 +20,13 @@ import {
   createPrivacyConfigDocument,
   createSystemCoreDocument,
 } from "../factories/document-factory.js";
-import { PostMergeValidator } from "../post-merge-validator.js";
+import {
+  runAllValidations,
+  PostMergeValidator,
+  ENTITY_FIELD_MAP,
+} from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
+import { ENTITY_CRDT_STRATEGIES } from "../strategies/crdt-strategies.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
 import type { CrdtGroup, CrdtSubsystem, CrdtInnerWorldRegion } from "../schemas/system-core.js";
@@ -110,6 +118,33 @@ function makeRegion(id: string, parentId?: string): CrdtInnerWorldRegion {
     updatedAt: 1000,
   };
 }
+
+// ── ENTITY_FIELD_MAP derivation ────────────────────────────────────────
+
+describe("ENTITY_FIELD_MAP derivation from CRDT strategies", () => {
+  it("has an entry for every entity type in ENTITY_CRDT_STRATEGIES", () => {
+    const strategyKeys = Object.keys(ENTITY_CRDT_STRATEGIES);
+    for (const key of strategyKeys) {
+      expect(ENTITY_FIELD_MAP.has(key)).toBe(true);
+    }
+    expect(ENTITY_FIELD_MAP.size).toBe(strategyKeys.length);
+  });
+
+  it("maps each entity type to the fieldName from its CRDT strategy", () => {
+    for (const [entityType, strategy] of Object.entries(ENTITY_CRDT_STRATEGIES)) {
+      expect(ENTITY_FIELD_MAP.get(entityType)).toBe(strategy.fieldName);
+    }
+  });
+
+  it("includes known mappings for key entity types", () => {
+    expect(ENTITY_FIELD_MAP.get("member")).toBe("members");
+    expect(ENTITY_FIELD_MAP.get("group")).toBe("groups");
+    expect(ENTITY_FIELD_MAP.get("fronting-session")).toBe("sessions");
+    expect(ENTITY_FIELD_MAP.get("friend-connection")).toBe("friendConnections");
+    expect(ENTITY_FIELD_MAP.get("journal-entry")).toBe("entries");
+    expect(ENTITY_FIELD_MAP.get("bucket-content-tag")).toBe("contentTags");
+  });
+});
 
 // ── Task 1: Tombstone enforcement ────────────────────────────────────
 
@@ -215,6 +250,124 @@ describe("PostMergeValidator: enforceTombstones", () => {
 
     expect(notifications).toHaveLength(0);
     expect(session.document.members["mem_1"]?.archived).toBe(false);
+  });
+
+  it("only processes specified entity types when modifiedEntityTypes is provided", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: "doc-tomb-targeted",
+      sodium,
+    });
+
+    // Create archived member and archived group
+    session.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Archived Member"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.groups["grp_1"] = makeGroup("grp_1", 1);
+      d.groups["grp_1"].archived = true;
+    });
+
+    // Only target "member" — should skip group
+    const validator = new PostMergeValidator();
+    const { notifications } = validator.enforceTombstones(session, new Set(["member"]));
+
+    // Only the member should be re-stamped, not the group
+    const memberNotifications = notifications.filter((n) => n.entityType === "member");
+    const groupNotifications = notifications.filter((n) => n.entityType === "group");
+
+    expect(memberNotifications).toHaveLength(1);
+    expect(groupNotifications).toHaveLength(0);
+  });
+
+  it("processes all entity types when modifiedEntityTypes is undefined", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: "doc-tomb-full-scan",
+      sodium,
+    });
+
+    session.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Archived Member"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.groups["grp_1"] = makeGroup("grp_1", 1);
+      d.groups["grp_1"].archived = true;
+    });
+
+    // No modifiedEntityTypes — should scan everything
+    const validator = new PostMergeValidator();
+    const { notifications } = validator.enforceTombstones(session);
+
+    const memberNotifications = notifications.filter((n) => n.entityType === "member");
+    const groupNotifications = notifications.filter((n) => n.entityType === "group");
+
+    expect(memberNotifications).toHaveLength(1);
+    expect(groupNotifications).toHaveLength(1);
+  });
+
+  it("returns no notifications when modifiedEntityTypes is an empty set", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: "doc-tomb-empty-set",
+      sodium,
+    });
+
+    session.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Archived"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const validator = new PostMergeValidator();
+    const { notifications } = validator.enforceTombstones(session, new Set());
+
+    expect(notifications).toHaveLength(0);
   });
 });
 
@@ -583,9 +736,9 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
   });
 });
 
-// ── Task 2: runAllValidations ──────────────────────────────────────────
+// ── Module-level runAllValidations ──────────────────────────────────────
 
-describe("PostMergeValidator: runAllValidations", () => {
+describe("runAllValidations (module-level function)", () => {
   let keys: DocumentKeys;
   let relay: EncryptedRelay;
 
@@ -604,8 +757,7 @@ describe("PostMergeValidator: runAllValidations", () => {
     });
 
     // No issues to fix
-    const validator = new PostMergeValidator();
-    const result = validator.runAllValidations(session);
+    const result = runAllValidations(session);
 
     expect(result.cycleBreaks).toHaveLength(0);
     expect(result.sortOrderPatches).toHaveLength(0);
@@ -644,8 +796,7 @@ describe("PostMergeValidator: runAllValidations", () => {
       };
     });
 
-    const validator = new PostMergeValidator();
-    const result = validator.runAllValidations(session);
+    const result = runAllValidations(session);
 
     expect(result.correctionEnvelopes.length).toBeGreaterThan(0);
     // notifications should include tombstone notifications
@@ -680,8 +831,7 @@ describe("PostMergeValidator: runAllValidations", () => {
     relay.submit(envB);
     syncThroughRelay([sessionA, sessionB], relay);
 
-    const validator = new PostMergeValidator();
-    const result = validator.runAllValidations(sessionA);
+    const result = runAllValidations(sessionA);
 
     // notifications should include both cycle and sort order entries
     const cycleNotifications = result.notifications.filter(
@@ -728,11 +878,86 @@ describe("PostMergeValidator: runAllValidations", () => {
     relay.submit(envB);
     syncThroughRelay([sessionA, sessionB], relay);
 
-    const validator = new PostMergeValidator();
-    const result = validator.runAllValidations(sessionA);
+    const result = runAllValidations(sessionA);
 
     // Both validators should have detected issues
     expect(result.cycleBreaks.length).toBeGreaterThan(0);
     expect(result.sortOrderPatches.length).toBeGreaterThan(0);
+  });
+});
+
+// ── PostMergeValidator class wrapper ────────────────────────────────────
+
+describe("PostMergeValidator class wrapper", () => {
+  let keys: DocumentKeys;
+
+  beforeEach(() => {
+    keys = makeKeys();
+  });
+
+  it("delegates runAllValidations to the module-level function", () => {
+    const base = createSystemCoreDocument();
+    const sessionA = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: "doc-class-wrapper-a",
+      sodium,
+    });
+    const sessionB = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: "doc-class-wrapper-b",
+      sodium,
+    });
+
+    // Set up identical state
+    sessionA.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Test"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+    sessionB.change((d) => {
+      d.members["mem_1"] = {
+        id: s("mem_1"),
+        systemId: s("sys_1"),
+        name: s("Test"),
+        pronouns: s("[]"),
+        description: null,
+        avatarSource: null,
+        colors: s("[]"),
+        saturationLevel: s('{"kind":"known","level":"fragment"}'),
+        tags: s("[]"),
+        suppressFriendFrontNotification: false,
+        boardMessageNotificationOnFront: false,
+        archived: true,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    // Both approaches should produce equivalent structure
+    const classResult = new PostMergeValidator().runAllValidations(sessionA);
+    const moduleResult = runAllValidations(sessionB);
+
+    expect(classResult.cycleBreaks).toEqual(moduleResult.cycleBreaks);
+    expect(classResult.sortOrderPatches).toEqual(moduleResult.sortOrderPatches);
+    expect(classResult.checkInNormalizations).toBe(moduleResult.checkInNormalizations);
+    expect(classResult.friendConnectionNormalizations).toBe(
+      moduleResult.friendConnectionNormalizations,
+    );
+    expect(classResult.notifications.length).toBe(moduleResult.notifications.length);
   });
 });
