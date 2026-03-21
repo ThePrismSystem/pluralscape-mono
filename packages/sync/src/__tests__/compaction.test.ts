@@ -112,15 +112,23 @@ describe("createSnapshot (formerly compactDocument)", () => {
 });
 
 describe("LazyDocumentSizeTracker", () => {
-  it("returns initial size without incrementing", () => {
+  it("starts with zero size before first increment", () => {
+    const tracker = new LazyDocumentSizeTracker();
+    expect(tracker.sizeBytes).toBe(0);
+  });
+
+  it("measures on first increment (deferred from constructor)", () => {
     const doc = Automerge.from<SimpleDoc>({ items: [] });
-    const tracker = new LazyDocumentSizeTracker(doc);
+    const tracker = new LazyDocumentSizeTracker();
+    tracker.increment(doc);
     expect(tracker.sizeBytes).toBeGreaterThan(0);
   });
 
   it("caches size between remeasure intervals", () => {
     const doc = Automerge.from<SimpleDoc>({ items: [] });
-    const tracker = new LazyDocumentSizeTracker(doc, 10);
+    const tracker = new LazyDocumentSizeTracker(10);
+    // First increment triggers measurement
+    tracker.increment(doc);
     const initial = tracker.sizeBytes;
 
     let currentDoc: Automerge.Doc<SimpleDoc> = doc;
@@ -137,7 +145,9 @@ describe("LazyDocumentSizeTracker", () => {
 
   it("remeasures after N increments", () => {
     const doc = Automerge.from<SimpleDoc>({ items: [] });
-    const tracker = new LazyDocumentSizeTracker(doc, 5);
+    const tracker = new LazyDocumentSizeTracker(5);
+    // First increment triggers measurement
+    tracker.increment(doc);
     const initial = tracker.sizeBytes;
 
     let currentDoc: Automerge.Doc<SimpleDoc> = doc;
@@ -156,7 +166,8 @@ describe("LazyDocumentSizeTracker", () => {
 
   it("reset measures new doc and resets counter", () => {
     const smallDoc = Automerge.from<SimpleDoc>({ items: [] });
-    const tracker = new LazyDocumentSizeTracker(smallDoc, 10);
+    const tracker = new LazyDocumentSizeTracker(10);
+    tracker.increment(smallDoc);
     const smallSize = tracker.sizeBytes;
 
     let bigDoc: Automerge.Doc<SimpleDoc> = smallDoc;

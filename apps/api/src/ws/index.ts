@@ -23,6 +23,7 @@ import {
   WS_AUTH_TIMEOUT_MS,
   WS_CLOSE_POLICY_VIOLATION,
   WS_GRACEFUL_SHUTDOWN_TIMEOUT_MS,
+  WS_MAX_MESSAGE_BYTES,
   WS_MAX_UNAUTHED_CONNECTIONS,
   WS_RELAY_MAX_DOCUMENTS,
   WS_SUBPROTOCOL,
@@ -150,6 +151,24 @@ syncWsApp.get(
               serializeServerMessage(
                 makeSyncError("MALFORMED_MESSAGE", "Binary frames are not supported", null),
               ),
+            );
+          } catch {
+            // Best-effort; connection may be broken
+          }
+          return;
+        }
+
+        // Reject oversized messages before JSON.parse to avoid DoS via
+        // large payloads. Bun enforces maxPayloadLength at the transport
+        // level, but this check protects the application layer regardless.
+        if (evt.data.length > WS_MAX_MESSAGE_BYTES) {
+          log.warn("WebSocket message exceeds size limit", {
+            connectionId,
+            size: evt.data.length,
+          });
+          try {
+            state.ws.send(
+              serializeServerMessage(makeSyncError("MALFORMED_MESSAGE", "Message too large", null)),
             );
           } catch {
             // Best-effort; connection may be broken

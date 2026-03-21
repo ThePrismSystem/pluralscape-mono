@@ -71,6 +71,10 @@ export class SseEventBuffer {
 
   /**
    * Get all events after the given Last-Event-ID within the replay window.
+   *
+   * Uses a linear scan over the ring buffer. This is acceptable because the
+   * buffer is capped at SSE_REPLAY_BUFFER_SIZE (100 entries).
+   *
    * Returns null if:
    * - The ID is too old (outside the buffer) — client missed evicted events
    * - The target ID >= nextId — client has IDs from a previous server instance (restart)

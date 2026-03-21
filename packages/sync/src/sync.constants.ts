@@ -78,6 +78,9 @@ export const DEFAULT_ACTIVE_CHANNEL_WINDOW_DAYS = 30;
 /** Maximum parallel document hydrations during bootstrap. */
 export const HYDRATION_CONCURRENCY = 5;
 
+/** Maximum parallel document evictions during bootstrap. */
+export const EVICTION_CONCURRENCY = 5;
+
 /** Maximum number of failed conflict persistence batches retained for retry. */
 export const MAX_CONFLICT_RETRY_BATCHES = 100;
 
@@ -100,3 +103,8 @@ export const JITTER_MIN = 0.5;
 
 /** Maximum jitter multiplier applied to backoff delay. */
 export const JITTER_MAX = 1.0;
+
+// ── Offline queue drain ───────────────────────────────────────────
+
+/** Maximum number of queue entries fetched per drain batch. */
+export const DRAIN_BATCH_SIZE = 500;

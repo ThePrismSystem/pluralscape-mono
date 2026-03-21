@@ -13,6 +13,7 @@ import { filterManifest } from "../subscription-filter.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 import {
   CORRECTION_ENVELOPE_CONCURRENCY,
+  EVICTION_CONCURRENCY,
   HYDRATION_CONCURRENCY,
   MAX_CONFLICT_RETRY_BATCHES,
 } from "../sync.constants.js";
@@ -89,10 +90,10 @@ export class SyncEngine {
     // 2. Apply replication profile filter
     const subscriptionSet = filterManifest(manifest, this.config.profile, localDocIds);
 
-    // 3. Evict stale local docs
-    for (const docId of subscriptionSet.evict) {
-      await this.config.storageAdapter.deleteDocument(docId);
-    }
+    // 3. Evict stale local docs (parallel with bounded concurrency)
+    await mapConcurrent(subscriptionSet.evict, EVICTION_CONCURRENCY, (docId) =>
+      this.config.storageAdapter.deleteDocument(docId),
+    );
 
     // 4. Hydrate each active document with bounded concurrency
     const results = await mapConcurrent(subscriptionSet.active, HYDRATION_CONCURRENCY, (entry) =>

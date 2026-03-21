@@ -4,6 +4,8 @@
  * Follows the same pattern as SqliteStorageAdapter: prepared statements,
  * SqliteDriver abstraction, DDL in constructor.
  */
+import { DRAIN_BATCH_SIZE } from "../sync.constants.js";
+
 import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
 
 import type { EncryptedChangeEnvelope } from "../types.js";
@@ -91,7 +93,8 @@ export class SqliteOfflineQueueAdapter implements OfflineQueueAdapter {
       drainUnsynced: driver.prepare<QueueRow>(
         `SELECT * FROM sync_offline_queue
          WHERE synced_at IS NULL
-         ORDER BY enqueued_at ASC`,
+         ORDER BY enqueued_at ASC
+         LIMIT ?`,
       ),
       markSynced: driver.prepare(
         `UPDATE sync_offline_queue
@@ -122,7 +125,7 @@ export class SqliteOfflineQueueAdapter implements OfflineQueueAdapter {
   }
 
   drainUnsynced(): Promise<readonly OfflineQueueEntry[]> {
-    const rows = this.stmts.drainUnsynced.all();
+    const rows = this.stmts.drainUnsynced.all(DRAIN_BATCH_SIZE);
     return Promise.resolve(rows.map(rowToEntry));
   }
 

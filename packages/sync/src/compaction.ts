@@ -37,10 +37,12 @@ export class LazyDocumentSizeTracker<T> {
   private changesSinceRemeasure: number;
   private readonly remeasureInterval: number;
 
-  constructor(doc: Automerge.Doc<T>, remeasureInterval = DEFAULT_REMEASURE_INTERVAL) {
+  constructor(remeasureInterval = DEFAULT_REMEASURE_INTERVAL) {
     this.remeasureInterval = remeasureInterval;
-    this.changesSinceRemeasure = 0;
-    this.cachedSize = Automerge.save(doc).byteLength;
+    // Start with changesSinceRemeasure at the threshold so the first
+    // increment() call triggers an actual measurement via Automerge.save().
+    this.changesSinceRemeasure = remeasureInterval;
+    this.cachedSize = 0;
   }
 
   get sizeBytes(): number {
