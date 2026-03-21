@@ -9,7 +9,9 @@ function mockWs(): { close: ReturnType<typeof vi.fn> } {
   return { close: vi.fn() };
 }
 
-function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContext {
+type AuthContextWithSystem = AuthContext & { readonly systemId: SystemId };
+
+function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContextWithSystem {
   const systemId = crypto.randomUUID() as SystemId;
   return {
     accountId,
@@ -48,7 +50,7 @@ describe("ConnectionManager", () => {
       const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", ws as never, Date.now());
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       manager.addSubscription("conn-1", "doc-1");
 
       manager.remove("conn-1");
@@ -90,7 +92,7 @@ describe("ConnectionManager", () => {
       const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       expect(manager.unauthenticatedCount).toBe(0);
 
       manager.remove("conn-1");
@@ -125,7 +127,7 @@ describe("ConnectionManager", () => {
       const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", mockWs() as never, Date.now());
-      const result = manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      const result = manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
 
       expect(result).toBe(true);
       const state = manager.get("conn-1");
@@ -140,7 +142,7 @@ describe("ConnectionManager", () => {
     it("returns false for non-existent connection", () => {
       manager = new ConnectionManager();
       const auth = mockAuth();
-      const result = manager.authenticate("nope", auth, auth.systemId as SystemId, "owner-full");
+      const result = manager.authenticate("nope", auth, auth.systemId, "owner-full");
       expect(result).toBe(false);
     });
 
@@ -151,7 +153,7 @@ describe("ConnectionManager", () => {
       const state = manager.register("conn-1", mockWs() as never, Date.now());
       state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
 
       const updated = manager.get("conn-1");
       expect(updated?.authTimeoutHandle).toBeNull();
@@ -194,17 +196,12 @@ describe("ConnectionManager", () => {
       const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       expect(manager.unauthenticatedCount).toBe(0);
 
       // Second authenticate call on already-authenticated connection should not go negative
       const auth2 = mockAuth();
-      const result = manager.authenticate(
-        "conn-1",
-        auth2,
-        auth2.systemId as SystemId,
-        "owner-full",
-      );
+      const result = manager.authenticate("conn-1", auth2, auth2.systemId, "owner-full");
       expect(result).toBe(false);
       expect(manager.unauthenticatedCount).toBe(0);
     });
@@ -330,8 +327,8 @@ describe("ConnectionManager", () => {
       manager.register("conn-1", mockWs() as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
-      manager.authenticate("conn-2", auth, auth.systemId as SystemId, "owner-lite");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
+      manager.authenticate("conn-2", auth, auth.systemId, "owner-lite");
 
       const acctConns = manager.getByAccount(auth.accountId);
       expect(acctConns.size).toBe(2);
@@ -346,8 +343,8 @@ describe("ConnectionManager", () => {
       manager.register("conn-1", mockWs() as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
-      manager.authenticate("conn-2", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
+      manager.authenticate("conn-2", auth, auth.systemId, "owner-full");
 
       manager.remove("conn-1");
 
@@ -362,11 +359,11 @@ describe("ConnectionManager", () => {
       manager.register("conn-1", mockWs() as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
 
       expect(manager.getAccountConnectionCount(auth.accountId)).toBe(1);
 
-      manager.authenticate("conn-2", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-2", auth, auth.systemId, "owner-full");
       expect(manager.getAccountConnectionCount(auth.accountId)).toBe(2);
     });
   });
@@ -397,7 +394,7 @@ describe("ConnectionManager", () => {
       manager.register("conn-2", mockWs() as never, Date.now());
       expect(manager.canAcceptUnauthenticated(2)).toBe(false);
 
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       expect(manager.canAcceptUnauthenticated(2)).toBe(true);
     });
   });
@@ -412,7 +409,7 @@ describe("ConnectionManager", () => {
       manager.register("conn-1", ws1 as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", ws2 as never, Date.now());
-      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId, "owner-full");
       manager.addSubscription("conn-1", "doc-a");
 
       manager.closeAll(1001, "shutdown");
@@ -467,12 +464,7 @@ describe("ConnectionManager", () => {
       for (let i = 0; i < maxPerAccount; i++) {
         manager.reserveUnauthSlot();
         manager.register(`conn-limit-${String(i)}`, mockWs() as never, Date.now());
-        manager.authenticate(
-          `conn-limit-${String(i)}`,
-          auth,
-          auth.systemId as SystemId,
-          "owner-full",
-        );
+        manager.authenticate(`conn-limit-${String(i)}`, auth, auth.systemId, "owner-full");
       }
 
       expect(manager.getAccountConnectionCount(auth.accountId)).toBe(maxPerAccount);
@@ -486,12 +478,7 @@ describe("ConnectionManager", () => {
       for (let i = 0; i < connectionCount; i++) {
         manager.reserveUnauthSlot();
         manager.register(`conn-dec-${String(i)}`, mockWs() as never, Date.now());
-        manager.authenticate(
-          `conn-dec-${String(i)}`,
-          auth,
-          auth.systemId as SystemId,
-          "owner-full",
-        );
+        manager.authenticate(`conn-dec-${String(i)}`, auth, auth.systemId, "owner-full");
       }
 
       expect(manager.getAccountConnectionCount(auth.accountId)).toBe(connectionCount);
@@ -509,24 +496,14 @@ describe("ConnectionManager", () => {
       for (let i = 0; i < 3; i++) {
         manager.reserveUnauthSlot();
         manager.register(`conn-a-${String(i)}`, mockWs() as never, Date.now());
-        manager.authenticate(
-          `conn-a-${String(i)}`,
-          authA,
-          authA.systemId as SystemId,
-          "owner-full",
-        );
+        manager.authenticate(`conn-a-${String(i)}`, authA, authA.systemId, "owner-full");
       }
 
       // Account B: 2 connections
       for (let i = 0; i < 2; i++) {
         manager.reserveUnauthSlot();
         manager.register(`conn-b-${String(i)}`, mockWs() as never, Date.now());
-        manager.authenticate(
-          `conn-b-${String(i)}`,
-          authB,
-          authB.systemId as SystemId,
-          "owner-full",
-        );
+        manager.authenticate(`conn-b-${String(i)}`, authB, authB.systemId, "owner-full");
       }
 
       expect(manager.getAccountConnectionCount(authA.accountId)).toBe(3);

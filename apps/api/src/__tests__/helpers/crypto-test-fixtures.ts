@@ -26,17 +26,13 @@ export function sig(fill: number): Signature {
 }
 
 /** Build a minimal change envelope (without seq). */
-export function makeEnvelope(
-  documentId: string,
-  overrides?: Partial<Omit<EncryptedChangeEnvelope, "seq">>,
-): Omit<EncryptedChangeEnvelope, "seq"> {
+export function makeEnvelope(documentId: string): Omit<EncryptedChangeEnvelope, "seq"> {
   return {
     documentId,
     ciphertext: new Uint8Array([0xde, 0xad]),
     authorPublicKey: pubkey(0x01),
     nonce: nonce(0x02),
     signature: sig(0x77),
-    ...overrides,
   };
 }
 
