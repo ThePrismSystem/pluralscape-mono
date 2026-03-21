@@ -1,4 +1,4 @@
-import { CursorExpiredError } from "@pluralscape/types";
+import { CursorInvalidError } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -150,10 +150,10 @@ describe("toCursor / fromCursor", () => {
     expect(cursor).toMatch(/^[A-Za-z0-9_-]+$/);
   });
 
-  it("throws CursorExpiredError for expired cursor", () => {
+  it("throws CursorInvalidError for expired cursor", () => {
     const cursor = toCursor("test-id");
     vi.advanceTimersByTime(TTL_MS + 1);
-    expect(() => fromCursor(cursor, TTL_MS)).toThrow(CursorExpiredError);
+    expect(() => fromCursor(cursor, TTL_MS)).toThrow(CursorInvalidError);
   });
 
   it("accepts cursor just within TTL", () => {
@@ -162,22 +162,52 @@ describe("toCursor / fromCursor", () => {
     expect(fromCursor(cursor, TTL_MS)).toBe("test-id");
   });
 
-  it("throws CursorExpiredError for malformed base64", () => {
+  it("throws CursorInvalidError for malformed base64", () => {
     expect(() => fromCursor("!!!not-valid!!!" as PaginationCursor, TTL_MS)).toThrow(
-      CursorExpiredError,
+      CursorInvalidError,
     );
   });
 
-  it("throws CursorExpiredError for valid base64 but invalid JSON", () => {
+  it("throws CursorInvalidError for valid base64 but invalid JSON", () => {
     const notJson = Buffer.from("not json").toString("base64url") as PaginationCursor;
-    expect(() => fromCursor(notJson, TTL_MS)).toThrow(CursorExpiredError);
+    expect(() => fromCursor(notJson, TTL_MS)).toThrow(CursorInvalidError);
   });
 
-  it("throws CursorExpiredError for JSON missing required fields", () => {
+  it("throws CursorInvalidError for JSON missing required fields", () => {
     const missingId = Buffer.from(JSON.stringify({ ts: Date.now() })).toString(
       "base64url",
     ) as PaginationCursor;
-    expect(() => fromCursor(missingId, TTL_MS)).toThrow(CursorExpiredError);
+    expect(() => fromCursor(missingId, TTL_MS)).toThrow(CursorInvalidError);
+  });
+
+  it("throws CursorInvalidError for tampered cursor", () => {
+    const cursor = toCursor("test-id");
+    // Decode, modify ts, re-encode (HMAC won't match)
+    const json = Buffer.from(cursor, "base64url").toString("utf8");
+    const parsed = JSON.parse(json) as { id: string; ts: number; mac: string };
+    parsed.ts = parsed.ts + 1;
+    const tampered = Buffer.from(JSON.stringify(parsed)).toString("base64url") as PaginationCursor;
+    expect(() => fromCursor(tampered, TTL_MS)).toThrow(CursorInvalidError);
+  });
+
+  it("CursorInvalidError has reason 'expired' for TTL failure", () => {
+    const cursor = toCursor("test-id");
+    vi.advanceTimersByTime(TTL_MS + 1);
+    try {
+      fromCursor(cursor, TTL_MS);
+    } catch (error: unknown) {
+      expect(error).toBeInstanceOf(CursorInvalidError);
+      expect((error as CursorInvalidError).reason).toBe("expired");
+    }
+  });
+
+  it("CursorInvalidError has reason 'malformed' for bad input", () => {
+    try {
+      fromCursor("garbage" as PaginationCursor, TTL_MS);
+    } catch (error: unknown) {
+      expect(error).toBeInstanceOf(CursorInvalidError);
+      expect((error as CursorInvalidError).reason).toBe("malformed");
+    }
   });
 });
 

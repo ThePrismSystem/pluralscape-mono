@@ -20,6 +20,7 @@ import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import { hashEmail } from "../lib/email-hash.js";
 import { serializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { toHex } from "../lib/hex.js";
+import { toCursor } from "../lib/pagination.js";
 import { buildIdleTimeoutFilter } from "../lib/session-idle-filter.js";
 import { generateSessionToken, hashSessionToken } from "../lib/session-token.js";
 import { isUniqueViolation } from "../lib/unique-violation.js";
@@ -39,6 +40,7 @@ import { ANTI_ENUM_SENTINEL_ACCOUNT_ID } from "./auth.constants.js";
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
+import type { PaginationCursor } from "@pluralscape/types";
 import type { AccountId, AccountType, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -365,7 +367,7 @@ export async function listSessions(
   accountId: string,
   cursor?: string,
   limit = DEFAULT_SESSION_LIMIT,
-): Promise<{ sessions: SessionInfo[]; nextCursor: string | null }> {
+): Promise<{ sessions: SessionInfo[]; nextCursor: PaginationCursor | null }> {
   const effectiveLimit = Math.min(limit, MAX_SESSION_LIMIT);
 
   const currentTime = now();
@@ -395,7 +397,8 @@ export async function listSessions(
 
   const hasMore = rows.length > effectiveLimit;
   const result = hasMore ? rows.slice(0, effectiveLimit) : rows;
-  const nextCursor = hasMore ? (result[result.length - 1]?.id ?? null) : null;
+  const lastId = result[result.length - 1]?.id;
+  const nextCursor = hasMore && lastId ? toCursor(lastId) : null;
 
   return { sessions: result, nextCursor };
 }

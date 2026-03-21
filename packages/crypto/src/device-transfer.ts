@@ -44,7 +44,7 @@ const TRANSFER_CODE_PATTERN = /^\d{10}$/;
 const UINT32_MULTIPLIER = 0x100000000n;
 
 /** Byte offset for the second uint32 in an 8-byte buffer. */
-const UINT32_HI_BYTE_OFFSET = 4;
+const UINT32_SECOND_OFFSET = 4;
 
 /** Number of random bytes for UUID v4 generation. */
 const UUID_RANDOM_BYTES = 16;
@@ -103,9 +103,9 @@ function generateUniformCode(): bigint {
   for (;;) {
     const rawBytes = adapter.randomBytes(TRANSFER_CODE_RANDOM_BYTES);
     const view = new DataView(rawBytes.buffer, rawBytes.byteOffset, rawBytes.byteLength);
-    const hi = BigInt(view.getUint32(0, true));
-    const lo = BigInt(view.getUint32(UINT32_HI_BYTE_OFFSET, true));
-    const value = hi * UINT32_MULTIPLIER + lo;
+    const a = BigInt(view.getUint32(0, true));
+    const b = BigInt(view.getUint32(UINT32_SECOND_OFFSET, true));
+    const value = a * UINT32_MULTIPLIER + b;
     if (value < maxUnbiased) return value % TRANSFER_CODE_MAX;
   }
 }

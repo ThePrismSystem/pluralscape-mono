@@ -1,6 +1,6 @@
 import { assertType, describe, expect, expectTypeOf, it } from "vitest";
 
-import { CursorExpiredError } from "../pagination.js";
+import { CursorInvalidError } from "../pagination.js";
 
 import type { OffsetPaginationParams, PaginatedResult, PaginationCursor } from "../pagination.js";
 
@@ -44,24 +44,45 @@ describe("PaginatedResult", () => {
   });
 });
 
-describe("CursorExpiredError", () => {
+describe("CursorInvalidError", () => {
   it("is instanceof Error", () => {
-    const err = new CursorExpiredError();
+    const err = new CursorInvalidError();
     expect(err).toBeInstanceOf(Error);
   });
 
   it("has correct name", () => {
-    const err = new CursorExpiredError();
-    expect(err.name).toBe("CursorExpiredError");
+    const err = new CursorInvalidError();
+    expect(err.name).toBe("CursorInvalidError");
   });
 
-  it("has default message", () => {
-    const err = new CursorExpiredError();
+  it("has default reason of 'expired'", () => {
+    const err = new CursorInvalidError();
+    expect(err.reason).toBe("expired");
+  });
+
+  it("has default message for expired reason", () => {
+    const err = new CursorInvalidError();
     expect(err.message).toBe("Pagination cursor has expired");
   });
 
+  it("has default message for malformed reason", () => {
+    const err = new CursorInvalidError("malformed");
+    expect(err.message).toBe("Malformed pagination cursor");
+  });
+
+  it("accepts explicit 'expired' reason", () => {
+    const err = new CursorInvalidError("expired");
+    expect(err.reason).toBe("expired");
+    expect(err.message).toBe("Pagination cursor has expired");
+  });
+
+  it("accepts explicit 'malformed' reason", () => {
+    const err = new CursorInvalidError("malformed");
+    expect(err.reason).toBe("malformed");
+  });
+
   it("accepts custom message", () => {
-    const err = new CursorExpiredError("custom");
+    const err = new CursorInvalidError("expired", "custom");
     expect(err.message).toBe("custom");
   });
 });

@@ -84,7 +84,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     jitterFraction: 0.2,
   },
   "analytics-compute": HEAVY_BACKOFF,
-  "account-purge": { ...HEAVY_BACKOFF, maxRetries: 3, backoffMs: 60_000, jitterFraction: 0.2 },
+  "account-purge": { ...HEAVY_BACKOFF, maxRetries: 3, backoffMs: 60_000 },
   "bucket-key-rotation": HEAVY_BACKOFF,
   "report-generate": {
     maxRetries: 3,

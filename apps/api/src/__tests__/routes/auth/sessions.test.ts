@@ -1,6 +1,7 @@
+import { PAGINATION } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { toCursor } from "../../../lib/pagination.js";
+import { fromCursor, toCursor } from "../../../lib/pagination.js";
 import {
   mockAuditWriterFactory,
   mockDbFactory,
@@ -91,7 +92,7 @@ describe("sessions route", () => {
           { id: "sess_1", createdAt: 1000, lastActive: 2000, expiresAt: 9000 },
           { id: "sess_2", createdAt: 1500, lastActive: 2500, expiresAt: 9500 },
         ],
-        nextCursor: "sess_2",
+        nextCursor: toCursor("sess_2"),
       };
       vi.mocked(listSessions).mockResolvedValueOnce(mockSessions);
 
@@ -101,7 +102,10 @@ describe("sessions route", () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as typeof mockSessions;
       expect(body.sessions).toHaveLength(2);
-      expect(body.nextCursor).toBe("sess_2");
+      expect(body.nextCursor).not.toBeNull();
+      if (body.nextCursor) {
+        expect(fromCursor(body.nextCursor, PAGINATION.cursorTtlMs)).toBe("sess_2");
+      }
       expect(vi.mocked(listSessions)).toHaveBeenCalledWith({}, "acct_test", undefined, 25);
     });
 
