@@ -51,3 +51,52 @@ export const BUCKET_SIZE_LIMIT_BYTES = 5 * MiB;
 
 /** Default hosted storage budget: 500 MiB. */
 export const DEFAULT_STORAGE_BUDGET_BYTES = 500 * MiB;
+
+// ── Compaction threshold ───────────────────────────────────────────
+
+/** Default number of changes since last snapshot before compaction is eligible. */
+export const DEFAULT_COMPACTION_CHANGE_THRESHOLD = 200;
+
+// ── Document factory defaults ──────────────────────────────────────
+
+/** Default font scale for system settings. */
+export const DEFAULT_FONT_SCALE = 1;
+
+/** Default app-lock timeout in minutes. */
+export const DEFAULT_LOCK_TIMEOUT_MINUTES = 5;
+
+/** Default background grace period in seconds before app-lock engages. */
+export const DEFAULT_BACKGROUND_GRACE_SECONDS = 60;
+
+// ── Replication profile defaults ───────────────────────────────────
+
+/** Default active channel window for owner-lite profile in days. */
+export const DEFAULT_ACTIVE_CHANNEL_WINDOW_DAYS = 30;
+
+// ── Sync engine ────────────────────────────────────────────────────
+
+/** Maximum parallel document hydrations during bootstrap. */
+export const HYDRATION_CONCURRENCY = 5;
+
+/** Maximum number of failed conflict persistence batches retained for retry. */
+export const MAX_CONFLICT_RETRY_BATCHES = 100;
+
+/** Maximum parallel correction envelope submissions. */
+export const CORRECTION_ENVELOPE_CONCURRENCY = 5;
+
+// ── Offline queue replay ───────────────────────────────────────────
+
+/** Maximum number of retries per entry before giving up. */
+export const MAX_RETRIES_PER_ENTRY = 3;
+
+/** Base delay in ms for exponential backoff. */
+export const BACKOFF_BASE_MS = 500;
+
+/** Maximum number of documents replayed concurrently. */
+export const REPLAY_DOCUMENT_CONCURRENCY = 3;
+
+/** Minimum jitter multiplier applied to backoff delay. */
+export const JITTER_MIN = 0.5;
+
+/** Maximum jitter multiplier applied to backoff delay. */
+export const JITTER_MAX = 1.0;

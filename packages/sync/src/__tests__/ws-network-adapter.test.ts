@@ -61,7 +61,7 @@ describe("WsNetworkAdapter", () => {
 
   runNetworkAdapterContract(createAdapter);
 
-  describe("dispose", () => {
+  describe("close", () => {
     it("rejects pending requests", async () => {
       let onMessage: ((msg: ServerMessage) => void) | null = null;
       const transport: SyncTransport = {
@@ -75,7 +75,7 @@ describe("WsNetworkAdapter", () => {
       const adapter = new WsNetworkAdapter(transport, 30_000);
 
       const pending = adapter.fetchManifest("sys_test");
-      adapter.dispose();
+      adapter.close();
 
       await expect(pending).rejects.toThrow(AdapterDisposedError);
       // Ensure onMessage callback reference was captured
@@ -87,9 +87,9 @@ describe("WsNetworkAdapter", () => {
       const adapter = new WsNetworkAdapter(transport);
 
       adapter.subscribe("doc-1", () => {});
-      adapter.dispose();
+      adapter.close();
 
-      // After dispose, subscribing again should work without issues
+      // After close, subscribing again should work without issues
       const sub = adapter.subscribe("doc-2", () => {});
       sub.unsubscribe();
     });
@@ -336,7 +336,7 @@ describe("WsNetworkAdapter", () => {
     });
   });
 
-  describe("auto-dispose on transport close (M12)", () => {
+  describe("auto-close on transport close (M12)", () => {
     /** Helper to create a transport with onClose support and capture the handler. */
     function createClosableTransport(): {
       transport: SyncTransport;
@@ -369,7 +369,7 @@ describe("WsNetworkAdapter", () => {
       };
     }
 
-    it("disposes adapter when transport onClose fires", () => {
+    it("closes adapter when transport onClose fires", () => {
       const { transport, triggerClose } = createClosableTransport();
       const adapter = new WsNetworkAdapter(transport);
 
@@ -390,7 +390,7 @@ describe("WsNetworkAdapter", () => {
       await expect(pending).rejects.toThrow(AdapterDisposedError);
     });
 
-    it("ignores messages after dispose", () => {
+    it("ignores messages after close", () => {
       const { transport, triggerClose, triggerMessage } = createClosableTransport();
       const adapter = new WsNetworkAdapter(transport);
       const received: EncryptedChangeEnvelope[][] = [];
@@ -400,7 +400,7 @@ describe("WsNetworkAdapter", () => {
 
       triggerClose();
 
-      // Send a message after dispose — should be ignored
+      // Send a message after close — should be ignored
       triggerMessage({
         type: "DocumentUpdate",
         correlationId: null,
@@ -411,19 +411,19 @@ describe("WsNetworkAdapter", () => {
       expect(received).toHaveLength(0);
     });
 
-    it("is idempotent — double dispose does not throw", () => {
+    it("is idempotent — double close does not throw", () => {
       const transport = new MockSyncTransport();
       const adapter = new WsNetworkAdapter(transport);
 
-      adapter.dispose();
-      adapter.dispose();
+      adapter.close();
+      adapter.close();
 
       expect(adapter.isDisposed).toBe(true);
     });
   });
 
-  describe("disposed guard on request()", () => {
-    it("rejects new requests immediately after dispose", async () => {
+  describe("closed guard on request()", () => {
+    it("rejects new requests immediately after close", async () => {
       const transport: SyncTransport = {
         state: "connected",
         send: () => Promise.resolve(),
@@ -431,12 +431,12 @@ describe("WsNetworkAdapter", () => {
         close: () => {},
       };
       const adapter = new WsNetworkAdapter(transport, 30_000);
-      adapter.dispose();
+      adapter.close();
 
       await expect(adapter.fetchManifest("sys-1")).rejects.toThrow(AdapterDisposedError);
     });
 
-    it("rejects submitChange after dispose", async () => {
+    it("rejects submitChange after close", async () => {
       const transport: SyncTransport = {
         state: "connected",
         send: () => Promise.resolve(),
@@ -444,7 +444,7 @@ describe("WsNetworkAdapter", () => {
         close: () => {},
       };
       const adapter = new WsNetworkAdapter(transport, 30_000);
-      adapter.dispose();
+      adapter.close();
 
       await expect(adapter.submitChange("doc-1", mockChangeWithoutSeq("doc-1"))).rejects.toThrow(
         AdapterDisposedError,

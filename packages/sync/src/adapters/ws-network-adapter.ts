@@ -58,9 +58,9 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       this.handleMessage(msg);
     });
 
-    // M12: Auto-dispose when transport closes
+    // M12: Auto-close when transport closes
     transport.onClose?.(() => {
-      this.dispose();
+      this.close();
     });
   }
 
@@ -262,7 +262,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     });
   }
 
-  dispose(): void {
+  close(): void {
     if (this.disposed) return;
     this.disposed = true;
 

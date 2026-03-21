@@ -1,12 +1,12 @@
 /**
- * OfflineQueueManager tests.
+ * replayOfflineQueue tests.
  *
  * Uses mock adapters to test replay ordering, partial failure handling,
  * causal ordering, and empty queue no-op.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { OfflineQueueManager } from "../offline-queue-manager.js";
+import { replayOfflineQueue } from "../offline-queue-manager.js";
 
 import { nonce, pubkey, sig } from "./test-crypto-helpers.js";
 
@@ -73,20 +73,19 @@ function mockStorageAdapter(): SyncStorageAdapter {
   };
 }
 
-describe("OfflineQueueManager", () => {
+describe("replayOfflineQueue", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it("returns zero counts for empty queue", async () => {
-    const manager = new OfflineQueueManager({
+    const result = await replayOfflineQueue({
       offlineQueueAdapter: mockOfflineQueueAdapter([]),
       networkAdapter: mockNetworkAdapter(),
       storageAdapter: mockStorageAdapter(),
       onError: vi.fn(),
     });
 
-    const result = await manager.replay();
     expect(result.replayed).toBe(0);
     expect(result.failed).toBe(0);
     expect(result.skipped).toBe(0);
@@ -109,14 +108,12 @@ describe("OfflineQueueManager", () => {
     const queueAdapter = mockOfflineQueueAdapter(entries);
     queueAdapter.markSynced = markSynced;
 
-    const manager = new OfflineQueueManager({
+    const result = await replayOfflineQueue({
       offlineQueueAdapter: queueAdapter,
       networkAdapter,
       storageAdapter: mockStorageAdapter(),
       onError: vi.fn(),
     });
-
-    const result = await manager.replay();
 
     expect(result.replayed).toBe(3);
     expect(result.failed).toBe(0);
@@ -154,14 +151,13 @@ describe("OfflineQueueManager", () => {
     });
 
     const onError = vi.fn();
-    const manager = new OfflineQueueManager({
+    const replayPromise = replayOfflineQueue({
       offlineQueueAdapter: mockOfflineQueueAdapter(entries),
       networkAdapter,
       storageAdapter: mockStorageAdapter(),
       onError,
     });
 
-    const replayPromise = manager.replay();
     // Advance past all backoff delays
     await vi.advanceTimersByTimeAsync(10_000);
     const result = await replayPromise;
@@ -190,14 +186,12 @@ describe("OfflineQueueManager", () => {
     const networkAdapter = mockNetworkAdapter({ submitChange });
     const queueAdapter = mockOfflineQueueAdapter(entries);
 
-    const manager = new OfflineQueueManager({
+    const result = await replayOfflineQueue({
       offlineQueueAdapter: queueAdapter,
       networkAdapter,
       storageAdapter: mockStorageAdapter(),
       onError: vi.fn(),
     });
-
-    const result = await manager.replay();
 
     expect(result.replayed).toBe(3);
     expect(submitChange).toHaveBeenCalledTimes(3);
@@ -234,14 +228,12 @@ describe("OfflineQueueManager", () => {
 
     const networkAdapter = mockNetworkAdapter({ submitChange });
 
-    const manager = new OfflineQueueManager({
+    const replayPromise = replayOfflineQueue({
       offlineQueueAdapter: mockOfflineQueueAdapter(entries),
       networkAdapter,
       storageAdapter: mockStorageAdapter(),
       onError: vi.fn(),
     });
-
-    const replayPromise = manager.replay();
 
     // Wait for workers to reach the gate (3 concurrent workers should start)
     await vi.waitFor(() => {
@@ -268,15 +260,15 @@ describe("OfflineQueueManager", () => {
     const appendChange = vi.fn().mockResolvedValue(undefined);
     const storageAdapter = mockStorageAdapter();
     storageAdapter.appendChange = appendChange;
-    const manager = new OfflineQueueManager({
+
+    const result = await replayOfflineQueue({
       offlineQueueAdapter: mockOfflineQueueAdapter(entries),
       networkAdapter: mockNetworkAdapter(),
       storageAdapter,
       onError: vi.fn(),
     });
 
-    await manager.replay();
-
+    expect(result.replayed).toBe(1);
     expect(appendChange).toHaveBeenCalledTimes(1);
     expect(appendChange).toHaveBeenCalledWith(
       "doc_a",
@@ -308,14 +300,13 @@ describe("OfflineQueueManager", () => {
         }),
     });
 
-    const manager = new OfflineQueueManager({
+    const replayPromise = replayOfflineQueue({
       offlineQueueAdapter: mockOfflineQueueAdapter(entries),
       networkAdapter,
       storageAdapter: mockStorageAdapter(),
       onError: vi.fn(),
     });
 
-    const replayPromise = manager.replay();
     await vi.advanceTimersByTimeAsync(10_000);
     const result = await replayPromise;
 
@@ -324,5 +315,23 @@ describe("OfflineQueueManager", () => {
     expect(result.skipped).toBe(1); // e3 skipped due to causal dependency
 
     vi.useRealTimers();
+  });
+
+  it("propagates error when drainUnsynced throws", async () => {
+    const error = new Error("DB connection lost");
+    const offlineQueueAdapter: OfflineQueueAdapter = {
+      enqueue: vi.fn(),
+      drainUnsynced: vi.fn().mockRejectedValue(error),
+      markSynced: vi.fn(),
+      deleteConfirmed: vi.fn(),
+    };
+    await expect(
+      replayOfflineQueue({
+        offlineQueueAdapter,
+        networkAdapter: mockNetworkAdapter(),
+        storageAdapter: mockStorageAdapter(),
+        onError: vi.fn(),
+      }),
+    ).rejects.toThrow("DB connection lost");
   });
 });

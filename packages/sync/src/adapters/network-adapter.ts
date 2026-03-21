@@ -116,6 +116,6 @@ export interface SyncNetworkAdapter {
    */
   fetchManifest(systemId: string): Promise<SyncManifest>;
 
-  /** Release resources (pending requests, timers, subscriptions). Optional. */
-  dispose?(): void;
+  /** Close the underlying transport and release resources. Optional. */
+  close?(): void | Promise<void>;
 }
