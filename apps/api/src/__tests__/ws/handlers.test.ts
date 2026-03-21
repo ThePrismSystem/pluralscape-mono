@@ -1,4 +1,4 @@
-import { initSodium } from "@pluralscape/crypto";
+import { getSodium, initSodium } from "@pluralscape/crypto";
 import { EncryptedRelay } from "@pluralscape/sync";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -106,7 +106,7 @@ function mockLog(): AppLogger {
 function isSubmitChangeResult(
   result: SubmitChangeResult | SyncError,
 ): result is SubmitChangeResult {
-  return "response" in result;
+  return result.type === "SubmitChangeResult";
 }
 
 const log = mockLog();
@@ -944,5 +944,71 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     const result = await handleSubmitChange(message, relay.asService());
 
     expect(isSubmitChangeResult(result)).toBe(true);
+  });
+
+  it("accepts a properly signed envelope when verification is enabled", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    const sodium = getSodium();
+    const { publicKey, secretKey } = sodium.signKeypair();
+    const ciphertext = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+    const signature = sodium.signDetached(ciphertext, secretKey);
+
+    const message: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      change: {
+        ciphertext,
+        nonce: nonce(1),
+        signature,
+        authorPublicKey: publicKey,
+        documentId: docId,
+      },
+    };
+
+    const result = await handleSubmitChange(message, relay.asService());
+
+    expect(isSubmitChangeResult(result)).toBe(true);
+    if (isSubmitChangeResult(result)) {
+      expect(result.response.type).toBe("ChangeAccepted");
+      expect(result.response.assignedSeq).toBe(1);
+    }
+  });
+
+  it("returns INVALID_ENVELOPE when envelope fields have wrong byte lengths", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    const message: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      change: {
+        ciphertext: new Uint8Array([0xde, 0xad]),
+        nonce: nonce(1),
+        // 10-byte signature instead of required 64 bytes
+        signature: new Uint8Array(10) as never,
+        authorPublicKey: pubkey(0x05),
+        documentId: docId,
+      },
+    };
+
+    const result = await handleSubmitChange(message, relay.asService());
+
+    expect(isSubmitChangeResult(result)).toBe(false);
+    if (!isSubmitChangeResult(result)) {
+      expect(result.type).toBe("SyncError");
+      expect(result.code).toBe("INVALID_ENVELOPE");
+    }
+
+    // Nothing stored
+    const stored = relay.getEnvelopesSince(docId, 0);
+    expect(stored).toHaveLength(0);
   });
 });

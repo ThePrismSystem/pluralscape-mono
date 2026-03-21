@@ -126,6 +126,32 @@ describe("PgSyncRelayService", () => {
       expect(result.envelopes).toEqual([]);
       expect(result.hasMore).toBe(false);
     });
+
+    it("returns hasMore: true when rows exceed limit", async () => {
+      const { db, chain } = mockDb();
+      const service = new PgSyncRelayService(db);
+
+      // Simulate limit + 1 rows returned (limit=2, so 3 rows triggers hasMore)
+      const rows = Array.from({ length: 3 }, (_, i) => ({
+        id: `sc_${String(i)}`,
+        documentId: "doc-1",
+        seq: i + 1,
+        encryptedPayload: new Uint8Array([0x01]),
+        authorPublicKey: new Uint8Array(32).fill(0x05),
+        nonce: new Uint8Array(24).fill(0x06),
+        signature: new Uint8Array(64).fill(0x77),
+        createdAt: Date.now(),
+      }));
+
+      chain.limit.mockResolvedValueOnce(rows);
+
+      const result = await service.getEnvelopesSince("doc-1", 0, 2);
+
+      expect(result.envelopes).toHaveLength(2);
+      expect(result.hasMore).toBe(true);
+      expect(result.envelopes[0]?.seq).toBe(1);
+      expect(result.envelopes[1]?.seq).toBe(2);
+    });
   });
 
   describe("submitSnapshot", () => {

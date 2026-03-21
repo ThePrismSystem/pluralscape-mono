@@ -1,5 +1,6 @@
+import { initSodium } from "@pluralscape/crypto";
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
@@ -96,6 +97,10 @@ describe("message-router", () => {
   let state: SyncConnectionState;
   let ctx: RouterContext;
   const log = mockLog();
+
+  beforeAll(async () => {
+    await initSodium();
+  });
 
   beforeEach(() => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
@@ -860,6 +865,51 @@ describe("message-router", () => {
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("INTERNAL_ERROR");
       expect(resp["message"]).toBe("Failed to process SubmitChangeRequest");
+    });
+
+    it("returns INVALID_ENVELOPE and skips broadcast when signature verification fails", async () => {
+      process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+
+      // Register a subscriber to verify no broadcast is sent
+      manager.reserveUnauthSlot();
+      const subWs = mockWs();
+      manager.register("conn-sub", subWs as never, Date.now());
+      manager.authenticate(
+        "conn-sub",
+        {
+          accountId: "acct_test" as AccountId,
+          systemId: "sys_sub" as SystemId,
+          sessionId: "sess_sub" as SessionId,
+          accountType: "system",
+          ownedSystemIds: new Set(["sys_sub" as SystemId]),
+        },
+        "sys_sub" as SystemId,
+        "owner-full",
+      );
+      manager.addSubscription("conn-sub", "doc-sig-fail");
+
+      const change = makeChangePayload("doc-sig-fail");
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitChangeRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          docId: "doc-sig-fail",
+          change,
+        }),
+        state,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INVALID_ENVELOPE");
+
+      // Subscriber should NOT have received a DocumentUpdate broadcast
+      expect(subWs.send).not.toHaveBeenCalled();
+
+      // Ownership should NOT have been set
+      expect(ctx.documentOwnership.has("doc-sig-fail")).toBe(false);
     });
 
     it("sends INTERNAL_ERROR when handleDocumentLoad throws", async () => {

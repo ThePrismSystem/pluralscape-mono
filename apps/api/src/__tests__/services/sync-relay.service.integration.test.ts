@@ -185,6 +185,20 @@ describe("PgSyncRelayService (PGlite integration)", () => {
       expect(result.envelopes).toEqual([]);
       expect(result.hasMore).toBe(false);
     });
+
+    it("returns hasMore: true when results exceed limit", async () => {
+      const docId = await insertDoc();
+      await service.submit(makeEnvelope(docId));
+      await service.submit({ ...makeEnvelope(docId), nonce: nonce(0x03) });
+      await service.submit({ ...makeEnvelope(docId), nonce: nonce(0x04) });
+
+      const result = await service.getEnvelopesSince(docId, 0, 2);
+
+      expect(result.envelopes).toHaveLength(2);
+      expect(result.hasMore).toBe(true);
+      expect(result.envelopes[0]?.seq).toBe(1);
+      expect(result.envelopes[1]?.seq).toBe(2);
+    });
   });
 
   describe("submitSnapshot", () => {
