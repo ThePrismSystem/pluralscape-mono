@@ -5,26 +5,9 @@ import {
   bytesToBase64url,
   serializeServerMessage,
 } from "../../ws/serialization.js";
+import { nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 
-import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 import type { ServerMessage } from "@pluralscape/sync";
-
-// ── Test helpers ──────────────────────────────────────────────────────
-
-function nonce(fill: number): AeadNonce {
-  const bytes: unknown = new Uint8Array(24).fill(fill);
-  return bytes as AeadNonce;
-}
-
-function pubkey(fill: number): SignPublicKey {
-  const bytes: unknown = new Uint8Array(32).fill(fill);
-  return bytes as SignPublicKey;
-}
-
-function sig(fill: number): Signature {
-  const bytes: unknown = new Uint8Array(64).fill(fill);
-  return bytes as Signature;
-}
 
 // ── Tests ─────────────────────────────────────────────────────────────
 

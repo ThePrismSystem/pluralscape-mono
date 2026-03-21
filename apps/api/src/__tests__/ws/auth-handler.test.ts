@@ -27,9 +27,6 @@ vi.mock("../../lib/db.js", () => ({
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-const SYSTEM_ID = "sys_550e8400-e29b-41d4-a716-446655440000" as SystemId;
-const ACCOUNT_ID = "acct_test" as AccountId;
-
 function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
   return { close: vi.fn(), send: vi.fn() };
 }
@@ -45,22 +42,26 @@ function mockLog(): AppLogger {
 }
 
 function validAuth(): AuthContext {
+  const systemId = crypto.randomUUID() as SystemId;
   return {
-    accountId: ACCOUNT_ID,
-    systemId: SYSTEM_ID,
-    sessionId: "sess_test" as SessionId,
+    accountId: crypto.randomUUID() as AccountId,
+    systemId,
+    sessionId: crypto.randomUUID() as SessionId,
     accountType: "system",
-    ownedSystemIds: new Set([SYSTEM_ID]),
+    ownedSystemIds: new Set([systemId]),
   };
 }
 
-function validRequest(overrides?: Partial<AuthenticateRequest>): AuthenticateRequest {
+function validRequest(
+  systemId: SystemId,
+  overrides?: Partial<AuthenticateRequest>,
+): AuthenticateRequest {
   return {
     type: "AuthenticateRequest",
     correlationId: "corr-1",
     protocolVersion: SYNC_PROTOCOL_VERSION,
     sessionToken: "a".repeat(64),
-    systemId: SYSTEM_ID,
+    systemId,
     profileType: "owner-full",
     ...overrides,
   };
@@ -88,7 +89,12 @@ describe("handleAuthenticate", () => {
     const state = manager.register("conn-1", mockWs() as never, Date.now());
     state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
-    const result = await handleAuthenticate(validRequest(), state, manager, log);
+    const result = await handleAuthenticate(
+      validRequest(auth.systemId as SystemId),
+      state,
+      manager,
+      log,
+    );
 
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -102,11 +108,17 @@ describe("handleAuthenticate", () => {
   });
 
   it("returns AUTH_FAILED for invalid token", async () => {
+    const auth = validAuth();
     mockValidateSession.mockResolvedValue({ ok: false, error: "UNAUTHENTICATED" });
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
-    const result = await handleAuthenticate(validRequest(), state, manager, log);
+    const result = await handleAuthenticate(
+      validRequest(auth.systemId as SystemId),
+      state,
+      manager,
+      log,
+    );
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -116,11 +128,17 @@ describe("handleAuthenticate", () => {
   });
 
   it("returns AUTH_EXPIRED for expired session", async () => {
+    const auth = validAuth();
     mockValidateSession.mockResolvedValue({ ok: false, error: "SESSION_EXPIRED" });
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
-    const result = await handleAuthenticate(validRequest(), state, manager, log);
+    const result = await handleAuthenticate(
+      validRequest(auth.systemId as SystemId),
+      state,
+      manager,
+      log,
+    );
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -137,7 +155,12 @@ describe("handleAuthenticate", () => {
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
-    const result = await handleAuthenticate(validRequest(), state, manager, log);
+    const result = await handleAuthenticate(
+      validRequest(auth.systemId as SystemId),
+      state,
+      manager,
+      log,
+    );
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -155,7 +178,7 @@ describe("handleAuthenticate", () => {
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
     const result = await handleAuthenticate(
-      validRequest({ profileType: "friend" }),
+      validRequest(auth.systemId as SystemId, { profileType: "friend" }),
       state,
       manager,
       log,
@@ -174,7 +197,7 @@ describe("handleAuthenticate", () => {
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
     const result = await handleAuthenticate(
-      validRequest({ profileType: "friend" }),
+      validRequest(auth.systemId as SystemId, { profileType: "friend" }),
       state,
       manager,
       log,
@@ -192,12 +215,17 @@ describe("handleAuthenticate", () => {
       const id = `existing-${String(i)}`;
       manager.reserveUnauthSlot();
       manager.register(id, mockWs() as never, Date.now());
-      manager.authenticate(id, auth, SYSTEM_ID, "owner-full");
+      manager.authenticate(id, auth, auth.systemId as SystemId, "owner-full");
     }
 
     manager.reserveUnauthSlot();
     const state = manager.register("conn-new", mockWs() as never, Date.now());
-    const result = await handleAuthenticate(validRequest(), state, manager, log);
+    const result = await handleAuthenticate(
+      validRequest(auth.systemId as SystemId),
+      state,
+      manager,
+      log,
+    );
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -206,26 +234,33 @@ describe("handleAuthenticate", () => {
   });
 
   it("clears auth timeout on success", async () => {
-    mockValidateSession.mockResolvedValue({ ok: true, auth: validAuth(), session: {} as never });
+    const auth = validAuth();
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
     state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
-    await handleAuthenticate(validRequest(), state, manager, log);
+    await handleAuthenticate(validRequest(auth.systemId as SystemId), state, manager, log);
 
-    // Auth timeout is cleared by manager.authenticate() — check the new state in the map
+    // Auth timeout is cleared by manager.authenticate() -- check the new state in the map
     const updated = manager.get("conn-1");
     expect(updated?.authTimeoutHandle).toBeNull();
   });
 
   it("returns AUTH_FAILED when connection removed during auth", async () => {
-    mockValidateSession.mockResolvedValue({ ok: true, auth: validAuth(), session: {} as never });
+    const auth = validAuth();
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
     // Simulate connection removal during async auth
     manager.remove("conn-1");
 
-    const result = await handleAuthenticate(validRequest(), state, manager, log);
+    const result = await handleAuthenticate(
+      validRequest(auth.systemId as SystemId),
+      state,
+      manager,
+      log,
+    );
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -234,12 +269,13 @@ describe("handleAuthenticate", () => {
   });
 
   it("preserves correlationId in response", async () => {
-    mockValidateSession.mockResolvedValue({ ok: true, auth: validAuth(), session: {} as never });
+    const auth = validAuth();
+    mockValidateSession.mockResolvedValue({ ok: true, auth, session: {} as never });
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
     const result = await handleAuthenticate(
-      validRequest({ correlationId: "my-corr-id" }),
+      validRequest(auth.systemId as SystemId, { correlationId: "my-corr-id" }),
       state,
       manager,
       log,
@@ -252,11 +288,17 @@ describe("handleAuthenticate", () => {
   });
 
   it("returns AUTH_FAILED when getDb throws", async () => {
+    const auth = validAuth();
     mockGetDb.mockRejectedValueOnce(new Error("DB connection failed"));
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
-    const result = await handleAuthenticate(validRequest(), state, manager, log);
+    const result = await handleAuthenticate(
+      validRequest(auth.systemId as SystemId),
+      state,
+      manager,
+      log,
+    );
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -266,11 +308,17 @@ describe("handleAuthenticate", () => {
   });
 
   it("returns AUTH_FAILED when validateSession throws", async () => {
+    const auth = validAuth();
     mockValidateSession.mockRejectedValueOnce(new Error("session service down"));
     manager.reserveUnauthSlot();
     const state = manager.register("conn-1", mockWs() as never, Date.now());
 
-    const result = await handleAuthenticate(validRequest(), state, manager, log);
+    const result = await handleAuthenticate(
+      validRequest(auth.systemId as SystemId),
+      state,
+      manager,
+      log,
+    );
 
     expect(result.ok).toBe(false);
     if (!result.ok) {

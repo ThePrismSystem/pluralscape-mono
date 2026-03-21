@@ -9,13 +9,14 @@ function mockWs(): { close: ReturnType<typeof vi.fn> } {
   return { close: vi.fn() };
 }
 
-function mockAuth(accountId = "acct_test" as AccountId): AuthContext {
+function mockAuth(accountId = crypto.randomUUID() as AccountId): AuthContext {
+  const systemId = crypto.randomUUID() as SystemId;
   return {
     accountId,
-    systemId: "sys_test" as SystemId,
-    sessionId: "sess_test" as SessionId,
+    systemId,
+    sessionId: crypto.randomUUID() as SessionId,
     accountType: "system",
-    ownedSystemIds: new Set(["sys_test" as SystemId]),
+    ownedSystemIds: new Set([systemId]),
   };
 }
 
@@ -44,16 +45,17 @@ describe("ConnectionManager", () => {
     it("removes a connection and cleans all indexes", () => {
       manager = new ConnectionManager();
       const ws = mockWs();
+      const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", ws as never, Date.now());
-      manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
       manager.addSubscription("conn-1", "doc-1");
 
       manager.remove("conn-1");
 
       expect(manager.activeCount).toBe(0);
       expect(manager.getSubscribers("doc-1").size).toBe(0);
-      expect(manager.getByAccount("acct_test").size).toBe(0);
+      expect(manager.getByAccount(auth.accountId).size).toBe(0);
     });
 
     it("clears auth timeout on remove", () => {
@@ -85,9 +87,10 @@ describe("ConnectionManager", () => {
 
     it("does not decrement unauthenticatedCount on remove of authed connection", () => {
       manager = new ConnectionManager();
+      const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
       expect(manager.unauthenticatedCount).toBe(0);
 
       manager.remove("conn-1");
@@ -119,38 +122,36 @@ describe("ConnectionManager", () => {
   describe("authenticate", () => {
     it("promotes phase and updates account index", () => {
       manager = new ConnectionManager();
+      const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", mockWs() as never, Date.now());
-      const result = manager.authenticate(
-        "conn-1",
-        mockAuth(),
-        "sys_test" as SystemId,
-        "owner-full",
-      );
+      const result = manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
 
       expect(result).toBe(true);
       const state = manager.get("conn-1");
       expect(state?.phase).toBe("authenticated");
-      expect(state?.auth?.accountId).toBe("acct_test");
-      expect(state?.systemId).toBe("sys_test");
+      expect(state?.auth?.accountId).toBe(auth.accountId);
+      expect(state?.systemId).toBe(auth.systemId);
       expect(state?.profileType).toBe("owner-full");
       expect(manager.unauthenticatedCount).toBe(0);
-      expect(manager.getByAccount("acct_test").has("conn-1")).toBe(true);
+      expect(manager.getByAccount(auth.accountId).has("conn-1")).toBe(true);
     });
 
     it("returns false for non-existent connection", () => {
       manager = new ConnectionManager();
-      const result = manager.authenticate("nope", mockAuth(), "sys_test" as SystemId, "owner-full");
+      const auth = mockAuth();
+      const result = manager.authenticate("nope", auth, auth.systemId as SystemId, "owner-full");
       expect(result).toBe(false);
     });
 
     it("clears auth timeout on authenticate", () => {
       manager = new ConnectionManager();
+      const auth = mockAuth();
       manager.reserveUnauthSlot();
       const state = manager.register("conn-1", mockWs() as never, Date.now());
       state.authTimeoutHandle = setTimeout(() => {}, 10_000);
 
-      manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
 
       const updated = manager.get("conn-1");
       expect(updated?.authTimeoutHandle).toBeNull();
@@ -190,16 +191,18 @@ describe("ConnectionManager", () => {
   describe("authenticate phase guard", () => {
     it("only decrements unauthCount when transitioning from awaiting-auth", () => {
       manager = new ConnectionManager();
+      const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
       expect(manager.unauthenticatedCount).toBe(0);
 
       // Second authenticate call on already-authenticated connection should not go negative
+      const auth2 = mockAuth();
       const result = manager.authenticate(
         "conn-1",
-        mockAuth(),
-        "sys_test" as SystemId,
+        auth2,
+        auth2.systemId as SystemId,
         "owner-full",
       );
       expect(result).toBe(false);
@@ -327,10 +330,10 @@ describe("ConnectionManager", () => {
       manager.register("conn-1", mockWs() as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", auth, "sys_test" as SystemId, "owner-full");
-      manager.authenticate("conn-2", auth, "sys_test" as SystemId, "owner-lite");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-2", auth, auth.systemId as SystemId, "owner-lite");
 
-      const acctConns = manager.getByAccount("acct_test");
+      const acctConns = manager.getByAccount(auth.accountId);
       expect(acctConns.size).toBe(2);
       expect(acctConns.has("conn-1")).toBe(true);
       expect(acctConns.has("conn-2")).toBe(true);
@@ -343,13 +346,13 @@ describe("ConnectionManager", () => {
       manager.register("conn-1", mockWs() as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", auth, "sys_test" as SystemId, "owner-full");
-      manager.authenticate("conn-2", auth, "sys_test" as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
+      manager.authenticate("conn-2", auth, auth.systemId as SystemId, "owner-full");
 
       manager.remove("conn-1");
 
-      expect(manager.getByAccount("acct_test").size).toBe(1);
-      expect(manager.getByAccount("acct_test").has("conn-2")).toBe(true);
+      expect(manager.getByAccount(auth.accountId).size).toBe(1);
+      expect(manager.getByAccount(auth.accountId).has("conn-2")).toBe(true);
     });
 
     it("getAccountConnectionCount reflects authenticated connections", () => {
@@ -359,12 +362,12 @@ describe("ConnectionManager", () => {
       manager.register("conn-1", mockWs() as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", mockWs() as never, Date.now());
-      manager.authenticate("conn-1", auth, "sys_test" as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
 
-      expect(manager.getAccountConnectionCount("acct_test")).toBe(1);
+      expect(manager.getAccountConnectionCount(auth.accountId)).toBe(1);
 
-      manager.authenticate("conn-2", auth, "sys_test" as SystemId, "owner-full");
-      expect(manager.getAccountConnectionCount("acct_test")).toBe(2);
+      manager.authenticate("conn-2", auth, auth.systemId as SystemId, "owner-full");
+      expect(manager.getAccountConnectionCount(auth.accountId)).toBe(2);
     });
   });
 
@@ -387,13 +390,14 @@ describe("ConnectionManager", () => {
 
     it("frees a slot when connection authenticates", () => {
       manager = new ConnectionManager();
+      const auth = mockAuth();
       manager.reserveUnauthSlot();
       manager.register("conn-1", mockWs() as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", mockWs() as never, Date.now());
       expect(manager.canAcceptUnauthenticated(2)).toBe(false);
 
-      manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
       expect(manager.canAcceptUnauthenticated(2)).toBe(true);
     });
   });
@@ -401,13 +405,14 @@ describe("ConnectionManager", () => {
   describe("closeAll", () => {
     it("closes all connections and empties all indexes", () => {
       manager = new ConnectionManager();
+      const auth = mockAuth();
       const ws1 = mockWs();
       const ws2 = mockWs();
       manager.reserveUnauthSlot();
       manager.register("conn-1", ws1 as never, Date.now());
       manager.reserveUnauthSlot();
       manager.register("conn-2", ws2 as never, Date.now());
-      manager.authenticate("conn-1", mockAuth(), "sys_test" as SystemId, "owner-full");
+      manager.authenticate("conn-1", auth, auth.systemId as SystemId, "owner-full");
       manager.addSubscription("conn-1", "doc-a");
 
       manager.closeAll(1001, "shutdown");
@@ -417,7 +422,7 @@ describe("ConnectionManager", () => {
       expect(manager.activeCount).toBe(0);
       expect(manager.unauthenticatedCount).toBe(0);
       expect(manager.getSubscribers("doc-a").size).toBe(0);
-      expect(manager.getByAccount("acct_test").size).toBe(0);
+      expect(manager.getByAccount(auth.accountId).size).toBe(0);
     });
 
     it("tolerates already-closed connections", () => {
@@ -455,6 +460,7 @@ describe("ConnectionManager", () => {
   describe("per-account connection limit enforcement", () => {
     it("getAccountConnectionCount reflects the limit boundary", () => {
       manager = new ConnectionManager();
+      const auth = mockAuth();
       const maxPerAccount = 10;
 
       // Register and authenticate connections up to the limit
@@ -463,17 +469,18 @@ describe("ConnectionManager", () => {
         manager.register(`conn-limit-${String(i)}`, mockWs() as never, Date.now());
         manager.authenticate(
           `conn-limit-${String(i)}`,
-          mockAuth(),
-          "sys_test" as SystemId,
+          auth,
+          auth.systemId as SystemId,
           "owner-full",
         );
       }
 
-      expect(manager.getAccountConnectionCount("acct_test")).toBe(maxPerAccount);
+      expect(manager.getAccountConnectionCount(auth.accountId)).toBe(maxPerAccount);
     });
 
     it("decrements account count when connections are removed", () => {
       manager = new ConnectionManager();
+      const auth = mockAuth();
       const connectionCount = 5;
 
       for (let i = 0; i < connectionCount; i++) {
@@ -481,20 +488,22 @@ describe("ConnectionManager", () => {
         manager.register(`conn-dec-${String(i)}`, mockWs() as never, Date.now());
         manager.authenticate(
           `conn-dec-${String(i)}`,
-          mockAuth(),
-          "sys_test" as SystemId,
+          auth,
+          auth.systemId as SystemId,
           "owner-full",
         );
       }
 
-      expect(manager.getAccountConnectionCount("acct_test")).toBe(connectionCount);
+      expect(manager.getAccountConnectionCount(auth.accountId)).toBe(connectionCount);
 
       manager.remove("conn-dec-0");
-      expect(manager.getAccountConnectionCount("acct_test")).toBe(connectionCount - 1);
+      expect(manager.getAccountConnectionCount(auth.accountId)).toBe(connectionCount - 1);
     });
 
     it("isolates connection counts between different accounts", () => {
       manager = new ConnectionManager();
+      const authA = mockAuth();
+      const authB = mockAuth();
 
       // Account A: 3 connections
       for (let i = 0; i < 3; i++) {
@@ -502,8 +511,8 @@ describe("ConnectionManager", () => {
         manager.register(`conn-a-${String(i)}`, mockWs() as never, Date.now());
         manager.authenticate(
           `conn-a-${String(i)}`,
-          mockAuth("acct_a" as AccountId),
-          "sys_test" as SystemId,
+          authA,
+          authA.systemId as SystemId,
           "owner-full",
         );
       }
@@ -514,19 +523,19 @@ describe("ConnectionManager", () => {
         manager.register(`conn-b-${String(i)}`, mockWs() as never, Date.now());
         manager.authenticate(
           `conn-b-${String(i)}`,
-          mockAuth("acct_b" as AccountId),
-          "sys_test" as SystemId,
+          authB,
+          authB.systemId as SystemId,
           "owner-full",
         );
       }
 
-      expect(manager.getAccountConnectionCount("acct_a")).toBe(3);
-      expect(manager.getAccountConnectionCount("acct_b")).toBe(2);
+      expect(manager.getAccountConnectionCount(authA.accountId)).toBe(3);
+      expect(manager.getAccountConnectionCount(authB.accountId)).toBe(2);
 
       // Removing from account A does not affect account B
       manager.remove("conn-a-0");
-      expect(manager.getAccountConnectionCount("acct_a")).toBe(2);
-      expect(manager.getAccountConnectionCount("acct_b")).toBe(2);
+      expect(manager.getAccountConnectionCount(authA.accountId)).toBe(2);
+      expect(manager.getAccountConnectionCount(authB.accountId)).toBe(2);
     });
   });
 
@@ -538,7 +547,7 @@ describe("ConnectionManager", () => {
 
     it("returns empty set for unknown accountId", () => {
       manager = new ConnectionManager();
-      expect(manager.getByAccount("acct_unknown").size).toBe(0);
+      expect(manager.getByAccount(crypto.randomUUID()).size).toBe(0);
     });
   });
 });

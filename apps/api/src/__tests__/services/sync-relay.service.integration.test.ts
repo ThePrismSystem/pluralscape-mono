@@ -5,9 +5,8 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PgSyncRelayService } from "../../services/sync-relay.service.js";
+import { makeEnvelope, makeSnapshotEnvelope, nonce } from "../helpers/crypto-test-fixtures.js";
 
-import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
-import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "@pluralscape/sync";
 import type { SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
@@ -72,42 +71,6 @@ const DDL = [
 // ── Helpers ──────────────────────────────────────────────────────────────
 
 const schema = { syncDocuments, syncChanges, syncSnapshots };
-
-function nonce(fill: number): AeadNonce {
-  const bytes: unknown = new Uint8Array(24).fill(fill);
-  return bytes as AeadNonce;
-}
-
-function pubkey(fill: number): SignPublicKey {
-  const bytes: unknown = new Uint8Array(32).fill(fill);
-  return bytes as SignPublicKey;
-}
-
-function sig(fill: number): Signature {
-  const bytes: unknown = new Uint8Array(64).fill(fill);
-  return bytes as Signature;
-}
-
-function makeEnvelope(documentId: string): Omit<EncryptedChangeEnvelope, "seq"> {
-  return {
-    documentId,
-    ciphertext: new Uint8Array([0xde, 0xad]),
-    authorPublicKey: pubkey(0x01),
-    nonce: nonce(0x02),
-    signature: sig(0x77),
-  };
-}
-
-function makeSnapshotEnvelope(documentId: string, snapshotVersion = 1): EncryptedSnapshotEnvelope {
-  return {
-    documentId,
-    snapshotVersion,
-    ciphertext: new Uint8Array([0xca, 0xfe]),
-    authorPublicKey: pubkey(0x03),
-    nonce: nonce(0x04),
-    signature: sig(0x88),
-  };
-}
 
 // ── Tests ────────────────────────────────────────────────────────────────
 
