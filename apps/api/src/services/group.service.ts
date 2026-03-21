@@ -15,7 +15,8 @@ import { detectAncestorCycle } from "../lib/hierarchy.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
 
-import { createHierarchyService, mapBaseFields } from "./hierarchy-service-factory.js";
+import { createHierarchyService } from "./hierarchy-service-factory.js";
+import { mapBaseFields } from "./hierarchy-service-helpers.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
