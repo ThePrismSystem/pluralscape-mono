@@ -3,8 +3,10 @@ import { getSodium } from "@pluralscape/crypto";
 import { env } from "../env.js";
 import { EMAIL_HASH_LENGTH, PEPPER_HEX_LENGTH } from "../routes/auth/auth.constants.js";
 
-import { HEX_RADIX } from "./hex.constants.js";
 import { toHex } from "./hex.js";
+
+/** Radix for hexadecimal parsing. */
+const HEX_RADIX = 16;
 
 /** Number of hex characters per byte. */
 const HEX_CHARS_PER_BYTE = 2;

@@ -2,10 +2,13 @@
  * Zod request body schemas for device transfer routes.
  * Domain: device transfer initiation and completion validation.
  */
-import { AEAD_NONCE_BYTES, AEAD_TAG_BYTES, PWHASH_SALT_BYTES } from "@pluralscape/crypto";
+import {
+  AEAD_NONCE_BYTES,
+  AEAD_TAG_BYTES,
+  HEX_CHARS_PER_BYTE,
+  PWHASH_SALT_BYTES,
+} from "@pluralscape/crypto";
 import { z } from "zod";
-
-import { HEX_BYTE_WIDTH } from "../../lib/hex.constants.js";
 
 /** Pattern for valid lowercase or uppercase hex strings. */
 const HEX_PATTERN = /^[0-9a-fA-F]+$/;
@@ -20,7 +23,7 @@ const MAX_ENCRYPTED_KEY_MATERIAL_BYTES = 1024;
 const MIN_ENCRYPTED_KEY_MATERIAL_BYTES = AEAD_NONCE_BYTES + AEAD_TAG_BYTES;
 
 /** Hex string length for the code salt (PWHASH_SALT_BYTES * 2 hex chars per byte). */
-const CODE_SALT_HEX_LENGTH = PWHASH_SALT_BYTES * HEX_BYTE_WIDTH;
+const CODE_SALT_HEX_LENGTH = PWHASH_SALT_BYTES * HEX_CHARS_PER_BYTE;
 
 /** Hex string for a fixed-size salt: must be exactly CODE_SALT_HEX_LENGTH hex chars. */
 const codeSaltHex = z
@@ -36,15 +39,15 @@ const codeSaltHex = z
 const encryptedKeyMaterialHex = z
   .string()
   .min(
-    MIN_ENCRYPTED_KEY_MATERIAL_BYTES * HEX_BYTE_WIDTH,
-    `encryptedKeyMaterialHex must be at least ${String(MIN_ENCRYPTED_KEY_MATERIAL_BYTES * HEX_BYTE_WIDTH)} hex characters`,
+    MIN_ENCRYPTED_KEY_MATERIAL_BYTES * HEX_CHARS_PER_BYTE,
+    `encryptedKeyMaterialHex must be at least ${String(MIN_ENCRYPTED_KEY_MATERIAL_BYTES * HEX_CHARS_PER_BYTE)} hex characters`,
   )
   .max(
-    MAX_ENCRYPTED_KEY_MATERIAL_BYTES * HEX_BYTE_WIDTH,
-    `encryptedKeyMaterialHex must be at most ${String(MAX_ENCRYPTED_KEY_MATERIAL_BYTES * HEX_BYTE_WIDTH)} hex characters`,
+    MAX_ENCRYPTED_KEY_MATERIAL_BYTES * HEX_CHARS_PER_BYTE,
+    `encryptedKeyMaterialHex must be at most ${String(MAX_ENCRYPTED_KEY_MATERIAL_BYTES * HEX_CHARS_PER_BYTE)} hex characters`,
   )
   .regex(HEX_PATTERN, "encryptedKeyMaterialHex must be a valid hex string")
-  .refine((v) => v.length % HEX_BYTE_WIDTH === 0, {
+  .refine((v) => v.length % HEX_CHARS_PER_BYTE === 0, {
     message: "encryptedKeyMaterialHex must have even length (whole bytes)",
   })
   .transform((v) => v.toLowerCase());

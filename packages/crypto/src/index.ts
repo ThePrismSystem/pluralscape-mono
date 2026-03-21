@@ -76,6 +76,7 @@ export {
   SIGN_PUBLIC_KEY_BYTES,
   SIGN_SECRET_KEY_BYTES,
   SIGN_SEED_BYTES,
+  HEX_CHARS_PER_BYTE,
   SODIUM_CONSTANTS,
 } from "./crypto.constants.js";
 

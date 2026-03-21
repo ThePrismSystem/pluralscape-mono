@@ -1,3 +1,5 @@
+import { toHex } from "@pluralscape/crypto";
+
 import {
   RELAY_MAX_ENVELOPES_PER_DOCUMENT,
   RELAY_MAX_SNAPSHOT_SIZE_BYTES,
@@ -5,13 +7,6 @@ import {
 
 import type { SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
-
-const HEX_BASE = 16;
-
-/** Convert a Uint8Array to a hex string. */
-function toHex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(HEX_BASE).padStart(2, "0")).join("");
-}
 
 /** Thrown when a snapshot submission has a version not newer than the current one. */
 export class SnapshotVersionConflictError extends Error {

@@ -120,6 +120,9 @@ export const SAFETY_NUMBER_HASH_BYTES = 30;
 /** Radix for hexadecimal parsing/formatting. */
 export const HEX_RADIX = 16;
 
+/** Number of hex characters per byte (each byte = 2 hex digits). */
+export const HEX_CHARS_PER_BYTE = 2;
+
 /** All sodium constants as a single frozen object. */
 export const SODIUM_CONSTANTS = Object.freeze({
   AEAD_KEY_BYTES,
