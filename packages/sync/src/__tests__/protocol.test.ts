@@ -13,7 +13,7 @@ import {
   type TransportState,
 } from "../protocol.js";
 
-import { docId, sysId } from "./test-crypto-helpers.js";
+import { asSyncDocId, sysId } from "./test-crypto-helpers.js";
 
 // ── SYNC_PROTOCOL_VERSION ────────────────────────────────────────────
 
@@ -80,7 +80,7 @@ describe("ClientMessage", () => {
     const msg: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
       correlationId: "test-123",
-      docId: docId("fronting-sys_abc-2026-Q1"),
+      docId: asSyncDocId("fronting-sys_abc-2026-Q1"),
       persist: true,
     };
     expect(msg.docId).toBe("fronting-sys_abc-2026-Q1");

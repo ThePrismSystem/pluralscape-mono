@@ -100,6 +100,18 @@ export function isValidRecoveryKeyFormat(displayKey: string): boolean {
   return RECOVERY_KEY_PATTERN.test(displayKey);
 }
 
+/**
+ * Validate and cast a string to a branded RecoveryKeyDisplay.
+ * Throws if the input does not match the expected recovery key format
+ * (13 groups of 4 base32 characters separated by dashes).
+ */
+export function toRecoveryKeyDisplay(key: string): RecoveryKeyDisplay {
+  if (!isValidRecoveryKeyFormat(key)) {
+    throw new InvalidInputError("Invalid recovery key format");
+  }
+  return key as RecoveryKeyDisplay;
+}
+
 // ── Public API ─────────────────────────────────────────────────────
 
 /**

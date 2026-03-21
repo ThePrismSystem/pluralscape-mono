@@ -27,17 +27,23 @@ describe("toChecksumHex", () => {
     expect(() => toChecksumHex("a".repeat(65))).toThrow("Expected 64-char hex digest, got 65");
   });
 
-  it("throws on uppercase hex", () => {
+  it("normalizes uppercase hex to lowercase", () => {
     const hex = "A".repeat(64);
-    expect(() => toChecksumHex(hex)).toThrow(
-      "Checksum hex digest must contain only lowercase hex characters",
-    );
+    const result = toChecksumHex(hex);
+    expect(result).toBe("a".repeat(64));
+    expectTypeOf(result).toEqualTypeOf<ChecksumHex>();
+  });
+
+  it("normalizes mixed-case hex to lowercase", () => {
+    const hex = "aAbBcCdDeEfF0123456789".padEnd(64, "0");
+    const result = toChecksumHex(hex);
+    expect(result).toBe(hex.toLowerCase());
   });
 
   it("throws on non-hex characters", () => {
     const hex = "g".repeat(64);
     expect(() => toChecksumHex(hex)).toThrow(
-      "Checksum hex digest must contain only lowercase hex characters",
+      "Checksum hex digest must contain only hex characters",
     );
   });
 

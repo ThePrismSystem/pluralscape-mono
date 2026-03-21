@@ -6,7 +6,7 @@ import { checkCompactionEligibility, LazyDocumentSizeTracker } from "../compacti
 import { EncryptedSyncSession } from "../sync-session.js";
 import { DEFAULT_COMPACTION_CONFIG } from "../types.js";
 
-import { docId } from "./test-crypto-helpers.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -85,7 +85,7 @@ describe("createSnapshot (formerly compactDocument)", () => {
     session = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: docId("fronting-sys_test"),
+      documentId: asSyncDocId("fronting-sys_test"),
       sodium,
     });
   });

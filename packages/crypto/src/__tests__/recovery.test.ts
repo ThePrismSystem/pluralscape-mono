@@ -1,8 +1,13 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, expectTypeOf, it, vi } from "vitest";
 
 import { DecryptionFailedError, InvalidInputError } from "../errors.js";
 import { deriveMasterKey, generateSalt } from "../master-key.js";
-import { generateRecoveryKey, isValidRecoveryKeyFormat, recoverMasterKey } from "../recovery.js";
+import {
+  generateRecoveryKey,
+  isValidRecoveryKeyFormat,
+  recoverMasterKey,
+  toRecoveryKeyDisplay,
+} from "../recovery.js";
 import { getSodium } from "../sodium.js";
 
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
@@ -206,5 +211,23 @@ describe("isValidRecoveryKeyFormat", () => {
         "ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z2345-67ABC-DEFGH-IJKLM-NOPQR-STUVW-XYZ23-4567A",
       ),
     ).toBe(false);
+  });
+});
+
+describe("toRecoveryKeyDisplay", () => {
+  it("returns a branded RecoveryKeyDisplay for a valid key", () => {
+    const { displayKey } = generateRecoveryKey(masterKey);
+    const result = toRecoveryKeyDisplay(displayKey);
+    expect(result).toBe(displayKey);
+    expectTypeOf(result).toEqualTypeOf<RecoveryKeyDisplay>();
+  });
+
+  it("throws InvalidInputError for an invalid key", () => {
+    expect(() => toRecoveryKeyDisplay("not-a-valid-key")).toThrow(InvalidInputError);
+    expect(() => toRecoveryKeyDisplay("not-a-valid-key")).toThrow("Invalid recovery key format");
+  });
+
+  it("throws for an empty string", () => {
+    expect(() => toRecoveryKeyDisplay("")).toThrow(InvalidInputError);
   });
 });

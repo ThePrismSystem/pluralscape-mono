@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { brandedSetHas, formatError, makeSyncError } from "../../ws/ws.utils.js";
-import { docId as toDocId } from "../helpers/crypto-test-fixtures.js";
+import { asSyncDocId } from "../helpers/crypto-test-fixtures.js";
 
 describe("formatError", () => {
   it("returns stack trace from Error instances when available", () => {
@@ -41,7 +41,7 @@ describe("brandedSetHas", () => {
 
 describe("makeSyncError", () => {
   it("creates a SyncError with all fields", () => {
-    const err = makeSyncError("PERMISSION_DENIED", "Access denied", "corr-1", toDocId("doc-1"));
+    const err = makeSyncError("PERMISSION_DENIED", "Access denied", "corr-1", asSyncDocId("doc-1"));
     expect(err).toEqual({
       type: "SyncError",
       correlationId: "corr-1",

@@ -9,9 +9,8 @@ import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "@plural
 import type { SyncDocumentId } from "@pluralscape/types";
 
 /** Cast a plain string to a branded SyncDocumentId for use in tests. */
-export function docId(id: string): SyncDocumentId {
-  const branded: unknown = id;
-  return branded as SyncDocumentId;
+export function asSyncDocId(id: string): SyncDocumentId {
+  return id as SyncDocumentId;
 }
 
 /** Create a test AeadNonce (24 bytes) filled with the given value. */

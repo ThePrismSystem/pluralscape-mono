@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { broadcastDocumentUpdate } from "../../ws/broadcast.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
-import { docId as toDocId } from "../helpers/crypto-test-fixtures.js";
+import { asSyncDocId } from "../helpers/crypto-test-fixtures.js";
 
 import type { AppLogger } from "../../lib/logger.js";
 import type { DocumentUpdate } from "@pluralscape/sync";
@@ -33,7 +33,7 @@ function mockAuth(accountId = "acct_test" as AccountId) {
   };
 }
 
-function makeUpdate(docId: SyncDocumentId = toDocId("doc-1")): DocumentUpdate {
+function makeUpdate(docId: SyncDocumentId = asSyncDocId("doc-1")): DocumentUpdate {
   return {
     type: "DocumentUpdate",
     correlationId: null,
@@ -189,7 +189,7 @@ describe("broadcastDocumentUpdate", () => {
     manager.addSubscription("conn-1", "doc-1");
     manager.addSubscription("conn-2", "doc-2");
 
-    broadcastDocumentUpdate(makeUpdate(toDocId("doc-1")), "nobody", manager, log);
+    broadcastDocumentUpdate(makeUpdate(asSyncDocId("doc-1")), "nobody", manager, log);
 
     expect(ws1.send).toHaveBeenCalledOnce();
     expect(ws2.send).not.toHaveBeenCalled();

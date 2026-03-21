@@ -12,7 +12,7 @@ import {
   splitDocument,
 } from "../time-split.js";
 
-import { docId } from "./test-crypto-helpers.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { FrontingDocument } from "../schemas/fronting.js";
 import type { DocumentKeys } from "../types.js";
@@ -143,7 +143,7 @@ describe("splitDocument", () => {
     const session = new EncryptedSyncSession<FrontingDocument>({
       doc,
       keys,
-      documentId: docId("fronting-sys_test"),
+      documentId: asSyncDocId("fronting-sys_test"),
       sodium,
     });
 
@@ -194,7 +194,7 @@ describe("splitDocument", () => {
     const session = new EncryptedSyncSession<FrontingDocument>({
       doc,
       keys,
-      documentId: docId("fronting-sys_test"),
+      documentId: asSyncDocId("fronting-sys_test"),
       sodium,
     });
 
@@ -214,7 +214,7 @@ describe("splitDocument", () => {
     const session = new EncryptedSyncSession({
       doc: wrongDoc,
       keys,
-      documentId: docId("fronting-sys_test"),
+      documentId: asSyncDocId("fronting-sys_test"),
       sodium,
     });
     expect(() => splitDocument("fronting-sys_test", session)).toThrow(
@@ -248,7 +248,7 @@ describe("splitDocument", () => {
     const session = new EncryptedSyncSession<FrontingDocument>({
       doc,
       keys,
-      documentId: docId("fronting-sys_test"),
+      documentId: asSyncDocId("fronting-sys_test"),
       sodium,
     });
 
@@ -264,7 +264,7 @@ describe("splitDocument", () => {
     const session = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: docId("chat-ch_test"),
+      documentId: asSyncDocId("chat-ch_test"),
       sodium,
     });
 
@@ -278,7 +278,7 @@ describe("splitDocument", () => {
     const session = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: docId("journal-sys_test"),
+      documentId: asSyncDocId("journal-sys_test"),
       sodium,
     });
 
@@ -292,7 +292,7 @@ describe("splitDocument", () => {
     const session = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: docId("system-core-sys_test"),
+      documentId: asSyncDocId("system-core-sys_test"),
       sodium,
     });
 

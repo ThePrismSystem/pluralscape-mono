@@ -4,7 +4,7 @@ import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
 // Cast test values to branded types — these are contract test fixtures,
 // not real cryptographic material.
-export function docId(id: string): SyncDocumentId {
+export function asSyncDocId(id: string): SyncDocumentId {
   return id as SyncDocumentId;
 }
 export function sysId(id: string): SystemId {

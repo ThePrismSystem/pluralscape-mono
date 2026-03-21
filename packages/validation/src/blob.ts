@@ -1,3 +1,4 @@
+import { toChecksumHex } from "@pluralscape/types";
 import { z } from "zod/v4";
 
 const BlobPurposeEnum = z.enum([
@@ -29,7 +30,8 @@ export const ConfirmUploadBodySchema = z
     checksum: z
       .string()
       .length(CHECKSUM_HEX_LENGTH)
-      .regex(/^[0-9a-f]+$/),
+      .regex(/^[0-9a-fA-F]+$/)
+      .transform(toChecksumHex),
     thumbnailOfBlobId: z.string().min(1).optional(),
   })
   .readonly();

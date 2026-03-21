@@ -6,7 +6,7 @@
  */
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 
-import { docId } from "./crypto.fixture.js";
+import { asSyncDocId } from "./crypto.fixture.js";
 
 import type { ClientMessage, ServerMessage } from "@pluralscape/sync";
 import type { SystemId } from "@pluralscape/types";
@@ -133,7 +133,7 @@ export class SyncWsClient {
     this.send({
       type: "SubscribeRequest",
       correlationId: null,
-      documents: documents.map((d) => ({ ...d, docId: docId(d.docId) })),
+      documents: documents.map((d) => ({ ...d, docId: asSyncDocId(d.docId) })),
     });
     return this.waitForMessage("SubscribeResponse");
   }

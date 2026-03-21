@@ -8,6 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
+import type { BlobResult } from "../../../services/blob.service.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
@@ -46,18 +47,18 @@ const BLOB_ID = "blob_660e8400-e29b-41d4-a716-446655440000";
 const BASE_URL = `/systems/sys_550e8400-e29b-41d4-a716-446655440000/blobs/${BLOB_ID}/confirm`;
 
 const MOCK_BLOB_RESULT = {
-  id: BLOB_ID as never,
-  systemId: MOCK_AUTH.systemId as never,
-  purpose: "avatar" as never,
+  id: BLOB_ID,
+  systemId: MOCK_AUTH.systemId,
+  purpose: "avatar",
   mimeType: "image/png",
   sizeBytes: 1024,
-  checksum: "abc123" as never,
-  uploadedAt: 1700000000000 as never,
+  checksum: "a".repeat(64),
+  uploadedAt: 1700000000000,
   thumbnailOfBlobId: null,
-};
+} as BlobResult;
 
 const VALID_BODY = {
-  checksum: "abc123",
+  checksum: "a".repeat(64),
 };
 
 // ── Tests ────────────────────────────────────────────────────────
@@ -83,7 +84,7 @@ describe("POST /systems/:systemId/blobs/:blobId/confirm", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as typeof MOCK_BLOB_RESULT;
     expect(body.id).toBe(BLOB_ID);
-    expect(body.checksum).toBe("abc123");
+    expect(body.checksum).toBe("a".repeat(64));
     expect(body.mimeType).toBe("image/png");
     expect(body.sizeBytes).toBe(1024);
     expect(body.purpose).toBe("avatar");

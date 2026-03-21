@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { submitCorrectionEnvelopes } from "../engine/sync-engine.js";
 
-import { docId, nonce, pubkey, sig } from "./test-crypto-helpers.js";
+import { asSyncDocId, nonce, pubkey, sig } from "./test-crypto-helpers.js";
 
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
@@ -16,7 +16,7 @@ import type { EncryptedChangeEnvelope } from "../types.js";
 
 // ── Test constants ─────────────────────────────────────────────────
 
-const DOC_A_ID = docId("doc_a");
+const DOC_A_ID = asSyncDocId("doc_a");
 
 // ── Mock factories ─────────────────────────────────────────────────
 

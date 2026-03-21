@@ -5,7 +5,7 @@ import {
   bytesToBase64url,
   serializeServerMessage,
 } from "../../ws/serialization.js";
-import { docId as toDocId, nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
+import { asSyncDocId, nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 
 import type { ServerMessage } from "@pluralscape/sync";
 
@@ -79,13 +79,13 @@ describe("serializeServerMessage", () => {
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId: crypto.randomUUID(),
-      docId: toDocId(crypto.randomUUID()),
+      docId: asSyncDocId(crypto.randomUUID()),
       snapshot: {
         ciphertext: new Uint8Array([1, 2, 3]),
         nonce: nonce(4),
         signature: sig(7),
         authorPublicKey: pubkey(10),
-        documentId: toDocId(crypto.randomUUID()),
+        documentId: asSyncDocId(crypto.randomUUID()),
         snapshotVersion: 1,
       },
     };
@@ -107,7 +107,7 @@ describe("serializeServerMessage", () => {
 
   it("leaves non-binary fields unaffected", () => {
     const correlationId = crypto.randomUUID();
-    const docId = toDocId(crypto.randomUUID());
+    const docId = asSyncDocId(crypto.randomUUID());
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId,
@@ -129,7 +129,7 @@ describe("serializeServerMessage", () => {
     const msg: ServerMessage = {
       type: "ChangeAccepted",
       correlationId: crypto.randomUUID(),
-      docId: toDocId(crypto.randomUUID()),
+      docId: asSyncDocId(crypto.randomUUID()),
       assignedSeq: 42,
     };
 
@@ -142,7 +142,7 @@ describe("serializeServerMessage", () => {
   });
 
   it("serializes nested binary fields in arrays", () => {
-    const docId = toDocId(crypto.randomUUID());
+    const docId = asSyncDocId(crypto.randomUUID());
     const msg: ServerMessage = {
       type: "ChangesResponse",
       correlationId: crypto.randomUUID(),
@@ -178,13 +178,13 @@ describe("serializeServerMessage", () => {
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId: crypto.randomUUID(),
-      docId: toDocId(crypto.randomUUID()),
+      docId: asSyncDocId(crypto.randomUUID()),
       snapshot: {
         ciphertext: new Uint8Array([255, 0, 128]),
         nonce: nonce(1),
         signature: sig(2),
         authorPublicKey: pubkey(3),
-        documentId: toDocId(crypto.randomUUID()),
+        documentId: asSyncDocId(crypto.randomUUID()),
         snapshotVersion: 5,
       },
     };

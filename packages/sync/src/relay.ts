@@ -87,29 +87,29 @@ export interface RelayOptions {
   /** Maximum size in bytes for a single snapshot ciphertext. Default: RELAY_MAX_SNAPSHOT_SIZE_BYTES (50 MiB). */
   readonly maxSnapshotSizeBytes?: number;
   /** Called when a document is evicted from the relay. */
-  readonly onEvict?: (documentId: string) => void;
+  readonly onEvict?: (documentId: SyncDocumentId) => void;
 }
 
 export class EncryptedRelay implements SyncRelayService {
-  private readonly documents = new Map<string, EncryptedChangeEnvelope[]>();
-  private readonly snapshots = new Map<string, EncryptedSnapshotEnvelope>();
+  private readonly documents = new Map<SyncDocumentId, EncryptedChangeEnvelope[]>();
+  private readonly snapshots = new Map<SyncDocumentId, EncryptedSnapshotEnvelope>();
   /**
    * LRU tracking via Map insertion order. Most-recently-used entries are at the end.
    * touch() deletes and re-inserts to move to end; eviction takes the first key (oldest).
    */
-  private readonly accessOrder = new Map<string, true>();
-  private readonly seqCounters = new Map<string, number>();
+  private readonly accessOrder = new Map<SyncDocumentId, true>();
+  private readonly seqCounters = new Map<SyncDocumentId, number>();
   /** Nonce-based dedup index: compositeKey(authorPublicKey, nonce) -> { documentId, seq }. */
   private readonly dedupIndex = new Map<
     string,
-    { readonly documentId: string; readonly seq: number }
+    { readonly documentId: SyncDocumentId; readonly seq: number }
   >();
   /** Secondary index: documentId -> Set of dedup keys for O(k) eviction cleanup. */
-  private readonly dedupByDoc = new Map<string, Set<string>>();
+  private readonly dedupByDoc = new Map<SyncDocumentId, Set<string>>();
   private readonly maxDocuments: number;
   private readonly maxEnvelopesPerDocument: number;
   private readonly maxSnapshotSizeBytes: number;
-  private readonly onEvict?: (documentId: string) => void;
+  private readonly onEvict?: (documentId: SyncDocumentId) => void;
 
   constructor(options?: RelayOptions) {
     this.maxDocuments = options?.maxDocuments ?? Infinity;
@@ -262,7 +262,7 @@ export class EncryptedRelay implements SyncRelayService {
     return this;
   }
 
-  inspectStorage(documentId: string): RelayDocumentState | undefined {
+  inspectStorage(documentId: SyncDocumentId): RelayDocumentState | undefined {
     const envelopes = this.documents.get(documentId);
     if (!envelopes) {
       return undefined;
@@ -279,7 +279,7 @@ export class EncryptedRelay implements SyncRelayService {
    * Called after a snapshot is accepted: all changes up to the document's
    * current seq are subsumed by the snapshot and their dedup entries can be freed.
    */
-  private pruneDedupForDocument(documentId: string, upToSeq: number): void {
+  private pruneDedupForDocument(documentId: SyncDocumentId, upToSeq: number): void {
     const docDedupKeys = this.dedupByDoc.get(documentId);
     if (!docDedupKeys) return;
 
@@ -299,20 +299,20 @@ export class EncryptedRelay implements SyncRelayService {
   }
 
   /** Move documentId to end of insertion order (most-recently-used). O(1). */
-  private touch(documentId: string): void {
+  private touch(documentId: SyncDocumentId): void {
     this.accessOrder.delete(documentId);
     this.accessOrder.set(documentId, true);
   }
 
   /** Evict the least-recently-accessed document if at capacity, skipping the incoming doc. */
-  private evictIfNeeded(incomingDocId?: string): void {
+  private evictIfNeeded(incomingDocId?: SyncDocumentId): void {
     if (this.accessOrder.size < this.maxDocuments) return;
 
     // If the incoming doc is already tracked, no eviction needed
     if (incomingDocId && this.accessOrder.has(incomingDocId)) return;
 
     // First key in Map is the oldest (LRU). O(1).
-    let oldestId: string | null = null;
+    let oldestId: SyncDocumentId | null = null;
     for (const [docId] of this.accessOrder) {
       if (docId !== incomingDocId) {
         oldestId = docId;

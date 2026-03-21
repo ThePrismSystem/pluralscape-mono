@@ -24,7 +24,7 @@ import { createSystemCoreDocument } from "../factories/document-factory.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { docId } from "./test-crypto-helpers.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { SystemCoreDocument } from "../schemas/system-core.js";
 import type { BucketKeyCache, KdfMasterKey, SodiumAdapter, SignKeypair } from "@pluralscape/crypto";
@@ -69,7 +69,7 @@ describe("performance", () => {
         sodium,
       });
       try {
-        const testDocId = docId("system-core-sys_perf1");
+        const testDocId = asSyncDocId("system-core-sys_perf1");
         const keys = resolver.resolveKeys(testDocId);
         const relay = new EncryptedRelay();
 
@@ -141,7 +141,7 @@ describe("performance", () => {
     // Verify that a snapshot is significantly smaller than the raw change log.
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("system-core-sys_perf2");
+      const testDocId = asSyncDocId("system-core-sys_perf2");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
 

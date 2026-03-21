@@ -8,7 +8,8 @@ const HEX_PATTERN = /^[0-9a-f]+$/;
 
 /**
  * Validate and cast a string to a branded ChecksumHex.
- * Throws if the input is not exactly 64 lowercase hex characters.
+ * Accepts uppercase hex and normalizes to lowercase.
+ * Throws if the input is not exactly 64 hex characters.
  */
 export function toChecksumHex(hex: string): ChecksumHex {
   if (hex.length !== CHECKSUM_HEX_LENGTH) {
@@ -16,8 +17,9 @@ export function toChecksumHex(hex: string): ChecksumHex {
       `Expected ${String(CHECKSUM_HEX_LENGTH)}-char hex digest, got ${String(hex.length)}`,
     );
   }
-  if (!HEX_PATTERN.test(hex)) {
-    throw new Error("Checksum hex digest must contain only lowercase hex characters");
+  const lower = hex.toLowerCase();
+  if (!HEX_PATTERN.test(lower)) {
+    throw new Error("Checksum hex digest must contain only hex characters");
   }
-  return hex as ChecksumHex;
+  return lower as ChecksumHex;
 }

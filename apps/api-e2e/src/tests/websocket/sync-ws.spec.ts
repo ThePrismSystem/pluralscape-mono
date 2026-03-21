@@ -8,7 +8,7 @@ import { test, expect } from "../../fixtures/auth.fixture.js";
 import {
   makeSignedChange,
   makeSignedSnapshot,
-  docId as toDocId,
+  asSyncDocId,
 } from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
@@ -94,7 +94,7 @@ test.describe("WebSocket sync server", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws2.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = toDocId(`e2e-doc-${crypto.randomUUID()}`);
+      const docId = asSyncDocId(`e2e-doc-${crypto.randomUUID()}`);
 
       // Both subscribe to the same doc
       const sub1 = await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
@@ -132,7 +132,7 @@ test.describe("WebSocket sync server", () => {
 
       // Send SubscribeRequest with 101 documents (over the 100 limit)
       const documents = Array.from({ length: 101 }, (_, i) => ({
-        docId: toDocId(`doc-${String(i)}`),
+        docId: asSyncDocId(`doc-${String(i)}`),
         lastSyncedSeq: 0,
         lastSnapshotVersion: 0,
       }));
@@ -209,7 +209,7 @@ test.describe("WebSocket sync server", () => {
     try {
       await ws.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = toDocId(`e2e-snap-${crypto.randomUUID()}`);
+      const docId = asSyncDocId(`e2e-snap-${crypto.randomUUID()}`);
       const snapshot = await makeSignedSnapshot(docId, 1);
       const response = await ws.submitSnapshot(docId, snapshot);
 

@@ -24,7 +24,7 @@ import type { SyncDocumentId } from "@pluralscape/types";
 import type { T1EncryptedBlob } from "@pluralscape/types";
 
 /** Cast a plain string to SyncDocumentId for use in tests. */
-export function docId(id: string): SyncDocumentId {
+export function asSyncDocId(id: string): SyncDocumentId {
   return id as SyncDocumentId;
 }
 

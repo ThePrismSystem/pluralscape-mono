@@ -155,7 +155,12 @@ export {
 
 // ── Recovery key ────────────────────────────────────────────────────
 export type { RecoveryKeyResult } from "./recovery.js";
-export { generateRecoveryKey, isValidRecoveryKeyFormat, recoverMasterKey } from "./recovery.js";
+export {
+  generateRecoveryKey,
+  isValidRecoveryKeyFormat,
+  recoverMasterKey,
+  toRecoveryKeyDisplay,
+} from "./recovery.js";
 
 // ── Recovery backup serialization ────────────────────────────────────
 export { deserializeRecoveryBackup, serializeRecoveryBackup } from "./recovery-backup.js";

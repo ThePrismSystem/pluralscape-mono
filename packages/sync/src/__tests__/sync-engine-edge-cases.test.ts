@@ -25,7 +25,7 @@ import * as postMergeValidator from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { docId, sysId } from "./test-crypto-helpers.js";
+import { asSyncDocId, sysId } from "./test-crypto-helpers.js";
 
 import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
@@ -36,8 +36,8 @@ import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@
 
 // ── Test constants ────────────────────────────────────────────────────
 
-const SYSTEM_CORE_DOC_ID = docId("system-core-sys_test");
-const FRONTING_DOC_ID = docId("fronting-sys_test");
+const SYSTEM_CORE_DOC_ID = asSyncDocId("system-core-sys_test");
+const FRONTING_DOC_ID = asSyncDocId("fronting-sys_test");
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -114,7 +114,7 @@ function relayNetworkAdapter(relay: EncryptedRelay): SyncNetworkAdapter {
         return Promise.resolve({ ...change, seq });
       }),
     fetchChangesSince: vi.fn().mockImplementation((rawDocId: string, sinceSeq: number) => {
-      return Promise.resolve(relay.getEnvelopesSince(docId(rawDocId), sinceSeq));
+      return Promise.resolve(relay.getEnvelopesSince(asSyncDocId(rawDocId), sinceSeq));
     }),
     submitSnapshot: vi.fn().mockResolvedValue(undefined),
     fetchLatestSnapshot: vi.fn().mockResolvedValue(null),
@@ -491,7 +491,7 @@ describe("SyncEngine edge cases", () => {
 
       // applyLocalChange should reject with the network error
       await expect(
-        engine.applyLocalChange(docId("system-core-sys_test"), (doc) => {
+        engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
           const d = doc as Record<string, Record<string, string>>;
           d["test_key"] = { value: "test" };
         }),

@@ -5,7 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
-import { docId } from "./test-crypto-helpers.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -19,7 +19,7 @@ interface MemberProfile {
 type DocSchema = { members: MemberProfile[] };
 
 let sodium: SodiumAdapter;
-const DOCUMENT_ID = docId("doc-sync-001");
+const DOCUMENT_ID = asSyncDocId("doc-sync-001");
 
 function makeKeys(s: SodiumAdapter): DocumentKeys {
   return {

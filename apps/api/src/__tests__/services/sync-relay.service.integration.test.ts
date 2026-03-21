@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PgSyncRelayService } from "../../services/sync-relay.service.js";
 import {
-  docId as toDocId,
+  asSyncDocId,
   makeEnvelope,
   makeSnapshotEnvelope,
   nonce,
@@ -129,7 +129,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
       createdAt: now,
       updatedAt: now,
     });
-    return toDocId(raw);
+    return asSyncDocId(raw);
   }
 
   describe("submit", () => {
@@ -157,7 +157,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
     });
 
     it("throws for missing document", async () => {
-      await expect(service.submit(makeEnvelope(toDocId("nonexistent-doc")))).rejects.toThrow(
+      await expect(service.submit(makeEnvelope(asSyncDocId("nonexistent-doc")))).rejects.toThrow(
         "Document not found",
       );
     });

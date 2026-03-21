@@ -10,14 +10,14 @@ import {
   SignatureVerificationError,
 } from "../encrypted-sync.js";
 
-import { docId } from "./test-crypto-helpers.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
 
 let sodium: SodiumAdapter;
 let keys: DocumentKeys;
-const DOCUMENT_ID = docId("doc-test-001");
+const DOCUMENT_ID = asSyncDocId("doc-test-001");
 
 const BYTE_RANGE = 256;
 
@@ -85,7 +85,7 @@ describe("encryptChange / decryptChange", () => {
   it("1.5 — decryptChange rejects envelope with wrong documentId", () => {
     const plaintext = testBytes(32);
     const envelope = encryptChange(plaintext, DOCUMENT_ID, keys, sodium);
-    const wrongDoc = { ...envelope, documentId: docId("doc-wrong-999"), seq: 0 };
+    const wrongDoc = { ...envelope, documentId: asSyncDocId("doc-wrong-999"), seq: 0 };
     // Signature check passes (signed over ciphertext), but AD mismatch causes decryption failure
     expect(() => decryptChange(wrongDoc, keys.encryptionKey, sodium)).toThrow();
   });

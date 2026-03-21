@@ -16,7 +16,7 @@ import { SignatureVerificationError } from "../encrypted-sync.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { docId } from "./test-crypto-helpers.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { BucketKeyCache, KdfMasterKey, SodiumAdapter, SignKeypair } from "@pluralscape/crypto";
 import type { BucketId } from "@pluralscape/types";
@@ -62,7 +62,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     });
 
     try {
-      const testDocId = docId("system-core-sys_rt1");
+      const testDocId = asSyncDocId("system-core-sys_rt1");
       const keys = resolver.resolveKeys(testDocId);
       const base = Automerge.from<DocSchema>({ members: [] });
       const relay = new EncryptedRelay();
@@ -108,7 +108,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     });
 
     try {
-      const testDocId = docId("bucket-bkt_rt1");
+      const testDocId = asSyncDocId("bucket-bkt_rt1");
       const keys = resolver.resolveKeys(testDocId);
       const base = Automerge.from<DocSchema>({ members: [] });
       const relay = new EncryptedRelay();
@@ -154,8 +154,8 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     });
 
     try {
-      const masterDocId = docId("system-core-sys_iso");
-      const bucketDocId = docId("bucket-bkt_iso1");
+      const masterDocId = asSyncDocId("system-core-sys_iso");
+      const bucketDocId = asSyncDocId("bucket-bkt_iso1");
       const masterKeys = resolver.resolveKeys(masterDocId);
       const bucketKeys = resolver.resolveKeys(bucketDocId);
       const base = Automerge.from<DocSchema>({ members: [] });
@@ -201,7 +201,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     });
 
     try {
-      const testDocId = docId("fronting-sys_snap");
+      const testDocId = asSyncDocId("fronting-sys_snap");
       const keys = resolver.resolveKeys(testDocId);
       const base = Automerge.from<DocSchema>({ members: [] });
       const relay = new EncryptedRelay();
@@ -262,7 +262,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     });
 
     try {
-      const testDocId = docId("journal-sys_multi");
+      const testDocId = asSyncDocId("journal-sys_multi");
       const keys1 = resolver1.resolveKeys(testDocId);
       const keys2 = resolver2.resolveKeys(testDocId);
 
@@ -309,7 +309,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
   it("rejects tampered ciphertext through full resolver-to-session pipeline", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("system-core-sys_tamper");
+      const testDocId = asSyncDocId("system-core-sys_tamper");
       const keys = resolver.resolveKeys(testDocId);
       const base = Automerge.from<DocSchema>({ members: [] });
       const relay = new EncryptedRelay();

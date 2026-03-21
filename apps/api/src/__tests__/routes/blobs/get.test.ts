@@ -8,6 +8,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
+import type { BlobResult } from "../../../services/blob.service.js";
 import type { ApiErrorResponse } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
@@ -48,15 +49,15 @@ const BASE_URL =
   "/systems/sys_550e8400-e29b-41d4-a716-446655440000/blobs/blob_660e8400-e29b-41d4-a716-446655440000";
 
 const MOCK_BLOB_RESULT = {
-  id: BLOB_ID as never,
-  systemId: MOCK_AUTH.systemId as never,
-  purpose: "avatar" as never,
+  id: BLOB_ID,
+  systemId: MOCK_AUTH.systemId,
+  purpose: "avatar",
   mimeType: "image/png",
   sizeBytes: 1024,
-  checksum: "abc123" as never,
-  uploadedAt: 1700000000000 as never,
+  checksum: "a".repeat(64),
+  uploadedAt: 1700000000000,
   thumbnailOfBlobId: null,
-};
+} as BlobResult;
 
 // ── Tests ────────────────────────────────────────────────────────
 
@@ -80,7 +81,7 @@ describe("GET /systems/:systemId/blobs/:blobId", () => {
     expect(body.purpose).toBe("avatar");
     expect(body.sizeBytes).toBe(1024);
     expect(body.mimeType).toBe("image/png");
-    expect(body.checksum).toBe("abc123");
+    expect(body.checksum).toBe("a".repeat(64));
     expect(body.uploadedAt).toBe(1700000000000);
   });
 

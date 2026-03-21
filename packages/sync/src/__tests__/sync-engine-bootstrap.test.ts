@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { SyncEngine } from "../engine/sync-engine.js";
 
-import { docId, pubkey, sysId } from "./test-crypto-helpers.js";
+import { asSyncDocId, pubkey, sysId } from "./test-crypto-helpers.js";
 
 import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
@@ -133,7 +133,7 @@ describe("SyncEngine bootstrap", () => {
       systemId: sysId("sys_test"),
       documents: [
         {
-          docId: docId("system-core-sys_test"),
+          docId: asSyncDocId("system-core-sys_test"),
           docType: "system-core",
           keyType: "derived",
           bucketId: null,
@@ -157,7 +157,7 @@ describe("SyncEngine bootstrap", () => {
     await engine.bootstrap();
 
     expect(engine.getActiveDocIds()).toContain("system-core-sys_test");
-    expect(engine.getSession("system-core-sys_test")).toBeDefined();
+    expect(engine.getSession(asSyncDocId("system-core-sys_test"))).toBeDefined();
   });
 
   it("evicts stale local documents not in manifest", async () => {
@@ -200,7 +200,7 @@ describe("SyncEngine bootstrap", () => {
       systemId: sysId("sys_test"),
       documents: [
         {
-          docId: docId("system-core-sys_test"),
+          docId: asSyncDocId("system-core-sys_test"),
           docType: "system-core",
           keyType: "derived",
           bucketId: null,
@@ -233,7 +233,7 @@ describe("SyncEngine bootstrap", () => {
       systemId: sysId("sys_test"),
       documents: [
         {
-          docId: docId("system-core-sys_test"),
+          docId: asSyncDocId("system-core-sys_test"),
           docType: "system-core",
           keyType: "derived",
           bucketId: null,
@@ -266,7 +266,7 @@ describe("SyncEngine bootstrap", () => {
       systemId: sysId("sys_test"),
       documents: [
         {
-          docId: docId("system-core-sys_test"),
+          docId: asSyncDocId("system-core-sys_test"),
           docType: "system-core",
           keyType: "derived",
           bucketId: null,

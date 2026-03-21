@@ -58,14 +58,14 @@ export interface SyncEngineConfig {
  * server manifest, apply remote changes, submit local changes.
  */
 export class SyncEngine {
-  private readonly sessions = new Map<string, EncryptedSyncSession<unknown>>();
-  private readonly syncStates = new Map<string, DocumentSyncState>();
+  private readonly sessions = new Map<SyncDocumentId, EncryptedSyncSession<unknown>>();
+  private readonly syncStates = new Map<SyncDocumentId, DocumentSyncState>();
   private readonly subscriptions: Array<{ unsubscribe(): void }> = [];
-  private readonly documentQueues = new Map<string, Promise<void>>();
+  private readonly documentQueues = new Map<SyncDocumentId, Promise<void>>();
 
   private readonly config: SyncEngineConfig;
   private failedConflictPersistence: Array<{
-    documentId: string;
+    documentId: SyncDocumentId;
     notifications: readonly ConflictNotification[];
   }> = [];
 
@@ -194,17 +194,17 @@ export class SyncEngine {
    * as EncryptedSyncSession<unknown>. Callers must ensure T matches the
    * actual document type for the given docId.
    */
-  getSession<T>(docId: string): EncryptedSyncSession<T> | undefined {
+  getSession<T>(docId: SyncDocumentId): EncryptedSyncSession<T> | undefined {
     return this.sessions.get(docId) as EncryptedSyncSession<T> | undefined;
   }
 
   /** Get sync state for a document. */
-  getSyncState(docId: string): DocumentSyncState | undefined {
+  getSyncState(docId: SyncDocumentId): DocumentSyncState | undefined {
     return this.syncStates.get(docId);
   }
 
   /** Get all active document IDs. */
-  getActiveDocIds(): readonly string[] {
+  getActiveDocIds(): readonly SyncDocumentId[] {
     return [...this.sessions.keys()];
   }
 
@@ -312,7 +312,7 @@ export class SyncEngine {
 
   // ── Private helpers ─────────────────────────────────────────────────
 
-  private enqueueDocumentOperation<T>(docId: string, op: () => Promise<T>): Promise<T> {
+  private enqueueDocumentOperation<T>(docId: SyncDocumentId, op: () => Promise<T>): Promise<T> {
     const prev = this.documentQueues.get(docId) ?? Promise.resolve();
     const next = prev.then(op, op);
     // Store void-wrapped version and schedule cleanup after resolution
@@ -487,7 +487,7 @@ export class SyncEngine {
   }
 
   private async persistConflicts(
-    docId: string,
+    docId: SyncDocumentId,
     notifications: readonly ConflictNotification[],
   ): Promise<void> {
     if (!this.config.conflictPersistenceAdapter) return;
@@ -524,7 +524,7 @@ export class SyncEngine {
     }
   }
 
-  private updateSyncState(docId: string, seq: number): void {
+  private updateSyncState(docId: SyncDocumentId, seq: number): void {
     const existing = this.syncStates.get(docId);
     this.syncStates.set(docId, {
       docId,

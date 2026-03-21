@@ -15,20 +15,20 @@ export interface SyncStorageAdapter {
    * Loads the latest encrypted snapshot for a document.
    * Returns null if no snapshot exists (new document or not yet snapshotted).
    */
-  loadSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null>;
+  loadSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null>;
 
   /**
    * Persists an encrypted snapshot for a document.
    * Must overwrite any existing snapshot — only the latest is retained.
    */
-  saveSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void>;
+  saveSnapshot(documentId: SyncDocumentId, snapshot: EncryptedSnapshotEnvelope): Promise<void>;
 
   /**
    * Loads all encrypted change envelopes since a given sequence number (exclusive).
    * Returns envelopes in ascending seq order. Returns an empty array if none exist.
    */
   loadChangesSince(
-    documentId: string,
+    documentId: SyncDocumentId,
     sinceSeq: number,
   ): Promise<readonly EncryptedChangeEnvelope[]>;
 
@@ -36,21 +36,24 @@ export interface SyncStorageAdapter {
    * Persists an encrypted change envelope.
    * The envelope must include a valid seq number (assigned by the relay/server).
    */
-  appendChange(documentId: string, change: EncryptedChangeEnvelope): Promise<void>;
+  appendChange(documentId: SyncDocumentId, change: EncryptedChangeEnvelope): Promise<void>;
 
   /**
    * Persists multiple encrypted change envelopes in a single batch.
    * Optional — callers should fall back to individual `appendChange` calls
    * when this method is not implemented.
    */
-  appendChanges?(documentId: string, changes: readonly EncryptedChangeEnvelope[]): Promise<void>;
+  appendChanges?(
+    documentId: SyncDocumentId,
+    changes: readonly EncryptedChangeEnvelope[],
+  ): Promise<void>;
 
   /**
    * Removes all change envelopes for a document with seq ≤ the snapshot's
    * snapshotVersion. Called after successfully saving a snapshot to reclaim
    * storage space (the snapshot supersedes the individual changes).
    */
-  pruneChangesBeforeSnapshot(documentId: string, snapshotVersion: number): Promise<void>;
+  pruneChangesBeforeSnapshot(documentId: SyncDocumentId, snapshotVersion: number): Promise<void>;
 
   /**
    * Returns the document IDs of all documents stored locally.
@@ -62,7 +65,7 @@ export interface SyncStorageAdapter {
    * Removes all local data (snapshot + changes) for a document.
    * Called when a document is removed from the manifest and no longer needed.
    */
-  deleteDocument(documentId: string): Promise<void>;
+  deleteDocument(documentId: SyncDocumentId): Promise<void>;
 
   /**
    * Releases any resources held by the adapter (e.g. database connections).

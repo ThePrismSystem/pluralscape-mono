@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { EncryptedRelay } from "../relay.js";
 
-import { docId, nonce, pubkey, sig, sysId } from "./test-crypto-helpers.js";
+import { asSyncDocId, nonce, pubkey, sig, sysId } from "./test-crypto-helpers.js";
 
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SyncDocumentId } from "@pluralscape/types";
@@ -34,7 +34,7 @@ function mockSnapshot(id: SyncDocumentId, version: number): EncryptedSnapshotEnv
 describe("EncryptedRelay as SyncRelayService", () => {
   it("submit returns a seq number", async () => {
     const relay = new EncryptedRelay();
-    const testDocId = docId("test-doc-1");
+    const testDocId = asSyncDocId("test-doc-1");
 
     const seq = await relay.submit(mockChange(testDocId));
 
@@ -45,7 +45,7 @@ describe("EncryptedRelay as SyncRelayService", () => {
 
   it("getEnvelopesSince returns paginated results", async () => {
     const relay = new EncryptedRelay();
-    const testDocId = docId("test-doc-2");
+    const testDocId = asSyncDocId("test-doc-2");
 
     await relay.submit(mockChange(testDocId));
     await relay.submit({ ...mockChange(testDocId), nonce: nonce(0x11) });
@@ -58,7 +58,7 @@ describe("EncryptedRelay as SyncRelayService", () => {
 
   it("getEnvelopesSince respects limit parameter", async () => {
     const relay = new EncryptedRelay();
-    const testDocId = docId("test-doc-paginate");
+    const testDocId = asSyncDocId("test-doc-paginate");
 
     await relay.submit(mockChange(testDocId));
     await relay.submit({ ...mockChange(testDocId), nonce: nonce(0x11) });
@@ -75,7 +75,7 @@ describe("EncryptedRelay as SyncRelayService", () => {
 
   it("submitSnapshot works directly", async () => {
     const relay = new EncryptedRelay();
-    const testDocId = docId("test-doc-3");
+    const testDocId = asSyncDocId("test-doc-3");
 
     await relay.submitSnapshot(mockSnapshot(testDocId, 1));
 
@@ -86,7 +86,7 @@ describe("EncryptedRelay as SyncRelayService", () => {
 
   it("getLatestSnapshot works directly", async () => {
     const relay = new EncryptedRelay();
-    const testDocId = docId("test-doc-4");
+    const testDocId = asSyncDocId("test-doc-4");
 
     await relay.submitSnapshot(mockSnapshot(testDocId, 5));
 

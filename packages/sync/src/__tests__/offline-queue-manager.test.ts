@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { replayOfflineQueue } from "../offline-queue-manager.js";
 import { DRAIN_BATCH_SIZE } from "../sync.constants.js";
 
-import { docId, nonce, pubkey, sig } from "./test-crypto-helpers.js";
+import { asSyncDocId, nonce, pubkey, sig } from "./test-crypto-helpers.js";
 
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { OfflineQueueAdapter, OfflineQueueEntry } from "../adapters/offline-queue-adapter.js";
@@ -19,9 +19,9 @@ import type { EncryptedChangeEnvelope } from "../types.js";
 function makeEntry(id: string, rawId: string, enqueuedAt: number): OfflineQueueEntry {
   return {
     id,
-    documentId: docId(rawId),
+    documentId: asSyncDocId(rawId),
     envelope: {
-      documentId: docId(rawId),
+      documentId: asSyncDocId(rawId),
       ciphertext: new Uint8Array([1, 2, 3]),
       nonce: nonce(1),
       signature: sig(1),

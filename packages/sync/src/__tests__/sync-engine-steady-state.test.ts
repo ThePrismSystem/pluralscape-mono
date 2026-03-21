@@ -23,7 +23,7 @@ import { NoActiveSessionError } from "../errors.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { docId, sysId } from "./test-crypto-helpers.js";
+import { asSyncDocId, sysId } from "./test-crypto-helpers.js";
 
 import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { OfflineQueueEntry } from "../adapters/offline-queue-adapter.js";
@@ -35,9 +35,9 @@ import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@
 
 // ── Test constants ────────────────────────────────────────────────────
 
-const SYSTEM_CORE_DOC_ID = docId("system-core-sys_test");
-const UNKNOWN_DOC_ID = docId("unknown-sys_test");
-const NONEXISTENT_DOC_ID = docId("nonexistent-sys_abc");
+const SYSTEM_CORE_DOC_ID = asSyncDocId("system-core-sys_test");
+const UNKNOWN_DOC_ID = asSyncDocId("unknown-sys_test");
+const NONEXISTENT_DOC_ID = asSyncDocId("nonexistent-sys_abc");
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -110,7 +110,7 @@ function relayNetworkAdapter(relay: EncryptedRelay): SyncNetworkAdapter {
         return { ...change, seq };
       }),
     fetchChangesSince: vi.fn().mockImplementation(async (rawDocId: string, sinceSeq: number) => {
-      const result = await relay.getEnvelopesSince(docId(rawDocId), sinceSeq);
+      const result = await relay.getEnvelopesSince(asSyncDocId(rawDocId), sinceSeq);
       return result.envelopes;
     }),
     submitSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -397,7 +397,7 @@ describe("SyncEngine steady-state", () => {
       networkAdapter.submitChange = vi
         .fn()
         .mockImplementation((rawDocId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
-          return originalSubmit(docId(rawDocId), change);
+          return originalSubmit(asSyncDocId(rawDocId), change);
         });
 
       const appendChange = vi.fn().mockResolvedValue(undefined);

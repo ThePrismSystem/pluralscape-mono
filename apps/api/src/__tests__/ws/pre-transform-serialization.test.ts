@@ -13,7 +13,7 @@ import {
   serializeServerMessage,
   transformBinaryFields,
 } from "../../ws/serialization.js";
-import { docId as toDocId, nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
+import { asSyncDocId, nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 
 import type { ServerMessage } from "@pluralscape/sync";
 
@@ -97,13 +97,13 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId: crypto.randomUUID(),
-      docId: toDocId(crypto.randomUUID()),
+      docId: asSyncDocId(crypto.randomUUID()),
       snapshot: {
         ciphertext: new Uint8Array([1, 2, 3]),
         nonce: nonce(4),
         signature: sig(7),
         authorPublicKey: pubkey(10),
-        documentId: toDocId(crypto.randomUUID()),
+        documentId: asSyncDocId(crypto.randomUUID()),
         snapshotVersion: 1,
       },
     };
@@ -127,7 +127,7 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
     const msg: ServerMessage = {
       type: "ChangeAccepted",
       correlationId: crypto.randomUUID(),
-      docId: toDocId(crypto.randomUUID()),
+      docId: asSyncDocId(crypto.randomUUID()),
       assignedSeq: 42,
     };
 
@@ -140,7 +140,7 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
   });
 
   it("handles nested arrays of envelopes with binary fields", () => {
-    const docId = toDocId(crypto.randomUUID());
+    const docId = asSyncDocId(crypto.randomUUID());
     const msg: ServerMessage = {
       type: "ChangesResponse",
       correlationId: crypto.randomUUID(),
@@ -171,13 +171,13 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId: crypto.randomUUID(),
-      docId: toDocId(crypto.randomUUID()),
+      docId: asSyncDocId(crypto.randomUUID()),
       snapshot: {
         ciphertext: new Uint8Array([255, 0, 128]),
         nonce: nonce(1),
         signature: sig(2),
         authorPublicKey: pubkey(3),
-        documentId: toDocId(crypto.randomUUID()),
+        documentId: asSyncDocId(crypto.randomUUID()),
         snapshotVersion: 5,
       },
     };
@@ -198,7 +198,7 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
   });
 
   it("handles DocumentUpdate with binary fields in changes array", () => {
-    const docId = toDocId(crypto.randomUUID());
+    const docId = asSyncDocId(crypto.randomUUID());
     const msg: ServerMessage = {
       type: "DocumentUpdate",
       correlationId: null,
@@ -232,7 +232,7 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
   });
 
   it("handles SubscribeResponse with catchup containing snapshots and changes", () => {
-    const docId = toDocId(crypto.randomUUID());
+    const docId = asSyncDocId(crypto.randomUUID());
     const msg: ServerMessage = {
       type: "SubscribeResponse",
       correlationId: crypto.randomUUID(),
@@ -276,7 +276,7 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
   });
 
   it("handles SubscribeResponse with null snapshot in catchup", () => {
-    const docId = toDocId(crypto.randomUUID());
+    const docId = asSyncDocId(crypto.randomUUID());
     const msg: ServerMessage = {
       type: "SubscribeResponse",
       correlationId: crypto.randomUUID(),
@@ -303,7 +303,7 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId: crypto.randomUUID(),
-      docId: toDocId(crypto.randomUUID()),
+      docId: asSyncDocId(crypto.randomUUID()),
       snapshot: null,
     };
 
@@ -332,7 +332,7 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
   });
 
   it("targeted approach produces same result as recursive for all message types", () => {
-    const docId = toDocId(crypto.randomUUID());
+    const docId = asSyncDocId(crypto.randomUUID());
 
     // Test with ChangesResponse (has binary fields in array)
     const msg: ServerMessage = {
@@ -367,7 +367,7 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
   });
 
   it("targeted approach produces same result as recursive for SubscribeResponse", () => {
-    const docId = toDocId(crypto.randomUUID());
+    const docId = asSyncDocId(crypto.randomUUID());
 
     const msg: ServerMessage = {
       type: "SubscribeResponse",

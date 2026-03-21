@@ -143,7 +143,7 @@ export type CompactionCheck =
 /** Thrown when a write would exceed the system's storage budget. */
 export class StorageBudgetExceededError extends Error {
   constructor(
-    readonly documentId: string,
+    readonly documentId: SyncDocumentId,
     readonly currentBytes: number,
     readonly maxBytes: number,
   ) {

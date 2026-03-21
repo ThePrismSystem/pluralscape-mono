@@ -33,7 +33,7 @@ import {
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { docId } from "./test-crypto-helpers.js";
+import { asSyncDocId } from "./test-crypto-helpers.js";
 
 import type { ChatDocument } from "../schemas/chat.js";
 import type { FrontingDocument } from "../schemas/fronting.js";
@@ -69,7 +69,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
   it("syncs a new member entry between two sessions", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("system-core-sys_typed1");
+      const testDocId = asSyncDocId("system-core-sys_typed1");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
       const base = createSystemCoreDocument();
@@ -120,7 +120,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
   it("merges concurrent member additions without data loss", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("system-core-sys_typed2");
+      const testDocId = asSyncDocId("system-core-sys_typed2");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
       const base = createSystemCoreDocument();
@@ -195,7 +195,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
   it("syncs group membership junctions", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("system-core-sys_typed3");
+      const testDocId = asSyncDocId("system-core-sys_typed3");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
       const base = createSystemCoreDocument();
@@ -234,7 +234,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
   it("survives snapshot roundtrip with real system-core schema", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("system-core-sys_typed_snap");
+      const testDocId = asSyncDocId("system-core-sys_typed_snap");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
 
@@ -269,7 +269,7 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
   it("syncs a fronting session entry between two sessions", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("fronting-sys_typed1");
+      const testDocId = asSyncDocId("fronting-sys_typed1");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
       const base = createFrontingDocument();
@@ -320,7 +320,7 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
   it("syncs switch append-only entries", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("fronting-sys_typed2");
+      const testDocId = asSyncDocId("fronting-sys_typed2");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
       const base = createFrontingDocument();
@@ -364,7 +364,7 @@ describe("typed encrypted roundtrip — ChatDocument", () => {
   it("syncs message appends between two sessions", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("chat-ch_typed1");
+      const testDocId = asSyncDocId("chat-ch_typed1");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
       const base = createChatDocument();
@@ -412,7 +412,7 @@ describe("typed encrypted roundtrip — ChatDocument", () => {
   it("merges concurrent message appends (both messages present)", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const testDocId = docId("chat-ch_typed2");
+      const testDocId = asSyncDocId("chat-ch_typed2");
       const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
       const base = createChatDocument();

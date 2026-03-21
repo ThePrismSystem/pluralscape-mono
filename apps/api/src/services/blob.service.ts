@@ -50,7 +50,7 @@ export interface BlobResult {
   readonly purpose: BlobPurpose;
   readonly mimeType: string | null;
   readonly sizeBytes: number;
-  readonly checksum: ChecksumHex;
+  readonly checksum: ChecksumHex | null;
   readonly uploadedAt: UnixMillis;
   readonly thumbnailOfBlobId: BlobId | null;
 }
@@ -418,7 +418,7 @@ function toBlobResult(row: {
     purpose: row.purpose as BlobPurpose,
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,
-    checksum: toChecksumHex(row.checksum ?? ""),
+    checksum: row.checksum ? toChecksumHex(row.checksum) : null,
     uploadedAt: toUnixMillis(row.uploadedAt ?? 0),
     thumbnailOfBlobId: row.thumbnailOfBlobId as BlobId | null,
   };

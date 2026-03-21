@@ -5,7 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { requestOnDemandDocument } from "../on-demand-loader.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { docId, sysId } from "./test-crypto-helpers.js";
+import { asSyncDocId, sysId } from "./test-crypto-helpers.js";
 
 import type {
   SyncManifest,
@@ -85,7 +85,7 @@ beforeAll(async () => {
 });
 
 describe("requestOnDemandDocument", () => {
-  const DOC_ID = docId("fronting-sys_test");
+  const DOC_ID = asSyncDocId("fronting-sys_test");
   let keys: DocumentKeys;
   let adapter: MockNetworkAdapter;
 
@@ -253,7 +253,7 @@ describe("requestOnDemandDocument", () => {
   });
 
   it("creates fresh session for non-fronting document type", async () => {
-    const chatDocId = docId("chat-ch_test");
+    const chatDocId = asSyncDocId("chat-ch_test");
     const result = await requestOnDemandDocument<SimpleDoc>(
       { docId: chatDocId, persist: false },
       adapter,

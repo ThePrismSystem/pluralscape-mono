@@ -10,7 +10,7 @@ import {
 import { MOCK_AUTH, createRouteApp } from "../../helpers/route-test-setup.js";
 
 import type { BlobResult } from "../../../services/blob.service.js";
-import type { ApiErrorResponse, PaginatedResult } from "@pluralscape/types";
+import type { ApiErrorResponse, PaginatedResult, PaginationCursor } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -81,17 +81,17 @@ describe("GET /systems/:systemId/blobs", () => {
     const page: PaginatedResult<BlobResult> = {
       items: [
         {
-          id: "blob_660e8400-e29b-41d4-a716-446655440000" as never,
-          systemId: SYS_ID as never,
-          purpose: "avatar" as never,
+          id: "blob_660e8400-e29b-41d4-a716-446655440000",
+          systemId: SYS_ID,
+          purpose: "avatar",
           mimeType: "image/png",
           sizeBytes: 1024,
-          checksum: "a".repeat(64) as never,
-          uploadedAt: 1700000000000 as never,
+          checksum: "a".repeat(64),
+          uploadedAt: 1700000000000,
           thumbnailOfBlobId: null,
-        },
+        } as BlobResult,
       ],
-      nextCursor: "blob_660e8400-e29b-41d4-a716-446655440000" as never,
+      nextCursor: "blob_660e8400-e29b-41d4-a716-446655440000" as PaginationCursor,
       hasMore: true,
       totalCount: null,
     };

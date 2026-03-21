@@ -10,7 +10,7 @@ import {
 
 import { MockSyncTransport } from "./mock-sync-transport.js";
 import { runNetworkAdapterContract } from "./network-adapter.contract.js";
-import { docId, nonce, pubkey, sig, sysId } from "./test-crypto-helpers.js";
+import { asSyncDocId, nonce, pubkey, sig, sysId } from "./test-crypto-helpers.js";
 
 import type { ServerMessage, SyncTransport } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
@@ -70,11 +70,11 @@ describe("WsNetworkAdapter", () => {
       const transport = new MockSyncTransport();
       const adapter = new WsNetworkAdapter(transport);
 
-      adapter.subscribe(docId("doc-1"), () => {});
+      adapter.subscribe(asSyncDocId("doc-1"), () => {});
       adapter.close();
 
       // After close, subscribing again should work without issues
-      const sub = adapter.subscribe(docId("doc-2"), () => {});
+      const sub = adapter.subscribe(asSyncDocId("doc-2"), () => {});
       sub.unsubscribe();
     });
   });
@@ -84,7 +84,7 @@ describe("WsNetworkAdapter", () => {
       const transport = new MockSyncTransport();
       const relay = transport.getRelay();
       const adapter = new WsNetworkAdapter(transport);
-      const testDocId = docId(crypto.randomUUID());
+      const testDocId = asSyncDocId(crypto.randomUUID());
 
       const received: EncryptedChangeEnvelope[][] = [];
       // First subscriber throws
@@ -111,7 +111,7 @@ describe("WsNetworkAdapter", () => {
       const transport = new MockSyncTransport();
       const relay = transport.getRelay();
       const adapter = new WsNetworkAdapter(transport, 30_000, { warn: warnFn });
-      const testDocId = docId(crypto.randomUUID());
+      const testDocId = asSyncDocId(crypto.randomUUID());
 
       adapter.subscribe(testDocId, () => {
         throw new Error("subscriber error");
@@ -161,12 +161,16 @@ describe("WsNetworkAdapter", () => {
 
     it("throws SyncProtocolError in fetchChangesSince", async () => {
       const { adapter } = createErrorTransport("FetchChangesRequest");
-      await expect(adapter.fetchChangesSince(docId("doc-1"), 0)).rejects.toThrow(SyncProtocolError);
+      await expect(adapter.fetchChangesSince(asSyncDocId("doc-1"), 0)).rejects.toThrow(
+        SyncProtocolError,
+      );
     });
 
     it("throws SyncProtocolError in fetchLatestSnapshot", async () => {
       const { adapter } = createErrorTransport("FetchSnapshotRequest");
-      await expect(adapter.fetchLatestSnapshot(docId("doc-1"))).rejects.toThrow(SyncProtocolError);
+      await expect(adapter.fetchLatestSnapshot(asSyncDocId("doc-1"))).rejects.toThrow(
+        SyncProtocolError,
+      );
     });
 
     it("throws SyncProtocolError in fetchManifest", async () => {
@@ -222,7 +226,7 @@ describe("WsNetworkAdapter", () => {
       const adapter = new WsNetworkAdapter(transport, 5_000, { warn: warnFn });
       const cb = vi.fn();
 
-      adapter.subscribe(docId("doc-1"), cb);
+      adapter.subscribe(asSyncDocId("doc-1"), cb);
       // Wait for the rejected send promise to be handled
       await vi.waitFor(() => {
         expect(warnFn).toHaveBeenCalled();
@@ -243,7 +247,7 @@ describe("WsNetworkAdapter", () => {
       const adapter = new WsNetworkAdapter(transport, 5_000, { warn: warnFn });
       const cb = vi.fn();
 
-      adapter.subscribe(docId("doc-1"), cb);
+      adapter.subscribe(asSyncDocId("doc-1"), cb);
       await vi.waitFor(() => {
         expect(warnFn).toHaveBeenCalledWith(
           "Subscribe transport send failed",
@@ -267,7 +271,7 @@ describe("WsNetworkAdapter", () => {
       };
       const adapter = new WsNetworkAdapter(transport, 5_000, { warn: warnFn });
 
-      const sub = adapter.subscribe(docId("doc-1"), () => {});
+      const sub = adapter.subscribe(asSyncDocId("doc-1"), () => {});
       sub.unsubscribe();
 
       await vi.waitFor(() => {
@@ -287,7 +291,7 @@ describe("WsNetworkAdapter", () => {
       const transport = new MockSyncTransport();
       const relay = transport.getRelay();
       const adapter = new WsNetworkAdapter(transport);
-      const testDocId = docId(crypto.randomUUID());
+      const testDocId = asSyncDocId(crypto.randomUUID());
 
       await relay.submit(mockChangeWithoutSeq(testDocId));
       await relay.submit({ ...mockChangeWithoutSeq(testDocId), nonce: nonce(0x11) });
@@ -304,7 +308,7 @@ describe("WsNetworkAdapter", () => {
     it("updates lastSeq from DocumentUpdate push", async () => {
       const transport = new MockSyncTransport();
       const adapter = new WsNetworkAdapter(transport);
-      const testDocId = docId(crypto.randomUUID());
+      const testDocId = asSyncDocId(crypto.randomUUID());
 
       const received: EncryptedChangeEnvelope[][] = [];
       adapter.subscribe(testDocId, (changes) => {
@@ -378,7 +382,7 @@ describe("WsNetworkAdapter", () => {
       const { transport, triggerClose, triggerMessage } = createClosableTransport();
       const adapter = new WsNetworkAdapter(transport);
       const received: EncryptedChangeEnvelope[][] = [];
-      adapter.subscribe(docId("doc-1"), (changes) => {
+      adapter.subscribe(asSyncDocId("doc-1"), (changes) => {
         received.push([...changes]);
       });
 
@@ -388,7 +392,7 @@ describe("WsNetworkAdapter", () => {
       triggerMessage({
         type: "DocumentUpdate",
         correlationId: null,
-        docId: docId("doc-1"),
+        docId: asSyncDocId("doc-1"),
         changes: [],
       });
 
@@ -431,7 +435,7 @@ describe("WsNetworkAdapter", () => {
       adapter.close();
 
       await expect(
-        adapter.submitChange(docId("doc-1"), mockChangeWithoutSeq(docId("doc-1"))),
+        adapter.submitChange(asSyncDocId("doc-1"), mockChangeWithoutSeq(asSyncDocId("doc-1"))),
       ).rejects.toThrow(AdapterDisposedError);
     });
   });
@@ -469,7 +473,7 @@ describe("WsNetworkAdapter", () => {
       }));
 
       await expect(
-        adapter.submitSnapshot(docId("doc-1"), mockSnapshot(docId("doc-1"))),
+        adapter.submitSnapshot(asSyncDocId("doc-1"), mockSnapshot(asSyncDocId("doc-1"))),
       ).rejects.toThrow(SyncProtocolError);
     });
 
@@ -479,11 +483,11 @@ describe("WsNetworkAdapter", () => {
         correlationId,
         code: "VERSION_CONFLICT",
         message: "version conflict",
-        docId: docId("doc-1"),
+        docId: asSyncDocId("doc-1"),
       }));
 
       await expect(
-        adapter.submitSnapshot(docId("doc-1"), mockSnapshot(docId("doc-1"))),
+        adapter.submitSnapshot(asSyncDocId("doc-1"), mockSnapshot(asSyncDocId("doc-1"))),
       ).resolves.toBeUndefined();
     });
 
@@ -491,12 +495,12 @@ describe("WsNetworkAdapter", () => {
       const { adapter } = createSnapshotTransport((correlationId) => ({
         type: "ChangeAccepted",
         correlationId,
-        docId: docId("doc-1"),
+        docId: asSyncDocId("doc-1"),
         assignedSeq: 1,
       }));
 
       await expect(
-        adapter.submitSnapshot(docId("doc-1"), mockSnapshot(docId("doc-1"))),
+        adapter.submitSnapshot(asSyncDocId("doc-1"), mockSnapshot(asSyncDocId("doc-1"))),
       ).rejects.toThrow(UnexpectedResponseError);
     });
 
@@ -504,12 +508,12 @@ describe("WsNetworkAdapter", () => {
       const { adapter } = createSnapshotTransport((correlationId) => ({
         type: "SnapshotAccepted",
         correlationId,
-        docId: docId("doc-1"),
+        docId: asSyncDocId("doc-1"),
         snapshotVersion: 1,
       }));
 
       await expect(
-        adapter.submitSnapshot(docId("doc-1"), mockSnapshot(docId("doc-1"))),
+        adapter.submitSnapshot(asSyncDocId("doc-1"), mockSnapshot(asSyncDocId("doc-1"))),
       ).resolves.toBeUndefined();
     });
   });

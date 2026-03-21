@@ -9,7 +9,7 @@ import { SqliteOfflineQueueAdapter } from "../adapters/sqlite-offline-queue-adap
 
 import { createBetterSqliteDriver } from "./better-sqlite-driver.js";
 import { runOfflineQueueAdapterContract } from "./offline-queue-adapter.contract.js";
-import { docId, nonce, pubkey, sig } from "./test-crypto-helpers.js";
+import { asSyncDocId, nonce, pubkey, sig } from "./test-crypto-helpers.js";
 
 describe("SqliteOfflineQueueAdapter (better-sqlite3)", () => {
   const databases: InstanceType<typeof Database>[] = [];
@@ -42,7 +42,7 @@ describe("SqliteOfflineQueueAdapter (better-sqlite3)", () => {
     const adapter = createAdapter();
     const ids = new Set<string>();
 
-    const testDocId = docId("doc_1");
+    const testDocId = asSyncDocId("doc_1");
     const envelope = {
       documentId: testDocId,
       ciphertext: new Uint8Array([1, 2, 3]),
@@ -62,7 +62,7 @@ describe("SqliteOfflineQueueAdapter (better-sqlite3)", () => {
   it("drainUnsynced returns proper Uint8Array (not Buffer subclass)", async () => {
     const adapter = createAdapter();
 
-    const testDocId = docId("doc_1");
+    const testDocId = asSyncDocId("doc_1");
     const envelope = {
       documentId: testDocId,
       ciphertext: new Uint8Array([10, 20, 30]),
