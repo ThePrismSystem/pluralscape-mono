@@ -611,12 +611,11 @@ describe("PostMergeValidator: runAllValidations", () => {
     expect(result.sortOrderPatches).toHaveLength(0);
     expect(result.checkInNormalizations).toBe(0);
     expect(result.friendConnectionNormalizations).toBe(0);
-    expect(result.tombstoneNotifications).toHaveLength(0);
     expect(result.correctionEnvelopes).toHaveLength(0);
     expect(result.notifications).toHaveLength(0);
   });
 
-  it("returns tombstoneNotifications, correctionEnvelopes, and notifications when issues exist", () => {
+  it("returns correctionEnvelopes and notifications when issues exist", () => {
     const base = createSystemCoreDocument();
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
@@ -648,7 +647,6 @@ describe("PostMergeValidator: runAllValidations", () => {
     const validator = new PostMergeValidator();
     const result = validator.runAllValidations(session);
 
-    expect(result.tombstoneNotifications.length).toBeGreaterThan(0);
     expect(result.correctionEnvelopes.length).toBeGreaterThan(0);
     // notifications should include tombstone notifications
     expect(result.notifications.length).toBeGreaterThan(0);
@@ -696,11 +694,10 @@ describe("PostMergeValidator: runAllValidations", () => {
     expect(cycleNotifications.length).toBeGreaterThan(0);
     expect(sortNotifications.length).toBeGreaterThan(0);
 
-    // The total notifications count should match what was previously computed in SyncEngine
+    // The total notifications count should match the sum of constituent notifications
+    const tombstoneCount = result.notifications.filter((n) => n.resolution === "lww-field").length;
     expect(result.notifications.length).toBe(
-      result.tombstoneNotifications.length +
-        result.cycleBreaks.length +
-        result.sortOrderPatches.length,
+      tombstoneCount + result.cycleBreaks.length + result.sortOrderPatches.length,
     );
   });
 

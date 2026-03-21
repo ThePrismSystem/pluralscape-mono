@@ -6,6 +6,7 @@
  * operations and the adapter interfaces for I/O.
  */
 import { createDocument } from "../factories/document-factory.js";
+import { mapConcurrent } from "../map-concurrent.js";
 import { OfflineQueueManager } from "../offline-queue-manager.js";
 import { PostMergeValidator } from "../post-merge-validator.js";
 import { filterManifest } from "../subscription-filter.js";
@@ -403,20 +404,12 @@ export class SyncEngine {
     docId: string,
     session: EncryptedSyncSession<unknown>,
   ): Promise<void> {
-    let notifications: readonly ConflictNotification[] = [];
-    let correctionEnvelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[] = [];
-
-    // Run validations — notification construction is handled by PostMergeValidator
-    try {
-      const result = this.postMergeValidator.runAllValidations(session);
-      correctionEnvelopes = result.correctionEnvelopes;
-      notifications = result.notifications;
-    } catch (error) {
-      this.config.onError("Post-merge validation failed", error);
-    }
+    // runAllValidations never throws — each validator is independently try/caught
+    const result = this.postMergeValidator.runAllValidations(session, this.config.onError);
+    const { correctionEnvelopes, notifications } = result;
 
     // Submit correction envelopes to server and persist locally
-    await this.submitCorrectionEnvelopes(docId, correctionEnvelopes);
+    await submitCorrectionEnvelopes(this.config, docId, correctionEnvelopes);
 
     // Fire onConflict callbacks
     if (this.config.onConflict) {
@@ -427,26 +420,6 @@ export class SyncEngine {
 
     // Persist conflict records (best-effort, with retry of previously failed)
     await this.persistConflicts(docId, notifications);
-  }
-
-  protected async submitCorrectionEnvelopes(
-    docId: string,
-    envelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[],
-  ): Promise<void> {
-    if (envelopes.length === 0) return;
-
-    const results = await Promise.allSettled(
-      envelopes.map(async (envelope) => {
-        const sequenced = await this.config.networkAdapter.submitChange(docId, envelope);
-        await this.config.storageAdapter.appendChange(docId, sequenced);
-      }),
-    );
-
-    for (const result of results) {
-      if (result.status === "rejected") {
-        this.config.onError(`Failed to submit correction envelope for ${docId}`, result.reason);
-      }
-    }
   }
 
   private async persistConflicts(
@@ -487,37 +460,47 @@ export class SyncEngine {
   }
 }
 
-// ── Utility ─────────────────────────────────────────────────────────
+// ── Correction envelope submission ──────────────────────────────────
 
 /**
- * Runs `fn` over `items` with bounded concurrency, returning settled results.
- * Safe in single-threaded JS: `index++` is atomic within a synchronous tick.
+ * Submits correction envelopes to the server and persists locally.
+ *
+ * Two-phase approach: first submit all to network in parallel, then
+ * persist all successful submissions locally. This ensures a persist
+ * failure for one envelope doesn't block submission of others.
+ *
+ * @internal Exported for testing only.
  */
-async function mapConcurrent<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<PromiseSettledResult<R>[]> {
-  const results = Array.from<PromiseSettledResult<R>>({ length: items.length });
-  let index = 0;
+export async function submitCorrectionEnvelopes(
+  config: Pick<SyncEngineConfig, "networkAdapter" | "storageAdapter" | "onError">,
+  docId: string,
+  envelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[],
+): Promise<void> {
+  if (envelopes.length === 0) return;
 
-  async function worker(): Promise<void> {
-    while (index < items.length) {
-      const i = index++;
-      const item = items[i] as T;
-      try {
-        const value = await fn(item);
-        results[i] = { status: "fulfilled", value };
-      } catch (reason) {
-        results[i] = { status: "rejected", reason };
-      }
+  // Phase 1: Submit all to network in parallel
+  const submitResults = await Promise.allSettled(
+    envelopes.map((envelope) => config.networkAdapter.submitChange(docId, envelope)),
+  );
+
+  // Collect successfully sequenced envelopes
+  const sequenced: EncryptedChangeEnvelope[] = [];
+  for (const result of submitResults) {
+    if (result.status === "fulfilled") {
+      sequenced.push(result.value);
+    } else {
+      config.onError(`Failed to submit correction envelope for ${docId}`, result.reason);
     }
   }
 
-  const workers: Promise<void>[] = [];
-  for (let i = 0; i < Math.min(limit, items.length); i++) {
-    workers.push(worker());
+  // Phase 2: Persist all successful submissions locally
+  const persistResults = await Promise.allSettled(
+    sequenced.map((envelope) => config.storageAdapter.appendChange(docId, envelope)),
+  );
+
+  for (const result of persistResults) {
+    if (result.status === "rejected") {
+      config.onError(`Failed to persist correction envelope for ${docId}`, result.reason);
+    }
   }
-  await Promise.all(workers);
-  return results;
 }

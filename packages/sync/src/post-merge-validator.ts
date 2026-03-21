@@ -374,93 +374,117 @@ export class PostMergeValidator {
   /**
    * Run all validations and return aggregate results.
    * Detects the document type from the session content and runs appropriate validators.
+   * Each validator is independently try/caught so partial failures preserve prior results.
    */
-  runAllValidations(session: EncryptedSyncSession<unknown>): PostMergeValidationResult {
+  runAllValidations(
+    session: EncryptedSyncSession<unknown>,
+    onError?: (message: string, error: unknown) => void,
+  ): PostMergeValidationResult {
     const doc = session.document as DocRecord;
     const now = Date.now();
 
     const correctionEnvelopes: Omit<EncryptedChangeEnvelope, "seq">[] = [];
     const notifications: ConflictNotification[] = [];
 
-    // Always run tombstone enforcement first
-    const tombstoneResult = this.enforceTombstones(session);
-    if (tombstoneResult.envelope) {
-      correctionEnvelopes.push(tombstoneResult.envelope);
-    }
-    notifications.push(...tombstoneResult.notifications);
-
     let cycleBreaks: CycleBreak[] = [];
     let sortOrderPatches: SortOrderPatch[] = [];
     let checkInNormalizations = 0;
     let friendConnectionNormalizations = 0;
 
-    if ("groups" in doc || "subsystems" in doc || "innerWorldRegions" in doc) {
-      const cycleResult = this.detectHierarchyCycles(session);
-      cycleBreaks = cycleResult.breaks;
-      if (cycleResult.envelope) {
-        correctionEnvelopes.push(cycleResult.envelope);
+    // Always run tombstone enforcement first
+    try {
+      const tombstoneResult = this.enforceTombstones(session);
+      if (tombstoneResult.envelope) {
+        correctionEnvelopes.push(tombstoneResult.envelope);
       }
-      for (const cycleBreak of cycleBreaks) {
-        notifications.push({
-          entityType: "hierarchy",
-          entityId: cycleBreak.entityId,
-          fieldName: "parentId",
-          resolution: "post-merge-cycle",
-          detectedAt: now,
-          summary: `Cycle broken: nulled parent of ${cycleBreak.entityId} (was ${cycleBreak.formerParentId})`,
-        });
+      notifications.push(...tombstoneResult.notifications);
+    } catch (error) {
+      onError?.("Tombstone enforcement failed", error);
+    }
+
+    if ("groups" in doc || "subsystems" in doc || "innerWorldRegions" in doc) {
+      try {
+        const cycleResult = this.detectHierarchyCycles(session);
+        cycleBreaks = cycleResult.breaks;
+        if (cycleResult.envelope) {
+          correctionEnvelopes.push(cycleResult.envelope);
+        }
+        for (const cycleBreak of cycleBreaks) {
+          notifications.push({
+            entityType: "hierarchy",
+            entityId: cycleBreak.entityId,
+            fieldName: "parentId",
+            resolution: "post-merge-cycle",
+            detectedAt: now,
+            summary: `Cycle broken: nulled parent of ${cycleBreak.entityId} (was ${cycleBreak.formerParentId})`,
+          });
+        }
+      } catch (error) {
+        onError?.("Cycle detection failed", error);
       }
 
-      const sortResult = this.normalizeSortOrder(session);
-      sortOrderPatches = sortResult.patches;
-      if (sortResult.envelope) {
-        correctionEnvelopes.push(sortResult.envelope);
-      }
-      for (const patch of sortOrderPatches) {
-        notifications.push({
-          entityType: "sortable",
-          entityId: patch.entityId,
-          fieldName: "sortOrder",
-          resolution: "post-merge-sort-normalize",
-          detectedAt: now,
-          summary: `Sort order normalized: ${patch.entityId} → ${String(patch.newSortOrder)}`,
-        });
+      try {
+        const sortResult = this.normalizeSortOrder(session);
+        sortOrderPatches = sortResult.patches;
+        if (sortResult.envelope) {
+          correctionEnvelopes.push(sortResult.envelope);
+        }
+        for (const patch of sortOrderPatches) {
+          notifications.push({
+            entityType: "sortable",
+            entityId: patch.entityId,
+            fieldName: "sortOrder",
+            resolution: "post-merge-sort-normalize",
+            detectedAt: now,
+            summary: `Sort order normalized: ${patch.entityId} → ${String(patch.newSortOrder)}`,
+          });
+        }
+      } catch (error) {
+        onError?.("Sort order normalization failed", error);
       }
     }
 
     if ("checkInRecords" in doc) {
-      const checkInResult = this.normalizeCheckInRecord(session);
-      checkInNormalizations = checkInResult.count;
-      if (checkInResult.envelope) {
-        correctionEnvelopes.push(checkInResult.envelope);
-      }
-      if (checkInNormalizations > 0) {
-        notifications.push({
-          entityType: "check-in-record",
-          entityId: "batch",
-          fieldName: "dismissed",
-          resolution: "post-merge-checkin-normalize",
-          detectedAt: now,
-          summary: `Normalized ${String(checkInNormalizations)} check-in record(s)`,
-        });
+      try {
+        const checkInResult = this.normalizeCheckInRecord(session);
+        checkInNormalizations = checkInResult.count;
+        if (checkInResult.envelope) {
+          correctionEnvelopes.push(checkInResult.envelope);
+        }
+        if (checkInNormalizations > 0) {
+          notifications.push({
+            entityType: "check-in-record",
+            entityId: "batch",
+            fieldName: "dismissed",
+            resolution: "post-merge-checkin-normalize",
+            detectedAt: now,
+            summary: `Normalized ${String(checkInNormalizations)} check-in record(s)`,
+          });
+        }
+      } catch (error) {
+        onError?.("Check-in normalization failed", error);
       }
     }
 
     if ("friendConnections" in doc) {
-      const friendResult = this.normalizeFriendConnection(session);
-      friendConnectionNormalizations = friendResult.count;
-      if (friendResult.envelope) {
-        correctionEnvelopes.push(friendResult.envelope);
-      }
-      if (friendConnectionNormalizations > 0) {
-        notifications.push({
-          entityType: "friend-connection",
-          entityId: "batch",
-          fieldName: "status",
-          resolution: "post-merge-friend-status",
-          detectedAt: now,
-          summary: `Normalized ${String(friendConnectionNormalizations)} friend connection(s)`,
-        });
+      try {
+        const friendResult = this.normalizeFriendConnection(session);
+        friendConnectionNormalizations = friendResult.count;
+        if (friendResult.envelope) {
+          correctionEnvelopes.push(friendResult.envelope);
+        }
+        if (friendConnectionNormalizations > 0) {
+          notifications.push({
+            entityType: "friend-connection",
+            entityId: "batch",
+            fieldName: "status",
+            resolution: "post-merge-friend-status",
+            detectedAt: now,
+            summary: `Normalized ${String(friendConnectionNormalizations)} friend connection(s)`,
+          });
+        }
+      } catch (error) {
+        onError?.("Friend connection normalization failed", error);
       }
     }
 
@@ -469,7 +493,6 @@ export class PostMergeValidator {
       sortOrderPatches,
       checkInNormalizations,
       friendConnectionNormalizations,
-      tombstoneNotifications: tombstoneResult.notifications,
       correctionEnvelopes,
       notifications,
     };

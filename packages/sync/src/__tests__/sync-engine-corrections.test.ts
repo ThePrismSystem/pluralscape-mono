@@ -1,30 +1,18 @@
 /**
- * SyncEngine correction envelope tests.
+ * Correction envelope submission tests.
  *
  * Verifies that correction envelopes are submitted in parallel (M7)
  * and individual failures are logged without blocking other submissions.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SyncEngine } from "../engine/sync-engine.js";
+import { submitCorrectionEnvelopes } from "../engine/sync-engine.js";
 
 import { nonce, pubkey, sig } from "./test-crypto-helpers.js";
 
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
-
-// ── Test subclass ──────────────────────────────────────────────────
-
-/** Exposes the protected submitCorrectionEnvelopes for direct testing. */
-class TestableSyncEngine extends SyncEngine {
-  async testSubmitCorrectionEnvelopes(
-    docId: string,
-    envelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[],
-  ): Promise<void> {
-    return this.submitCorrectionEnvelopes(docId, envelopes);
-  }
-}
 
 // ── Mock factories ─────────────────────────────────────────────────
 
@@ -74,7 +62,7 @@ function makeTestEnvelopes(count: number): Omit<EncryptedChangeEnvelope, "seq">[
 
 // ── Tests ──────────────────────────────────────────────────────────
 
-describe("SyncEngine: submitCorrectionEnvelopes (M7)", () => {
+describe("submitCorrectionEnvelopes (M7)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -96,17 +84,15 @@ describe("SyncEngine: submitCorrectionEnvelopes (M7)", () => {
     const storageAdapter = mockStorageAdapter();
     storageAdapter.appendChange = appendChange;
 
-    const engine = new TestableSyncEngine({
-      networkAdapter: mockNetworkAdapter({ submitChange: parallelSubmitChange }),
-      storageAdapter,
-      keyResolver: { resolveKeys: vi.fn() } as never,
-      sodium: {} as never,
-      profile: { documents: [] } as never,
-      systemId: "sys_test",
-      onError,
-    });
-
-    await engine.testSubmitCorrectionEnvelopes("doc_a", makeTestEnvelopes(3));
+    await submitCorrectionEnvelopes(
+      {
+        networkAdapter: mockNetworkAdapter({ submitChange: parallelSubmitChange }),
+        storageAdapter,
+        onError,
+      },
+      "doc_a",
+      makeTestEnvelopes(3),
+    );
 
     // All 3 envelopes should have been submitted
     expect(parallelSubmitChange).toHaveBeenCalledTimes(3);
@@ -124,19 +110,14 @@ describe("SyncEngine: submitCorrectionEnvelopes (M7)", () => {
 
   it("handles empty envelopes array without calling network", async () => {
     const submitChange = vi.fn();
+    const networkAdapter = mockNetworkAdapter({ submitChange });
     const onError = vi.fn();
 
-    const engine = new TestableSyncEngine({
-      networkAdapter: mockNetworkAdapter({ submitChange }),
-      storageAdapter: mockStorageAdapter(),
-      keyResolver: { resolveKeys: vi.fn() } as never,
-      sodium: {} as never,
-      profile: { documents: [] } as never,
-      systemId: "sys_test",
-      onError,
-    });
-
-    await engine.testSubmitCorrectionEnvelopes("doc_a", []);
+    await submitCorrectionEnvelopes(
+      { networkAdapter, storageAdapter: mockStorageAdapter(), onError },
+      "doc_a",
+      [],
+    );
 
     expect(submitChange).not.toHaveBeenCalled();
     expect(onError).not.toHaveBeenCalled();
@@ -148,17 +129,11 @@ describe("SyncEngine: submitCorrectionEnvelopes (M7)", () => {
     const storageAdapter = mockStorageAdapter();
     storageAdapter.appendChange = appendChange;
 
-    const engine = new TestableSyncEngine({
-      networkAdapter: mockNetworkAdapter(),
-      storageAdapter,
-      keyResolver: { resolveKeys: vi.fn() } as never,
-      sodium: {} as never,
-      profile: { documents: [] } as never,
-      systemId: "sys_test",
-      onError,
-    });
-
-    await engine.testSubmitCorrectionEnvelopes("doc_a", makeTestEnvelopes(2));
+    await submitCorrectionEnvelopes(
+      { networkAdapter: mockNetworkAdapter(), storageAdapter, onError },
+      "doc_a",
+      makeTestEnvelopes(2),
+    );
 
     // All should be persisted
     expect(appendChange).toHaveBeenCalledTimes(2);

@@ -203,7 +203,7 @@ describe("OfflineQueueManager", () => {
     expect(submitChange).toHaveBeenCalledTimes(3);
   });
 
-  it("processes multiple documents concurrently", async () => {
+  it("processes multiple documents concurrently with bounded parallelism", async () => {
     // Create entries for 4 different documents
     const entries = [
       makeEntry("e1", "doc_a", 1000),
@@ -215,17 +215,20 @@ describe("OfflineQueueManager", () => {
     const documentsInFlight = new Set<string>();
     let maxConcurrentDocs = 0;
 
+    // Gate pattern: all submits block until gate is opened
+    let openGate: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      openGate = resolve;
+    });
+
     const submitChange = vi
       .fn()
       .mockImplementation((docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
         documentsInFlight.add(docId);
         maxConcurrentDocs = Math.max(maxConcurrentDocs, documentsInFlight.size);
-        return new Promise<EncryptedChangeEnvelope>((resolve) => {
-          // Simulate async work to allow concurrency to be observed
-          setTimeout(() => {
-            documentsInFlight.delete(docId);
-            resolve({ ...change, seq: 1 } as EncryptedChangeEnvelope);
-          }, 10);
+        return gate.then(() => {
+          documentsInFlight.delete(docId);
+          return { ...change, seq: 1 } as EncryptedChangeEnvelope;
         });
       });
 
@@ -238,13 +241,25 @@ describe("OfflineQueueManager", () => {
       onError: vi.fn(),
     });
 
-    const result = await manager.replay();
+    const replayPromise = manager.replay();
+
+    // Wait for workers to reach the gate (3 concurrent workers should start)
+    await vi.waitFor(() => {
+      expect(submitChange).toHaveBeenCalledTimes(3);
+    });
+
+    // Verify concurrency is bounded: at most 3 docs in flight
+    expect(maxConcurrentDocs).toBeGreaterThan(1);
+    expect(maxConcurrentDocs).toBeLessThanOrEqual(3);
+
+    // Open the gate so all resolve, allowing the 4th doc to start
+    openGate();
+
+    const result = await replayPromise;
 
     expect(result.replayed).toBe(4);
     expect(result.failed).toBe(0);
     expect(result.skipped).toBe(0);
-    // With 4 docs and concurrency limit of 3, we should see at least 2 concurrent
-    expect(maxConcurrentDocs).toBeGreaterThan(1);
   });
 
   it("persists changes locally after successful replay", async () => {

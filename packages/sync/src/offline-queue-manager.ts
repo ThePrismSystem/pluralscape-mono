@@ -5,6 +5,8 @@
  * and re-submits them in enqueued_at order. Server-side dedup
  * (sync_changes_dedup_idx) makes re-submission safe.
  */
+import { mapConcurrent } from "./map-concurrent.js";
+
 import type { SyncNetworkAdapter } from "./adapters/network-adapter.js";
 import type { OfflineQueueAdapter, OfflineQueueEntry } from "./adapters/offline-queue-adapter.js";
 import type { SyncStorageAdapter } from "./adapters/storage-adapter.js";
@@ -21,6 +23,9 @@ const REPLAY_DOCUMENT_CONCURRENCY = 3;
 /** Minimum jitter multiplier applied to backoff delay. */
 const JITTER_MIN = 0.5;
 
+/** Maximum jitter multiplier applied to backoff delay. */
+const JITTER_MAX = 1.0;
+
 /** Result of a replay attempt. */
 export interface ReplayResult {
   readonly replayed: number;
@@ -34,13 +39,6 @@ export interface OfflineQueueManagerConfig {
   readonly networkAdapter: SyncNetworkAdapter;
   readonly storageAdapter: SyncStorageAdapter;
   readonly onError: (message: string, error: unknown) => void;
-}
-
-/** Per-document replay result used for aggregation. */
-interface DocumentReplayResult {
-  readonly replayed: number;
-  readonly failed: number;
-  readonly skipped: number;
 }
 
 /**
@@ -83,10 +81,8 @@ export class OfflineQueueManager {
 
     // Process documents concurrently with bounded parallelism
     const documentGroups = [...byDocument.values()];
-    const docResults = await mapConcurrentReplay(
-      documentGroups,
-      REPLAY_DOCUMENT_CONCURRENCY,
-      (docEntries) => this.replayDocument(docEntries),
+    const settled = await mapConcurrent(documentGroups, REPLAY_DOCUMENT_CONCURRENCY, (docEntries) =>
+      this.replayDocument(docEntries),
     );
 
     // Aggregate results
@@ -94,17 +90,26 @@ export class OfflineQueueManager {
     let failed = 0;
     let skipped = 0;
 
-    for (const docResult of docResults) {
-      replayed += docResult.replayed;
-      failed += docResult.failed;
-      skipped += docResult.skipped;
+    for (let i = 0; i < settled.length; i++) {
+      const result = settled[i];
+      if (!result) continue;
+      if (result.status === "fulfilled") {
+        replayed += result.value.replayed;
+        failed += result.value.failed;
+        skipped += result.value.skipped;
+      } else {
+        // Treat all entries in the failed group as failed
+        const group = documentGroups[i];
+        if (group) failed += group.length;
+        this.config.onError("Document replay failed unexpectedly", result.reason);
+      }
     }
 
     return { replayed, failed, skipped };
   }
 
   /** Replay all entries for a single document in causal order. */
-  private async replayDocument(docEntries: OfflineQueueEntry[]): Promise<DocumentReplayResult> {
+  private async replayDocument(docEntries: OfflineQueueEntry[]): Promise<ReplayResult> {
     // Sort by enqueuedAt (should already be sorted, but ensure)
     docEntries.sort((a, b) => a.enqueuedAt - b.enqueuedAt);
 
@@ -149,7 +154,7 @@ export class OfflineQueueManager {
 
         if (attempt < MAX_RETRIES_PER_ENTRY - 1) {
           // Exponential backoff with jitter
-          const jitter = JITTER_MIN + Math.random() * JITTER_MIN;
+          const jitter = JITTER_MIN + Math.random() * (JITTER_MAX - JITTER_MIN);
           const delay = BACKOFF_BASE_MS * 2 ** attempt * jitter;
           await sleep(delay);
         }
@@ -164,32 +169,4 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-}
-
-/**
- * Runs `fn` over `items` with bounded concurrency, returning results in order.
- * Safe in single-threaded JS: `index++` is atomic within a synchronous tick.
- */
-async function mapConcurrentReplay<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<R>,
-): Promise<R[]> {
-  const results = Array.from<R | undefined>({ length: items.length });
-  let index = 0;
-
-  async function worker(): Promise<void> {
-    while (index < items.length) {
-      const i = index++;
-      const item = items[i] as T;
-      results[i] = await fn(item);
-    }
-  }
-
-  const workers: Promise<void>[] = [];
-  for (let i = 0; i < Math.min(limit, items.length); i++) {
-    workers.push(worker());
-  }
-  await Promise.all(workers);
-  return results as R[];
 }

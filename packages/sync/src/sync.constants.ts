@@ -6,10 +6,10 @@
 // ── Byte size helpers ───────────────────────────────────────────────
 
 /** 1 KiB in bytes. */
-const KiB = 1_024;
+export const KiB = 1_024;
 
 /** 1 MiB in bytes. */
-const MiB = KiB * KiB;
+export const MiB = KiB * 1024;
 
 // ── Compaction ──────────────────────────────────────────────────────
 
