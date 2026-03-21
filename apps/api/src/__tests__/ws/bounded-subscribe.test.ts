@@ -11,10 +11,10 @@ import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
 import { handleSubscribeRequest } from "../../ws/handlers.js";
 import { WS_SUBSCRIBE_CONCURRENCY } from "../../ws/ws.constants.js";
+import { nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
-import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 import type {
   EncryptedChangeEnvelope,
   SubscribeRequest,
@@ -23,21 +23,6 @@ import type {
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 // ── Test helpers ──────────────────────────────────────────────────────
-
-function nonce(fill: number): AeadNonce {
-  const bytes: unknown = new Uint8Array(24).fill(fill);
-  return bytes as AeadNonce;
-}
-
-function pubkey(fill: number): SignPublicKey {
-  const bytes: unknown = new Uint8Array(32).fill(fill);
-  return bytes as SignPublicKey;
-}
-
-function sig(fill: number): Signature {
-  const bytes: unknown = new Uint8Array(64).fill(fill);
-  return bytes as Signature;
-}
 
 let changeCounter = 0;
 

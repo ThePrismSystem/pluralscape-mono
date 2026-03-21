@@ -13,11 +13,11 @@ import {
   handleSubmitSnapshot,
   handleDocumentLoad,
 } from "../../ws/handlers.js";
+import { nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { SyncConnectionState } from "../../ws/connection-state.js";
-import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 import type {
   DocumentLoadRequest,
   EncryptedChangeEnvelope,
@@ -33,21 +33,6 @@ import type {
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
 
 // ── Test helpers ──────────────────────────────────────────────────────
-
-function nonce(fill: number): AeadNonce {
-  const bytes: unknown = new Uint8Array(24).fill(fill);
-  return bytes as AeadNonce;
-}
-
-function pubkey(fill: number): SignPublicKey {
-  const bytes: unknown = new Uint8Array(32).fill(fill);
-  return bytes as SignPublicKey;
-}
-
-function sig(fill: number): Signature {
-  const bytes: unknown = new Uint8Array(64).fill(fill);
-  return bytes as Signature;
-}
 
 let changeCounter = 0;
 

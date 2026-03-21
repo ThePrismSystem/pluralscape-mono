@@ -314,9 +314,75 @@ describe("ValkeyPubSub", () => {
 
       s.emit("ready");
 
-      expect(s.subscribeMock).toHaveBeenCalledTimes(2);
-      expect(s.subscribeMock).toHaveBeenCalledWith("ps:sync:doc-1");
-      expect(s.subscribeMock).toHaveBeenCalledWith("ps:sync:doc-2");
+      await vi.waitFor(() => {
+        expect(s.subscribeMock).toHaveBeenCalledTimes(2);
+        expect(s.subscribeMock).toHaveBeenCalledWith("ps:sync:doc-1");
+        expect(s.subscribeMock).toHaveBeenCalledWith("ps:sync:doc-2");
+      });
+    });
+
+    it("delivers messages after reconnect resubscription", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+      const s = sub();
+      const handler = vi.fn();
+
+      await pubsub.subscribe("ps:sync:doc-reconnect", handler);
+      s.subscribeMock.mockClear();
+
+      // Simulate disconnect + reconnect via "ready" event
+      s.emit("ready");
+
+      await vi.waitFor(() => {
+        expect(s.subscribeMock).toHaveBeenCalledWith("ps:sync:doc-reconnect");
+      });
+
+      // Messages should still be delivered after reconnect
+      s.emit("message", "ps:sync:doc-reconnect", '{"after":"reconnect"}');
+      expect(handler).toHaveBeenCalledWith('{"after":"reconnect"}');
+    });
+
+    it("error event on subscriber does not crash", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+      const s = sub();
+
+      // Emitting error events should be handled gracefully
+      expect(() => {
+        s.emit("error", new Error("connection reset"));
+      }).not.toThrow();
+    });
+
+    it("error event on publisher does not crash", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+      const p = pub();
+
+      expect(() => {
+        p.emit("error", new Error("publisher connection lost"));
+      }).not.toThrow();
+    });
+
+    it("unsubscribe during reconnection does not leave stale handlers", async () => {
+      await pubsub.connect("redis://localhost:6379", mockFactory());
+      const s = sub();
+      const handler = vi.fn();
+
+      await pubsub.subscribe("ps:sync:doc-unsub", handler);
+
+      // Unsubscribe while still connected
+      await pubsub.unsubscribe("ps:sync:doc-unsub", handler);
+
+      s.subscribeMock.mockClear();
+
+      // Trigger reconnect
+      s.emit("ready");
+
+      // The unsubscribed channel should not be resubscribed
+      // (it was removed from activeChannels by unsubscribe)
+      await Promise.resolve();
+      expect(s.subscribeMock).not.toHaveBeenCalledWith("ps:sync:doc-unsub");
+
+      // Messages on the old channel should not be delivered
+      s.emit("message", "ps:sync:doc-unsub", "stale");
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 
