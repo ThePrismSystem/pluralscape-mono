@@ -3,8 +3,8 @@
  * Domain: real-time sync transport (ADR 007).
  */
 
-/** Maximum WebSocket message size in bytes (5 MB, per protocol spec). */
-export const WS_MAX_MESSAGE_BYTES = 5_242_880;
+/** Maximum WebSocket message size in bytes (5 MB = 5 * 1_024 * 1_024, per protocol spec). */
+export const WS_MAX_MESSAGE_BYTES = 5 * 1_024 * 1_024;
 
 /** Milliseconds to wait for AuthenticateRequest before closing the connection. */
 export const WS_AUTH_TIMEOUT_MS = 10_000;
@@ -71,3 +71,12 @@ export const WS_MAX_SUBSCRIPTIONS_PER_CONNECTION = 500;
 
 /** Safety timeout (ms) to release unauth slot if onOpen never fires after upgrade. */
 export const WS_UPGRADE_SAFETY_TIMEOUT_MS = 5_000;
+
+/** Maximum concurrent document catchup fetches during subscribe (prevents resource exhaustion). */
+export const WS_SUBSCRIBE_CONCURRENCY = 10;
+
+/** Default timeout (ms) for graceful WebSocket shutdown. */
+export const WS_GRACEFUL_SHUTDOWN_TIMEOUT_MS = 10_000;
+
+/** Polling interval (ms) for checking connection drain during graceful shutdown. */
+export const WS_SHUTDOWN_DRAIN_POLL_MS = 50;

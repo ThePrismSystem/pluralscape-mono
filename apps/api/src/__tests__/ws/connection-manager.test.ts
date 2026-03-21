@@ -446,7 +446,7 @@ describe("ConnectionManager", () => {
       manager.closeAll(1001, "shutdown", { debug: debugFn });
 
       expect(debugFn).toHaveBeenCalledWith(
-        "Failed to close WebSocket during closeAll",
+        "Failed to close WebSocket",
         expect.objectContaining({ connectionId: "conn-1" }),
       );
     });

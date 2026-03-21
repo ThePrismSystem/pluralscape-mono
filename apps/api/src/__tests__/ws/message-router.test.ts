@@ -786,7 +786,7 @@ describe("message-router", () => {
       expect(resp["message"]).toBe("Failed to process manifest");
     });
 
-    it("sends INTERNAL_ERROR when handleSubscribeRequest throws", async () => {
+    it("drops document and returns SubscribeResponse when catchup fetch fails", async () => {
       const brokenRelay = {
         submit: vi.fn(),
         submitSnapshot: vi.fn(),
@@ -814,9 +814,8 @@ describe("message-router", () => {
       );
 
       const resp = lastResponse();
-      expect(resp["type"]).toBe("SyncError");
-      expect(resp["code"]).toBe("INTERNAL_ERROR");
-      expect(resp["message"]).toBe("Failed to process subscription");
+      expect(resp["type"]).toBe("SubscribeResponse");
+      expect(resp["droppedDocIds"]).toContain("doc-sub-err");
     });
 
     it("sends INTERNAL_ERROR when handleSubmitChange throws", async () => {
