@@ -150,7 +150,7 @@ describe("enum arrays", () => {
   });
 
   it("WEBHOOK_EVENT_TYPES matches WebhookEventType union", () => {
-    expect(WEBHOOK_EVENT_TYPES).toHaveLength(16);
+    expect(WEBHOOK_EVENT_TYPES).toHaveLength(15);
     expect(WEBHOOK_EVENT_TYPES).toContain("member.created");
     expect(WEBHOOK_EVENT_TYPES).toContain("custom-front.changed");
   });
@@ -215,7 +215,7 @@ describe("enum arrays", () => {
   });
 
   it("ENTITY_TYPES matches EntityType union", () => {
-    expect(ENTITY_TYPES).toHaveLength(60);
+    expect(ENTITY_TYPES).toHaveLength(59);
     expect(ENTITY_TYPES).toContain("member");
     expect(ENTITY_TYPES).toContain("system");
     expect(ENTITY_TYPES).toContain("fronting-report");
@@ -292,7 +292,7 @@ describe("enum arrays", () => {
     expect(PK_SYNC_DIRECTIONS).toHaveLength(3);
     expect(DEVICE_TOKEN_PLATFORMS).toHaveLength(3);
     expect(NOTIFICATION_EVENT_TYPES).toHaveLength(6);
-    expect(WEBHOOK_EVENT_TYPES).toHaveLength(16);
+    expect(WEBHOOK_EVENT_TYPES).toHaveLength(15);
     expect(WEBHOOK_DELIVERY_STATUSES).toHaveLength(3);
     expect(BLOB_PURPOSES).toHaveLength(6);
     expect(IMPORT_SOURCES).toHaveLength(3);
@@ -303,7 +303,7 @@ describe("enum arrays", () => {
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
     expect(JOB_TYPES).toHaveLength(15);
     expect(JOB_STATUSES).toHaveLength(5);
-    expect(ENTITY_TYPES).toHaveLength(60);
+    expect(ENTITY_TYPES).toHaveLength(59);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);
     expect(DISCOVERY_STATUSES).toHaveLength(3);
     expect(ROTATION_STATES).toHaveLength(5);
