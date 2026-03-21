@@ -78,7 +78,6 @@ function makeFrontingDoc(): Automerge.Doc<FrontingDocument> {
   return fromDoc<FrontingDocument>({
     sessions: {},
     comments: {},
-    switches: [],
     checkInRecords: {},
   });
 }
@@ -287,7 +286,6 @@ describe("FrontingDocument schema", () => {
   it("initializes with empty collections", () => {
     const doc = makeFrontingDoc();
     expect(Object.keys(doc.sessions)).toHaveLength(0);
-    expect(doc.switches).toHaveLength(0);
     expect(Object.keys(doc.checkInRecords)).toHaveLength(0);
   });
 
@@ -323,21 +321,6 @@ describe("FrontingDocument schema", () => {
     expect(doc.sessions["fs_1"]?.endTime).toBe(2000);
   });
 
-  it("appends switches to the append-only list", () => {
-    let doc = makeFrontingDoc();
-    doc = Automerge.change(doc, (d) => {
-      d.switches.push({
-        id: s("sw_1"),
-        systemId: s("sys_test"),
-        memberIds: s('["mem_1","mem_2"]'),
-        timestamp: 1000,
-        archived: false,
-      });
-    });
-    expect(doc.switches).toHaveLength(1);
-    expect(doc.switches[0]?.memberIds.val).toBe('["mem_1","mem_2"]');
-  });
-
   it("adds and responds to a check-in record (mutable fields)", () => {
     let doc = makeFrontingDoc();
     doc = Automerge.change(doc, (d) => {
@@ -369,20 +352,11 @@ describe("FrontingDocument schema", () => {
   });
 
   it("saves and loads via binary serialization", () => {
-    let doc = makeFrontingDoc();
-    doc = Automerge.change(doc, (d) => {
-      d.switches.push({
-        id: s("sw_1"),
-        systemId: s("sys_test"),
-        memberIds: s('["mem_1"]'),
-        timestamp: 9999,
-        archived: false,
-      });
-    });
+    const doc = makeFrontingDoc();
     const bytes = Automerge.save(doc);
     const loaded = Automerge.load<FrontingDocument>(bytes);
-    expect(loaded.switches).toHaveLength(1);
-    expect(loaded.switches[0]?.timestamp).toBe(9999);
+    expect(Object.keys(loaded.sessions)).toHaveLength(0);
+    expect(Object.keys(loaded.checkInRecords)).toHaveLength(0);
   });
 });
 

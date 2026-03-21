@@ -316,24 +316,6 @@ export const SQLITE_DDL = {
     CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL;
     CREATE INDEX fronting_sessions_system_archived_idx ON fronting_sessions (system_id, archived)
   `,
-  switches: `
-    CREATE TABLE switches (
-      id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      timestamp INTEGER NOT NULL,
-      member_ids TEXT NOT NULL CHECK (json_array_length(member_ids) >= 1),
-      created_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1,
-      archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER,
-      CHECK (version >= 1),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
-    )
-  `,
-  switchesIndexes: `
-    CREATE INDEX switches_system_timestamp_idx ON switches (system_id, timestamp);
-    CREATE INDEX switches_system_archived_idx ON switches (system_id, archived)
-  `,
   customFronts: `
     CREATE TABLE custom_fronts (
       id TEXT PRIMARY KEY,
@@ -1531,8 +1513,6 @@ export function createSqliteFrontingTables(client: InstanceType<typeof Database>
   client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
   client.exec(SQLITE_DDL.frontingSessionsIndexes);
-  client.exec(SQLITE_DDL.switches);
-  client.exec(SQLITE_DDL.switchesIndexes);
   client.exec(SQLITE_DDL.frontingComments);
   client.exec(SQLITE_DDL.frontingCommentsIndexes);
 }

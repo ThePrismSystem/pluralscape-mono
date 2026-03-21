@@ -5,7 +5,6 @@ import type {
   ArchivedCustomFront,
   ArchivedFrontingComment,
   ArchivedFrontingSession,
-  ArchivedSwitch,
   CoFrontState,
   CompletedFrontingSession,
   CustomFront,
@@ -13,7 +12,6 @@ import type {
   FrontingSession,
   FrontingType,
   OuttriggerSentiment,
-  Switch,
 } from "../fronting.js";
 import type {
   CustomFrontId,
@@ -21,7 +19,6 @@ import type {
   FrontingSessionId,
   HexColor,
   MemberId,
-  SwitchId,
   SystemId,
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
@@ -116,46 +113,6 @@ describe("FrontingSession", () => {
   it("has archived as false literal on both variants", () => {
     expectTypeOf<ActiveFrontingSession["archived"]>().toEqualTypeOf<false>();
     expectTypeOf<CompletedFrontingSession["archived"]>().toEqualTypeOf<false>();
-  });
-});
-
-describe("Switch", () => {
-  it("has correct field types", () => {
-    expectTypeOf<Switch["id"]>().toEqualTypeOf<SwitchId>();
-    expectTypeOf<Switch["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<Switch["memberIds"]>().toEqualTypeOf<readonly [MemberId, ...MemberId[]]>();
-    expectTypeOf<Switch["timestamp"]>().toEqualTypeOf<UnixMillis>();
-  });
-
-  it("does not extend AuditMetadata", () => {
-    expectTypeOf<Switch>().not.toExtend<AuditMetadata>();
-  });
-
-  it("has archived as false literal", () => {
-    expectTypeOf<Switch["archived"]>().toEqualTypeOf<false>();
-  });
-
-  it("has exact shape", () => {
-    expectTypeOf<keyof Switch>().toEqualTypeOf<
-      "id" | "systemId" | "memberIds" | "timestamp" | "archived"
-    >();
-  });
-});
-
-describe("ArchivedSwitch", () => {
-  it("has archived as true literal", () => {
-    expectTypeOf<ArchivedSwitch["archived"]>().toEqualTypeOf<true>();
-  });
-
-  it("has archivedAt timestamp", () => {
-    expectTypeOf<ArchivedSwitch["archivedAt"]>().toEqualTypeOf<UnixMillis>();
-  });
-
-  it("preserves core Switch fields", () => {
-    expectTypeOf<ArchivedSwitch["id"]>().toEqualTypeOf<SwitchId>();
-    expectTypeOf<ArchivedSwitch["systemId"]>().toEqualTypeOf<SystemId>();
-    expectTypeOf<ArchivedSwitch["memberIds"]>().toEqualTypeOf<readonly [MemberId, ...MemberId[]]>();
-    expectTypeOf<ArchivedSwitch["timestamp"]>().toEqualTypeOf<UnixMillis>();
   });
 });
 

@@ -104,11 +104,6 @@ const TABLE_PAIRS: Array<{
     sqliteTable: getTableColumns(sqlite.frontingSessions),
   },
   {
-    name: "switches",
-    pgTable: getTableColumns(pg.switches),
-    sqliteTable: getTableColumns(sqlite.switches),
-  },
-  {
     name: "customFronts",
     pgTable: getTableColumns(pg.customFronts),
     sqliteTable: getTableColumns(sqlite.customFronts),
@@ -515,39 +510,6 @@ describe("Column existence", () => {
     });
   });
 
-  // Fix 5 — switches has memberIds (not encryptedData)
-  describe("switches (Fix 5)", () => {
-    it("PG has memberIds column", () => {
-      const cols = getTableColumns(pg.switches);
-      expect(cols).toHaveProperty("memberIds");
-    });
-
-    it("SQLite has memberIds column", () => {
-      const cols = getTableColumns(sqlite.switches);
-      expect(cols).toHaveProperty("memberIds");
-    });
-
-    it("switches does not have an encryptedData column", () => {
-      const pgCols = getTableColumns(pg.switches);
-      const sqliteCols = getTableColumns(sqlite.switches);
-      expect(pgCols).not.toHaveProperty("encryptedData");
-      expect(sqliteCols).not.toHaveProperty("encryptedData");
-    });
-
-    it("PG memberIds DB column is named member_ids", () => {
-      const cols = getTableColumns(pg.switches);
-      expect(cols.memberIds.name).toBe("member_ids");
-    });
-
-    it("has expected canonical columns: id, systemId, timestamp, memberIds, createdAt", () => {
-      const cols = getTableColumns(pg.switches);
-      const expected = ["id", "systemId", "timestamp", "memberIds", "createdAt"];
-      for (const col of expected) {
-        expect(cols, `expected column ${col}`).toHaveProperty(col);
-      }
-    });
-  });
-
   // Fix 6 — systemSettings has a separate id PK
   describe("systemSettings (Fix 6)", () => {
     it("PG has id column as primary key", () => {
@@ -652,15 +614,6 @@ describe("Column existence", () => {
 //    tables that should be plaintext/simple records.
 // ---------------------------------------------------------------------------
 describe("DB-only column allowlist", () => {
-  it("switches has version, archived, and archivedAt (versioned and archivable record)", () => {
-    const cols = getTableColumns(pg.switches);
-    expect(cols).toHaveProperty("version");
-    expect(cols).toHaveProperty("archived");
-    expect(cols).toHaveProperty("archivedAt");
-    // switches does not have encryptedData
-    expect(cols).not.toHaveProperty("encryptedData");
-  });
-
   it("frontingReports has encryptedData but no other DB-only columns", () => {
     const cols = getTableColumns(pg.frontingReports);
     expect(cols).toHaveProperty("encryptedData");
@@ -732,17 +685,6 @@ describe("Type-level assertions", () => {
   it("SQLite frontingComments.frontingSessionId infers as string", () => {
     type Row = InferSelectModel<typeof sqlite.frontingComments>;
     expectTypeOf<Row["frontingSessionId"]>().toEqualTypeOf<string>();
-  });
-
-  // Fix 5 — switches.memberIds is a non-empty readonly tuple
-  it("PG switches.memberIds infers as readonly [string, ...string[]]", () => {
-    type Row = InferSelectModel<typeof pg.switches>;
-    expectTypeOf<Row["memberIds"]>().toEqualTypeOf<readonly [string, ...string[]]>();
-  });
-
-  it("SQLite switches.memberIds infers as readonly [string, ...string[]]", () => {
-    type Row = InferSelectModel<typeof sqlite.switches>;
-    expectTypeOf<Row["memberIds"]>().toEqualTypeOf<readonly [string, ...string[]]>();
   });
 
   // Fix 6 — systemSettings has both id and systemId as string

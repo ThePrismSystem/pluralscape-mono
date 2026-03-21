@@ -13,7 +13,6 @@ export type WebhookEventType =
   | "member.archived"
   | "fronting.started"
   | "fronting.ended"
-  | "switch.recorded"
   | "group.created"
   | "group.updated"
   | "note.created"

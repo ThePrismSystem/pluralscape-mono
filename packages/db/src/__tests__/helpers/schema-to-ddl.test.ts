@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { accounts, deviceTransferRequests, sessions } from "../../schema/pg/auth.js";
-import { frontingSessions, switches } from "../../schema/pg/fronting.js";
+import { frontingSessions } from "../../schema/pg/fronting.js";
 import { friendConnections } from "../../schema/pg/privacy.js";
 
 import { pgTableToCreateDDL, pgTableToIndexDDL } from "./schema-to-ddl.js";
@@ -102,7 +102,6 @@ describe("pgTableToIndexDDL", () => {
       ...pgTableToIndexDDL(accounts),
       ...pgTableToIndexDDL(sessions),
       ...pgTableToIndexDDL(friendConnections),
-      ...pgTableToIndexDDL(switches),
     ];
     for (const idx of allIndexes) {
       expect(idx).not.toMatch(/\$\d+/);

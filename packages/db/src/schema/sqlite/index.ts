@@ -12,7 +12,7 @@ export {
   pollVotes,
 } from "./communication.js";
 export { fieldBucketVisibility, fieldDefinitions, fieldValues } from "./custom-fields.js";
-export { customFronts, frontingComments, frontingSessions, switches } from "./fronting.js";
+export { customFronts, frontingComments, frontingSessions } from "./fronting.js";
 export { groupMemberships, groups } from "./groups.js";
 export { innerworldCanvas, innerworldEntities, innerworldRegions } from "./innerworld.js";
 export { journalEntries, wikiPages } from "./journal.js";
@@ -104,8 +104,6 @@ export type {
 export type {
   FrontingSessionRow,
   NewFrontingSession,
-  SwitchRow,
-  NewSwitch,
   CustomFrontRow,
   NewCustomFront,
   FrontingCommentRow,

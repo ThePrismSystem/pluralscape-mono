@@ -99,7 +99,6 @@ function isFrontingDocument(doc: unknown): doc is FrontingDocument {
     doc !== null &&
     typeof doc === "object" &&
     "sessions" in doc &&
-    "switches" in doc &&
     "comments" in doc &&
     "checkInRecords" in doc
   );

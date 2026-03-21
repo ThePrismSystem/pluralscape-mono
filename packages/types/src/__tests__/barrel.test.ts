@@ -127,7 +127,6 @@ import type {
   PKImportSwitch,
   PKMemberMapping,
   PKProxyTag,
-  PKSwitchMapping,
   PKSyncableEntityType,
   PKSyncDirection,
   PKSyncError,
@@ -354,8 +353,6 @@ import type {
   SubsystemLayerLink,
   SubsystemMembership,
   SubsystemSideSystemLink,
-  Switch,
-  SwitchId,
   System,
   SystemId,
   TermCategory,
@@ -375,7 +372,6 @@ describe("barrel exports", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<MemberPhotoId>().toExtend<string>();
-    expectTypeOf<SwitchId>().toExtend<string>();
     expectTypeOf<HexColor>().toExtend<string>();
     expectTypeOf<EntityType>().toExtend<string>();
     expectTypeOf<System>().toBeObject();
@@ -400,7 +396,6 @@ describe("barrel exports", () => {
     expectTypeOf<FrontingSession>().toBeObject();
     expectTypeOf<ActiveFrontingSession>().toBeObject();
     expectTypeOf<CompletedFrontingSession>().toBeObject();
-    expectTypeOf<Switch>().toBeObject();
     expectTypeOf<CustomFront>().toBeObject();
     expectTypeOf<ArchivedCustomFront>().toBeObject();
     expectTypeOf<CoFrontState>().toBeObject();
@@ -810,7 +805,6 @@ describe("barrel exports", () => {
     expectTypeOf<PKBridgeConfig>().toBeObject();
     expectTypeOf<PKMemberMapping>().toBeObject();
     expectTypeOf<PKGroupMapping>().toBeObject();
-    expectTypeOf<PKSwitchMapping>().toBeObject();
     expectTypeOf<PKEntityMapping>().toBeObject();
     expectTypeOf<PKSyncState>().toBeObject();
     expectTypeOf<PKSyncError>().toBeObject();

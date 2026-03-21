@@ -38,21 +38,6 @@ export interface CrdtFrontingComment extends CrdtAuditFields {
   archived: boolean;
 }
 
-// ── switch ───────────────────────────────────────────────────────────
-
-/**
- * CRDT representation of a Switch (append-only list element).
- * Immutable once appended — records the moment control transfers.
- */
-export interface CrdtSwitch {
-  id: CrdtString;
-  systemId: CrdtString;
-  /** JSON-serialized [MemberId, ...MemberId[]] */
-  memberIds: CrdtString;
-  timestamp: number;
-  archived: boolean;
-}
-
 // ── check-in record ──────────────────────────────────────────────────
 
 /**
@@ -94,8 +79,6 @@ export interface FrontingDocument {
   sessions: Record<string, CrdtFrontingSession>;
   /** LWW map keyed by FrontingCommentId. */
   comments: Record<string, CrdtFrontingComment>;
-  /** Append-only list of switch events. Immutable once appended. */
-  switches: CrdtSwitch[];
   /** Append-lww map: records are added by ID assignment; response fields are mutable. */
   checkInRecords: Record<string, CrdtCheckInRecord>;
 }

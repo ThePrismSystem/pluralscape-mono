@@ -22,7 +22,6 @@ export type {
 export type {
   CrdtFrontingSession,
   CrdtFrontingComment,
-  CrdtSwitch,
   CrdtCheckInRecord,
   FrontingDocument,
 } from "./schemas/fronting.js";

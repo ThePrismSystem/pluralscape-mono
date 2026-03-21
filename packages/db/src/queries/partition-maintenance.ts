@@ -7,18 +7,13 @@ import type { PgliteDatabase } from "drizzle-orm/pglite";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** Tables managed via range partitioning on a timestamp column. */
-export const PARTITIONED_TABLES = [
-  "messages",
-  "audit_log",
-  "fronting_sessions",
-  "switches",
-] as const;
+export const PARTITIONED_TABLES = ["messages", "audit_log", "fronting_sessions"] as const;
 
 export type PartitionedTable = (typeof PARTITIONED_TABLES)[number];
 
 /**
  * Only audit_log partitions may be destructively detached.
- * Messages, fronting_sessions, and switches are retained until
+ * Messages and fronting_sessions are retained until
  * explicitly deleted by the user or account deletion.
  */
 export type DetachableTable = "audit_log";

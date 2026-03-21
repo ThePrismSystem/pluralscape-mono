@@ -45,7 +45,6 @@ import type {
   SessionId,
   SideSystemId,
   SubsystemId,
-  SwitchId,
   AuthKeyId,
   RecoveryKeyId,
   DeviceTransferRequestId,
@@ -107,7 +106,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 61 branded types as string-based", () => {
+  it("defines all 60 branded types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -149,7 +148,6 @@ describe("branded ID types", () => {
     expectTypeOf<SystemSettingsId>().toExtend<string>();
     expectTypeOf<PollOptionId>().toExtend<string>();
     expectTypeOf<MemberPhotoId>().toExtend<string>();
-    expectTypeOf<SwitchId>().toExtend<string>();
     expectTypeOf<AuthKeyId>().toExtend<string>();
     expectTypeOf<RecoveryKeyId>().toExtend<string>();
     expectTypeOf<DeviceTransferRequestId>().toExtend<string>();
@@ -207,7 +205,7 @@ describe("ID_PREFIXES", () => {
 
   it("has the same number of entries as EntityType members", () => {
     const prefixCount = Object.keys(ID_PREFIXES).length;
-    expect(prefixCount).toBe(65);
+    expect(prefixCount).toBe(64);
   });
 });
 
@@ -275,7 +273,6 @@ describe("EntityType", () => {
         case "system-settings":
         case "poll-option":
         case "member-photo":
-        case "switch":
         case "auth-key":
         case "recovery-key":
         case "device-transfer-request":

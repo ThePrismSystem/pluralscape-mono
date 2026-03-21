@@ -316,48 +316,6 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
       resolver.dispose();
     }
   });
-
-  it("syncs switch append-only entries", async () => {
-    const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
-    try {
-      const testDocId = asSyncDocId("fronting-sys_typed2");
-      const keys = resolver.resolveKeys(testDocId);
-      const relay = new EncryptedRelay();
-      const base = createFrontingDocument();
-
-      const sessionA = new EncryptedSyncSession<FrontingDocument>({
-        doc: Automerge.clone(base),
-        keys,
-        documentId: testDocId,
-        sodium,
-      });
-      const sessionB = new EncryptedSyncSession<FrontingDocument>({
-        doc: Automerge.clone(base),
-        keys,
-        documentId: testDocId,
-        sodium,
-      });
-
-      const envelope = sessionA.change((doc) => {
-        doc.switches.push({
-          id: s("sw_1"),
-          systemId: s("sys_typed2"),
-          memberIds: s('["mem_1"]'),
-          timestamp: 1000,
-          archived: false,
-        });
-      });
-      await relay.submit(envelope);
-
-      const _r5 = await relay.getEnvelopesSince(testDocId, 0);
-      sessionB.applyEncryptedChanges(_r5.envelopes);
-
-      expect(sessionB.document.switches).toHaveLength(1);
-      expect(String(sessionB.document.switches[0]?.memberIds)).toBe('["mem_1"]');
-    } finally {
-      resolver.dispose();
-    }
-  });
 });
 
 describe("typed encrypted roundtrip — ChatDocument", () => {

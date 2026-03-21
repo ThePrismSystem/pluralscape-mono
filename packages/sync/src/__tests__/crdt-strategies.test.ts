@@ -54,7 +54,6 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
       // fronting
       "fronting-session",
       "fronting-comment",
-      "switch",
       "check-in-record",
       // chat
       "channel",
@@ -126,7 +125,7 @@ describe("ENTITY_CRDT_STRATEGIES registry", () => {
       ([, s]) => s.storageType === "append-only",
     );
     for (const [entityType, strategy] of appendOnly) {
-      // append-only entities: lifecycle-event (system-core), switch (fronting),
+      // append-only entities: lifecycle-event (system-core),
       // message, poll-vote (chat)
       expect(
         ["system-core", "fronting", "chat"],

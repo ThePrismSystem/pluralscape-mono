@@ -4,7 +4,6 @@ import type {
   FrontingSessionId,
   HexColor,
   MemberId,
-  SwitchId,
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
@@ -66,18 +65,6 @@ export type FrontingSession = ActiveFrontingSession | CompletedFrontingSession;
 
 /** An archived fronting session. */
 export type ArchivedFrontingSession = Archived<FrontingSession>;
-
-/** An event recording a switch between members. */
-export interface Switch {
-  readonly id: SwitchId;
-  readonly systemId: SystemId;
-  readonly memberIds: readonly [MemberId, ...MemberId[]];
-  readonly timestamp: UnixMillis;
-  readonly archived: false;
-}
-
-/** An archived switch. */
-export type ArchivedSwitch = Archived<Switch>;
 
 /** A user-defined abstract cognitive state logged like a member. */
 export interface CustomFront extends AuditMetadata {

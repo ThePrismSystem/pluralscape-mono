@@ -4,12 +4,7 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/sqlite/auth.js";
-import {
-  customFronts,
-  frontingComments,
-  frontingSessions,
-  switches,
-} from "../schema/sqlite/fronting.js";
+import { customFronts, frontingComments, frontingSessions } from "../schema/sqlite/fronting.js";
 import { members } from "../schema/sqlite/members.js";
 import { systems } from "../schema/sqlite/systems.js";
 
@@ -28,7 +23,6 @@ const schema = {
   systems,
   members,
   frontingSessions,
-  switches,
   customFronts,
   frontingComments,
 };
@@ -91,7 +85,6 @@ describe("SQLite fronting schema", () => {
 
   afterEach(() => {
     db.delete(frontingComments).run();
-    db.delete(switches).run();
     db.delete(frontingSessions).run();
     db.delete(customFronts).run();
   });
@@ -591,233 +584,6 @@ describe("SQLite fronting schema", () => {
         .run();
 
       const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-  });
-
-  describe("switches", () => {
-    it("inserts with memberIds and round-trips the array", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const memberIds = ["mem_test1", "mem_test2"] as const;
-
-      db.insert(switches)
-        .values({
-          id,
-          systemId,
-          timestamp: now,
-          memberIds,
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.memberIds).toEqual(memberIds);
-      expect(rows[0]?.systemId).toBe(systemId);
-      expect(rows[0]?.timestamp).toBe(now);
-    });
-
-    it("cascades on system deletion", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(switches)
-        .values({
-          id,
-          systemId,
-          timestamp: now,
-          memberIds: ["mem_test1", "mem_test2"],
-          createdAt: now,
-        })
-        .run();
-
-      db.delete(systems).where(eq(systems.id, systemId)).run();
-      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
-      expect(rows).toHaveLength(0);
-    });
-
-    it("rejects nonexistent systemId FK", () => {
-      const now = Date.now();
-      expect(() =>
-        db
-          .insert(switches)
-          .values({
-            id: crypto.randomUUID(),
-            systemId: "nonexistent",
-            timestamp: now,
-            memberIds: ["mem_test1", "mem_test2"],
-            createdAt: now,
-          })
-          .run(),
-      ).toThrow(/FOREIGN KEY|constraint/i);
-    });
-
-    it("rejects empty memberIds array via CHECK constraint", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-
-      expect(() =>
-        client
-          .prepare(
-            "INSERT INTO switches (id, system_id, timestamp, member_ids, created_at) VALUES (?, ?, ?, '[]', ?)",
-          )
-          .run(crypto.randomUUID(), systemId, now, now),
-      ).toThrow(/CHECK|constraint/i);
-    });
-
-    it("accepts single-element memberIds array (minimum valid)", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(switches)
-        .values({
-          id,
-          systemId,
-          timestamp: now,
-          memberIds: ["mem_single"],
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.memberIds).toEqual(["mem_single"]);
-    });
-
-    it("defaults version to 1", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(switches)
-        .values({
-          id,
-          systemId,
-          timestamp: now,
-          memberIds: ["mem_test1"],
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
-      expect(rows[0]?.version).toBe(1);
-    });
-
-    it("rejects version < 1 via CHECK constraint", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-
-      expect(() =>
-        client
-          .prepare(
-            `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version) VALUES (?, ?, ?, '["m1"]', ?, 0)`,
-          )
-          .run(crypto.randomUUID(), systemId, now, now),
-      ).toThrow(/constraint/i);
-    });
-
-    it("defaults archived to false and archivedAt to null", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(switches)
-        .values({
-          id,
-          systemId,
-          timestamp: now,
-          memberIds: ["mem_test1"],
-          createdAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
-      expect(rows[0]?.archived).toBe(false);
-      expect(rows[0]?.archivedAt).toBeNull();
-    });
-
-    it("round-trips archived: true with archivedAt timestamp", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(switches)
-        .values({
-          id,
-          systemId,
-          timestamp: now,
-          memberIds: ["mem_test1"],
-          createdAt: now,
-          archived: true,
-          archivedAt: now,
-        })
-        .run();
-
-      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-
-    it("rejects archived=true with archivedAt=null via CHECK constraint", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-
-      expect(() =>
-        client
-          .prepare(
-            `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version, archived, archived_at) VALUES (?, ?, ?, '["m1"]', ?, 1, 1, NULL)`,
-          )
-          .run(crypto.randomUUID(), systemId, now, now),
-      ).toThrow(/CHECK|constraint/i);
-    });
-
-    it("rejects archived=false with archivedAt set via CHECK constraint", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const now = Date.now();
-
-      expect(() =>
-        client
-          .prepare(
-            `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version, archived, archived_at) VALUES (?, ?, ?, '["m1"]', ?, 1, 0, ?)`,
-          )
-          .run(crypto.randomUUID(), systemId, now, now, now),
-      ).toThrow(/CHECK|constraint/i);
-    });
-
-    it("updates archived from false to true", () => {
-      const accountId = insertAccount();
-      const systemId = insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      db.insert(switches)
-        .values({
-          id,
-          systemId,
-          timestamp: now,
-          memberIds: ["mem_test1"],
-          createdAt: now,
-        })
-        .run();
-
-      db.update(switches).set({ archived: true, archivedAt: now }).where(eq(switches.id, id)).run();
-
-      const rows = db.select().from(switches).where(eq(switches.id, id)).all();
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
     });

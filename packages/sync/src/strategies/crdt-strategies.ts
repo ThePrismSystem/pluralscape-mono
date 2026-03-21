@@ -213,12 +213,6 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "comments",
     mutationSemantics: "LWW per field — content, archived",
   },
-  switch: {
-    storageType: "append-only",
-    document: "fronting",
-    fieldName: "switches",
-    mutationSemantics: "Immutable once appended — records the moment control transfers",
-  },
   "check-in-record": {
     storageType: "append-lww",
     document: "fronting",

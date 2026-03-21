@@ -220,53 +220,6 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
   });
 });
 
-// ── Category 2: Concurrent appends to lists ───────────────────────────
-
-describe("Category 2: concurrent appends to lists", () => {
-  let relay: EncryptedRelay;
-  let keys: DocumentKeys;
-
-  beforeEach(() => {
-    relay = new EncryptedRelay();
-    keys = makeKeys();
-  });
-
-  it("2a — concurrent appends to switches list: both entries present after merge", async () => {
-    const base = createFrontingDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-fronting-001"));
-
-    const envA = sessionA.change((d) => {
-      d.switches.push({
-        id: s("sw_a"),
-        systemId: s("sys_1"),
-        memberIds: s('["mem_1"]'),
-        timestamp: 1000,
-        archived: false,
-      });
-    });
-    const envB = sessionB.change((d) => {
-      d.switches.push({
-        id: s("sw_b"),
-        systemId: s("sys_1"),
-        memberIds: s('["mem_2"]'),
-        timestamp: 1001,
-        archived: false,
-      });
-    });
-
-    await relay.submit(envA);
-    await relay.submit(envB);
-    await syncThroughRelay([sessionA, sessionB], relay);
-
-    expect(sessionA.document.switches).toHaveLength(2);
-    expect(sessionB.document.switches).toHaveLength(2);
-    const ids = sessionA.document.switches.map((sw) => sw.id.val);
-    expect(ids).toContain("sw_a");
-    expect(ids).toContain("sw_b");
-    expect(sessionA.document).toEqual(sessionB.document);
-  });
-});
-
 // ── Category 3: Concurrent FrontingSession end time ───────────────────
 
 describe("Category 3: concurrent FrontingSession end time", () => {

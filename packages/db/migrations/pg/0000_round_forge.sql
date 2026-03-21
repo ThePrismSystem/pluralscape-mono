@@ -830,21 +830,6 @@ CREATE TABLE "subsystems" (
 	CONSTRAINT "subsystems_archived_consistency_check" CHECK (("subsystems"."archived" = true) = ("subsystems"."archived_at" IS NOT NULL))
 );
 --> statement-breakpoint
-CREATE TABLE "switches" (
-	"id" varchar(50) NOT NULL,
-	"system_id" varchar(50) NOT NULL,
-	"timestamp" timestamptz NOT NULL,
-	"member_ids" jsonb NOT NULL,
-	"created_at" timestamptz NOT NULL,
-	"version" integer DEFAULT 1 NOT NULL,
-	"archived" boolean DEFAULT false NOT NULL,
-	"archived_at" timestamptz,
-	CONSTRAINT "switches_id_timestamp_pk" PRIMARY KEY("id","timestamp"),
-	CONSTRAINT "switches_member_ids_check" CHECK (jsonb_array_length("switches"."member_ids") >= 1),
-	CONSTRAINT "switches_version_check" CHECK ("switches"."version" >= 1),
-	CONSTRAINT "switches_archived_consistency_check" CHECK (("switches"."archived" = true) = ("switches"."archived_at" IS NOT NULL))
-);
---> statement-breakpoint
 CREATE TABLE "sync_changes" (
 	"id" varchar(50) PRIMARY KEY NOT NULL,
 	"document_id" varchar(255) NOT NULL,
@@ -989,7 +974,7 @@ CREATE TABLE "webhook_deliveries" (
 	"created_at" timestamptz NOT NULL,
 	"archived" boolean DEFAULT false NOT NULL,
 	"archived_at" timestamptz,
-	CONSTRAINT "webhook_deliveries_event_type_check" CHECK ("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+	CONSTRAINT "webhook_deliveries_event_type_check" CHECK ("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
 	CONSTRAINT "webhook_deliveries_status_check" CHECK ("webhook_deliveries"."status" IS NULL OR "webhook_deliveries"."status" IN ('pending', 'success', 'failed')),
 	CONSTRAINT "webhook_deliveries_attempt_count_check" CHECK ("webhook_deliveries"."attempt_count" >= 0),
 	CONSTRAINT "webhook_deliveries_http_status_check" CHECK ("webhook_deliveries"."http_status" IS NULL OR ("webhook_deliveries"."http_status" >= 100 AND "webhook_deliveries"."http_status" <= 599)),
@@ -1126,7 +1111,6 @@ ALTER TABLE "subsystem_side_system_links" ADD CONSTRAINT "subsystem_side_system_
 ALTER TABLE "subsystem_side_system_links" ADD CONSTRAINT "subsystem_side_system_links_side_system_id_system_id_side_systems_id_system_id_fk" FOREIGN KEY ("side_system_id","system_id") REFERENCES "public"."side_systems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subsystems" ADD CONSTRAINT "subsystems_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subsystems" ADD CONSTRAINT "subsystems_parent_subsystem_id_system_id_subsystems_id_system_id_fk" FOREIGN KEY ("parent_subsystem_id","system_id") REFERENCES "public"."subsystems"("id","system_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "switches" ADD CONSTRAINT "switches_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sync_changes" ADD CONSTRAINT "sync_changes_document_id_sync_documents_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."sync_documents"("document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sync_conflicts" ADD CONSTRAINT "sync_conflicts_document_id_sync_documents_document_id_fk" FOREIGN KEY ("document_id") REFERENCES "public"."sync_documents"("document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sync_documents" ADD CONSTRAINT "sync_documents_system_id_systems_id_fk" FOREIGN KEY ("system_id") REFERENCES "public"."systems"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -1267,8 +1251,6 @@ CREATE INDEX "subsystem_memberships_system_id_idx" ON "subsystem_memberships" US
 CREATE INDEX "subsystem_side_system_links_subsystem_id_idx" ON "subsystem_side_system_links" USING btree ("subsystem_id");--> statement-breakpoint
 CREATE INDEX "subsystem_side_system_links_side_system_id_idx" ON "subsystem_side_system_links" USING btree ("side_system_id");--> statement-breakpoint
 CREATE INDEX "subsystems_system_archived_idx" ON "subsystems" USING btree ("system_id","archived");--> statement-breakpoint
-CREATE INDEX "switches_system_timestamp_idx" ON "switches" USING btree ("system_id","timestamp");--> statement-breakpoint
-CREATE INDEX "switches_system_archived_idx" ON "switches" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE UNIQUE INDEX "sync_changes_document_id_seq_idx" ON "sync_changes" USING btree ("document_id","seq");--> statement-breakpoint
 CREATE UNIQUE INDEX "sync_changes_dedup_idx" ON "sync_changes" USING btree ("document_id","author_public_key","nonce");--> statement-breakpoint
 CREATE INDEX "sync_conflicts_document_id_idx" ON "sync_conflicts" USING btree ("document_id");--> statement-breakpoint

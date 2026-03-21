@@ -1089,23 +1089,6 @@ CREATE TABLE `subsystems` (
 --> statement-breakpoint
 CREATE INDEX `subsystems_system_archived_idx` ON `subsystems` (`system_id`,`archived`);--> statement-breakpoint
 CREATE UNIQUE INDEX `subsystems_id_system_id_unique` ON `subsystems` (`id`,`system_id`);--> statement-breakpoint
-CREATE TABLE `switches` (
-	`id` text PRIMARY KEY NOT NULL,
-	`system_id` text NOT NULL,
-	`timestamp` integer NOT NULL,
-	`member_ids` text NOT NULL,
-	`created_at` integer NOT NULL,
-	`version` integer DEFAULT 1 NOT NULL,
-	`archived` integer DEFAULT false NOT NULL,
-	`archived_at` integer,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "switches_member_ids_check" CHECK(json_array_length("switches"."member_ids") >= 1),
-	CONSTRAINT "switches_version_check" CHECK("switches"."version" >= 1),
-	CONSTRAINT "switches_archived_consistency_check" CHECK(("switches"."archived" = true) = ("switches"."archived_at" IS NOT NULL))
-);
---> statement-breakpoint
-CREATE INDEX `switches_system_timestamp_idx` ON `switches` (`system_id`,`timestamp`);--> statement-breakpoint
-CREATE INDEX `switches_system_archived_idx` ON `switches` (`system_id`,`archived`);--> statement-breakpoint
 CREATE TABLE `sync_changes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`document_id` text NOT NULL,
@@ -1287,7 +1270,7 @@ CREATE TABLE `webhook_deliveries` (
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`webhook_id`,`system_id`) REFERENCES `webhook_configs`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "webhook_deliveries_event_type_check" CHECK("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+	CONSTRAINT "webhook_deliveries_event_type_check" CHECK("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
 	CONSTRAINT "webhook_deliveries_status_check" CHECK("webhook_deliveries"."status" IS NULL OR "webhook_deliveries"."status" IN ('pending', 'success', 'failed')),
 	CONSTRAINT "webhook_deliveries_attempt_count_check" CHECK("webhook_deliveries"."attempt_count" >= 0),
 	CONSTRAINT "webhook_deliveries_http_status_check" CHECK("webhook_deliveries"."http_status" IS NULL OR ("webhook_deliveries"."http_status" >= 100 AND "webhook_deliveries"."http_status" <= 599)),

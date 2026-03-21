@@ -1,5 +1,5 @@
 import type { EncryptedString } from "./encryption.js";
-import type { GroupId, MemberId, PKBridgeConfigId, SwitchId, SystemId } from "./ids.js";
+import type { GroupId, MemberId, PKBridgeConfigId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { AuditMetadata } from "./utility.js";
 
@@ -13,7 +13,7 @@ export type PKSyncDirection = "ps-to-pk" | "pk-to-ps" | "bidirectional";
 export type PKSyncStatus = "idle" | "syncing" | "error" | "paused";
 
 /** Entity types that can be synced with PluralKit. */
-export type PKSyncableEntityType = "member" | "group" | "switch";
+export type PKSyncableEntityType = "member" | "group";
 
 /** Error codes for PK sync failures. */
 export type PKSyncErrorCode =
@@ -53,16 +53,8 @@ export interface PKGroupMapping {
   readonly lastSyncedAt: UnixMillis;
 }
 
-/** Maps a Pluralscape switch to its PluralKit counterpart. */
-export interface PKSwitchMapping {
-  readonly psEntityType: "switch";
-  readonly psEntityId: SwitchId;
-  readonly pkEntityId: string;
-  readonly lastSyncedAt: UnixMillis;
-}
-
 /** Maps a Pluralscape entity to its PluralKit counterpart. */
-export type PKEntityMapping = PKMemberMapping | PKGroupMapping | PKSwitchMapping;
+export type PKEntityMapping = PKMemberMapping | PKGroupMapping;
 
 /** Current state of the PK sync process. */
 export interface PKSyncState {

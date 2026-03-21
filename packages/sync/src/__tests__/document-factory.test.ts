@@ -94,7 +94,6 @@ describe("Document factories", () => {
       const doc = createFrontingDocument();
       expect(doc.sessions).toBeDefined();
       expect(doc.comments).toBeDefined();
-      expect(doc.switches).toBeDefined();
       expect(doc.checkInRecords).toBeDefined();
     });
 
@@ -102,7 +101,6 @@ describe("Document factories", () => {
       const doc = createFrontingDocument();
       expect(Object.keys(doc.sessions)).toHaveLength(0);
       expect(Object.keys(doc.comments)).toHaveLength(0);
-      expect(doc.switches).toHaveLength(0);
       expect(Object.keys(doc.checkInRecords)).toHaveLength(0);
     });
 

@@ -210,7 +210,7 @@ describe("splitDocument", () => {
 
   it("throws if fronting docId is paired with a non-fronting document shape", () => {
     const keys = makeKeys(sodium);
-    const wrongDoc = Automerge.from({ sessions: {}, switches: [] });
+    const wrongDoc = Automerge.from({ sessions: {} });
     const session = new EncryptedSyncSession({
       doc: wrongDoc,
       keys,
