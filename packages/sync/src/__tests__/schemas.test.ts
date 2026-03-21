@@ -3,14 +3,12 @@ import { describe, expect, it } from "vitest";
 
 import { fromDoc } from "../factories/document-factory.js";
 
-import type {
-  BucketProjectionDocument,
-  ChatDocument,
-  FrontingDocument,
-  JournalDocument,
-  PrivacyConfigDocument,
-  SystemCoreDocument,
-} from "../schemas/index.js";
+import type { BucketProjectionDocument } from "../schemas/bucket.js";
+import type { ChatDocument } from "../schemas/chat.js";
+import type { FrontingDocument } from "../schemas/fronting.js";
+import type { JournalDocument } from "../schemas/journal.js";
+import type { PrivacyConfigDocument } from "../schemas/privacy-config.js";
+import type { SystemCoreDocument } from "../schemas/system-core.js";
 
 // ── helpers ──────────────────────────────────────────────────────────
 

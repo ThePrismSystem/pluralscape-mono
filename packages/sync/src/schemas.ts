@@ -1,5 +1,5 @@
-export type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./common.js";
-
+// @pluralscape/sync/schemas — CRDT document schema types
+export type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./schemas/common.js";
 export type {
   CrdtSystem,
   CrdtSystemSettings,
@@ -18,16 +18,14 @@ export type {
   CrdtTimer,
   CrdtLifecycleEvent,
   SystemCoreDocument,
-} from "./system-core.js";
-
+} from "./schemas/system-core.js";
 export type {
   CrdtFrontingSession,
   CrdtFrontingComment,
   CrdtSwitch,
   CrdtCheckInRecord,
   FrontingDocument,
-} from "./fronting.js";
-
+} from "./schemas/fronting.js";
 export type {
   CrdtChannel,
   CrdtChatMessage,
@@ -37,10 +35,13 @@ export type {
   CrdtPollVote,
   CrdtAcknowledgementRequest,
   ChatDocument,
-} from "./chat.js";
-
-export type { CrdtJournalEntry, CrdtWikiPage, CrdtNote, JournalDocument } from "./journal.js";
-
+} from "./schemas/chat.js";
+export type {
+  CrdtJournalEntry,
+  CrdtWikiPage,
+  CrdtNote,
+  JournalDocument,
+} from "./schemas/journal.js";
 export type {
   CrdtPrivacyBucket,
   CrdtBucketContentTag,
@@ -48,6 +49,5 @@ export type {
   CrdtFriendCode,
   CrdtKeyGrant,
   PrivacyConfigDocument,
-} from "./privacy-config.js";
-
-export type { BucketProjectionDocument } from "./bucket.js";
+} from "./schemas/privacy-config.js";
+export type { BucketProjectionDocument } from "./schemas/bucket.js";
