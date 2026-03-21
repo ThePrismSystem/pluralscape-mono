@@ -558,7 +558,8 @@ describe("auth service", () => {
       const result = await loginAccount(db, credentials, "web", mockAudit, mockLogger);
       expect(result).toBeNull();
 
-      // Wait for fire-and-forget promise to settle
+      // Flush fire-and-forget promise — no fake timers here since the
+      // delay is waiting for a real async void operation to settle.
       await new Promise((resolve) => setTimeout(resolve, 10));
       expect(logMethods.error).toHaveBeenCalledWith(
         "Failed to write auth.login-failed audit event",

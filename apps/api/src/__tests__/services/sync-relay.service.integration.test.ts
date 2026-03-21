@@ -223,7 +223,8 @@ describe("PgSyncRelayService (PGlite integration)", () => {
       const [row1] = await db.select({ createdAt: syncSnapshots.createdAt }).from(syncSnapshots);
       const originalCreatedAt = row1?.createdAt;
 
-      // Small delay to ensure timestamps differ
+      // Real delay to ensure DB timestamps differ — integration test
+      // against a live database, so fake timers are not applicable.
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       await service.submitSnapshot(makeSnapshotEnvelope(docId, 2));
