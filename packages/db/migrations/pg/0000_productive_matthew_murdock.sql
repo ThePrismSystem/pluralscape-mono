@@ -393,7 +393,6 @@ CREATE TABLE "fronting_sessions" (
 	"start_time" timestamptz NOT NULL,
 	"end_time" timestamptz,
 	"member_id" varchar(50),
-	"fronting_type" varchar(50) DEFAULT 'fronting' NOT NULL,
 	"custom_front_id" varchar(50),
 	"linked_structure" jsonb,
 	"encrypted_data" "bytea" NOT NULL,
@@ -405,7 +404,6 @@ CREATE TABLE "fronting_sessions" (
 	CONSTRAINT "fronting_sessions_id_start_time_pk" PRIMARY KEY("id","start_time"),
 	CONSTRAINT "fronting_sessions_id_system_id_unique" UNIQUE("id","system_id","start_time"),
 	CONSTRAINT "fronting_sessions_end_time_check" CHECK ("fronting_sessions"."end_time" IS NULL OR "fronting_sessions"."end_time" > "fronting_sessions"."start_time"),
-	CONSTRAINT "fronting_sessions_fronting_type_check" CHECK ("fronting_sessions"."fronting_type" IS NULL OR "fronting_sessions"."fronting_type" IN ('fronting', 'co-conscious')),
 	CONSTRAINT "fronting_sessions_version_check" CHECK ("fronting_sessions"."version" >= 1),
 	CONSTRAINT "fronting_sessions_archived_consistency_check" CHECK (("fronting_sessions"."archived" = true) = ("fronting_sessions"."archived_at" IS NOT NULL)),
 	CONSTRAINT "fronting_sessions_subject_check" CHECK ("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL)
@@ -1189,7 +1187,6 @@ CREATE INDEX "fronting_reports_system_id_idx" ON "fronting_reports" USING btree 
 CREATE INDEX "fronting_sessions_system_start_idx" ON "fronting_sessions" USING btree ("system_id","start_time");--> statement-breakpoint
 CREATE INDEX "fronting_sessions_system_member_start_idx" ON "fronting_sessions" USING btree ("system_id","member_id","start_time");--> statement-breakpoint
 CREATE INDEX "fronting_sessions_system_end_idx" ON "fronting_sessions" USING btree ("system_id","end_time");--> statement-breakpoint
-CREATE INDEX "fronting_sessions_system_type_start_idx" ON "fronting_sessions" USING btree ("system_id","fronting_type","start_time");--> statement-breakpoint
 CREATE INDEX "fronting_sessions_active_idx" ON "fronting_sessions" USING btree ("system_id") WHERE "fronting_sessions"."end_time" IS NULL;--> statement-breakpoint
 CREATE INDEX "fronting_sessions_system_archived_idx" ON "fronting_sessions" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "group_memberships_member_id_idx" ON "group_memberships" USING btree ("member_id");--> statement-breakpoint

@@ -282,7 +282,6 @@ import type {
   FrontingComment,
   FrontingCommentId,
   FrontingSession,
-  FrontingType,
   GatekeptLayer,
   Group,
   GroupMembership,
@@ -392,7 +391,6 @@ describe("barrel exports", () => {
   });
 
   it("exports fronting types", () => {
-    expectTypeOf<FrontingType>().toBeString();
     expectTypeOf<FrontingSession>().toBeObject();
     expectTypeOf<ActiveFrontingSession>().toBeObject();
     expectTypeOf<CompletedFrontingSession>().toBeObject();

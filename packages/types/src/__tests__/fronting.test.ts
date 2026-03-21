@@ -1,4 +1,4 @@
-import { assertType, describe, expectTypeOf, it } from "vitest";
+import { describe, expectTypeOf, it } from "vitest";
 
 import type {
   ActiveFrontingSession,
@@ -10,7 +10,6 @@ import type {
   CustomFront,
   FrontingComment,
   FrontingSession,
-  FrontingType,
   OuttriggerSentiment,
 } from "../fronting.js";
 import type {
@@ -23,34 +22,6 @@ import type {
 } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 import type { AuditMetadata, EntityReference } from "../utility.js";
-
-describe("FrontingType", () => {
-  it("accepts valid values", () => {
-    assertType<FrontingType>("fronting");
-    assertType<FrontingType>("co-conscious");
-  });
-
-  it("rejects invalid values", () => {
-    // @ts-expect-error invalid fronting type
-    assertType<FrontingType>("dormant");
-  });
-
-  it("is exhaustive in a switch", () => {
-    function handleFrontingType(type: FrontingType): string {
-      switch (type) {
-        case "fronting":
-          return "fronting";
-        case "co-conscious":
-          return "co-conscious";
-        default: {
-          const _exhaustive: never = type;
-          return _exhaustive;
-        }
-      }
-    }
-    expectTypeOf(handleFrontingType).toBeFunction();
-  });
-});
 
 describe("FrontingSession", () => {
   it("discriminates on endTime — null narrows to ActiveFrontingSession", () => {
@@ -70,17 +41,16 @@ describe("FrontingSession", () => {
     expectTypeOf<ActiveFrontingSession["systemId"]>().toEqualTypeOf<SystemId>();
     expectTypeOf<ActiveFrontingSession["memberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<ActiveFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<ActiveFrontingSession["frontingType"]>().toEqualTypeOf<FrontingType>();
     expectTypeOf<ActiveFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<ActiveFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
     expectTypeOf<ActiveFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
       "subsystem" | "side-system" | "layer"
     > | null>();
     expectTypeOf<ActiveFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<ActiveFrontingSession["outtrigger"]>().toEqualTypeOf<{
-      readonly reason: string;
-      readonly sentiment: OuttriggerSentiment;
-    } | null>();
+    expectTypeOf<ActiveFrontingSession["outtrigger"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<
+      ActiveFrontingSession["outtriggerSentiment"]
+    >().toEqualTypeOf<OuttriggerSentiment | null>();
   });
 
   it("CompletedFrontingSession has individual field types", () => {
@@ -89,17 +59,16 @@ describe("FrontingSession", () => {
     expectTypeOf<CompletedFrontingSession["memberId"]>().toEqualTypeOf<MemberId>();
     expectTypeOf<CompletedFrontingSession["startTime"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<CompletedFrontingSession["endTime"]>().toEqualTypeOf<UnixMillis>();
-    expectTypeOf<CompletedFrontingSession["frontingType"]>().toEqualTypeOf<FrontingType>();
     expectTypeOf<CompletedFrontingSession["comment"]>().toEqualTypeOf<string | null>();
     expectTypeOf<CompletedFrontingSession["customFrontId"]>().toEqualTypeOf<CustomFrontId | null>();
     expectTypeOf<CompletedFrontingSession["linkedStructure"]>().toEqualTypeOf<EntityReference<
       "subsystem" | "side-system" | "layer"
     > | null>();
     expectTypeOf<CompletedFrontingSession["positionality"]>().toEqualTypeOf<string | null>();
-    expectTypeOf<CompletedFrontingSession["outtrigger"]>().toEqualTypeOf<{
-      readonly reason: string;
-      readonly sentiment: OuttriggerSentiment;
-    } | null>();
+    expectTypeOf<CompletedFrontingSession["outtrigger"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<
+      CompletedFrontingSession["outtriggerSentiment"]
+    >().toEqualTypeOf<OuttriggerSentiment | null>();
   });
 
   it("ActiveFrontingSession extends AuditMetadata", () => {

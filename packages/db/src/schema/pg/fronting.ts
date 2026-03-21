@@ -18,9 +18,7 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
-import { FRONTING_TYPES } from "../../helpers/enums.js";
+import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -61,10 +59,6 @@ export const frontingSessions = pgTable(
     startTime: pgTimestamp("start_time").notNull(),
     endTime: pgTimestamp("end_time"),
     memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
-    frontingType: varchar("fronting_type", { length: ENUM_MAX_LENGTH })
-      .notNull()
-      .default("fronting")
-      .$type<ServerFrontingSession["frontingType"]>(),
     customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
     linkedStructure: jsonb("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -79,7 +73,6 @@ export const frontingSessions = pgTable(
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
-    index("fronting_sessions_system_type_start_idx").on(t.systemId, t.frontingType, t.startTime),
     index("fronting_sessions_active_idx")
       .on(t.systemId)
       .where(sql`${t.endTime} IS NULL`),
@@ -88,7 +81,6 @@ export const frontingSessions = pgTable(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
-    check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId, t.startTime),
     foreignKey({
       columns: [t.memberId, t.systemId],

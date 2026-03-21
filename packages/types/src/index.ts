@@ -135,7 +135,6 @@ export type {
 
 // ── Fronting ────────────────────────────────────────────────────────
 export type {
-  FrontingType,
   OuttriggerSentiment,
   ActiveFrontingSession,
   CompletedFrontingSession,

@@ -1,4 +1,3 @@
-import type { FrontingType } from "./fronting.js";
 import type {
   BlobId,
   CustomFrontId,
@@ -112,7 +111,6 @@ export interface EntityLink {
 /** Shared base fields for all fronting snapshot entry variants (unexported). */
 interface FrontingSnapshotEntryBase {
   readonly sessionId: FrontingSessionId;
-  readonly frontingType: FrontingType;
   readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
   readonly startTime: UnixMillis;
 }

@@ -495,7 +495,6 @@ CREATE TABLE `fronting_sessions` (
 	`start_time` integer NOT NULL,
 	`end_time` integer,
 	`member_id` text,
-	`fronting_type` text DEFAULT 'fronting' NOT NULL,
 	`custom_front_id` text,
 	`linked_structure` text,
 	`encrypted_data` blob NOT NULL,
@@ -508,7 +507,6 @@ CREATE TABLE `fronting_sessions` (
 	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`custom_front_id`) REFERENCES `custom_fronts`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "fronting_sessions_end_time_check" CHECK("fronting_sessions"."end_time" IS NULL OR "fronting_sessions"."end_time" > "fronting_sessions"."start_time"),
-	CONSTRAINT "fronting_sessions_fronting_type_check" CHECK("fronting_sessions"."fronting_type" IS NULL OR "fronting_sessions"."fronting_type" IN ('fronting', 'co-conscious')),
 	CONSTRAINT "fronting_sessions_version_check" CHECK("fronting_sessions"."version" >= 1),
 	CONSTRAINT "fronting_sessions_archived_consistency_check" CHECK(("fronting_sessions"."archived" = true) = ("fronting_sessions"."archived_at" IS NOT NULL)),
 	CONSTRAINT "fronting_sessions_subject_check" CHECK("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL)
@@ -517,7 +515,6 @@ CREATE TABLE `fronting_sessions` (
 CREATE INDEX `fronting_sessions_system_start_idx` ON `fronting_sessions` (`system_id`,`start_time`);--> statement-breakpoint
 CREATE INDEX `fronting_sessions_system_member_start_idx` ON `fronting_sessions` (`system_id`,`member_id`,`start_time`);--> statement-breakpoint
 CREATE INDEX `fronting_sessions_system_end_idx` ON `fronting_sessions` (`system_id`,`end_time`);--> statement-breakpoint
-CREATE INDEX `fronting_sessions_system_type_start_idx` ON `fronting_sessions` (`system_id`,`fronting_type`,`start_time`);--> statement-breakpoint
 CREATE INDEX `fronting_sessions_active_idx` ON `fronting_sessions` (`system_id`) WHERE "fronting_sessions"."end_time" IS NULL;--> statement-breakpoint
 CREATE INDEX `fronting_sessions_system_archived_idx` ON `fronting_sessions` (`system_id`,`archived`);--> statement-breakpoint
 CREATE UNIQUE INDEX `fronting_sessions_id_system_id_unique` ON `fronting_sessions` (`id`,`system_id`);--> statement-breakpoint

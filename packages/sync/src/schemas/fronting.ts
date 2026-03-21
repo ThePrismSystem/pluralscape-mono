@@ -14,15 +14,15 @@ export interface CrdtFrontingSession extends CrdtAuditFields {
   startTime: number;
   /** LWW — set on switch-out. Null while session is active. */
   endTime: number | null;
-  /** FrontingType string: "fronting" | "co-conscious" */
-  frontingType: CrdtString;
   comment: CrdtOptionalString;
   customFrontId: CrdtOptionalString;
   /** JSON-serialized EntityReference<"subsystem"|"side-system"|"layer"> | null */
   linkedStructure: CrdtOptionalString;
   positionality: CrdtOptionalString;
-  /** JSON-serialized outtrigger object | null */
+  /** Free-text outtrigger reason | null */
   outtrigger: CrdtOptionalString;
+  /** OuttriggerSentiment string: "positive" | "neutral" | "negative" | null */
+  outtriggerSentiment: CrdtOptionalString;
   archived: boolean;
 }
 

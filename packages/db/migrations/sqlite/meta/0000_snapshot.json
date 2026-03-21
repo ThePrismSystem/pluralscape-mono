@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "3146d502-8325-4f3a-9482-1d051fac1172",
+  "id": "a7feda88-b6fc-4a5a-91e0-d5e233caa2d6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -3106,14 +3106,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "fronting_type": {
-          "name": "fronting_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'fronting'"
-        },
         "custom_front_id": {
           "name": "custom_front_id",
           "type": "text",
@@ -3189,11 +3181,6 @@
           "columns": ["system_id", "end_time"],
           "isUnique": false
         },
-        "fronting_sessions_system_type_start_idx": {
-          "name": "fronting_sessions_system_type_start_idx",
-          "columns": ["system_id", "fronting_type", "start_time"],
-          "isUnique": false
-        },
         "fronting_sessions_active_idx": {
           "name": "fronting_sessions_active_idx",
           "columns": ["system_id"],
@@ -3246,10 +3233,6 @@
         "fronting_sessions_end_time_check": {
           "name": "fronting_sessions_end_time_check",
           "value": "\"fronting_sessions\".\"end_time\" IS NULL OR \"fronting_sessions\".\"end_time\" > \"fronting_sessions\".\"start_time\""
-        },
-        "fronting_sessions_fronting_type_check": {
-          "name": "fronting_sessions_fronting_type_check",
-          "value": "\"fronting_sessions\".\"fronting_type\" IS NULL OR \"fronting_sessions\".\"fronting_type\" IN ('fronting', 'co-conscious')"
         },
         "fronting_sessions_version_check": {
           "name": "fronting_sessions_version_check",

@@ -20,7 +20,6 @@ import type {
   ExportFormat,
   ExportRequestStatus,
   FriendConnectionStatus,
-  FrontingType,
   ImportJobStatus,
   ImportSource,
   JobStatus,
@@ -52,10 +51,6 @@ export const KNOWN_SATURATION_LEVELS = [
   "partially-elaborated",
   "highly-elaborated",
 ] as const satisfies readonly KnownSaturationLevel[];
-export const FRONTING_TYPES = [
-  "fronting",
-  "co-conscious",
-] as const satisfies readonly FrontingType[];
 export const RELATIONSHIP_TYPES = [
   "split-from",
   "fused-from",

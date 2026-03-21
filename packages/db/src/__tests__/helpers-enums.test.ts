@@ -20,7 +20,6 @@ import {
   EXPORT_REQUEST_STATUSES,
   FRIEND_CONNECTION_STATUSES,
   FRONTING_REPORT_FORMATS,
-  FRONTING_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
   JOB_STATUSES,
@@ -60,10 +59,6 @@ describe("enum arrays", () => {
       "partially-elaborated",
       "highly-elaborated",
     ]);
-  });
-
-  it("FRONTING_TYPES matches FrontingType union", () => {
-    expect(FRONTING_TYPES).toEqual(["fronting", "co-conscious"]);
   });
 
   it("RELATIONSHIP_TYPES matches RelationshipType union", () => {
@@ -275,7 +270,6 @@ describe("enum arrays", () => {
 
   it("all arrays have correct element counts", () => {
     expect(KNOWN_SATURATION_LEVELS).toHaveLength(4);
-    expect(FRONTING_TYPES).toHaveLength(2);
     expect(RELATIONSHIP_TYPES).toHaveLength(10);
     expect(LAYER_ACCESS_TYPES).toHaveLength(2);
     expect(FRIEND_CONNECTION_STATUSES).toHaveLength(4);

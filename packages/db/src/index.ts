@@ -45,7 +45,6 @@ export type {
 // ── Helpers ────────────────────────────────────────────────────
 export {
   KNOWN_SATURATION_LEVELS,
-  FRONTING_TYPES,
   RELATIONSHIP_TYPES,
   LAYER_ACCESS_TYPES,
   FRIEND_CONNECTION_STATUSES,

@@ -290,7 +290,6 @@ export const SQLITE_DDL = {
       start_time INTEGER NOT NULL,
       end_time INTEGER,
       member_id TEXT,
-      fronting_type TEXT NOT NULL DEFAULT 'fronting' CHECK (fronting_type IN ('fronting', 'co-conscious')),
       custom_front_id TEXT,
       linked_structure TEXT,
       encrypted_data BLOB NOT NULL,
@@ -312,7 +311,6 @@ export const SQLITE_DDL = {
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
     CREATE INDEX fronting_sessions_system_member_start_idx ON fronting_sessions (system_id, member_id, start_time);
     CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
-    CREATE INDEX fronting_sessions_system_type_start_idx ON fronting_sessions (system_id, fronting_type, start_time);
     CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL;
     CREATE INDEX fronting_sessions_system_archived_idx ON fronting_sessions (system_id, archived)
   `,

@@ -1,5 +1,5 @@
 {
-  "id": "2099b034-2740-4e85-8f16-371a9254ec2c",
+  "id": "8f131082-498a-4c40-b7d3-f8a8252646a3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -3837,13 +3837,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "fronting_type": {
-          "name": "fronting_type",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'fronting'"
-        },
         "custom_front_id": {
           "name": "custom_front_id",
           "type": "varchar(50)",
@@ -3965,33 +3958,6 @@
           "method": "btree",
           "with": {}
         },
-        "fronting_sessions_system_type_start_idx": {
-          "name": "fronting_sessions_system_type_start_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "fronting_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "start_time",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "fronting_sessions_active_idx": {
           "name": "fronting_sessions_active_idx",
           "columns": [
@@ -4077,10 +4043,6 @@
         "fronting_sessions_end_time_check": {
           "name": "fronting_sessions_end_time_check",
           "value": "\"fronting_sessions\".\"end_time\" IS NULL OR \"fronting_sessions\".\"end_time\" > \"fronting_sessions\".\"start_time\""
-        },
-        "fronting_sessions_fronting_type_check": {
-          "name": "fronting_sessions_fronting_type_check",
-          "value": "\"fronting_sessions\".\"fronting_type\" IS NULL OR \"fronting_sessions\".\"fronting_type\" IN ('fronting', 'co-conscious')"
         },
         "fronting_sessions_version_check": {
           "name": "fronting_sessions_version_check",

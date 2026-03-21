@@ -316,14 +316,12 @@ describe("PG fronting schema", () => {
         createdAt: now,
         updatedAt: now,
         memberId,
-        frontingType: "fronting",
         customFrontId: cfId,
         linkedStructure: { entityType: "subsystem", entityId: "r-1" },
       });
 
       const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
       expect(rows[0]?.memberId).toBe(memberId);
-      expect(rows[0]?.frontingType).toBe("fronting");
       expect(rows[0]?.customFrontId).toBe(cfId);
       expect(rows[0]?.linkedStructure).toEqual({ entityType: "subsystem", entityId: "r-1" });
     });
@@ -347,7 +345,6 @@ describe("PG fronting schema", () => {
 
       const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
       expect(rows[0]?.memberId).toBeNull();
-      expect(rows[0]?.frontingType).toBe("fronting");
       expect(rows[0]?.customFrontId).toBe(customFrontId);
       expect(rows[0]?.linkedStructure).toBeNull();
     });
@@ -434,26 +431,6 @@ describe("PG fronting schema", () => {
           updatedAt: now,
         }),
       ).rejects.toThrow();
-    });
-
-    it("rejects invalid frontingType via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const memberId = await insertMember(systemId);
-      const now = Date.now();
-
-      await expect(
-        db.insert(frontingSessions).values({
-          id: crypto.randomUUID(),
-          systemId,
-          startTime: now,
-          memberId,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-          frontingType: "invalid" as "fronting",
-        }),
-      ).rejects.toThrow(/check|constraint|failed query/i);
     });
 
     it("rejects version < 1 via CHECK constraint", async () => {

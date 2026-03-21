@@ -10,7 +10,7 @@ import type {
   AcknowledgementRequest,
 } from "./communication.js";
 import type { FieldDefinition, FieldValue, FieldType } from "./custom-fields.js";
-import type { FrontingSession, FrontingType, FrontingComment, CustomFront } from "./fronting.js";
+import type { FrontingSession, FrontingComment, CustomFront } from "./fronting.js";
 import type { Group } from "./groups.js";
 import type { MemberPhoto } from "./identity.js";
 import type {
@@ -139,8 +139,8 @@ export type ClientMember = import("./identity.js").Member;
 
 /**
  * Server-side fronting session representation.
- * T1 encrypted: comment, positionality
- * T3 plaintext: timestamps, memberId, frontingType, customFrontId, linkedStructure, archived
+ * T1 encrypted: comment, positionality, outtrigger, outtriggerSentiment
+ * T3 plaintext: timestamps, memberId, customFrontId, linkedStructure, archived
  */
 export interface ServerFrontingSession extends AuditMetadata {
   readonly id: FrontingSessionId;
@@ -148,7 +148,6 @@ export interface ServerFrontingSession extends AuditMetadata {
   readonly memberId: MemberId;
   readonly startTime: UnixMillis;
   readonly endTime: UnixMillis | null;
-  readonly frontingType: FrontingType;
   readonly customFrontId: CustomFrontId | null;
   readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
   readonly archived: boolean;
@@ -699,7 +698,7 @@ export type EncryptFn<ClientT, ServerT> = (client: ClientT, masterKey: Uint8Arra
 // ── Tier map ───────────────────────────────────────────────────
 //
 // Member: T1 (name, pronouns, description, tags, colors, avatarSource, saturationLevel, suppressFriendFrontNotification, boardMessageNotificationOnFront) | T3 (archived)
-// FrontingSession: T1 (comment, positionality, outtrigger) | T3 (timestamps, memberId, frontingType, customFrontId, linkedStructure, archived)
+// FrontingSession: T1 (comment, positionality, outtrigger, outtriggerSentiment) | T3 (timestamps, memberId, customFrontId, linkedStructure, archived)
 // FrontingComment: T1 (content) | T3 (frontingSessionId, memberId, archived) — extends AuditMetadata
 // Group: T1 (name, description, imageSource, color, emoji) | T3 (sortOrder, archived, parentGroupId)
 // Subsystem: T1 (name, description, color, imageSource, emoji) | T3 (parentSubsystemId, architectureType, hasCore, discoveryStatus, archived)
