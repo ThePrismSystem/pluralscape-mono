@@ -63,53 +63,56 @@ describe("EncryptedSyncSession — full integration", () => {
     base = Automerge.from<DocSchema>({ members: [] });
   });
 
-  it("3.1 — two sessions sync a MemberProfile through encrypted relay", () => {
+  it("3.1 — two sessions sync a MemberProfile through encrypted relay", async () => {
     const sessionA = makeSession(base, sharedKeys);
     const sessionB = makeSession(base, sharedKeys);
 
     const envelope = sessionA.change((doc) => {
       doc.members.push({ name: "Luna", pronouns: "she/her", description: "Host" });
     });
-    relay.submit(envelope);
+    await relay.submit(envelope);
 
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince(DOCUMENT_ID, 0));
+    const result = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    sessionB.applyEncryptedChanges(result.envelopes);
 
     expect(sessionB.document.members).toHaveLength(1);
     expect(sessionB.document.members[0]?.name).toBe("Luna");
   });
 
-  it("3.2 — changes on one side propagate through encrypted relay", () => {
+  it("3.2 — changes on one side propagate through encrypted relay", async () => {
     const sessionA = makeSession(base, sharedKeys);
     const sessionB = makeSession(base, sharedKeys);
 
-    relay.submit(
+    await relay.submit(
       sessionA.change((doc) => {
         doc.members.push({ name: "Kai", pronouns: "they/them", description: "Protector" });
       }),
     );
-    relay.submit(
+    await relay.submit(
       sessionA.change((doc) => {
         doc.members.push({ name: "Nova", pronouns: "xe/xem", description: "Little" });
       }),
     );
 
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince(DOCUMENT_ID, 0));
+    const result = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    sessionB.applyEncryptedChanges(result.envelopes);
 
     expect(sessionB.document.members).toHaveLength(2);
     expect(sessionB.document.members[0]?.name).toBe("Kai");
     expect(sessionB.document.members[1]?.name).toBe("Nova");
   });
 
-  it("3.3 — concurrent edits to different fields merge without conflict", () => {
+  it("3.3 — concurrent edits to different fields merge without conflict", async () => {
     const sessionA = makeSession(base, sharedKeys);
     const sessionB = makeSession(base, sharedKeys);
 
-    relay.submit(
+    await relay.submit(
       sessionA.change((doc) => {
         doc.members.push({ name: "Original", pronouns: "they/them", description: "none" });
       }),
     );
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince(DOCUMENT_ID, 0));
+    const r1 = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    sessionB.applyEncryptedChanges(r1.envelopes);
 
     const envelopeA = sessionA.change((doc) => {
       firstMember(doc).name = "Updated Name";
@@ -118,25 +121,26 @@ describe("EncryptedSyncSession — full integration", () => {
       firstMember(doc).pronouns = "she/her";
     });
 
-    relay.submit(envelopeA);
-    relay.submit(envelopeB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envelopeA);
+    await relay.submit(envelopeB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document.members[0]?.name).toBe("Updated Name");
     expect(sessionA.document.members[0]?.pronouns).toBe("she/her");
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
-  it("3.4 — concurrent edits to same field produce deterministic LWW resolution", () => {
+  it("3.4 — concurrent edits to same field produce deterministic LWW resolution", async () => {
     const sessionA = makeSession(base, sharedKeys);
     const sessionB = makeSession(base, sharedKeys);
 
-    relay.submit(
+    await relay.submit(
       sessionA.change((doc) => {
         doc.members.push({ name: "Original", pronouns: "they/them", description: "none" });
       }),
     );
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince(DOCUMENT_ID, 0));
+    const r1 = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    sessionB.applyEncryptedChanges(r1.envelopes);
 
     const envelopeA = sessionA.change((doc) => {
       firstMember(doc).name = "Name A";
@@ -145,14 +149,14 @@ describe("EncryptedSyncSession — full integration", () => {
       firstMember(doc).name = "Name B";
     });
 
-    relay.submit(envelopeA);
-    relay.submit(envelopeB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envelopeA);
+    await relay.submit(envelopeB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document.members[0]?.name).toBe(sessionB.document.members[0]?.name);
   });
 
-  it("3.5 — concurrent edits resolve identically regardless of apply order", () => {
+  it("3.5 — concurrent edits resolve identically regardless of apply order", async () => {
     const keysForTest = makeKeys(sodium);
     const relayFwd = new EncryptedRelay();
     const relayRev = new EncryptedRelay();
@@ -166,10 +170,11 @@ describe("EncryptedSyncSession — full integration", () => {
       doc.members.push({ name: "Original", pronouns: "they/them", description: "none" });
     });
     for (const r of [relayFwd, relayRev]) {
-      r.submit(initEnvelope);
+      await r.submit(initEnvelope);
     }
+    const fwdResult = await relayFwd.getEnvelopesSince(DOCUMENT_ID, 0);
     for (const s of [sessionB1, sessionA2, sessionB2]) {
-      s.applyEncryptedChanges(relayFwd.getEnvelopesSince(DOCUMENT_ID, 0));
+      s.applyEncryptedChanges(fwdResult.envelopes);
     }
 
     const envA = sessionA1.change((doc) => {
@@ -179,39 +184,39 @@ describe("EncryptedSyncSession — full integration", () => {
       firstMember(doc).name = "From B";
     });
 
-    relayFwd.submit(envA);
-    relayFwd.submit(envB);
-    syncThroughRelay([sessionA1, sessionB1], relayFwd);
+    await relayFwd.submit(envA);
+    await relayFwd.submit(envB);
+    await syncThroughRelay([sessionA1, sessionB1], relayFwd);
 
-    relayRev.submit(envB);
-    relayRev.submit(envA);
-    syncThroughRelay([sessionA2, sessionB2], relayRev);
+    await relayRev.submit(envB);
+    await relayRev.submit(envA);
+    await syncThroughRelay([sessionA2, sessionB2], relayRev);
 
     expect(sessionA1.document.members[0]?.name).toBe(sessionA2.document.members[0]?.name);
   });
 
-  it("3.6 — applying the same encrypted envelopes twice is idempotent via seq-skip", () => {
+  it("3.6 — applying the same encrypted envelopes twice is idempotent via seq-skip", async () => {
     const sessionA = makeSession(base, sharedKeys);
     const sessionB = makeSession(base, sharedKeys);
 
     const envelope = sessionA.change((doc) => {
       doc.members.push({ name: "Duplicate", pronouns: "they/them", description: "test" });
     });
-    const seq = relay.submit(envelope);
+    const seq = await relay.submit(envelope);
 
-    const envelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
-    sessionB.applyEncryptedChanges(envelopes);
+    const result = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    sessionB.applyEncryptedChanges(result.envelopes);
     expect(sessionB.document.members).toHaveLength(1);
     expect(sessionB.lastSyncedSeq).toBe(seq);
 
     // Apply same envelopes again — should be idempotent
-    sessionB.applyEncryptedChanges(envelopes);
+    sessionB.applyEncryptedChanges(result.envelopes);
     expect(sessionB.document.members).toHaveLength(1);
     expect(sessionB.document.members[0]?.name).toBe("Duplicate");
     expect(sessionB.lastSyncedSeq).toBe(seq);
   });
 
-  it("3.7 — snapshot roundtrip preserves document state through encryption", () => {
+  it("3.7 — snapshot roundtrip preserves document state through encryption", async () => {
     const sessionA = makeSession(base, sharedKeys);
 
     sessionA.change((doc) => {
@@ -219,9 +224,9 @@ describe("EncryptedSyncSession — full integration", () => {
     });
 
     const snapshotEnvelope = sessionA.createSnapshot(1);
-    relay.submitSnapshot(snapshotEnvelope);
+    await relay.submitSnapshot(snapshotEnvelope);
 
-    const loaded = relay.getLatestSnapshot(DOCUMENT_ID);
+    const loaded = await relay.getLatestSnapshot(DOCUMENT_ID);
     expect(loaded).not.toBeNull();
     if (!loaded) return;
 
@@ -231,7 +236,7 @@ describe("EncryptedSyncSession — full integration", () => {
     expect(sessionB.document.members[0]?.name).toBe("Snapshotted");
   });
 
-  it("3.8 — sync continues correctly after loading from snapshot", () => {
+  it("3.8 — sync continues correctly after loading from snapshot", async () => {
     const sessionA = makeSession(base, sharedKeys);
 
     sessionA.change((doc) => {
@@ -239,27 +244,28 @@ describe("EncryptedSyncSession — full integration", () => {
     });
 
     const snapshotEnvelope = sessionA.createSnapshot(1);
-    relay.submitSnapshot(snapshotEnvelope);
+    await relay.submitSnapshot(snapshotEnvelope);
 
-    const snapshot = relay.getLatestSnapshot(DOCUMENT_ID);
+    const snapshot = await relay.getLatestSnapshot(DOCUMENT_ID);
     expect(snapshot).not.toBeNull();
     if (!snapshot) return;
 
     const sessionB = EncryptedSyncSession.fromSnapshot<DocSchema>(snapshot, sharedKeys, sodium);
 
-    relay.submit(
+    await relay.submit(
       sessionA.change((doc) => {
         doc.members.push({ name: "After Snapshot", pronouns: "she/her", description: "v2" });
       }),
     );
 
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince(DOCUMENT_ID, 0));
+    const result = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    sessionB.applyEncryptedChanges(result.envelopes);
 
     expect(sessionB.document.members).toHaveLength(2);
     expect(sessionB.document.members[1]?.name).toBe("After Snapshot");
   });
 
-  it("3.9 — three-way concurrent edit resolves deterministically", () => {
+  it("3.9 — three-way concurrent edit resolves deterministically", async () => {
     const sessionA = makeSession(base, sharedKeys);
     const sessionB = makeSession(base, sharedKeys);
     const sessionC = makeSession(base, sharedKeys);
@@ -267,10 +273,10 @@ describe("EncryptedSyncSession — full integration", () => {
     const initEnv = sessionA.change((doc) => {
       doc.members.push({ name: "Original", pronouns: "they/them", description: "none" });
     });
-    relay.submit(initEnv);
-    const initEnvelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
-    sessionB.applyEncryptedChanges(initEnvelopes);
-    sessionC.applyEncryptedChanges(initEnvelopes);
+    await relay.submit(initEnv);
+    const initResult = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    sessionB.applyEncryptedChanges(initResult.envelopes);
+    sessionC.applyEncryptedChanges(initResult.envelopes);
 
     const envA = sessionA.change((doc) => {
       firstMember(doc).description = "From A";
@@ -282,10 +288,10 @@ describe("EncryptedSyncSession — full integration", () => {
       firstMember(doc).description = "From C";
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    relay.submit(envC);
-    syncThroughRelay([sessionA, sessionB, sessionC], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await relay.submit(envC);
+    await syncThroughRelay([sessionA, sessionB, sessionC], relay);
 
     const resultA = sessionA.document.members[0]?.description;
     const resultB = sessionB.document.members[0]?.description;
@@ -295,7 +301,7 @@ describe("EncryptedSyncSession — full integration", () => {
     expect(resultB).toBe(resultC);
   });
 
-  it("3.10 — mid-batch decryption failure rolls back doc and lastSyncedSeq", () => {
+  it("3.10 — mid-batch decryption failure rolls back doc and lastSyncedSeq", async () => {
     const sessionA = makeSession(base, sharedKeys);
     const sessionB = makeSession(base, sharedKeys);
 
@@ -303,17 +309,17 @@ describe("EncryptedSyncSession — full integration", () => {
     const env1 = sessionA.change((doc) => {
       doc.members.push({ name: "Valid", pronouns: "they/them", description: "ok" });
     });
-    const seq1 = relay.submit(env1);
+    const seq1 = await relay.submit(env1);
 
     // Second envelope: corrupted ciphertext (will fail signature check)
     const env2 = sessionA.change((doc) => {
       firstMember(doc).name = "Updated";
     });
-    const seq2 = relay.submit(env2);
+    const seq2 = await relay.submit(env2);
 
-    const envelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
+    const result = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
     // Corrupt the second envelope's ciphertext
-    const corrupted = envelopes.map((e) => {
+    const corrupted = result.envelopes.map((e) => {
       if (e.seq === seq2) {
         const badCiphertext = new Uint8Array(e.ciphertext);
         badCiphertext[0] = (badCiphertext[0] ?? 0) ^ 0xff;
@@ -323,7 +329,7 @@ describe("EncryptedSyncSession — full integration", () => {
     });
 
     // Apply first envelope successfully
-    sessionB.applyEncryptedChanges(envelopes.filter((e) => e.seq === seq1));
+    sessionB.applyEncryptedChanges(result.envelopes.filter((e) => e.seq === seq1));
     expect(sessionB.document.members).toHaveLength(1);
     expect(sessionB.lastSyncedSeq).toBe(seq1);
 
@@ -341,7 +347,7 @@ describe("EncryptedSyncSession — full integration", () => {
     expect(sessionB.lastSyncedSeq).toBe(seqBefore);
   });
 
-  it("3.11 — relay rejects snapshot version downgrade or equal version", () => {
+  it("3.11 — relay rejects snapshot version downgrade or equal version", async () => {
     const sessionA = makeSession(base, sharedKeys);
 
     sessionA.change((doc) => {
@@ -349,25 +355,23 @@ describe("EncryptedSyncSession — full integration", () => {
     });
 
     const snapshotV2 = sessionA.createSnapshot(2);
-    relay.submitSnapshot(snapshotV2);
+    await relay.submitSnapshot(snapshotV2);
 
     // Attempt to submit version 1 (downgrade)
     const snapshotV1 = sessionA.createSnapshot(1);
-    expect(() => {
-      relay.submitSnapshot(snapshotV1);
-    }).toThrow(/not newer than current version/);
+    await expect(relay.submitSnapshot(snapshotV1)).rejects.toThrow(
+      /not newer than current version/,
+    );
 
     // Attempt to submit same version 2 (equal)
     const snapshotV2Again = sessionA.createSnapshot(2);
-    expect(() => {
-      relay.submitSnapshot(snapshotV2Again);
-    }).toThrow(/not newer than current version/);
+    await expect(relay.submitSnapshot(snapshotV2Again)).rejects.toThrow(
+      /not newer than current version/,
+    );
 
     // Version 3 should succeed
     const snapshotV3 = sessionA.createSnapshot(3);
-    expect(() => {
-      relay.submitSnapshot(snapshotV3);
-    }).not.toThrow();
+    await expect(relay.submitSnapshot(snapshotV3)).resolves.toBeUndefined();
   });
 
   describe("M22 — sort skip for trivial arrays", () => {
@@ -377,39 +381,39 @@ describe("EncryptedSyncSession — full integration", () => {
       expect(session.lastSyncedSeq).toBe(0);
     });
 
-    it("applies single envelope without copying/sorting", () => {
+    it("applies single envelope without copying/sorting", async () => {
       const sessionA = makeSession(base, sharedKeys);
       const sessionB = makeSession(base, sharedKeys);
 
       const envelope = sessionA.change((doc) => {
         doc.members.push({ name: "SingleChange", pronouns: "they/them", description: "test" });
       });
-      const seq = relay.submit(envelope);
-      const envelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
+      const seq = await relay.submit(envelope);
+      const result = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
 
-      expect(envelopes).toHaveLength(1);
-      sessionB.applyEncryptedChanges(envelopes);
+      expect(result.envelopes).toHaveLength(1);
+      sessionB.applyEncryptedChanges(result.envelopes);
       expect(sessionB.lastSyncedSeq).toBe(seq);
       expect(sessionB.document.members).toHaveLength(1);
     });
 
-    it("correctly sorts multiple out-of-order envelopes", () => {
+    it("correctly sorts multiple out-of-order envelopes", async () => {
       const sessionA = makeSession(base, sharedKeys);
       const sessionB = makeSession(base, sharedKeys);
 
       const env1 = sessionA.change((doc) => {
         doc.members.push({ name: "First", pronouns: "they/them", description: "1" });
       });
-      relay.submit(env1);
+      await relay.submit(env1);
 
       const env2 = sessionA.change((doc) => {
         doc.members.push({ name: "Second", pronouns: "they/them", description: "2" });
       });
-      relay.submit(env2);
+      await relay.submit(env2);
 
-      const envelopes = relay.getEnvelopesSince(DOCUMENT_ID, 0);
+      const result = await relay.getEnvelopesSince(DOCUMENT_ID, 0);
       // Reverse to simulate out-of-order delivery
-      const reversed = [...envelopes].reverse();
+      const reversed = [...result.envelopes].reverse();
       sessionB.applyEncryptedChanges(reversed);
 
       expect(sessionB.document.members).toHaveLength(2);

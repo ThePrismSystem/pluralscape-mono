@@ -64,7 +64,7 @@ afterAll(() => {
 });
 
 describe("typed encrypted roundtrip — SystemCoreDocument", () => {
-  it("syncs a new member entry between two sessions", () => {
+  it("syncs a new member entry between two sessions", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "system-core-sys_typed1";
@@ -103,9 +103,10 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
           updatedAt: 1000,
         };
       });
-      relay.submit(envelope);
+      await relay.submit(envelope);
 
-      sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const _r1 = await relay.getEnvelopesSince(docId, 0);
+      sessionB.applyEncryptedChanges(_r1.envelopes);
 
       expect(sessionB.document.members["mem_1"]).toBeDefined();
       expect(String(sessionB.document.members["mem_1"]?.name)).toBe("Luna");
@@ -114,7 +115,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
     }
   });
 
-  it("merges concurrent member additions without data loss", () => {
+  it("merges concurrent member additions without data loss", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "system-core-sys_typed2";
@@ -168,8 +169,8 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
         };
       });
 
-      relay.submit(envA);
-      relay.submit(envB);
+      await relay.submit(envA);
+      await relay.submit(envB);
 
       const sessionC = new EncryptedSyncSession<SystemCoreDocument>({
         doc: Automerge.clone(base),
@@ -177,7 +178,8 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
         documentId: docId,
         sodium,
       });
-      sessionC.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const _r2 = await relay.getEnvelopesSince(docId, 0);
+      sessionC.applyEncryptedChanges(_r2.envelopes);
 
       expect(sessionC.document.members["mem_a"]).toBeDefined();
       expect(sessionC.document.members["mem_b"]).toBeDefined();
@@ -188,7 +190,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
     }
   });
 
-  it("syncs group membership junctions", () => {
+  it("syncs group membership junctions", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "system-core-sys_typed3";
@@ -214,9 +216,10 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
         doc.groupMemberships["grp_a_mem_1"] = true;
         doc.groupMemberships["grp_a_mem_2"] = true;
       });
-      relay.submit(envelope);
+      await relay.submit(envelope);
 
-      sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const _r3 = await relay.getEnvelopesSince(docId, 0);
+      sessionB.applyEncryptedChanges(_r3.envelopes);
 
       expect(sessionB.document.groupMemberships["grp_a_mem_1"]).toBe(true);
       expect(sessionB.document.groupMemberships["grp_a_mem_2"]).toBe(true);
@@ -226,7 +229,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
     }
   });
 
-  it("survives snapshot roundtrip with real system-core schema", () => {
+  it("survives snapshot roundtrip with real system-core schema", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "system-core-sys_typed_snap";
@@ -246,9 +249,9 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
       });
 
       const snapshot = sessionA.createSnapshot(1);
-      relay.submitSnapshot(snapshot);
+      await relay.submitSnapshot(snapshot);
 
-      const loaded = relay.getLatestSnapshot(docId);
+      const loaded = await relay.getLatestSnapshot(docId);
       expect(loaded).not.toBeNull();
       if (!loaded) return;
 
@@ -261,7 +264,7 @@ describe("typed encrypted roundtrip — SystemCoreDocument", () => {
 });
 
 describe("typed encrypted roundtrip — FrontingDocument", () => {
-  it("syncs a fronting session entry between two sessions", () => {
+  it("syncs a fronting session entry between two sessions", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "fronting-sys_typed1";
@@ -300,9 +303,10 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
           updatedAt: 1000,
         };
       });
-      relay.submit(envelope);
+      await relay.submit(envelope);
 
-      sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const _r4 = await relay.getEnvelopesSince(docId, 0);
+      sessionB.applyEncryptedChanges(_r4.envelopes);
 
       expect(sessionB.document.sessions["fs_1"]).toBeDefined();
       expect(String(sessionB.document.sessions["fs_1"]?.memberId)).toBe("mem_1");
@@ -311,7 +315,7 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
     }
   });
 
-  it("syncs switch append-only entries", () => {
+  it("syncs switch append-only entries", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "fronting-sys_typed2";
@@ -341,9 +345,10 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
           archived: false,
         });
       });
-      relay.submit(envelope);
+      await relay.submit(envelope);
 
-      sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const _r5 = await relay.getEnvelopesSince(docId, 0);
+      sessionB.applyEncryptedChanges(_r5.envelopes);
 
       expect(sessionB.document.switches).toHaveLength(1);
       expect(String(sessionB.document.switches[0]?.memberIds)).toBe('["mem_1"]');
@@ -354,7 +359,7 @@ describe("typed encrypted roundtrip — FrontingDocument", () => {
 });
 
 describe("typed encrypted roundtrip — ChatDocument", () => {
-  it("syncs message appends between two sessions", () => {
+  it("syncs message appends between two sessions", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "chat-ch_typed1";
@@ -390,9 +395,10 @@ describe("typed encrypted roundtrip — ChatDocument", () => {
           archived: false,
         });
       });
-      relay.submit(envelope);
+      await relay.submit(envelope);
 
-      sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const _r6 = await relay.getEnvelopesSince(docId, 0);
+      sessionB.applyEncryptedChanges(_r6.envelopes);
 
       expect(sessionB.document.messages).toHaveLength(1);
       expect(String(sessionB.document.messages[0]?.content)).toBe("Hello, world!");
@@ -401,7 +407,7 @@ describe("typed encrypted roundtrip — ChatDocument", () => {
     }
   });
 
-  it("merges concurrent message appends (both messages present)", () => {
+  it("merges concurrent message appends (both messages present)", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "chat-ch_typed2";
@@ -451,8 +457,8 @@ describe("typed encrypted roundtrip — ChatDocument", () => {
         });
       });
 
-      relay.submit(envA);
-      relay.submit(envB);
+      await relay.submit(envA);
+      await relay.submit(envB);
 
       const sessionC = new EncryptedSyncSession<ChatDocument>({
         doc: Automerge.clone(base),
@@ -460,7 +466,8 @@ describe("typed encrypted roundtrip — ChatDocument", () => {
         documentId: docId,
         sodium,
       });
-      sessionC.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const _r7 = await relay.getEnvelopesSince(docId, 0);
+      sessionC.applyEncryptedChanges(_r7.envelopes);
 
       expect(sessionC.document.messages).toHaveLength(2);
       const ids = sessionC.document.messages.map((m) => String(m.id));

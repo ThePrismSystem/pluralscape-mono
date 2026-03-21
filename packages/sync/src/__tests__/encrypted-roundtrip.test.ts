@@ -51,7 +51,7 @@ afterAll(() => {
 });
 
 describe("encrypted roundtrip with real key hierarchy", () => {
-  it("master-key roundtrip: sync changes between two sessions", () => {
+  it("master-key roundtrip: sync changes between two sessions", async () => {
     const resolver = DocumentKeyResolver.create({
       masterKey,
       signingKeys,
@@ -81,9 +81,10 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       const envelope = sessionA.change((doc) => {
         doc.members.push({ name: "Luna", pronouns: "she/her", description: "Host" });
       });
-      relay.submit(envelope);
+      await relay.submit(envelope);
 
-      sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const result = await relay.getEnvelopesSince(docId, 0);
+      sessionB.applyEncryptedChanges(result.envelopes);
 
       expect(sessionB.document.members).toHaveLength(1);
       expect(sessionB.document.members[0]?.name).toBe("Luna");
@@ -92,7 +93,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     }
   });
 
-  it("bucket-key roundtrip: sync changes with per-bucket key", () => {
+  it("bucket-key roundtrip: sync changes with per-bucket key", async () => {
     const bucketId = "bkt_rt1" as BucketId;
     const bucketKey = generateBucketKey();
     bucketKeyCache.set(bucketId, bucketKey);
@@ -126,9 +127,10 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       const envelope = sessionA.change((doc) => {
         doc.members.push({ name: "Kai", pronouns: "they/them", description: "Protector" });
       });
-      relay.submit(envelope);
+      await relay.submit(envelope);
 
-      sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const result = await relay.getEnvelopesSince(docId, 0);
+      sessionB.applyEncryptedChanges(result.envelopes);
 
       expect(sessionB.document.members).toHaveLength(1);
       expect(sessionB.document.members[0]?.name).toBe("Kai");
@@ -137,7 +139,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     }
   });
 
-  it("cross-key isolation: master-key change cannot be decrypted by bucket-key session", () => {
+  it("cross-key isolation: master-key change cannot be decrypted by bucket-key session", async () => {
     const bucketId = "bkt_iso1" as BucketId;
     const bucketKey = generateBucketKey();
     bucketKeyCache.set(bucketId, bucketKey);
@@ -169,8 +171,8 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       });
 
       // Submit to relay as if it were a bucket document
-      relay.submit({ ...envelope, documentId: bucketDocId });
-      const envelopes = relay.getEnvelopesSince(bucketDocId, 0);
+      await relay.submit({ ...envelope, documentId: bucketDocId });
+      const result = await relay.getEnvelopesSince(bucketDocId, 0);
 
       // Attempt to decrypt with bucket keys should fail
       const bucketSession = new EncryptedSyncSession({
@@ -181,14 +183,14 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       });
 
       expect(() => {
-        bucketSession.applyEncryptedChanges(envelopes);
+        bucketSession.applyEncryptedChanges(result.envelopes);
       }).toThrow();
     } finally {
       resolver.dispose();
     }
   });
 
-  it("snapshot roundtrip: create and load snapshot with real keys", () => {
+  it("snapshot roundtrip: create and load snapshot with real keys", async () => {
     const resolver = DocumentKeyResolver.create({
       masterKey,
       signingKeys,
@@ -214,9 +216,9 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       });
 
       const snapshotEnvelope = sessionA.createSnapshot(1);
-      relay.submitSnapshot(snapshotEnvelope);
+      await relay.submitSnapshot(snapshotEnvelope);
 
-      const loaded = relay.getLatestSnapshot(docId);
+      const loaded = await relay.getLatestSnapshot(docId);
       expect(loaded).not.toBeNull();
       if (!loaded) return;
 
@@ -278,7 +280,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       const envelope = session1.change((doc) => {
         doc.members.push({ name: "From Device 1", pronouns: "they/them", description: "synced" });
       });
-      relay.submit(envelope);
+      await relay.submit(envelope);
 
       // Device 2 syncs the change (using its own independently-derived keys)
       const session2 = new EncryptedSyncSession({
@@ -287,7 +289,8 @@ describe("encrypted roundtrip with real key hierarchy", () => {
         documentId: docId,
         sodium,
       });
-      session2.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+      const result = await relay.getEnvelopesSince(docId, 0);
+      session2.applyEncryptedChanges(result.envelopes);
 
       expect(session2.document.members).toHaveLength(1);
       expect(session2.document.members[0]?.name).toBe("From Device 1");
@@ -301,7 +304,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
     }
   });
 
-  it("rejects tampered ciphertext through full resolver-to-session pipeline", () => {
+  it("rejects tampered ciphertext through full resolver-to-session pipeline", async () => {
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
       const docId = "system-core-sys_tamper";
@@ -322,7 +325,7 @@ describe("encrypted roundtrip with real key hierarchy", () => {
       // Tamper with ciphertext before relay
       const tampered = new Uint8Array(envelope.ciphertext);
       tampered[0] = (tampered[0] ?? 0) ^ 0xff;
-      relay.submit({ ...envelope, ciphertext: tampered });
+      await relay.submit({ ...envelope, ciphertext: tampered });
 
       // Session B should reject the tampered envelope
       const sessionB = new EncryptedSyncSession({
@@ -331,8 +334,9 @@ describe("encrypted roundtrip with real key hierarchy", () => {
         documentId: docId,
         sodium,
       });
+      const result = await relay.getEnvelopesSince(docId, 0);
       expect(() => {
-        sessionB.applyEncryptedChanges(relay.getEnvelopesSince(docId, 0));
+        sessionB.applyEncryptedChanges(result.envelopes);
       }).toThrow(SignatureVerificationError);
     } finally {
       resolver.dispose();

@@ -219,7 +219,7 @@ describe("Compaction: snapshot roundtrip", () => {
     expect(restoredB.document.members["mem_b"]?.name.val).toBe("From B");
   });
 
-  it("change count tracking: snapshot + new changes roundtrip", () => {
+  it("change count tracking: snapshot + new changes roundtrip", async () => {
     const base = createFrontingDocument();
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
@@ -256,7 +256,7 @@ describe("Compaction: snapshot roundtrip", () => {
         archived: false,
       });
     });
-    relay.submit(postChange);
+    await relay.submit(postChange);
 
     // anotherSession starts with lastSyncedSeq=0 because it's using a fresh relay
     // (in production the relay would track real server seqs, but here we use a fresh relay
@@ -267,7 +267,8 @@ describe("Compaction: snapshot roundtrip", () => {
       sodium,
       0,
     );
-    anotherSession.applyEncryptedChanges(relay.getEnvelopesSince("doc-lc-roundtrip", 0));
+    const _r1 = await relay.getEnvelopesSince("doc-lc-roundtrip", 0);
+    anotherSession.applyEncryptedChanges(_r1.envelopes);
 
     // Both sessions agree on the post-snapshot state
     expect(newSession.document.switches).toHaveLength(6);
@@ -312,7 +313,7 @@ describe("Compaction: snapshot roundtrip", () => {
     expect(snap2.snapshotVersion).toBeLessThan(snap3.snapshotVersion);
   });
 
-  it("snapshot restores with lastSyncedSeq for incremental recovery", () => {
+  it("snapshot restores with lastSyncedSeq for incremental recovery", async () => {
     const base = createFrontingDocument();
     const relay = new EncryptedRelay();
     const keys2 = makeKeys();
@@ -332,7 +333,7 @@ describe("Compaction: snapshot roundtrip", () => {
         archived: false,
       });
     });
-    relay.submit(env1);
+    await relay.submit(env1);
 
     const snapshot = session.createSnapshot(1);
     // Restore with lastSyncedSeq = 1 so incremental sync knows to start from seq 2
@@ -547,7 +548,7 @@ describe("Purging: post-compaction state", () => {
     expect(stateAfter).toEqual(stateBefore);
   });
 
-  it("purge roundtrip: snapshot + apply new changes = correct final state", () => {
+  it("purge roundtrip: snapshot + apply new changes = correct final state", async () => {
     const base = createFrontingDocument();
     const relay = new EncryptedRelay();
     const session = new EncryptedSyncSession({
@@ -582,18 +583,19 @@ describe("Purging: post-compaction state", () => {
         archived: false,
       });
     });
-    relay.submit(postChange);
+    await relay.submit(postChange);
 
     // Restore from snapshot and apply post-snapshot changes (simulates purge + recovery).
     // lastSyncedSeq=0 because this fresh relay only has the post-snapshot change at seq=1.
     const restored = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium, 0);
-    restored.applyEncryptedChanges(relay.getEnvelopesSince("doc-purge-002", 0));
+    const _r2 = await relay.getEnvelopesSince("doc-purge-002", 0);
+    restored.applyEncryptedChanges(_r2.envelopes);
 
     expect(restored.document.switches).toHaveLength(4);
     expect(restored.document.switches.map((s_) => s_.id.val)).toContain("sw_post");
   });
 
-  it("changes with seq > snapshotVersion survive purge", () => {
+  it("changes with seq > snapshotVersion survive purge", async () => {
     const base = createFrontingDocument();
     const relay = new EncryptedRelay();
     const session = new EncryptedSyncSession({
@@ -612,7 +614,7 @@ describe("Purging: post-compaction state", () => {
         archived: false,
       });
     });
-    relay.submit(env1);
+    await relay.submit(env1);
 
     // Snapshot is created but submission/retention logic is out-of-scope (server-side)
     session.createSnapshot(1);
@@ -626,15 +628,16 @@ describe("Purging: post-compaction state", () => {
         archived: false,
       });
     });
-    relay.submit(env2);
+    await relay.submit(env2);
 
     // After "purge" (seq <= 1 removed), only env2 (seq 2) survives
-    const changesAfterPurge = relay.getEnvelopesSince("doc-purge-003", 1);
+    const _changesAfterPurgePg = await relay.getEnvelopesSince("doc-purge-003", 1);
+    const changesAfterPurge = _changesAfterPurgePg.envelopes;
     expect(changesAfterPurge).toHaveLength(1);
     expect(changesAfterPurge[0]?.seq).toBe(2);
   });
 
-  it("snapshot + pruned changes + new changes = consistent final state", () => {
+  it("snapshot + pruned changes + new changes = consistent final state", async () => {
     const base = createSystemCoreDocument();
     const relay = new EncryptedRelay();
     const session = new EncryptedSyncSession({
@@ -661,7 +664,7 @@ describe("Purging: post-compaction state", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(preEnv);
+    await relay.submit(preEnv);
 
     const snap = session.createSnapshot(1);
 
@@ -673,12 +676,13 @@ describe("Purging: post-compaction state", () => {
         g.updatedAt = 2000;
       }
     });
-    relay.submit(postEnv);
+    await relay.submit(postEnv);
 
     // Simulate recovery from snapshot
     const recovered = EncryptedSyncSession.fromSnapshot<typeof base>(snap, keys, sodium, 1);
     // Apply only changes after snapshotVersion=1
-    const postSnapshotChanges = relay.getEnvelopesSince("doc-purge-full", 1);
+    const _postSnapshotChangesPg = await relay.getEnvelopesSince("doc-purge-full", 1);
+    const postSnapshotChanges = _postSnapshotChangesPg.envelopes;
     recovered.applyEncryptedChanges(postSnapshotChanges);
 
     expect(recovered.document.groups["grp_1"]?.name.val).toBe("Renamed Group");
@@ -762,7 +766,7 @@ describe("Archive: cold document behavior", () => {
     expect(Object.keys(session.document.sessions)).toHaveLength(1);
   });
 
-  it("on-demand loaded document has correct data after sync", () => {
+  it("on-demand loaded document has correct data after sync", async () => {
     const base = createSystemCoreDocument();
     const relay = new EncryptedRelay();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-archive-ondemand");
@@ -785,8 +789,8 @@ describe("Archive: cold document behavior", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(env);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(env);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions have the data — simulates on-demand load working correctly
     expect(sessionB.document.members["mem_history"]?.name.val).toBe("Historical Member");

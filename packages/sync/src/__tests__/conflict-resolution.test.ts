@@ -76,7 +76,7 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
     keys = makeKeys();
   });
 
-  it("1a — concurrent edits to different fields both survive", () => {
+  it("1a — concurrent edits to different fields both survive", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
@@ -99,8 +99,9 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cr-001", 0));
+    await relay.submit(seedEnv);
+    const _r1 = await relay.getEnvelopesSince("doc-cr-001", 0);
+    sessionB.applyEncryptedChanges(_r1.envelopes);
 
     // Concurrent edits to different fields
     const envA = sessionA.change((d) => {
@@ -112,16 +113,16 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
       if (m) m.description = s("New description");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document.members["mem_1"]?.name.val).toBe("New Name");
     expect(sessionA.document.members["mem_1"]?.description?.val).toBe("New description");
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
-  it("1b — concurrent edits to same field converge deterministically (LWW)", () => {
+  it("1b — concurrent edits to same field converge deterministically (LWW)", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
@@ -143,8 +144,9 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cr-001", 0));
+    await relay.submit(seedEnv);
+    const _r2 = await relay.getEnvelopesSince("doc-cr-001", 0);
+    sessionB.applyEncryptedChanges(_r2.envelopes);
 
     const envA = sessionA.change((d) => {
       const m = d.members["mem_1"];
@@ -155,9 +157,9 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
       if (m) m.name = s("Name from B");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions must converge to the same value
     expect(sessionA.document.members["mem_1"]?.name.val).toBe(
@@ -168,7 +170,7 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
     expect(["Name from A", "Name from B"]).toContain(winner);
   });
 
-  it("1c — concurrent archive + edit: both changes apply independently", () => {
+  it("1c — concurrent archive + edit: both changes apply independently", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
@@ -190,8 +192,9 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cr-001", 0));
+    await relay.submit(seedEnv);
+    const _r3 = await relay.getEnvelopesSince("doc-cr-001", 0);
+    sessionB.applyEncryptedChanges(_r3.envelopes);
 
     // A archives, B edits name — both should apply
     const envA = sessionA.change((d) => {
@@ -203,9 +206,9 @@ describe("Category 1: concurrent edits to LWW map entities", () => {
       if (m) m.name = s("Edited while archived");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Entity is archived AND has the edited name
     expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
@@ -225,7 +228,7 @@ describe("Category 2: concurrent appends to lists", () => {
     keys = makeKeys();
   });
 
-  it("2a — concurrent appends to switches list: both entries present after merge", () => {
+  it("2a — concurrent appends to switches list: both entries present after merge", async () => {
     const base = createFrontingDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-fronting-001");
 
@@ -248,9 +251,9 @@ describe("Category 2: concurrent appends to lists", () => {
       });
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document.switches).toHaveLength(2);
     expect(sessionB.document.switches).toHaveLength(2);
@@ -272,7 +275,7 @@ describe("Category 3: concurrent FrontingSession end time", () => {
     keys = makeKeys();
   });
 
-  it("3a — concurrent end-time writes converge to a single LWW winner", () => {
+  it("3a — concurrent end-time writes converge to a single LWW winner", async () => {
     const base = createFrontingDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-fronting-001");
 
@@ -294,8 +297,9 @@ describe("Category 3: concurrent FrontingSession end time", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-fronting-001", 0));
+    await relay.submit(seedEnv);
+    const _r4 = await relay.getEnvelopesSince("doc-fronting-001", 0);
+    sessionB.applyEncryptedChanges(_r4.envelopes);
 
     // Both sessions try to end the session concurrently
     const envA = sessionA.change((d) => {
@@ -313,9 +317,9 @@ describe("Category 3: concurrent FrontingSession end time", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions converge to the same endTime (LWW picks one)
     const endA = sessionA.document.sessions["fs_1"]?.endTime;
@@ -342,7 +346,7 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
     keys = makeKeys();
   });
 
-  it("4a — concurrent cross-parent writes both apply, producing a detectable cycle", () => {
+  it("4a — concurrent cross-parent writes both apply, producing a detectable cycle", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-004");
 
@@ -351,8 +355,9 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
       d.groups["groupA"] = makeGroup("groupA", 1);
       d.groups["groupB"] = makeGroup("groupB", 2);
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cr-004", 0));
+    await relay.submit(seedEnv);
+    const _r5 = await relay.getEnvelopesSince("doc-cr-004", 0);
+    sessionB.applyEncryptedChanges(_r5.envelopes);
 
     // A: groupA.parentGroupId = groupB
     const envA = sessionA.change((d) => {
@@ -371,9 +376,9 @@ describe("Category 4: concurrent re-parenting creating cycles", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions converge
     expect(sessionA.document).toEqual(sessionB.document);
@@ -396,7 +401,7 @@ describe("Category 5: concurrent KeyGrant revocation", () => {
     keys = makeKeys();
   });
 
-  it("5a — concurrent revocations both result in a revoked state", () => {
+  it("5a — concurrent revocations both result in a revoked state", async () => {
     const base = createPrivacyConfigDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-privacy-001");
 
@@ -411,8 +416,9 @@ describe("Category 5: concurrent KeyGrant revocation", () => {
         revokedAt: null,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-privacy-001", 0));
+    await relay.submit(seedEnv);
+    const _r6 = await relay.getEnvelopesSince("doc-privacy-001", 0);
+    sessionB.applyEncryptedChanges(_r6.envelopes);
 
     // Both devices revoke concurrently
     const envA = sessionA.change((d) => {
@@ -424,9 +430,9 @@ describe("Category 5: concurrent KeyGrant revocation", () => {
       if (kg) kg.revokedAt = 2001;
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both converge and grant is revoked regardless of which timestamp won
     const revokedAtA = sessionA.document.keyGrants["kg_1"]?.revokedAt;
@@ -447,7 +453,7 @@ describe("Category 6: junction add-wins semantics", () => {
     keys = makeKeys();
   });
 
-  it("6a — concurrent add on A and no-op on B: junction is present after merge", () => {
+  it("6a — concurrent add on A and no-op on B: junction is present after merge", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
@@ -456,14 +462,14 @@ describe("Category 6: junction add-wins semantics", () => {
     });
 
     // B does not add anything — just receives A's change
-    relay.submit(envA);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionB.document.groupMemberships["g1_m1"]).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
-  it("6b — two concurrent adds to different keys: both junctions present", () => {
+  it("6b — two concurrent adds to different keys: both junctions present", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-001");
 
@@ -474,9 +480,9 @@ describe("Category 6: junction add-wins semantics", () => {
       d.groupMemberships["g1_m2"] = true;
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document.groupMemberships["g1_m1"]).toBe(true);
     expect(sessionA.document.groupMemberships["g1_m2"]).toBe(true);
@@ -495,7 +501,7 @@ describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
     keys = makeKeys();
   });
 
-  it("7a — concurrent respond and dismiss converge to a single state", () => {
+  it("7a — concurrent respond and dismiss converge to a single state", async () => {
     const base = createFrontingDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-fronting-001");
 
@@ -513,8 +519,9 @@ describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-fronting-001", 0));
+    await relay.submit(seedEnv);
+    const _r7 = await relay.getEnvelopesSince("doc-fronting-001", 0);
+    sessionB.applyEncryptedChanges(_r7.envelopes);
 
     // A responds, B dismisses concurrently
     const envA = sessionA.change((d) => {
@@ -533,9 +540,9 @@ describe("Category 7: CheckInRecord concurrent respond + dismiss", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both converge to the same state
     expect(sessionA.document).toEqual(sessionB.document);
@@ -568,7 +575,7 @@ describe("Category 8: sort order conflicts", () => {
     keys = makeKeys();
   });
 
-  it("8a — concurrent sort order reorders converge to a consistent (possibly inverted) state", () => {
+  it("8a — concurrent sort order reorders converge to a consistent (possibly inverted) state", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cr-008");
 
@@ -582,8 +589,9 @@ describe("Category 8: sort order conflicts", () => {
         d.groups[id] = makeGroup(id, order);
       }
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cr-008", 0));
+    await relay.submit(seedEnv);
+    const _r8 = await relay.getEnvelopesSince("doc-cr-008", 0);
+    sessionB.applyEncryptedChanges(_r8.envelopes);
 
     // Session A: swap grp_1 and grp_3 (3→1, 1→3)
     const envA = sessionA.change((d) => {
@@ -600,9 +608,9 @@ describe("Category 8: sort order conflicts", () => {
       if (g2) g2.sortOrder = 1;
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions converge to the same state
     expect(sessionA.document).toEqual(sessionB.document);
@@ -630,7 +638,7 @@ describe("Category 9: ChatMessage edit chain", () => {
     keys = makeKeys();
   });
 
-  it("9a — concurrent edit message and unrelated append both present; edit chain intact", () => {
+  it("9a — concurrent edit message and unrelated append both present; edit chain intact", async () => {
     const base = createChatDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-chat-009");
 
@@ -650,8 +658,9 @@ describe("Category 9: ChatMessage edit chain", () => {
         archived: false,
       });
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-chat-009", 0));
+    await relay.submit(seedEnv);
+    const _r9 = await relay.getEnvelopesSince("doc-chat-009", 0);
+    sessionB.applyEncryptedChanges(_r9.envelopes);
 
     // Session A posts an edit (msg_2 with editOf = msg_1)
     const envA = sessionA.change((d) => {
@@ -686,9 +695,9 @@ describe("Category 9: ChatMessage edit chain", () => {
       });
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Both sessions converge
     expect(sessionA.document).toEqual(sessionB.document);
@@ -757,7 +766,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     expect(restored.document.members["mem_1"]?.description?.val).toBe("Still here");
   });
 
-  it("concurrent archive on both devices converges to archived", () => {
+  it("concurrent archive on both devices converges to archived", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-002");
 
@@ -779,8 +788,9 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-002", 0));
+    await relay.submit(seedEnv);
+    const _r10 = await relay.getEnvelopesSince("doc-tomb-002", 0);
+    sessionB.applyEncryptedChanges(_r10.envelopes);
 
     const envA = sessionA.change((d) => {
       const m = d.members["mem_1"];
@@ -797,15 +807,15 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
-  it("un-archive (archived false after true) applies via LWW", () => {
+  it("un-archive (archived false after true) applies via LWW", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-003");
 
@@ -827,8 +837,9 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-003", 0));
+    await relay.submit(seedEnv);
+    const _r11 = await relay.getEnvelopesSince("doc-tomb-003", 0);
+    sessionB.applyEncryptedChanges(_r11.envelopes);
 
     // A un-archives
     const envA = sessionA.change((d) => {
@@ -838,8 +849,8 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
         m.updatedAt = 2000;
       }
     });
-    relay.submit(envA);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionB.document.members["mem_1"]?.archived).toBe(false);
     expect(sessionA.document).toEqual(sessionB.document);
@@ -879,7 +890,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     expect(session.document.members["mem_1"]?.name.val).toBe("Archived Member");
   });
 
-  it("junction referencing archived member remains valid after archive", () => {
+  it("junction referencing archived member remains valid after archive", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-005");
 
@@ -902,16 +913,17 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
       };
       d.groupMemberships["g1_mem_1"] = true;
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-005", 0));
+    await relay.submit(seedEnv);
+    const _r12 = await relay.getEnvelopesSince("doc-tomb-005", 0);
+    sessionB.applyEncryptedChanges(_r12.envelopes);
 
     // A archives the member; B does nothing
     const envA = sessionA.change((d) => {
       const m = d.members["mem_1"];
       if (m) m.archived = true;
     });
-    relay.submit(envA);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     // Junction still present even though member is archived
     expect(sessionB.document.members["mem_1"]?.archived).toBe(true);
@@ -919,7 +931,7 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
     expect(sessionA.document).toEqual(sessionB.document);
   });
 
-  it("concurrent archive + junction add: junction preserved (add-wins), entity archived", () => {
+  it("concurrent archive + junction add: junction preserved (add-wins), entity archived", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-006");
 
@@ -941,8 +953,9 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-tomb-006", 0));
+    await relay.submit(seedEnv);
+    const _r13 = await relay.getEnvelopesSince("doc-tomb-006", 0);
+    sessionB.applyEncryptedChanges(_r13.envelopes);
 
     // A archives member, B adds a group junction for member concurrently
     const envA = sessionA.change((d) => {
@@ -953,9 +966,9 @@ describe("Tombstone lifecycle: archived entities in CRDT", () => {
       d.groupMemberships["g2_mem_1"] = true;
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document.members["mem_1"]?.archived).toBe(true);
     expect(sessionA.document.groupMemberships["g2_mem_1"]).toBe(true);
@@ -1010,7 +1023,7 @@ describe("Hierarchy cycles: subsystems and innerworld regions", () => {
     };
   }
 
-  it("concurrent cross-reparenting of subsystems produces a detectable cycle", () => {
+  it("concurrent cross-reparenting of subsystems produces a detectable cycle", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cycle-ss");
 
@@ -1018,8 +1031,9 @@ describe("Hierarchy cycles: subsystems and innerworld regions", () => {
       d.subsystems["ss_a"] = makeSubsystem("ss_a");
       d.subsystems["ss_b"] = makeSubsystem("ss_b");
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cycle-ss", 0));
+    await relay.submit(seedEnv);
+    const _r14 = await relay.getEnvelopesSince("doc-cycle-ss", 0);
+    sessionB.applyEncryptedChanges(_r14.envelopes);
 
     const envA = sessionA.change((d) => {
       const ss = d.subsystems["ss_a"];
@@ -1036,16 +1050,16 @@ describe("Hierarchy cycles: subsystems and innerworld regions", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document).toEqual(sessionB.document);
     expect(sessionA.document.subsystems["ss_a"]?.parentSubsystemId?.val).toBe("ss_b");
     expect(sessionA.document.subsystems["ss_b"]?.parentSubsystemId?.val).toBe("ss_a");
   });
 
-  it("concurrent cross-reparenting of innerworld regions produces a detectable cycle", () => {
+  it("concurrent cross-reparenting of innerworld regions produces a detectable cycle", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-cycle-iw");
 
@@ -1053,8 +1067,9 @@ describe("Hierarchy cycles: subsystems and innerworld regions", () => {
       d.innerWorldRegions["rg_a"] = makeRegion("rg_a");
       d.innerWorldRegions["rg_b"] = makeRegion("rg_b");
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-cycle-iw", 0));
+    await relay.submit(seedEnv);
+    const _r15 = await relay.getEnvelopesSince("doc-cycle-iw", 0);
+    sessionB.applyEncryptedChanges(_r15.envelopes);
 
     const envA = sessionA.change((d) => {
       const rg = d.innerWorldRegions["rg_a"];
@@ -1071,9 +1086,9 @@ describe("Hierarchy cycles: subsystems and innerworld regions", () => {
       }
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document).toEqual(sessionB.document);
     expect(sessionA.document.innerWorldRegions["rg_a"]?.parentRegionId?.val).toBe("rg_b");
@@ -1092,7 +1107,7 @@ describe("Multi-level chat edit chains", () => {
     keys = makeKeys();
   });
 
-  it("multi-level edit chain (msg_1 → msg_2 → msg_3) is preserved after sync", () => {
+  it("multi-level edit chain (msg_1 → msg_2 → msg_3) is preserved after sync", async () => {
     const base = createChatDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-edit-chain");
 
@@ -1143,10 +1158,10 @@ describe("Multi-level chat edit chains", () => {
       });
     });
 
-    relay.submit(env1);
-    relay.submit(env2);
-    relay.submit(env3);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(env1);
+    await relay.submit(env2);
+    await relay.submit(env3);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const msgs = sessionB.document.messages;
     expect(msgs).toHaveLength(3);
@@ -1156,7 +1171,7 @@ describe("Multi-level chat edit chains", () => {
     expect(msg2?.editOf?.val).toBe("msg_1");
   });
 
-  it("concurrent edits to same original message produce parallel edit chains", () => {
+  it("concurrent edits to same original message produce parallel edit chains", async () => {
     const base = createChatDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-edit-parallel");
 
@@ -1175,8 +1190,9 @@ describe("Multi-level chat edit chains", () => {
         archived: false,
       });
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-edit-parallel", 0));
+    await relay.submit(seedEnv);
+    const _r16 = await relay.getEnvelopesSince("doc-edit-parallel", 0);
+    sessionB.applyEncryptedChanges(_r16.envelopes);
 
     // Both devices edit the same message concurrently
     const envA = sessionA.change((d) => {
@@ -1210,9 +1226,9 @@ describe("Multi-level chat edit chains", () => {
       });
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document).toEqual(sessionB.document);
     const msgs = sessionA.document.messages;
@@ -1233,7 +1249,7 @@ describe("Sort order tie detection", () => {
     keys = makeKeys();
   });
 
-  it("concurrent reorders producing identical sortOrder values create detectable ties", () => {
+  it("concurrent reorders producing identical sortOrder values create detectable ties", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-sort-tie");
 
@@ -1241,8 +1257,9 @@ describe("Sort order tie detection", () => {
       d.groups["grp_1"] = makeGroup("grp_1", 1);
       d.groups["grp_2"] = makeGroup("grp_2", 2);
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-sort-tie", 0));
+    await relay.submit(seedEnv);
+    const _r17 = await relay.getEnvelopesSince("doc-sort-tie", 0);
+    sessionB.applyEncryptedChanges(_r17.envelopes);
 
     // Both set the same sortOrder value
     const envA = sessionA.change((d) => {
@@ -1254,9 +1271,9 @@ describe("Sort order tie detection", () => {
       if (g) g.sortOrder = 5;
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document).toEqual(sessionB.document);
     // Both groups have sortOrder 5 — a tie requiring post-merge normalization
@@ -1264,7 +1281,7 @@ describe("Sort order tie detection", () => {
     expect(sessionA.document.groups["grp_2"]?.sortOrder).toBe(5);
   });
 
-  it("three groups with concurrent reorders all converge", () => {
+  it("three groups with concurrent reorders all converge", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-sort-three");
 
@@ -1273,8 +1290,9 @@ describe("Sort order tie detection", () => {
       d.groups["grp_2"] = makeGroup("grp_2", 2);
       d.groups["grp_3"] = makeGroup("grp_3", 3);
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-sort-three", 0));
+    await relay.submit(seedEnv);
+    const _r18 = await relay.getEnvelopesSince("doc-sort-three", 0);
+    sessionB.applyEncryptedChanges(_r18.envelopes);
 
     // A: reverse order
     const envA = sessionA.change((d) => {
@@ -1295,9 +1313,9 @@ describe("Sort order tie detection", () => {
       if (g3) g3.sortOrder = 10;
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     expect(sessionA.document).toEqual(sessionB.document);
     // Each group has a sortOrder value — LWW picked winners
@@ -1318,7 +1336,7 @@ describe("Category 10: FriendConnection nested assignedBuckets", () => {
     keys = makeKeys();
   });
 
-  it("10a — concurrent bucket adds to different keys: both present after merge", () => {
+  it("10a — concurrent bucket adds to different keys: both present after merge", async () => {
     const base = createPrivacyConfigDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-privacy-001");
 
@@ -1337,8 +1355,9 @@ describe("Category 10: FriendConnection nested assignedBuckets", () => {
         updatedAt: 1000,
       };
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-privacy-001", 0));
+    await relay.submit(seedEnv);
+    const _r19 = await relay.getEnvelopesSince("doc-privacy-001", 0);
+    sessionB.applyEncryptedChanges(_r19.envelopes);
 
     const envA = sessionA.change((d) => {
       const fc = d.friendConnections["fc_1"];
@@ -1349,9 +1368,9 @@ describe("Category 10: FriendConnection nested assignedBuckets", () => {
       if (fc) fc.assignedBuckets["bkt_2"] = true;
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const assigned = sessionA.document.friendConnections["fc_1"]?.assignedBuckets;
     expect(assigned?.["bkt_1"]).toBe(true);
