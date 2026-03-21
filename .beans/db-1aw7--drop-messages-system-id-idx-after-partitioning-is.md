@@ -5,7 +5,8 @@ status: todo
 type: task
 priority: deferred
 created_at: 2026-03-13T11:47:22Z
-updated_at: 2026-03-13T11:47:22Z
+updated_at: 2026-03-21T10:15:55Z
+parent: ps-9u4w
 ---
 
 Drop the messages_system_id_idx index from both PG and SQLite schemas once PG partitioning is confirmed stable.

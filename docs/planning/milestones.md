@@ -87,7 +87,6 @@ Epics:
 
 - Front logging API (features.md section 2), including outtrigger reason/sentiment (L5) and fronting structure location display (L1)
 - Analytics engine (features.md section 2)
-- Fronting history report generation (features.md section 2)
 - Automated timers and check-in reminders (features.md section 2)
 - Webhooks event system
 
@@ -148,6 +147,7 @@ Epics:
 - Journaling UI (features.md section 7)
 - Search UI (features.md section 8)
 - Settings screens
+- Fronting history report generation (features.md section 2)
 - Littles Safe Mode (features.md section 13)
 - Offline-first client integration (features.md section 15)
 - Web platform support

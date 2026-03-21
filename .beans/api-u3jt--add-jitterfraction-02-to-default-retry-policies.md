@@ -3,8 +3,10 @@
 title: Add jitterFraction 0.2 to default retry policies
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-16T09:05:23Z
-updated_at: 2026-03-16T09:05:23Z
+updated_at: 2026-03-21T10:22:25Z
+parent: api-0zl4
 blocked_by:
   - api-g954
 ---

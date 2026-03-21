@@ -3,8 +3,10 @@
 title: Abstract console methods into structured logging module
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-09T11:15:03Z
-updated_at: 2026-03-09T11:15:03Z
+updated_at: 2026-03-21T10:22:25Z
+parent: api-0zl4
 ---
 
 Create a structured logging module that wraps console.info/warn/error. Then ban all direct console usage codebase-wide (remove info from the no-console allow list) except in the one logging module file.
