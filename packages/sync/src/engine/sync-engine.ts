@@ -43,6 +43,12 @@ export interface SyncEngineConfig {
 /** Maximum parallel document hydrations during bootstrap. */
 const HYDRATION_CONCURRENCY = 5;
 
+/** Maximum number of failed conflict persistence batches retained for retry. */
+const MAX_CONFLICT_RETRY_BATCHES = 100;
+
+/** Maximum parallel correction envelope submissions. */
+const CORRECTION_ENVELOPE_CONCURRENCY = 5;
+
 /**
  * Client-side sync engine.
  *
@@ -99,7 +105,7 @@ export class SyncEngine {
     const results = await mapConcurrent(
       [...subscriptionSet.active],
       HYDRATION_CONCURRENCY,
-      (entry) => this.hydrateDocument(entry.docId, entry.docType),
+      (entry) => this.hydrateDocument(entry.docId, entry.docType, entry.snapshotVersion),
     );
 
     // Log failures but don't abort — partial bootstrap is better than none
@@ -281,13 +287,18 @@ export class SyncEngine {
   private enqueueDocumentOperation<T>(docId: string, op: () => Promise<T>): Promise<T> {
     const prev = this.documentQueues.get(docId) ?? Promise.resolve();
     const next = prev.then(op, op);
-    this.documentQueues.set(
-      docId,
-      next.then(
-        () => {},
-        () => {},
-      ),
+    // P-M4: Track the void-wrapped promise so we can clean up after resolution
+    const voidPromise = next.then(
+      () => {},
+      () => {},
     );
+    this.documentQueues.set(docId, voidPromise);
+    // Clean up the map entry if it still points to this promise (identity check avoids race)
+    void voidPromise.then(() => {
+      if (this.documentQueues.get(docId) === voidPromise) {
+        this.documentQueues.delete(docId);
+      }
+    });
     return next;
   }
 
@@ -335,17 +346,38 @@ export class SyncEngine {
     }
   }
 
-  private async hydrateDocument(docId: string, docType: SyncDocumentType): Promise<void> {
+  private async hydrateDocument(
+    docId: string,
+    docType: SyncDocumentType,
+    manifestSnapshotVersion?: number,
+  ): Promise<void> {
     const keys = this.config.keyResolver.resolveKeys(docId);
 
     // Try loading from local storage first
     const localSnapshot = await this.config.storageAdapter.loadSnapshot(docId);
     const localChanges = await this.config.storageAdapter.loadChangesSince(docId, 0);
 
-    // Try fetching from server
-    const serverSnapshot = await this.config.networkAdapter.fetchLatestSnapshot(docId);
-    const serverSnapshotSeq = serverSnapshot?.snapshotVersion ?? 0;
+    // P-M2: Determine local high-water mark from snapshot + changes
     const localSnapshotSeq = localSnapshot?.snapshotVersion ?? 0;
+    const localMaxSeq =
+      localChanges.length > 0
+        ? Math.max(localSnapshotSeq, localChanges[localChanges.length - 1]?.seq ?? 0)
+        : localSnapshotSeq;
+    const serverManifestVersion = manifestSnapshotVersion ?? 0;
+
+    // P-M2: Skip server fetch if local state already matches or exceeds manifest.
+    // Only skip when the manifest reports a positive snapshot version — version 0
+    // means the server may have unsnapshot changes we haven't seen.
+    const localUpToDate =
+      serverManifestVersion > 0 &&
+      localSnapshotSeq >= serverManifestVersion &&
+      localMaxSeq >= serverManifestVersion;
+
+    // Try fetching from server (skip if local is up to date)
+    const serverSnapshot = localUpToDate
+      ? null
+      : await this.config.networkAdapter.fetchLatestSnapshot(docId);
+    const serverSnapshotSeq = serverSnapshot?.snapshotVersion ?? 0;
 
     // Use whichever snapshot is newer
     const snapshot = serverSnapshotSeq > localSnapshotSeq ? serverSnapshot : localSnapshot;
@@ -377,18 +409,20 @@ export class SyncEngine {
       }
     }
 
-    // Fetch server changes since last known seq
-    const changes = await this.config.networkAdapter.fetchChangesSince(
-      docId,
-      session.lastSyncedSeq,
-    );
-    if (changes.length > 0) {
-      session.applyEncryptedChanges(changes);
+    // Fetch server changes since last known seq (skip if local is up to date)
+    if (!localUpToDate) {
+      const changes = await this.config.networkAdapter.fetchChangesSince(
+        docId,
+        session.lastSyncedSeq,
+      );
+      if (changes.length > 0) {
+        session.applyEncryptedChanges(changes);
 
-      // Run post-merge validation to correct merge artifacts
-      await this.runPostMergeValidation(docId, session);
+        // Run post-merge validation to correct merge artifacts
+        await this.runPostMergeValidation(docId, session);
 
-      await this.persistChanges(docId, changes);
+        await this.persistChanges(docId, changes);
+      }
     }
 
     this.sessions.set(docId, session);
@@ -447,6 +481,16 @@ export class SyncEngine {
         this.failedConflictPersistence.push(batch);
       }
     }
+
+    // P-M5: Cap the retry buffer to prevent unbounded growth
+    if (this.failedConflictPersistence.length > MAX_CONFLICT_RETRY_BATCHES) {
+      const dropped = this.failedConflictPersistence.length - MAX_CONFLICT_RETRY_BATCHES;
+      this.failedConflictPersistence = this.failedConflictPersistence.slice(dropped);
+      this.config.onError(
+        `Conflict retry buffer exceeded cap (${String(MAX_CONFLICT_RETRY_BATCHES)}), dropped ${String(dropped)} oldest entries`,
+        null,
+      );
+    }
   }
 
   private updateSyncState(docId: string, seq: number): void {
@@ -478,9 +522,11 @@ export async function submitCorrectionEnvelopes(
 ): Promise<void> {
   if (envelopes.length === 0) return;
 
-  // Phase 1: Submit all to network in parallel
-  const submitResults = await Promise.allSettled(
-    envelopes.map((envelope) => config.networkAdapter.submitChange(docId, envelope)),
+  // P-M8: Phase 1 — Submit to network with bounded concurrency
+  const submitResults = await mapConcurrent(
+    [...envelopes],
+    CORRECTION_ENVELOPE_CONCURRENCY,
+    (envelope) => config.networkAdapter.submitChange(docId, envelope),
   );
 
   // Collect successfully sequenced envelopes
@@ -493,9 +539,11 @@ export async function submitCorrectionEnvelopes(
     }
   }
 
-  // Phase 2: Persist all successful submissions locally
-  const persistResults = await Promise.allSettled(
-    sequenced.map((envelope) => config.storageAdapter.appendChange(docId, envelope)),
+  // Phase 2: Persist all successful submissions locally with bounded concurrency
+  const persistResults = await mapConcurrent(
+    sequenced,
+    CORRECTION_ENVELOPE_CONCURRENCY,
+    (envelope) => config.storageAdapter.appendChange(docId, envelope),
   );
 
   for (const result of persistResults) {

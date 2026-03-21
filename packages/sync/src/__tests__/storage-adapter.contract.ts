@@ -97,6 +97,37 @@ export function runStorageAdapterContract(factory: () => SyncStorageAdapter): vo
       });
     });
 
+    describe("appendChanges (batch)", () => {
+      it("persists multiple changes in a single call", async () => {
+        const adapter = factory();
+        if (!adapter.appendChanges) return;
+        const docId = "doc_batch";
+        const changes = [makeChange(1, docId), makeChange(2, docId), makeChange(3, docId)];
+        await adapter.appendChanges(docId, changes);
+        const result = await adapter.loadChangesSince(docId, 0);
+        expect(result.map((c) => c.seq)).toEqual([1, 2, 3]);
+      });
+
+      it("is a no-op for empty array", async () => {
+        const adapter = factory();
+        if (!adapter.appendChanges) return;
+        await expect(adapter.appendChanges("doc_empty_batch", [])).resolves.not.toThrow();
+        const result = await adapter.loadChangesSince("doc_empty_batch", 0);
+        expect(result).toHaveLength(0);
+      });
+
+      it("does not cross-contaminate between documents", async () => {
+        const adapter = factory();
+        if (!adapter.appendChanges) return;
+        await adapter.appendChanges("doc_a", [makeChange(1, "doc_a"), makeChange(2, "doc_a")]);
+        await adapter.appendChanges("doc_b", [makeChange(1, "doc_b")]);
+        const resultA = await adapter.loadChangesSince("doc_a", 0);
+        const resultB = await adapter.loadChangesSince("doc_b", 0);
+        expect(resultA).toHaveLength(2);
+        expect(resultB).toHaveLength(1);
+      });
+    });
+
     describe("pruneChangesBeforeSnapshot", () => {
       it("removes changes with seq ≤ snapshotVersion", async () => {
         const adapter = factory();
