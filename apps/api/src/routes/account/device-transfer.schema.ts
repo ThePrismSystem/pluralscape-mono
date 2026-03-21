@@ -29,7 +29,8 @@ const codeSaltHex = z
     CODE_SALT_HEX_LENGTH,
     `codeSaltHex must be exactly ${String(CODE_SALT_HEX_LENGTH)} hex characters`,
   )
-  .regex(HEX_PATTERN, "codeSaltHex must be a valid hex string");
+  .regex(HEX_PATTERN, "codeSaltHex must be a valid hex string")
+  .transform((v) => v.toLowerCase());
 
 /** Hex string for encrypted key material with min/max byte-length bounds. */
 const encryptedKeyMaterialHex = z
@@ -45,11 +46,11 @@ const encryptedKeyMaterialHex = z
   .regex(HEX_PATTERN, "encryptedKeyMaterialHex must be a valid hex string")
   .refine((v) => v.length % HEX_BYTE_WIDTH === 0, {
     message: "encryptedKeyMaterialHex must have even length (whole bytes)",
-  });
+  })
+  .transform((v) => v.toLowerCase());
 
 /** Transfer code: exactly 8 decimal digits. */
 const TRANSFER_CODE_DIGIT_COUNT = 8;
-const TRANSFER_CODE_PATTERN = /^\d{8}$/;
 
 const code = z
   .string()
@@ -57,7 +58,7 @@ const code = z
     TRANSFER_CODE_DIGIT_COUNT,
     `code must be exactly ${String(TRANSFER_CODE_DIGIT_COUNT)} digits`,
   )
-  .regex(TRANSFER_CODE_PATTERN, "code must be 8 decimal digits");
+  .regex(/^\d+$/, "code must contain only decimal digits");
 
 /** Schema for POST /device-transfer (initiate). */
 export const initiateTransferBodySchema = z.object({

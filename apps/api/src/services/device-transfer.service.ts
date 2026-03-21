@@ -13,11 +13,10 @@ import { and, eq, gt, sql } from "drizzle-orm";
 
 import { deserializeEncryptedPayload } from "../lib/encrypted-payload.js";
 import { fromHex, toHex } from "../lib/hex.js";
-import { deriveTransferKeyOffload } from "../lib/pwhash-offload.js";
+import { WorkerError, deriveTransferKeyOffload } from "../lib/pwhash-offload.js";
 import { MAX_TRANSFER_CODE_ATTEMPTS } from "../routes/account/device-transfer.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
-import type { AeadKey } from "@pluralscape/crypto";
 import type { AccountId, SessionId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -177,17 +176,13 @@ export async function completeTransfer(
   try {
     const raw = await deriveTransferKeyOffload(code, salt);
     assertAeadKey(raw);
-    const transferKey: AeadKey = raw;
     const payload = deserializeEncryptedPayload(row.encryptedKeyMaterial);
-    decryptFromTransfer(payload, transferKey);
+    decryptFromTransfer(payload, raw);
     codeCorrect = true;
   } catch (error) {
     if (error instanceof DecryptionFailedError) {
       // Decryption failed — wrong code, handled below
-    } else if (
-      error instanceof Error &&
-      (error.message === "pwhash worker timeout" || error.message.includes("Worker"))
-    ) {
+    } else if (error instanceof WorkerError) {
       throw new KeyDerivationUnavailableError("Key derivation service is temporarily unavailable", {
         cause: error,
       });
@@ -240,7 +235,14 @@ export async function completeTransfer(
       detail: `Transfer ${transferId} completed by session ${sessionId}`,
     });
 
-    await tx.delete(deviceTransferRequests).where(eq(deviceTransferRequests.id, transferId));
+    const [deleted] = await tx
+      .delete(deviceTransferRequests)
+      .where(eq(deviceTransferRequests.id, transferId))
+      .returning({ id: deviceTransferRequests.id });
+
+    if (!deleted) {
+      throw new TransferNotFoundError("Transfer already completed");
+    }
   });
 
   return { encryptedKeyMaterialHex };

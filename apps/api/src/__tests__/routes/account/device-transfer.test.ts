@@ -149,6 +149,18 @@ describe("POST /account/device-transfer (initiate)", () => {
     expect(body.error.code).toBe("VALIDATION_ERROR");
   });
 
+  it("returns 400 when encryptedKeyMaterialHex is too long", async () => {
+    const app = createApp();
+    const res = await postJSON(app, "/account/device-transfer", {
+      codeSaltHex: VALID_SALT_HEX,
+      encryptedKeyMaterialHex: "bb".repeat(1025), // 2050 hex chars, max is 2048
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("returns 400 when encryptedKeyMaterialHex has odd length", async () => {
     const app = createApp();
     const res = await postJSON(app, "/account/device-transfer", {
@@ -287,7 +299,7 @@ describe("POST /account/device-transfer/:id/complete", () => {
     expect(body.error.code).toBe("UNAUTHENTICATED");
   });
 
-  it("returns 500 when service throws KeyDerivationUnavailableError", async () => {
+  it("returns 503 when service throws KeyDerivationUnavailableError", async () => {
     vi.mocked(completeTransfer).mockRejectedValueOnce(
       new KeyDerivationUnavailableError("Key derivation service is temporarily unavailable"),
     );
@@ -297,7 +309,9 @@ describe("POST /account/device-transfer/:id/complete", () => {
       code: VALID_CODE,
     });
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("SERVICE_UNAVAILABLE");
   });
 
   it("returns 400 when body is not valid JSON", async () => {

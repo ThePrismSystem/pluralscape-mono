@@ -5,8 +5,8 @@ import { Hono } from "hono";
 import {
   HTTP_BAD_REQUEST,
   HTTP_CREATED,
-  HTTP_INTERNAL_SERVER_ERROR,
   HTTP_NOT_FOUND,
+  HTTP_SERVICE_UNAVAILABLE,
   HTTP_UNAUTHORIZED,
 } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -136,7 +136,7 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
     }
     if (error instanceof KeyDerivationUnavailableError) {
-      throw new ApiHttpError(HTTP_INTERNAL_SERVER_ERROR, "SERVICE_UNAVAILABLE", error.message);
+      throw new ApiHttpError(HTTP_SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE", error.message);
     }
     throw error;
   }

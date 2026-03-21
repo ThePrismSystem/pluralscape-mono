@@ -8,6 +8,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker as _Worker } from "node:worker_threads";
 
+/** Thrown when the pwhash worker pool fails (timeout, crash, or error response). */
+export class WorkerError extends Error {
+  override readonly name = "WorkerError" as const;
+}
+
 // node:worker_threads Worker has .on() but Bun's ambient Worker type does not.
 // Re-declare with the EventEmitter methods we actually use.
 interface NodeWorker {
@@ -56,7 +61,7 @@ function initPool(): NodeWorker[] {
       if (msg.ok) {
         req.resolve(msg.value);
       } else {
-        req.reject(new Error(msg.error ?? "Worker error"));
+        req.reject(new WorkerError(msg.error ?? "Worker error"));
       }
     });
     worker.on("error", (err: Error) => {
@@ -84,7 +89,7 @@ function dispatch(message: Record<string, unknown>): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       pending.delete(id);
-      reject(new Error("pwhash worker timeout"));
+      reject(new WorkerError("pwhash worker timeout"));
     }, DISPATCH_TIMEOUT_MS);
 
     pending.set(id, {
