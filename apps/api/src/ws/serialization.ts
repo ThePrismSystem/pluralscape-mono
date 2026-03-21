@@ -9,7 +9,7 @@
  * Binary fields are at known locations in the protocol schema, so we walk
  * only those paths rather than visiting every property in the object tree.
  */
-import type { ServerMessage } from "@pluralscape/sync";
+import type { EncryptedChangeEnvelope, ServerMessage } from "@pluralscape/sync";
 
 /** Convert a Base64url string to Uint8Array. */
 export function base64urlToBytes(input: string): Uint8Array {
@@ -21,8 +21,17 @@ export function bytesToBase64url(input: Uint8Array): string {
   return Buffer.from(input).toString("base64url");
 }
 
-/** Field names that contain Uint8Array values in envelope types. */
-const ENVELOPE_BINARY_FIELDS = ["ciphertext", "nonce", "signature", "authorPublicKey"] as const;
+/**
+ * Field names that contain Uint8Array values in envelope types.
+ * Constrained against EncryptedChangeEnvelope so new binary fields
+ * cause a compile error if not added here.
+ */
+const ENVELOPE_BINARY_FIELDS = [
+  "ciphertext",
+  "nonce",
+  "signature",
+  "authorPublicKey",
+] as const satisfies readonly (keyof EncryptedChangeEnvelope)[];
 
 /**
  * Convert binary fields in an envelope-shaped object to base64url strings.
@@ -39,13 +48,26 @@ function transformEnvelope(envelope: Record<string, unknown>): Record<string, un
   return result;
 }
 
+/** Transform a message whose binary data lives in a top-level `changes` array. */
+function transformChangesArray(msg: Record<string, unknown>): Record<string, unknown> {
+  const changes = msg["changes"];
+  if (!Array.isArray(changes)) return msg;
+  return { ...msg, changes: changes.map(transformEnvelope) };
+}
+
 /**
  * Map of ServerMessage types to functions that transform their binary fields.
  *
- * Only message types that contain Uint8Array data need entries here.
+ * Only message types that contain Uint8Array data need entries here:
+ *   - SnapshotResponse  — snapshot envelope
+ *   - ChangesResponse   — changes array of envelopes
+ *   - DocumentUpdate    — changes array of envelopes
+ *   - SubscribeResponse — catchup array containing snapshot + changes
+ *
  * Messages without binary fields (AuthenticateResponse, ManifestResponse,
  * ChangeAccepted, SnapshotAccepted, ManifestChanged, SyncError) are
- * serialized directly without transformation.
+ * serialized directly without transformation. When adding a new ServerMessage
+ * type with Uint8Array fields, add a corresponding entry here.
  */
 const BINARY_FIELD_PATHS: Partial<
   Record<ServerMessage["type"], (msg: Record<string, unknown>) => Record<string, unknown>>
@@ -56,26 +78,21 @@ const BINARY_FIELD_PATHS: Partial<
     return { ...msg, snapshot: transformEnvelope(snapshot) };
   },
 
-  ChangesResponse: (msg) => {
-    const changes = msg["changes"] as Record<string, unknown>[];
-    return { ...msg, changes: changes.map(transformEnvelope) };
-  },
+  ChangesResponse: transformChangesArray,
 
-  DocumentUpdate: (msg) => {
-    const changes = msg["changes"] as Record<string, unknown>[];
-    return { ...msg, changes: changes.map(transformEnvelope) };
-  },
+  DocumentUpdate: transformChangesArray,
 
   SubscribeResponse: (msg) => {
-    const catchup = msg["catchup"] as Array<Record<string, unknown>>;
+    const catchup = msg["catchup"];
+    if (!Array.isArray(catchup)) return msg;
     return {
       ...msg,
-      catchup: catchup.map((entry) => {
-        const changes = entry["changes"] as Record<string, unknown>[];
+      catchup: catchup.map((entry: Record<string, unknown>) => {
+        const changes = entry["changes"];
         const snapshot = entry["snapshot"] as Record<string, unknown> | null;
         return {
           ...entry,
-          changes: changes.map(transformEnvelope),
+          changes: Array.isArray(changes) ? changes.map(transformEnvelope) : changes,
           snapshot: snapshot ? transformEnvelope(snapshot) : null,
         };
       }),
@@ -121,7 +138,6 @@ export function transformBinaryFields(obj: unknown): unknown {
 export function serializeServerMessage(msg: ServerMessage): string {
   const transformer = BINARY_FIELD_PATHS[msg.type];
   if (transformer) {
-    // Widen to Record via spread for indexed property access in transformer
     return JSON.stringify(transformer({ ...msg }));
   }
   // No binary fields — serialize directly

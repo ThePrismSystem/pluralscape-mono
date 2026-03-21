@@ -991,6 +991,40 @@ describe("message-router", () => {
       expect(resp["message"]).toBe("Failed to process FetchSnapshotRequest");
     });
 
+    it("sends INTERNAL_ERROR when FetchChangesRequest handler throws", async () => {
+      const brokenRelay = {
+        submit: vi.fn(),
+        submitSnapshot: vi.fn(),
+        getEnvelopesSince: vi.fn(() => {
+          throw new Error("changes fetch failure");
+        }),
+        getLatestSnapshot: vi.fn(),
+        getManifest: vi.fn(),
+      };
+      const brokenCtx: RouterContext = {
+        relay: brokenRelay as never,
+        documentOwnership: new Map<string, SystemId>(),
+        manager,
+      };
+
+      await routeMessage(
+        JSON.stringify({
+          type: "FetchChangesRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          docId: "doc-changes-err",
+          sinceSeq: 0,
+        }),
+        state,
+        log,
+        brokenCtx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INTERNAL_ERROR");
+      expect(resp["message"]).toBe("Failed to process FetchChangesRequest");
+    });
+
     it("SubmitSnapshotRequest VERSION_CONFLICT does not set ownership", async () => {
       // First submit to establish version 2
       const snapshot1 = {
@@ -1291,6 +1325,7 @@ describe("message-router", () => {
 
     it("skips DB lookup when cache already has ownership", async () => {
       ctx.documentOwnership.set("doc-cached", "sys_test" as SystemId);
+      mockDb.select.mockClear();
 
       await routeMessage(
         JSON.stringify({
@@ -1305,6 +1340,7 @@ describe("message-router", () => {
 
       const resp = lastResponse();
       expect(resp["type"]).toBe("SnapshotResponse");
+      expect(mockDb.select).not.toHaveBeenCalled();
     });
 
     it("fails open when DB query throws", async () => {

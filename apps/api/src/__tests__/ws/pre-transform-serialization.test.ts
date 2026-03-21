@@ -365,4 +365,47 @@ describe("serializeServerMessage (targeted binary field paths)", () => {
     // Both approaches should produce the same JSON
     expect(JSON.parse(targeted)).toEqual(JSON.parse(recursive));
   });
+
+  it("targeted approach produces same result as recursive for SubscribeResponse", () => {
+    const docId = crypto.randomUUID();
+
+    const msg: ServerMessage = {
+      type: "SubscribeResponse",
+      correlationId: crypto.randomUUID(),
+      catchup: [
+        {
+          docId,
+          changes: [
+            {
+              ciphertext: new Uint8Array([1, 2, 3]),
+              nonce: nonce(1),
+              signature: sig(2),
+              authorPublicKey: pubkey(3),
+              documentId: docId,
+              seq: 1,
+            },
+          ],
+          snapshot: {
+            ciphertext: new Uint8Array([10, 20]),
+            nonce: nonce(4),
+            signature: sig(5),
+            authorPublicKey: pubkey(6),
+            documentId: docId,
+            snapshotVersion: 1,
+          },
+        },
+        {
+          docId,
+          changes: [],
+          snapshot: null,
+        },
+      ],
+      droppedDocIds: [],
+    };
+
+    const targeted = serializeServerMessage(msg);
+    const recursive = JSON.stringify(transformBinaryFields(msg));
+
+    expect(JSON.parse(targeted)).toEqual(JSON.parse(recursive));
+  });
 });

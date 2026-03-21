@@ -6,7 +6,7 @@
  */
 import { syncDocuments } from "@pluralscape/db/pg";
 import { EncryptedRelay } from "@pluralscape/sync";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { getDb } from "../lib/db.js";
 
@@ -181,12 +181,12 @@ async function checkAccess(
         ownership.set(docId, owner);
       }
     } catch (err) {
-      log.warn("Failed to query document ownership from DB", {
+      log.error("Failed to query document ownership from DB — failing open", {
         docId,
         error: formatError(err),
       });
-      // Fail open on DB error — the in-memory relay is still the primary
-      // gate, and E2E encryption prevents data exposure regardless
+      // Fail open: the in-memory relay is still the primary gate, and
+      // E2E encryption prevents data exposure regardless
     }
   }
 
@@ -372,6 +372,30 @@ export async function routeMessage(
       );
       if (!msg) return;
       // I17: Check each doc individually; subscribe permitted ones, deny denied ones
+      // Pre-warm ownership cache in a single batch query to avoid N sequential DB hits
+      const uncachedDocIds = msg.documents
+        .map((e) => e.docId)
+        .filter((id) => !documentOwnership.has(id));
+      if (uncachedDocIds.length > 0) {
+        try {
+          const db = await getDb();
+          const rows = await db
+            .select({
+              documentId: syncDocuments.documentId,
+              systemId: syncDocuments.systemId,
+            })
+            .from(syncDocuments)
+            .where(inArray(syncDocuments.documentId, uncachedDocIds));
+          for (const row of rows) {
+            documentOwnership.set(row.documentId, row.systemId as SystemId);
+          }
+        } catch (err) {
+          log.error("Failed to batch-query document ownership from DB", {
+            error: formatError(err),
+          });
+          // Fail open — individual checkAccess calls will also fail open on cache miss
+        }
+      }
       const permitted: typeof msg.documents = [];
       for (const entry of msg.documents) {
         if (
@@ -528,6 +552,10 @@ export async function routeMessage(
         return;
       try {
         const result = await handleSubmitChange(msg, relay);
+        if (result.type === "SyncError") {
+          send(state, result, log);
+          return;
+        }
         if (!send(state, result.response, log)) return;
         // Post-success: set ownership and broadcast to other subscribers
         try {
@@ -594,15 +622,7 @@ export async function routeMessage(
         if (!send(state, response, log)) return;
         // Post-success: set ownership only on non-error responses
         if (response.type !== "SyncError") {
-          try {
-            documentOwnership.set(msg.docId, state.systemId);
-          } catch (err) {
-            log.error("Post-submit side-effect failed for SubmitSnapshotRequest", {
-              connectionId: state.connectionId,
-              docId: msg.docId,
-              error: formatError(err),
-            });
-          }
+          documentOwnership.set(msg.docId, state.systemId);
         }
       } catch (err) {
         log.error("handleSubmitSnapshot threw", {
