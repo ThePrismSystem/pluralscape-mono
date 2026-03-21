@@ -178,3 +178,12 @@ export { SYNC_PROTOCOL_VERSION } from "./protocol.js";
 // ── Sync engine ─────────────────────────────────────────────────────
 export { SyncEngine } from "./engine/index.js";
 export type { SyncEngineConfig } from "./engine/index.js";
+
+// ── Engine: compaction ──────────────────────────────────────────────
+export { handleCompaction, compactionIdempotencyKey } from "./engine/compaction.js";
+export type {
+  CompactionInput,
+  CompactionResult,
+  CompactionReason,
+  CompactionSkipReason,
+} from "./engine/compaction.js";

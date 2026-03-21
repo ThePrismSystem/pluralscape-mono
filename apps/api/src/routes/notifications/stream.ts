@@ -38,28 +38,54 @@ interface AccountSseState {
   messageHandler: ((message: string) => void) | null;
 }
 
-const accountStates = new Map<string, AccountSseState>();
-let noPubSubWarningLogged = false;
+/** Encapsulates per-account SSE state management. */
+class SseStateManager {
+  private readonly states = new Map<string, AccountSseState>();
+  private noPubSubWarningLogged = false;
 
-function getOrCreateState(accountId: string): AccountSseState {
-  let state = accountStates.get(accountId);
-  if (!state) {
-    state = {
-      buffer: new SseEventBuffer(),
-      streams: new Set(),
-      messageHandler: null,
-    };
-    accountStates.set(accountId, state);
+  getOrCreate(accountId: string): AccountSseState {
+    let state = this.states.get(accountId);
+    if (!state) {
+      state = {
+        buffer: new SseEventBuffer(),
+        streams: new Set(),
+        messageHandler: null,
+      };
+      this.states.set(accountId, state);
+    }
+    return state;
   }
-  return state;
+
+  get(accountId: string): AccountSseState | undefined {
+    return this.states.get(accountId);
+  }
+
+  delete(accountId: string): void {
+    this.states.delete(accountId);
+  }
+
+  get warningLogged(): boolean {
+    return this.noPubSubWarningLogged;
+  }
+
+  set warningLogged(value: boolean) {
+    this.noPubSubWarningLogged = value;
+  }
+
+  reset(): void {
+    this.states.clear();
+    this.noPubSubWarningLogged = false;
+  }
 }
+
+const sseState = new SseStateManager();
 
 notificationsRoutes.get("/stream", (c) => {
   const auth = c.get("auth");
   const accountId = auth.accountId;
   const lastEventId = c.req.header("Last-Event-ID");
   // M1: Enforce per-account SSE connection limit
-  const existingStreams = accountStates.get(accountId)?.streams.size ?? 0;
+  const existingStreams = sseState.get(accountId)?.streams.size ?? 0;
   if (existingStreams >= SSE_MAX_CONNECTIONS_PER_ACCOUNT) {
     return c.json(
       {
@@ -70,7 +96,7 @@ notificationsRoutes.get("/stream", (c) => {
     );
   }
 
-  const state = getOrCreateState(accountId);
+  const state = sseState.getOrCreate(accountId);
   const pubsub = getNotificationPubSub();
   const channel = `${SSE_CHANNEL_PREFIX}${accountId}`;
 
@@ -141,9 +167,9 @@ notificationsRoutes.get("/stream", (c) => {
         await pubsub.subscribe(channel, handler);
       }
 
-      if (!pubsub && !noPubSubWarningLogged) {
+      if (!pubsub && !sseState.warningLogged) {
         logger.warn("SSE: no pub/sub configured, stream will only receive heartbeats");
-        noPubSubWarningLogged = true;
+        sseState.warningLogged = true;
       }
 
       // Wait for the stream to close (client disconnect)
@@ -166,7 +192,7 @@ notificationsRoutes.get("/stream", (c) => {
         if (pubsub && state.messageHandler) {
           await pubsub.unsubscribe(channel, state.messageHandler);
         }
-        accountStates.delete(accountId);
+        sseState.delete(accountId);
       }
     }
   });
@@ -174,18 +200,17 @@ notificationsRoutes.get("/stream", (c) => {
 
 /** Get the number of active SSE streams for an account. */
 export function getAccountSseStreamCount(accountId: string): number {
-  return accountStates.get(accountId)?.streams.size ?? 0;
+  return sseState.get(accountId)?.streams.size ?? 0;
 }
 
 /** Reset SSE state (for testing). */
 export function _resetSseStateForTesting(): void {
-  accountStates.clear();
-  noPubSubWarningLogged = false;
+  sseState.reset();
 }
 
 /** Add a mock stream entry for testing connection limits (does not create a real stream). */
 export function _addMockStreamForTesting(accountId: string): void {
-  const state = getOrCreateState(accountId);
+  const state = sseState.getOrCreate(accountId);
   // Use a unique object as a stand-in for a real SSEStreamingApi
   state.streams.add({} as SSEStreamingApi);
 }
