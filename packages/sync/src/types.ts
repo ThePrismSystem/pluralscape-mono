@@ -16,6 +16,7 @@ import {
 import type { SyncDocumentType } from "./document-types.js";
 import type { AeadKey, SignKeypair, SignPublicKey } from "@pluralscape/crypto";
 import type { AeadNonce, Signature } from "@pluralscape/crypto";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 export interface DocumentKeys {
   readonly encryptionKey: AeadKey;
@@ -27,7 +28,7 @@ export interface EncryptedChangeEnvelope {
   readonly nonce: AeadNonce;
   readonly signature: Signature;
   readonly authorPublicKey: SignPublicKey;
-  readonly documentId: string;
+  readonly documentId: SyncDocumentId;
   readonly seq: number;
 }
 
@@ -36,7 +37,7 @@ export interface EncryptedSnapshotEnvelope {
   readonly nonce: AeadNonce;
   readonly signature: Signature;
   readonly authorPublicKey: SignPublicKey;
-  readonly documentId: string;
+  readonly documentId: SyncDocumentId;
   readonly snapshotVersion: number;
 }
 

@@ -86,7 +86,7 @@ describe("GET /systems/:systemId/blobs", () => {
           purpose: "avatar" as never,
           mimeType: "image/png",
           sizeBytes: 1024,
-          checksum: "a".repeat(64),
+          checksum: "a".repeat(64) as never,
           uploadedAt: 1700000000000 as never,
           thumbnailOfBlobId: null,
         },

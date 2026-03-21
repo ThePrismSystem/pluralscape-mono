@@ -8,7 +8,7 @@ import {
 import type { SyncManifest } from "./adapters/network-adapter.js";
 import type { PaginatedEnvelopes, SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
-import type { SystemId } from "@pluralscape/types";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
 /**
  * Number of bytes in the composite dedup key buffer.
@@ -182,7 +182,7 @@ export class EncryptedRelay implements SyncRelayService {
    * additional envelopes exist beyond the returned page.
    */
   getEnvelopesSince(
-    documentId: string,
+    documentId: SyncDocumentId,
     sinceSeq: number,
     limit?: number,
   ): Promise<PaginatedEnvelopes> {
@@ -240,7 +240,7 @@ export class EncryptedRelay implements SyncRelayService {
     return Promise.resolve();
   }
 
-  getLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
+  getLatestSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null> {
     const snapshot = this.snapshots.get(documentId) ?? null;
     if (snapshot !== null || this.documents.has(documentId)) {
       this.touch(documentId);

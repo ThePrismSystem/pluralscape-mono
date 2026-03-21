@@ -11,6 +11,8 @@ import {
 } from "../relay.js";
 import { MiB } from "../sync.constants.js";
 
+import { docId, sysId } from "./test-crypto-helpers.js";
+
 import type { SyncRelayService } from "../relay-service.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -18,7 +20,7 @@ import type { SodiumAdapter } from "@pluralscape/crypto";
 let sodium: SodiumAdapter;
 let keys: DocumentKeys;
 let relay: EncryptedRelay;
-const DOCUMENT_ID = "doc-relay-001";
+const DOCUMENT_ID = docId("doc-relay-001");
 
 beforeAll(async () => {
   sodium = new WasmSodiumAdapter();
@@ -102,8 +104,8 @@ describe("EncryptedRelay", () => {
   });
 
   it("2.4b — different documents have independent seq counters", async () => {
-    const c1 = encryptChange(sodium.randomBytes(16), "doc-alpha", keys, sodium);
-    const c2 = encryptChange(sodium.randomBytes(16), "doc-beta", keys, sodium);
+    const c1 = encryptChange(sodium.randomBytes(16), docId("doc-alpha"), keys, sodium);
+    const c2 = encryptChange(sodium.randomBytes(16), docId("doc-beta"), keys, sodium);
 
     const seqA = await relay.submit(c1);
     const seqB = await relay.submit(c2);
@@ -136,7 +138,7 @@ describe("EncryptedRelay", () => {
     expect(latest?.ciphertext).toEqual(snap2.ciphertext);
 
     // No snapshot for unknown doc
-    expect(await relay.getLatestSnapshot("doc-unknown")).toBeNull();
+    expect(await relay.getLatestSnapshot(docId("doc-unknown"))).toBeNull();
   });
 
   describe("implements SyncRelayService", () => {
@@ -197,9 +199,9 @@ describe("EncryptedRelay", () => {
         },
       });
 
-      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
-      const c2 = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
-      const c3 = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      const c1 = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), docId("doc-b"), keys, sodium);
+      const c3 = encryptChange(sodium.randomBytes(16), docId("doc-c"), keys, sodium);
 
       await limitedRelay.submit(c1);
       await limitedRelay.submit(c2);
@@ -207,11 +209,11 @@ describe("EncryptedRelay", () => {
       await limitedRelay.submit(c3);
 
       expect(evicted).toEqual(["doc-a"]);
-      const result = await limitedRelay.getEnvelopesSince("doc-a", 0);
+      const result = await limitedRelay.getEnvelopesSince(docId("doc-a"), 0);
       expect(result.envelopes).toHaveLength(0);
-      const resultB = await limitedRelay.getEnvelopesSince("doc-b", 0);
+      const resultB = await limitedRelay.getEnvelopesSince(docId("doc-b"), 0);
       expect(resultB.envelopes).toHaveLength(1);
-      const resultC = await limitedRelay.getEnvelopesSince("doc-c", 0);
+      const resultC = await limitedRelay.getEnvelopesSince(docId("doc-c"), 0);
       expect(resultC.envelopes).toHaveLength(1);
     });
 
@@ -219,8 +221,8 @@ describe("EncryptedRelay", () => {
       const onEvict = vi.fn();
       const limitedRelay = new EncryptedRelay({ maxDocuments: 1, onEvict });
 
-      const c1 = encryptChange(sodium.randomBytes(16), "doc-x", keys, sodium);
-      const c2 = encryptChange(sodium.randomBytes(16), "doc-y", keys, sodium);
+      const c1 = encryptChange(sodium.randomBytes(16), docId("doc-x"), keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), docId("doc-y"), keys, sodium);
 
       await limitedRelay.submit(c1);
       await limitedRelay.submit(c2);
@@ -240,8 +242,8 @@ describe("EncryptedRelay", () => {
         },
       });
 
-      const c1 = encryptChange(sodium.randomBytes(16), "doc-old", keys, sodium);
-      const c2 = encryptChange(sodium.randomBytes(16), "doc-new", keys, sodium);
+      const c1 = encryptChange(sodium.randomBytes(16), docId("doc-old"), keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), docId("doc-new"), keys, sodium);
 
       await limitedRelay.submit(c1);
       now = 2000;
@@ -249,11 +251,11 @@ describe("EncryptedRelay", () => {
 
       // Touch doc-old to make it more recent than doc-new
       now = 3000;
-      await limitedRelay.getEnvelopesSince("doc-old", 0);
+      await limitedRelay.getEnvelopesSince(docId("doc-old"), 0);
 
       // Now add doc-c — should evict doc-new (less recently accessed)
       now = 4000;
-      const c3 = encryptChange(sodium.randomBytes(16), "doc-third", keys, sodium);
+      const c3 = encryptChange(sodium.randomBytes(16), docId("doc-third"), keys, sodium);
       await limitedRelay.submit(c3);
 
       expect(evicted).toEqual(["doc-new"]);
@@ -265,8 +267,8 @@ describe("EncryptedRelay", () => {
       const onEvict = vi.fn();
       const limitedRelay = new EncryptedRelay({ maxDocuments: 10, onEvict });
 
-      const c1 = encryptChange(sodium.randomBytes(16), "doc-1", keys, sodium);
-      const c2 = encryptChange(sodium.randomBytes(16), "doc-2", keys, sodium);
+      const c1 = encryptChange(sodium.randomBytes(16), docId("doc-1"), keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), docId("doc-2"), keys, sodium);
 
       await limitedRelay.submit(c1);
       await limitedRelay.submit(c2);
@@ -283,17 +285,17 @@ describe("EncryptedRelay", () => {
         },
       });
 
-      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
-      const c2 = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      const c1 = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), docId("doc-b"), keys, sodium);
       await limitedRelay.submit(c1);
       await limitedRelay.submit(c2);
 
       // Submit again to doc-a — doc-a is already tracked, so no eviction needed
-      const c3 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const c3 = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await limitedRelay.submit(c3);
 
       expect(evicted).toEqual([]);
-      const result = await limitedRelay.getEnvelopesSince("doc-a", 0);
+      const result = await limitedRelay.getEnvelopesSince(docId("doc-a"), 0);
       expect(result.envelopes).toHaveLength(2);
     });
 
@@ -309,8 +311,8 @@ describe("EncryptedRelay", () => {
         },
       });
 
-      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
-      const c2 = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      const c1 = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), docId("doc-b"), keys, sodium);
 
       await limitedRelay.submit(c1);
       now = 2000;
@@ -318,11 +320,11 @@ describe("EncryptedRelay", () => {
 
       // Submit to new doc-c — doc-a (oldest) should be evicted, not doc-c
       now = 3000;
-      const c3 = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      const c3 = encryptChange(sodium.randomBytes(16), docId("doc-c"), keys, sodium);
       await limitedRelay.submit(c3);
 
       expect(evicted).toEqual(["doc-a"]);
-      const result = await limitedRelay.getEnvelopesSince("doc-c", 0);
+      const result = await limitedRelay.getEnvelopesSince(docId("doc-c"), 0);
       expect(result.envelopes).toHaveLength(1);
 
       vi.restoreAllMocks();
@@ -331,19 +333,19 @@ describe("EncryptedRelay", () => {
     it("cleans up seq counters on eviction", async () => {
       const limitedRelay = new EncryptedRelay({ maxDocuments: 1 });
 
-      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const c1 = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await limitedRelay.submit(c1);
-      const resultA1 = await limitedRelay.getEnvelopesSince("doc-a", 0);
+      const resultA1 = await limitedRelay.getEnvelopesSince(docId("doc-a"), 0);
       expect(resultA1.envelopes[0]?.seq).toBe(1);
 
       // Evict doc-a by submitting to doc-b
-      const c2 = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      const c2 = encryptChange(sodium.randomBytes(16), docId("doc-b"), keys, sodium);
       await limitedRelay.submit(c2);
 
       // Re-create doc-a — seq should restart at 1
-      const c3 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const c3 = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await limitedRelay.submit(c3);
-      const resultA2 = await limitedRelay.getEnvelopesSince("doc-a", 0);
+      const resultA2 = await limitedRelay.getEnvelopesSince(docId("doc-a"), 0);
       expect(resultA2.envelopes[0]?.seq).toBe(1);
     });
   });
@@ -400,16 +402,16 @@ describe("EncryptedRelay", () => {
 
       // Fill doc-a to the limit
       for (let i = 0; i < maxEnvelopes; i++) {
-        const envelope = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+        const envelope = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
         await limitedRelay.submit(envelope);
       }
 
       // doc-b should still accept envelopes
-      const envelopeB = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      const envelopeB = encryptChange(sodium.randomBytes(16), docId("doc-b"), keys, sodium);
       expect(await limitedRelay.submit(envelopeB)).toBe(1);
 
       // doc-a should still be rejected
-      const overflowA = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const overflowA = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await expect(limitedRelay.submit(overflowA)).rejects.toThrow(EnvelopeLimitExceededError);
     });
 
@@ -441,21 +443,21 @@ describe("EncryptedRelay", () => {
 
       // Submit multiple envelopes for doc-a
       for (let i = 0; i < 5; i++) {
-        const envelope = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+        const envelope = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
         await limitedRelay.submit(envelope);
       }
 
       // Evict doc-a by submitting to doc-b
-      const cb = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      const cb = encryptChange(sodium.randomBytes(16), docId("doc-b"), keys, sodium);
       await limitedRelay.submit(cb);
 
       expect(evicted).toEqual(["doc-a"]);
 
       // After eviction, resubmitting an envelope for doc-a gets seq 1 (fresh doc)
       // This confirms dedup entries were cleaned — old nonces no longer recognized
-      const c1 = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const c1 = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await limitedRelay.submit(c1);
-      const result = await limitedRelay.getEnvelopesSince("doc-a", 0);
+      const result = await limitedRelay.getEnvelopesSince(docId("doc-a"), 0);
       expect(result.envelopes[0]?.seq).toBe(1);
     });
 
@@ -463,13 +465,13 @@ describe("EncryptedRelay", () => {
       const limitedRelay = new EncryptedRelay({ maxDocuments: 2 });
 
       // Submit envelopes for doc-a and doc-b
-      const ea = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const ea = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await limitedRelay.submit(ea);
-      const eb = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      const eb = encryptChange(sodium.randomBytes(16), docId("doc-b"), keys, sodium);
       await limitedRelay.submit(eb);
 
       // Evict doc-a by submitting to doc-c
-      const ec = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      const ec = encryptChange(sodium.randomBytes(16), docId("doc-c"), keys, sodium);
       await limitedRelay.submit(ec);
 
       // doc-b dedup should still work — resubmit returns existing seq
@@ -487,13 +489,13 @@ describe("EncryptedRelay", () => {
       });
 
       // Chain of evictions: doc-a -> doc-b -> doc-c
-      const ca = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const ca = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await limitedRelay.submit(ca);
 
-      const cb = encryptChange(sodium.randomBytes(16), "doc-b", keys, sodium);
+      const cb = encryptChange(sodium.randomBytes(16), docId("doc-b"), keys, sodium);
       await limitedRelay.submit(cb);
 
-      const cc = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      const cc = encryptChange(sodium.randomBytes(16), docId("doc-c"), keys, sodium);
       await limitedRelay.submit(cc);
 
       expect(evicted).toEqual(["doc-a", "doc-b"]);
@@ -503,9 +505,9 @@ describe("EncryptedRelay", () => {
       expect(dedupSeq).toBe(1);
 
       // Re-creating evicted docs should get fresh seqs
-      const newA = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const newA = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await limitedRelay.submit(newA);
-      const result = await limitedRelay.getEnvelopesSince("doc-a", 0);
+      const result = await limitedRelay.getEnvelopesSince(docId("doc-a"), 0);
       expect(result.envelopes[0]?.seq).toBe(1);
     });
   });
@@ -665,14 +667,14 @@ describe("EncryptedRelay", () => {
 
   describe("cross-document dedup key collision", () => {
     it("does not dedup the same envelope submitted to different documents", async () => {
-      const envelope = encryptChange(sodium.randomBytes(16), "doc-x", keys, sodium);
+      const envelope = encryptChange(sodium.randomBytes(16), docId("doc-x"), keys, sodium);
 
       // Submit to doc-x
       const seqX = await relay.submit(envelope);
       expect(seqX).toBe(1);
 
       // Submit the exact same (authorPublicKey, nonce) to doc-y — should NOT dedup
-      const envelopeY = { ...envelope, documentId: "doc-y" };
+      const envelopeY = { ...envelope, documentId: docId("doc-y") };
       const seqY = await relay.submit(envelopeY);
       expect(seqY).toBe(1); // doc-y has its own seq counter
 
@@ -692,17 +694,17 @@ describe("EncryptedRelay", () => {
         },
       });
 
-      const envelope = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      const envelope = encryptChange(sodium.randomBytes(16), docId("doc-a"), keys, sodium);
       await limitedRelay.submit(envelope);
 
       // Same (authorPublicKey, nonce) to doc-b — triggers cross-doc cleanup
-      const envelopeB = { ...envelope, documentId: "doc-b" };
+      const envelopeB = { ...envelope, documentId: docId("doc-b") };
       await limitedRelay.submit(envelopeB);
 
       // Evict doc-a by filling capacity (doc-a, doc-b already exist, add doc-c and doc-d)
-      const ec = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      const ec = encryptChange(sodium.randomBytes(16), docId("doc-c"), keys, sodium);
       await limitedRelay.submit(ec);
-      const ed = encryptChange(sodium.randomBytes(16), "doc-d", keys, sodium);
+      const ed = encryptChange(sodium.randomBytes(16), docId("doc-d"), keys, sodium);
       await limitedRelay.submit(ed);
 
       // doc-a should have been evicted cleanly (no stale dedup references causing issues)
@@ -712,7 +714,7 @@ describe("EncryptedRelay", () => {
 
   describe("getManifest", () => {
     it("returns empty documents array with the given systemId", async () => {
-      const systemId = "sys_test123" as import("@pluralscape/types").SystemId;
+      const systemId = sysId("sys_test123");
       const manifest = await relay.getManifest(systemId);
       expect(manifest).toEqual({ documents: [], systemId });
     });

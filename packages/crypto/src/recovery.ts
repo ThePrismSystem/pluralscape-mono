@@ -136,7 +136,7 @@ export function generateRecoveryKey(masterKey: KdfMasterKey): RecoveryKeyResult 
  * bad format, DecryptionFailedError on wrong key or tampered blob.
  */
 export function recoverMasterKey(
-  displayKey: string,
+  displayKey: RecoveryKeyDisplay,
   encryptedMasterKey: EncryptedPayload,
 ): KdfMasterKey {
   if (!isValidRecoveryKeyFormat(displayKey)) {

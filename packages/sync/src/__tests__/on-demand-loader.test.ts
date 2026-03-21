@@ -5,6 +5,8 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { requestOnDemandDocument } from "../on-demand-loader.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
+import { docId, sysId } from "./test-crypto-helpers.js";
+
 import type {
   SyncManifest,
   SyncNetworkAdapter,
@@ -12,7 +14,6 @@ import type {
 } from "../adapters/network-adapter.js";
 import type { DocumentKeys, EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
-import type { SystemId } from "@pluralscape/types";
 
 type SimpleDoc = { items: string[] };
 
@@ -74,7 +75,7 @@ class MockNetworkAdapter implements SyncNetworkAdapter {
   }
 
   fetchManifest(systemId: string): Promise<SyncManifest> {
-    return Promise.resolve({ systemId: systemId as SystemId, documents: [] });
+    return Promise.resolve({ systemId: sysId(systemId), documents: [] });
   }
 }
 
@@ -84,7 +85,7 @@ beforeAll(async () => {
 });
 
 describe("requestOnDemandDocument", () => {
-  const DOC_ID = "fronting-sys_test";
+  const DOC_ID = docId("fronting-sys_test");
   let keys: DocumentKeys;
   let adapter: MockNetworkAdapter;
 
@@ -252,7 +253,7 @@ describe("requestOnDemandDocument", () => {
   });
 
   it("creates fresh session for non-fronting document type", async () => {
-    const chatDocId = "chat-ch_test";
+    const chatDocId = docId("chat-ch_test");
     const result = await requestOnDemandDocument<SimpleDoc>(
       { docId: chatDocId, persist: false },
       adapter,

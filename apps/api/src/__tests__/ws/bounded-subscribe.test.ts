@@ -11,7 +11,7 @@ import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
 import { handleSubscribeRequest } from "../../ws/handlers.js";
 import { WS_SUBSCRIBE_CONCURRENCY } from "../../ws/ws.constants.js";
-import { nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
+import { docId as toDocId, nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
@@ -26,14 +26,14 @@ import type { AccountId, SessionId, SyncDocumentId, SystemId } from "@pluralscap
 
 let changeCounter = 0;
 
-function mockChangeWithoutSeq(docId: string): Omit<EncryptedChangeEnvelope, "seq"> {
+function mockChangeWithoutSeq(id: SyncDocumentId): Omit<EncryptedChangeEnvelope, "seq"> {
   const fill = ++changeCounter;
   return {
     ciphertext: new Uint8Array([1, 2, 3]),
     nonce: nonce(fill),
     signature: sig(fill),
     authorPublicKey: pubkey(10),
-    documentId: docId,
+    documentId: id,
   };
 }
 
@@ -94,7 +94,7 @@ describe("bounded subscribe concurrency", () => {
     const docCount = WS_SUBSCRIBE_CONCURRENCY + 5;
     const docIds: SyncDocumentId[] = [];
     for (let i = 0; i < docCount; i++) {
-      const docId = crypto.randomUUID() as SyncDocumentId;
+      const docId = toDocId(crypto.randomUUID());
       docIds.push(docId);
       await relay.submit(mockChangeWithoutSeq(docId));
     }
@@ -129,7 +129,7 @@ describe("bounded subscribe concurrency", () => {
 
     const docIds: SyncDocumentId[] = [];
     for (let i = 0; i < WS_SUBSCRIBE_CONCURRENCY; i++) {
-      const docId = crypto.randomUUID() as SyncDocumentId;
+      const docId = toDocId(crypto.randomUUID());
       docIds.push(docId);
       await relay.submit(mockChangeWithoutSeq(docId));
     }
@@ -162,7 +162,7 @@ describe("bounded subscribe concurrency", () => {
     const docCount = 3;
     const docIds: SyncDocumentId[] = [];
     for (let i = 0; i < docCount; i++) {
-      const docId = crypto.randomUUID() as SyncDocumentId;
+      const docId = toDocId(crypto.randomUUID());
       docIds.push(docId);
       await relay.submit(mockChangeWithoutSeq(docId));
     }
@@ -192,7 +192,7 @@ describe("bounded subscribe concurrency", () => {
 
     // Create enough docs to span multiple batches
     const docCount = WS_SUBSCRIBE_CONCURRENCY * 3;
-    const docIds = Array.from({ length: docCount }, () => crypto.randomUUID() as SyncDocumentId);
+    const docIds = Array.from({ length: docCount }, () => toDocId(crypto.randomUUID()));
 
     // Track concurrency via getEnvelopesSince calls
     let inFlight = 0;

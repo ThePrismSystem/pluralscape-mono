@@ -6,11 +6,12 @@
  * and marked as synced once the server acknowledges them.
  */
 import type { EncryptedChangeEnvelope } from "../types.js";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 /** An entry in the offline queue. */
 export interface OfflineQueueEntry {
   readonly id: string;
-  readonly documentId: string;
+  readonly documentId: SyncDocumentId;
   readonly envelope: Omit<EncryptedChangeEnvelope, "seq">;
   readonly enqueuedAt: number;
   readonly syncedAt: number | null;
@@ -26,7 +27,10 @@ export interface OfflineQueueEntry {
  */
 export interface OfflineQueueAdapter {
   /** Enqueue a change for later submission. Returns the entry ID. */
-  enqueue(documentId: string, envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<string>;
+  enqueue(
+    documentId: SyncDocumentId,
+    envelope: Omit<EncryptedChangeEnvelope, "seq">,
+  ): Promise<string>;
 
   /** Drain up to a batch of unsynced entries, ordered by enqueuedAt. */
   drainUnsynced(): Promise<readonly OfflineQueueEntry[]>;

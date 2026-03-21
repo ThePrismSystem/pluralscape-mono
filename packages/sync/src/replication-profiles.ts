@@ -1,6 +1,7 @@
 import { DEFAULT_ACTIVE_CHANNEL_WINDOW_DAYS } from "./sync.constants.js";
 
 import type { SyncManifestEntry } from "./adapters/network-adapter.js";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 // ── Replication profile types ────────────────────────────────────────
 
@@ -77,7 +78,7 @@ export interface SubscriptionSet {
    * Document IDs present in local storage but not in the manifest or no longer subscribed.
    * These should be evicted from local storage.
    */
-  readonly evict: readonly string[];
+  readonly evict: readonly SyncDocumentId[];
 }
 
 // ── On-demand document loading ────────────────────────────────────────
@@ -89,7 +90,7 @@ export interface SubscriptionSet {
  */
 export interface OnDemandLoadRequest {
   /** The document ID to load. Must be in the manifest and pass access checks. */
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /**
    * If true, the loaded document is persisted to local storage and included
    * in future sync (as an on-demand document, not a subscription).

@@ -1,8 +1,16 @@
 import type { EncryptedSnapshotEnvelope } from "../types.js";
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
-// Cast test byte arrays to branded types — these are contract test fixtures,
+// Cast test values to branded types — these are contract test fixtures,
 // not real cryptographic material.
+export function docId(id: string): SyncDocumentId {
+  return id as SyncDocumentId;
+}
+export function sysId(id: string): SystemId {
+  return id as SystemId;
+}
+
 export function nonce(fill: number): AeadNonce {
   const bytes: unknown = new Uint8Array(24).fill(fill);
   return bytes as AeadNonce;
@@ -16,7 +24,10 @@ export function sig(fill: number): Signature {
   return bytes as Signature;
 }
 
-export function makeSnapshot(version: number, documentId: string): EncryptedSnapshotEnvelope {
+export function makeSnapshot(
+  version: number,
+  documentId: SyncDocumentId,
+): EncryptedSnapshotEnvelope {
   return {
     documentId,
     snapshotVersion: version,

@@ -2,13 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { filterManifest } from "../subscription-filter.js";
 
+import { docId } from "./test-crypto-helpers.js";
+
 import type { SyncManifestEntry } from "../adapters/network-adapter.js";
 import type {
   FriendProfile,
   OwnerLiteProfile,
   ReplicationProfile,
 } from "../replication-profiles.js";
-import type { BucketId, ChannelId } from "@pluralscape/types";
+import type { BucketId, ChannelId, SyncDocumentId } from "@pluralscape/types";
 
 /** Cast a string to BucketId for test fixtures. */
 const bid = (id: string): BucketId => id as BucketId;
@@ -16,7 +18,10 @@ const bid = (id: string): BucketId => id as BucketId;
 const cid = (id: string): ChannelId => id as ChannelId;
 
 function entry(
-  overrides: Partial<SyncManifestEntry> & { docId: string; docType: SyncManifestEntry["docType"] },
+  overrides: Partial<SyncManifestEntry> & {
+    docId: SyncDocumentId;
+    docType: SyncManifestEntry["docType"];
+  },
 ): SyncManifestEntry {
   return {
     keyType: "derived",
@@ -41,9 +46,9 @@ describe("filterManifest — owner-full", () => {
   it("all non-archived entries are active", () => {
     const manifest = {
       documents: [
-        entry({ docId: "system-core-sys_a", docType: "system-core" }),
-        entry({ docId: "fronting-sys_a", docType: "fronting" }),
-        entry({ docId: "chat-ch_a", docType: "chat" }),
+        entry({ docId: docId("system-core-sys_a"), docType: "system-core" }),
+        entry({ docId: docId("fronting-sys_a"), docType: "fronting" }),
+        entry({ docId: docId("chat-ch_a"), docType: "chat" }),
       ],
     };
     const result = filterManifest(manifest, profile, []);
@@ -54,9 +59,9 @@ describe("filterManifest — owner-full", () => {
   it("archived entries go to available", () => {
     const manifest = {
       documents: [
-        entry({ docId: "system-core-sys_a", docType: "system-core" }),
+        entry({ docId: docId("system-core-sys_a"), docType: "system-core" }),
         entry({
-          docId: "fronting-sys_a-2025-Q1",
+          docId: docId("fronting-sys_a-2025-Q1"),
           docType: "fronting",
           timePeriod: "2025-Q1",
           archived: true,
@@ -71,20 +76,26 @@ describe("filterManifest — owner-full", () => {
 
   it("computes evict from local docs not in manifest", () => {
     const manifest = {
-      documents: [entry({ docId: "system-core-sys_a", docType: "system-core" })],
+      documents: [entry({ docId: docId("system-core-sys_a"), docType: "system-core" })],
     };
-    const result = filterManifest(manifest, profile, ["system-core-sys_a", "old-doc-sys_x"]);
+    const result = filterManifest(manifest, profile, [
+      docId("system-core-sys_a"),
+      docId("old-doc-sys_x"),
+    ]);
     expect(result.evict).toEqual(["old-doc-sys_x"]);
   });
 
   it("local docs in manifest are not evicted", () => {
     const manifest = {
       documents: [
-        entry({ docId: "system-core-sys_a", docType: "system-core" }),
-        entry({ docId: "fronting-sys_a", docType: "fronting" }),
+        entry({ docId: docId("system-core-sys_a"), docType: "system-core" }),
+        entry({ docId: docId("fronting-sys_a"), docType: "fronting" }),
       ],
     };
-    const result = filterManifest(manifest, profile, ["system-core-sys_a", "fronting-sys_a"]);
+    const result = filterManifest(manifest, profile, [
+      docId("system-core-sys_a"),
+      docId("fronting-sys_a"),
+    ]);
     expect(result.evict).toHaveLength(0);
   });
 });
@@ -95,10 +106,10 @@ describe("filterManifest — owner-lite", () => {
   it("system-core, privacy-config, and bucket are always active", () => {
     const manifest = {
       documents: [
-        entry({ docId: "system-core-sys_a", docType: "system-core" }),
-        entry({ docId: "privacy-config-sys_a", docType: "privacy-config" }),
+        entry({ docId: docId("system-core-sys_a"), docType: "system-core" }),
+        entry({ docId: docId("privacy-config-sys_a"), docType: "privacy-config" }),
         entry({
-          docId: "bucket-bkt_a",
+          docId: docId("bucket-bkt_a"),
           docType: "bucket",
           keyType: "bucket",
           bucketId: bid("bkt_a"),
@@ -112,8 +123,16 @@ describe("filterManifest — owner-lite", () => {
   it("fronting current period is active, historical is available", () => {
     const manifest = {
       documents: [
-        entry({ docId: "fronting-sys_a-2026-Q1", docType: "fronting", timePeriod: "2026-Q1" }),
-        entry({ docId: "fronting-sys_a-2025-Q4", docType: "fronting", timePeriod: "2025-Q4" }),
+        entry({
+          docId: docId("fronting-sys_a-2026-Q1"),
+          docType: "fronting",
+          timePeriod: "2026-Q1",
+        }),
+        entry({
+          docId: docId("fronting-sys_a-2025-Q4"),
+          docType: "fronting",
+          timePeriod: "2025-Q4",
+        }),
       ],
     };
     const result = filterManifest(manifest, profile, [], NOW);
@@ -123,7 +142,7 @@ describe("filterManifest — owner-lite", () => {
 
   it("fronting base doc (no period) is active when no splits exist", () => {
     const manifest = {
-      documents: [entry({ docId: "fronting-sys_a", docType: "fronting" })],
+      documents: [entry({ docId: docId("fronting-sys_a"), docType: "fronting" })],
     };
     const result = filterManifest(manifest, profile, [], NOW);
     expect(result.active).toHaveLength(1);
@@ -134,7 +153,7 @@ describe("filterManifest — owner-lite", () => {
     const manifest = {
       documents: [
         entry({
-          docId: "chat-ch_a",
+          docId: docId("chat-ch_a"),
           docType: "chat",
           channelId: cid("ch_a"),
           updatedAt: recentUpdate,
@@ -150,7 +169,7 @@ describe("filterManifest — owner-lite", () => {
     const manifest = {
       documents: [
         entry({
-          docId: "chat-ch_a",
+          docId: docId("chat-ch_a"),
           docType: "chat",
           channelId: cid("ch_a"),
           updatedAt: oldUpdate,
@@ -164,7 +183,7 @@ describe("filterManifest — owner-lite", () => {
 
   it("journal is always available (never active in lite)", () => {
     const manifest = {
-      documents: [entry({ docId: "journal-sys_a", docType: "journal" })],
+      documents: [entry({ docId: docId("journal-sys_a"), docType: "journal" })],
     };
     const result = filterManifest(manifest, profile, [], NOW);
     expect(result.active).toHaveLength(0);
@@ -175,7 +194,7 @@ describe("filterManifest — owner-lite", () => {
     const manifest = {
       documents: [
         entry({
-          docId: "fronting-sys_a-2026-Q1",
+          docId: docId("fronting-sys_a-2026-Q1"),
           docType: "fronting",
           timePeriod: "2026-Q1",
           archived: true,
@@ -199,13 +218,13 @@ describe("filterManifest — friend", () => {
     const manifest = {
       documents: [
         entry({
-          docId: "bucket-bkt_shared",
+          docId: docId("bucket-bkt_shared"),
           docType: "bucket",
           keyType: "bucket",
           bucketId: bid("bkt_shared"),
         }),
         entry({
-          docId: "bucket-bkt_other",
+          docId: docId("bucket-bkt_other"),
           docType: "bucket",
           keyType: "bucket",
           bucketId: bid("bkt_other"),
@@ -220,10 +239,10 @@ describe("filterManifest — friend", () => {
   it("non-bucket types are excluded", () => {
     const manifest = {
       documents: [
-        entry({ docId: "system-core-sys_a", docType: "system-core" }),
-        entry({ docId: "fronting-sys_a", docType: "fronting" }),
+        entry({ docId: docId("system-core-sys_a"), docType: "system-core" }),
+        entry({ docId: docId("fronting-sys_a"), docType: "fronting" }),
         entry({
-          docId: "bucket-bkt_shared",
+          docId: docId("bucket-bkt_shared"),
           docType: "bucket",
           keyType: "bucket",
           bucketId: bid("bkt_shared"),
@@ -238,7 +257,7 @@ describe("filterManifest — friend", () => {
     const manifest = {
       documents: [
         entry({
-          docId: "bucket-bkt_shared",
+          docId: docId("bucket-bkt_shared"),
           docType: "bucket",
           keyType: "bucket",
           bucketId: bid("bkt_shared"),
@@ -246,7 +265,10 @@ describe("filterManifest — friend", () => {
       ],
     };
     // Local has a bucket that's no longer granted
-    const result = filterManifest(manifest, profile, ["bucket-bkt_shared", "bucket-bkt_revoked"]);
+    const result = filterManifest(manifest, profile, [
+      docId("bucket-bkt_shared"),
+      docId("bucket-bkt_revoked"),
+    ]);
     expect(result.evict).toEqual(["bucket-bkt_revoked"]);
   });
 
@@ -254,7 +276,7 @@ describe("filterManifest — friend", () => {
     const manifest = {
       documents: [
         entry({
-          docId: "bucket-bkt_shared",
+          docId: docId("bucket-bkt_shared"),
           docType: "bucket",
           keyType: "bucket",
           bucketId: bid("bkt_shared"),
@@ -271,9 +293,9 @@ describe("filterManifest — malformed docIds", () => {
     const profile: OwnerLiteProfile = { profileType: "owner-lite", activeChannelWindowDays: 30 };
     const manifest = {
       documents: [
-        entry({ docId: "system-core-sys_a", docType: "system-core" }),
-        entry({ docId: "not-a-valid-id", docType: "fronting" }),
-        entry({ docId: "fronting-sys_a", docType: "fronting" }),
+        entry({ docId: docId("system-core-sys_a"), docType: "system-core" }),
+        entry({ docId: docId("not-a-valid-id"), docType: "fronting" }),
+        entry({ docId: docId("fronting-sys_a"), docType: "fronting" }),
       ],
     };
     const result = filterManifest(manifest, profile, [], NOW);
@@ -323,14 +345,14 @@ describe("filterManifest — friend edge cases", () => {
     const manifest = {
       documents: [
         entry({
-          docId: "bucket-bkt_a",
+          docId: docId("bucket-bkt_a"),
           docType: "bucket",
           keyType: "bucket",
           bucketId: bid("bkt_a"),
         }),
       ],
     };
-    const result = filterManifest(manifest, profile, ["bucket-bkt_old"]);
+    const result = filterManifest(manifest, profile, [docId("bucket-bkt_old")]);
     expect(result.active).toHaveLength(0);
     expect(result.evict).toContain("bucket-bkt_old");
   });
@@ -343,7 +365,7 @@ describe("filterManifest — chat time-split edge cases", () => {
     const manifest = {
       documents: [
         entry({
-          docId: "chat-ch_a-2026-03",
+          docId: docId("chat-ch_a-2026-03"),
           docType: "chat",
           channelId: cid("ch_a"),
           timePeriod: "2026-03",
@@ -364,8 +386,8 @@ describe("filterManifest — lifecycle integration", () => {
 
     const manifest1 = {
       documents: [
-        entry({ docId: "system-core-sys_a", docType: "system-core" }),
-        entry({ docId: "fronting-sys_a", docType: "fronting" }),
+        entry({ docId: docId("system-core-sys_a"), docType: "system-core" }),
+        entry({ docId: docId("fronting-sys_a"), docType: "fronting" }),
       ],
     };
     const result1 = filterManifest(manifest1, profile, []);
@@ -374,8 +396,8 @@ describe("filterManifest — lifecycle integration", () => {
     // Manifest changes: fronting doc removed, new chat doc added
     const manifest2 = {
       documents: [
-        entry({ docId: "system-core-sys_a", docType: "system-core" }),
-        entry({ docId: "chat-ch_a", docType: "chat" }),
+        entry({ docId: docId("system-core-sys_a"), docType: "system-core" }),
+        entry({ docId: docId("chat-ch_a"), docType: "chat" }),
       ],
     };
     const localIds = result1.active.map((e) => e.docId);

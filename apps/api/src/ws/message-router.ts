@@ -38,8 +38,8 @@ import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
-import type { ServerMessage, SyncRelayService } from "@pluralscape/sync";
-import type { SystemId } from "@pluralscape/types";
+import type { DocumentVersionEntry, ServerMessage, SyncRelayService } from "@pluralscape/sync";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { ZodType } from "zod";
 
 // ── DI Context ───────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ function parseMessage<T>(
  * (sync_documents.system_id) on cache miss to survive server restarts.
  */
 async function checkAccess(
-  docId: string,
+  docId: SyncDocumentId,
   systemId: SystemId,
   correlationId: string | null,
   state: SyncConnectionState,
@@ -401,7 +401,7 @@ export async function routeMessage(
           // Fail open — individual checkAccess calls will also fail open on cache miss
         }
       }
-      const permitted: (typeof msg.documents)[number][] = [];
+      const permitted: DocumentVersionEntry[] = [];
       for (const entry of msg.documents) {
         if (
           await checkAccess(

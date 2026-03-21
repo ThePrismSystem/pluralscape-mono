@@ -1,4 +1,5 @@
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 /**
  * Persistence interface for encrypted CRDT sync data.
@@ -55,7 +56,7 @@ export interface SyncStorageAdapter {
    * Returns the document IDs of all documents stored locally.
    * Used to enumerate known documents during initial sync.
    */
-  listDocuments(): Promise<readonly string[]>;
+  listDocuments(): Promise<readonly SyncDocumentId[]>;
 
   /**
    * Removes all local data (snapshot + changes) for a document.

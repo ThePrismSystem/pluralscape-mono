@@ -8,6 +8,7 @@ import { getSodium } from "../sodium.js";
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
 import type { KdfMasterKey } from "../types.js";
+import type { RecoveryKeyDisplay } from "@pluralscape/types";
 
 let masterKey: KdfMasterKey;
 
@@ -120,9 +121,9 @@ describe("recoverMasterKey", () => {
 
   it("invalid format throws InvalidInputError (not DecryptionFailedError)", () => {
     const { encryptedMasterKey } = generateRecoveryKey(masterKey);
-    expect(() => recoverMasterKey("not-a-valid-key", encryptedMasterKey)).toThrow(
-      InvalidInputError,
-    );
+    expect(() =>
+      recoverMasterKey("not-a-valid-key" as RecoveryKeyDisplay, encryptedMasterKey),
+    ).toThrow(InvalidInputError);
   });
 });
 

@@ -23,6 +23,8 @@ import { NoActiveSessionError } from "../errors.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
+import { docId, sysId } from "./test-crypto-helpers.js";
+
 import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { OfflineQueueEntry } from "../adapters/offline-queue-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
@@ -30,7 +32,12 @@ import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
-import type { SystemId } from "@pluralscape/types";
+
+// ── Test constants ────────────────────────────────────────────────────
+
+const SYSTEM_CORE_DOC_ID = docId("system-core-sys_test");
+const UNKNOWN_DOC_ID = docId("unknown-sys_test");
+const NONEXISTENT_DOC_ID = docId("nonexistent-sys_abc");
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -58,10 +65,10 @@ afterAll(() => {
 });
 
 const SYSTEM_CORE_MANIFEST: SyncManifest = {
-  systemId: "sys_test" as SystemId,
+  systemId: sysId("sys_test"),
   documents: [
     {
-      docId: "system-core-sys_test",
+      docId: SYSTEM_CORE_DOC_ID,
       docType: "system-core",
       keyType: "derived",
       bucketId: null,
@@ -102,8 +109,8 @@ function relayNetworkAdapter(relay: EncryptedRelay): SyncNetworkAdapter {
         const seq = await relay.submit(change);
         return { ...change, seq };
       }),
-    fetchChangesSince: vi.fn().mockImplementation(async (docId: string, sinceSeq: number) => {
-      const result = await relay.getEnvelopesSince(docId, sinceSeq);
+    fetchChangesSince: vi.fn().mockImplementation(async (rawDocId: string, sinceSeq: number) => {
+      const result = await relay.getEnvelopesSince(docId(rawDocId), sinceSeq);
       return result.envelopes;
     }),
     submitSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -123,7 +130,7 @@ async function createBootstrappedEngine(
     keyResolver: createKeyResolver(),
     sodium,
     profile: { profileType: "owner-full" },
-    systemId: "sys_test" as SystemId,
+    systemId: sysId("sys_test"),
     onError: vi.fn(),
     ...overrides,
   });
@@ -144,7 +151,7 @@ describe("SyncEngine steady-state", () => {
       });
 
       // Use Automerge-compatible mutation (untyped via the unknown doc)
-      const seq = await engine.applyLocalChange("system-core-sys_test", (doc) => {
+      const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_test"] = { value: "hello" };
       });
@@ -156,12 +163,12 @@ describe("SyncEngine steady-state", () => {
     it("updates sync state after successful submission", async () => {
       const engine = await createBootstrappedEngine();
 
-      await engine.applyLocalChange("system-core-sys_test", (doc) => {
+      await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_test2"] = { value: 1 };
       });
 
-      const state = engine.getSyncState("system-core-sys_test");
+      const state = engine.getSyncState(SYSTEM_CORE_DOC_ID);
       expect(state?.lastSyncedSeq).toBe(1);
     });
 
@@ -171,11 +178,11 @@ describe("SyncEngine steady-state", () => {
         networkAdapter: relayNetworkAdapter(relay),
       });
 
-      const seq1 = await engine.applyLocalChange("system-core-sys_test", (doc) => {
+      const seq1 = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_a"] = { v: 1 };
       });
-      const seq2 = await engine.applyLocalChange("system-core-sys_test", (doc) => {
+      const seq2 = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_b"] = { v: 2 };
       });
@@ -188,7 +195,7 @@ describe("SyncEngine steady-state", () => {
       const engine = await createBootstrappedEngine();
 
       await expect(
-        engine.applyLocalChange("nonexistent-sys_abc", () => {
+        engine.applyLocalChange(NONEXISTENT_DOC_ID, () => {
           /* no-op */
         }),
       ).rejects.toThrow(NoActiveSessionError);
@@ -198,14 +205,14 @@ describe("SyncEngine steady-state", () => {
   describe("handleIncomingChanges", () => {
     it("applies encrypted changes and persists locally", async () => {
       const keyResolver = createKeyResolver();
-      const keys = keyResolver.resolveKeys("system-core-sys_test");
+      const keys = keyResolver.resolveKeys(SYSTEM_CORE_DOC_ID);
 
       // Create a sender session with a fresh doc to produce valid changes
       const doc = Automerge.from<Record<string, unknown>>({ items: {} });
       const senderSession = new EncryptedSyncSession({
         doc,
         keys,
-        documentId: "system-core-sys_test",
+        documentId: SYSTEM_CORE_DOC_ID,
         sodium,
       });
 
@@ -221,20 +228,20 @@ describe("SyncEngine steady-state", () => {
         storageAdapter: mockStorageAdapter({ appendChange }),
       });
 
-      await engine.handleIncomingChanges("system-core-sys_test", [change]);
+      await engine.handleIncomingChanges(SYSTEM_CORE_DOC_ID, [change]);
 
       expect(appendChange).toHaveBeenCalledWith("system-core-sys_test", change);
     });
 
     it("updates lastSyncedSeq to highest seq in batch", async () => {
       const keyResolver = createKeyResolver();
-      const keys = keyResolver.resolveKeys("system-core-sys_test");
+      const keys = keyResolver.resolveKeys(SYSTEM_CORE_DOC_ID);
 
       const doc = Automerge.from<Record<string, unknown>>({ counter: 0 });
       const senderSession = new EncryptedSyncSession({
         doc,
         keys,
-        documentId: "system-core-sys_test",
+        documentId: SYSTEM_CORE_DOC_ID,
         sodium,
       });
 
@@ -251,15 +258,15 @@ describe("SyncEngine steady-state", () => {
       ];
 
       const engine = await createBootstrappedEngine();
-      await engine.handleIncomingChanges("system-core-sys_test", changes);
+      await engine.handleIncomingChanges(SYSTEM_CORE_DOC_ID, changes);
 
-      const state = engine.getSyncState("system-core-sys_test");
+      const state = engine.getSyncState(SYSTEM_CORE_DOC_ID);
       expect(state?.lastSyncedSeq).toBe(7);
     });
 
     it("ignores changes for unknown documents", async () => {
       const engine = await createBootstrappedEngine();
-      await engine.handleIncomingChanges("unknown-sys_test", []);
+      await engine.handleIncomingChanges(UNKNOWN_DOC_ID, []);
     });
   });
 
@@ -280,7 +287,7 @@ describe("SyncEngine steady-state", () => {
         offlineQueueAdapter,
       });
 
-      await engine.applyLocalChange("system-core-sys_test", (doc) => {
+      await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_offline_test"] = { value: "test" };
       });
@@ -308,7 +315,7 @@ describe("SyncEngine steady-state", () => {
         offlineQueueAdapter,
       });
 
-      const seq = await engine.applyLocalChange("system-core-sys_test", (doc) => {
+      const seq = await engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
         const d = doc as Record<string, Record<string, unknown>>;
         d["_sync_test"] = { value: 1 };
       });
@@ -341,7 +348,7 @@ describe("SyncEngine steady-state", () => {
       });
 
       await expect(
-        engine.applyLocalChange("system-core-sys_test", (doc) => {
+        engine.applyLocalChange(SYSTEM_CORE_DOC_ID, (doc) => {
           const d = doc as Record<string, Record<string, unknown>>;
           d["_fail_test"] = { value: 1 };
         }),
@@ -357,14 +364,14 @@ describe("SyncEngine steady-state", () => {
     it("replays offline queue entries during bootstrap and updates sessions", async () => {
       const relay = new EncryptedRelay();
       const keyResolver = createKeyResolver();
-      const keys = keyResolver.resolveKeys("system-core-sys_test");
+      const keys = keyResolver.resolveKeys(SYSTEM_CORE_DOC_ID);
 
       // Create a sender session to produce a valid encrypted change
       const doc = Automerge.from<Record<string, unknown>>({ items: {} });
       const senderSession = new EncryptedSyncSession({
         doc,
         keys,
-        documentId: "system-core-sys_test",
+        documentId: SYSTEM_CORE_DOC_ID,
         sodium,
       });
 
@@ -374,7 +381,7 @@ describe("SyncEngine steady-state", () => {
 
       const entry: OfflineQueueEntry = {
         id: "oq_replay_1",
-        documentId: "system-core-sys_test",
+        documentId: SYSTEM_CORE_DOC_ID,
         envelope,
         enqueuedAt: 1000,
         syncedAt: null,
@@ -389,8 +396,8 @@ describe("SyncEngine steady-state", () => {
       const originalSubmit = networkAdapter.submitChange.bind(networkAdapter);
       networkAdapter.submitChange = vi
         .fn()
-        .mockImplementation((docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
-          return originalSubmit(docId, change);
+        .mockImplementation((rawDocId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
+          return originalSubmit(docId(rawDocId), change);
         });
 
       const appendChange = vi.fn().mockResolvedValue(undefined);
@@ -422,13 +429,13 @@ describe("SyncEngine steady-state", () => {
   describe("validation persistence", () => {
     it("persists conflict notifications via conflictPersistenceAdapter", async () => {
       const keyResolver = createKeyResolver();
-      const keys = keyResolver.resolveKeys("system-core-sys_test");
+      const keys = keyResolver.resolveKeys(SYSTEM_CORE_DOC_ID);
 
       const doc = Automerge.from<Record<string, unknown>>({ items: {} });
       const senderSession = new EncryptedSyncSession({
         doc,
         keys,
-        documentId: "system-core-sys_test",
+        documentId: SYSTEM_CORE_DOC_ID,
         sodium,
       });
 
@@ -448,7 +455,7 @@ describe("SyncEngine steady-state", () => {
         conflictPersistenceAdapter,
       });
 
-      await engine.handleIncomingChanges("system-core-sys_test", [change]);
+      await engine.handleIncomingChanges(SYSTEM_CORE_DOC_ID, [change]);
 
       // Drain microtask queue — the fire-and-forget persistence promise chain
       // (saveConflicts().catch(...)) should resolve without unhandled rejections

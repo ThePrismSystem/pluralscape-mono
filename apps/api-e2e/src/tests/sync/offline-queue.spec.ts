@@ -5,11 +5,10 @@
  * through the real WebSocket sync server.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
-import { makeSignedChange } from "../../fixtures/crypto.fixture.js";
+import { makeSignedChange, docId as toDocId } from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { ChangeAccepted } from "@pluralscape/sync";
-import type { SyncDocumentId } from "@pluralscape/types";
 
 test.describe("Sync offline queue E2E", () => {
   test("submit change, disconnect, reconnect, verify change retrievable", async ({
@@ -26,7 +25,7 @@ test.describe("Sync offline queue E2E", () => {
     const ws1 = new SyncWsClient();
     await ws1.connect();
 
-    const docId = `e2e-offline-${crypto.randomUUID()}` as SyncDocumentId;
+    const docId = toDocId(`e2e-offline-${crypto.randomUUID()}`);
 
     try {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
@@ -74,7 +73,7 @@ test.describe("Sync offline queue E2E", () => {
     const ws = new SyncWsClient();
     await ws.connect();
 
-    const docId = `e2e-dedup-${crypto.randomUUID()}`;
+    const docId = toDocId(`e2e-dedup-${crypto.randomUUID()}`);
 
     try {
       await ws.authenticate(registeredAccount.sessionToken, systemId);

@@ -10,15 +10,19 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-import { makeSnapshot, nonce, pubkey, sig } from "./test-crypto-helpers.js";
+import { docId, makeSnapshot, nonce, pubkey, sig, sysId } from "./test-crypto-helpers.js";
 
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 // ── Test data builders ─────────────────────────────────────────────────
 
 /** Builds a change payload (no seq) suitable for submitChange. */
-function makeChangePayload(fill: number, documentId: string): Omit<EncryptedChangeEnvelope, "seq"> {
+function makeChangePayload(
+  fill: number,
+  documentId: SyncDocumentId,
+): Omit<EncryptedChangeEnvelope, "seq"> {
   return {
     documentId,
     ciphertext: new Uint8Array([1, 2, 3, fill]),
@@ -35,19 +39,19 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
     describe("submitChange / fetchChangesSince", () => {
       it("returns an envelope with a server-assigned seq", async () => {
         const adapter = factory();
-        const docId = "doc_submit1";
-        const result = await adapter.submitChange(docId, makeChangePayload(0, docId));
+        const testDocId = docId("doc_submit1");
+        const result = await adapter.submitChange(testDocId, makeChangePayload(0, testDocId));
         expect(typeof result.seq).toBe("number");
         expect(result.seq).toBeGreaterThanOrEqual(1);
       });
 
       it("returns submitted changes in ascending seq order", async () => {
         const adapter = factory();
-        const docId = "doc_order";
+        const testDocId = docId("doc_order");
         for (let i = 1; i <= 3; i++) {
-          await adapter.submitChange(docId, makeChangePayload(i, docId));
+          await adapter.submitChange(testDocId, makeChangePayload(i, testDocId));
         }
-        const result = await adapter.fetchChangesSince(docId, 0);
+        const result = await adapter.fetchChangesSince(testDocId, 0);
         expect(result.length).toBeGreaterThanOrEqual(3);
         for (let i = 1; i < result.length; i++) {
           expect(result[i]?.seq ?? 0).toBeGreaterThan(result[i - 1]?.seq ?? 0);
@@ -56,15 +60,15 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
 
       it("fetchChangesSince excludes envelopes at or below sinceSeq", async () => {
         const adapter = factory();
-        const docId = "doc_since";
+        const testDocId = docId("doc_since");
         const seqs: number[] = [];
         for (let i = 1; i <= 4; i++) {
-          const submitted = await adapter.submitChange(docId, makeChangePayload(i, docId));
+          const submitted = await adapter.submitChange(testDocId, makeChangePayload(i, testDocId));
           seqs.push(submitted.seq);
         }
         // Fetch since the second submitted seq (exclusive)
         const cutoff = seqs[1] ?? 0;
-        const result = await adapter.fetchChangesSince(docId, cutoff);
+        const result = await adapter.fetchChangesSince(testDocId, cutoff);
         for (const envelope of result) {
           expect(envelope.seq).toBeGreaterThan(cutoff);
         }
@@ -72,7 +76,7 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
 
       it("returns empty array for a document with no changes", async () => {
         const adapter = factory();
-        const result = await adapter.fetchChangesSince("doc_empty", 0);
+        const result = await adapter.fetchChangesSince(docId("doc_empty"), 0);
         expect(result).toHaveLength(0);
       });
     });
@@ -80,16 +84,16 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
     describe("submitSnapshot / fetchLatestSnapshot", () => {
       it("returns null for a document with no snapshot", async () => {
         const adapter = factory();
-        const result = await adapter.fetchLatestSnapshot("doc_no_snap");
+        const result = await adapter.fetchLatestSnapshot(docId("doc_no_snap"));
         expect(result).toBeNull();
       });
 
       it("round-trips a submitted snapshot", async () => {
         const adapter = factory();
-        const docId = "doc_snap_rt";
-        const snapshot = makeSnapshot(1, docId);
-        await adapter.submitSnapshot(docId, snapshot);
-        const loaded = await adapter.fetchLatestSnapshot(docId);
+        const testDocId = docId("doc_snap_rt");
+        const snapshot = makeSnapshot(1, testDocId);
+        await adapter.submitSnapshot(testDocId, snapshot);
+        const loaded = await adapter.fetchLatestSnapshot(testDocId);
         expect(loaded).not.toBeNull();
         expect(loaded?.snapshotVersion).toBe(1);
         expect(new Uint8Array(loaded?.ciphertext ?? [])).toEqual(snapshot.ciphertext);
@@ -97,11 +101,11 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
 
       it("fetchLatestSnapshot returns the most recent snapshot", async () => {
         const adapter = factory();
-        const docId = "doc_snap_latest";
-        await adapter.submitSnapshot(docId, makeSnapshot(1, docId));
-        await adapter.submitSnapshot(docId, makeSnapshot(3, docId));
-        await adapter.submitSnapshot(docId, makeSnapshot(2, docId));
-        const loaded = await adapter.fetchLatestSnapshot(docId);
+        const testDocId = docId("doc_snap_latest");
+        await adapter.submitSnapshot(testDocId, makeSnapshot(1, testDocId));
+        await adapter.submitSnapshot(testDocId, makeSnapshot(3, testDocId));
+        await adapter.submitSnapshot(testDocId, makeSnapshot(2, testDocId));
+        const loaded = await adapter.fetchLatestSnapshot(testDocId);
         // Should return the highest version submitted, regardless of order
         expect(loaded?.snapshotVersion).toBe(3);
       });
@@ -110,7 +114,7 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
     describe("subscribe", () => {
       it("returns a subscription with an unsubscribe function", () => {
         const adapter = factory();
-        const subscription = adapter.subscribe("doc_sub1", () => {
+        const subscription = adapter.subscribe(docId("doc_sub1"), () => {
           /* no-op */
         });
         expect(typeof subscription.unsubscribe).toBe("function");
@@ -119,7 +123,7 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
 
       it("unsubscribe does not throw", () => {
         const adapter = factory();
-        const subscription = adapter.subscribe("doc_sub2", () => {
+        const subscription = adapter.subscribe(docId("doc_sub2"), () => {
           /* no-op */
         });
         expect(() => {
@@ -129,13 +133,13 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
 
       it("callback is not invoked after unsubscribe", async () => {
         const adapter = factory();
-        const docId = "doc_sub_unsub";
+        const testDocId = docId("doc_sub_unsub");
         const callback = vi.fn();
-        const subscription = adapter.subscribe(docId, callback);
+        const subscription = adapter.subscribe(testDocId, callback);
         subscription.unsubscribe();
 
         // Submit a change after unsubscribing — callback should not fire
-        await adapter.submitChange(docId, makeChangePayload(1, docId));
+        await adapter.submitChange(testDocId, makeChangePayload(1, testDocId));
 
         // Give any async delivery a chance to fire
         await Promise.resolve();
@@ -146,7 +150,7 @@ export function runNetworkAdapterContract(factory: () => SyncNetworkAdapter): vo
     describe("fetchManifest", () => {
       it("returns a manifest with the correct systemId", async () => {
         const adapter = factory();
-        const systemId = "sys_manifest_test";
+        const systemId = sysId("sys_manifest_test");
         const manifest = await adapter.fetchManifest(systemId);
         expect(manifest.systemId).toBe(systemId);
         expect(Array.isArray(manifest.documents)).toBe(true);

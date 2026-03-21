@@ -21,6 +21,8 @@ import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 import { DEFAULT_COMPACTION_CONFIG, DEFAULT_STORAGE_BUDGET } from "../types.js";
 
+import { docId } from "./test-crypto-helpers.js";
+
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { CompactionInput } from "../engine/compaction-handler.js";
 import type { SyncRelayService } from "../relay-service.js";
@@ -61,7 +63,7 @@ function createSession(): EncryptedSyncSession<unknown> {
   return new EncryptedSyncSession({
     doc: createSystemCoreDocument(),
     keys,
-    documentId: "system-core-sys_test",
+    documentId: docId("system-core-sys_test"),
     sodium,
   });
 }
@@ -92,7 +94,7 @@ describe("handleCompaction", () => {
     storage.pruneChangesBeforeSnapshot = pruneChanges;
 
     const input: CompactionInput = {
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       session,
       changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
       lastSyncedSeq: 200,
@@ -117,7 +119,7 @@ describe("handleCompaction", () => {
     const storage = mockStorageAdapter();
 
     const input: CompactionInput = {
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       session,
       changesSinceSnapshot: 5,
       lastSyncedSeq: 0,
@@ -140,7 +142,7 @@ describe("handleCompaction", () => {
     const storage = mockStorageAdapter();
 
     const input: CompactionInput = {
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       session,
       changesSinceSnapshot: 5,
       lastSyncedSeq: 0,
@@ -171,7 +173,7 @@ describe("handleCompaction", () => {
     allDocumentSizes.set("system-core-sys_test", DEFAULT_STORAGE_BUDGET.maxTotalBytes + 1);
 
     const input: CompactionInput = {
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       session,
       changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
       lastSyncedSeq: 0,
@@ -200,7 +202,7 @@ describe("handleCompaction", () => {
     const storage = mockStorageAdapter();
 
     const input: CompactionInput = {
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       session,
       changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
       lastSyncedSeq: 0,
@@ -224,7 +226,7 @@ describe("handleCompaction", () => {
     storage.saveSnapshot = vi.fn().mockRejectedValue(new Error("disk full"));
 
     const input: CompactionInput = {
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       session,
       changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
       lastSyncedSeq: 200,
@@ -249,7 +251,7 @@ describe("handleCompaction", () => {
     storage.saveSnapshot = vi.fn().mockRejectedValue(new Error("disk full"));
 
     const input: CompactionInput = {
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       session,
       changesSinceSnapshot: DEFAULT_COMPACTION_CONFIG.changeThreshold,
       lastSyncedSeq: 0,

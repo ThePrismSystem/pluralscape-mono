@@ -1,6 +1,6 @@
 import type { SyncManifest } from "./adapters/network-adapter.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
-import type { SystemId } from "@pluralscape/types";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
 /** Result of a paginated envelope fetch. */
 export interface PaginatedEnvelopes {
@@ -28,7 +28,7 @@ export interface SyncRelayService {
    * the last envelope's seq as the new `sinceSeq`.
    */
   getEnvelopesSince(
-    documentId: string,
+    documentId: SyncDocumentId,
     sinceSeq: number,
     limit?: number,
   ): Promise<PaginatedEnvelopes>;
@@ -37,7 +37,7 @@ export interface SyncRelayService {
   submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void>;
 
   /** Get the latest snapshot for a document. */
-  getLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null>;
+  getLatestSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null>;
 
   /** Get the document manifest for a system. */
   getManifest(systemId: SystemId): Promise<SyncManifest>;

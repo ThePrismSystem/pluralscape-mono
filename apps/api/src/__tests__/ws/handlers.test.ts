@@ -14,7 +14,7 @@ import {
   handleSubmitSnapshot,
   handleDocumentLoad,
 } from "../../ws/handlers.js";
-import { nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
+import { docId as toDocId, nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
@@ -40,24 +40,24 @@ import type { AccountId, SessionId, SyncDocumentId, SystemId } from "@pluralscap
 
 let changeCounter = 0;
 
-function mockChangeWithoutSeq(docId: string): Omit<EncryptedChangeEnvelope, "seq"> {
+function mockChangeWithoutSeq(id: SyncDocumentId): Omit<EncryptedChangeEnvelope, "seq"> {
   const fill = ++changeCounter;
   return {
     ciphertext: new Uint8Array([1, 2, 3]),
     nonce: nonce(fill),
     signature: sig(fill),
     authorPublicKey: pubkey(10),
-    documentId: docId,
+    documentId: id,
   };
 }
 
-function mockSnapshot(docId: string, version: number): EncryptedSnapshotEnvelope {
+function mockSnapshot(id: SyncDocumentId, version: number): EncryptedSnapshotEnvelope {
   return {
     ciphertext: new Uint8Array([1, 2, 3]),
     nonce: nonce(4),
     signature: sig(7),
     authorPublicKey: pubkey(10),
-    documentId: docId,
+    documentId: id,
     snapshotVersion: version,
   };
 }
@@ -175,7 +175,7 @@ describe("handleSubscribeRequest", () => {
   it("registers subscriptions and returns catchup with changes", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
@@ -204,7 +204,7 @@ describe("handleSubscribeRequest", () => {
   it("includes newer snapshot in catchup when available", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
@@ -229,7 +229,7 @@ describe("handleSubscribeRequest", () => {
   it("omits catchup entry when client is already current", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
@@ -252,7 +252,7 @@ describe("handleSubscribeRequest", () => {
   it("adds subscription to connection manager", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
@@ -283,7 +283,7 @@ describe("handleSubscribeRequest", () => {
     }
 
     // Now subscribe to one more doc that has data
-    const extraDocId = crypto.randomUUID() as SyncDocumentId;
+    const extraDocId = toDocId(crypto.randomUUID());
     await relay.submit(mockChangeWithoutSeq(extraDocId));
 
     const message: SubscribeRequest = {
@@ -302,7 +302,7 @@ describe("handleSubscribeRequest", () => {
   it("returns empty droppedDocIds when all subscriptions succeed", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
@@ -332,7 +332,7 @@ describe("handleUnsubscribeRequest", () => {
   it("removes subscription from connection manager", async () => {
     manager = new ConnectionManager();
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
@@ -360,7 +360,7 @@ describe("handleUnsubscribeRequest", () => {
 
   it("is idempotent when unsubscribing from a non-subscribed document", () => {
     manager = new ConnectionManager();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const connId = crypto.randomUUID();
     const systemId = crypto.randomUUID();
     const auth = mockAuth();
@@ -381,7 +381,7 @@ describe("handleUnsubscribeRequest", () => {
 describe("handleFetchSnapshot", () => {
   it("returns the latest snapshot from the relay", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const correlationId = crypto.randomUUID();
 
     await relay.submitSnapshot(mockSnapshot(docId, 1));
@@ -403,7 +403,7 @@ describe("handleFetchSnapshot", () => {
 
   it("returns null snapshot when no snapshot exists", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     const message: FetchSnapshotRequest = {
       type: "FetchSnapshotRequest",
@@ -420,7 +420,7 @@ describe("handleFetchSnapshot", () => {
 describe("handleFetchChanges", () => {
   it("returns changes since the given seq", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const correlationId = crypto.randomUUID();
 
     await relay.submit(mockChangeWithoutSeq(docId));
@@ -446,7 +446,7 @@ describe("handleFetchChanges", () => {
 
   it("returns empty array when no changes exist after sinceSeq", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     await relay.submit(mockChangeWithoutSeq(docId));
 
@@ -468,7 +468,7 @@ describe("handleFetchChanges", () => {
     const message: FetchChangesRequest = {
       type: "FetchChangesRequest",
       correlationId: crypto.randomUUID(),
-      docId: crypto.randomUUID() as SyncDocumentId,
+      docId: toDocId(crypto.randomUUID()),
       sinceSeq: 0,
     };
 
@@ -490,7 +490,7 @@ describe("handleFetchChanges", () => {
     const message: FetchChangesRequest = {
       type: "FetchChangesRequest",
       correlationId: crypto.randomUUID(),
-      docId: "doc-1" as SyncDocumentId,
+      docId: toDocId("doc-1"),
       sinceSeq: 0,
     };
 
@@ -503,7 +503,7 @@ describe("handleFetchChanges", () => {
 describe("handleSubmitChange", () => {
   it("assigns a seq and returns ChangeAccepted with the sequenced envelope", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const correlationId = crypto.randomUUID();
 
     const message: SubmitChangeRequest = {
@@ -527,7 +527,7 @@ describe("handleSubmitChange", () => {
 
   it("assigns monotonically increasing seq values", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     const msg1: SubmitChangeRequest = {
       type: "SubmitChangeRequest",
@@ -555,8 +555,8 @@ describe("handleSubmitChange", () => {
 
   it("overrides documentId in the change with the request docId", async () => {
     const relay = new EncryptedRelay();
-    const requestDocId = crypto.randomUUID() as SyncDocumentId;
-    const differentDocId = crypto.randomUUID() as SyncDocumentId;
+    const requestDocId = toDocId(crypto.randomUUID());
+    const differentDocId = toDocId(crypto.randomUUID());
 
     const changeWithDifferentDoc = mockChangeWithoutSeq(differentDocId);
 
@@ -584,7 +584,7 @@ describe("handleSubmitChange", () => {
 describe("handleSubmitSnapshot", () => {
   it("returns SnapshotAccepted for a valid snapshot", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const correlationId = crypto.randomUUID();
 
     const message: SubmitSnapshotRequest = {
@@ -606,7 +606,7 @@ describe("handleSubmitSnapshot", () => {
 
   it("returns SyncError with VERSION_CONFLICT when snapshot version is not newer", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     // Submit version 2 first
     await relay.submitSnapshot(mockSnapshot(docId, 2));
@@ -629,7 +629,7 @@ describe("handleSubmitSnapshot", () => {
 
   it("returns SyncError when submitting the same version", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     await relay.submitSnapshot(mockSnapshot(docId, 1));
 
@@ -647,8 +647,8 @@ describe("handleSubmitSnapshot", () => {
 
   it("overrides documentId in the snapshot with the request docId", async () => {
     const relay = new EncryptedRelay();
-    const requestDocId = crypto.randomUUID() as SyncDocumentId;
-    const differentDocId = crypto.randomUUID() as SyncDocumentId;
+    const requestDocId = toDocId(crypto.randomUUID());
+    const differentDocId = toDocId(crypto.randomUUID());
 
     const message: SubmitSnapshotRequest = {
       type: "SubmitSnapshotRequest",
@@ -671,7 +671,7 @@ describe("handleSubmitSnapshot", () => {
 describe("handleDocumentLoad", () => {
   it("returns both snapshot and changes for the requested document", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
     const correlationId = crypto.randomUUID();
 
     await relay.submitSnapshot(mockSnapshot(docId, 1));
@@ -705,7 +705,7 @@ describe("handleDocumentLoad", () => {
 
   it("returns null snapshot when none exists", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     await relay.submit(mockChangeWithoutSeq(docId));
 
@@ -727,7 +727,7 @@ describe("handleDocumentLoad", () => {
 
   it("returns empty changes and null snapshot for unknown document", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     const message: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
@@ -747,7 +747,7 @@ describe("handleDocumentLoad", () => {
 
   it("returns all changes from seq 0 when no snapshot exists", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     await relay.submit(mockChangeWithoutSeq(docId));
     await relay.submit(mockChangeWithoutSeq(docId));
@@ -770,7 +770,7 @@ describe("handleDocumentLoad", () => {
 
   it("fetches only changes after snapshot version when snapshot exists (P-H2)", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     // Submit 5 changes (seq 1..5)
     for (let i = 0; i < 5; i++) {
@@ -805,7 +805,7 @@ describe("handleDocumentLoad", () => {
 describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
   it("returns hasMore: false when results fit within the limit", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     await relay.submit(mockChangeWithoutSeq(docId));
     await relay.submit(mockChangeWithoutSeq(docId));
@@ -819,7 +819,7 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
 
   it("returns hasMore: true when more results exist beyond the limit", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     for (let i = 0; i < 5; i++) {
       await relay.submit(mockChangeWithoutSeq(docId));
@@ -834,7 +834,7 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
 
   it("returns hasMore: false when results exactly match the limit", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     for (let i = 0; i < 3; i++) {
       await relay.submit(mockChangeWithoutSeq(docId));
@@ -849,7 +849,7 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
 
   it("supports cursor-based pagination using the last returned seq", async () => {
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     for (let i = 0; i < 5; i++) {
       await relay.submit(mockChangeWithoutSeq(docId));
@@ -886,7 +886,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
 
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     // Mock data has random bytes as signatures — they will fail verification
     const message: SubmitChangeRequest = {
@@ -914,7 +914,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
 
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     const message: SubmitChangeRequest = {
       type: "SubmitChangeRequest",
@@ -932,7 +932,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "0";
 
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     const message: SubmitChangeRequest = {
       type: "SubmitChangeRequest",
@@ -950,7 +950,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
 
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     const sodium = getSodium();
     const { publicKey, secretKey } = sodium.signKeypair();
@@ -983,7 +983,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
 
     const relay = new EncryptedRelay();
-    const docId = crypto.randomUUID() as SyncDocumentId;
+    const docId = toDocId(crypto.randomUUID());
 
     const message: SubmitChangeRequest = {
       type: "SubmitChangeRequest",

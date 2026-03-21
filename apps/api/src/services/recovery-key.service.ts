@@ -36,6 +36,7 @@ import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { ClientPlatform } from "../routes/auth/auth.constants.js";
 import type { AeadKey, KdfMasterKey, PwhashSalt, RecoveryKeyResult } from "@pluralscape/crypto";
+import type { RecoveryKeyDisplay } from "@pluralscape/types";
 import type { AccountId, SessionId, UnixMillis } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
@@ -263,7 +264,7 @@ export async function resetPasswordWithRecoveryKey(
 
     // Crypto: reset password via recovery key
     const resetResult = await resetPasswordViaRecoveryKey({
-      displayKey: parsed.recoveryKey,
+      displayKey: parsed.recoveryKey as RecoveryKeyDisplay,
       encryptedBackup: encBackupBytes,
       newPassword: parsed.newPassword,
       pwhashProfile: "server",

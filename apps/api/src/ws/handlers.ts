@@ -47,7 +47,6 @@ export async function handleManifestRequest(
   message: ManifestRequest,
   relay: SyncRelayService,
 ): Promise<ManifestResponse> {
-  // Safe cast: router validates message.systemId === state.systemId before dispatch
   const manifest = await relay.getManifest(message.systemId);
   return {
     type: "ManifestResponse",
@@ -61,7 +60,7 @@ export async function handleManifestRequest(
 /** Result of handling a SubscribeRequest, including skipped docs for quota reporting. */
 export interface SubscribeResult {
   readonly response: SubscribeResponse;
-  readonly skippedDocIds: readonly string[];
+  readonly skippedDocIds: readonly SyncDocumentId[];
 }
 
 /** Handle a SubscribeRequest. Registers subscriptions and computes catch-up. */
@@ -344,7 +343,7 @@ export async function handleDocumentLoad(
  */
 async function collectAllEnvelopes(
   relay: SyncRelayService,
-  docId: string,
+  docId: SyncDocumentId,
   sinceSeq: number,
   pageSize: number,
 ): Promise<readonly EncryptedChangeEnvelope[]> {

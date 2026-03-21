@@ -11,6 +11,7 @@ import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
 import type { OfflineQueueAdapter, OfflineQueueEntry } from "./offline-queue-adapter.js";
 import type { SqliteDriver, SqliteStatement } from "./sqlite-driver.js";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 interface QueueRow {
   id: string;
@@ -49,9 +50,9 @@ function rowToEntry(row: QueueRow): OfflineQueueEntry {
   const blobs = assertEnvelopeBlobs(row);
   return {
     id: row.id,
-    documentId: row.document_id,
+    documentId: row.document_id as SyncDocumentId,
     envelope: {
-      documentId: row.document_id,
+      documentId: row.document_id as SyncDocumentId,
       ciphertext: toUint8Array(row.ciphertext),
       ...blobs,
     },

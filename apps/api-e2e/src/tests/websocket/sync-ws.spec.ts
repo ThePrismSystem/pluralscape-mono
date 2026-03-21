@@ -5,11 +5,15 @@
  * The server is spawned by Playwright's globalSetup on port 10099.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
-import { makeSignedChange, makeSignedSnapshot } from "../../fixtures/crypto.fixture.js";
+import {
+  makeSignedChange,
+  makeSignedSnapshot,
+  docId as toDocId,
+} from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { SnapshotAccepted, SubscribeResponse, SyncError } from "@pluralscape/sync";
-import type { SyncDocumentId, SystemId } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 
 test.describe("WebSocket sync server", () => {
   test("authenticates successfully with valid session token", async ({
@@ -90,7 +94,7 @@ test.describe("WebSocket sync server", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws2.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = `e2e-doc-${crypto.randomUUID()}`;
+      const docId = toDocId(`e2e-doc-${crypto.randomUUID()}`);
 
       // Both subscribe to the same doc
       const sub1 = await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
@@ -128,7 +132,7 @@ test.describe("WebSocket sync server", () => {
 
       // Send SubscribeRequest with 101 documents (over the 100 limit)
       const documents = Array.from({ length: 101 }, (_, i) => ({
-        docId: `doc-${String(i)}` as SyncDocumentId,
+        docId: toDocId(`doc-${String(i)}`),
         lastSyncedSeq: 0,
         lastSnapshotVersion: 0,
       }));
@@ -205,7 +209,7 @@ test.describe("WebSocket sync server", () => {
     try {
       await ws.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = `e2e-snap-${crypto.randomUUID()}`;
+      const docId = toDocId(`e2e-snap-${crypto.randomUUID()}`);
       const snapshot = await makeSignedSnapshot(docId, 1);
       const response = await ws.submitSnapshot(docId, snapshot);
 

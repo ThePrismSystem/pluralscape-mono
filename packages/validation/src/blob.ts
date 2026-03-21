@@ -12,8 +12,8 @@ const BlobPurposeEnum = z.enum([
 /** Maximum length of a MIME type string. */
 const MAX_MIME_TYPE_LENGTH = 255;
 
-/** SHA-256 hex digest length (64 chars). */
-const SHA256_HEX_LENGTH = 64;
+/** Checksum hex digest length (64 chars). */
+const CHECKSUM_HEX_LENGTH = 64;
 
 export const CreateUploadUrlBodySchema = z
   .object({
@@ -26,7 +26,10 @@ export const CreateUploadUrlBodySchema = z
 
 export const ConfirmUploadBodySchema = z
   .object({
-    checksum: z.string().length(SHA256_HEX_LENGTH),
+    checksum: z
+      .string()
+      .length(CHECKSUM_HEX_LENGTH)
+      .regex(/^[0-9a-f]+$/),
     thumbnailOfBlobId: z.string().min(1).optional(),
   })
   .readonly();

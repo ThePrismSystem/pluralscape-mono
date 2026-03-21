@@ -79,7 +79,10 @@ const changeWithoutSeq = z.object({
   nonce: nonceBytes,
   signature: signatureBytes,
   authorPublicKey: signPublicKeyBytes,
-  documentId: z.string().min(1),
+  documentId: z
+    .string()
+    .min(1)
+    .transform((s): SyncDocumentId => s as SyncDocumentId),
 });
 
 /** Full encrypted snapshot envelope. */
@@ -88,7 +91,10 @@ const snapshotEnvelope = z.object({
   nonce: nonceBytes,
   signature: signatureBytes,
   authorPublicKey: signPublicKeyBytes,
-  documentId: z.string().min(1),
+  documentId: z
+    .string()
+    .min(1)
+    .transform((s): SyncDocumentId => s as SyncDocumentId),
   snapshotVersion: z.number().int().positive(),
 });
 

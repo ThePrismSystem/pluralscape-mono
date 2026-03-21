@@ -73,13 +73,13 @@ export type {
   HexColor,
   SlugHash,
   RecoveryKeyDisplay,
-  Sha256Hex,
+  ChecksumHex,
   EntityType,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
 
-// ── SHA-256 ──────────────────────────────────────────────────────
-export { toSha256Hex } from "./sha256.js";
+// ── Checksum ─────────────────────────────────────────────────────
+export { toChecksumHex } from "./checksum.js";
 
 // ── Timestamps ──────────────────────────────────────────────────────
 export type { UnixMillis, ISOTimestamp } from "./timestamps.js";

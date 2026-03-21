@@ -1,5 +1,6 @@
 import type { DocumentKeys, EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 import type { AeadKey, SodiumAdapter } from "@pluralscape/crypto";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 export class SignatureVerificationError extends Error {
   override readonly name = "SignatureVerificationError" as const;
@@ -25,7 +26,7 @@ function buildSnapshotAD(documentId: string, snapshotVersion: number): Uint8Arra
 
 export function encryptChange(
   change: Uint8Array,
-  documentId: string,
+  documentId: SyncDocumentId,
   keys: DocumentKeys,
   sodium: SodiumAdapter,
 ): Omit<EncryptedChangeEnvelope, "seq"> {
@@ -62,7 +63,7 @@ export function decryptChange(
 
 export function encryptSnapshot(
   snapshot: Uint8Array,
-  documentId: string,
+  documentId: SyncDocumentId,
   snapshotVersion: number,
   keys: DocumentKeys,
   sodium: SodiumAdapter,

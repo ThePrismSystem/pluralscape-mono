@@ -11,11 +11,12 @@ import { NoChangeProducedError } from "./errors.js";
 import type { EncryptedRelay } from "./relay.js";
 import type { DocumentKeys, EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 interface SyncSessionConfig<T> {
   doc: Automerge.Doc<T>;
   keys: DocumentKeys;
-  documentId: string;
+  documentId: SyncDocumentId;
   sodium: SodiumAdapter;
   lastSyncedSeq?: number;
 }
@@ -23,7 +24,7 @@ interface SyncSessionConfig<T> {
 export class EncryptedSyncSession<T> {
   private doc: Automerge.Doc<T>;
   private readonly keys: DocumentKeys;
-  readonly documentId: string;
+  readonly documentId: SyncDocumentId;
   private readonly sodium: SodiumAdapter;
   private lastSyncedSeq_: number;
 

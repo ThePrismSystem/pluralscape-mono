@@ -85,8 +85,8 @@ export type SlugHash = Brand<string, "SlugHash">;
 /** Human-readable recovery key display string (e.g. ABCD-EFGH-...). */
 export type RecoveryKeyDisplay = Brand<string, "RecoveryKeyDisplay">;
 
-/** SHA-256 hex digest (64 lowercase hex characters). */
-export type Sha256Hex = Brand<string, "Sha256Hex">;
+/** Checksum hex digest (64 lowercase hex characters). */
+export type ChecksumHex = Brand<string, "ChecksumHex">;
 
 // ── ID prefix convention ────────────────────────────────────────────
 

@@ -51,7 +51,7 @@ const MOCK_BLOB_RESULT = {
   purpose: "avatar" as never,
   mimeType: "image/png",
   sizeBytes: 1024,
-  checksum: "abc123",
+  checksum: "abc123" as never,
   uploadedAt: 1700000000000 as never,
   thumbnailOfBlobId: null,
 };

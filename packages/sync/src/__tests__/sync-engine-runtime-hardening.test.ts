@@ -24,7 +24,7 @@ import * as PostMergeValidatorModule from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
-import { nonce, pubkey, sig } from "./test-crypto-helpers.js";
+import { docId, nonce, pubkey, sig, sysId } from "./test-crypto-helpers.js";
 
 import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
@@ -32,7 +32,6 @@ import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
-import type { SystemId } from "@pluralscape/types";
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -64,10 +63,10 @@ afterEach(() => {
 });
 
 const SYSTEM_CORE_MANIFEST: SyncManifest = {
-  systemId: "sys_test" as SystemId,
+  systemId: sysId("sys_test"),
   documents: [
     {
-      docId: "system-core-sys_test",
+      docId: docId("system-core-sys_test"),
       docType: "system-core",
       keyType: "derived",
       bucketId: null,
@@ -108,8 +107,8 @@ function relayNetworkAdapter(relay: EncryptedRelay): SyncNetworkAdapter {
         const seq = relay.submit(change);
         return Promise.resolve({ ...change, seq });
       }),
-    fetchChangesSince: vi.fn().mockImplementation((docId: string, sinceSeq: number) => {
-      return Promise.resolve(relay.getEnvelopesSince(docId, sinceSeq));
+    fetchChangesSince: vi.fn().mockImplementation((rawDocId: string, sinceSeq: number) => {
+      return Promise.resolve(relay.getEnvelopesSince(docId(rawDocId), sinceSeq));
     }),
     submitSnapshot: vi.fn().mockResolvedValue(undefined),
     fetchLatestSnapshot: vi.fn().mockResolvedValue(null),
@@ -128,7 +127,7 @@ async function createBootstrappedEngine(
     keyResolver: createKeyResolver(),
     sodium,
     profile: { profileType: "owner-full" },
-    systemId: "sys_test" as SystemId,
+    systemId: sysId("sys_test"),
     onError: vi.fn(),
     ...overrides,
   });
@@ -147,7 +146,7 @@ describe("P-M1: batch Automerge change application", () => {
     const senderSession = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       sodium,
     });
 
@@ -168,7 +167,7 @@ describe("P-M1: batch Automerge change application", () => {
     ];
 
     const engine = await createBootstrappedEngine();
-    await engine.handleIncomingChanges("system-core-sys_test", changes);
+    await engine.handleIncomingChanges(docId("system-core-sys_test"), changes);
 
     const state = engine.getSyncState("system-core-sys_test");
     expect(state?.lastSyncedSeq).toBe(3);
@@ -182,7 +181,7 @@ describe("P-M1: batch Automerge change application", () => {
     const session = new EncryptedSyncSession({
       doc: base,
       keys,
-      documentId: "test-doc",
+      documentId: docId("test-doc"),
       sodium,
     });
 
@@ -197,7 +196,7 @@ describe("P-M1: batch Automerge change application", () => {
     const receiverSession = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "test-doc",
+      documentId: docId("test-doc"),
       sodium,
     });
 
@@ -227,16 +226,16 @@ describe("P-M2: skip redundant hydration", () => {
     const tempSession = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       sodium,
     });
     const snapshot = tempSession.createSnapshot(5);
 
     const manifest: SyncManifest = {
-      systemId: "sys_test" as SystemId,
+      systemId: sysId("sys_test"),
       documents: [
         {
-          docId: "system-core-sys_test",
+          docId: docId("system-core-sys_test"),
           docType: "system-core",
           keyType: "derived",
           bucketId: null,
@@ -274,7 +273,7 @@ describe("P-M2: skip redundant hydration", () => {
       keyResolver: createKeyResolver(),
       sodium,
       profile: { profileType: "owner-full" },
-      systemId: "sys_test" as SystemId,
+      systemId: sysId("sys_test"),
       onError: vi.fn(),
     });
 
@@ -289,10 +288,10 @@ describe("P-M2: skip redundant hydration", () => {
 
   it("fetches from server when manifest has newer snapshot version", async () => {
     const manifest: SyncManifest = {
-      systemId: "sys_test" as SystemId,
+      systemId: sysId("sys_test"),
       documents: [
         {
-          docId: "system-core-sys_test",
+          docId: docId("system-core-sys_test"),
           docType: "system-core",
           keyType: "derived",
           bucketId: null,
@@ -325,7 +324,7 @@ describe("P-M2: skip redundant hydration", () => {
       keyResolver: createKeyResolver(),
       sodium,
       profile: { profileType: "owner-full" },
-      systemId: "sys_test" as SystemId,
+      systemId: sysId("sys_test"),
       onError: vi.fn(),
     });
 
@@ -347,17 +346,17 @@ describe("P-M2: skip redundant hydration", () => {
     const tempSession = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       sodium,
     });
     const snapshot = tempSession.createSnapshot(5);
 
     // Manifest reports version 0 — server has never snapshotted
     const manifest: SyncManifest = {
-      systemId: "sys_test" as SystemId,
+      systemId: sysId("sys_test"),
       documents: [
         {
-          docId: "system-core-sys_test",
+          docId: docId("system-core-sys_test"),
           docType: "system-core",
           keyType: "derived",
           bucketId: null,
@@ -395,7 +394,7 @@ describe("P-M2: skip redundant hydration", () => {
       keyResolver: createKeyResolver(),
       sodium,
       profile: { profileType: "owner-full" },
-      systemId: "sys_test" as SystemId,
+      systemId: sysId("sys_test"),
       onError: vi.fn(),
     });
 
@@ -420,7 +419,7 @@ describe("P-M3: batch storage writes", () => {
     const senderSession = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       sodium,
     });
 
@@ -445,7 +444,7 @@ describe("P-M3: batch storage writes", () => {
       storageAdapter: mockStorageAdapter({ appendChanges, appendChange }),
     });
 
-    await engine.handleIncomingChanges("system-core-sys_test", changes);
+    await engine.handleIncomingChanges(docId("system-core-sys_test"), changes);
 
     // Should call appendChanges (batch) instead of appendChange (individual)
     expect(appendChanges).toHaveBeenCalledTimes(1);
@@ -460,7 +459,7 @@ describe("P-M3: batch storage writes", () => {
     const senderSession = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       sodium,
     });
 
@@ -485,7 +484,7 @@ describe("P-M3: batch storage writes", () => {
       storageAdapter: mockStorageAdapter({ appendChange }),
     });
 
-    await engine.handleIncomingChanges("system-core-sys_test", changes);
+    await engine.handleIncomingChanges(docId("system-core-sys_test"), changes);
 
     // Should fall back to individual calls
     expect(appendChange).toHaveBeenCalledTimes(2);
@@ -498,7 +497,7 @@ describe("P-M4: operation promise cleanup", () => {
   it("cleans up documentQueues after operations complete", async () => {
     const engine = await createBootstrappedEngine();
 
-    await engine.applyLocalChange("system-core-sys_test", (doc) => {
+    await engine.applyLocalChange(docId("system-core-sys_test"), (doc) => {
       const d = doc as Record<string, Record<string, unknown>>;
       d["_cleanup_test"] = { value: "test" };
     });
@@ -512,7 +511,7 @@ describe("P-M4: operation promise cleanup", () => {
     expect(engine.pendingOperationCount).toBe(0);
 
     // Engine should still work with the cleaned-up queue
-    const seq2 = await engine.applyLocalChange("system-core-sys_test", (doc) => {
+    const seq2 = await engine.applyLocalChange(docId("system-core-sys_test"), (doc) => {
       const d = doc as Record<string, Record<string, unknown>>;
       d["_cleanup_test2"] = { value: "test2" };
     });
@@ -541,7 +540,7 @@ describe("P-M5: conflict retry buffer cap", () => {
     const senderSession = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       sodium,
     });
 
@@ -558,7 +557,7 @@ describe("P-M5: conflict retry buffer cap", () => {
         const inner = items["items"];
         if (inner) inner[`key${String(i)}`] = i;
       });
-      await engine.handleIncomingChanges("system-core-sys_test", [{ ...env, seq: i }]);
+      await engine.handleIncomingChanges(docId("system-core-sys_test"), [{ ...env, seq: i }]);
     }
 
     // Engine should still function correctly after failed persistence attempts
@@ -578,7 +577,7 @@ describe("P-M5: conflict retry buffer cap", () => {
     const senderSession = new EncryptedSyncSession({
       doc,
       keys,
-      documentId: "system-core-sys_test",
+      documentId: docId("system-core-sys_test"),
       sodium,
     });
 
@@ -616,7 +615,7 @@ describe("P-M5: conflict retry buffer cap", () => {
         const inner = items["items"];
         if (inner) inner[`cap_key${String(i)}`] = i;
       });
-      await engine.handleIncomingChanges("system-core-sys_test", [{ ...env, seq: i }]);
+      await engine.handleIncomingChanges(docId("system-core-sys_test"), [{ ...env, seq: i }]);
     }
 
     expect(onError).toHaveBeenCalledWith(expect.stringContaining("dropped 1 oldest entries"), null);
@@ -675,7 +674,7 @@ describe("P-M8: bounded concurrency for correction envelopes", () => {
     const envelopes: Omit<EncryptedChangeEnvelope, "seq">[] = [];
     for (let i = 1; i <= 10; i++) {
       envelopes.push({
-        documentId: "doc_a",
+        documentId: docId("doc_a"),
         ciphertext: new Uint8Array([i]),
         nonce: nonce(i),
         signature: sig(i),
@@ -685,7 +684,7 @@ describe("P-M8: bounded concurrency for correction envelopes", () => {
 
     await submitCorrectionEnvelopes(
       { networkAdapter, storageAdapter, onError },
-      "doc_a",
+      docId("doc_a"),
       envelopes,
     );
 
@@ -732,7 +731,7 @@ describe("P-M8: bounded concurrency for correction envelopes", () => {
     const envelopes: Omit<EncryptedChangeEnvelope, "seq">[] = [];
     for (let i = 1; i <= 6; i++) {
       envelopes.push({
-        documentId: "doc_a",
+        documentId: docId("doc_a"),
         ciphertext: new Uint8Array([i]),
         nonce: nonce(i),
         signature: sig(i),
@@ -742,7 +741,7 @@ describe("P-M8: bounded concurrency for correction envelopes", () => {
 
     await submitCorrectionEnvelopes(
       { networkAdapter, storageAdapter, onError },
-      "doc_a",
+      docId("doc_a"),
       envelopes,
     );
 

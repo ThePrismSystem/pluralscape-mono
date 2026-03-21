@@ -12,6 +12,8 @@ import {
   type SubscriptionSet,
 } from "../replication-profiles.js";
 
+import { docId } from "./test-crypto-helpers.js";
+
 import type { SyncManifestEntry } from "../adapters/network-adapter.js";
 
 // ── DEFAULT_OWNER_FULL_PROFILE ───────────────────────────────────────
@@ -87,7 +89,7 @@ describe("FriendProfile", () => {
 describe("OnDemandLoadRequest", () => {
   it("has docId and persist fields", () => {
     const req: OnDemandLoadRequest = {
-      docId: "fronting-sys_abc-2025-Q4",
+      docId: docId("fronting-sys_abc-2025-Q4"),
       persist: true,
     };
     expect(req.docId).toBe("fronting-sys_abc-2025-Q4");
@@ -96,7 +98,7 @@ describe("OnDemandLoadRequest", () => {
 
   it("is structurally distinct from protocol DocumentLoadRequest (no type/correlationId)", () => {
     const req: OnDemandLoadRequest = {
-      docId: "journal-sys_abc-2026",
+      docId: docId("journal-sys_abc-2026"),
       persist: false,
     };
     // OnDemandLoadRequest does not extend SyncMessageBase — no type or correlationId fields
@@ -110,7 +112,7 @@ describe("OnDemandLoadRequest", () => {
 describe("SubscriptionSet", () => {
   it("has active, available, evict fields", () => {
     const entry: SyncManifestEntry = {
-      docId: "system-core-sys_abc",
+      docId: docId("system-core-sys_abc"),
       docType: "system-core",
       keyType: "derived",
       bucketId: null,
@@ -127,12 +129,12 @@ describe("SubscriptionSet", () => {
     const set: SubscriptionSet = {
       active: [entry],
       available: [],
-      evict: ["old-doc-id"],
+      evict: [docId("old-doc-id")],
     };
 
     expect(set.active).toHaveLength(1);
     expect(set.available).toHaveLength(0);
-    expect(set.evict).toEqual(["old-doc-id"]);
+    expect(set.evict).toEqual([docId("old-doc-id")]);
   });
 });
 
@@ -141,7 +143,7 @@ describe("SubscriptionSet", () => {
 describe("DocumentSyncState", () => {
   it("has docId, lastSyncedSeq, lastSnapshotVersion, onDemand fields", () => {
     const state: DocumentSyncState = {
-      docId: "chat-ch_xyz-2026-03",
+      docId: docId("chat-ch_xyz-2026-03"),
       lastSyncedSeq: 42,
       lastSnapshotVersion: 2,
       onDemand: true,

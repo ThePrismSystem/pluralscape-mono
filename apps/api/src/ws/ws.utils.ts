@@ -22,7 +22,7 @@ export function makeSyncError(
   code: SyncError["code"],
   message: string,
   correlationId: string | null,
-  docId: SyncDocumentId | string | null = null,
+  docId: SyncDocumentId | null = null,
 ): SyncError {
-  return { type: "SyncError", correlationId, code, message, docId: docId as SyncDocumentId | null };
+  return { type: "SyncError", correlationId, code, message, docId };
 }
