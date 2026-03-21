@@ -4,10 +4,13 @@ import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscap
 import { createId, ID_PREFIXES } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
+import { WS_ENVELOPE_PAGE_SIZE } from "../ws/ws.constants.js";
+
 import type { SyncChangeRow, SyncSnapshotRow } from "@pluralscape/db/pg";
 import type {
   EncryptedChangeEnvelope,
   EncryptedSnapshotEnvelope,
+  PaginatedEnvelopes,
   SyncManifest,
   SyncManifestEntry,
   SyncRelayService,
@@ -96,14 +99,23 @@ export class PgSyncRelayService implements SyncRelayService {
   async getEnvelopesSince(
     documentId: string,
     sinceSeq: number,
-  ): Promise<readonly EncryptedChangeEnvelope[]> {
+    limit: number = WS_ENVELOPE_PAGE_SIZE,
+  ): Promise<PaginatedEnvelopes> {
+    // Fetch limit + 1 rows so we can detect whether more exist beyond the page
     const rows = await this.db
       .select()
       .from(syncChanges)
       .where(and(eq(syncChanges.documentId, documentId), gt(syncChanges.seq, sinceSeq)))
-      .orderBy(syncChanges.seq);
+      .orderBy(syncChanges.seq)
+      .limit(limit + 1);
 
-    return rows.map((row) => this.mapChangeRow(row));
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+
+    return {
+      envelopes: pageRows.map((row) => this.mapChangeRow(row)),
+      hasMore,
+    };
   }
 
   async submitSnapshot(envelope: EncryptedSnapshotEnvelope): Promise<void> {

@@ -4,9 +4,10 @@
  * All handlers for the authenticated phase of the sync protocol, consolidated
  * into a single module for import simplicity.
  */
-import { SnapshotVersionConflictError } from "@pluralscape/sync";
+import { getSodium } from "@pluralscape/crypto";
+import { SnapshotVersionConflictError, verifyEnvelopeSignature } from "@pluralscape/sync";
 
-import { WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
+import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
@@ -90,8 +91,8 @@ export async function handleSubscribeRequest(
     const batchResults = await Promise.all(
       batch.map(async (entry): Promise<DocumentCatchup | null> => {
         try {
-          const [changes, snapshot] = await Promise.all([
-            relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+          const [{ envelopes: changes }, snapshot] = await Promise.all([
+            relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq, WS_ENVELOPE_PAGE_SIZE),
             relay.getLatestSnapshot(entry.docId),
           ]);
           const hasNewerSnapshot =
@@ -158,11 +159,16 @@ export async function handleFetchChanges(
   message: FetchChangesRequest,
   relay: SyncRelayService,
 ): Promise<ChangesResponse> {
+  const { envelopes } = await relay.getEnvelopesSince(
+    message.docId,
+    message.sinceSeq,
+    WS_ENVELOPE_PAGE_SIZE,
+  );
   return {
     type: "ChangesResponse",
     correlationId: message.correlationId,
     docId: message.docId,
-    changes: await relay.getEnvelopesSince(message.docId, message.sinceSeq),
+    changes: envelopes,
   };
 }
 
@@ -174,11 +180,35 @@ export interface SubmitChangeResult {
   readonly sequencedEnvelope: EncryptedChangeEnvelope;
 }
 
-/** Handle a SubmitChangeRequest. Returns ChangeAccepted and the sequenced envelope. */
+/**
+ * Handle a SubmitChangeRequest. Returns ChangeAccepted and the sequenced envelope.
+ *
+ * When envelope signature verification is enabled (VERIFY_ENVELOPE_SIGNATURES env var),
+ * the server verifies the envelope signature before storing/broadcasting. On failure,
+ * returns a SyncError with code INVALID_ENVELOPE and the envelope is dropped.
+ */
 export async function handleSubmitChange(
   message: SubmitChangeRequest,
   relay: SyncRelayService,
-): Promise<SubmitChangeResult> {
+): Promise<SubmitChangeResult | SyncError> {
+  // Sec-M2: Server-side envelope signature verification
+  if (shouldVerifyEnvelopeSignatures()) {
+    const sodium = getSodium();
+    const valid = verifyEnvelopeSignature(
+      { ...message.change, documentId: message.docId, seq: 0 },
+      sodium,
+    );
+    if (!valid) {
+      return {
+        type: "SyncError",
+        correlationId: message.correlationId,
+        code: "INVALID_ENVELOPE",
+        message: "Envelope signature verification failed",
+        docId: message.docId,
+      };
+    }
+  }
+
   const assignedSeq = await relay.submit({
     ...message.change,
     documentId: message.docId,
@@ -231,16 +261,23 @@ export async function handleSubmitSnapshot(
 /**
  * Handle a DocumentLoadRequest (on-demand document load).
  *
- * Returns both snapshot and changes for the requested document.
+ * P-H2: Optimized to fetch changes since the latest snapshot version rather
+ * than from seq 0. If a snapshot exists, only changes after snapshotVersion
+ * are fetched. If no snapshot exists, falls back to paginated fetch from seq 0.
  */
 export async function handleDocumentLoad(
   message: DocumentLoadRequest,
   relay: SyncRelayService,
 ): Promise<[SnapshotResponse, ChangesResponse]> {
-  const [snapshot, changes] = await Promise.all([
-    relay.getLatestSnapshot(message.docId),
-    relay.getEnvelopesSince(message.docId, 0),
-  ]);
+  const snapshot = await relay.getLatestSnapshot(message.docId);
+
+  // Fetch changes since the snapshot version (or from seq 0 if no snapshot)
+  const sinceSeq = snapshot !== null ? snapshot.snapshotVersion : 0;
+  const { envelopes: changes } = await relay.getEnvelopesSince(
+    message.docId,
+    sinceSeq,
+    WS_ENVELOPE_PAGE_SIZE,
+  );
 
   return [
     {
@@ -256,4 +293,17 @@ export async function handleDocumentLoad(
       changes,
     },
   ];
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Whether to verify envelope signatures server-side.
+ * Configurable via VERIFY_ENVELOPE_SIGNATURES env var for performance tuning.
+ * Defaults to true (secure by default).
+ */
+function shouldVerifyEnvelopeSignatures(): boolean {
+  const envVal = process.env["VERIFY_ENVELOPE_SIGNATURES"];
+  if (envVal === undefined) return true;
+  return envVal !== "false" && envVal !== "0";
 }

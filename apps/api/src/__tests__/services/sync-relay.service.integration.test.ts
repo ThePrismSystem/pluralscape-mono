@@ -173,15 +173,17 @@ describe("PgSyncRelayService (PGlite integration)", () => {
 
       const result = await service.getEnvelopesSince(docId, 1);
 
-      expect(result).toHaveLength(2);
-      expect(result[0]?.seq).toBe(2);
-      expect(result[1]?.seq).toBe(3);
+      expect(result.envelopes).toHaveLength(2);
+      expect(result.envelopes[0]?.seq).toBe(2);
+      expect(result.envelopes[1]?.seq).toBe(3);
+      expect(result.hasMore).toBe(false);
     });
 
     it("returns empty for no matches", async () => {
       const docId = await insertDoc();
       const result = await service.getEnvelopesSince(docId, 0);
-      expect(result).toEqual([]);
+      expect(result.envelopes).toEqual([]);
+      expect(result.hasMore).toBe(false);
     });
   });
 

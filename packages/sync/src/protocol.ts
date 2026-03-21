@@ -85,6 +85,7 @@ export type SyncErrorCode =
   | "MALFORMED_MESSAGE" // Message failed schema validation or size limit
   | "QUOTA_EXCEEDED" // Storage budget exceeded (see document-lifecycle.md §6)
   | "RATE_LIMITED" // Submitting changes too rapidly
+  | "INVALID_ENVELOPE" // Envelope signature verification failed; envelope dropped
   | "PROTOCOL_MISMATCH" // Client protocolVersion != SYNC_PROTOCOL_VERSION
   | "INTERNAL_ERROR"; // Server-side error; retry after backoff
 

@@ -1,5 +1,6 @@
+import { initSodium } from "@pluralscape/crypto";
 import { EncryptedRelay } from "@pluralscape/sync";
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
@@ -18,6 +19,7 @@ import { nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 import type { AuthContext } from "../../lib/auth-context.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { SyncConnectionState } from "../../ws/connection-state.js";
+import type { SubmitChangeResult } from "../../ws/handlers.js";
 import type {
   DocumentLoadRequest,
   EncryptedChangeEnvelope,
@@ -28,6 +30,8 @@ import type {
   SubmitChangeRequest,
   SubmitSnapshotRequest,
   SubscribeRequest,
+  SyncError,
+  SyncRelayService,
   UnsubscribeRequest,
 } from "@pluralscape/sync";
 import type { AccountId, SessionId, SystemId } from "@pluralscape/types";
@@ -98,7 +102,30 @@ function mockLog(): AppLogger {
   };
 }
 
+/** Type guard: returns true if the result is a SubmitChangeResult (not SyncError). */
+function isSubmitChangeResult(
+  result: SubmitChangeResult | SyncError,
+): result is SubmitChangeResult {
+  return "response" in result;
+}
+
 const log = mockLog();
+
+// Disable envelope signature verification for handler tests that use mock data.
+// Tests that specifically exercise signature verification enable it per-test.
+const savedEnvValue = process.env["VERIFY_ENVELOPE_SIGNATURES"];
+
+beforeEach(() => {
+  process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+});
+
+afterEach(() => {
+  if (savedEnvValue === undefined) {
+    delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+  } else {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = savedEnvValue;
+  }
+});
 
 // ── Tests ─────────────────────────────────────────────────────────────
 
@@ -449,6 +476,28 @@ describe("handleFetchChanges", () => {
 
     expect(result.changes).toHaveLength(0);
   });
+
+  it("passes WS_ENVELOPE_PAGE_SIZE as the limit parameter", async () => {
+    const getEnvelopesSinceSpy = vi.fn().mockResolvedValue({ envelopes: [], hasMore: false });
+    const mockService: SyncRelayService = {
+      submit: vi.fn(),
+      getEnvelopesSince: getEnvelopesSinceSpy,
+      submitSnapshot: vi.fn(),
+      getLatestSnapshot: vi.fn().mockResolvedValue(null),
+      getManifest: vi.fn(),
+    };
+
+    const message: FetchChangesRequest = {
+      type: "FetchChangesRequest",
+      correlationId: crypto.randomUUID(),
+      docId: "doc-1",
+      sinceSeq: 0,
+    };
+
+    await handleFetchChanges(message, mockService);
+
+    expect(getEnvelopesSinceSpy).toHaveBeenCalledWith("doc-1", 0, 500);
+  });
 });
 
 describe("handleSubmitChange", () => {
@@ -464,14 +513,16 @@ describe("handleSubmitChange", () => {
       change: mockChangeWithoutSeq(docId),
     };
 
-    const { response, sequencedEnvelope } = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(message, relay.asService());
+    expect(isSubmitChangeResult(result)).toBe(true);
+    if (!isSubmitChangeResult(result)) return;
 
-    expect(response.type).toBe("ChangeAccepted");
-    expect(response.correlationId).toBe(correlationId);
-    expect(response.docId).toBe(docId);
-    expect(response.assignedSeq).toBe(1);
-    expect(sequencedEnvelope.seq).toBe(1);
-    expect(sequencedEnvelope.documentId).toBe(docId);
+    expect(result.response.type).toBe("ChangeAccepted");
+    expect(result.response.correlationId).toBe(correlationId);
+    expect(result.response.docId).toBe(docId);
+    expect(result.response.assignedSeq).toBe(1);
+    expect(result.sequencedEnvelope.seq).toBe(1);
+    expect(result.sequencedEnvelope.documentId).toBe(docId);
   });
 
   it("assigns monotonically increasing seq values", async () => {
@@ -494,6 +545,10 @@ describe("handleSubmitChange", () => {
     const result1 = await handleSubmitChange(msg1, relay.asService());
     const result2 = await handleSubmitChange(msg2, relay.asService());
 
+    expect(isSubmitChangeResult(result1)).toBe(true);
+    expect(isSubmitChangeResult(result2)).toBe(true);
+    if (!isSubmitChangeResult(result1) || !isSubmitChangeResult(result2)) return;
+
     expect(result1.response.assignedSeq).toBe(1);
     expect(result2.response.assignedSeq).toBe(2);
   });
@@ -512,10 +567,12 @@ describe("handleSubmitChange", () => {
       change: changeWithDifferentDoc,
     };
 
-    const { response, sequencedEnvelope } = await handleSubmitChange(message, relay.asService());
+    const result = await handleSubmitChange(message, relay.asService());
+    expect(isSubmitChangeResult(result)).toBe(true);
+    if (!isSubmitChangeResult(result)) return;
 
-    expect(response.docId).toBe(requestDocId);
-    expect(sequencedEnvelope.documentId).toBe(requestDocId);
+    expect(result.response.docId).toBe(requestDocId);
+    expect(result.sequencedEnvelope.documentId).toBe(requestDocId);
 
     // Verify the relay stored it under the request docId
     const stored = relay.getEnvelopesSince(requestDocId, 0);
@@ -642,7 +699,8 @@ describe("handleDocumentLoad", () => {
     expect(changesResponse.type).toBe("ChangesResponse");
     expect(changesResponse.correlationId).toBe(correlationId);
     expect(changesResponse.docId).toBe(docId);
-    expect(changesResponse.changes).toHaveLength(2);
+    // P-H2: With a snapshot at version 1, only changes after seq 1 are returned
+    expect(changesResponse.changes).toHaveLength(1);
   });
 
   it("returns null snapshot when none exists", async () => {
@@ -687,7 +745,7 @@ describe("handleDocumentLoad", () => {
     expect(changesResponse.changes).toHaveLength(0);
   });
 
-  it("returns all changes from seq 0", async () => {
+  it("returns all changes from seq 0 when no snapshot exists", async () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
@@ -708,5 +766,183 @@ describe("handleDocumentLoad", () => {
     expect(changesResponse.changes[0]?.seq).toBe(1);
     expect(changesResponse.changes[1]?.seq).toBe(2);
     expect(changesResponse.changes[2]?.seq).toBe(3);
+  });
+
+  it("fetches only changes after snapshot version when snapshot exists (P-H2)", async () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    // Submit 5 changes (seq 1..5)
+    for (let i = 0; i < 5; i++) {
+      relay.submit(mockChangeWithoutSeq(docId));
+    }
+    // Submit a snapshot at version 3 (simulating snapshot covering seqs 1..3)
+    relay.submitSnapshot(mockSnapshot(docId, 3));
+
+    const message: DocumentLoadRequest = {
+      type: "DocumentLoadRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      persist: false,
+    };
+
+    const [snapshotResponse, changesResponse] = await handleDocumentLoad(
+      message,
+      relay.asService(),
+    );
+
+    expect(snapshotResponse.snapshot).not.toBeNull();
+    expect(snapshotResponse.snapshot?.snapshotVersion).toBe(3);
+    // Only changes with seq > 3 should be returned
+    expect(changesResponse.changes).toHaveLength(2);
+    expect(changesResponse.changes[0]?.seq).toBe(4);
+    expect(changesResponse.changes[1]?.seq).toBe(5);
+  });
+});
+
+// ── P-H1: Pagination tests ──────────────────────────────────────────
+
+describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
+  it("returns hasMore: false when results fit within the limit", async () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    relay.submit(mockChangeWithoutSeq(docId));
+    relay.submit(mockChangeWithoutSeq(docId));
+
+    const service = relay.asService();
+    const result = await service.getEnvelopesSince(docId, 0, 10);
+
+    expect(result.envelopes).toHaveLength(2);
+    expect(result.hasMore).toBe(false);
+  });
+
+  it("returns hasMore: true when more results exist beyond the limit", async () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    for (let i = 0; i < 5; i++) {
+      relay.submit(mockChangeWithoutSeq(docId));
+    }
+
+    const service = relay.asService();
+    const result = await service.getEnvelopesSince(docId, 0, 3);
+
+    expect(result.envelopes).toHaveLength(3);
+    expect(result.hasMore).toBe(true);
+  });
+
+  it("returns hasMore: false when results exactly match the limit", async () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    for (let i = 0; i < 3; i++) {
+      relay.submit(mockChangeWithoutSeq(docId));
+    }
+
+    const service = relay.asService();
+    const result = await service.getEnvelopesSince(docId, 0, 3);
+
+    expect(result.envelopes).toHaveLength(3);
+    expect(result.hasMore).toBe(false);
+  });
+
+  it("supports cursor-based pagination using the last returned seq", async () => {
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    for (let i = 0; i < 5; i++) {
+      relay.submit(mockChangeWithoutSeq(docId));
+    }
+
+    const service = relay.asService();
+    // First page
+    const page1 = await service.getEnvelopesSince(docId, 0, 2);
+    expect(page1.envelopes).toHaveLength(2);
+    expect(page1.hasMore).toBe(true);
+
+    // Second page (use last envelope's seq as cursor)
+    const lastSeq = page1.envelopes[1]?.seq ?? 0;
+    const page2 = await service.getEnvelopesSince(docId, lastSeq, 2);
+    expect(page2.envelopes).toHaveLength(2);
+    expect(page2.hasMore).toBe(true);
+
+    // Third page
+    const lastSeq2 = page2.envelopes[1]?.seq ?? 0;
+    const page3 = await service.getEnvelopesSince(docId, lastSeq2, 2);
+    expect(page3.envelopes).toHaveLength(1);
+    expect(page3.hasMore).toBe(false);
+  });
+});
+
+// ── Sec-M2: Signature verification tests ────────────────────────────
+
+describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
+  beforeAll(async () => {
+    await initSodium();
+  });
+
+  it("returns SyncError with INVALID_ENVELOPE when verification is enabled and signature is invalid", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    // Mock data has random bytes as signatures — they will fail verification
+    const message: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      change: mockChangeWithoutSeq(docId),
+    };
+
+    const result = await handleSubmitChange(message, relay.asService());
+
+    expect(isSubmitChangeResult(result)).toBe(false);
+    if (!isSubmitChangeResult(result)) {
+      expect(result.type).toBe("SyncError");
+      expect(result.code).toBe("INVALID_ENVELOPE");
+      expect(result.docId).toBe(docId);
+    }
+
+    // Verify nothing was stored in the relay
+    const stored = relay.getEnvelopesSince(docId, 0);
+    expect(stored).toHaveLength(0);
+  });
+
+  it("accepts the envelope when verification is disabled via env var", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
+
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    const message: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      change: mockChangeWithoutSeq(docId),
+    };
+
+    const result = await handleSubmitChange(message, relay.asService());
+
+    expect(isSubmitChangeResult(result)).toBe(true);
+  });
+
+  it("accepts the envelope when VERIFY_ENVELOPE_SIGNATURES is '0'", async () => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "0";
+
+    const relay = new EncryptedRelay();
+    const docId = crypto.randomUUID();
+
+    const message: SubmitChangeRequest = {
+      type: "SubmitChangeRequest",
+      correlationId: crypto.randomUUID(),
+      docId,
+      change: mockChangeWithoutSeq(docId),
+    };
+
+    const result = await handleSubmitChange(message, relay.asService());
+
+    expect(isSubmitChangeResult(result)).toBe(true);
   });
 });

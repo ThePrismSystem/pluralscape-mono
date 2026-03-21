@@ -103,26 +103,28 @@ describe("PgSyncRelayService", () => {
         createdAt: Date.now(),
       };
 
-      chain.orderBy.mockResolvedValueOnce([row]);
+      chain.limit.mockResolvedValueOnce([row]);
 
       const result = await service.getEnvelopesSince("doc-1", 1);
 
-      expect(result).toHaveLength(1);
-      expect(result[0]?.signature).toEqual(row.signature);
-      expect(result[0]?.ciphertext).toEqual(row.encryptedPayload);
-      expect(result[0]?.documentId).toBe("doc-1");
-      expect(result[0]?.seq).toBe(2);
+      expect(result.envelopes).toHaveLength(1);
+      expect(result.envelopes[0]?.signature).toEqual(row.signature);
+      expect(result.envelopes[0]?.ciphertext).toEqual(row.encryptedPayload);
+      expect(result.envelopes[0]?.documentId).toBe("doc-1");
+      expect(result.envelopes[0]?.seq).toBe(2);
+      expect(result.hasMore).toBe(false);
     });
 
     it("returns empty for no matches", async () => {
       const { db, chain } = mockDb();
       const service = new PgSyncRelayService(db);
 
-      chain.orderBy.mockResolvedValueOnce([]);
+      chain.limit.mockResolvedValueOnce([]);
 
       const result = await service.getEnvelopesSince("doc-1", 0);
 
-      expect(result).toEqual([]);
+      expect(result.envelopes).toEqual([]);
+      expect(result.hasMore).toBe(false);
     });
   });
 

@@ -86,6 +86,9 @@ function authRequest(): string {
   });
 }
 
+// Disable envelope signature verification for router tests (mock data has invalid signatures).
+const savedEnvValue = process.env["VERIFY_ENVELOPE_SIGNATURES"];
+
 // ── Tests ───────────────────────────────────────────────────────────
 
 describe("message-router", () => {
@@ -95,6 +98,7 @@ describe("message-router", () => {
   const log = mockLog();
 
   beforeEach(() => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     manager = new ConnectionManager();
     manager.reserveUnauthSlot();
     state = manager.register("conn-1", mockWs() as never, Date.now());
@@ -103,6 +107,11 @@ describe("message-router", () => {
   });
 
   afterEach(() => {
+    if (savedEnvValue === undefined) {
+      delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    } else {
+      process.env["VERIFY_ENVELOPE_SIGNATURES"] = savedEnvValue;
+    }
     manager.closeAll(1001, "test cleanup");
     ctx.documentOwnership.clear();
   });

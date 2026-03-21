@@ -490,9 +490,14 @@ export async function routeMessage(
         documentOwnership,
         async (msg) => {
           const result = await handleSubmitChange(msg, relay);
+          // Sec-M2: signature verification may return SyncError instead of SubmitChangeResult
+          if (!("response" in result)) {
+            return { response: result };
+          }
           return { response: result.response, context: result.sequencedEnvelope };
         },
-        (msg, _response, sequencedEnvelope) => {
+        (msg, response, sequencedEnvelope) => {
+          if (response.type === "SyncError") return;
           documentOwnership.set(msg.docId, state.systemId);
           broadcastDocumentUpdate(
             {

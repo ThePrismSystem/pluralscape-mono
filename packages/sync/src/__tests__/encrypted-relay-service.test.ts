@@ -63,9 +63,10 @@ describe("EncryptedRelay.asService()", () => {
     relay.submit(mockChange(docId));
     relay.submit({ ...mockChange(docId), nonce: nonce(0x11) });
 
-    const envelopes = await service.getEnvelopesSince(docId, 1);
-    expect(envelopes).toHaveLength(1);
-    expect(envelopes[0]?.seq).toBe(2);
+    const result = await service.getEnvelopesSince(docId, 1);
+    expect(result.envelopes).toHaveLength(1);
+    expect(result.envelopes[0]?.seq).toBe(2);
+    expect(result.hasMore).toBe(false);
   });
 
   it("submitSnapshot delegates correctly", async () => {
