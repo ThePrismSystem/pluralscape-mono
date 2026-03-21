@@ -84,7 +84,9 @@ export class PgSyncRelayService implements SyncRelayService {
         );
 
       if (!existing) {
-        throw new DocumentNotFoundError(envelope.documentId);
+        throw new Error(
+          `Dedup change row unexpectedly missing for document: ${envelope.documentId}`,
+        );
       }
 
       return existing.seq;

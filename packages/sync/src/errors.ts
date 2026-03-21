@@ -4,7 +4,7 @@
  * Provides structured error types for protocol, adapter, and document
  * operations so callers can catch by name or instanceof.
  */
-import type { SyncErrorCode } from "./protocol.js";
+import type { ClientMessage, SyncErrorCode } from "./protocol.js";
 
 /**
  * Thrown when the server returns a SyncError protocol message.
@@ -43,9 +43,9 @@ export class UnexpectedResponseError extends Error {
  */
 export class SyncTimeoutError extends Error {
   override readonly name = "SyncTimeoutError" as const;
-  readonly messageType: string;
+  readonly messageType: ClientMessage["type"];
 
-  constructor(messageType: string, options?: ErrorOptions) {
+  constructor(messageType: ClientMessage["type"], options?: ErrorOptions) {
     super(`Request timed out: ${messageType}`, options);
     this.messageType = messageType;
   }
@@ -79,10 +79,12 @@ export class NoChangeProducedError extends Error {
 export class UnsupportedDocumentTypeError extends Error {
   override readonly name = "UnsupportedDocumentTypeError" as const;
   readonly documentType: string;
+  readonly operation: string;
 
   constructor(documentType: string, operation: string, options?: ErrorOptions) {
     super(`Document type "${documentType}" does not support ${operation}`, options);
     this.documentType = documentType;
+    this.operation = operation;
   }
 }
 

@@ -34,7 +34,7 @@ import type { ConnectionManager } from "./connection-manager.js";
 import type { AuthenticatedState, SyncConnectionState } from "./connection-state.js";
 import type { ClientMessageType } from "./message-schemas.js";
 import type { AppLogger } from "../lib/logger.js";
-import type { EncryptedChangeEnvelope, ServerMessage, SyncRelayService } from "@pluralscape/sync";
+import type { ServerMessage, SyncRelayService } from "@pluralscape/sync";
 import type { SystemId } from "@pluralscape/types";
 import type { ZodType } from "zod";
 
@@ -172,24 +172,35 @@ function checkAccess(
  *
  * M16: Extended with optional `onSuccess` callback that runs after the response
  * is successfully sent. Used by submit operations to set ownership and broadcast.
+ *
+ * The handler returns `{ response, context? }`. The optional `context` value is
+ * forwarded to `onSuccess`, eliminating shared mutable closures between handler
+ * and callback. `onSuccess` runs in its own try/catch (log-only) to prevent
+ * double-response if the callback throws after the success response was sent.
  */
-async function dispatchWithAccess<T extends { docId: string; correlationId: string | null }>(
+async function dispatchWithAccess<
+  T extends { docId: string; correlationId: string | null },
+  C = void,
+>(
   schema: ZodType<T>,
   parsed: unknown,
   state: AuthenticatedState,
   messageType: string,
   log: AppLogger,
   ownership: Map<string, SystemId>,
-  handler: (msg: T) => Promise<ServerMessage>,
-  onSuccess?: (msg: T, response: ServerMessage) => void,
+  handler: (msg: T) => Promise<{ response: ServerMessage; context?: C }>,
+  onSuccess?: (msg: T, response: ServerMessage, context: C) => void,
 ): Promise<void> {
   const msg = parseMessage(schema, parsed, state, messageType, log);
   if (!msg) return;
   if (!checkAccess(msg.docId, state.systemId, msg.correlationId, state, log, ownership)) return;
+
+  let response: ServerMessage;
+  let context: C | undefined;
   try {
-    const response = await handler(msg);
-    if (!send(state, response, log)) return;
-    onSuccess?.(msg, response);
+    const result = await handler(msg);
+    response = result.response;
+    context = result.context;
   } catch (err) {
     log.error("Handler threw in dispatchWithAccess", {
       connectionId: state.connectionId,
@@ -199,9 +210,30 @@ async function dispatchWithAccess<T extends { docId: string; correlationId: stri
     });
     send(
       state,
-      makeSyncError("INTERNAL_ERROR", "Failed to process request", msg.correlationId, msg.docId),
+      makeSyncError(
+        "INTERNAL_ERROR",
+        `Failed to process ${messageType}`,
+        msg.correlationId,
+        msg.docId,
+      ),
       log,
     );
+    return;
+  }
+
+  if (!send(state, response, log)) return;
+
+  if (onSuccess) {
+    try {
+      onSuccess(msg, response, context as C);
+    } catch (err) {
+      log.error("onSuccess threw in dispatchWithAccess", {
+        connectionId: state.connectionId,
+        messageType,
+        docId: msg.docId,
+        error: formatError(err),
+      });
+    }
   }
 }
 
@@ -335,8 +367,6 @@ export async function routeMessage(
   }
 
   // 6. Validate and dispatch using helpers
-  // Closure variable for SubmitChangeRequest broadcast envelope
-  let submitChangeEnvelope: EncryptedChangeEnvelope = undefined as never;
   switch (messageType) {
     case "ManifestRequest": {
       const msg = parseMessage(
@@ -433,7 +463,7 @@ export async function routeMessage(
         messageType,
         log,
         documentOwnership,
-        (msg) => handleFetchSnapshot(msg, relay),
+        async (msg) => ({ response: await handleFetchSnapshot(msg, relay) }),
       );
       break;
     }
@@ -445,7 +475,7 @@ export async function routeMessage(
         messageType,
         log,
         documentOwnership,
-        (msg) => handleFetchChanges(msg, relay),
+        async (msg) => ({ response: await handleFetchChanges(msg, relay) }),
       );
       break;
     }
@@ -460,18 +490,16 @@ export async function routeMessage(
         documentOwnership,
         async (msg) => {
           const result = await handleSubmitChange(msg, relay);
-          // Stash sequenced envelope for broadcast in onSuccess via closure
-          submitChangeEnvelope = result.sequencedEnvelope;
-          return result.response;
+          return { response: result.response, context: result.sequencedEnvelope };
         },
-        (msg) => {
+        (msg, _response, sequencedEnvelope) => {
           documentOwnership.set(msg.docId, state.systemId);
           broadcastDocumentUpdate(
             {
               type: "DocumentUpdate",
               correlationId: null,
               docId: msg.docId,
-              changes: [submitChangeEnvelope],
+              changes: [sequencedEnvelope],
             },
             state.connectionId,
             manager,
@@ -490,7 +518,7 @@ export async function routeMessage(
         messageType,
         log,
         documentOwnership,
-        (msg) => handleSubmitSnapshot(msg, relay),
+        async (msg) => ({ response: await handleSubmitSnapshot(msg, relay) }),
         (msg, response) => {
           if (response.type !== "SyncError") {
             documentOwnership.set(msg.docId, state.systemId);

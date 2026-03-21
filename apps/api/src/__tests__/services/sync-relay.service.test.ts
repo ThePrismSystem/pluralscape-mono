@@ -101,6 +101,29 @@ describe("PgSyncRelayService", () => {
 
       expect(seq).toBe(3);
     });
+
+    it("throws assertion Error (not DocumentNotFoundError) when dedup row is missing", async () => {
+      const { db, chain } = mockDb();
+      const service = new PgSyncRelayService(db);
+
+      // UPDATE returns a row (document exists)
+      chain.returning.mockResolvedValueOnce([{ lastSeq: 4 }]);
+      // INSERT returns empty (dedup hit)
+      chain.returning.mockResolvedValueOnce([]);
+      // Rollback UPDATE where
+      chain.where.mockReturnValueOnce(chain).mockReturnValueOnce(chain);
+      // SELECT where returns empty — the "impossible" edge case
+      chain.where.mockResolvedValueOnce([]);
+
+      try {
+        await service.submit(makeEnvelope("doc-dedup-missing"));
+        expect.unreachable("Should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(Error);
+        expect(err).not.toBeInstanceOf(DocumentNotFoundError);
+        expect((err as Error).message).toContain("Dedup change row unexpectedly missing");
+      }
+    });
   });
 
   describe("getEnvelopesSince", () => {

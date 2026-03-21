@@ -1,12 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WsNetworkAdapter } from "../adapters/ws-network-adapter.js";
+import {
+  AdapterDisposedError,
+  SyncProtocolError,
+  SyncTimeoutError,
+  UnexpectedResponseError,
+} from "../errors.js";
 
 import { MockSyncTransport } from "./mock-sync-transport.js";
 import { runNetworkAdapterContract } from "./network-adapter.contract.js";
 
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
-import type { EncryptedChangeEnvelope, ServerMessage, SyncTransport } from "@pluralscape/sync";
+import type {
+  EncryptedChangeEnvelope,
+  EncryptedSnapshotEnvelope,
+  ServerMessage,
+  SyncTransport,
+} from "@pluralscape/sync";
 
 function nonce(fill: number): AeadNonce {
   const bytes: unknown = new Uint8Array(24).fill(fill);
@@ -28,6 +39,17 @@ function mockChangeWithoutSeq(docId: string): Omit<EncryptedChangeEnvelope, "seq
     signature: sig(0xbb),
     authorPublicKey: pubkey(0xcc),
     documentId: docId,
+  };
+}
+
+function mockSnapshot(docId: string): EncryptedSnapshotEnvelope {
+  return {
+    ciphertext: new Uint8Array([4, 5, 6]),
+    nonce: nonce(0xdd),
+    signature: sig(0xee),
+    authorPublicKey: pubkey(0xff),
+    documentId: docId,
+    snapshotVersion: 1,
   };
 }
 
@@ -55,7 +77,7 @@ describe("WsNetworkAdapter", () => {
       const pending = adapter.fetchManifest("sys_test");
       adapter.dispose();
 
-      await expect(pending).rejects.toThrow("Adapter disposed");
+      await expect(pending).rejects.toThrow(AdapterDisposedError);
       // Ensure onMessage callback reference was captured
       expect(onMessage).not.toBeNull();
     });
@@ -153,19 +175,19 @@ describe("WsNetworkAdapter", () => {
       return { transport, adapter };
     }
 
-    it("throws on SyncError in fetchChangesSince", async () => {
+    it("throws SyncProtocolError in fetchChangesSince", async () => {
       const { adapter } = createErrorTransport("FetchChangesRequest");
-      await expect(adapter.fetchChangesSince("doc-1", 0)).rejects.toThrow("SyncError");
+      await expect(adapter.fetchChangesSince("doc-1", 0)).rejects.toThrow(SyncProtocolError);
     });
 
-    it("throws on SyncError in fetchLatestSnapshot", async () => {
+    it("throws SyncProtocolError in fetchLatestSnapshot", async () => {
       const { adapter } = createErrorTransport("FetchSnapshotRequest");
-      await expect(adapter.fetchLatestSnapshot("doc-1")).rejects.toThrow("SyncError");
+      await expect(adapter.fetchLatestSnapshot("doc-1")).rejects.toThrow(SyncProtocolError);
     });
 
-    it("throws on SyncError in fetchManifest", async () => {
+    it("throws SyncProtocolError in fetchManifest", async () => {
       const { adapter } = createErrorTransport("ManifestRequest");
-      await expect(adapter.fetchManifest("sys-1")).rejects.toThrow("SyncError");
+      await expect(adapter.fetchManifest("sys-1")).rejects.toThrow(SyncProtocolError);
     });
   });
 
@@ -188,7 +210,7 @@ describe("WsNetworkAdapter", () => {
 
       vi.advanceTimersByTime(150);
 
-      await expect(pending).rejects.toThrow("Request timed out");
+      await expect(pending).rejects.toThrow(SyncTimeoutError);
     });
   });
 
@@ -285,7 +307,7 @@ describe("WsNetworkAdapter", () => {
   describe("auto-dispose on transport close (M12)", () => {
     /** Helper to create a transport with onClose support and capture the handler. */
     function createClosableTransport(): {
-      transport: SyncTransport & { onClose: (handler: () => void) => void };
+      transport: SyncTransport;
       triggerClose: () => void;
       triggerMessage: (msg: ServerMessage) => void;
     } {
@@ -293,7 +315,7 @@ describe("WsNetworkAdapter", () => {
         close: [],
         message: [],
       };
-      const transport: SyncTransport & { onClose: (handler: () => void) => void } = {
+      const transport: SyncTransport = {
         state: "connected",
         send: () => Promise.resolve(),
         onMessage: (handler) => {
@@ -333,7 +355,7 @@ describe("WsNetworkAdapter", () => {
       const pending = adapter.fetchManifest("sys-1");
       triggerClose();
 
-      await expect(pending).rejects.toThrow("Adapter disposed");
+      await expect(pending).rejects.toThrow(AdapterDisposedError);
     });
 
     it("ignores messages after dispose", () => {
@@ -365,6 +387,110 @@ describe("WsNetworkAdapter", () => {
       adapter.dispose();
 
       expect(adapter.isDisposed).toBe(true);
+    });
+  });
+
+  describe("disposed guard on request()", () => {
+    it("rejects new requests immediately after dispose", async () => {
+      const transport: SyncTransport = {
+        state: "connected",
+        send: () => Promise.resolve(),
+        onMessage: () => {},
+        close: () => {},
+      };
+      const adapter = new WsNetworkAdapter(transport, 30_000);
+      adapter.dispose();
+
+      await expect(adapter.fetchManifest("sys-1")).rejects.toThrow(AdapterDisposedError);
+    });
+
+    it("rejects submitChange after dispose", async () => {
+      const transport: SyncTransport = {
+        state: "connected",
+        send: () => Promise.resolve(),
+        onMessage: () => {},
+        close: () => {},
+      };
+      const adapter = new WsNetworkAdapter(transport, 30_000);
+      adapter.dispose();
+
+      await expect(adapter.submitChange("doc-1", mockChangeWithoutSeq("doc-1"))).rejects.toThrow(
+        AdapterDisposedError,
+      );
+    });
+  });
+
+  describe("submitSnapshot", () => {
+    function createSnapshotTransport(
+      responseFactory: (correlationId: string | null) => ServerMessage,
+    ): {
+      adapter: WsNetworkAdapter;
+    } {
+      let onMessage: ((msg: ServerMessage) => void) | null = null;
+      const transport: SyncTransport = {
+        state: "connected",
+        send: (msg) => {
+          void Promise.resolve().then(() => {
+            onMessage?.(responseFactory(msg.correlationId ?? null));
+          });
+          return Promise.resolve();
+        },
+        onMessage: (handler) => {
+          onMessage = handler;
+        },
+        close: () => {},
+      };
+      return { adapter: new WsNetworkAdapter(transport, 5_000) };
+    }
+
+    it("throws SyncProtocolError on non-VERSION_CONFLICT SyncError", async () => {
+      const { adapter } = createSnapshotTransport((correlationId) => ({
+        type: "SyncError",
+        correlationId,
+        code: "INTERNAL_ERROR",
+        message: "test error",
+        docId: null,
+      }));
+
+      await expect(adapter.submitSnapshot("doc-1", mockSnapshot("doc-1"))).rejects.toThrow(
+        SyncProtocolError,
+      );
+    });
+
+    it("silently returns on VERSION_CONFLICT", async () => {
+      const { adapter } = createSnapshotTransport((correlationId) => ({
+        type: "SyncError",
+        correlationId,
+        code: "VERSION_CONFLICT",
+        message: "version conflict",
+        docId: "doc-1",
+      }));
+
+      await expect(adapter.submitSnapshot("doc-1", mockSnapshot("doc-1"))).resolves.toBeUndefined();
+    });
+
+    it("throws UnexpectedResponseError on wrong response type", async () => {
+      const { adapter } = createSnapshotTransport((correlationId) => ({
+        type: "ChangeAccepted",
+        correlationId,
+        docId: "doc-1",
+        assignedSeq: 1,
+      }));
+
+      await expect(adapter.submitSnapshot("doc-1", mockSnapshot("doc-1"))).rejects.toThrow(
+        UnexpectedResponseError,
+      );
+    });
+
+    it("resolves on SnapshotAccepted", async () => {
+      const { adapter } = createSnapshotTransport((correlationId) => ({
+        type: "SnapshotAccepted",
+        correlationId,
+        docId: "doc-1",
+        snapshotVersion: 1,
+      }));
+
+      await expect(adapter.submitSnapshot("doc-1", mockSnapshot("doc-1"))).resolves.toBeUndefined();
     });
   });
 });

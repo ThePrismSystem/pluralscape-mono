@@ -750,7 +750,7 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("INTERNAL_ERROR");
-      expect(resp["message"]).toBe("Failed to process request");
+      expect(resp["message"]).toBe("Failed to process SubmitSnapshotRequest");
     });
 
     it("sends INTERNAL_ERROR when handleManifestRequest throws", async () => {
@@ -851,7 +851,7 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("INTERNAL_ERROR");
-      expect(resp["message"]).toBe("Failed to process request");
+      expect(resp["message"]).toBe("Failed to process SubmitChangeRequest");
     });
 
     it("sends INTERNAL_ERROR when handleDocumentLoad throws", async () => {
@@ -918,7 +918,7 @@ describe("message-router", () => {
       const resp = lastResponse();
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("INTERNAL_ERROR");
-      expect(resp["message"]).toBe("Failed to process request");
+      expect(resp["message"]).toBe("Failed to process FetchSnapshotRequest");
     });
 
     it("SubmitSnapshotRequest VERSION_CONFLICT does not set ownership", async () => {
@@ -1101,6 +1101,39 @@ describe("message-router", () => {
       ).resolves.not.toThrow();
 
       brokenManager.closeAll(1001, "test cleanup");
+    });
+
+    it("does not send double response when onSuccess side-effect throws", async () => {
+      const throwingOwnership = new Map<string, SystemId>();
+      Object.defineProperty(throwingOwnership, "set", {
+        value: () => {
+          throw new Error("ownership set failed");
+        },
+      });
+      const brokenCtx: RouterContext = {
+        relay: ctx.relay,
+        documentOwnership: throwingOwnership,
+        manager,
+      };
+
+      const change = makeChangePayload("doc-onsuccess-err");
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitChangeRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          docId: "doc-onsuccess-err",
+          change,
+        }),
+        state,
+        log,
+        brokenCtx,
+      );
+
+      // Should see exactly one response: ChangeAccepted (NOT an additional INTERNAL_ERROR)
+      const responses = sent.map((s) => JSON.parse(s) as Record<string, unknown>);
+      const forThisDoc = responses.filter((r) => r["docId"] === "doc-onsuccess-err");
+      expect(forThisDoc).toHaveLength(1);
+      expect(forThisDoc[0]?.["type"]).toBe("ChangeAccepted");
     });
 
     it("sends empty SubscribeResponse when all documents are denied", async () => {

@@ -153,6 +153,11 @@ describe("sync typed errors", () => {
       const err = new UnsupportedDocumentTypeError("privacy-config", "time-splitting");
       expect(err.documentType).toBe("privacy-config");
     });
+
+    it("stores operation", () => {
+      const err = new UnsupportedDocumentTypeError("system-core", "time-splitting");
+      expect(err.operation).toBe("time-splitting");
+    });
   });
 
   describe("DocumentNotFoundError", () => {

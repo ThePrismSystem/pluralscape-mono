@@ -22,6 +22,8 @@ export interface SyncTransport {
   send(message: ClientMessage): Promise<void>;
   /** Register a handler for all server-originated messages. */
   onMessage(handler: (message: ServerMessage) => void): void;
+  /** Register a handler for transport close events. */
+  onClose?(handler: () => void): void;
   /** Close the transport connection. */
   close(): void;
 }

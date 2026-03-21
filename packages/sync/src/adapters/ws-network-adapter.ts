@@ -58,12 +58,10 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       this.handleMessage(msg);
     });
 
-    // M12: Auto-dispose when transport closes or errors
-    if ("onClose" in transport && typeof transport.onClose === "function") {
-      (transport as SyncTransport & { onClose: (handler: () => void) => void }).onClose(() => {
-        this.dispose();
-      });
-    }
+    // M12: Auto-dispose when transport closes
+    transport.onClose?.(() => {
+      this.dispose();
+    });
   }
 
   async submitChange(
@@ -234,6 +232,10 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   private request(
     message: DistributiveOmit<ClientMessage, "correlationId">,
   ): Promise<ServerMessage> {
+    if (this.disposed) {
+      return Promise.reject(new AdapterDisposedError());
+    }
+
     const correlationId = crypto.randomUUID();
     const fullMessage = { ...message, correlationId } as ClientMessage;
 
