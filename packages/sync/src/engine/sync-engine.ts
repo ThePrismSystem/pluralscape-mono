@@ -91,9 +91,18 @@ export class SyncEngine {
     const subscriptionSet = filterManifest(manifest, this.config.profile, localDocIds);
 
     // 3. Evict stale local docs (parallel with bounded concurrency)
-    await mapConcurrent(subscriptionSet.evict, EVICTION_CONCURRENCY, (docId) =>
-      this.config.storageAdapter.deleteDocument(docId),
+    const evictionResults = await mapConcurrent(
+      subscriptionSet.evict,
+      EVICTION_CONCURRENCY,
+      (docId) => this.config.storageAdapter.deleteDocument(docId),
     );
+    for (let i = 0; i < evictionResults.length; i++) {
+      const result = evictionResults[i];
+      if (result?.status === "rejected") {
+        const docId = subscriptionSet.evict[i];
+        this.config.onError(`Failed to evict document ${docId ?? "unknown"}`, result.reason);
+      }
+    }
 
     // 4. Hydrate each active document with bounded concurrency
     const results = await mapConcurrent(subscriptionSet.active, HYDRATION_CONCURRENCY, (entry) =>

@@ -45,6 +45,7 @@ export class LazyDocumentSizeTracker<T> {
     this.cachedSize = 0;
   }
 
+  /** Returns 0 before the first `increment()` call triggers a measurement. */
   get sizeBytes(): number {
     return this.cachedSize;
   }

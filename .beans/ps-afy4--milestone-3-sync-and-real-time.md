@@ -1,11 +1,11 @@
 ---
 # ps-afy4
 title: "Milestone 3: Sync and Real-Time"
-status: todo
+status: completed
 type: milestone
 priority: normal
 created_at: 2026-03-08T12:15:46Z
-updated_at: 2026-03-19T11:33:33Z
+updated_at: 2026-03-21T08:42:57Z
 blocked_by:
   - ps-vtws
 ---
@@ -31,3 +31,7 @@ Sync implementation, WebSocket transport, offline resilience
 ## M4 Dependency
 
 M4 (Fronting Engine) depends on sync being operational — fronting sessions must sync across devices via the CRDT layer built in this milestone.
+
+## Summary of Changes
+
+All 10 child epics completed: CRDT sync implementation, WebSocket server, SSE fallback, offline queue and replay, conflict resolution, multi-device key transfer, API hardening (audit 013 + M2 scorecard), M3 low-severity remediation, and M3 comprehensive HIGH+MEDIUM audit remediation. E2E tests passing for WebSocket sync, SSE notifications, device transfer, and conflict resolution flows. Milestone 3 is complete.

@@ -180,10 +180,10 @@ export { SyncEngine } from "./engine/index.js";
 export type { SyncEngineConfig } from "./engine/index.js";
 
 // ── Engine: compaction ──────────────────────────────────────────────
-export { handleCompaction, compactionIdempotencyKey } from "./engine/compaction.js";
+export { handleCompaction, compactionIdempotencyKey } from "./engine/compaction-handler.js";
 export type {
   CompactionInput,
   CompactionResult,
   CompactionReason,
   CompactionSkipReason,
-} from "./engine/compaction.js";
+} from "./engine/compaction-handler.js";

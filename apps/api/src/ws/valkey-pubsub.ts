@@ -17,13 +17,12 @@
 import { WS_VALKEY_CONNECT_TIMEOUT_MS } from "./ws.constants.js";
 import { formatError } from "./ws.utils.js";
 
-/** Minimal logger interface for dependency injection. */
-export interface PubSubLogger {
-  info(msg: string, obj?: Record<string, unknown>): void;
-  warn(msg: string, obj?: Record<string, unknown>): void;
-  error(msg: string, obj?: Record<string, unknown>): void;
+import type { Logger } from "@pluralscape/types";
+
+/** Logger interface for pub/sub — extends base Logger with debug level. */
+export type PubSubLogger = Logger & {
   debug(msg: string, obj?: Record<string, unknown>): void;
-}
+};
 
 /** Minimal ioredis-compatible interface for pub/sub operations. */
 export interface PubSubClient {

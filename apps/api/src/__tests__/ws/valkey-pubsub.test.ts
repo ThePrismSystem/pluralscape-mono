@@ -85,6 +85,7 @@ describe("ValkeyPubSub", () => {
 
   beforeEach(() => {
     mocks = [];
+    vi.clearAllMocks();
     pubsub = new ValkeyPubSub("server-1", mockLogger);
   });
 

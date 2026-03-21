@@ -8,6 +8,7 @@
 import { mapConcurrent } from "./map-concurrent.js";
 import {
   BACKOFF_BASE_MS,
+  DRAIN_BATCH_SIZE,
   JITTER_MAX,
   JITTER_MIN,
   MAX_RETRIES_PER_ENTRY,
@@ -42,14 +43,22 @@ export interface ReplayOfflineQueueConfig {
  * Uses exponential backoff with jitter on failures, max 3 retries per entry.
  */
 export async function replayOfflineQueue(config: ReplayOfflineQueueConfig): Promise<ReplayResult> {
-  const entries = await config.offlineQueueAdapter.drainUnsynced();
-  if (entries.length === 0) {
+  const allEntries: OfflineQueueEntry[] = [];
+  let batch: readonly OfflineQueueEntry[];
+  do {
+    batch = await config.offlineQueueAdapter.drainUnsynced();
+    for (const entry of batch) {
+      allEntries.push(entry);
+    }
+  } while (batch.length >= DRAIN_BATCH_SIZE);
+
+  if (allEntries.length === 0) {
     return { replayed: 0, failed: 0, skipped: 0 };
   }
 
   // Group by documentId
   const byDocument = new Map<string, OfflineQueueEntry[]>();
-  for (const entry of entries) {
+  for (const entry of allEntries) {
     const existing = byDocument.get(entry.documentId);
     if (existing) {
       existing.push(entry);

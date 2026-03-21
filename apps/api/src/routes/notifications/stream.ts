@@ -38,47 +38,29 @@ interface AccountSseState {
   messageHandler: ((message: string) => void) | null;
 }
 
-/** Encapsulates per-account SSE state management. */
-class SseStateManager {
-  private readonly states = new Map<string, AccountSseState>();
-  private noPubSubWarningLogged = false;
-
+/** Per-account SSE state management. */
+const sseState = {
+  states: new Map<string, AccountSseState>(),
+  noPubSubWarningLogged: false,
   getOrCreate(accountId: string): AccountSseState {
     let state = this.states.get(accountId);
     if (!state) {
-      state = {
-        buffer: new SseEventBuffer(),
-        streams: new Set(),
-        messageHandler: null,
-      };
+      state = { buffer: new SseEventBuffer(), streams: new Set(), messageHandler: null };
       this.states.set(accountId, state);
     }
     return state;
-  }
-
+  },
   get(accountId: string): AccountSseState | undefined {
     return this.states.get(accountId);
-  }
-
+  },
   delete(accountId: string): void {
     this.states.delete(accountId);
-  }
-
-  get warningLogged(): boolean {
-    return this.noPubSubWarningLogged;
-  }
-
-  set warningLogged(value: boolean) {
-    this.noPubSubWarningLogged = value;
-  }
-
+  },
   reset(): void {
     this.states.clear();
     this.noPubSubWarningLogged = false;
-  }
-}
-
-const sseState = new SseStateManager();
+  },
+};
 
 notificationsRoutes.get("/stream", (c) => {
   const auth = c.get("auth");
@@ -167,9 +149,9 @@ notificationsRoutes.get("/stream", (c) => {
         await pubsub.subscribe(channel, handler);
       }
 
-      if (!pubsub && !sseState.warningLogged) {
+      if (!pubsub && !sseState.noPubSubWarningLogged) {
         logger.warn("SSE: no pub/sub configured, stream will only receive heartbeats");
-        sseState.warningLogged = true;
+        sseState.noPubSubWarningLogged = true;
       }
 
       // Wait for the stream to close (client disconnect)

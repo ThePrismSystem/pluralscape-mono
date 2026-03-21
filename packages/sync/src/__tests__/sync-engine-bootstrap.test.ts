@@ -174,6 +174,26 @@ describe("SyncEngine bootstrap", () => {
     expect(deleteFn).toHaveBeenCalledWith("stale-doc-sys_old");
   });
 
+  it("logs error when eviction fails but continues bootstrap", async () => {
+    const evictionError = new Error("Storage I/O error");
+    const deleteFn = vi.fn().mockRejectedValue(evictionError);
+    const storageAdapter = mockStorageAdapter({
+      listDocuments: vi.fn().mockResolvedValue(["stale-doc-sys_fail"]),
+      deleteDocument: deleteFn,
+    });
+    const networkAdapter = mockNetworkAdapter();
+    const onError = vi.fn();
+
+    const engine = createEngine({ networkAdapter, storageAdapter, onError });
+    await engine.bootstrap();
+
+    expect(deleteFn).toHaveBeenCalledWith("stale-doc-sys_fail");
+    expect(onError).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to evict document"),
+      evictionError,
+    );
+  });
+
   it("subscribes to active documents for real-time updates", async () => {
     const subscribeFn = vi.fn().mockReturnValue({ unsubscribe: vi.fn() });
     const manifest: SyncManifest = {

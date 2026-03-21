@@ -28,7 +28,7 @@ export interface OfflineQueueAdapter {
   /** Enqueue a change for later submission. Returns the entry ID. */
   enqueue(documentId: string, envelope: Omit<EncryptedChangeEnvelope, "seq">): Promise<string>;
 
-  /** Drain all unsynced entries, ordered by enqueuedAt. */
+  /** Drain up to a batch of unsynced entries, ordered by enqueuedAt. */
   drainUnsynced(): Promise<readonly OfflineQueueEntry[]>;
 
   /** Mark an entry as synced with the server-assigned sequence number. */
