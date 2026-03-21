@@ -40,7 +40,7 @@ Epics:
 - ~~API specification~~ [COMPLETED] — concrete operational constants for rate limits, pagination, sessions, errors, and retry policies
 - ~~API foundation (`apps/api`)~~ [COMPLETED] — Hono server with CORS, security headers, rate limiting, error handling middleware
 
-## Milestone 2: API Core [IN PROGRESS]
+## Milestone 2: API Core [COMPLETED]
 
 Goal: Authentication, identity management, core CRUD
 
@@ -57,22 +57,27 @@ Epics:
 - ~~Per-category rate limit middleware wiring~~ [COMPLETED] — read/write/auth/sensitive categories with Valkey-backed distributed store
 - ~~Key rotation API endpoints~~ [COMPLETED] — initiate, claim, complete-chunk, progress tracking (ADR 014)
 - ~~Innerworld CRUD~~ [COMPLETED] — regions, entities, canvas with archive/restore/delete
-- ~~Lifecycle events~~ [COMPLETED] — type-specific validation, cursor-based pagination
+- ~~Lifecycle events~~ [COMPLETED] — type-specific validation, cursor-based pagination (ADR 026)
 - ~~Audit log~~ [COMPLETED] — query endpoint with resourceType filtering, PII cleanup scheduling
 - ~~API comprehensive audit remediation~~ [COMPLETED] — 36-issue audit across security, ownership, testing, and code quality; executed via 7 parallel worktree PRs
+- ~~OpenAPI 3.1 specification~~ [COMPLETED] — 155 operations across 20 route domains with client-side plaintext schemas for E2E encryption
 
-## Milestone 3: Sync and Real-Time
+## Milestone 3: Sync and Real-Time [COMPLETED]
 
 Goal: Sync implementation, WebSocket transport, offline resilience
 
 Epics:
 
-- CRDT sync implementation (`packages/sync`)
-- WebSocket server (features.md section 15)
-- SSE fallback
-- Offline queue and replay
-- Conflict resolution
-- Multi-device key transfer (ADR 011)
+- ~~CRDT sync implementation~~ [COMPLETED] — Automerge relay with encrypted sync payloads, sync session management, document topology, subscription profiles (`packages/sync`)
+- ~~WebSocket sync server~~ [COMPLETED] — binary protocol, bounded subscriptions, auth timeout, graceful shutdown, Valkey pub/sub for cross-instance fan-out
+- ~~SSE notification stream~~ [COMPLETED] — heartbeat, reconnect replay, per-account fan-out, idle timeout handling
+- ~~Offline queue and replay~~ [COMPLETED] — batched drain, causal ordering, exponential backoff, cryptographic confirmation before clearing local data
+- ~~Conflict resolution~~ [COMPLETED] — post-merge validation engine, hierarchy cycle detection, sort-order repair
+- ~~Multi-device key transfer~~ [COMPLETED] — device transfer protocol, code entropy (ADR 024), attempt limiting, transfer session cleanup job
+- ~~Valkey pub/sub adapter~~ [COMPLETED] — cross-instance fan-out, auto-resubscribe on reconnect
+- ~~E2E test suite~~ [COMPLETED] — Playwright (`apps/api-e2e`), 51 tests covering auth, sync, SSE, device transfer, members
+- ~~M2 audit scorecard remediation~~ [COMPLETED] — timing side-channels, structured logging, response envelope standardization, DRY violations
+- ~~M3 comprehensive audit remediation~~ [COMPLETED] — 42 HIGH+MEDIUM findings across 12 parallel worktree PRs, plus 28 LOW-severity findings
 
 ## Milestone 4: Fronting Engine
 
@@ -195,7 +200,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 
 ## Architecture Decision Records
 
-25 accepted ADRs cover the full stack:
+26 accepted ADRs cover the full stack:
 
 - [ADR 001: AGPL-3.0 License](../adr/001-agpl-3-license.md)
 - [ADR 002-008](../adr/) — Foundation decisions (frontend, API, database, sync, encryption, real-time, runtime)
@@ -216,6 +221,7 @@ These features are tracked but may be deferred past initial launch. Each has a d
 - [ADR 023: Zod-Type Alignment](../adr/023-zod-type-alignment.md) — strategy for keeping Zod validation schemas synchronized with TypeScript types
 - [ADR 024: Device Transfer Code Entropy](../adr/024-device-transfer-code-entropy.md) — entropy trade-off for user-typed device transfer codes
 - [ADR 025: Webhook Secret Storage](../adr/025-webhook-secret-storage.md) — T3 plaintext storage for webhook signing secrets
+- [ADR 026: Lifecycle Event Type-Specific Validation](../adr/026-lifecycle-event-type-validation.md) — type-discriminated validation for lifecycle event subtypes
 
 ## Development Sequence Rationale
 

@@ -8,58 +8,22 @@ Pluralscape helps plural systems (DID, OSDD, and beyond) manage identity trackin
 
 ## Status
 
-**Active development — Milestones 0-2 complete, starting Milestone 3 (Sync and Real-Time).**
+**Active development — Milestones 0-3 complete, starting Milestone 4 (Fronting Engine).**
 
-Milestones 0 (infrastructure), 1 (data layer), and 2 (API Core) are complete. The full REST API is implemented with 155 operations across 20 route domains, documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
+Milestones 0 (infrastructure), 1 (data layer), 2 (API Core), and 3 (Sync and Real-Time) are complete. The full REST API is implemented with 155 operations across 20 route domains, documented in a comprehensive [OpenAPI 3.1 specification](docs/openapi/openapi.yaml) ([bundled single-file](docs/openapi.yaml)).
 
-Milestone 2 delivered:
-
-- Auth system — registration, login, session management, recovery key backup/regeneration, password reset via recovery key, biometric token enrollment
-- Member CRUD — full lifecycle with photos, custom field values, membership queries
-- Groups and folders — CRUD, hierarchical nesting, membership management, group copy, cycle detection
-- Custom fronts, system settings, initial setup wizard, nomenclature
-- System structure — subsystems, side-systems, layers, relationships, structure links, structure memberships
-- Media upload pipeline — presigned upload/download URLs, blob confirmation, lifecycle management
-- Per-category rate limiting with Valkey-backed distributed store
-- Key rotation API — initiate, claim, complete-chunk, progress tracking
-- Innerworld CRUD — regions, entities, canvas
-- Lifecycle events with type-specific validation
-- Audit log with query filtering and PII cleanup scheduling
-- Security audit remediation — 52 issues across security, ownership, testing, and code quality
-- OpenAPI 3.1 specification with client-side plaintext schemas for E2E encryption
-
-See the full [milestone roadmap](docs/planning/milestones.md) and [feature specification](docs/planning/features.md).
+Milestone 3 delivered encrypted CRDT sync, WebSocket/SSE transport, offline queue with replay, conflict resolution, multi-device key transfer, a Playwright E2E suite, and comprehensive security audit remediation. See the [CHANGELOG](CHANGELOG.md) for details, the [milestone roadmap](docs/planning/milestones.md) for the full plan, and the [feature specification](docs/planning/features.md) for scope.
 
 ## Test Suite
 
-4,258 tests across 316 test files — all passing.
-
-| Metric     | Coverage |
-| ---------- | -------- |
-| Statements | 94.64%   |
-| Branches   | 84.30%   |
-| Functions  | 93.87%   |
-| Lines      | 94.82%   |
-
-Coverage by package:
-
-| Package                   | Statements | Notes                                                           |
-| ------------------------- | ---------- | --------------------------------------------------------------- |
-| `@pluralscape/types`      | 100%       | Runtime validators and API constants fully covered              |
-| `@pluralscape/db`         | 100%       | Schema, helpers, RLS, and views                                 |
-| `@pluralscape/queue`      | 100%       | Job queue, retry policies, DLQ, observability                   |
-| `@pluralscape/storage`    | 100%       | S3 + filesystem adapters, quota management, lifecycle           |
-| `@pluralscape/validation` | 100%       | Shared Zod schemas with contract tests                          |
-| `@pluralscape/crypto`     | 98.70%     | Full coverage across all crypto operations                      |
-| `@pluralscape/sync`       | 95.98%     | Encrypted CRDT relay and session management                     |
-| `@pluralscape/i18n`       | 95.20%     | Locale formatting, nomenclature, and React integration          |
-| `@pluralscape/api`        | 94.44%     | 25 service modules, 90+ route handlers, middleware, auth, audit |
+Unit and integration tests run via Vitest; E2E tests via Playwright (`apps/api-e2e`). Coverage is enforced in CI — run `pnpm test:coverage` for a current report.
 
 ```bash
 pnpm test              # Run all tests
 pnpm test:unit         # Unit tests only
 pnpm test:integration  # Integration tests only
 pnpm test:coverage     # Tests with coverage report
+pnpm test:e2e          # E2E tests (Playwright)
 ```
 
 ## Values
@@ -75,6 +39,7 @@ This is a **pnpm monorepo** orchestrated by [Turborepo](https://turbo.build).
 ```
 apps/
   api/             Hono on Bun — tRPC (internal) + REST (public)
+  api-e2e/         E2E test suite (Playwright)
   mobile/          Expo (React Native) — web, iOS, Android
 
 packages/
@@ -102,7 +67,7 @@ ui-design/
 docs/
   openapi/         OpenAPI 3.1 spec (multi-file source, Redocly CLI)
   openapi.yaml     Bundled single-file OpenAPI spec (generated)
-  adr/             Architecture Decision Records (23 accepted)
+  adr/             Architecture Decision Records (26 accepted)
   audits/          Codebase audit reports
   planning/        Specifications, milestones, feature planning
   future-features/ Unscheduled feature design documents
@@ -162,7 +127,7 @@ See the complete [feature specification](docs/planning/features.md).
 ### Prerequisites
 
 - [Bun](https://bun.sh) (runtime)
-- [pnpm](https://pnpm.io) 9.x (package manager)
+- [pnpm](https://pnpm.io) 10.x (package manager)
 - [Node.js](https://nodejs.org) 18+ (for tooling compatibility)
 - PostgreSQL 15+ (for integration tests)
 
@@ -188,6 +153,7 @@ pnpm test              # Run all tests
 pnpm test:unit         # Unit tests only
 pnpm test:integration  # Integration tests only
 pnpm test:coverage     # Tests with coverage report
+pnpm test:e2e          # E2E tests (Playwright)
 pnpm clean             # Clean build artifacts
 pnpm roadmap           # Generate docs/roadmap.md from beans
 pnpm codeql            # Run CodeQL security analysis
