@@ -3,11 +3,7 @@ import { getSodium } from "@pluralscape/crypto";
 import { env } from "../env.js";
 import { EMAIL_HASH_LENGTH, PEPPER_HEX_LENGTH } from "../routes/auth/auth.constants.js";
 
-import { HEX_RADIX } from "./hex.constants.js";
-import { toHex } from "./hex.js";
-
-/** Number of hex characters per byte. */
-const HEX_CHARS_PER_BYTE = 2;
+import { fromHex, toHex } from "./hex.js";
 
 /**
  * Get the global email hash pepper from environment.
@@ -27,18 +23,7 @@ export function getEmailHashPepper(): Uint8Array {
       `EMAIL_HASH_PEPPER must be a ${String(PEPPER_HEX_LENGTH)}-character hex string (32 bytes).`,
     );
   }
-  const bytes = new Uint8Array(hex.length / HEX_CHARS_PER_BYTE);
-  for (let i = 0; i < bytes.length; i++) {
-    const byte = parseInt(
-      hex.slice(i * HEX_CHARS_PER_BYTE, i * HEX_CHARS_PER_BYTE + HEX_CHARS_PER_BYTE),
-      HEX_RADIX,
-    );
-    if (Number.isNaN(byte)) {
-      throw new Error("EMAIL_HASH_PEPPER must be a valid hex string.");
-    }
-    bytes[i] = byte;
-  }
-  return bytes;
+  return fromHex(hex);
 }
 
 /**
