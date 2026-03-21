@@ -2,6 +2,7 @@ import { extractErrorMessage } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 import { Worker } from "bullmq";
 
+import { BASE_36 } from "../../queue.constants.js";
 import { BaseJobWorker } from "../base-job-worker.js";
 
 import { fromStoredData } from "./job-mapper.js";
@@ -13,8 +14,6 @@ import type { BaseJobWorkerOptions } from "../base-job-worker.js";
 import type { JobDefinition, JobId } from "@pluralscape/types";
 import type { Job as BullMQJob } from "bullmq";
 import type IORedis from "ioredis";
-
-const BASE_36 = 36;
 
 /**
  * BullMQ-backed implementation of JobWorker.

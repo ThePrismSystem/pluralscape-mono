@@ -54,7 +54,7 @@ export interface CompactionConfig {
 export const DEFAULT_COMPACTION_CONFIG: CompactionConfig = {
   changeThreshold: DEFAULT_COMPACTION_CHANGE_THRESHOLD,
   sizeThresholdBytes: DEFAULT_COMPACTION_SIZE_BYTES,
-} as const;
+};
 
 /** Time-based split unit for growing documents. */
 export type TimeSplitUnit = "quarter" | "month" | "year";

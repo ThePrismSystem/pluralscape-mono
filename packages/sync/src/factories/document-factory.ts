@@ -17,10 +17,13 @@ import type { SystemCoreDocument } from "../schemas/system-core.js";
 // ── helper ────────────────────────────────────────────────────────────
 
 /**
- * Cast helper: Automerge.from<T> requires T extends Record<string, unknown>,
- * which specific document interfaces don't satisfy at the TypeScript level
- * (they lack an explicit index signature). We cast through unknown to satisfy
- * the constraint while preserving the correct return type.
+ * Cast helper for Automerge.from().
+ *
+ * Automerge.from() expects `Record<string, unknown>`, which specific document
+ * interfaces don't satisfy (they lack an explicit index signature). The
+ * double-cast (T → unknown → Record) preserves compile-time type safety on
+ * the input while satisfying Automerge's runtime signature. The return is
+ * cast back to `Automerge.Doc<T>` to restore the correct type.
  */
 export function fromDoc<T>(init: T): Automerge.Doc<T> {
   const asUnknown: unknown = init;
