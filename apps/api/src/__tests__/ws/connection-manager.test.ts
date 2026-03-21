@@ -470,10 +470,6 @@ describe("ConnectionManager", () => {
       }
 
       expect(manager.getAccountConnectionCount("acct_test")).toBe(maxPerAccount);
-
-      // The caller (auth-handler) checks this count before allowing new connections
-      // Verify that the count accurately reflects the limit
-      expect(manager.getAccountConnectionCount("acct_test") >= maxPerAccount).toBe(true);
     });
 
     it("decrements account count when connections are removed", () => {

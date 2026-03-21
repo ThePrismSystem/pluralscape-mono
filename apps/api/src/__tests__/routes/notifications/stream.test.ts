@@ -139,6 +139,39 @@ describe("GET /notifications/stream", () => {
       // The subscribe handler should have been captured by the mock
       expect(capturedSubscribeHandler).not.toBeNull();
     });
+
+    it("logs warning for malformed Valkey messages", async () => {
+      mockPubSub = createMockPubSub();
+      const app = createApp();
+      await app.request("/notifications/stream");
+
+      if (capturedSubscribeHandler === null) {
+        throw new Error("subscribe handler was not captured");
+      }
+
+      capturedSubscribeHandler("not valid json {{{");
+
+      expect(vi.mocked(logger)["warn"]).toHaveBeenCalledWith(
+        "SSE: malformed Valkey message",
+        expect.objectContaining({ channel: expect.any(String) }),
+      );
+    });
+
+    it("handler processes valid Valkey JSON without errors", async () => {
+      mockPubSub = createMockPubSub();
+      const app = createApp();
+      await app.request("/notifications/stream");
+
+      if (capturedSubscribeHandler === null) {
+        throw new Error("subscribe handler was not captured");
+      }
+      const handler = capturedSubscribeHandler;
+
+      // Should not throw — pushes to buffer and attempts fan-out
+      expect(() => {
+        handler(JSON.stringify({ event: "test", data: { foo: "bar" } }));
+      }).not.toThrow();
+    });
   });
 
   describe("Last-Event-ID replay via SseEventBuffer", () => {

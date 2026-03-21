@@ -4,6 +4,7 @@
  * Tests initial sync flow: manifest fetch, profile filtering, document
  * hydration from snapshots + changes, subscription setup.
  */
+import { SODIUM_CONSTANTS } from "@pluralscape/crypto";
 import { describe, expect, it, vi } from "vitest";
 
 import { SyncEngine } from "../engine/sync-engine.js";
@@ -32,7 +33,7 @@ function mockSodium(): SodiumAdapter {
   return {
     init: vi.fn().mockResolvedValue(undefined),
     isReady: vi.fn().mockReturnValue(true),
-    constants: {} as SodiumAdapter["constants"],
+    constants: SODIUM_CONSTANTS,
     supportsSecureMemzero: false,
     aeadEncrypt: unimplemented,
     aeadDecrypt: unimplemented,

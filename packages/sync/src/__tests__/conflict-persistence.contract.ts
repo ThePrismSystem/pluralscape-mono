@@ -81,9 +81,22 @@ export function runConflictPersistenceContract(factory: () => ConflictPersistenc
         ]);
 
         // Delete records older than a cutoff between old and recent
-        const cutoff = recentTimestamp - 1;
+        const cutoff = Math.floor((oldTimestamp + recentTimestamp) / 2);
         const deleted = await adapter.deleteOlderThan(cutoff);
         expect(deleted).toBeGreaterThanOrEqual(1);
+      });
+
+      it("keeps records at exactly the cutoff timestamp (strict less-than semantics)", async () => {
+        const adapter = factory();
+        const exactTimestamp = 50_000;
+
+        await adapter.saveConflicts("doc-boundary", [
+          makeNotification({ detectedAt: exactTimestamp }),
+        ]);
+
+        // cutoff === detectedAt — record is NOT "older than" cutoff, so should survive
+        const deleted = await adapter.deleteOlderThan(exactTimestamp);
+        expect(deleted).toBe(0);
       });
 
       it("returns 0 when all records are newer than the cutoff", async () => {

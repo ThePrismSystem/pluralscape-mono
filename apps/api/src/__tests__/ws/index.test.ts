@@ -15,8 +15,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * Simplified handler interface for the WebSocket lifecycle callbacks.
  * Uses Record to avoid coupling with the WSContext type from hono/ws.
  */
+interface MockWs {
+  close: ReturnType<typeof vi.fn>;
+  send: ReturnType<typeof vi.fn>;
+}
+
 interface WsHandler {
-  onOpen?: (...args: unknown[]) => void;
+  onOpen?: (evt: unknown, ws: MockWs) => void;
   onMessage?: (evt: { data: unknown }) => void;
   onClose?: () => void;
   onError?: (evt: unknown) => void;
@@ -66,15 +71,24 @@ vi.mock("../../lib/db.js", () => ({
   getDb: vi.fn().mockResolvedValue({}),
 }));
 
+let mockOriginAllowed = true;
+vi.mock("../../ws/origin-validation.js", () => ({
+  isAllowedOrigin: vi.fn(() => mockOriginAllowed),
+}));
+
 // ── Import after mocks ──────────────────────────────────────────────
 
 const { connectionManager } = await import("../../ws/index.js");
-const { WS_MAX_UNAUTHED_CONNECTIONS, WS_AUTH_TIMEOUT_MS } =
-  await import("../../ws/ws.constants.js");
+const {
+  WS_MAX_UNAUTHED_CONNECTIONS,
+  WS_AUTH_TIMEOUT_MS,
+  WS_CLOSE_POLICY_VIOLATION,
+  WS_UPGRADE_SAFETY_TIMEOUT_MS,
+} = await import("../../ws/ws.constants.js");
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function mockWs(): { close: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> } {
+function mockWs(): MockWs {
   return {
     close: vi.fn(),
     send: vi.fn(),
@@ -112,6 +126,7 @@ describe("WS entry point lifecycle", () => {
 
   afterEach(() => {
     connectionManager.closeAll(1001, "test cleanup");
+    mockOriginAllowed = true;
     vi.useRealTimers();
     vi.clearAllMocks();
   });
@@ -237,6 +252,31 @@ describe("WS entry point lifecycle", () => {
 
       // Only the error response should have been sent, no routing
       expect(ws.send).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("origin validation", () => {
+    it("closes connection with policy violation when origin is disallowed", () => {
+      mockOriginAllowed = false;
+      const handler = createConnectionHandler();
+      const ws = mockWs();
+
+      handler.onOpen?.(new Event("open"), ws);
+      expect(ws.close).toHaveBeenCalledWith(WS_CLOSE_POLICY_VIOLATION, "Origin not allowed");
+    });
+  });
+
+  describe("upgrade safety timeout", () => {
+    it("releases unauth slot when onOpen never fires", () => {
+      const countBefore = connectionManager.unauthenticatedCount;
+      const handler = createConnectionHandler();
+      expect(connectionManager.unauthenticatedCount).toBe(countBefore + 1);
+
+      // Advance past upgrade safety timeout without calling onOpen
+      vi.advanceTimersByTime(WS_UPGRADE_SAFETY_TIMEOUT_MS + 1);
+
+      expect(connectionManager.unauthenticatedCount).toBe(countBefore);
+      void handler;
     });
   });
 });
