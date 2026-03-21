@@ -203,6 +203,65 @@ describe("OfflineQueueManager", () => {
     expect(submitChange).toHaveBeenCalledTimes(3);
   });
 
+  it("processes multiple documents concurrently with bounded parallelism", async () => {
+    // Create entries for 4 different documents
+    const entries = [
+      makeEntry("e1", "doc_a", 1000),
+      makeEntry("e2", "doc_b", 1000),
+      makeEntry("e3", "doc_c", 1000),
+      makeEntry("e4", "doc_d", 1000),
+    ];
+
+    const documentsInFlight = new Set<string>();
+    let maxConcurrentDocs = 0;
+
+    // Gate pattern: all submits block until gate is opened
+    let openGate: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      openGate = resolve;
+    });
+
+    const submitChange = vi
+      .fn()
+      .mockImplementation((docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
+        documentsInFlight.add(docId);
+        maxConcurrentDocs = Math.max(maxConcurrentDocs, documentsInFlight.size);
+        return gate.then(() => {
+          documentsInFlight.delete(docId);
+          return { ...change, seq: 1 } as EncryptedChangeEnvelope;
+        });
+      });
+
+    const networkAdapter = mockNetworkAdapter({ submitChange });
+
+    const manager = new OfflineQueueManager({
+      offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+      networkAdapter,
+      storageAdapter: mockStorageAdapter(),
+      onError: vi.fn(),
+    });
+
+    const replayPromise = manager.replay();
+
+    // Wait for workers to reach the gate (3 concurrent workers should start)
+    await vi.waitFor(() => {
+      expect(submitChange).toHaveBeenCalledTimes(3);
+    });
+
+    // Verify concurrency is bounded: at most 3 docs in flight
+    expect(maxConcurrentDocs).toBeGreaterThan(1);
+    expect(maxConcurrentDocs).toBeLessThanOrEqual(3);
+
+    // Open the gate so all resolve, allowing the 4th doc to start
+    openGate();
+
+    const result = await replayPromise;
+
+    expect(result.replayed).toBe(4);
+    expect(result.failed).toBe(0);
+    expect(result.skipped).toBe(0);
+  });
+
   it("persists changes locally after successful replay", async () => {
     const entries = [makeEntry("e1", "doc_a", 1000)];
 
