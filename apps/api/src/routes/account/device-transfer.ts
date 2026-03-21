@@ -6,6 +6,7 @@ import {
   HTTP_BAD_REQUEST,
   HTTP_CREATED,
   HTTP_NOT_FOUND,
+  HTTP_SERVICE_UNAVAILABLE,
   HTTP_UNAUTHORIZED,
 } from "../../http.constants.js";
 import { ApiHttpError } from "../../lib/api-error.js";
@@ -14,6 +15,7 @@ import { getDb } from "../../lib/db.js";
 import { parseJsonBody } from "../../lib/parse-json-body.js";
 import { createRateLimiter } from "../../middleware/rate-limit.js";
 import {
+  KeyDerivationUnavailableError,
   TransferCodeError,
   TransferExpiredError,
   TransferNotFoundError,
@@ -26,6 +28,10 @@ import {
   MAX_TRANSFER_CODE_ATTEMPTS,
   TRANSFER_INITIATION_LIMIT,
 } from "./device-transfer.constants.js";
+import {
+  completeTransferBodySchema,
+  initiateTransferBodySchema,
+} from "./device-transfer.schema.js";
 
 import type { AuthEnv } from "../../lib/auth-context.js";
 import type { Context } from "hono";
@@ -53,15 +59,13 @@ deviceTransferRoute.post("/", async (c) => {
   const body = await parseJsonBody(c);
   const audit = createAuditWriter(c, auth);
 
-  const parsed = body as { codeSaltHex?: string; encryptedKeyMaterialHex?: string };
-  if (
-    typeof parsed.codeSaltHex !== "string" ||
-    typeof parsed.encryptedKeyMaterialHex !== "string"
-  ) {
+  const parseResult = initiateTransferBodySchema.safeParse(body);
+  if (!parseResult.success) {
     throw new ApiHttpError(
       HTTP_BAD_REQUEST,
       "VALIDATION_ERROR",
-      "codeSaltHex and encryptedKeyMaterialHex are required",
+      "Invalid request body",
+      parseResult.error.issues,
     );
   }
 
@@ -70,7 +74,7 @@ deviceTransferRoute.post("/", async (c) => {
       db,
       auth.accountId,
       auth.sessionId,
-      { codeSaltHex: parsed.codeSaltHex, encryptedKeyMaterialHex: parsed.encryptedKeyMaterialHex },
+      parseResult.data,
       audit,
     );
     return c.json(result, HTTP_CREATED);
@@ -101,9 +105,14 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
   const audit = createAuditWriter(c, auth);
   const transferId = c.req.param("id");
 
-  const parsed = body as { code?: string };
-  if (typeof parsed.code !== "string") {
-    throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", "code is required");
+  const parseResult = completeTransferBodySchema.safeParse(body);
+  if (!parseResult.success) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "VALIDATION_ERROR",
+      "Invalid request body",
+      parseResult.error.issues,
+    );
   }
 
   try {
@@ -112,7 +121,7 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
       transferId,
       auth.accountId,
       auth.sessionId,
-      parsed.code,
+      parseResult.data.code,
       audit,
     );
     return c.json(result);
@@ -125,6 +134,9 @@ deviceTransferRoute.post("/:id/complete", async (c) => {
     }
     if (error instanceof TransferValidationError) {
       throw new ApiHttpError(HTTP_BAD_REQUEST, "VALIDATION_ERROR", error.message);
+    }
+    if (error instanceof KeyDerivationUnavailableError) {
+      throw new ApiHttpError(HTTP_SERVICE_UNAVAILABLE, "SERVICE_UNAVAILABLE", error.message);
     }
     throw error;
   }
