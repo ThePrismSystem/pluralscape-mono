@@ -11,10 +11,9 @@ import type {
   EncryptedChangeEnvelope,
   EncryptedSnapshotEnvelope,
   PaginatedEnvelopes,
-  SyncManifest,
-  SyncManifestEntry,
   SyncRelayService,
 } from "@pluralscape/sync";
+import type { SyncManifest, SyncManifestEntry } from "@pluralscape/sync/adapters";
 import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 

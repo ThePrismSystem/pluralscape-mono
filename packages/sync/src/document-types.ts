@@ -8,6 +8,11 @@ import type {
 
 export type { SyncDocumentType, DocumentKeyType } from "@pluralscape/types";
 
+/** Entity ID type per document type for branded casting. */
+type EntityIdForDocType = {
+  [K in SyncDocumentType]: K extends "chat" ? ChannelId : K extends "bucket" ? BucketId : SystemId;
+};
+
 /** Parsed components of a document ID. */
 export type ParsedDocumentId =
   | {
@@ -133,50 +138,12 @@ export function parseDocumentId(documentId: string): ParsedDocumentId {
         throw new InvalidDocumentIdError(documentId);
       }
 
-      switch (config.documentType) {
-        case "system-core":
-          return {
-            documentType: "system-core",
-            keyType: "derived",
-            entityId: entityId as SystemId,
-            timePeriod: null,
-          };
-        case "fronting":
-          return {
-            documentType: "fronting",
-            keyType: "derived",
-            entityId: entityId as SystemId,
-            timePeriod,
-          };
-        case "chat":
-          return {
-            documentType: "chat",
-            keyType: "derived",
-            entityId: entityId as ChannelId,
-            timePeriod,
-          };
-        case "journal":
-          return {
-            documentType: "journal",
-            keyType: "derived",
-            entityId: entityId as SystemId,
-            timePeriod,
-          };
-        case "privacy-config":
-          return {
-            documentType: "privacy-config",
-            keyType: "derived",
-            entityId: entityId as SystemId,
-            timePeriod: null,
-          };
-        case "bucket":
-          return {
-            documentType: "bucket",
-            keyType: "bucket",
-            entityId: entityId as BucketId,
-            timePeriod: null,
-          };
-      }
+      return {
+        documentType: config.documentType,
+        keyType: config.keyType,
+        entityId: entityId as EntityIdForDocType[typeof config.documentType],
+        timePeriod,
+      } as ParsedDocumentId;
     }
   }
 

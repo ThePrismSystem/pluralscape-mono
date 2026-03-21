@@ -11,13 +11,9 @@ import {
 import { MockSyncTransport } from "./mock-sync-transport.js";
 import { runNetworkAdapterContract } from "./network-adapter.contract.js";
 
+import type { ServerMessage, SyncTransport } from "../protocol.js";
+import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
-import type {
-  EncryptedChangeEnvelope,
-  EncryptedSnapshotEnvelope,
-  ServerMessage,
-  SyncTransport,
-} from "@pluralscape/sync";
 
 function nonce(fill: number): AeadNonce {
   const bytes: unknown = new Uint8Array(24).fill(fill);

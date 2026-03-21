@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { JobHandlerContext } from "@pluralscape/queue";
-import type { ConflictPersistenceAdapter, OfflineQueueAdapter } from "@pluralscape/sync";
+import type { ConflictPersistenceAdapter } from "@pluralscape/sync";
+import type { OfflineQueueAdapter } from "@pluralscape/sync/adapters";
 import type { JobDefinition, JobId, UnixMillis } from "@pluralscape/types";
 
 // ── Mock deps ────────────────────────────────────────────────────────

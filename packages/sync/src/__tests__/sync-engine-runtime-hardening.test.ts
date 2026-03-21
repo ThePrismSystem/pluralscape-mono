@@ -590,7 +590,7 @@ describe("P-M5: conflict retry buffer cap", () => {
       detectedAt: Date.now(),
       summary: "test conflict",
     };
-    const validationSpy = vi.spyOn(PostMergeValidatorModule, "runAllValidations").mockReturnValue({
+    vi.spyOn(PostMergeValidatorModule, "runAllValidations").mockReturnValue({
       cycleBreaks: [],
       sortOrderPatches: [],
       checkInNormalizations: 0,

@@ -1,4 +1,12 @@
 // @pluralscape/sync — Encrypted CRDT sync over relay
+//
+// Root barrel exports core types, session, engine, document factory, and
+// protocol messages. Specialized exports live behind sub-entry points:
+//   @pluralscape/sync/adapters  — storage/network adapters and SQLite drivers
+//   @pluralscape/sync/schemas   — CRDT document schema types
+//   @pluralscape/sync/protocol  — full protocol message taxonomy
+
+// ── Core types ───────────────────────────────────────────────────────
 export type {
   DocumentKeys,
   EncryptedChangeEnvelope,
@@ -24,6 +32,7 @@ export {
   StorageBudgetExceededError,
 } from "./types.js";
 
+// ── Encryption ───────────────────────────────────────────────────────
 export {
   encryptChange,
   decryptChange,
@@ -33,6 +42,7 @@ export {
   SignatureVerificationError,
 } from "./encrypted-sync.js";
 
+// ── Errors ───────────────────────────────────────────────────────────
 export {
   SyncProtocolError,
   UnexpectedResponseError,
@@ -43,6 +53,7 @@ export {
   DocumentNotFoundError,
 } from "./errors.js";
 
+// ── Relay ────────────────────────────────────────────────────────────
 export type { PaginatedEnvelopes, SyncRelayService } from "./relay-service.js";
 export {
   RELAY_MAX_ENVELOPES_PER_DOCUMENT,
@@ -56,69 +67,18 @@ export {
 } from "./relay.js";
 export type { RelayDocumentState, RelayOptions } from "./relay.js";
 
+// ── Session ──────────────────────────────────────────────────────────
 export { EncryptedSyncSession, syncThroughRelay } from "./sync-session.js";
 
+// ── Document identity ────────────────────────────────────────────────
 export type { DocumentKeyType, ParsedDocumentId, SyncDocumentType } from "./document-types.js";
 export { InvalidDocumentIdError, parseDocumentId } from "./document-types.js";
 
+// ── Document key resolver ────────────────────────────────────────────
 export type { DocumentKeyResolverConfig } from "./document-key-resolver.js";
 export { BucketKeyNotFoundError, DocumentKeyResolver } from "./document-key-resolver.js";
 
-// ── Document schemas ──────────────────────────────────────────────────
-export type { CrdtAuditFields, CrdtOptionalString, CrdtString } from "./schemas/common.js";
-export type {
-  CrdtSystem,
-  CrdtSystemSettings,
-  CrdtMember,
-  CrdtMemberPhoto,
-  CrdtGroup,
-  CrdtSubsystem,
-  CrdtSideSystem,
-  CrdtLayer,
-  CrdtRelationship,
-  CrdtCustomFront,
-  CrdtFieldDefinition,
-  CrdtFieldValue,
-  CrdtInnerWorldEntity,
-  CrdtInnerWorldRegion,
-  CrdtTimer,
-  CrdtLifecycleEvent,
-  SystemCoreDocument,
-} from "./schemas/system-core.js";
-export type {
-  CrdtFrontingSession,
-  CrdtFrontingComment,
-  CrdtSwitch,
-  CrdtCheckInRecord,
-  FrontingDocument,
-} from "./schemas/fronting.js";
-export type {
-  CrdtChannel,
-  CrdtChatMessage,
-  CrdtBoardMessage,
-  CrdtPoll,
-  CrdtPollOption,
-  CrdtPollVote,
-  CrdtAcknowledgementRequest,
-  ChatDocument,
-} from "./schemas/chat.js";
-export type {
-  CrdtJournalEntry,
-  CrdtWikiPage,
-  CrdtNote,
-  JournalDocument,
-} from "./schemas/journal.js";
-export type {
-  CrdtPrivacyBucket,
-  CrdtBucketContentTag,
-  CrdtFriendConnection,
-  CrdtFriendCode,
-  CrdtKeyGrant,
-  PrivacyConfigDocument,
-} from "./schemas/privacy-config.js";
-export type { BucketProjectionDocument } from "./schemas/bucket.js";
-
-// ── CRDT strategies ───────────────────────────────────────────────────
+// ── CRDT strategies ──────────────────────────────────────────────────
 export { ENTITY_CRDT_STRATEGIES } from "./strategies/crdt-strategies.js";
 export type {
   CrdtStorageType,
@@ -126,7 +86,7 @@ export type {
   SyncedEntityType,
 } from "./strategies/crdt-strategies.js";
 
-// ── Document factories ────────────────────────────────────────────────
+// ── Document factories ───────────────────────────────────────────────
 export {
   createDocument,
   createSystemCoreDocument,
@@ -138,20 +98,9 @@ export {
   fromDoc,
 } from "./factories/document-factory.js";
 
-// ── Adapter interfaces ────────────────────────────────────────────────
-export type { SyncStorageAdapter } from "./adapters/storage-adapter.js";
-export type {
-  SyncManifest,
-  SyncManifestEntry,
-  SyncNetworkAdapter,
-  SyncSubscription,
-} from "./adapters/network-adapter.js";
-export type { SqliteDriver, SqliteStatement } from "./adapters/sqlite-driver.js";
-export { SqliteStorageAdapter } from "./adapters/sqlite-storage-adapter.js";
-export { createBunSqliteDriver } from "./adapters/bun-sqlite-driver.js";
-export { WsNetworkAdapter } from "./adapters/ws-network-adapter.js";
-export type { OfflineQueueAdapter, OfflineQueueEntry } from "./adapters/offline-queue-adapter.js";
-export { SqliteOfflineQueueAdapter } from "./adapters/sqlite-offline-queue-adapter.js";
+// ── Post-merge validation ────────────────────────────────────────────
+export { runAllValidations } from "./post-merge-validator.js";
+export type { ConflictPersistenceAdapter, PersistedConflict } from "./conflict-persistence.js";
 
 // ── Offline queue management ─────────────────────────────────────────
 export { replayOfflineQueue } from "./offline-queue-manager.js";
@@ -193,14 +142,14 @@ export type {
 } from "./replication-profiles.js";
 export { DEFAULT_OWNER_FULL_PROFILE, DEFAULT_OWNER_LITE_PROFILE } from "./replication-profiles.js";
 
-// ── Protocol messages ──────────────────────────────────────────────────
+// ── Protocol messages ────────────────────────────────────────────────
 export type {
   TransportState,
   SyncTransport,
   SyncMessageBase,
+  SyncErrorCode,
   DocumentVersionEntry,
   DocumentCatchup,
-  SyncErrorCode,
   AuthenticateRequest,
   ManifestRequest,
   SubscribeRequest,
@@ -226,10 +175,6 @@ export type {
 } from "./protocol.js";
 export { SYNC_PROTOCOL_VERSION } from "./protocol.js";
 
-// ── Post-merge validation ────────────────────────────────────────────
-export { runAllValidations } from "./post-merge-validator.js";
-export type { ConflictPersistenceAdapter, PersistedConflict } from "./conflict-persistence.js";
-
-// ── Sync engine ──────────────────────────────────────────────────────
+// ── Sync engine ─────────────────────────────────────────────────────
 export { SyncEngine } from "./engine/index.js";
 export type { SyncEngineConfig } from "./engine/index.js";

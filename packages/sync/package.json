@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./adapters": "./src/adapters.ts",
+    "./schemas": "./src/schemas.ts",
+    "./protocol": "./src/protocol.ts"
   },
   "dependencies": {
     "@automerge/automerge": "^3.2.4",

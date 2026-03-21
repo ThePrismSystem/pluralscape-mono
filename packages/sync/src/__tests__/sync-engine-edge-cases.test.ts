@@ -174,13 +174,13 @@ describe("SyncEngine edge cases", () => {
       const networkAdapter = relayNetworkAdapter(relay);
       networkAdapter.submitChange = vi
         .fn()
-        .mockImplementation((docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
+        .mockImplementation(async (docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
           if (docId === "doc-fail") {
-            return Promise.reject(new Error("Network error"));
+            throw new Error("Network error");
           }
           // doc-succeed gets through
-          const seq = relay.submit(change);
-          return Promise.resolve({ ...change, seq });
+          const seq = await relay.submit(change);
+          return { ...change, seq };
         });
 
       const markSynced = vi.fn().mockResolvedValue(undefined);
@@ -231,8 +231,7 @@ describe("SyncEngine edge cases", () => {
 
       // Retry failure messages should have been logged for doc-fail
       const retryErrors = onError.mock.calls.filter(
-        (call: unknown[]) =>
-          typeof call[0] === "string" && (call[0]).includes("oq_fail_1"),
+        (call: unknown[]) => typeof call[0] === "string" && call[0].includes("oq_fail_1"),
       );
       expect(retryErrors.length).toBeGreaterThanOrEqual(1);
 
