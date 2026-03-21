@@ -8,7 +8,7 @@
 import { createDocument } from "../factories/document-factory.js";
 import { mapConcurrent } from "../map-concurrent.js";
 import { OfflineQueueManager } from "../offline-queue-manager.js";
-import { PostMergeValidator } from "../post-merge-validator.js";
+import { runAllValidations } from "../post-merge-validator.js";
 import { filterManifest } from "../subscription-filter.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
@@ -56,7 +56,6 @@ export class SyncEngine {
   private readonly documentQueues = new Map<string, Promise<void>>();
 
   private readonly config: SyncEngineConfig;
-  private readonly postMergeValidator = new PostMergeValidator();
   private readonly offlineQueueManager?: OfflineQueueManager;
   private failedConflictPersistence: Array<{
     documentId: string;
@@ -405,7 +404,7 @@ export class SyncEngine {
     session: EncryptedSyncSession<unknown>,
   ): Promise<void> {
     // runAllValidations never throws — each validator is independently try/caught
-    const result = this.postMergeValidator.runAllValidations(session, this.config.onError);
+    const result = runAllValidations(session, this.config.onError);
     const { correctionEnvelopes, notifications } = result;
 
     // Submit correction envelopes to server and persist locally

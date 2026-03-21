@@ -227,7 +227,7 @@ export type {
 export { SYNC_PROTOCOL_VERSION } from "./protocol.js";
 
 // ── Post-merge validation ────────────────────────────────────────────
-export { PostMergeValidator } from "./post-merge-validator.js";
+export { runAllValidations } from "./post-merge-validator.js";
 export type { ConflictPersistenceAdapter, PersistedConflict } from "./conflict-persistence.js";
 
 // ── Sync engine ──────────────────────────────────────────────────────

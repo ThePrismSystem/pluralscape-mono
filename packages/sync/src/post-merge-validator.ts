@@ -3,7 +3,7 @@
  *
  * After two CRDT sessions merge, certain application-level invariants may be
  * violated (e.g. hierarchy cycles, sort order ties, conflicting boolean flags).
- * This validator detects and corrects those violations via session.change(),
+ * This module detects and corrects those violations via session.change(),
  * making the corrections part of CRDT history.
  */
 import * as Automerge from "@automerge/automerge";
@@ -49,6 +49,7 @@ interface CheckInLike {
 interface FriendConnectionLike {
   status: Automerge.ImmutableString;
   assignedBuckets: Record<string, true>;
+  /** JSON-serialized object (e.g. `{"showMembers":true}`). Parse `.val` with JSON.parse(). */
   visibility: Automerge.ImmutableString;
 }
 
@@ -76,533 +77,503 @@ function getParentId(
   return null;
 }
 
-// ── Field name mapping ───────────────────────────────────────────────
+// ── Field name mapping (derived from CRDT strategies) ───────────────
 
 /** Maps CRDT entity type names to their field names in Automerge documents. */
 const ENTITY_FIELD_MAP: ReadonlyMap<string, string> = new Map(
-  Object.entries({
-    member: "members",
-    "member-photo": "memberPhotos",
-    group: "groups",
-    subsystem: "subsystems",
-    "side-system": "sideSystems",
-    layer: "layers",
-    relationship: "relationships",
-    "custom-front": "customFronts",
-    "field-definition": "fieldDefinitions",
-    "field-value": "fieldValues",
-    "innerworld-entity": "innerWorldEntities",
-    "innerworld-region": "innerWorldRegions",
-    timer: "timers",
-    "fronting-session": "sessions",
-    "fronting-comment": "comments",
-    "check-in-record": "checkInRecords",
-    channel: "channel",
-    "board-message": "boardMessages",
-    poll: "polls",
-    "poll-option": "pollOptions",
-    acknowledgement: "acknowledgements",
-    "journal-entry": "entries",
-    "wiki-page": "wikiPages",
-    note: "notes",
-    bucket: "buckets",
-    "bucket-content-tag": "contentTags",
-    "friend-connection": "friendConnections",
-    "friend-code": "friendCodes",
-    "key-grant": "keyGrants",
-  }),
+  Object.entries(ENTITY_CRDT_STRATEGIES).map(([type, strat]) => [type, strat.fieldName]),
 );
 
-// ── Validator ────────────────────────────────────────────────────────
+// ── Validation functions ────────────────────────────────────────────
 
 /**
- * Validates and corrects post-merge CRDT state.
+ * Walk lww-map / append-lww entities and re-stamp `archived = true` for any
+ * entity that is currently archived. This ensures tombstone wins over concurrent
+ * un-archive operations by making the archive the latest CRDT write.
  *
- * Each method takes a session, detects violations, and applies corrective
- * mutations via session.change(). The corrections become part of CRDT history.
+ * Returns notifications and the correction envelope (if any mutations were applied).
  */
-export class PostMergeValidator {
-  /**
-   * Walk all lww-map entities and re-stamp `archived = true` for any entity
-   * that is currently archived. This ensures tombstone wins over concurrent
-   * un-archive operations by making the archive the latest CRDT write.
-   *
-   * Returns notifications and the correction envelope (if any mutations were applied).
-   */
-  enforceTombstones(session: EncryptedSyncSession<unknown>): {
-    notifications: ConflictNotification[];
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    const notifications: ConflictNotification[] = [];
-    const doc = session.document as DocRecord;
+export function enforceTombstones(session: EncryptedSyncSession<unknown>): {
+  notifications: ConflictNotification[];
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const notifications: ConflictNotification[] = [];
+  const doc = session.document as DocRecord;
 
-    const lwwMapTypes = Object.entries(ENTITY_CRDT_STRATEGIES).filter(
-      ([, strategy]) => strategy.storageType === "lww-map" || strategy.storageType === "append-lww",
-    );
+  const lwwMapTypes = Object.entries(ENTITY_CRDT_STRATEGIES).filter(([, strategy]) => {
+    return strategy.storageType === "lww-map" || strategy.storageType === "append-lww";
+  });
 
-    const mutations: Array<{ fieldName: string; entityId: string; entityType: string }> = [];
+  const mutations: Array<{ fieldName: string; entityId: string; entityType: string }> = [];
 
-    for (const [entityType] of lwwMapTypes) {
-      const fieldName = ENTITY_FIELD_MAP.get(entityType);
-      if (!fieldName) continue;
+  for (const [entityType, strategy] of lwwMapTypes) {
+    const { fieldName } = strategy;
 
-      const entityMap = getEntityMap<ArchivableEntity>(doc, fieldName);
-      if (!entityMap) continue;
+    const entityMap = getEntityMap<ArchivableEntity>(doc, fieldName);
+    if (!entityMap) continue;
 
-      for (const [entityId, entity] of Object.entries(entityMap)) {
-        if (entity.archived) {
-          mutations.push({ fieldName, entityId, entityType });
-        }
+    for (const [entityId, entity] of Object.entries(entityMap)) {
+      if (entity.archived) {
+        mutations.push({ fieldName, entityId, entityType });
       }
     }
-
-    if (mutations.length === 0) {
-      return { notifications, envelope: null };
-    }
-
-    const envelope = session.change((d) => {
-      const docMap = d as DocRecord;
-      for (const { fieldName, entityId } of mutations) {
-        const map = getEntityMap<ArchivableEntity>(docMap, fieldName);
-        const target = map?.[entityId];
-        if (target) {
-          target.archived = true;
-        }
-      }
-    });
-
-    for (const { entityType, entityId } of mutations) {
-      notifications.push({
-        entityType,
-        entityId,
-        fieldName: "archived",
-        resolution: "lww-field",
-        detectedAt: Date.now(),
-        summary: `Re-stamped tombstone for ${entityType} ${entityId}`,
-      });
-    }
-
-    return { notifications, envelope };
   }
 
-  /**
-   * DFS on groups/subsystems/innerWorldRegions parent chains.
-   * Break cycles by nulling the parent of the lowest-ID entity (deterministic).
-   *
-   * Returns cycle breaks and the correction envelope (if any mutations were applied).
-   */
-  detectHierarchyCycles(session: EncryptedSyncSession<unknown>): {
-    breaks: CycleBreak[];
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    const doc = session.document as DocRecord;
-    const allPendingClears: Array<{
-      fieldName: string;
-      parentField: string;
-      entityId: string;
-      formerParentId: string;
-    }> = [];
+  if (mutations.length === 0) {
+    return { notifications, envelope: null };
+  }
 
-    const collectClears = this.detectCyclesForField(doc, "groups", "parentGroupId");
-    allPendingClears.push(...collectClears);
-
-    const subsystemClears = this.detectCyclesForField(doc, "subsystems", "parentSubsystemId");
-    allPendingClears.push(...subsystemClears);
-
-    const regionClears = this.detectCyclesForField(doc, "innerWorldRegions", "parentRegionId");
-    allPendingClears.push(...regionClears);
-
-    if (allPendingClears.length === 0) {
-      return { breaks: [], envelope: null };
-    }
-
-    const envelope = session.change((d) => {
-      const docMap = d as DocRecord;
-      for (const { fieldName, parentField, entityId } of allPendingClears) {
-        const map = getEntityMap<Record<string, Automerge.ImmutableString | null>>(
-          docMap,
-          fieldName,
-        );
-        const target = map?.[entityId];
-        if (target) {
-          target[parentField] = null;
-        }
+  const envelope = session.change((d) => {
+    const docMap = d as DocRecord;
+    for (const { fieldName, entityId } of mutations) {
+      const map = getEntityMap<ArchivableEntity>(docMap, fieldName);
+      const target = map?.[entityId];
+      if (target) {
+        target.archived = true;
       }
-    });
+    }
+  });
 
-    const breaks = allPendingClears.map(({ entityId, formerParentId }) => ({
+  for (const { entityType, entityId } of mutations) {
+    notifications.push({
+      entityType,
       entityId,
-      formerParentId,
-    }));
-
-    return { breaks, envelope };
-  }
-
-  /**
-   * For entities with sortOrder, detect ties and re-assign sequential values
-   * by createdAt then id. Handles groups, memberPhotos, and fieldDefinitions.
-   *
-   * Returns patches and the correction envelope (if any mutations were applied).
-   */
-  normalizeSortOrder(session: EncryptedSyncSession<unknown>): {
-    patches: SortOrderPatch[];
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    const doc = session.document as DocRecord;
-    const allPatches: Array<SortOrderPatch & { fieldName: string }> = [];
-
-    for (const fieldName of ["groups", "memberPhotos", "fieldDefinitions"]) {
-      const entityMap = getEntityMap<SortableEntity>(doc, fieldName);
-      if (entityMap) {
-        allPatches.push(...this.collectSortOrderPatches(entityMap, fieldName));
-      }
-    }
-
-    if (allPatches.length === 0) {
-      return { patches: [], envelope: null };
-    }
-
-    const envelope = session.change((d) => {
-      const docMap = d as DocRecord;
-      for (const { entityId, newSortOrder, fieldName } of allPatches) {
-        const map = getEntityMap<SortableEntity>(docMap, fieldName);
-        const target = map?.[entityId];
-        if (target) {
-          target.sortOrder = newSortOrder;
-        }
-      }
+      fieldName: "archived",
+      resolution: "lww-field",
+      detectedAt: Date.now(),
+      summary: `Re-stamped tombstone for ${entityType} ${entityId}`,
     });
-
-    const patches = allPatches.map(({ entityId, newSortOrder }) => ({
-      entityId,
-      newSortOrder,
-    }));
-
-    return { patches, envelope };
   }
 
-  /**
-   * If respondedByMemberId is set AND dismissed is true, re-apply dismissed = false.
-   * Response takes priority over dismissal.
-   *
-   * Returns the count and the correction envelope (if any mutations were applied).
-   */
-  normalizeCheckInRecord(session: EncryptedSyncSession<unknown>): {
-    count: number;
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    const doc = session.document as DocRecord;
+  return { notifications, envelope };
+}
 
-    const checkInRecords = getEntityMap<CheckInLike>(doc, "checkInRecords");
-    if (!checkInRecords) return { count: 0, envelope: null };
+/**
+ * Generic cycle detection for a given entity field and parent field.
+ * Returns pending clears (entityId + parentField to null) without mutating the session.
+ */
+function detectCyclesForField(
+  doc: DocRecord,
+  fieldName: string,
+  parentField: string,
+): Array<{ fieldName: string; parentField: string; entityId: string; formerParentId: string }> {
+  const entityMap = getEntityMap<
+    ParentableEntity & Record<string, Automerge.ImmutableString | null>
+  >(doc, fieldName);
+  if (!entityMap) return [];
 
-    const toFix: string[] = [];
-    for (const [recordId, record] of Object.entries(checkInRecords)) {
-      if (record.respondedByMemberId !== null && record.dismissed) {
-        toFix.push(recordId);
-      }
-    }
+  const pendingClears: Array<{
+    fieldName: string;
+    parentField: string;
+    entityId: string;
+    formerParentId: string;
+  }> = [];
+  const visited = new Set<string>();
+  const inStack = new Set<string>();
 
-    if (toFix.length === 0) {
-      return { count: 0, envelope: null };
-    }
+  for (const entityId of Object.keys(entityMap)) {
+    if (visited.has(entityId)) continue;
 
-    const envelope = session.change((d) => {
-      const map = getEntityMap<CheckInLike>(d as DocRecord, "checkInRecords");
-      for (const recordId of toFix) {
-        const target = map?.[recordId];
-        if (target) {
-          target.dismissed = false;
-        }
-      }
-    });
+    const path: string[] = [];
+    let current: string | null = entityId;
 
-    return { count: toFix.length, envelope };
-  }
+    while (current !== null && !visited.has(current)) {
+      if (inStack.has(current)) {
+        const cycleStart = path.indexOf(current);
+        const cycle = path.slice(cycleStart);
+        cycle.push(current);
 
-  /**
-   * If status reverted to "pending" from "accepted", re-stamp "accepted".
-   * Accepted connections should not revert to pending.
-   * Uses JSON.parse to check visibility instead of string comparison.
-   *
-   * Returns the count and the correction envelope (if any mutations were applied).
-   */
-  normalizeFriendConnection(session: EncryptedSyncSession<unknown>): {
-    count: number;
-    envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
-  } {
-    const doc = session.document as DocRecord;
-
-    const friendConnections = getEntityMap<FriendConnectionLike>(doc, "friendConnections");
-    if (!friendConnections) return { count: 0, envelope: null };
-
-    const toFix: string[] = [];
-    for (const [connectionId, connection] of Object.entries(friendConnections)) {
-      if (connection.status.val === "pending") {
-        const hasAssignedBuckets = Object.keys(connection.assignedBuckets).length > 0;
-        let hasVisibility = false;
-        try {
-          const parsed = JSON.parse(connection.visibility.val) as Record<string, unknown>;
-          hasVisibility = Object.keys(parsed).length > 0;
-        } catch {
-          hasVisibility = false;
-        }
-
-        if (hasAssignedBuckets || hasVisibility) {
-          toFix.push(connectionId);
-        }
-      }
-    }
-
-    if (toFix.length === 0) {
-      return { count: 0, envelope: null };
-    }
-
-    const envelope = session.change((d) => {
-      const map = getEntityMap<FriendConnectionLike>(d as DocRecord, "friendConnections");
-      for (const connectionId of toFix) {
-        const target = map?.[connectionId];
-        if (target) {
-          target.status = new Automerge.ImmutableString("accepted");
-        }
-      }
-    });
-
-    return { count: toFix.length, envelope };
-  }
-
-  /**
-   * Run all validations and return aggregate results.
-   * Detects the document type from the session content and runs appropriate validators.
-   * Each validator is independently try/caught so partial failures preserve prior results.
-   */
-  runAllValidations(
-    session: EncryptedSyncSession<unknown>,
-    onError?: (message: string, error: unknown) => void,
-  ): PostMergeValidationResult {
-    const doc = session.document as DocRecord;
-    const now = Date.now();
-
-    const correctionEnvelopes: Omit<EncryptedChangeEnvelope, "seq">[] = [];
-    const notifications: ConflictNotification[] = [];
-
-    let cycleBreaks: CycleBreak[] = [];
-    let sortOrderPatches: SortOrderPatch[] = [];
-    let checkInNormalizations = 0;
-    let friendConnectionNormalizations = 0;
-
-    // Always run tombstone enforcement first
-    try {
-      const tombstoneResult = this.enforceTombstones(session);
-      if (tombstoneResult.envelope) {
-        correctionEnvelopes.push(tombstoneResult.envelope);
-      }
-      notifications.push(...tombstoneResult.notifications);
-    } catch (error) {
-      onError?.("Tombstone enforcement failed", error);
-    }
-
-    if ("groups" in doc || "subsystems" in doc || "innerWorldRegions" in doc) {
-      try {
-        const cycleResult = this.detectHierarchyCycles(session);
-        cycleBreaks = cycleResult.breaks;
-        if (cycleResult.envelope) {
-          correctionEnvelopes.push(cycleResult.envelope);
-        }
-        for (const cycleBreak of cycleBreaks) {
-          notifications.push({
-            entityType: "hierarchy",
-            entityId: cycleBreak.entityId,
-            fieldName: "parentId",
-            resolution: "post-merge-cycle",
-            detectedAt: now,
-            summary: `Cycle broken: nulled parent of ${cycleBreak.entityId} (was ${cycleBreak.formerParentId})`,
-          });
-        }
-      } catch (error) {
-        onError?.("Cycle detection failed", error);
-      }
-
-      try {
-        const sortResult = this.normalizeSortOrder(session);
-        sortOrderPatches = sortResult.patches;
-        if (sortResult.envelope) {
-          correctionEnvelopes.push(sortResult.envelope);
-        }
-        for (const patch of sortOrderPatches) {
-          notifications.push({
-            entityType: "sortable",
-            entityId: patch.entityId,
-            fieldName: "sortOrder",
-            resolution: "post-merge-sort-normalize",
-            detectedAt: now,
-            summary: `Sort order normalized: ${patch.entityId} → ${String(patch.newSortOrder)}`,
-          });
-        }
-      } catch (error) {
-        onError?.("Sort order normalization failed", error);
-      }
-    }
-
-    if ("checkInRecords" in doc) {
-      try {
-        const checkInResult = this.normalizeCheckInRecord(session);
-        checkInNormalizations = checkInResult.count;
-        if (checkInResult.envelope) {
-          correctionEnvelopes.push(checkInResult.envelope);
-        }
-        if (checkInNormalizations > 0) {
-          notifications.push({
-            entityType: "check-in-record",
-            entityId: "batch",
-            fieldName: "dismissed",
-            resolution: "post-merge-checkin-normalize",
-            detectedAt: now,
-            summary: `Normalized ${String(checkInNormalizations)} check-in record(s)`,
-          });
-        }
-      } catch (error) {
-        onError?.("Check-in normalization failed", error);
-      }
-    }
-
-    if ("friendConnections" in doc) {
-      try {
-        const friendResult = this.normalizeFriendConnection(session);
-        friendConnectionNormalizations = friendResult.count;
-        if (friendResult.envelope) {
-          correctionEnvelopes.push(friendResult.envelope);
-        }
-        if (friendConnectionNormalizations > 0) {
-          notifications.push({
-            entityType: "friend-connection",
-            entityId: "batch",
-            fieldName: "status",
-            resolution: "post-merge-friend-status",
-            detectedAt: now,
-            summary: `Normalized ${String(friendConnectionNormalizations)} friend connection(s)`,
-          });
-        }
-      } catch (error) {
-        onError?.("Friend connection normalization failed", error);
-      }
-    }
-
-    return {
-      cycleBreaks,
-      sortOrderPatches,
-      checkInNormalizations,
-      friendConnectionNormalizations,
-      correctionEnvelopes,
-      notifications,
-    };
-  }
-
-  // ── Private helpers ──────────────────────────────────────────────────
-
-  /**
-   * Generic cycle detection for a given entity field and parent field.
-   * Returns pending clears (entityId + parentField to null) without mutating the session.
-   */
-  private detectCyclesForField(
-    doc: DocRecord,
-    fieldName: string,
-    parentField: string,
-  ): Array<{ fieldName: string; parentField: string; entityId: string; formerParentId: string }> {
-    const entityMap = getEntityMap<
-      ParentableEntity & Record<string, Automerge.ImmutableString | null>
-    >(doc, fieldName);
-    if (!entityMap) return [];
-
-    const pendingClears: Array<{
-      fieldName: string;
-      parentField: string;
-      entityId: string;
-      formerParentId: string;
-    }> = [];
-    const visited = new Set<string>();
-    const inStack = new Set<string>();
-
-    for (const entityId of Object.keys(entityMap)) {
-      if (visited.has(entityId)) continue;
-
-      const path: string[] = [];
-      let current: string | null = entityId;
-
-      while (current !== null && !visited.has(current)) {
-        if (inStack.has(current)) {
-          const cycleStart = path.indexOf(current);
-          const cycle = path.slice(cycleStart);
-          cycle.push(current);
-
-          const lowestId = cycle.sort()[0];
-          if (lowestId !== undefined) {
-            const entity = entityMap[lowestId];
-            const parentId = getParentId(entity, parentField);
-            if (parentId !== null) {
-              pendingClears.push({
-                fieldName,
-                parentField,
-                entityId: lowestId,
-                formerParentId: parentId,
-              });
-            }
+        const lowestId = cycle.sort()[0];
+        if (lowestId !== undefined) {
+          const entity = entityMap[lowestId];
+          const parentId = getParentId(entity, parentField);
+          if (parentId !== null) {
+            pendingClears.push({
+              fieldName,
+              parentField,
+              entityId: lowestId,
+              formerParentId: parentId,
+            });
           }
-          break;
         }
-
-        inStack.add(current);
-        path.push(current);
-
-        const currentEntity = entityMap[current];
-        current = getParentId(currentEntity, parentField);
-
-        if (current !== null && !(current in entityMap)) {
-          current = null;
-        }
+        break;
       }
 
-      for (const id of path) {
-        visited.add(id);
-        inStack.delete(id);
+      inStack.add(current);
+      path.push(current);
+
+      const currentEntity = entityMap[current];
+      current = getParentId(currentEntity, parentField);
+
+      if (current !== null && !(current in entityMap)) {
+        current = null;
       }
     }
 
-    return pendingClears;
+    for (const id of path) {
+      visited.add(id);
+      inStack.delete(id);
+    }
   }
 
-  /** Pure computation: collect sort order patches for a single entity map. */
-  private collectSortOrderPatches<T extends SortableEntity>(
-    entityMap: Record<string, T>,
-    fieldName: string,
-  ): Array<SortOrderPatch & { fieldName: string }> {
-    const patches: Array<SortOrderPatch & { fieldName: string }> = [];
-    const entities = Object.entries(entityMap);
+  return pendingClears;
+}
 
-    if (entities.length === 0) return patches;
+/**
+ * DFS on hierarchical entity parent chains (derived from strategies with parentField).
+ * Break cycles by nulling the parent of the lowest-ID entity (deterministic).
+ *
+ * Returns cycle breaks and the correction envelope (if any mutations were applied).
+ */
+export function detectHierarchyCycles(session: EncryptedSyncSession<unknown>): {
+  breaks: CycleBreak[];
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
+  const allPendingClears: Array<{
+    fieldName: string;
+    parentField: string;
+    entityId: string;
+    formerParentId: string;
+  }> = [];
 
-    const sortOrders = entities.map(([, e]) => e.sortOrder);
-    const uniqueOrders = new Set(sortOrders);
-
-    if (uniqueOrders.size === sortOrders.length) {
-      return patches;
+  for (const [, strategy] of Object.entries(ENTITY_CRDT_STRATEGIES)) {
+    if ("parentField" in strategy) {
+      const clears = detectCyclesForField(doc, strategy.fieldName, strategy.parentField);
+      allPendingClears.push(...clears);
     }
+  }
 
-    const sorted = [...entities].sort(([idA, a], [idB, b]) => {
-      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-      if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
-      return idA.localeCompare(idB);
-    });
+  if (allPendingClears.length === 0) {
+    return { breaks: [], envelope: null };
+  }
 
-    for (let i = 0; i < sorted.length; i++) {
-      const [entityId, entity] = sorted[i] as [string, T];
-      const newOrder = i + 1;
-
-      if (entity.sortOrder !== newOrder) {
-        patches.push({ entityId, newSortOrder: newOrder, fieldName });
+  const envelope = session.change((d) => {
+    const docMap = d as DocRecord;
+    for (const { fieldName, parentField, entityId } of allPendingClears) {
+      const map = getEntityMap<Record<string, Automerge.ImmutableString | null>>(docMap, fieldName);
+      const target = map?.[entityId];
+      if (target) {
+        target[parentField] = null;
       }
     }
+  });
 
+  const breaks = allPendingClears.map(({ entityId, formerParentId }) => ({
+    entityId,
+    formerParentId,
+  }));
+
+  return { breaks, envelope };
+}
+
+/** Pure computation: collect sort order patches for a single entity map. */
+function collectSortOrderPatches<T extends SortableEntity>(
+  entityMap: Record<string, T>,
+  fieldName: string,
+): Array<SortOrderPatch & { fieldName: string }> {
+  const patches: Array<SortOrderPatch & { fieldName: string }> = [];
+  const entities = Object.entries(entityMap);
+
+  if (entities.length === 0) return patches;
+
+  const sortOrders = entities.map(([, e]) => e.sortOrder);
+  const uniqueOrders = new Set(sortOrders);
+
+  if (uniqueOrders.size === sortOrders.length) {
     return patches;
   }
+
+  const sorted = [...entities].sort(([idA, a], [idB, b]) => {
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
+    return idA.localeCompare(idB);
+  });
+
+  for (let i = 0; i < sorted.length; i++) {
+    const [entityId, entity] = sorted[i] as [string, T];
+    const newOrder = i + 1;
+
+    if (entity.sortOrder !== newOrder) {
+      patches.push({ entityId, newSortOrder: newOrder, fieldName });
+    }
+  }
+
+  return patches;
 }
+
+/**
+ * For entities with sortOrder (derived from strategies with hasSortOrder), detect ties
+ * and re-assign sequential values by createdAt then id.
+ *
+ * Returns patches and the correction envelope (if any mutations were applied).
+ */
+export function normalizeSortOrder(session: EncryptedSyncSession<unknown>): {
+  patches: SortOrderPatch[];
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
+  const allPatches: Array<SortOrderPatch & { fieldName: string }> = [];
+
+  const sortableFields = Object.values(ENTITY_CRDT_STRATEGIES)
+    .filter((s) => "hasSortOrder" in s)
+    .map((s) => s.fieldName);
+
+  for (const fieldName of sortableFields) {
+    const entityMap = getEntityMap<SortableEntity>(doc, fieldName);
+    if (entityMap) {
+      allPatches.push(...collectSortOrderPatches(entityMap, fieldName));
+    }
+  }
+
+  if (allPatches.length === 0) {
+    return { patches: [], envelope: null };
+  }
+
+  const envelope = session.change((d) => {
+    const docMap = d as DocRecord;
+    for (const { entityId, newSortOrder, fieldName } of allPatches) {
+      const map = getEntityMap<SortableEntity>(docMap, fieldName);
+      const target = map?.[entityId];
+      if (target) {
+        target.sortOrder = newSortOrder;
+      }
+    }
+  });
+
+  const patches = allPatches.map(({ entityId, newSortOrder }) => ({
+    entityId,
+    newSortOrder,
+  }));
+
+  return { patches, envelope };
+}
+
+/**
+ * If respondedByMemberId is set AND dismissed is true, re-apply dismissed = false.
+ * Response takes priority over dismissal.
+ *
+ * Returns the count and the correction envelope (if any mutations were applied).
+ */
+export function normalizeCheckInRecord(session: EncryptedSyncSession<unknown>): {
+  count: number;
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
+
+  const checkInRecords = getEntityMap<CheckInLike>(doc, "checkInRecords");
+  if (!checkInRecords) return { count: 0, envelope: null };
+
+  const toFix: string[] = [];
+  for (const [recordId, record] of Object.entries(checkInRecords)) {
+    if (record.respondedByMemberId !== null && record.dismissed) {
+      toFix.push(recordId);
+    }
+  }
+
+  if (toFix.length === 0) {
+    return { count: 0, envelope: null };
+  }
+
+  const envelope = session.change((d) => {
+    const map = getEntityMap<CheckInLike>(d as DocRecord, "checkInRecords");
+    for (const recordId of toFix) {
+      const target = map?.[recordId];
+      if (target) {
+        target.dismissed = false;
+      }
+    }
+  });
+
+  return { count: toFix.length, envelope };
+}
+
+/**
+ * If status reverted to "pending" from "accepted", re-stamp "accepted".
+ * Accepted connections should not revert to pending.
+ * Uses JSON.parse to check visibility instead of string comparison.
+ *
+ * Returns the count and the correction envelope (if any mutations were applied).
+ */
+export function normalizeFriendConnection(session: EncryptedSyncSession<unknown>): {
+  count: number;
+  envelope: Omit<EncryptedChangeEnvelope, "seq"> | null;
+} {
+  const doc = session.document as DocRecord;
+
+  const friendConnections = getEntityMap<FriendConnectionLike>(doc, "friendConnections");
+  if (!friendConnections) return { count: 0, envelope: null };
+
+  const toFix: string[] = [];
+  for (const [connectionId, connection] of Object.entries(friendConnections)) {
+    if (connection.status.val === "pending") {
+      const hasAssignedBuckets = Object.keys(connection.assignedBuckets).length > 0;
+      let hasVisibility = false;
+      try {
+        const parsed = JSON.parse(connection.visibility.val) as Record<string, unknown>;
+        hasVisibility = Object.keys(parsed).length > 0;
+      } catch {
+        hasVisibility = false;
+      }
+
+      if (hasAssignedBuckets || hasVisibility) {
+        toFix.push(connectionId);
+      }
+    }
+  }
+
+  if (toFix.length === 0) {
+    return { count: 0, envelope: null };
+  }
+
+  const envelope = session.change((d) => {
+    const map = getEntityMap<FriendConnectionLike>(d as DocRecord, "friendConnections");
+    for (const connectionId of toFix) {
+      const target = map?.[connectionId];
+      if (target) {
+        target.status = new Automerge.ImmutableString("accepted");
+      }
+    }
+  });
+
+  return { count: toFix.length, envelope };
+}
+
+// ── Public API ──────────────────────────────────────────────────────
+
+/**
+ * Run all post-merge validations and return aggregate results.
+ * Detects the document type from the session content and runs appropriate validators.
+ * Each validator is independently try/caught so partial failures preserve prior results.
+ */
+export function runAllValidations(
+  session: EncryptedSyncSession<unknown>,
+  onError?: (message: string, error: unknown) => void,
+): PostMergeValidationResult {
+  const doc = session.document as DocRecord;
+  const now = Date.now();
+
+  const correctionEnvelopes: Omit<EncryptedChangeEnvelope, "seq">[] = [];
+  const notifications: ConflictNotification[] = [];
+  const errors: Array<{ validator: string; error: unknown }> = [];
+
+  let cycleBreaks: CycleBreak[] = [];
+  let sortOrderPatches: SortOrderPatch[] = [];
+  let checkInNormalizations = 0;
+  let friendConnectionNormalizations = 0;
+
+  // Always run tombstone enforcement first
+  try {
+    const tombstoneResult = enforceTombstones(session);
+    if (tombstoneResult.envelope) {
+      correctionEnvelopes.push(tombstoneResult.envelope);
+    }
+    notifications.push(...tombstoneResult.notifications);
+  } catch (error) {
+    errors.push({ validator: "enforceTombstones", error });
+    onError?.("Tombstone enforcement failed", error);
+  }
+
+  if ("groups" in doc || "subsystems" in doc || "innerWorldRegions" in doc) {
+    try {
+      const cycleResult = detectHierarchyCycles(session);
+      cycleBreaks = cycleResult.breaks;
+      if (cycleResult.envelope) {
+        correctionEnvelopes.push(cycleResult.envelope);
+      }
+      for (const cycleBreak of cycleBreaks) {
+        notifications.push({
+          entityType: "hierarchy",
+          entityId: cycleBreak.entityId,
+          fieldName: "parentId",
+          resolution: "post-merge-cycle",
+          detectedAt: now,
+          summary: `Cycle broken: nulled parent of ${cycleBreak.entityId} (was ${cycleBreak.formerParentId})`,
+        });
+      }
+    } catch (error) {
+      errors.push({ validator: "detectHierarchyCycles", error });
+      onError?.("Cycle detection failed", error);
+    }
+
+    try {
+      const sortResult = normalizeSortOrder(session);
+      sortOrderPatches = sortResult.patches;
+      if (sortResult.envelope) {
+        correctionEnvelopes.push(sortResult.envelope);
+      }
+      for (const patch of sortOrderPatches) {
+        notifications.push({
+          entityType: "sortable",
+          entityId: patch.entityId,
+          fieldName: "sortOrder",
+          resolution: "post-merge-sort-normalize",
+          detectedAt: now,
+          summary: `Sort order normalized: ${patch.entityId} → ${String(patch.newSortOrder)}`,
+        });
+      }
+    } catch (error) {
+      errors.push({ validator: "normalizeSortOrder", error });
+      onError?.("Sort order normalization failed", error);
+    }
+  }
+
+  if ("checkInRecords" in doc) {
+    try {
+      const checkInResult = normalizeCheckInRecord(session);
+      checkInNormalizations = checkInResult.count;
+      if (checkInResult.envelope) {
+        correctionEnvelopes.push(checkInResult.envelope);
+      }
+      if (checkInNormalizations > 0) {
+        notifications.push({
+          entityType: "check-in-record",
+          entityId: "batch",
+          fieldName: "dismissed",
+          resolution: "post-merge-checkin-normalize",
+          detectedAt: now,
+          summary: `Normalized ${String(checkInNormalizations)} check-in record(s)`,
+        });
+      }
+    } catch (error) {
+      errors.push({ validator: "normalizeCheckInRecord", error });
+      onError?.("Check-in normalization failed", error);
+    }
+  }
+
+  if ("friendConnections" in doc) {
+    try {
+      const friendResult = normalizeFriendConnection(session);
+      friendConnectionNormalizations = friendResult.count;
+      if (friendResult.envelope) {
+        correctionEnvelopes.push(friendResult.envelope);
+      }
+      if (friendConnectionNormalizations > 0) {
+        notifications.push({
+          entityType: "friend-connection",
+          entityId: "batch",
+          fieldName: "status",
+          resolution: "post-merge-friend-status",
+          detectedAt: now,
+          summary: `Normalized ${String(friendConnectionNormalizations)} friend connection(s)`,
+        });
+      }
+    } catch (error) {
+      errors.push({ validator: "normalizeFriendConnection", error });
+      onError?.("Friend connection normalization failed", error);
+    }
+  }
+
+  return {
+    cycleBreaks,
+    sortOrderPatches,
+    checkInNormalizations,
+    friendConnectionNormalizations,
+    correctionEnvelopes,
+    notifications,
+    errors,
+  };
+}
+
+/** Derived field map from CRDT strategies: entity type → document field name. */
+export { ENTITY_FIELD_MAP };

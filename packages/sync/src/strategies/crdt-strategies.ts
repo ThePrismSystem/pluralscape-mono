@@ -27,6 +27,12 @@ export interface CrdtStrategy {
    * Summarises which fields are mutable after creation and what wins on conflict.
    */
   readonly mutationSemantics: string;
+  /** The field name used to store this entity type in the Automerge document. */
+  readonly fieldName: string;
+  /** Parent reference field name, if this entity participates in hierarchy cycle detection. */
+  readonly parentField?: string;
+  /** Whether this entity has a sortOrder field that needs tie-breaking normalization. */
+  readonly hasSortOrder?: boolean;
 }
 
 /**
@@ -41,126 +47,155 @@ export const ENTITY_CRDT_STRATEGIES = {
   system: {
     storageType: "singleton-lww",
     document: "system-core",
+    fieldName: "system",
     mutationSemantics: "LWW per field — name, displayName, description, avatarSource",
   },
   "system-settings": {
     storageType: "singleton-lww",
     document: "system-core",
+    fieldName: "systemSettings",
     mutationSemantics: "LWW per field — all settings fields",
   },
   member: {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "members",
     mutationSemantics:
       "LWW per field — name, pronouns, description, avatarSource, colors, saturationLevel, tags, notification flags, archived",
   },
   "member-photo": {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "memberPhotos",
+    hasSortOrder: true,
     mutationSemantics: "LWW per field — imageSource, sortOrder, caption, archived",
   },
   group: {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "groups",
+    parentField: "parentGroupId",
+    hasSortOrder: true,
     mutationSemantics:
       "LWW per field — name, description, parentGroupId, imageSource, color, emoji, sortOrder, archived",
   },
   subsystem: {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "subsystems",
+    parentField: "parentSubsystemId",
     mutationSemantics:
       "LWW per field — name, description, parentSubsystemId, architectureType, hasCore, discoveryStatus, visual, archived",
   },
   "side-system": {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "sideSystems",
     mutationSemantics: "LWW per field — name, description, visual, archived",
   },
   layer: {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "layers",
     mutationSemantics:
       "LWW per field — name, description, accessType, gatekeeperMemberIds, visual, archived",
   },
   relationship: {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "relationships",
     mutationSemantics: "LWW per field — type, label, bidirectional, archived",
   },
   "custom-front": {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "customFronts",
     mutationSemantics: "LWW per field — name, description, color, emoji, archived",
   },
   "field-definition": {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "fieldDefinitions",
+    hasSortOrder: true,
     mutationSemantics:
       "LWW per field — name, description, fieldType, options, required, sortOrder, archived",
   },
   "field-value": {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "fieldValues",
     mutationSemantics: "LWW per field — value, updatedAt",
   },
   "innerworld-entity": {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "innerWorldEntities",
     mutationSemantics:
       "LWW per field — positionX, positionY, visual, regionId, type-specific fields, archived",
   },
   "innerworld-region": {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "innerWorldRegions",
+    parentField: "parentRegionId",
     mutationSemantics:
       "LWW per field — name, description, parentRegionId, visual, boundaryData, accessType, gatekeeperMemberIds, archived",
   },
   timer: {
     storageType: "lww-map",
     document: "system-core",
+    fieldName: "timers",
     mutationSemantics:
       "LWW per field — intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, promptText, enabled, archived",
   },
   "lifecycle-event": {
     storageType: "append-only",
     document: "system-core",
+    fieldName: "lifecycleEvents",
     mutationSemantics: "Immutable once appended — append-only list in system-core document",
   },
   // Junctions (system-core)
   "group-membership": {
     storageType: "junction-map",
     document: "system-core",
+    fieldName: "groupMemberships",
     mutationSemantics:
       "Add-wins — compound key {groupId}_{memberId} mapped to true; concurrent add+remove preserves the junction",
   },
   "subsystem-membership": {
     storageType: "junction-map",
     document: "system-core",
+    fieldName: "subsystemMemberships",
     mutationSemantics: "Add-wins — compound key {subsystemId}_{memberId} mapped to true",
   },
   "side-system-membership": {
     storageType: "junction-map",
     document: "system-core",
+    fieldName: "sideSystemMemberships",
     mutationSemantics: "Add-wins — compound key {sideSystemId}_{memberId} mapped to true",
   },
   "layer-membership": {
     storageType: "junction-map",
     document: "system-core",
+    fieldName: "layerMemberships",
     mutationSemantics: "Add-wins — compound key {layerId}_{memberId} mapped to true",
   },
   "subsystem-layer-link": {
     storageType: "junction-map",
     document: "system-core",
+    fieldName: "subsystemLayerLinks",
     mutationSemantics: "Add-wins — compound key {subsystemId}_{layerId} mapped to true",
   },
   "subsystem-side-system-link": {
     storageType: "junction-map",
     document: "system-core",
+    fieldName: "subsystemSideSystemLinks",
     mutationSemantics: "Add-wins — compound key {subsystemId}_{sideSystemId} mapped to true",
   },
   "side-system-layer-link": {
     storageType: "junction-map",
     document: "system-core",
+    fieldName: "sideSystemLayerLinks",
     mutationSemantics: "Add-wins — compound key {sideSystemId}_{layerId} mapped to true",
   },
 
@@ -168,22 +203,26 @@ export const ENTITY_CRDT_STRATEGIES = {
   "fronting-session": {
     storageType: "append-lww",
     document: "fronting",
+    fieldName: "sessions",
     mutationSemantics:
       "Append via map key assignment; endTime, comment, positionality, and archived are LWW-mutable after creation",
   },
   "fronting-comment": {
     storageType: "lww-map",
     document: "fronting",
+    fieldName: "comments",
     mutationSemantics: "LWW per field — content, archived",
   },
   switch: {
     storageType: "append-only",
     document: "fronting",
+    fieldName: "switches",
     mutationSemantics: "Immutable once appended — records the moment control transfers",
   },
   "check-in-record": {
     storageType: "append-lww",
     document: "fronting",
+    fieldName: "checkInRecords",
     mutationSemantics:
       "Append via map key assignment; respondedByMemberId, respondedAt, dismissed are LWW-mutable (topology correction — was append-only)",
   },
@@ -192,39 +231,46 @@ export const ENTITY_CRDT_STRATEGIES = {
   channel: {
     storageType: "singleton-lww",
     document: "chat",
+    fieldName: "channel",
     mutationSemantics: "LWW per field — name, type, parentId, sortOrder, archived",
   },
   message: {
     storageType: "append-only",
     document: "chat",
+    fieldName: "messages",
     mutationSemantics:
       "Immutable once appended; edits produce new entries with editOf reference to original",
   },
   "board-message": {
     storageType: "append-lww",
     document: "chat",
+    fieldName: "boardMessages",
     mutationSemantics:
       "Append via map key assignment; pinned and sortOrder are LWW-mutable (topology correction — was append-only)",
   },
   poll: {
     storageType: "lww-map",
     document: "chat",
+    fieldName: "polls",
     mutationSemantics: "LWW per field — title, description, status, closedAt, archived",
   },
   "poll-option": {
     storageType: "lww-map",
     document: "chat",
+    fieldName: "pollOptions",
     mutationSemantics:
       "LWW per field — label, color, emoji; voteCount omitted (computed at read time)",
   },
   "poll-vote": {
     storageType: "append-only",
     document: "chat",
+    fieldName: "pollVotes",
     mutationSemantics: "Immutable once appended — votes are permanent records",
   },
   acknowledgement: {
     storageType: "lww-map",
     document: "chat",
+    fieldName: "acknowledgements",
     mutationSemantics:
       "LWW per field — confirmed and confirmedAt are mutable when target member acknowledges",
   },
@@ -233,18 +279,21 @@ export const ENTITY_CRDT_STRATEGIES = {
   "journal-entry": {
     storageType: "append-lww",
     document: "journal",
+    fieldName: "entries",
     mutationSemantics:
       "Append via map key assignment; title, blocks, tags, linkedEntities are LWW-mutable after creation",
   },
   "wiki-page": {
     storageType: "lww-map",
     document: "journal",
+    fieldName: "wikiPages",
     mutationSemantics:
       "LWW per field — title, slug, blocks, linkedFromPages, tags, linkedEntities, archived",
   },
   note: {
     storageType: "lww-map",
     document: "journal",
+    fieldName: "notes",
     mutationSemantics: "LWW per field — title, content, backgroundColor, archived",
   },
 
@@ -252,28 +301,33 @@ export const ENTITY_CRDT_STRATEGIES = {
   bucket: {
     storageType: "lww-map",
     document: "privacy-config",
+    fieldName: "buckets",
     mutationSemantics: "LWW per field — name, description, archived",
   },
   "bucket-content-tag": {
     storageType: "lww-map",
     document: "privacy-config",
+    fieldName: "contentTags",
     mutationSemantics:
       "LWW; compound key {entityType}_{entityId}_{bucketId} — deleting key removes assignment",
   },
   "friend-connection": {
     storageType: "lww-map",
     document: "privacy-config",
+    fieldName: "friendConnections",
     mutationSemantics:
       "LWW per field — status, visibility, archived; assignedBuckets is a nested add-wins map keyed by bucketId",
   },
   "friend-code": {
     storageType: "lww-map",
     document: "privacy-config",
+    fieldName: "friendCodes",
     mutationSemantics: "LWW per field — archived only (all other fields immutable after creation)",
   },
   "key-grant": {
     storageType: "append-lww",
     document: "privacy-config",
+    fieldName: "keyGrants",
     mutationSemantics:
       "Append via map key assignment; revokedAt is the only LWW-mutable field (concurrent revocations are idempotent — safe outcome)",
   },
