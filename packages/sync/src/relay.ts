@@ -127,6 +127,17 @@ export class EncryptedRelay implements SyncRelayService {
       return Promise.resolve(existing.seq);
     }
 
+    // Cross-document key collision: clean up the stale dedupByDoc reference
+    // before overwriting. Astronomically unlikely with random 24-byte nonces,
+    // but keeps the secondary index consistent.
+    if (existing) {
+      const oldDocKeys = this.dedupByDoc.get(existing.documentId);
+      if (oldDocKeys) {
+        oldDocKeys.delete(dedupKey);
+        if (oldDocKeys.size === 0) this.dedupByDoc.delete(existing.documentId);
+      }
+    }
+
     // Evict LRU documents first so stale docs don't block limit checks
     this.evictIfNeeded(envelope.documentId);
 
@@ -220,8 +231,10 @@ export class EncryptedRelay implements SyncRelayService {
     }
     this.snapshots.set(envelope.documentId, envelope);
 
-    // Prune dedup entries for changes that are now covered by the snapshot
-    this.pruneDedupForDocument(envelope.documentId, envelope.snapshotVersion);
+    // Prune dedup entries for all changes up to the document's current seq.
+    // Snapshot acceptance means these changes are subsumed; their dedup entries can be freed.
+    const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
+    this.pruneDedupForDocument(envelope.documentId, currentSeq);
 
     this.touch(envelope.documentId);
     return Promise.resolve();
@@ -235,6 +248,11 @@ export class EncryptedRelay implements SyncRelayService {
     return Promise.resolve(snapshot);
   }
 
+  /**
+   * Returns an empty manifest. The in-memory relay does not track the document
+   * metadata (docType, keyType, bucketId, etc.) required by SyncManifestEntry,
+   * so it cannot produce a meaningful manifest. Production uses PgSyncRelayService.
+   */
   getManifest(systemId: SystemId): Promise<SyncManifest> {
     return Promise.resolve({ documents: [], systemId });
   }
@@ -258,13 +276,14 @@ export class EncryptedRelay implements SyncRelayService {
   /**
    * Prune dedup entries for a document where the associated seq is <= upToSeq.
    *
-   * Called after a snapshot is accepted: changes with seq <= snapshotVersion
-   * are subsumed by the snapshot and their dedup entries can be freed.
+   * Called after a snapshot is accepted: all changes up to the document's
+   * current seq are subsumed by the snapshot and their dedup entries can be freed.
    */
   private pruneDedupForDocument(documentId: string, upToSeq: number): void {
     const docDedupKeys = this.dedupByDoc.get(documentId);
     if (!docDedupKeys) return;
 
+    // Safe: ES2015 Set iterator handles mid-loop deletion (deleted elements are skipped).
     for (const key of docDedupKeys) {
       const entry = this.dedupIndex.get(key);
       if (entry && entry.seq <= upToSeq) {

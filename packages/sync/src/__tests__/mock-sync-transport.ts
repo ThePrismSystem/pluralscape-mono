@@ -2,7 +2,11 @@
  * In-memory SyncTransport wired to an EncryptedRelay.
  * Used by WsNetworkAdapter contract tests to avoid real WebSocket connections.
  */
-import { EncryptedRelay } from "../relay.js";
+import {
+  EncryptedRelay,
+  SnapshotSizeLimitExceededError,
+  SnapshotVersionConflictError,
+} from "../relay.js";
 
 import type { ClientMessage, ServerMessage, SyncTransport, TransportState } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
@@ -163,14 +167,26 @@ export class MockSyncTransport implements SyncTransport {
             docId: message.docId,
             snapshotVersion: message.snapshot.snapshotVersion,
           };
-        } catch {
-          return {
-            type: "SyncError",
-            correlationId: message.correlationId,
-            code: "VERSION_CONFLICT",
-            message: "Snapshot version conflict",
-            docId: message.docId,
-          };
+        } catch (err) {
+          if (err instanceof SnapshotVersionConflictError) {
+            return {
+              type: "SyncError",
+              correlationId: message.correlationId,
+              code: "VERSION_CONFLICT",
+              message: "Snapshot version conflict",
+              docId: message.docId,
+            };
+          }
+          if (err instanceof SnapshotSizeLimitExceededError) {
+            return {
+              type: "SyncError",
+              correlationId: message.correlationId,
+              code: "QUOTA_EXCEEDED",
+              message: "Snapshot exceeds maximum allowed size",
+              docId: message.docId,
+            };
+          }
+          throw err;
         }
       }
 

@@ -7,6 +7,7 @@ import {
   EncryptedRelay,
   EnvelopeLimitExceededError,
   SnapshotSizeLimitExceededError,
+  SnapshotVersionConflictError,
 } from "../relay.js";
 import { MiB } from "../sync.constants.js";
 
@@ -549,8 +550,8 @@ describe("EncryptedRelay", () => {
   });
 
   describe("dedup pruning on snapshot (P-H3)", () => {
-    it("prunes dedup entries for changes with seq <= snapshotVersion", async () => {
-      // Submit 5 changes for the document
+    it("prunes all dedup entries up to current seq on snapshot acceptance", async () => {
+      // Submit 5 changes for the document (seq 1-5)
       const envelopes = [];
       for (let i = 0; i < 5; i++) {
         const envelope = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
@@ -558,26 +559,18 @@ describe("EncryptedRelay", () => {
         envelopes.push(envelope);
       }
 
-      // Submit snapshot at version 3 — changes 1-3 are subsumed
-      const snapshot = encryptSnapshot(sodium.randomBytes(64), DOCUMENT_ID, 3, keys, sodium);
+      // Use a snapshotVersion (99) that differs from seq numbers
+      // to prove pruning uses the document's current seq, not snapshotVersion
+      const snapshot = encryptSnapshot(sodium.randomBytes(64), DOCUMENT_ID, 99, keys, sodium);
       await relay.submitSnapshot(snapshot);
 
-      // Resubmitting changes 1-3 should get NEW seq numbers (dedup pruned)
-      for (let i = 0; i < 3; i++) {
+      // All 5 dedup entries should be pruned (current seq was 5)
+      for (let i = 0; i < 5; i++) {
         const envelope = envelopes[i];
         if (!envelope) throw new Error(`Expected envelope at index ${String(i)}`);
         const seq = await relay.submit(envelope);
-        // These will get seq > 5 because the counter continues from 5
+        // Should get new seq numbers (6, 7, 8, 9, 10)
         expect(seq).toBeGreaterThan(5);
-      }
-
-      // Resubmitting changes 4-5 should still dedup (seq > snapshotVersion)
-      for (let i = 3; i < 5; i++) {
-        const envelope = envelopes[i];
-        if (!envelope) throw new Error(`Expected envelope at index ${String(i)}`);
-        const seq = await relay.submit(envelope);
-        // Should return original seq (4 or 5)
-        expect(seq).toBe(i + 1);
       }
     });
 
@@ -600,6 +593,128 @@ describe("EncryptedRelay", () => {
       // Resubmitting the change should get a new seq (dedup was pruned)
       const newSeq = await relay.submit(envelope);
       expect(newSeq).toBe(2);
+    });
+  });
+
+  describe("snapshot version conflict", () => {
+    it("rejects snapshot with version equal to current", async () => {
+      const snap1 = encryptSnapshot(sodium.randomBytes(64), DOCUMENT_ID, 2, keys, sodium);
+      await relay.submitSnapshot(snap1);
+
+      const snap2 = encryptSnapshot(sodium.randomBytes(64), DOCUMENT_ID, 2, keys, sodium);
+      await expect(relay.submitSnapshot(snap2)).rejects.toThrow(SnapshotVersionConflictError);
+    });
+
+    it("rejects snapshot with version lower than current", async () => {
+      const snap1 = encryptSnapshot(sodium.randomBytes(64), DOCUMENT_ID, 3, keys, sodium);
+      await relay.submitSnapshot(snap1);
+
+      const snap2 = encryptSnapshot(sodium.randomBytes(64), DOCUMENT_ID, 1, keys, sodium);
+      await expect(relay.submitSnapshot(snap2)).rejects.toThrow(SnapshotVersionConflictError);
+    });
+
+    it("includes attemptedVersion and currentVersion in the error", async () => {
+      const snap1 = encryptSnapshot(sodium.randomBytes(64), DOCUMENT_ID, 5, keys, sodium);
+      await relay.submitSnapshot(snap1);
+
+      const snap2 = encryptSnapshot(sodium.randomBytes(64), DOCUMENT_ID, 3, keys, sodium);
+      try {
+        await relay.submitSnapshot(snap2);
+        expect.unreachable("should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(SnapshotVersionConflictError);
+        const error = err as SnapshotVersionConflictError;
+        expect(error.attemptedVersion).toBe(3);
+        expect(error.currentVersion).toBe(5);
+      }
+    });
+  });
+
+  describe("snapshot size limit boundary", () => {
+    it("accepts snapshot at exactly the size limit", async () => {
+      // Create a relay with a specific limit, then craft a snapshot whose
+      // ciphertext is exactly that size. The check is `>`, not `>=`.
+      const exactSize = 128;
+      const limitedRelay = new EncryptedRelay({ maxSnapshotSizeBytes: exactSize });
+
+      // Build an envelope manually with exact-size ciphertext
+      const snapshot = encryptSnapshot(sodium.randomBytes(16), DOCUMENT_ID, 1, keys, sodium);
+      const exactCiphertext = new Uint8Array(exactSize);
+      exactCiphertext.set(
+        snapshot.ciphertext.subarray(0, Math.min(snapshot.ciphertext.length, exactSize)),
+      );
+      const exactSnapshot = { ...snapshot, ciphertext: exactCiphertext };
+
+      await limitedRelay.submitSnapshot(exactSnapshot);
+      expect(await limitedRelay.getLatestSnapshot(DOCUMENT_ID)).toEqual(exactSnapshot);
+    });
+
+    it("rejects snapshot one byte over the limit", async () => {
+      const exactSize = 128;
+      const limitedRelay = new EncryptedRelay({ maxSnapshotSizeBytes: exactSize });
+
+      const snapshot = encryptSnapshot(sodium.randomBytes(16), DOCUMENT_ID, 1, keys, sodium);
+      const overCiphertext = new Uint8Array(exactSize + 1);
+      const overSnapshot = { ...snapshot, ciphertext: overCiphertext };
+
+      await expect(limitedRelay.submitSnapshot(overSnapshot)).rejects.toThrow(
+        SnapshotSizeLimitExceededError,
+      );
+    });
+  });
+
+  describe("cross-document dedup key collision", () => {
+    it("does not dedup the same envelope submitted to different documents", async () => {
+      const envelope = encryptChange(sodium.randomBytes(16), "doc-x", keys, sodium);
+
+      // Submit to doc-x
+      const seqX = await relay.submit(envelope);
+      expect(seqX).toBe(1);
+
+      // Submit the exact same (authorPublicKey, nonce) to doc-y — should NOT dedup
+      const envelopeY = { ...envelope, documentId: "doc-y" };
+      const seqY = await relay.submit(envelopeY);
+      expect(seqY).toBe(1); // doc-y has its own seq counter
+
+      // doc-x dedup should still work
+      const dedupSeqX = await relay.submit(envelope);
+      // After cross-doc collision, the dedup entry was reassigned to doc-y,
+      // so doc-x gets a new seq
+      expect(dedupSeqX).toBe(2);
+    });
+
+    it("cleans up stale dedupByDoc entry on cross-document collision", async () => {
+      const evicted: string[] = [];
+      const limitedRelay = new EncryptedRelay({
+        maxDocuments: 3,
+        onEvict: (docId) => {
+          evicted.push(docId);
+        },
+      });
+
+      const envelope = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
+      await limitedRelay.submit(envelope);
+
+      // Same (authorPublicKey, nonce) to doc-b — triggers cross-doc cleanup
+      const envelopeB = { ...envelope, documentId: "doc-b" };
+      await limitedRelay.submit(envelopeB);
+
+      // Evict doc-a by filling capacity (doc-a, doc-b already exist, add doc-c and doc-d)
+      const ec = encryptChange(sodium.randomBytes(16), "doc-c", keys, sodium);
+      await limitedRelay.submit(ec);
+      const ed = encryptChange(sodium.randomBytes(16), "doc-d", keys, sodium);
+      await limitedRelay.submit(ed);
+
+      // doc-a should have been evicted cleanly (no stale dedup references causing issues)
+      expect(evicted).toContain("doc-a");
+    });
+  });
+
+  describe("getManifest", () => {
+    it("returns empty documents array with the given systemId", async () => {
+      const systemId = "sys_test123" as import("@pluralscape/types").SystemId;
+      const manifest = await relay.getManifest(systemId);
+      expect(manifest).toEqual({ documents: [], systemId });
     });
   });
 });

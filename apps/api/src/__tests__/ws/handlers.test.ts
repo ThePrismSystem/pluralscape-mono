@@ -774,10 +774,10 @@ describe("handleDocumentLoad", () => {
 
     // Submit 5 changes (seq 1..5)
     for (let i = 0; i < 5; i++) {
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
     }
     // Submit a snapshot at version 3 (simulating snapshot covering seqs 1..3)
-    relay.submitSnapshot(mockSnapshot(docId, 3));
+    await relay.submitSnapshot(mockSnapshot(docId, 3));
 
     const message: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
@@ -807,8 +807,8 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
     const relay = new EncryptedRelay();
     const docId = crypto.randomUUID();
 
-    relay.submit(mockChangeWithoutSeq(docId));
-    relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
+    await relay.submit(mockChangeWithoutSeq(docId));
 
     const service = relay.asService();
     const result = await service.getEnvelopesSince(docId, 0, 10);
@@ -822,7 +822,7 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
     const docId = crypto.randomUUID();
 
     for (let i = 0; i < 5; i++) {
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
     }
 
     const service = relay.asService();
@@ -837,7 +837,7 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
     const docId = crypto.randomUUID();
 
     for (let i = 0; i < 3; i++) {
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
     }
 
     const service = relay.asService();
@@ -852,7 +852,7 @@ describe("getEnvelopesSince pagination via asService() (P-H1)", () => {
     const docId = crypto.randomUUID();
 
     for (let i = 0; i < 5; i++) {
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
     }
 
     const service = relay.asService();
@@ -906,8 +906,8 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     }
 
     // Verify nothing was stored in the relay
-    const stored = relay.getEnvelopesSince(docId, 0);
-    expect(stored).toHaveLength(0);
+    const stored = await relay.getEnvelopesSince(docId, 0);
+    expect(stored.envelopes).toHaveLength(0);
   });
 
   it("accepts the envelope when verification is disabled via env var", async () => {
@@ -1008,7 +1008,7 @@ describe("handleSubmitChange envelope signature verification (Sec-M2)", () => {
     }
 
     // Nothing stored
-    const stored = relay.getEnvelopesSince(docId, 0);
-    expect(stored).toHaveLength(0);
+    const stored = await relay.getEnvelopesSince(docId, 0);
+    expect(stored.envelopes).toHaveLength(0);
   });
 });

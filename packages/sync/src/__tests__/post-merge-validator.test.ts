@@ -365,7 +365,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     expect(sessionA.document.innerWorldRegions["rg_a"]?.parentRegionId).toBeNull();
   });
 
-  it("breaks a 3-node group cycle (A->B->C->A) by nulling parent of lowest-ID entity", () => {
+  it("breaks a 3-node group cycle (A->B->C->A) by nulling parent of lowest-ID entity", async () => {
     const base = createSystemCoreDocument();
     const [sessionA, sessionB] = makeSessions(base, keys, "doc-3-cycle");
 
@@ -374,8 +374,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.groups["grpB"] = makeGroup("grpB", 2);
       d.groups["grpC"] = makeGroup("grpC", 3);
     });
-    relay.submit(seedEnv);
-    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-3-cycle", 0));
+    await relay.submit(seedEnv);
+    const seedResult = await relay.getEnvelopesSince("doc-3-cycle", 0);
+    sessionB.applyEncryptedChanges(seedResult.envelopes);
 
     // A sets grpA->grpB, grpB->grpC. B sets grpC->grpA. After merge: A->B->C->A cycle.
     const envA = sessionA.change((d) => {
@@ -389,9 +390,9 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       if (gC) gC.parentGroupId = s("grpA");
     });
 
-    relay.submit(envA);
-    relay.submit(envB);
-    syncThroughRelay([sessionA, sessionB], relay);
+    await relay.submit(envA);
+    await relay.submit(envB);
+    await syncThroughRelay([sessionA, sessionB], relay);
 
     const { breaks } = detectHierarchyCycles(sessionA);
 
