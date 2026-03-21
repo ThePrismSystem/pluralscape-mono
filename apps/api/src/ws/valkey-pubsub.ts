@@ -7,6 +7,12 @@
  *
  * On reconnect, automatically resubscribes to all active channels since
  * Valkey drops subscriptions when the connection is lost.
+ *
+ * Security: Valkey pub/sub messages are trusted — they travel over the
+ * internal network between the API server and Valkey. No authentication
+ * or integrity layer is applied to individual messages. If the deployment
+ * boundary changes (e.g. Valkey exposed to untrusted networks), message
+ * signing should be added.
  */
 import { logger } from "../lib/logger.js";
 

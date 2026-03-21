@@ -35,6 +35,11 @@ export async function handleAuthenticate(
   const { correlationId } = message;
 
   // 1. Validate session token (wrapped to catch infrastructure errors)
+  // Security: the session token is sent in the WS message body rather than
+  // in headers, because the browser WebSocket API does not support custom
+  // headers on the upgrade request. This is mitigated by requiring TLS —
+  // WS connections must use wss:// in production, so the token is encrypted
+  // in transit.
   let auth;
   try {
     const db = await getDb();

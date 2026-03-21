@@ -242,6 +242,11 @@ export async function routeMessage(
   const messageType = parsed.type;
 
   // 3. Phase: awaiting-auth — only AuthenticateRequest allowed
+  //
+  // Security: the auth phase is time-bounded by WS_AUTH_TIMEOUT_MS (10 s).
+  // Each connection processes at most one message before transitioning to
+  // the authenticated phase, so rate-limiting auth-phase messages would add
+  // complexity for negligible security gain.
   if (state.phase === "awaiting-auth") {
     if (messageType !== "AuthenticateRequest") {
       sendErrorAndClose(
