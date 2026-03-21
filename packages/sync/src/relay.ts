@@ -1,4 +1,7 @@
-import { RELAY_MAX_ENVELOPES_PER_DOCUMENT } from "./relay.constants.js";
+import {
+  RELAY_MAX_ENVELOPES_PER_DOCUMENT,
+  RELAY_MAX_SNAPSHOT_SIZE_BYTES,
+} from "./relay.constants.js";
 
 import type { SyncRelayService } from "./relay-service.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
@@ -46,6 +49,27 @@ export class EnvelopeLimitExceededError extends Error {
   }
 }
 
+/**
+ * Thrown when a snapshot's ciphertext exceeds the configured size limit.
+ */
+export class SnapshotSizeLimitExceededError extends Error {
+  override readonly name = "SnapshotSizeLimitExceededError" as const;
+  readonly documentId: string;
+  readonly sizeBytes: number;
+  readonly limit: number;
+
+  constructor(documentId: string, sizeBytes: number, limit: number, options?: ErrorOptions) {
+    super(
+      `Snapshot for document "${documentId}" is ${String(sizeBytes)} bytes, ` +
+        `exceeding the limit of ${String(limit)} bytes.`,
+      options,
+    );
+    this.documentId = documentId;
+    this.sizeBytes = sizeBytes;
+    this.limit = limit;
+  }
+}
+
 export interface RelayDocumentState {
   readonly envelopes: readonly EncryptedChangeEnvelope[];
   readonly snapshot: EncryptedSnapshotEnvelope | null;
@@ -57,6 +81,8 @@ export interface RelayOptions {
   readonly maxDocuments?: number;
   /** Maximum number of change envelopes per document. Default: RELAY_MAX_ENVELOPES_PER_DOCUMENT (10,000). */
   readonly maxEnvelopesPerDocument?: number;
+  /** Maximum size in bytes for a single snapshot ciphertext. Default: Infinity (no limit). */
+  readonly maxSnapshotSizeBytes?: number;
   /** Called when a document is evicted from the relay. */
   readonly onEvict?: (documentId: string) => void;
 }
@@ -76,12 +102,14 @@ export class EncryptedRelay {
   private readonly dedupByDoc = new Map<string, Set<string>>();
   private readonly maxDocuments: number;
   private readonly maxEnvelopesPerDocument: number;
+  private readonly maxSnapshotSizeBytes: number;
   private readonly onEvict?: (documentId: string) => void;
 
   constructor(options?: RelayOptions) {
     this.maxDocuments = options?.maxDocuments ?? Infinity;
     this.maxEnvelopesPerDocument =
       options?.maxEnvelopesPerDocument ?? RELAY_MAX_ENVELOPES_PER_DOCUMENT;
+    this.maxSnapshotSizeBytes = options?.maxSnapshotSizeBytes ?? RELAY_MAX_SNAPSHOT_SIZE_BYTES;
     this.onEvict = options?.onEvict;
   }
 
@@ -93,13 +121,14 @@ export class EncryptedRelay {
       return existingSeq;
     }
 
-    // Enforce per-document envelope limit before accepting new data
+    // Evict LRU documents first so stale docs don't block limit checks
+    this.evictIfNeeded(envelope.documentId);
+
+    // Enforce per-document envelope limit (checked after eviction so LRU cleanup always runs)
     const docEnvelopes = this.documents.get(envelope.documentId);
     if (docEnvelopes && docEnvelopes.length >= this.maxEnvelopesPerDocument) {
       throw new EnvelopeLimitExceededError(envelope.documentId, this.maxEnvelopesPerDocument);
     }
-
-    this.evictIfNeeded(envelope.documentId);
 
     const currentSeq = this.seqCounters.get(envelope.documentId) ?? 0;
     const seq = currentSeq + 1;
@@ -152,6 +181,13 @@ export class EncryptedRelay {
 
   submitSnapshot(envelope: EncryptedSnapshotEnvelope): void {
     this.evictIfNeeded(envelope.documentId);
+    if (envelope.ciphertext.byteLength > this.maxSnapshotSizeBytes) {
+      throw new SnapshotSizeLimitExceededError(
+        envelope.documentId,
+        envelope.ciphertext.byteLength,
+        this.maxSnapshotSizeBytes,
+      );
+    }
     const existing = this.snapshots.get(envelope.documentId);
     if (existing && existing.snapshotVersion >= envelope.snapshotVersion) {
       throw new SnapshotVersionConflictError(envelope.snapshotVersion, existing.snapshotVersion);

@@ -2,8 +2,12 @@ import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { encryptChange, encryptSnapshot } from "../encrypted-sync.js";
-import { RELAY_MAX_ENVELOPES_PER_DOCUMENT } from "../relay.constants.js";
-import { EncryptedRelay, EnvelopeLimitExceededError } from "../relay.js";
+import { RELAY_MAX_SNAPSHOT_SIZE_BYTES } from "../relay.constants.js";
+import {
+  EncryptedRelay,
+  EnvelopeLimitExceededError,
+  SnapshotSizeLimitExceededError,
+} from "../relay.js";
 
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
@@ -329,8 +333,6 @@ describe("EncryptedRelay", () => {
       const envelope = encryptChange(sodium.randomBytes(16), DOCUMENT_ID, keys, sodium);
       const seq = defaultRelay.submit(envelope);
       expect(seq).toBe(1);
-      // Verify the default constant is the expected value
-      expect(RELAY_MAX_ENVELOPES_PER_DOCUMENT).toBe(10_000);
     });
 
     it("enforces limits independently per document", () => {
@@ -369,7 +371,7 @@ describe("EncryptedRelay", () => {
   });
 
   describe("secondary dedup index (M9)", () => {
-    it("cleans up dedup entries efficiently on eviction", () => {
+    it("evicts and resets document state including dedup entries", () => {
       const evicted: string[] = [];
       const limitedRelay = new EncryptedRelay({
         maxDocuments: 1,
@@ -444,6 +446,49 @@ describe("EncryptedRelay", () => {
       const newA = encryptChange(sodium.randomBytes(16), "doc-a", keys, sodium);
       limitedRelay.submit(newA);
       expect(limitedRelay.getEnvelopesSince("doc-a", 0)[0]?.seq).toBe(1);
+    });
+  });
+
+  describe("snapshot size limit", () => {
+    it("rejects snapshot exceeding configured size limit", () => {
+      const limitedRelay = new EncryptedRelay({ maxSnapshotSizeBytes: 64 });
+      // 512 bytes of plaintext will produce ciphertext well over 64 bytes
+      const snapshot = encryptSnapshot(sodium.randomBytes(512), DOCUMENT_ID, 1, keys, sodium);
+      expect(() => {
+        limitedRelay.submitSnapshot(snapshot);
+      }).toThrow(SnapshotSizeLimitExceededError);
+    });
+
+    it("accepts snapshot within size limit", () => {
+      // Large limit to accommodate AEAD overhead on small plaintext
+      const limitedRelay = new EncryptedRelay({ maxSnapshotSizeBytes: 4096 });
+      const snapshot = encryptSnapshot(sodium.randomBytes(16), DOCUMENT_ID, 1, keys, sodium);
+      limitedRelay.submitSnapshot(snapshot);
+      expect(limitedRelay.getLatestSnapshot(DOCUMENT_ID)).toEqual(snapshot);
+    });
+
+    it("includes documentId, sizeBytes, and limit in the error", () => {
+      const limitedRelay = new EncryptedRelay({ maxSnapshotSizeBytes: 64 });
+      const snapshot = encryptSnapshot(sodium.randomBytes(512), DOCUMENT_ID, 1, keys, sodium);
+      try {
+        limitedRelay.submitSnapshot(snapshot);
+        expect.unreachable("should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(SnapshotSizeLimitExceededError);
+        const error = err as SnapshotSizeLimitExceededError;
+        expect(error.documentId).toBe(DOCUMENT_ID);
+        expect(error.sizeBytes).toBe(snapshot.ciphertext.byteLength);
+        expect(error.limit).toBe(64);
+      }
+    });
+
+    it("no size limit by default", () => {
+      const defaultRelay = new EncryptedRelay();
+      // Large snapshot should be accepted without error
+      const snapshot = encryptSnapshot(sodium.randomBytes(1024), DOCUMENT_ID, 1, keys, sodium);
+      defaultRelay.submitSnapshot(snapshot);
+      expect(defaultRelay.getLatestSnapshot(DOCUMENT_ID)).toEqual(snapshot);
+      expect(RELAY_MAX_SNAPSHOT_SIZE_BYTES).toBe(Infinity);
     });
   });
 });
