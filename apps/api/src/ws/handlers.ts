@@ -4,9 +4,10 @@
  * All handlers for the authenticated phase of the sync protocol, consolidated
  * into a single module for import simplicity.
  */
-import { SnapshotVersionConflictError } from "@pluralscape/sync";
+import { getSodium, InvalidInputError } from "@pluralscape/crypto";
+import { SnapshotVersionConflictError, verifyEnvelopeSignature } from "@pluralscape/sync";
 
-import { WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
+import { WS_ENVELOPE_PAGE_SIZE, WS_SUBSCRIBE_CONCURRENCY } from "./ws.constants.js";
 
 import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
@@ -91,7 +92,7 @@ export async function handleSubscribeRequest(
       batch.map(async (entry): Promise<DocumentCatchup | null> => {
         try {
           const [changes, snapshot] = await Promise.all([
-            relay.getEnvelopesSince(entry.docId, entry.lastSyncedSeq),
+            collectAllEnvelopes(relay, entry.docId, entry.lastSyncedSeq, WS_ENVELOPE_PAGE_SIZE),
             relay.getLatestSnapshot(entry.docId),
           ]);
           const hasNewerSnapshot =
@@ -158,11 +159,17 @@ export async function handleFetchChanges(
   message: FetchChangesRequest,
   relay: SyncRelayService,
 ): Promise<ChangesResponse> {
+  const changes = await collectAllEnvelopes(
+    relay,
+    message.docId,
+    message.sinceSeq,
+    WS_ENVELOPE_PAGE_SIZE,
+  );
   return {
     type: "ChangesResponse",
     correlationId: message.correlationId,
     docId: message.docId,
-    changes: await relay.getEnvelopesSince(message.docId, message.sinceSeq),
+    changes,
   };
 }
 
@@ -170,21 +177,61 @@ export async function handleFetchChanges(
 
 /** Result of handling a SubmitChangeRequest, including the sequenced envelope for broadcast. */
 export interface SubmitChangeResult {
+  readonly type: "SubmitChangeResult";
   readonly response: ChangeAccepted;
   readonly sequencedEnvelope: EncryptedChangeEnvelope;
 }
 
-/** Handle a SubmitChangeRequest. Returns ChangeAccepted and the sequenced envelope. */
+/**
+ * Handle a SubmitChangeRequest. Returns ChangeAccepted and the sequenced envelope.
+ *
+ * When envelope signature verification is enabled (VERIFY_ENVELOPE_SIGNATURES env var),
+ * the server verifies the envelope signature before storing/broadcasting. On failure,
+ * returns a SyncError with code INVALID_ENVELOPE and the envelope is dropped.
+ */
 export async function handleSubmitChange(
   message: SubmitChangeRequest,
   relay: SyncRelayService,
-): Promise<SubmitChangeResult> {
+): Promise<SubmitChangeResult | SyncError> {
+  // Sec-M2: Server-side envelope signature verification
+  if (shouldVerifyEnvelopeSignatures()) {
+    let valid: boolean;
+    try {
+      const sodium = getSodium();
+      valid = verifyEnvelopeSignature(
+        { ...message.change, documentId: message.docId, seq: 0 },
+        sodium,
+      );
+    } catch (err) {
+      if (err instanceof InvalidInputError) {
+        return {
+          type: "SyncError",
+          correlationId: message.correlationId,
+          code: "INVALID_ENVELOPE",
+          message: "Envelope signature verification failed",
+          docId: message.docId,
+        };
+      }
+      throw err;
+    }
+    if (!valid) {
+      return {
+        type: "SyncError",
+        correlationId: message.correlationId,
+        code: "INVALID_ENVELOPE",
+        message: "Envelope signature verification failed",
+        docId: message.docId,
+      };
+    }
+  }
+
   const assignedSeq = await relay.submit({
     ...message.change,
     documentId: message.docId,
   });
 
   return {
+    type: "SubmitChangeResult",
     response: {
       type: "ChangeAccepted",
       correlationId: message.correlationId,
@@ -231,16 +278,19 @@ export async function handleSubmitSnapshot(
 /**
  * Handle a DocumentLoadRequest (on-demand document load).
  *
- * Returns both snapshot and changes for the requested document.
+ * P-H2: Optimized to fetch changes since the latest snapshot version rather
+ * than from seq 0. If a snapshot exists, only changes after snapshotVersion
+ * are fetched. If no snapshot exists, falls back to paginated fetch from seq 0.
  */
 export async function handleDocumentLoad(
   message: DocumentLoadRequest,
   relay: SyncRelayService,
 ): Promise<[SnapshotResponse, ChangesResponse]> {
-  const [snapshot, changes] = await Promise.all([
-    relay.getLatestSnapshot(message.docId),
-    relay.getEnvelopesSince(message.docId, 0),
-  ]);
+  const snapshot = await relay.getLatestSnapshot(message.docId);
+
+  // Fetch changes since the snapshot version (or from seq 0 if no snapshot)
+  const sinceSeq = snapshot !== null ? snapshot.snapshotVersion : 0;
+  const changes = await collectAllEnvelopes(relay, message.docId, sinceSeq, WS_ENVELOPE_PAGE_SIZE);
 
   return [
     {
@@ -256,4 +306,40 @@ export async function handleDocumentLoad(
       changes,
     },
   ];
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────
+
+/**
+ * Fetch all envelopes by looping through pages until `hasMore` is false.
+ * Prevents silent truncation when a document exceeds a single page of results.
+ */
+async function collectAllEnvelopes(
+  relay: SyncRelayService,
+  docId: string,
+  sinceSeq: number,
+  pageSize: number,
+): Promise<readonly EncryptedChangeEnvelope[]> {
+  const all: EncryptedChangeEnvelope[] = [];
+  let cursor = sinceSeq;
+  for (;;) {
+    const page = await relay.getEnvelopesSince(docId, cursor, pageSize);
+    all.push(...page.envelopes);
+    if (!page.hasMore || page.envelopes.length === 0) break;
+    const last = page.envelopes[page.envelopes.length - 1];
+    if (!last) break;
+    cursor = last.seq;
+  }
+  return all;
+}
+
+/**
+ * Whether to verify envelope signatures server-side.
+ * Configurable via VERIFY_ENVELOPE_SIGNATURES env var for performance tuning.
+ * Defaults to true (secure by default).
+ */
+function shouldVerifyEnvelopeSignatures(): boolean {
+  const envVal = process.env["VERIFY_ENVELOPE_SIGNATURES"];
+  if (envVal === undefined) return true;
+  return envVal !== "false" && envVal !== "0";
 }

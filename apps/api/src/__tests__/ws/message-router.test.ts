@@ -1,5 +1,6 @@
+import { initSodium } from "@pluralscape/crypto";
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER_BRAND } from "../../lib/logger.js";
 import { ConnectionManager } from "../../ws/connection-manager.js";
@@ -86,6 +87,9 @@ function authRequest(): string {
   });
 }
 
+// Disable envelope signature verification for router tests (mock data has invalid signatures).
+const savedEnvValue = process.env["VERIFY_ENVELOPE_SIGNATURES"];
+
 // ── Tests ───────────────────────────────────────────────────────────
 
 describe("message-router", () => {
@@ -94,7 +98,12 @@ describe("message-router", () => {
   let ctx: RouterContext;
   const log = mockLog();
 
+  beforeAll(async () => {
+    await initSodium();
+  });
+
   beforeEach(() => {
+    process.env["VERIFY_ENVELOPE_SIGNATURES"] = "false";
     manager = new ConnectionManager();
     manager.reserveUnauthSlot();
     state = manager.register("conn-1", mockWs() as never, Date.now());
@@ -103,6 +112,11 @@ describe("message-router", () => {
   });
 
   afterEach(() => {
+    if (savedEnvValue === undefined) {
+      delete process.env["VERIFY_ENVELOPE_SIGNATURES"];
+    } else {
+      process.env["VERIFY_ENVELOPE_SIGNATURES"] = savedEnvValue;
+    }
     manager.closeAll(1001, "test cleanup");
     ctx.documentOwnership.clear();
   });
@@ -851,6 +865,51 @@ describe("message-router", () => {
       expect(resp["type"]).toBe("SyncError");
       expect(resp["code"]).toBe("INTERNAL_ERROR");
       expect(resp["message"]).toBe("Failed to process SubmitChangeRequest");
+    });
+
+    it("returns INVALID_ENVELOPE and skips broadcast when signature verification fails", async () => {
+      process.env["VERIFY_ENVELOPE_SIGNATURES"] = "true";
+
+      // Register a subscriber to verify no broadcast is sent
+      manager.reserveUnauthSlot();
+      const subWs = mockWs();
+      manager.register("conn-sub", subWs as never, Date.now());
+      manager.authenticate(
+        "conn-sub",
+        {
+          accountId: "acct_test" as AccountId,
+          systemId: "sys_sub" as SystemId,
+          sessionId: "sess_sub" as SessionId,
+          accountType: "system",
+          ownedSystemIds: new Set(["sys_sub" as SystemId]),
+        },
+        "sys_sub" as SystemId,
+        "owner-full",
+      );
+      manager.addSubscription("conn-sub", "doc-sig-fail");
+
+      const change = makeChangePayload("doc-sig-fail");
+      await routeMessage(
+        JSON.stringify({
+          type: "SubmitChangeRequest",
+          correlationId: "550e8400-e29b-41d4-a716-446655440000",
+          docId: "doc-sig-fail",
+          change,
+        }),
+        state,
+        log,
+        ctx,
+      );
+
+      const resp = lastResponse();
+      expect(resp["type"]).toBe("SyncError");
+      expect(resp["code"]).toBe("INVALID_ENVELOPE");
+
+      // Subscriber should NOT have received a DocumentUpdate broadcast
+      expect(subWs.send).not.toHaveBeenCalled();
+
+      // Ownership should NOT have been set
+      expect(ctx.documentOwnership.has("doc-sig-fail")).toBe(false);
     });
 
     it("sends INTERNAL_ERROR when handleDocumentLoad throws", async () => {

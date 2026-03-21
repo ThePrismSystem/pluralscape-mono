@@ -204,7 +204,7 @@ describe("bounded subscribe concurrency", () => {
         maxInFlight = Math.max(maxInFlight, inFlight);
         await new Promise<void>((r) => setTimeout(r, 1));
         inFlight--;
-        return [];
+        return { envelopes: [], hasMore: false };
       },
       getLatestSnapshot: () => Promise.resolve(null),
       submit: () => Promise.resolve(1),

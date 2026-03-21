@@ -43,7 +43,7 @@ export {
   DocumentNotFoundError,
 } from "./errors.js";
 
-export type { SyncRelayService } from "./relay-service.js";
+export type { PaginatedEnvelopes, SyncRelayService } from "./relay-service.js";
 export {
   RELAY_MAX_ENVELOPES_PER_DOCUMENT,
   RELAY_MAX_SNAPSHOT_SIZE_BYTES,

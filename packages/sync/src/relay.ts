@@ -203,8 +203,16 @@ export class EncryptedRelay {
   asService(): SyncRelayService {
     return {
       submit: (envelope) => Promise.resolve(this.submit(envelope)),
-      getEnvelopesSince: (documentId, sinceSeq) =>
-        Promise.resolve(this.getEnvelopesSince(documentId, sinceSeq)),
+      getEnvelopesSince: (documentId, sinceSeq, limit) => {
+        const all = this.getEnvelopesSince(documentId, sinceSeq);
+        if (limit !== undefined && all.length > limit) {
+          return Promise.resolve({
+            envelopes: all.slice(0, limit),
+            hasMore: true,
+          });
+        }
+        return Promise.resolve({ envelopes: all, hasMore: false });
+      },
       submitSnapshot: (envelope) => {
         this.submitSnapshot(envelope);
         return Promise.resolve();

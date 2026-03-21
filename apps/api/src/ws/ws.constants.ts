@@ -75,6 +75,9 @@ export const WS_UPGRADE_SAFETY_TIMEOUT_MS = 5_000;
 /** Maximum concurrent document catchup fetches during subscribe (prevents resource exhaustion). */
 export const WS_SUBSCRIBE_CONCURRENCY = 10;
 
+/** Maximum envelopes returned per paginated getEnvelopesSince call (P-H1 audit finding). */
+export const WS_ENVELOPE_PAGE_SIZE = 500;
+
 /** Default timeout (ms) for graceful WebSocket shutdown. */
 export const WS_GRACEFUL_SHUTDOWN_TIMEOUT_MS = 10_000;
 

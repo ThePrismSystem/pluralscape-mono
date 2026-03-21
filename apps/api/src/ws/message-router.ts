@@ -189,7 +189,7 @@ async function dispatchWithAccess<
   log: AppLogger,
   ownership: Map<string, SystemId>,
   handler: (msg: T) => Promise<{ response: ServerMessage; context?: C }>,
-  onSuccess?: (msg: T, response: ServerMessage, context: C) => void,
+  onSuccess?: (msg: T, response: ServerMessage, context: C | undefined) => void,
 ): Promise<void> {
   const msg = parseMessage(schema, parsed, state, messageType, log);
   if (!msg) return;
@@ -225,7 +225,7 @@ async function dispatchWithAccess<
 
   if (onSuccess) {
     try {
-      onSuccess(msg, response, context as C);
+      onSuccess(msg, response, context);
     } catch (err) {
       log.error("onSuccess threw in dispatchWithAccess", {
         connectionId: state.connectionId,
@@ -490,9 +490,13 @@ export async function routeMessage(
         documentOwnership,
         async (msg) => {
           const result = await handleSubmitChange(msg, relay);
+          if (result.type === "SyncError") {
+            return { response: result };
+          }
           return { response: result.response, context: result.sequencedEnvelope };
         },
-        (msg, _response, sequencedEnvelope) => {
+        (msg, response, sequencedEnvelope) => {
+          if (response.type === "SyncError" || !sequencedEnvelope) return;
           documentOwnership.set(msg.docId, state.systemId);
           broadcastDocumentUpdate(
             {
