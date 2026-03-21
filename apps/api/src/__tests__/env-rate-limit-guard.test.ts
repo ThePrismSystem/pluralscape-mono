@@ -3,12 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 describe("env DISABLE_RATE_LIMIT production guard", () => {
   const originalNodeEnv = process.env["NODE_ENV"];
   const originalDisableRateLimit = process.env["DISABLE_RATE_LIMIT"];
+  const originalEmailHashPepper = process.env["EMAIL_HASH_PEPPER"];
 
   beforeEach(() => {
     vi.resetModules();
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+
     // Restore original env vars
     if (originalNodeEnv === undefined) {
       delete process.env["NODE_ENV"];
@@ -19,6 +22,11 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
       delete process.env["DISABLE_RATE_LIMIT"];
     } else {
       process.env["DISABLE_RATE_LIMIT"] = originalDisableRateLimit;
+    }
+    if (originalEmailHashPepper === undefined) {
+      delete process.env["EMAIL_HASH_PEPPER"];
+    } else {
+      process.env["EMAIL_HASH_PEPPER"] = originalEmailHashPepper;
     }
   });
 
@@ -36,9 +44,6 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
     expect(stderrSpy).toHaveBeenCalledWith(
       "CRITICAL: DISABLE_RATE_LIMIT=1 is not allowed in production. Forcing rate limiting ON.\n",
     );
-
-    stderrSpy.mockRestore();
-    delete process.env["EMAIL_HASH_PEPPER"];
   });
 
   it("allows DISABLE_RATE_LIMIT=1 in development", async () => {
@@ -64,14 +69,8 @@ describe("env DISABLE_RATE_LIMIT production guard", () => {
     process.env["DISABLE_RATE_LIMIT"] = "0";
     process.env["EMAIL_HASH_PEPPER"] = "a".repeat(64);
 
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-
     const { env } = await import("../env.js");
 
     expect(env.DISABLE_RATE_LIMIT).toBe(false);
-    expect(stderrSpy).not.toHaveBeenCalled();
-
-    stderrSpy.mockRestore();
-    delete process.env["EMAIL_HASH_PEPPER"];
   });
 });

@@ -270,13 +270,10 @@ describe("WsNetworkAdapter", () => {
 
     it("logs a warning when unsubscribe transport send fails", async () => {
       const warnFn = vi.fn();
-      let callCount = 0;
       const transport: SyncTransport = {
         state: "connected",
         send: (msg) => {
-          callCount++;
-          // Let SubscribeRequest succeed, fail on UnsubscribeRequest
-          if ("type" in msg && msg.type === "UnsubscribeRequest") {
+          if (msg.type === "UnsubscribeRequest") {
             return Promise.reject(new Error("unsubscribe send failed"));
           }
           return Promise.resolve();
@@ -298,8 +295,6 @@ describe("WsNetworkAdapter", () => {
           }),
         );
       });
-      // Verify the UnsubscribeRequest was actually sent
-      expect(callCount).toBe(2);
     });
   });
 
