@@ -452,6 +452,88 @@ describe("ConnectionManager", () => {
     });
   });
 
+  describe("per-account connection limit enforcement", () => {
+    it("getAccountConnectionCount reflects the limit boundary", () => {
+      manager = new ConnectionManager();
+      const maxPerAccount = 10;
+
+      // Register and authenticate connections up to the limit
+      for (let i = 0; i < maxPerAccount; i++) {
+        manager.reserveUnauthSlot();
+        manager.register(`conn-limit-${String(i)}`, mockWs() as never, Date.now());
+        manager.authenticate(
+          `conn-limit-${String(i)}`,
+          mockAuth(),
+          "sys_test" as SystemId,
+          "owner-full",
+        );
+      }
+
+      expect(manager.getAccountConnectionCount("acct_test")).toBe(maxPerAccount);
+
+      // The caller (auth-handler) checks this count before allowing new connections
+      // Verify that the count accurately reflects the limit
+      expect(manager.getAccountConnectionCount("acct_test") >= maxPerAccount).toBe(true);
+    });
+
+    it("decrements account count when connections are removed", () => {
+      manager = new ConnectionManager();
+      const connectionCount = 5;
+
+      for (let i = 0; i < connectionCount; i++) {
+        manager.reserveUnauthSlot();
+        manager.register(`conn-dec-${String(i)}`, mockWs() as never, Date.now());
+        manager.authenticate(
+          `conn-dec-${String(i)}`,
+          mockAuth(),
+          "sys_test" as SystemId,
+          "owner-full",
+        );
+      }
+
+      expect(manager.getAccountConnectionCount("acct_test")).toBe(connectionCount);
+
+      manager.remove("conn-dec-0");
+      expect(manager.getAccountConnectionCount("acct_test")).toBe(connectionCount - 1);
+    });
+
+    it("isolates connection counts between different accounts", () => {
+      manager = new ConnectionManager();
+
+      // Account A: 3 connections
+      for (let i = 0; i < 3; i++) {
+        manager.reserveUnauthSlot();
+        manager.register(`conn-a-${String(i)}`, mockWs() as never, Date.now());
+        manager.authenticate(
+          `conn-a-${String(i)}`,
+          mockAuth("acct_a" as AccountId),
+          "sys_test" as SystemId,
+          "owner-full",
+        );
+      }
+
+      // Account B: 2 connections
+      for (let i = 0; i < 2; i++) {
+        manager.reserveUnauthSlot();
+        manager.register(`conn-b-${String(i)}`, mockWs() as never, Date.now());
+        manager.authenticate(
+          `conn-b-${String(i)}`,
+          mockAuth("acct_b" as AccountId),
+          "sys_test" as SystemId,
+          "owner-full",
+        );
+      }
+
+      expect(manager.getAccountConnectionCount("acct_a")).toBe(3);
+      expect(manager.getAccountConnectionCount("acct_b")).toBe(2);
+
+      // Removing from account A does not affect account B
+      manager.remove("conn-a-0");
+      expect(manager.getAccountConnectionCount("acct_a")).toBe(2);
+      expect(manager.getAccountConnectionCount("acct_b")).toBe(2);
+    });
+  });
+
   describe("get / getByAccount", () => {
     it("returns undefined for unknown connectionId", () => {
       manager = new ConnectionManager();

@@ -116,10 +116,10 @@ describe("WsNetworkAdapter", () => {
 
       // Trigger a change that causes a DocumentUpdate
       await adapter.submitChange(docId, mockChangeWithoutSeq(docId));
-      // Wait for async delivery
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(received.length).toBeGreaterThan(0);
+      // Wait for async delivery to complete
+      await vi.waitFor(() => {
+        expect(received.length).toBeGreaterThan(0);
+      });
     });
 
     it("logs a warning when a subscriber callback throws", async () => {
@@ -135,12 +135,12 @@ describe("WsNetworkAdapter", () => {
 
       relay.submit(mockChangeWithoutSeq(docId));
       await adapter.submitChange(docId, mockChangeWithoutSeq(docId));
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(warnFn).toHaveBeenCalledWith(
-        "Subscriber callback error",
-        expect.objectContaining({ error: expect.any(String) }),
-      );
+      await vi.waitFor(() => {
+        expect(warnFn).toHaveBeenCalledWith(
+          "Subscriber callback error",
+          expect.objectContaining({ error: expect.any(String) }),
+        );
+      });
     });
   });
 
@@ -228,18 +228,21 @@ describe("WsNetworkAdapter", () => {
     });
 
     it("cleans up subscription on subscribe send failure", async () => {
+      const warnFn = vi.fn();
       const transport: SyncTransport = {
         state: "connected",
         send: () => Promise.reject(new Error("send failed")),
         onMessage: () => {},
         close: () => {},
       };
-      const adapter = new WsNetworkAdapter(transport, 5_000);
+      const adapter = new WsNetworkAdapter(transport, 5_000, { warn: warnFn });
       const cb = vi.fn();
 
       adapter.subscribe("doc-1", cb);
-      // Wait for the rejected promise to be handled
-      await new Promise((r) => setTimeout(r, 10));
+      // Wait for the rejected send promise to be handled
+      await vi.waitFor(() => {
+        expect(warnFn).toHaveBeenCalled();
+      });
 
       // Subscription should have been cleaned up — unsubscribe should not throw
       // (no UnsubscribeRequest will be sent since there are no remaining callbacks)
@@ -257,12 +260,12 @@ describe("WsNetworkAdapter", () => {
       const cb = vi.fn();
 
       adapter.subscribe("doc-1", cb);
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(warnFn).toHaveBeenCalledWith(
-        "Subscribe transport send failed",
-        expect.objectContaining({ error: expect.any(String) }),
-      );
+      await vi.waitFor(() => {
+        expect(warnFn).toHaveBeenCalledWith(
+          "Subscribe transport send failed",
+          expect.objectContaining({ error: expect.any(String) }),
+        );
+      });
     });
   });
 
@@ -297,10 +300,10 @@ describe("WsNetworkAdapter", () => {
 
       // Submit a change — MockSyncTransport sends both ChangeAccepted and DocumentUpdate
       await adapter.submitChange(docId, mockChangeWithoutSeq(docId));
-      await new Promise((r) => setTimeout(r, 10));
-
-      // The adapter should have received the change via DocumentUpdate
-      expect(received.length).toBeGreaterThan(0);
+      // Wait for async DocumentUpdate delivery to subscriber
+      await vi.waitFor(() => {
+        expect(received.length).toBeGreaterThan(0);
+      });
     });
   });
 

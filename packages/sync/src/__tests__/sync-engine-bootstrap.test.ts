@@ -20,27 +20,62 @@ import type { SystemId, UnixMillis } from "@pluralscape/types";
 
 // ── Mock factories ──────────────────────────────────────────────────
 
+/**
+ * Minimal SodiumAdapter mock for bootstrap tests.
+ * Only memzero is exercised during bootstrap — other methods throw
+ * if called, which catches unexpected crypto calls.
+ */
 function mockSodium(): SodiumAdapter {
+  const unimplemented = (): never => {
+    throw new Error("SodiumAdapter method not expected during bootstrap");
+  };
   return {
+    init: vi.fn().mockResolvedValue(undefined),
+    isReady: vi.fn().mockReturnValue(true),
+    constants: {} as SodiumAdapter["constants"],
+    supportsSecureMemzero: false,
+    aeadEncrypt: unimplemented,
+    aeadDecrypt: unimplemented,
+    aeadKeygen: unimplemented,
+    boxKeypair: unimplemented,
+    boxSeedKeypair: unimplemented,
+    boxEasy: unimplemented,
+    boxOpenEasy: unimplemented,
+    signKeypair: unimplemented,
+    signSeedKeypair: unimplemented,
+    signDetached: unimplemented,
+    signVerifyDetached: unimplemented,
+    pwhash: unimplemented,
+    pwhashStr: unimplemented,
+    pwhashStrVerify: unimplemented,
+    kdfDeriveFromKey: unimplemented,
+    kdfKeygen: unimplemented,
+    genericHash: unimplemented,
+    randomBytes: unimplemented,
     memzero: vi.fn(),
-  } as never;
+  } satisfies SodiumAdapter;
 }
 
 function mockKeys(): DocumentKeys {
+  // Two-step cast through intermediate variables (same pattern as test-crypto-helpers)
+  const encKey: unknown = new Uint8Array(32).fill(0xaa);
+  const privKey: unknown = new Uint8Array(64).fill(0xcc);
   return {
-    encryptionKey: new Uint8Array(32).fill(0xaa) as never as AeadKey,
+    encryptionKey: encKey as AeadKey,
     signingKeys: {
       publicKey: pubkey(0xbb),
-      privateKey: new Uint8Array(64).fill(0xcc),
-    } as never as SignKeypair,
+      privateKey: privKey,
+    } as SignKeypair,
   };
 }
 
+/** Minimal DocumentKeyResolver mock — only resolveKeys and dispose are used during bootstrap. */
 function mockKeyResolver(keys: DocumentKeys): DocumentKeyResolver {
-  return {
+  const resolver: unknown = {
     resolveKeys: vi.fn().mockReturnValue(keys),
     dispose: vi.fn(),
-  } as never;
+  };
+  return resolver as DocumentKeyResolver;
 }
 
 function mockStorageAdapter(overrides: Partial<SyncStorageAdapter> = {}): SyncStorageAdapter {
