@@ -1,6 +1,6 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { fieldBucketVisibility, fieldDefinitions, fieldValues } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import {
   CreateFieldDefinitionBodySchema,
   UpdateFieldDefinitionBodySchema,
@@ -24,7 +24,6 @@ import type {
   FieldDefinitionId,
   FieldType,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -43,7 +42,7 @@ const fieldDefCache = new QueryCache<PaginatedResult<FieldDefinitionResult>>(
 /** Build a cache key for list queries. */
 function listCacheKey(
   systemId: SystemId,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
   includeArchived?: boolean,
 ): string {
@@ -115,10 +114,10 @@ function toFieldDefinitionResult(row: {
     sortOrder: row.sortOrder,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
     archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
   };
 }
 
@@ -216,7 +215,7 @@ export async function listFieldDefinitions(
   systemId: SystemId,
   auth: AuthContext,
   opts?: {
-    cursor?: PaginationCursor;
+    cursor?: string;
     limit?: number;
     includeArchived?: boolean;
   },

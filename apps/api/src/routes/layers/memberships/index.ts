@@ -1,11 +1,11 @@
-import { ID_PREFIXES, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES } from "@pluralscape/types";
 import { Hono } from "hono";
 
 import { HTTP_CREATED, HTTP_NO_CONTENT } from "../../../http.constants.js";
 import { createAuditWriter } from "../../../lib/audit-writer.js";
 import { getDb } from "../../../lib/db.js";
 import { parseIdParam, requireIdParam } from "../../../lib/id-param.js";
-import { parsePaginationLimit } from "../../../lib/pagination.js";
+import { parseCursor, parsePaginationLimit } from "../../../lib/pagination.js";
 import { parseJsonBody } from "../../../lib/parse-json-body.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../../../service.constants.js";
@@ -61,7 +61,7 @@ listRoute.get("/", async (c) => {
     systemId,
     layerId,
     auth,
-    cursorParam ? toCursor(cursorParam) : undefined,
+    parseCursor(cursorParam),
     limit,
   );
   return c.json(result);

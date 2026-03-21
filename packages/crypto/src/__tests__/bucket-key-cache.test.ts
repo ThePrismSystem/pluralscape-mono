@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createBucketKeyCache } from "../bucket-key-cache.js";
 import { generateBucketKey } from "../bucket-keys.js";
@@ -13,6 +13,7 @@ import type { BucketId } from "@pluralscape/types";
 const bucket1 = "bucket-001" as BucketId;
 const bucket2 = "bucket-002" as BucketId;
 const bucket3 = "bucket-003" as BucketId;
+const bucket4 = "bucket-004" as BucketId;
 
 let cache: BucketKeyCache;
 
@@ -287,5 +288,99 @@ describe("memory safety: memzero on versioned removal", () => {
       cache.clearAll();
     }).not.toThrow();
     expect(cache.size).toBe(0);
+  });
+});
+
+describe("same-reference safety", () => {
+  it("set() with same Uint8Array instance promotes without memzero", () => {
+    const key = generateBucketKey();
+    cache.set(bucket1, key);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.set(bucket1, key);
+    expect(memzeroSpy).not.toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+    expect(cache.get(bucket1)).toBe(key);
+  });
+
+  it("setVersioned() with same Uint8Array instance promotes without memzero", () => {
+    const key = generateBucketKey();
+    cache.setVersioned(bucket1, 1, key);
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    cache.setVersioned(bucket1, 1, key);
+    expect(memzeroSpy).not.toHaveBeenCalled();
+    memzeroSpy.mockRestore();
+    expect(cache.getByVersion(bucket1, 1)).toBe(key);
+  });
+});
+
+describe("LRU eviction (maxSize)", () => {
+  let lruCache: BucketKeyCache;
+
+  beforeEach(() => {
+    lruCache = createBucketKeyCache({ maxSize: 3 });
+  });
+
+  afterEach(() => {
+    lruCache.clearAll();
+  });
+
+  it("evicts oldest entry when exceeding maxSize", () => {
+    lruCache.set(bucket1, generateBucketKey());
+    lruCache.set(bucket2, generateBucketKey());
+    lruCache.set(bucket3, generateBucketKey());
+    lruCache.set(bucket4, generateBucketKey());
+    expect(lruCache.size).toBe(3);
+    expect(lruCache.has(bucket1)).toBe(false);
+    expect(lruCache.has(bucket2)).toBe(true);
+    expect(lruCache.has(bucket3)).toBe(true);
+    expect(lruCache.has(bucket4)).toBe(true);
+  });
+
+  it("get() promotes key so it is not evicted", () => {
+    lruCache.set(bucket1, generateBucketKey());
+    lruCache.set(bucket2, generateBucketKey());
+    lruCache.set(bucket3, generateBucketKey());
+    // Access bucket1 to promote it
+    lruCache.get(bucket1);
+    // Insert bucket4 — should evict bucket2 (oldest not-promoted)
+    lruCache.set(bucket4, generateBucketKey());
+    expect(lruCache.has(bucket1)).toBe(true);
+    expect(lruCache.has(bucket2)).toBe(false);
+    expect(lruCache.has(bucket3)).toBe(true);
+    expect(lruCache.has(bucket4)).toBe(true);
+  });
+
+  it("memzeros evicted keys", () => {
+    const key1 = generateBucketKey();
+    lruCache.set(bucket1, key1);
+    lruCache.set(bucket2, generateBucketKey());
+    lruCache.set(bucket3, generateBucketKey());
+    const sodium = getSodium();
+    const memzeroSpy = vi.spyOn(sodium, "memzero");
+    lruCache.set(bucket4, generateBucketKey());
+    expect(memzeroSpy).toHaveBeenCalledWith(key1);
+    memzeroSpy.mockRestore();
+  });
+
+  it("without maxSize, cache is unbounded", () => {
+    const unbounded = createBucketKeyCache();
+    for (let i = 0; i < 100; i++) {
+      unbounded.set(`bucket-${String(i).padStart(3, "0")}` as BucketId, generateBucketKey());
+    }
+    expect(unbounded.size).toBe(100);
+    unbounded.clearAll();
+  });
+
+  it("versioned store uses separate LRU budget", () => {
+    // maxSize 3 for main store, versioned gets maxSize * 2 = 6
+    for (let v = 1; v <= 7; v++) {
+      lruCache.setVersioned(bucket1, v, generateBucketKey());
+    }
+    // First versioned entry should be evicted
+    expect(lruCache.getByVersion(bucket1, 1)).toBeUndefined();
+    // Later entries should remain
+    expect(lruCache.getByVersion(bucket1, 7)).toBeDefined();
   });
 });

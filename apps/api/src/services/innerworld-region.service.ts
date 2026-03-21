@@ -1,5 +1,5 @@
 import { innerworldEntities, innerworldRegions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateRegionBodySchema, UpdateRegionBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, inArray, sql } from "drizzle-orm";
 
@@ -21,7 +21,6 @@ import type {
   EncryptedBlob,
   InnerWorldRegionId,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -60,10 +59,10 @@ function toRegionResult(row: {
     parentRegionId: row.parentRegionId as InnerWorldRegionId | null,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
     archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
   };
 }
 
@@ -142,7 +141,7 @@ export async function listRegions(
   systemId: SystemId,
   auth: AuthContext,
   opts?: {
-    cursor?: PaginationCursor;
+    cursor?: string;
     limit?: number;
     includeArchived?: boolean;
   },

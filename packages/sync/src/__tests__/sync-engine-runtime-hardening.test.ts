@@ -15,6 +15,7 @@ import {
   initSodium,
 } from "@pluralscape/crypto";
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { toUnixMillis } from "@pluralscape/types";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { DocumentKeyResolver } from "../document-key-resolver.js";
@@ -31,7 +32,7 @@ import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
-import type { SystemId, UnixMillis } from "@pluralscape/types";
+import type { SystemId } from "@pluralscape/types";
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -72,8 +73,8 @@ const SYSTEM_CORE_MANIFEST: SyncManifest = {
       bucketId: null,
       channelId: null,
       timePeriod: null,
-      createdAt: 1000 as UnixMillis,
-      updatedAt: 1000 as UnixMillis,
+      createdAt: toUnixMillis(1000),
+      updatedAt: toUnixMillis(1000),
       sizeBytes: 0,
       snapshotVersion: 0,
       lastSeq: 0,
@@ -241,8 +242,8 @@ describe("P-M2: skip redundant hydration", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000 as UnixMillis,
-          updatedAt: 1000 as UnixMillis,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           sizeBytes: 100,
           snapshotVersion: 5,
           lastSeq: 5,
@@ -297,8 +298,8 @@ describe("P-M2: skip redundant hydration", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000 as UnixMillis,
-          updatedAt: 1000 as UnixMillis,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           sizeBytes: 100,
           snapshotVersion: 10,
           lastSeq: 10,
@@ -362,8 +363,8 @@ describe("P-M2: skip redundant hydration", () => {
           bucketId: null,
           channelId: null,
           timePeriod: null,
-          createdAt: 1000 as UnixMillis,
-          updatedAt: 1000 as UnixMillis,
+          createdAt: toUnixMillis(1000),
+          updatedAt: toUnixMillis(1000),
           sizeBytes: 0,
           snapshotVersion: 0,
           lastSeq: 0,

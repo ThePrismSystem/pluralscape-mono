@@ -8,7 +8,7 @@ import {
   isValidTransferCode,
 } from "@pluralscape/crypto";
 import { deviceTransferRequests } from "@pluralscape/db/pg";
-import { createId, now } from "@pluralscape/types";
+import { createId, now, toUnixMillis } from "@pluralscape/types";
 import { and, eq, gt, sql } from "drizzle-orm";
 
 import { deserializeEncryptedPayload } from "../lib/encrypted-payload.js";
@@ -91,7 +91,7 @@ export async function initiateTransfer(
   // A periodic cleanup job (or shorter TTL with eager wipe) is a future
   // optimization — the risk is minimal since the key material is encrypted
   // under the Argon2id-derived transfer key, which is never stored.
-  const expiresAt = (createdAt + TRANSFER_TIMEOUT_MS) as UnixMillis;
+  const expiresAt = toUnixMillis(createdAt + TRANSFER_TIMEOUT_MS);
 
   await db.transaction(async (tx) => {
     await tx.insert(deviceTransferRequests).values({

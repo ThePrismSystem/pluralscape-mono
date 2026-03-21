@@ -6,6 +6,7 @@ export const DEFAULT_RETRY_POLICY: RetryPolicy = {
   backoffMs: 1_000,
   backoffMultiplier: 2,
   maxBackoffMs: 30_000,
+  jitterFraction: 0.2,
 };
 
 /** Shared policy for heavy background maintenance jobs (5min base, 30min cap). */
@@ -15,6 +16,7 @@ const HEAVY_BACKOFF: RetryPolicy = {
   backoffMultiplier: 5,
   maxBackoffMs: 1_800_000,
   strategy: "exponential",
+  jitterFraction: 0.2,
 };
 
 /**
@@ -30,6 +32,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 2,
     maxBackoffMs: 30_000,
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
   "sync-pull": {
     maxRetries: 3,
@@ -37,6 +40,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 2,
     maxBackoffMs: 30_000,
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
   "blob-upload": {
     maxRetries: 3,
@@ -44,6 +48,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 4,
     maxBackoffMs: 60_000,
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
   "blob-cleanup": HEAVY_BACKOFF,
   "export-generate": {
@@ -52,6 +57,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 4,
     maxBackoffMs: 60_000,
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
   "import-process": {
     maxRetries: 3,
@@ -59,6 +65,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 4,
     maxBackoffMs: 60_000,
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
   "webhook-deliver": {
     maxRetries: 5,
@@ -66,6 +73,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 4,
     maxBackoffMs: 7_200_000, // 2 hours
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
   "notification-send": {
     maxRetries: 3,
@@ -73,6 +81,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 1,
     maxBackoffMs: 30_000,
     strategy: "linear",
+    jitterFraction: 0.2,
   },
   "analytics-compute": HEAVY_BACKOFF,
   "account-purge": { ...HEAVY_BACKOFF, maxRetries: 3, backoffMs: 60_000 },
@@ -83,6 +92,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 4,
     maxBackoffMs: 60_000,
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
   "sync-queue-cleanup": HEAVY_BACKOFF,
   "audit-log-cleanup": HEAVY_BACKOFF,
@@ -93,6 +103,7 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 2,
     maxBackoffMs: 30_000,
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
   "device-transfer-cleanup": {
     maxRetries: 3,
@@ -100,5 +111,6 @@ export const DEFAULT_RETRY_POLICIES: Readonly<Record<JobType, RetryPolicy>> = {
     backoffMultiplier: 2,
     maxBackoffMs: 60_000,
     strategy: "exponential",
+    jitterFraction: 0.2,
   },
 };

@@ -4,6 +4,8 @@
  * Retains up to SSE_REPLAY_BUFFER_SIZE events for at most SSE_REPLAY_MAX_AGE_MS.
  * Supports replay from a given Last-Event-ID for client reconnection.
  */
+import { toUnixMillis } from "@pluralscape/types";
+
 import { SSE_REPLAY_BUFFER_SIZE, SSE_REPLAY_MAX_AGE_MS } from "./sse.constants.js";
 
 import type { UnixMillis } from "@pluralscape/types";
@@ -53,7 +55,7 @@ export class SseEventBuffer {
       id,
       event,
       data,
-      timestamp: Date.now() as UnixMillis,
+      timestamp: toUnixMillis(Date.now()),
     };
 
     this.ring[this.tail] = entry;

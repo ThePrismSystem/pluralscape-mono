@@ -1,4 +1,5 @@
 import { jobs } from "@pluralscape/db/sqlite";
+import { toUnixMillis } from "@pluralscape/types";
 import { createId, now } from "@pluralscape/types/runtime";
 import { and, eq, isNull, lte, or, sql } from "drizzle-orm";
 
@@ -219,7 +220,7 @@ export class SqliteJobQueue implements JobQueue {
         status: "pending" as JobStatus,
         attempts: newAttempts,
         error,
-        nextRetryAt: (currentTime + backoff) as UnixMillis,
+        nextRetryAt: toUnixMillis(currentTime + backoff),
       })
       .where(eq(jobs.id, jobId))
       .run();

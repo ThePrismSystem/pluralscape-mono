@@ -1,4 +1,4 @@
-import { extractErrorMessage } from "@pluralscape/types";
+import { extractErrorMessage, toUnixMillis } from "@pluralscape/types";
 import { createId, now } from "@pluralscape/types/runtime";
 import { Queue, Worker } from "bullmq";
 
@@ -346,7 +346,7 @@ export class BullMQJobQueue implements JobQueue {
       status: "pending",
       attempts: newAttempts,
       error,
-      nextRetryAt: (currentTime + backoff) as UnixMillis,
+      nextRetryAt: toUnixMillis(currentTime + backoff),
     };
 
     await job.updateData(updated);

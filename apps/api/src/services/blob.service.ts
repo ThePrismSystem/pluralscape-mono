@@ -1,6 +1,6 @@
 import { blobMetadata } from "@pluralscape/db/pg";
 import { QuotaExceededError } from "@pluralscape/storage";
-import { BLOB_SIZE_LIMITS, ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { BLOB_SIZE_LIMITS, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { ConfirmUploadBodySchema, CreateUploadUrlBodySchema } from "@pluralscape/validation";
 import { and, eq, gt, sql } from "drizzle-orm";
 
@@ -22,7 +22,6 @@ import type {
   BlobId,
   BlobPurpose,
   PaginatedResult,
-  PaginationCursor,
   StorageKey,
   SystemId,
   UnixMillis,
@@ -97,7 +96,7 @@ export async function createUploadUrl(
   const blobId = createId(ID_PREFIXES.blob);
   const storageKey = `${systemId}/${blobId}` as StorageKey;
   const timestamp = now();
-  const expiresAt = (timestamp + PRESIGNED_UPLOAD_TTL_MS) as UnixMillis;
+  const expiresAt = toUnixMillis(timestamp + PRESIGNED_UPLOAD_TTL_MS);
 
   // Insert pending row
   await db.insert(blobMetadata).values({
@@ -270,7 +269,7 @@ export async function listBlobs(
   systemId: SystemId,
   auth: AuthContext,
   opts?: {
-    cursor?: PaginationCursor;
+    cursor?: string;
     limit?: number;
     includeArchived?: boolean;
   },
@@ -412,7 +411,7 @@ function toBlobResult(row: {
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,
     checksum: row.checksum ?? "",
-    uploadedAt: (row.uploadedAt ?? 0) as UnixMillis,
+    uploadedAt: toUnixMillis(row.uploadedAt ?? 0),
     thumbnailOfBlobId: row.thumbnailOfBlobId as BlobId | null,
   };
 }

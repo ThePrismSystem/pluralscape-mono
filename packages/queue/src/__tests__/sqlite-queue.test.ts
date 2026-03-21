@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import Database from "better-sqlite3-multiple-ciphers";
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -87,29 +88,29 @@ describe("SqliteJobWorker", () => {
 describe("SqliteJobQueue-specific", () => {
   describe("findStalledJobs", () => {
     it("detects a stalled job when heartbeat timeout has elapsed", async () => {
-      let currentTime = 1000 as UnixMillis;
+      let currentTime = toUnixMillis(1000);
       const queue = createQueue({ clock: () => currentTime });
 
       await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
       await queue.dequeue();
 
-      currentTime = 7000 as UnixMillis;
+      currentTime = toUnixMillis(7000);
       const stalled = await queue.findStalledJobs();
       expect(stalled).toHaveLength(1);
       expect(stalled[0]?.status).toBe("running");
     });
 
     it("does not report a job as stalled when heartbeat resets the clock", async () => {
-      let currentTime = 1000 as UnixMillis;
+      let currentTime = toUnixMillis(1000);
       const queue = createQueue({ clock: () => currentTime });
 
       await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
       const job = await dequeueOrFail(queue);
 
-      currentTime = 4000 as UnixMillis;
+      currentTime = toUnixMillis(4000);
       await queue.heartbeat(job.id);
 
-      currentTime = 8000 as UnixMillis;
+      currentTime = toUnixMillis(8000);
       const stalled = await queue.findStalledJobs();
       expect(stalled).toHaveLength(0);
     });

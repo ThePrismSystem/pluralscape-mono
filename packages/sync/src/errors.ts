@@ -89,6 +89,20 @@ export class UnsupportedDocumentTypeError extends Error {
 }
 
 /**
+ * Thrown when an operation requires an active sync session for a document,
+ * but no session exists (e.g. applyLocalChange before subscribing).
+ */
+export class NoActiveSessionError extends Error {
+  override readonly name = "NoActiveSessionError" as const;
+  readonly docId: string;
+
+  constructor(docId: string, options?: ErrorOptions) {
+    super(`No active session for document: ${docId}`, options);
+    this.docId = docId;
+  }
+}
+
+/**
  * Thrown when a document is not found (e.g. in relay service operations).
  */
 export class DocumentNotFoundError extends Error {

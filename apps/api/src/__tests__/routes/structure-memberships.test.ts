@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { toCursor } from "../../lib/pagination.js";
 import {
   mockAuditWriterFactory,
   mockAuthFactory,
@@ -335,7 +336,7 @@ for (const variant of VARIANTS) {
       const emptyPage = { items: [], nextCursor: null, hasMore: false, totalCount: null };
       listMock().mockResolvedValueOnce(emptyPage);
 
-      await createApp().request(`${baseUrl}?cursor=cur_abc&limit=5`);
+      await createApp().request(`${baseUrl}?cursor=${toCursor("cur_abc")}&limit=5`);
 
       expect(listMock()).toHaveBeenCalledWith(
         expect.anything(),

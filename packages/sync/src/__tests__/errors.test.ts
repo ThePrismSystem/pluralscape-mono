@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AdapterDisposedError,
   DocumentNotFoundError,
+  NoActiveSessionError,
   NoChangeProducedError,
   SyncProtocolError,
   SyncTimeoutError,
@@ -157,6 +158,28 @@ describe("sync typed errors", () => {
     it("stores operation", () => {
       const err = new UnsupportedDocumentTypeError("system-core", "time-splitting");
       expect(err.operation).toBe("time-splitting");
+    });
+  });
+
+  describe("NoActiveSessionError", () => {
+    it("is instanceof Error", () => {
+      const err = new NoActiveSessionError("doc-123");
+      expect(err).toBeInstanceOf(Error);
+    });
+
+    it("has correct name", () => {
+      const err = new NoActiveSessionError("doc-123");
+      expect(err.name).toBe("NoActiveSessionError");
+    });
+
+    it("includes docId in message", () => {
+      const err = new NoActiveSessionError("system-core-sys_abc");
+      expect(err.message).toContain("system-core-sys_abc");
+    });
+
+    it("stores docId", () => {
+      const err = new NoActiveSessionError("doc-abc");
+      expect(err.docId).toBe("doc-abc");
     });
   });
 

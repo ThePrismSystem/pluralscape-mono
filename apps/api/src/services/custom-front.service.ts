@@ -1,5 +1,5 @@
 import { customFronts, frontingSessions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateCustomFrontBodySchema, UpdateCustomFrontBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -22,7 +22,6 @@ import type {
   CustomFrontId,
   EncryptedBlob,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -59,9 +58,9 @@ function toCustomFrontResult(row: {
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
   };
 }
 
@@ -118,7 +117,7 @@ export async function listCustomFronts(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<CustomFrontResult>> {
   assertSystemOwnership(systemId, auth);

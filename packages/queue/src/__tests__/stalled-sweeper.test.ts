@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { describe, expect, it, vi } from "vitest";
 
 import { StalledJobSweeper } from "../observability/stalled-sweeper.js";
@@ -5,7 +6,7 @@ import { StalledJobSweeper } from "../observability/stalled-sweeper.js";
 import { dequeueOrFail, makeJobParams } from "./helpers.js";
 import { InMemoryJobQueue } from "./mock-queue.js";
 
-import type { Logger, UnixMillis } from "@pluralscape/types";
+import type { Logger } from "@pluralscape/types";
 
 const mockLogger: Logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -31,7 +32,7 @@ describe("StalledJobSweeper", () => {
   });
 
   it("sweep() fails stalled jobs and calls onSweep with count", async () => {
-    let currentTime = 1000 as UnixMillis;
+    let currentTime = toUnixMillis(1000);
     const queue = new InMemoryJobQueue(mockLogger, () => currentTime);
     const onSweep = vi.fn();
     const sweeper = new StalledJobSweeper(queue, { onSweep, logger: mockLogger });
@@ -40,7 +41,7 @@ describe("StalledJobSweeper", () => {
     await dequeueOrFail(queue);
 
     // Advance time past the timeout
-    currentTime = 5000 as UnixMillis;
+    currentTime = toUnixMillis(5000);
 
     await sweeper.sweep();
 
@@ -61,7 +62,7 @@ describe("StalledJobSweeper", () => {
   });
 
   it("sweep() logs stalled jobs when a logger is provided", async () => {
-    let currentTime = 1000 as UnixMillis;
+    let currentTime = toUnixMillis(1000);
     const queue = new InMemoryJobQueue(mockLogger, () => currentTime);
     const warn = vi.fn();
     const sweeper = new StalledJobSweeper(queue, {
@@ -70,7 +71,7 @@ describe("StalledJobSweeper", () => {
 
     await queue.enqueue(makeJobParams({ timeoutMs: 3000 }));
     await dequeueOrFail(queue);
-    currentTime = 5000 as UnixMillis;
+    currentTime = toUnixMillis(5000);
 
     await sweeper.sweep();
 

@@ -7,7 +7,7 @@ import {
   subsystemSideSystemLinks,
   subsystems,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import {
   CreateSideSystemLayerLinkBodySchema,
   CreateSubsystemLayerLinkBodySchema,
@@ -25,13 +25,7 @@ import { DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT } from "../service.constants.js";
 
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type {
-  EncryptedBlob,
-  PaginatedResult,
-  PaginationCursor,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { EncryptedBlob, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { z } from "zod/v4";
@@ -91,7 +85,7 @@ interface LinkEntityConfig<TParsed> {
   readonly query: (
     db: PostgresJsDatabase,
     systemId: SystemId,
-    cursor: PaginationCursor | undefined,
+    cursor: string | undefined,
     limit: number,
     filterEntityAId?: string,
     filterEntityBId?: string,
@@ -157,7 +151,7 @@ function toLinkResult(row: NormalizedLinkRow): StructureLinkResult {
     entityBId: row.entityBId,
     systemId: row.systemId as SystemId,
     encryptedData: row.encryptedData ? encryptedBlobToBase64(row.encryptedData) : null,
-    createdAt: row.createdAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
   };
 }
 
@@ -386,7 +380,7 @@ async function listLinksGeneric<TParsed>(
   systemId: SystemId,
   auth: AuthContext,
   cfg: LinkEntityConfig<TParsed>,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
   filterEntityAId?: string,
   filterEntityBId?: string,
@@ -472,7 +466,7 @@ export function listSubsystemLayerLinks(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
   filterSubsystemId?: string,
   filterLayerId?: string,
@@ -493,7 +487,7 @@ export function listSubsystemSideSystemLinks(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
   filterSubsystemId?: string,
   filterSideSystemId?: string,
@@ -514,7 +508,7 @@ export function listSideSystemLayerLinks(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
   filterSideSystemId?: string,
   filterLayerId?: string,

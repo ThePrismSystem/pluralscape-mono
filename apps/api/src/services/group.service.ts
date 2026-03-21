@@ -24,7 +24,6 @@ import type {
   EncryptedBlob,
   GroupId,
   PaginatedResult,
-  PaginationCursor,
   SystemId,
   UnixMillis,
 } from "@pluralscape/types";
@@ -139,7 +138,7 @@ export const listGroups: (
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit?: number,
 ) => Promise<PaginatedResult<GroupResult>> = groupHierarchy.list;
 

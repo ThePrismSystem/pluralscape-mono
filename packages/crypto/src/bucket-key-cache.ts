@@ -25,10 +25,38 @@ export interface BucketKeyCache {
   deleteVersion(bucketId: BucketId, keyVersion: number): void;
 }
 
+/** Options for creating a bucket key cache. */
+export interface BucketKeyCacheOptions {
+  /**
+   * Maximum number of entries in the main store. When exceeded, the
+   * least-recently-used entry is evicted (and memzeroed). Omit for unbounded.
+   * Versioned store uses `maxSize * 2` as its budget.
+   */
+  readonly maxSize?: number;
+}
+
+/** Versioned store budget multiplier (each bucket may have old+new during rotation). */
+const VERSIONED_BUDGET_MULTIPLIER = 2;
+
+/**
+ * Evict the oldest entry (first in Map insertion order) from a Map,
+ * memzeroing the evicted key material.
+ */
+function evictOldest<K>(map: Map<K, AeadKey>): void {
+  const first = map.entries().next();
+  if (!first.done) {
+    getSodium().memzero(first.value[1]);
+    map.delete(first.value[0]);
+  }
+}
+
 /** Create a new in-memory bucket key cache backed by a Map. */
-export function createBucketKeyCache(): BucketKeyCache {
+export function createBucketKeyCache(options?: BucketKeyCacheOptions): BucketKeyCache {
   const store = new Map<BucketId, AeadKey>();
   const versionedStore = new Map<string, AeadKey>();
+  const maxSize = options?.maxSize;
+  const versionedMaxSize =
+    maxSize !== undefined ? maxSize * VERSIONED_BUDGET_MULTIPLIER : undefined;
 
   function versionKey(bucketId: BucketId, keyVersion: number): string {
     return `${bucketId}:v${String(keyVersion)}`;
@@ -36,13 +64,24 @@ export function createBucketKeyCache(): BucketKeyCache {
 
   return {
     get(bucketId: BucketId): AeadKey | undefined {
-      return store.get(bucketId);
+      const value = store.get(bucketId);
+      if (value !== undefined && maxSize !== undefined) {
+        // LRU promotion: delete and re-insert to move to end
+        store.delete(bucketId);
+        store.set(bucketId, value);
+      }
+      return value;
     },
 
     set(bucketId: BucketId, key: AeadKey): void {
       const existing = store.get(bucketId);
       if (existing !== undefined) {
-        getSodium().memzero(existing);
+        if (existing !== key) {
+          getSodium().memzero(existing);
+        }
+        store.delete(bucketId);
+      } else if (maxSize !== undefined && store.size >= maxSize) {
+        evictOldest(store);
       }
       store.set(bucketId, key);
     },
@@ -55,6 +94,7 @@ export function createBucketKeyCache(): BucketKeyCache {
       }
     },
 
+    /** Check if a bucket key exists. Does NOT count as an LRU access — will not prevent eviction. */
     has(bucketId: BucketId): boolean {
       return store.has(bucketId);
     },
@@ -76,14 +116,26 @@ export function createBucketKeyCache(): BucketKeyCache {
     },
 
     getByVersion(bucketId: BucketId, keyVersion: number): AeadKey | undefined {
-      return versionedStore.get(versionKey(bucketId, keyVersion));
+      const vk = versionKey(bucketId, keyVersion);
+      const value = versionedStore.get(vk);
+      if (value !== undefined && versionedMaxSize !== undefined) {
+        // LRU promotion
+        versionedStore.delete(vk);
+        versionedStore.set(vk, value);
+      }
+      return value;
     },
 
     setVersioned(bucketId: BucketId, keyVersion: number, key: AeadKey): void {
       const vk = versionKey(bucketId, keyVersion);
       const existing = versionedStore.get(vk);
       if (existing !== undefined) {
-        getSodium().memzero(existing);
+        if (existing !== key) {
+          getSodium().memzero(existing);
+        }
+        versionedStore.delete(vk);
+      } else if (versionedMaxSize !== undefined && versionedStore.size >= versionedMaxSize) {
+        evictOldest(versionedStore);
       }
       versionedStore.set(vk, key);
     },

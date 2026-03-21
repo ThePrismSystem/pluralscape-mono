@@ -12,7 +12,7 @@ import {
   verifyPassword,
 } from "@pluralscape/crypto";
 import { accounts, recoveryKeys, sessions } from "@pluralscape/db/pg";
-import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, SESSION_TIMEOUTS, createId, now, toUnixMillis } from "@pluralscape/types";
 import {
   PasswordResetViaRecoveryKeySchema,
   RegenerateRecoveryKeySchema,
@@ -62,7 +62,7 @@ export async function getRecoveryKeyStatus(
   if (!row) {
     return { hasActiveKey: false, createdAt: null };
   }
-  return { hasActiveKey: true, createdAt: row.createdAt as UnixMillis };
+  return { hasActiveKey: true, createdAt: toUnixMillis(row.createdAt) };
 }
 
 // ── Regenerate Recovery Key ──────────────────────────────────────

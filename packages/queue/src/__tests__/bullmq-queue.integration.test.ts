@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { BullMQJobQueue } from "../adapters/bullmq/bullmq-job-queue.js";
@@ -102,13 +103,13 @@ describe.skipIf(!ctx.available)("BullMQJobQueue-specific", () => {
   });
 
   it("detects stalled jobs with injectable clock", async () => {
-    let currentTime = 1000 as UnixMillis;
+    let currentTime = toUnixMillis(1000);
     queue = createQueue({ clock: () => currentTime });
 
     await queue.enqueue(makeJobParams({ timeoutMs: 5000 }));
     await queue.dequeue();
 
-    currentTime = 7000 as UnixMillis;
+    currentTime = toUnixMillis(7000);
     const stalled = await queue.findStalledJobs();
     expect(stalled).toHaveLength(1);
     expect(stalled[0]?.status).toBe("running");

@@ -1,6 +1,6 @@
 import { deserializeEncryptedBlob, InvalidInputError } from "@pluralscape/crypto";
 import { fieldValues } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
 import { SetFieldValueBodySchema, UpdateFieldValueBodySchema } from "@pluralscape/validation";
 import { and, eq, sql } from "drizzle-orm";
 
@@ -62,8 +62,8 @@ function toFieldValueResult(row: {
     systemId: row.systemId as SystemId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
   };
 }
 

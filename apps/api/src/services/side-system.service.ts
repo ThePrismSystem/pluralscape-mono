@@ -4,7 +4,7 @@ import {
   sideSystems,
   subsystemSideSystemLinks,
 } from "@pluralscape/db/pg";
-import { ID_PREFIXES, createId, now } from "@pluralscape/types";
+import { ID_PREFIXES, createId, now, toUnixMillis, toUnixMillisOrNull } from "@pluralscape/types";
 import { CreateSideSystemBodySchema, UpdateSideSystemBodySchema } from "@pluralscape/validation";
 import { and, count, eq, gt, sql } from "drizzle-orm";
 
@@ -26,7 +26,6 @@ import type { AuthContext } from "../lib/auth-context.js";
 import type {
   EncryptedBlob,
   PaginatedResult,
-  PaginationCursor,
   SideSystemId,
   SystemId,
   UnixMillis,
@@ -63,10 +62,10 @@ function toSideSystemResult(row: {
     systemId: row.systemId as SystemId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
-    createdAt: row.createdAt as UnixMillis,
-    updatedAt: row.updatedAt as UnixMillis,
+    createdAt: toUnixMillis(row.createdAt),
+    updatedAt: toUnixMillis(row.updatedAt),
     archived: row.archived,
-    archivedAt: row.archivedAt as UnixMillis | null,
+    archivedAt: toUnixMillisOrNull(row.archivedAt),
   };
 }
 
@@ -123,7 +122,7 @@ export async function listSideSystems(
   db: PostgresJsDatabase,
   systemId: SystemId,
   auth: AuthContext,
-  cursor?: PaginationCursor,
+  cursor?: string,
   limit = DEFAULT_PAGE_LIMIT,
 ): Promise<PaginatedResult<SideSystemResult>> {
   assertSystemOwnership(systemId, auth);

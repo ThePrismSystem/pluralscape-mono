@@ -1,10 +1,10 @@
-import { ID_PREFIXES, toCursor } from "@pluralscape/types";
+import { ID_PREFIXES } from "@pluralscape/types";
 import { InnerWorldEntityQuerySchema } from "@pluralscape/validation";
 import { Hono } from "hono";
 
 import { getDb } from "../../../lib/db.js";
 import { requireIdParam } from "../../../lib/id-param.js";
-import { parsePaginationLimit } from "../../../lib/pagination.js";
+import { parseCursor, parsePaginationLimit } from "../../../lib/pagination.js";
 import { createCategoryRateLimiter } from "../../../middleware/rate-limit.js";
 import { listEntities } from "../../../services/innerworld-entity.service.js";
 
@@ -27,7 +27,7 @@ listRoute.get("/", async (c) => {
 
   const db = await getDb();
   const result = await listEntities(db, systemId, auth, {
-    cursor: cursorParam ? toCursor(cursorParam) : undefined,
+    cursor: parseCursor(cursorParam),
     limit,
     regionId,
     includeArchived,

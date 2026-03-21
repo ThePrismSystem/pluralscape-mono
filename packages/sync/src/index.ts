@@ -51,6 +51,7 @@ export {
   NoChangeProducedError,
   UnsupportedDocumentTypeError,
   DocumentNotFoundError,
+  NoActiveSessionError,
 } from "./errors.js";
 
 // ── Relay ────────────────────────────────────────────────────────────

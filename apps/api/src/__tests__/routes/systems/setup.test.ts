@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,7 +9,7 @@ import {
 } from "../../helpers/common-route-mocks.js";
 import { createRouteApp, postJSON } from "../../helpers/route-test-setup.js";
 
-import type { ApiErrorResponse, SystemId, SystemSettingsId, UnixMillis } from "@pluralscape/types";
+import type { ApiErrorResponse, SystemId, SystemSettingsId } from "@pluralscape/types";
 
 // ── Mocks ────────────────────────────────────────────────────────
 
@@ -57,8 +58,8 @@ const MOCK_COMPLETE_RESULT = {
   biometricEnabled: false,
   encryptedData: "base64data",
   version: 1,
-  createdAt: 1700000000000 as UnixMillis,
-  updatedAt: 1700000000000 as UnixMillis,
+  createdAt: toUnixMillis(1700000000000),
+  updatedAt: toUnixMillis(1700000000000),
 };
 
 // ── Tests ────────────────────────────────────────────────────────

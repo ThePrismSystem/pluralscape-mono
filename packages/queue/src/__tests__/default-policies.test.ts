@@ -54,6 +54,12 @@ describe("DEFAULT_RETRY_POLICIES", () => {
     }
   });
 
+  it("every policy has jitterFraction 0.2", () => {
+    for (const [type, policy] of Object.entries(DEFAULT_RETRY_POLICIES)) {
+      expect(policy.jitterFraction, `${type}.jitterFraction`).toBe(0.2);
+    }
+  });
+
   it("notification-send uses linear strategy", () => {
     expect(DEFAULT_RETRY_POLICIES["notification-send"].strategy).toBe("linear");
   });

@@ -1,10 +1,11 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { mockDb } from "./helpers/mock-db.js";
 
 import type { JobHandlerContext } from "@pluralscape/queue";
 import type { BlobStorageAdapter } from "@pluralscape/storage";
-import type { JobDefinition, JobId, StorageKey, UnixMillis } from "@pluralscape/types";
+import type { JobDefinition, JobId, StorageKey } from "@pluralscape/types";
 
 // ── Mock deps ────────────────────────────────────────────────────────
 
@@ -58,8 +59,8 @@ function stubJob(): JobDefinition<"blob-cleanup"> {
     nextRetryAt: null,
     error: null,
     result: null,
-    createdAt: 0 as UnixMillis,
-    startedAt: 0 as UnixMillis,
+    createdAt: toUnixMillis(0),
+    startedAt: toUnixMillis(0),
     completedAt: null,
     idempotencyKey: null,
     lastHeartbeatAt: null,

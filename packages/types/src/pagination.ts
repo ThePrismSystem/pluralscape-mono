@@ -11,9 +11,23 @@ export interface PaginatedResult<T> {
   readonly totalCount: number | null;
 }
 
-/** Cast a branded ID to a PaginationCursor for use as a pagination token. */
-export function toCursor(id: string): PaginationCursor {
-  return id as PaginationCursor;
+/** Thrown when a pagination cursor is expired or malformed. */
+export class CursorInvalidError extends Error {
+  override readonly name = "CursorInvalidError" as const;
+  readonly reason: "expired" | "malformed";
+
+  constructor(
+    reason: "expired" | "malformed" = "expired",
+    message?: string,
+    options?: ErrorOptions,
+  ) {
+    super(
+      message ??
+        (reason === "expired" ? "Pagination cursor has expired" : "Malformed pagination cursor"),
+      options,
+    );
+    this.reason = reason;
+  }
 }
 
 /** Parameters for offset-based pagination. */

@@ -1,12 +1,6 @@
 import type { AuditWriter } from "../lib/audit-writer.js";
 import type { AuthContext } from "../lib/auth-context.js";
-import type {
-  AuditEventType,
-  PaginatedResult,
-  PaginationCursor,
-  SystemId,
-  UnixMillis,
-} from "@pluralscape/types";
+import type { AuditEventType, PaginatedResult, SystemId, UnixMillis } from "@pluralscape/types";
 import type { ColumnBaseConfig, ColumnDataType } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -122,7 +116,7 @@ export interface HierarchyService<TId extends string, TResult extends { readonly
     db: PostgresJsDatabase,
     systemId: SystemId,
     auth: AuthContext,
-    cursor?: PaginationCursor,
+    cursor?: string,
     limit?: number,
   ) => Promise<PaginatedResult<TResult>>;
 

@@ -1,3 +1,4 @@
+import { toUnixMillis } from "@pluralscape/types";
 import { createId, now } from "@pluralscape/types/runtime";
 
 import {
@@ -176,7 +177,7 @@ export class InMemoryJobQueue implements JobQueue {
         status: "pending",
         attempts: newAttempts,
         error,
-        nextRetryAt: (currentTime + backoff) as UnixMillis,
+        nextRetryAt: toUnixMillis(currentTime + backoff),
       };
       this.jobs.set(jobId, updated);
       await fireHook(this.hooks, "onFail", updated, new Error(error), this.logger);

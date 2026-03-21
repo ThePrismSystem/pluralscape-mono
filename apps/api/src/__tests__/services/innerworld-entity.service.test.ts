@@ -1,6 +1,7 @@
-import { toCursor } from "@pluralscape/types";
+import { PAGINATION } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { fromCursor, toCursor } from "../../lib/pagination.js";
 import { mockDb } from "../helpers/mock-db.js";
 import { mockOwnershipFailure } from "../helpers/mock-ownership.js";
 
@@ -211,7 +212,11 @@ describe("listEntities", () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.hasMore).toBe(true);
-    expect(result.nextCursor).not.toBeNull();
+    const { nextCursor } = result;
+    expect(nextCursor).not.toBeNull();
+    if (nextCursor) {
+      expect(fromCursor(nextCursor, PAGINATION.cursorTtlMs)).toBe("iwe_a");
+    }
   });
 
   it("filters by regionId when provided", async () => {

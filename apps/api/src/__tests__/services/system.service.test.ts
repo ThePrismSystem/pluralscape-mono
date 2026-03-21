@@ -1,6 +1,7 @@
-import { toCursor } from "@pluralscape/types";
+import { PAGINATION } from "@pluralscape/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { fromCursor } from "../../lib/pagination.js";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { AuthContext } from "../../lib/auth-context.js";
@@ -100,7 +101,11 @@ describe("listSystems", () => {
 
     expect(result.items).toHaveLength(1);
     expect(result.hasMore).toBe(true);
-    expect(result.nextCursor).toBe("sys_a");
+    const { nextCursor } = result;
+    expect(nextCursor).not.toBeNull();
+    if (nextCursor) {
+      expect(fromCursor(nextCursor, PAGINATION.cursorTtlMs)).toBe("sys_a");
+    }
   });
 
   it("caps limit to MAX_SYSTEM_LIMIT", async () => {
@@ -127,7 +132,7 @@ describe("listSystems", () => {
     const { db, chain } = mockDb();
     chain.limit.mockResolvedValueOnce([]);
 
-    await listSystems(db, AUTH.accountId, toCursor("sys_cursor-id"));
+    await listSystems(db, AUTH.accountId, "sys_cursor-id");
 
     expect(chain.where).toHaveBeenCalled();
   });

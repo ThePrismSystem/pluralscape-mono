@@ -6,6 +6,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { toUnixMillis } from "@pluralscape/types";
 import { now } from "@pluralscape/types/runtime";
 
 import { BlobAlreadyExistsError, BlobNotFoundError, BlobTooLargeError } from "../../errors.js";
@@ -25,7 +26,7 @@ import type {
   PresignedUrlResult,
   StoredBlobMetadata,
 } from "../../interface.js";
-import type { StorageKey, UnixMillis } from "@pluralscape/types";
+import type { StorageKey } from "@pluralscape/types";
 
 const CHECKSUM_META_KEY = "checksum";
 const UPLOADED_AT_META_KEY = "uploadedat";
@@ -177,7 +178,7 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
         sizeBytes: response.ContentLength ?? 0,
         mimeType: mimeType === "application/octet-stream" ? null : mimeType,
         checksum,
-        uploadedAt: Number(uploadedAtStr) as UnixMillis,
+        uploadedAt: toUnixMillis(Number(uploadedAtStr)),
       };
     } catch (err) {
       const name = err instanceof Error ? err.name : "";
@@ -201,7 +202,7 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
 
     try {
       const url = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
-      const expiresAt = (now() + expiryMs) as UnixMillis;
+      const expiresAt = toUnixMillis(now() + expiryMs);
 
       return {
         supported: true,
@@ -224,7 +225,7 @@ export class S3BlobStorageAdapter implements BlobStorageAdapter {
 
     try {
       const url = await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
-      const expiresAt = (now() + expiryMs) as UnixMillis;
+      const expiresAt = toUnixMillis(now() + expiryMs);
 
       return {
         supported: true,
