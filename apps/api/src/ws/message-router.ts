@@ -401,7 +401,7 @@ export async function routeMessage(
           // Fail open — individual checkAccess calls will also fail open on cache miss
         }
       }
-      const permitted: typeof msg.documents = [];
+      const permitted: (typeof msg.documents)[number][] = [];
       for (const entry of msg.documents) {
         if (
           await checkAccess(

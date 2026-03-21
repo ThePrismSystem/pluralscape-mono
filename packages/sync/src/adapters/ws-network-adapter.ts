@@ -11,7 +11,7 @@ import {
 import type { ClientMessage, ServerMessage, SyncTransport } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SyncManifest, SyncNetworkAdapter, SyncSubscription } from "./network-adapter.js";
-import type { Logger } from "@pluralscape/types";
+import type { Logger, SyncDocumentId, SystemId } from "@pluralscape/types";
 
 /** Distributive Omit that preserves union members. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
@@ -70,7 +70,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   ): Promise<EncryptedChangeEnvelope> {
     const response = await this.request({
       type: "SubmitChangeRequest",
-      docId: documentId,
+      docId: documentId as SyncDocumentId,
       change,
     });
 
@@ -87,7 +87,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   ): Promise<readonly EncryptedChangeEnvelope[]> {
     const response = await this.request({
       type: "FetchChangesRequest",
-      docId: documentId,
+      docId: documentId as SyncDocumentId,
       sinceSeq,
     });
 
@@ -101,7 +101,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   async submitSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
     const response = await this.request({
       type: "SubmitSnapshotRequest",
-      docId: documentId,
+      docId: documentId as SyncDocumentId,
       snapshot,
     });
 
@@ -118,7 +118,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   async fetchLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
     const response = await this.request({
       type: "FetchSnapshotRequest",
-      docId: documentId,
+      docId: documentId as SyncDocumentId,
     });
 
     const snapshotResp = this.expectResponse(response, "SnapshotResponse");
@@ -142,7 +142,9 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
       .send({
         type: "SubscribeRequest",
         correlationId: crypto.randomUUID(),
-        documents: [{ docId: documentId, lastSyncedSeq: lastSeq, lastSnapshotVersion: 0 }],
+        documents: [
+          { docId: documentId as SyncDocumentId, lastSyncedSeq: lastSeq, lastSnapshotVersion: 0 },
+        ],
       })
       .catch((err: unknown) => {
         this.logger?.warn("Subscribe transport send failed", { error: String(err) });
@@ -159,7 +161,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
             .send({
               type: "UnsubscribeRequest",
               correlationId: crypto.randomUUID(),
-              docId: documentId,
+              docId: documentId as SyncDocumentId,
             })
             .catch((err: unknown) => {
               this.logger?.warn("Unsubscribe send failed", {
@@ -175,7 +177,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   async fetchManifest(systemId: string): Promise<SyncManifest> {
     const response = await this.request({
       type: "ManifestRequest",
-      systemId,
+      systemId: systemId as SystemId,
     });
 
     const manifestResp = this.expectResponse(response, "ManifestResponse");

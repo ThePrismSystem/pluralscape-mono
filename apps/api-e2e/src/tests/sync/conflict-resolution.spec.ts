@@ -9,6 +9,7 @@ import { makeSignedChange, createSyncCryptoContext } from "../../fixtures/crypto
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { ChangeAccepted, DocumentUpdate, SubscribeResponse } from "@pluralscape/sync";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 test.describe("Sync conflict resolution E2E", () => {
   test("two-client convergence: both clients submit changes and receive updates", async ({
@@ -30,7 +31,7 @@ test.describe("Sync conflict resolution E2E", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws2.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = `e2e-conflict-${crypto.randomUUID()}`;
+      const docId = `e2e-conflict-${crypto.randomUUID()}` as SyncDocumentId;
 
       // Both subscribe to the same document
       const sub1 = await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);

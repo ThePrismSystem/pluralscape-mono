@@ -14,6 +14,7 @@ import { runNetworkAdapterContract } from "./network-adapter.contract.js";
 import type { ServerMessage, SyncTransport } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 function nonce(fill: number): AeadNonce {
   const bytes: unknown = new Uint8Array(24).fill(fill);
@@ -400,7 +401,7 @@ describe("WsNetworkAdapter", () => {
       triggerMessage({
         type: "DocumentUpdate",
         correlationId: null,
-        docId: "doc-1",
+        docId: "doc-1" as SyncDocumentId,
         changes: [],
       });
 
@@ -491,7 +492,7 @@ describe("WsNetworkAdapter", () => {
         correlationId,
         code: "VERSION_CONFLICT",
         message: "version conflict",
-        docId: "doc-1",
+        docId: "doc-1" as SyncDocumentId,
       }));
 
       await expect(adapter.submitSnapshot("doc-1", mockSnapshot("doc-1"))).resolves.toBeUndefined();
@@ -501,7 +502,7 @@ describe("WsNetworkAdapter", () => {
       const { adapter } = createSnapshotTransport((correlationId) => ({
         type: "ChangeAccepted",
         correlationId,
-        docId: "doc-1",
+        docId: "doc-1" as SyncDocumentId,
         assignedSeq: 1,
       }));
 
@@ -514,7 +515,7 @@ describe("WsNetworkAdapter", () => {
       const { adapter } = createSnapshotTransport((correlationId) => ({
         type: "SnapshotAccepted",
         correlationId,
-        docId: "doc-1",
+        docId: "doc-1" as SyncDocumentId,
         snapshotVersion: 1,
       }));
 

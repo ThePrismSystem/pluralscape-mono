@@ -16,12 +16,20 @@ import { WS_MAX_SUBSCRIBE_DOCUMENTS } from "./ws.constants.js";
 
 import type { AeadNonce, Signature, SignPublicKey } from "@pluralscape/crypto";
 import type { ClientMessage } from "@pluralscape/sync";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { ZodType } from "zod";
 
 // ── Shared schemas ──────────────────────────────────────────────────
 
 const correlationId = z.uuid().nullable();
-const docId = z.string().min(1);
+const docId = z
+  .string()
+  .min(1)
+  .transform((s): SyncDocumentId => s as SyncDocumentId);
+const systemId = z
+  .string()
+  .min(1)
+  .transform((s): SystemId => s as SystemId);
 
 /** Pattern for valid base64url characters (RFC 4648 §5). */
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
@@ -86,7 +94,7 @@ const snapshotEnvelope = z.object({
 
 /** Per-document sync position. */
 const documentVersionEntry = z.object({
-  docId: z.string().min(1),
+  docId,
   lastSyncedSeq: z.number().int().nonnegative(),
   lastSnapshotVersion: z.number().int().nonnegative(),
 });
@@ -98,14 +106,14 @@ export const authenticateRequestSchema = z.object({
   correlationId,
   protocolVersion: z.literal(SYNC_PROTOCOL_VERSION),
   sessionToken: z.string().regex(SESSION_TOKEN_PATTERN),
-  systemId: z.string().min(1),
+  systemId,
   profileType: z.enum(PROFILE_TYPES),
 });
 
 export const manifestRequestSchema = z.object({
   type: z.literal("ManifestRequest"),
   correlationId,
-  systemId: z.string().min(1),
+  systemId,
 });
 
 export const subscribeRequestSchema = z.object({

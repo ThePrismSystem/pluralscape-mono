@@ -9,6 +9,7 @@ import { makeSignedChange, makeSignedSnapshot } from "../../fixtures/crypto.fixt
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { SnapshotAccepted, SubscribeResponse, SyncError } from "@pluralscape/sync";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
 test.describe("WebSocket sync server", () => {
   test("authenticates successfully with valid session token", async ({
@@ -62,7 +63,7 @@ test.describe("WebSocket sync server", () => {
       ws.send({
         type: "ManifestRequest",
         correlationId: null,
-        systemId: "sys_test",
+        systemId: "sys_test" as SystemId,
       });
       const response = await ws.waitForMessage(null);
       expect(response.type).toBe("SyncError");
@@ -127,7 +128,7 @@ test.describe("WebSocket sync server", () => {
 
       // Send SubscribeRequest with 101 documents (over the 100 limit)
       const documents = Array.from({ length: 101 }, (_, i) => ({
-        docId: `doc-${String(i)}`,
+        docId: `doc-${String(i)}` as SyncDocumentId,
         lastSyncedSeq: 0,
         lastSnapshotVersion: 0,
       }));

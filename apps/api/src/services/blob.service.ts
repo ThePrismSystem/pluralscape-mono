@@ -22,6 +22,7 @@ import type {
   BlobId,
   BlobPurpose,
   PaginatedResult,
+  Sha256Hex,
   StorageKey,
   SystemId,
   UnixMillis,
@@ -410,7 +411,7 @@ function toBlobResult(row: {
     purpose: row.purpose as BlobPurpose,
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,
-    checksum: row.checksum ?? "",
+    checksum: (row.checksum ?? "") as Sha256Hex,
     uploadedAt: toUnixMillis(row.uploadedAt ?? 0),
     thumbnailOfBlobId: row.thumbnailOfBlobId as BlobId | null,
   };

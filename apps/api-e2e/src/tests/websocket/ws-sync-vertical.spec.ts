@@ -12,6 +12,7 @@ import { test, expect } from "../../fixtures/auth.fixture.js";
 import { createAuthenticatedWsClient, makeSignedChange } from "../../fixtures/ws-sync.fixture.js";
 
 import type { ServerMessage } from "@pluralscape/sync";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 /** Assert a ServerMessage has a specific type, narrowing for subsequent property access. */
 function assertMessageType<T extends ServerMessage["type"]>(
@@ -86,7 +87,7 @@ test.describe("WebSocket sync vertical slice", () => {
     const client2 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
 
     try {
-      const docId = `e2e-unsub-${crypto.randomUUID()}`;
+      const docId = `e2e-unsub-${crypto.randomUUID()}` as SyncDocumentId;
 
       // Both subscribe
       await client1.ws.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);

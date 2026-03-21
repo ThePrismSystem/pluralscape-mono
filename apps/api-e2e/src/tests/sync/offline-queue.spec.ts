@@ -9,6 +9,7 @@ import { makeSignedChange } from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { ChangeAccepted } from "@pluralscape/sync";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 test.describe("Sync offline queue E2E", () => {
   test("submit change, disconnect, reconnect, verify change retrievable", async ({
@@ -25,7 +26,7 @@ test.describe("Sync offline queue E2E", () => {
     const ws1 = new SyncWsClient();
     await ws1.connect();
 
-    const docId = `e2e-offline-${crypto.randomUUID()}`;
+    const docId = `e2e-offline-${crypto.randomUUID()}` as SyncDocumentId;
 
     try {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);

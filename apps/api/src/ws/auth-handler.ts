@@ -8,7 +8,6 @@ import type { ConnectionManager } from "./connection-manager.js";
 import type { SyncConnectionState } from "./connection-state.js";
 import type { AppLogger } from "../lib/logger.js";
 import type { AuthenticateRequest, AuthenticateResponse, SyncError } from "@pluralscape/sync";
-import type { SystemId } from "@pluralscape/types";
 
 /** Result of handling an AuthenticateRequest. */
 export type AuthResult =
@@ -97,7 +96,7 @@ export async function handleAuthenticate(
   const authenticated = manager.authenticate(
     state.connectionId,
     auth,
-    message.systemId as SystemId,
+    message.systemId,
     message.profileType,
   );
 

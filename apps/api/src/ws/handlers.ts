@@ -38,7 +38,7 @@ import type {
   SyncRelayService,
   UnsubscribeRequest,
 } from "@pluralscape/sync";
-import type { SystemId } from "@pluralscape/types";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 // ── Manifest ────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ export async function handleManifestRequest(
   relay: SyncRelayService,
 ): Promise<ManifestResponse> {
   // Safe cast: router validates message.systemId === state.systemId before dispatch
-  const manifest = await relay.getManifest(message.systemId as SystemId);
+  const manifest = await relay.getManifest(message.systemId);
   return {
     type: "ManifestResponse",
     correlationId: message.correlationId,
@@ -73,7 +73,7 @@ export async function handleSubscribeRequest(
   log: AppLogger,
 ): Promise<SubscribeResponse> {
   // Phase 1: register subscriptions, partition into permitted vs dropped
-  const droppedDocIds: string[] = [];
+  const droppedDocIds: SyncDocumentId[] = [];
   const permitted: DocumentVersionEntry[] = [];
 
   for (const entry of message.documents) {

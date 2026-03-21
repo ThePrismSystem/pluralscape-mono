@@ -1,5 +1,6 @@
 import type { SyncManifest } from "./adapters/network-adapter.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "./types.js";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
 // ── Protocol version ──────────────────────────────────────────────────
 
@@ -51,7 +52,7 @@ export interface SyncMessageBase {
  * Sent in SubscribeRequest so the server can compute catch-up data.
  */
 export interface DocumentVersionEntry {
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /** Highest change seq the client has applied locally. 0 = no changes applied. */
   readonly lastSyncedSeq: number;
   /** Snapshot version the client bootstrapped from. 0 = no snapshot loaded. */
@@ -63,7 +64,7 @@ export interface DocumentVersionEntry {
  * Omitted for documents where the client is already current.
  */
 export interface DocumentCatchup {
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /** Changes the client is missing, in ascending seq order. */
   readonly changes: readonly EncryptedChangeEnvelope[];
   /**
@@ -105,7 +106,7 @@ export interface AuthenticateRequest extends SyncMessageBase {
    */
   readonly sessionToken: string;
   /** The system ID this client belongs to. */
-  readonly systemId: string;
+  readonly systemId: SystemId;
   /** Replication profile the client intends to use for this session. */
   readonly profileType: "owner-full" | "owner-lite" | "friend";
 }
@@ -117,7 +118,7 @@ export interface AuthenticateRequest extends SyncMessageBase {
  */
 export interface ManifestRequest extends SyncMessageBase {
   readonly type: "ManifestRequest";
-  readonly systemId: string;
+  readonly systemId: SystemId;
 }
 
 /**
@@ -138,7 +139,7 @@ export interface SubscribeRequest extends SyncMessageBase {
  */
 export interface UnsubscribeRequest extends SyncMessageBase {
   readonly type: "UnsubscribeRequest";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
 }
 
 /**
@@ -147,7 +148,7 @@ export interface UnsubscribeRequest extends SyncMessageBase {
  */
 export interface FetchSnapshotRequest extends SyncMessageBase {
   readonly type: "FetchSnapshotRequest";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
 }
 
 /**
@@ -156,7 +157,7 @@ export interface FetchSnapshotRequest extends SyncMessageBase {
  */
 export interface FetchChangesRequest extends SyncMessageBase {
   readonly type: "FetchChangesRequest";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /** Server returns changes with seq strictly greater than this value. */
   readonly sinceSeq: number;
 }
@@ -168,7 +169,7 @@ export interface FetchChangesRequest extends SyncMessageBase {
  */
 export interface SubmitChangeRequest extends SyncMessageBase {
   readonly type: "SubmitChangeRequest";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /** Change without seq — the server assigns seq on acceptance. */
   readonly change: Omit<EncryptedChangeEnvelope, "seq">;
 }
@@ -180,7 +181,7 @@ export interface SubmitChangeRequest extends SyncMessageBase {
  */
 export interface SubmitSnapshotRequest extends SyncMessageBase {
   readonly type: "SubmitSnapshotRequest";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   readonly snapshot: EncryptedSnapshotEnvelope;
 }
 
@@ -192,7 +193,7 @@ export interface SubmitSnapshotRequest extends SyncMessageBase {
  */
 export interface DocumentLoadRequest extends SyncMessageBase {
   readonly type: "DocumentLoadRequest";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /**
    * Whether the client intends to persist this document locally.
    * Informational — does not affect server behavior or access checks.
@@ -235,7 +236,7 @@ export interface SubscribeResponse extends SyncMessageBase {
    */
   readonly catchup: readonly DocumentCatchup[];
   /** Document IDs that were dropped because the subscription cap was reached. */
-  readonly droppedDocIds: readonly string[];
+  readonly droppedDocIds: readonly SyncDocumentId[];
 }
 
 /**
@@ -246,7 +247,7 @@ export interface SubscribeResponse extends SyncMessageBase {
 export interface DocumentUpdate extends SyncMessageBase {
   readonly type: "DocumentUpdate";
   readonly correlationId: null;
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /** One or more new changes, in ascending seq order. */
   readonly changes: readonly EncryptedChangeEnvelope[];
 }
@@ -256,7 +257,7 @@ export interface DocumentUpdate extends SyncMessageBase {
  */
 export interface SnapshotResponse extends SyncMessageBase {
   readonly type: "SnapshotResponse";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /** Null if no snapshot has been submitted for this document yet. */
   readonly snapshot: EncryptedSnapshotEnvelope | null;
 }
@@ -266,7 +267,7 @@ export interface SnapshotResponse extends SyncMessageBase {
  */
 export interface ChangesResponse extends SyncMessageBase {
   readonly type: "ChangesResponse";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   readonly changes: readonly EncryptedChangeEnvelope[];
 }
 
@@ -276,7 +277,7 @@ export interface ChangesResponse extends SyncMessageBase {
  */
 export interface ChangeAccepted extends SyncMessageBase {
   readonly type: "ChangeAccepted";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /** Server-assigned seq for the accepted change. */
   readonly assignedSeq: number;
 }
@@ -287,7 +288,7 @@ export interface ChangeAccepted extends SyncMessageBase {
  */
 export interface SnapshotAccepted extends SyncMessageBase {
   readonly type: "SnapshotAccepted";
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   readonly snapshotVersion: number;
 }
 
@@ -299,7 +300,7 @@ export interface SnapshotAccepted extends SyncMessageBase {
 export interface ManifestChanged extends SyncMessageBase {
   readonly type: "ManifestChanged";
   readonly correlationId: null;
-  readonly systemId: string;
+  readonly systemId: SystemId;
   /**
    * Optional hint about what changed (e.g., a new docId or a revoked grant).
    * Informational only — the client must re-fetch the manifest regardless.
@@ -316,7 +317,7 @@ export interface SyncError extends SyncMessageBase {
   readonly code: SyncErrorCode;
   readonly message: string;
   /** Present when the error is scoped to a specific document. */
-  readonly docId: string | null;
+  readonly docId: SyncDocumentId | null;
 }
 
 // ── Message unions ────────────────────────────────────────────────────

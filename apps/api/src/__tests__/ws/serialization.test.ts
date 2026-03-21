@@ -8,6 +8,7 @@ import {
 import { nonce, pubkey, sig } from "../helpers/crypto-test-fixtures.js";
 
 import type { ServerMessage } from "@pluralscape/sync";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 // ── Tests ─────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ describe("serializeServerMessage", () => {
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId: crypto.randomUUID(),
-      docId: crypto.randomUUID(),
+      docId: crypto.randomUUID() as SyncDocumentId,
       snapshot: {
         ciphertext: new Uint8Array([1, 2, 3]),
         nonce: nonce(4),
@@ -107,7 +108,7 @@ describe("serializeServerMessage", () => {
 
   it("leaves non-binary fields unaffected", () => {
     const correlationId = crypto.randomUUID();
-    const docId = crypto.randomUUID();
+    const docId = crypto.randomUUID() as SyncDocumentId;
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId,
@@ -129,7 +130,7 @@ describe("serializeServerMessage", () => {
     const msg: ServerMessage = {
       type: "ChangeAccepted",
       correlationId: crypto.randomUUID(),
-      docId: crypto.randomUUID(),
+      docId: crypto.randomUUID() as SyncDocumentId,
       assignedSeq: 42,
     };
 
@@ -142,7 +143,7 @@ describe("serializeServerMessage", () => {
   });
 
   it("serializes nested binary fields in arrays", () => {
-    const docId = crypto.randomUUID();
+    const docId = crypto.randomUUID() as SyncDocumentId;
     const msg: ServerMessage = {
       type: "ChangesResponse",
       correlationId: crypto.randomUUID(),
@@ -178,7 +179,7 @@ describe("serializeServerMessage", () => {
     const msg: ServerMessage = {
       type: "SnapshotResponse",
       correlationId: crypto.randomUUID(),
-      docId: crypto.randomUUID(),
+      docId: crypto.randomUUID() as SyncDocumentId,
       snapshot: {
         ciphertext: new Uint8Array([255, 0, 128]),
         nonce: nonce(1),

@@ -72,9 +72,14 @@ export type {
   StorageKey,
   HexColor,
   SlugHash,
+  RecoveryKeyDisplay,
+  Sha256Hex,
   EntityType,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
+
+// ── SHA-256 ──────────────────────────────────────────────────────
+export { toSha256Hex } from "./sha256.js";
 
 // ── Timestamps ──────────────────────────────────────────────────────
 export type { UnixMillis, ISOTimestamp } from "./timestamps.js";

@@ -13,6 +13,8 @@ import {
   type TransportState,
 } from "../protocol.js";
 
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
+
 // ── SYNC_PROTOCOL_VERSION ────────────────────────────────────────────
 
 describe("SYNC_PROTOCOL_VERSION", () => {
@@ -78,7 +80,7 @@ describe("ClientMessage", () => {
     const msg: DocumentLoadRequest = {
       type: "DocumentLoadRequest",
       correlationId: "test-123",
-      docId: "fronting-sys_abc-2026-Q1",
+      docId: "fronting-sys_abc-2026-Q1" as SyncDocumentId,
       persist: true,
     };
     expect(msg.docId).toBe("fronting-sys_abc-2026-Q1");
@@ -125,7 +127,7 @@ describe("AuthenticateRequest", () => {
       correlationId: "auth-1",
       protocolVersion: SYNC_PROTOCOL_VERSION,
       sessionToken: "token-abc",
-      systemId: "sys_123",
+      systemId: "sys_123" as SystemId,
       profileType: "owner-full",
     };
     expect(msg.protocolVersion).toBe(SYNC_PROTOCOL_VERSION);
@@ -138,7 +140,7 @@ describe("AuthenticateRequest", () => {
       // @ts-expect-error protocolVersion must be typeof SYNC_PROTOCOL_VERSION, not arbitrary number
       protocolVersion: 99,
       sessionToken: "token-abc",
-      systemId: "sys_123",
+      systemId: "sys_123" as SystemId,
       profileType: "owner-full",
     };
     expect(_msg.protocolVersion).toBe(99);

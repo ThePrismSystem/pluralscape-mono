@@ -7,6 +7,7 @@
 import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 
 import type { ClientMessage, ServerMessage } from "@pluralscape/sync";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
 const E2E_PORT = 10_099;
 const WS_URL = `ws://localhost:${String(E2E_PORT)}/v1/sync/ws`;
@@ -117,7 +118,7 @@ export class SyncWsClient {
       correlationId: null,
       protocolVersion: SYNC_PROTOCOL_VERSION,
       sessionToken,
-      systemId,
+      systemId: systemId as SystemId,
       profileType: "owner-full",
     });
     return this.waitForMessage(null);
@@ -130,7 +131,7 @@ export class SyncWsClient {
     this.send({
       type: "SubscribeRequest",
       correlationId: null,
-      documents,
+      documents: documents.map((d) => ({ ...d, docId: d.docId as SyncDocumentId })),
     });
     return this.waitForMessage("SubscribeResponse");
   }
