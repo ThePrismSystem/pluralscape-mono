@@ -8,6 +8,7 @@ import type { SyncNetworkAdapter } from "./adapters/network-adapter.js";
 import type { DocumentSyncState, OnDemandLoadRequest } from "./replication-profiles.js";
 import type { DocumentKeys } from "./types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 /** Result of loading a document on-demand. */
 export interface OnDemandLoadResult<T> {
@@ -24,7 +25,7 @@ export interface OnDemandLoadResult<T> {
  * and the caller is responsible for ensuring T matches that type.
  */
 function createFreshSession<T>(
-  docId: string,
+  docId: SyncDocumentId,
   keys: DocumentKeys,
   sodium: SodiumAdapter,
 ): EncryptedSyncSession<T> {

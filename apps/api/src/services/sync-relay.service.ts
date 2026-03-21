@@ -14,7 +14,7 @@ import type {
   SyncRelayService,
 } from "@pluralscape/sync";
 import type { SyncManifest, SyncManifestEntry } from "@pluralscape/sync/adapters";
-import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
+import type { BucketId, ChannelId, SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 /** PostgreSQL-backed implementation of SyncRelayService. */
@@ -96,7 +96,7 @@ export class PgSyncRelayService implements SyncRelayService {
   }
 
   async getEnvelopesSince(
-    documentId: string,
+    documentId: SyncDocumentId,
     sinceSeq: number,
     limit: number = WS_ENVELOPE_PAGE_SIZE,
   ): Promise<PaginatedEnvelopes> {
@@ -175,7 +175,7 @@ export class PgSyncRelayService implements SyncRelayService {
     });
   }
 
-  async getLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
+  async getLatestSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null> {
     const [row] = await this.db
       .select()
       .from(syncSnapshots)
@@ -193,7 +193,7 @@ export class PgSyncRelayService implements SyncRelayService {
       .where(eq(syncDocuments.systemId, systemId));
 
     const documents: SyncManifestEntry[] = rows.map((row) => ({
-      docId: row.documentId,
+      docId: row.documentId as SyncDocumentId,
       docType: row.docType,
       keyType: row.keyType,
       bucketId: row.bucketId as BucketId | null,
@@ -219,7 +219,7 @@ export class PgSyncRelayService implements SyncRelayService {
       nonce: row.nonce,
       signature: row.signature,
       authorPublicKey: row.authorPublicKey,
-      documentId: row.documentId,
+      documentId: row.documentId as SyncDocumentId,
       seq: row.seq,
     };
   }
@@ -233,7 +233,7 @@ export class PgSyncRelayService implements SyncRelayService {
       nonce: row.nonce,
       signature: row.signature,
       authorPublicKey: row.authorPublicKey,
-      documentId: row.documentId,
+      documentId: row.documentId as SyncDocumentId,
       snapshotVersion: row.snapshotVersion,
     };
   }

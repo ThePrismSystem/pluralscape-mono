@@ -5,7 +5,11 @@
  * real WebSocket sync server.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
-import { makeSignedChange, createSyncCryptoContext } from "../../fixtures/crypto.fixture.js";
+import {
+  makeSignedChange,
+  createSyncCryptoContext,
+  asSyncDocId,
+} from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { ChangeAccepted, DocumentUpdate, SubscribeResponse } from "@pluralscape/sync";
@@ -30,7 +34,7 @@ test.describe("Sync conflict resolution E2E", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws2.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = `e2e-conflict-${crypto.randomUUID()}`;
+      const docId = asSyncDocId(`e2e-conflict-${crypto.randomUUID()}`);
 
       // Both subscribe to the same document
       const sub1 = await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
@@ -98,7 +102,7 @@ test.describe("Sync conflict resolution E2E", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws2.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = `e2e-tombstone-${crypto.randomUUID()}`;
+      const docId = asSyncDocId(`e2e-tombstone-${crypto.randomUUID()}`);
 
       await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
       await ws2.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);

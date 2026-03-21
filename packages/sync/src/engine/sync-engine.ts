@@ -29,6 +29,7 @@ import type { ReplayResult } from "../offline-queue-manager.js";
 import type { DocumentSyncState, ReplicationProfile } from "../replication-profiles.js";
 import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 
 /** Configuration for creating a SyncEngine. */
 export interface SyncEngineConfig {
@@ -37,7 +38,7 @@ export interface SyncEngineConfig {
   readonly keyResolver: DocumentKeyResolver;
   readonly sodium: SodiumAdapter;
   readonly profile: ReplicationProfile;
-  readonly systemId: string;
+  readonly systemId: SystemId;
   /** Error handler for non-fatal errors (hydration failures, incoming change errors). */
   readonly onError: (message: string, error: unknown) => void;
   /** Callback invoked when a post-merge conflict is auto-resolved. */
@@ -57,14 +58,14 @@ export interface SyncEngineConfig {
  * server manifest, apply remote changes, submit local changes.
  */
 export class SyncEngine {
-  private readonly sessions = new Map<string, EncryptedSyncSession<unknown>>();
-  private readonly syncStates = new Map<string, DocumentSyncState>();
+  private readonly sessions = new Map<SyncDocumentId, EncryptedSyncSession<unknown>>();
+  private readonly syncStates = new Map<SyncDocumentId, DocumentSyncState>();
   private readonly subscriptions: Array<{ unsubscribe(): void }> = [];
-  private readonly documentQueues = new Map<string, Promise<void>>();
+  private readonly documentQueues = new Map<SyncDocumentId, Promise<void>>();
 
   private readonly config: SyncEngineConfig;
   private failedConflictPersistence: Array<{
-    documentId: string;
+    documentId: SyncDocumentId;
     notifications: readonly ConflictNotification[];
   }> = [];
 
@@ -193,17 +194,17 @@ export class SyncEngine {
    * as EncryptedSyncSession<unknown>. Callers must ensure T matches the
    * actual document type for the given docId.
    */
-  getSession<T>(docId: string): EncryptedSyncSession<T> | undefined {
+  getSession<T>(docId: SyncDocumentId): EncryptedSyncSession<T> | undefined {
     return this.sessions.get(docId) as EncryptedSyncSession<T> | undefined;
   }
 
   /** Get sync state for a document. */
-  getSyncState(docId: string): DocumentSyncState | undefined {
+  getSyncState(docId: SyncDocumentId): DocumentSyncState | undefined {
     return this.syncStates.get(docId);
   }
 
   /** Get all active document IDs. */
-  getActiveDocIds(): readonly string[] {
+  getActiveDocIds(): readonly SyncDocumentId[] {
     return [...this.sessions.keys()];
   }
 
@@ -222,7 +223,7 @@ export class SyncEngine {
    *
    * Returns the server-assigned sequence number.
    */
-  async applyLocalChange(docId: string, changeFn: (doc: unknown) => void): Promise<number> {
+  async applyLocalChange(docId: SyncDocumentId, changeFn: (doc: unknown) => void): Promise<number> {
     return this.enqueueDocumentOperation(docId, async () => {
       const session = this.sessions.get(docId);
       if (!session) {
@@ -262,7 +263,7 @@ export class SyncEngine {
    * Routes through the per-document operation queue.
    */
   async handleIncomingChanges(
-    docId: string,
+    docId: SyncDocumentId,
     changes: readonly EncryptedChangeEnvelope[],
   ): Promise<void> {
     return this.enqueueDocumentOperation(docId, () => this.applyIncomingChanges(docId, changes));
@@ -311,7 +312,7 @@ export class SyncEngine {
 
   // ── Private helpers ─────────────────────────────────────────────────
 
-  private enqueueDocumentOperation<T>(docId: string, op: () => Promise<T>): Promise<T> {
+  private enqueueDocumentOperation<T>(docId: SyncDocumentId, op: () => Promise<T>): Promise<T> {
     const prev = this.documentQueues.get(docId) ?? Promise.resolve();
     const next = prev.then(op, op);
     // Store void-wrapped version and schedule cleanup after resolution
@@ -335,7 +336,7 @@ export class SyncEngine {
    * to storage — the server will re-send on next connect.
    */
   private async applyIncomingChanges(
-    docId: string,
+    docId: SyncDocumentId,
     changes: readonly EncryptedChangeEnvelope[],
   ): Promise<void> {
     const session = this.sessions.get(docId);
@@ -361,7 +362,7 @@ export class SyncEngine {
   }
 
   private async persistChanges(
-    docId: string,
+    docId: SyncDocumentId,
     changes: readonly EncryptedChangeEnvelope[],
   ): Promise<void> {
     if (this.config.storageAdapter.appendChanges) {
@@ -374,7 +375,7 @@ export class SyncEngine {
   }
 
   private async hydrateDocument(
-    docId: string,
+    docId: SyncDocumentId,
     docType: SyncDocumentType,
     manifestSnapshotVersion?: number,
     manifestLastSeq?: number,
@@ -464,7 +465,7 @@ export class SyncEngine {
   }
 
   private async runPostMergeValidation(
-    docId: string,
+    docId: SyncDocumentId,
     session: EncryptedSyncSession<unknown>,
   ): Promise<void> {
     // runAllValidations never throws — each validator is independently try/caught
@@ -486,7 +487,7 @@ export class SyncEngine {
   }
 
   private async persistConflicts(
-    docId: string,
+    docId: SyncDocumentId,
     notifications: readonly ConflictNotification[],
   ): Promise<void> {
     if (!this.config.conflictPersistenceAdapter) return;
@@ -523,7 +524,7 @@ export class SyncEngine {
     }
   }
 
-  private updateSyncState(docId: string, seq: number): void {
+  private updateSyncState(docId: SyncDocumentId, seq: number): void {
     const existing = this.syncStates.get(docId);
     this.syncStates.set(docId, {
       docId,
@@ -547,7 +548,7 @@ export class SyncEngine {
  */
 export async function submitCorrectionEnvelopes(
   config: Pick<SyncEngineConfig, "networkAdapter" | "storageAdapter" | "onError">,
-  docId: string,
+  docId: SyncDocumentId,
   envelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[],
 ): Promise<void> {
   if (envelopes.length === 0) return;

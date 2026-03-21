@@ -1,6 +1,6 @@
 import type { DocumentKeyType, SyncDocumentType } from "../document-types.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
-import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
+import type { BucketId, ChannelId, SyncDocumentId, SystemId } from "@pluralscape/types";
 
 // ── Manifest ─────────────────────────────────────────────────────────
 
@@ -11,7 +11,7 @@ import type { BucketId, ChannelId, SystemId } from "@pluralscape/types";
  */
 export interface SyncManifestEntry {
   /** Unique document identifier (e.g. "system-core-sys_abc", "chat-ch_xyz-2026-03"). */
-  readonly docId: string;
+  readonly docId: SyncDocumentId;
   /** Which sync document type this entry represents. */
   readonly docType: SyncDocumentType;
   /** Key type determining which encryption key is used. */
@@ -74,7 +74,7 @@ export interface SyncNetworkAdapter {
    * Returns the envelope with the server-assigned seq number.
    */
   submitChange(
-    documentId: string,
+    documentId: SyncDocumentId,
     change: Omit<EncryptedChangeEnvelope, "seq">,
   ): Promise<EncryptedChangeEnvelope>;
 
@@ -83,7 +83,7 @@ export interface SyncNetworkAdapter {
    * Returns envelopes in ascending seq order. Returns an empty array if none.
    */
   fetchChangesSince(
-    documentId: string,
+    documentId: SyncDocumentId,
     sinceSeq: number,
   ): Promise<readonly EncryptedChangeEnvelope[]>;
 
@@ -91,13 +91,13 @@ export interface SyncNetworkAdapter {
    * Submits an encrypted snapshot to the server.
    * The server validates that snapshotVersion strictly increases.
    */
-  submitSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void>;
+  submitSnapshot(documentId: SyncDocumentId, snapshot: EncryptedSnapshotEnvelope): Promise<void>;
 
   /**
    * Fetches the latest encrypted snapshot for a document.
    * Returns null if no snapshot exists yet.
    */
-  fetchLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null>;
+  fetchLatestSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null>;
 
   /**
    * Subscribes to real-time change notifications for a document.
@@ -105,7 +105,7 @@ export interface SyncNetworkAdapter {
    * Returns a subscription handle — call unsubscribe() to stop receiving updates.
    */
   subscribe(
-    documentId: string,
+    documentId: SyncDocumentId,
     onChanges: (changes: readonly EncryptedChangeEnvelope[]) => void,
   ): SyncSubscription;
 
@@ -114,7 +114,7 @@ export interface SyncNetworkAdapter {
    * Owner devices receive the full manifest.
    * Friend devices receive a filtered manifest (bucket docs with active KeyGrants only).
    */
-  fetchManifest(systemId: string): Promise<SyncManifest>;
+  fetchManifest(systemId: SystemId): Promise<SyncManifest>;
 
   /** Close the underlying transport and release resources. Optional. */
   close?(): void | Promise<void>;

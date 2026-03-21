@@ -5,9 +5,14 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { PgSyncRelayService } from "../../services/sync-relay.service.js";
-import { makeEnvelope, makeSnapshotEnvelope, nonce } from "../helpers/crypto-test-fixtures.js";
+import {
+  asSyncDocId,
+  makeEnvelope,
+  makeSnapshotEnvelope,
+  nonce,
+} from "../helpers/crypto-test-fixtures.js";
 
-import type { SystemId } from "@pluralscape/types";
+import type { SyncDocumentId, SystemId } from "@pluralscape/types";
 import type { PgliteDatabase } from "drizzle-orm/pglite";
 
 // ── DDL ─────────────────────────────────────────────────────────────────
@@ -114,17 +119,17 @@ describe("PgSyncRelayService (PGlite integration)", () => {
   });
 
   /** Insert a sync document row and return its documentId. */
-  async function insertDoc(docId?: string): Promise<string> {
-    const id = docId ?? `system-core-sys_${crypto.randomUUID().slice(0, 8)}`;
+  async function insertDoc(id?: string): Promise<SyncDocumentId> {
+    const raw = id ?? `system-core-sys_${crypto.randomUUID().slice(0, 8)}`;
     const now = Date.now();
     await db.insert(syncDocuments).values({
-      documentId: id,
+      documentId: raw,
       systemId,
       docType: "system-core",
       createdAt: now,
       updatedAt: now,
     });
-    return id;
+    return asSyncDocId(raw);
   }
 
   describe("submit", () => {
@@ -152,7 +157,7 @@ describe("PgSyncRelayService (PGlite integration)", () => {
     });
 
     it("throws for missing document", async () => {
-      await expect(service.submit(makeEnvelope("nonexistent-doc"))).rejects.toThrow(
+      await expect(service.submit(makeEnvelope(asSyncDocId("nonexistent-doc")))).rejects.toThrow(
         "Document not found",
       );
     });

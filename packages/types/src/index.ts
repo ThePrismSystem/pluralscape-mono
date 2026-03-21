@@ -72,9 +72,14 @@ export type {
   StorageKey,
   HexColor,
   SlugHash,
+  RecoveryKeyDisplay,
+  ChecksumHex,
   EntityType,
 } from "./ids.js";
 export { ID_PREFIXES } from "./ids.js";
+
+// ── Checksum ─────────────────────────────────────────────────────
+export { toChecksumHex } from "./checksum.js";
 
 // ── Timestamps ──────────────────────────────────────────────────────
 export type { UnixMillis, ISOTimestamp } from "./timestamps.js";

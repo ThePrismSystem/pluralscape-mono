@@ -8,11 +8,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { submitCorrectionEnvelopes } from "../engine/sync-engine.js";
 
-import { nonce, pubkey, sig } from "./test-crypto-helpers.js";
+import { asSyncDocId, nonce, pubkey, sig } from "./test-crypto-helpers.js";
 
 import type { SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { EncryptedChangeEnvelope } from "../types.js";
+
+// ── Test constants ─────────────────────────────────────────────────
+
+const DOC_A_ID = asSyncDocId("doc_a");
 
 // ── Mock factories ─────────────────────────────────────────────────
 
@@ -50,7 +54,7 @@ function makeTestEnvelopes(count: number): Omit<EncryptedChangeEnvelope, "seq">[
   const envelopes: Omit<EncryptedChangeEnvelope, "seq">[] = [];
   for (let i = 1; i <= count; i++) {
     envelopes.push({
-      documentId: "doc_a",
+      documentId: DOC_A_ID,
       ciphertext: new Uint8Array([i]),
       nonce: nonce(i),
       signature: sig(i),
@@ -90,7 +94,7 @@ describe("submitCorrectionEnvelopes (M7)", () => {
         storageAdapter,
         onError,
       },
-      "doc_a",
+      DOC_A_ID,
       makeTestEnvelopes(3),
     );
 
@@ -115,7 +119,7 @@ describe("submitCorrectionEnvelopes (M7)", () => {
 
     await submitCorrectionEnvelopes(
       { networkAdapter, storageAdapter: mockStorageAdapter(), onError },
-      "doc_a",
+      DOC_A_ID,
       [],
     );
 
@@ -131,7 +135,7 @@ describe("submitCorrectionEnvelopes (M7)", () => {
 
     await submitCorrectionEnvelopes(
       { networkAdapter: mockNetworkAdapter(), storageAdapter, onError },
-      "doc_a",
+      DOC_A_ID,
       makeTestEnvelopes(2),
     );
 

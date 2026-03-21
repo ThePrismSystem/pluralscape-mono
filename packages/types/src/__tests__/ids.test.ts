@@ -13,6 +13,7 @@ import type {
   BucketId,
   ChannelId,
   CheckInRecordId,
+  ChecksumHex,
   CustomFrontId,
   DeviceTokenId,
   EntityType,
@@ -39,6 +40,7 @@ import type {
   PollId,
   PollOptionId,
   PollVoteId,
+  RecoveryKeyDisplay,
   RelationshipId,
   SessionId,
   SideSystemId,
@@ -105,7 +107,7 @@ describe("branded ID types", () => {
     expectTypeOf<SystemId>().toExtend<string>();
   });
 
-  it("defines all 59 branded types as string-based", () => {
+  it("defines all 61 branded types as string-based", () => {
     expectTypeOf<SystemId>().toExtend<string>();
     expectTypeOf<MemberId>().toExtend<string>();
     expectTypeOf<GroupId>().toExtend<string>();
@@ -165,6 +167,8 @@ describe("branded ID types", () => {
     expectTypeOf<WebhookDeliveryId>().toExtend<string>();
     expectTypeOf<FriendNotificationPreferenceId>().toExtend<string>();
     expectTypeOf<HexColor>().toExtend<string>();
+    expectTypeOf<RecoveryKeyDisplay>().toExtend<string>();
+    expectTypeOf<ChecksumHex>().toExtend<string>();
   });
 });
 

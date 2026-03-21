@@ -5,10 +5,15 @@
  * The server is spawned by Playwright's globalSetup on port 10099.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
-import { makeSignedChange, makeSignedSnapshot } from "../../fixtures/crypto.fixture.js";
+import {
+  makeSignedChange,
+  makeSignedSnapshot,
+  asSyncDocId,
+} from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { SnapshotAccepted, SubscribeResponse, SyncError } from "@pluralscape/sync";
+import type { SystemId } from "@pluralscape/types";
 
 test.describe("WebSocket sync server", () => {
   test("authenticates successfully with valid session token", async ({
@@ -62,7 +67,7 @@ test.describe("WebSocket sync server", () => {
       ws.send({
         type: "ManifestRequest",
         correlationId: null,
-        systemId: "sys_test",
+        systemId: "sys_test" as SystemId,
       });
       const response = await ws.waitForMessage(null);
       expect(response.type).toBe("SyncError");
@@ -89,7 +94,7 @@ test.describe("WebSocket sync server", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws2.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = `e2e-doc-${crypto.randomUUID()}`;
+      const docId = asSyncDocId(`e2e-doc-${crypto.randomUUID()}`);
 
       // Both subscribe to the same doc
       const sub1 = await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
@@ -127,7 +132,7 @@ test.describe("WebSocket sync server", () => {
 
       // Send SubscribeRequest with 101 documents (over the 100 limit)
       const documents = Array.from({ length: 101 }, (_, i) => ({
-        docId: `doc-${String(i)}`,
+        docId: asSyncDocId(`doc-${String(i)}`),
         lastSyncedSeq: 0,
         lastSnapshotVersion: 0,
       }));
@@ -204,7 +209,7 @@ test.describe("WebSocket sync server", () => {
     try {
       await ws.authenticate(registeredAccount.sessionToken, systemId);
 
-      const docId = `e2e-snap-${crypto.randomUUID()}`;
+      const docId = asSyncDocId(`e2e-snap-${crypto.randomUUID()}`);
       const snapshot = await makeSignedSnapshot(docId, 1);
       const response = await ws.submitSnapshot(docId, snapshot);
 

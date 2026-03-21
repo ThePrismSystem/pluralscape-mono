@@ -80,6 +80,14 @@ export type StorageKey = Brand<string, "StorageKey">;
 export type HexColor = Brand<string, "HexColor">;
 export type SlugHash = Brand<string, "SlugHash">;
 
+// ── Branded value types (not entity IDs) ────────────────────────────
+
+/** Human-readable recovery key display string (e.g. ABCD-EFGH-...). */
+export type RecoveryKeyDisplay = Brand<string, "RecoveryKeyDisplay">;
+
+/** Checksum hex digest (64 lowercase hex characters). */
+export type ChecksumHex = Brand<string, "ChecksumHex">;
+
 // ── ID prefix convention ────────────────────────────────────────────
 
 export const ID_PREFIXES = {

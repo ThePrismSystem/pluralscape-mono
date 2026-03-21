@@ -1,6 +1,13 @@
 import { blobMetadata } from "@pluralscape/db/pg";
 import { QuotaExceededError } from "@pluralscape/storage";
-import { BLOB_SIZE_LIMITS, ID_PREFIXES, createId, now, toUnixMillis } from "@pluralscape/types";
+import {
+  BLOB_SIZE_LIMITS,
+  ID_PREFIXES,
+  createId,
+  now,
+  toChecksumHex,
+  toUnixMillis,
+} from "@pluralscape/types";
 import { ConfirmUploadBodySchema, CreateUploadUrlBodySchema } from "@pluralscape/validation";
 import { and, eq, gt, sql } from "drizzle-orm";
 
@@ -21,6 +28,7 @@ import type { BlobQuotaService } from "@pluralscape/storage/quota";
 import type {
   BlobId,
   BlobPurpose,
+  ChecksumHex,
   PaginatedResult,
   StorageKey,
   SystemId,
@@ -42,7 +50,7 @@ export interface BlobResult {
   readonly purpose: BlobPurpose;
   readonly mimeType: string | null;
   readonly sizeBytes: number;
-  readonly checksum: string;
+  readonly checksum: ChecksumHex | null;
   readonly uploadedAt: UnixMillis;
   readonly thumbnailOfBlobId: BlobId | null;
 }
@@ -410,7 +418,7 @@ function toBlobResult(row: {
     purpose: row.purpose as BlobPurpose,
     mimeType: row.mimeType,
     sizeBytes: row.sizeBytes,
-    checksum: row.checksum ?? "",
+    checksum: row.checksum ? toChecksumHex(row.checksum) : null,
     uploadedAt: toUnixMillis(row.uploadedAt ?? 0),
     thumbnailOfBlobId: row.thumbnailOfBlobId as BlobId | null,
   };

@@ -8,11 +8,12 @@ import type { PwhashProfile } from "./master-key.js";
 import type { RecoveryKeyResult } from "./recovery.js";
 import type { EncryptedPayload } from "./symmetric.js";
 import type { KdfMasterKey, PwhashSalt } from "./types.js";
+import type { RecoveryKeyDisplay } from "@pluralscape/types";
 
 /** Input for a password reset via recovery key. */
 export interface PasswordResetParams {
   /** The recovery key display string from the user (e.g. ABCD-EFGH-...). */
-  readonly displayKey: string;
+  readonly displayKey: RecoveryKeyDisplay;
   /** Serialized encrypted backup blob retrieved from the server. */
   readonly encryptedBackup: Uint8Array;
   /** The new password to set. */

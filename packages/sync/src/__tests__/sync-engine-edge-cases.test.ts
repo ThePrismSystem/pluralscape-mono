@@ -25,13 +25,19 @@ import * as postMergeValidator from "../post-merge-validator.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
+import { asSyncDocId, sysId } from "./test-crypto-helpers.js";
+
 import type { SyncManifest, SyncNetworkAdapter } from "../adapters/network-adapter.js";
 import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { ConflictPersistenceAdapter } from "../conflict-persistence.js";
 import type { SyncEngineConfig } from "../engine/sync-engine.js";
 import type { ConflictNotification, EncryptedChangeEnvelope } from "../types.js";
 import type { BucketKeyCache, KdfMasterKey, SignKeypair, SodiumAdapter } from "@pluralscape/crypto";
-import type { SystemId } from "@pluralscape/types";
+
+// ── Test constants ────────────────────────────────────────────────────
+
+const SYSTEM_CORE_DOC_ID = asSyncDocId("system-core-sys_test");
+const FRONTING_DOC_ID = asSyncDocId("fronting-sys_test");
 
 // ── Shared setup ─────────────────────────────────────────────────────
 
@@ -63,10 +69,10 @@ afterEach(() => {
 });
 
 const SYSTEM_CORE_MANIFEST: SyncManifest = {
-  systemId: "sys_test" as SystemId,
+  systemId: sysId("sys_test"),
   documents: [
     {
-      docId: "system-core-sys_test",
+      docId: SYSTEM_CORE_DOC_ID,
       docType: "system-core",
       keyType: "derived",
       bucketId: null,
@@ -107,8 +113,8 @@ function relayNetworkAdapter(relay: EncryptedRelay): SyncNetworkAdapter {
         const seq = relay.submit(change);
         return Promise.resolve({ ...change, seq });
       }),
-    fetchChangesSince: vi.fn().mockImplementation((docId: string, sinceSeq: number) => {
-      return Promise.resolve(relay.getEnvelopesSince(docId, sinceSeq));
+    fetchChangesSince: vi.fn().mockImplementation((rawDocId: string, sinceSeq: number) => {
+      return Promise.resolve(relay.getEnvelopesSince(asSyncDocId(rawDocId), sinceSeq));
     }),
     submitSnapshot: vi.fn().mockResolvedValue(undefined),
     fetchLatestSnapshot: vi.fn().mockResolvedValue(null),
@@ -127,7 +133,7 @@ async function createBootstrappedEngine(
     keyResolver: createKeyResolver(),
     sodium,
     profile: { profileType: "owner-full" },
-    systemId: "sys_test" as SystemId,
+    systemId: sysId("sys_test"),
     onError: vi.fn(),
     ...overrides,
   });
@@ -157,14 +163,14 @@ describe("SyncEngine edge cases", () => {
 
       const relay = new EncryptedRelay();
       const keyResolver = createKeyResolver();
-      const keys = keyResolver.resolveKeys("system-core-sys_test");
+      const keys = keyResolver.resolveKeys(SYSTEM_CORE_DOC_ID);
 
       // Create valid encrypted envelopes
       const doc = Automerge.from<Record<string, unknown>>({ items: {} });
       const senderSession = new EncryptedSyncSession({
         doc,
         keys,
-        documentId: "system-core-sys_test",
+        documentId: SYSTEM_CORE_DOC_ID,
         sodium,
       });
 
@@ -211,7 +217,7 @@ describe("SyncEngine edge cases", () => {
         keyResolver,
         sodium,
         profile: { profileType: "owner-full" },
-        systemId: "sys_test" as SystemId,
+        systemId: sysId("sys_test"),
         onError,
         offlineQueueAdapter: {
           enqueue: vi.fn().mockResolvedValue("mock-id"),
@@ -224,7 +230,7 @@ describe("SyncEngine edge cases", () => {
       // Use fetchManifest that returns empty to avoid hydration issues during bootstrap
       networkAdapter.fetchManifest = vi
         .fn()
-        .mockResolvedValue({ systemId: "sys_test" as SystemId, documents: [] });
+        .mockResolvedValue({ systemId: sysId("sys_test"), documents: [] });
 
       const bootstrapPromise = engine.bootstrap();
       await vi.advanceTimersByTimeAsync(10_000);
@@ -250,13 +256,13 @@ describe("SyncEngine edge cases", () => {
   describe("applyIncomingChanges conflict persistence failure", () => {
     it("logs error when conflictPersistenceAdapter.saveConflicts fails", async () => {
       const keyResolver = createKeyResolver();
-      const keys = keyResolver.resolveKeys("system-core-sys_test");
+      const keys = keyResolver.resolveKeys(SYSTEM_CORE_DOC_ID);
 
       const doc = Automerge.from<Record<string, unknown>>({ items: {} });
       const senderSession = new EncryptedSyncSession({
         doc,
         keys,
-        documentId: "system-core-sys_test",
+        documentId: SYSTEM_CORE_DOC_ID,
         sodium,
       });
 
@@ -299,7 +305,7 @@ describe("SyncEngine edge cases", () => {
       });
 
       // Apply incoming changes - should not throw even if persistence fails
-      await engine.handleIncomingChanges("system-core-sys_test", [change]);
+      await engine.handleIncomingChanges(SYSTEM_CORE_DOC_ID, [change]);
 
       // saveConflicts was called with the fake notification
       expect(saveConflicts).toHaveBeenCalled();
@@ -330,10 +336,10 @@ describe("SyncEngine edge cases", () => {
       });
 
       const manifest: SyncManifest = {
-        systemId: "sys_test" as SystemId,
+        systemId: sysId("sys_test"),
         documents: [
           {
-            docId: "system-core-sys_test",
+            docId: SYSTEM_CORE_DOC_ID,
             docType: "system-core",
             keyType: "derived",
             bucketId: null,
@@ -347,7 +353,7 @@ describe("SyncEngine edge cases", () => {
             archived: false,
           },
           {
-            docId: "fronting-sys_test",
+            docId: FRONTING_DOC_ID,
             docType: "fronting",
             keyType: "derived",
             bucketId: null,
@@ -485,7 +491,7 @@ describe("SyncEngine edge cases", () => {
 
       // applyLocalChange should reject with the network error
       await expect(
-        engine.applyLocalChange("system-core-sys_test", (doc) => {
+        engine.applyLocalChange(asSyncDocId("system-core-sys_test"), (doc) => {
           const d = doc as Record<string, Record<string, string>>;
           d["test_key"] = { value: "test" };
         }),

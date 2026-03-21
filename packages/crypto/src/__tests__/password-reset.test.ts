@@ -9,6 +9,8 @@ import { getSodium } from "../sodium.js";
 
 import { setupSodium, teardownSodium } from "./helpers/setup-sodium.js";
 
+import type { RecoveryKeyDisplay } from "@pluralscape/types";
+
 beforeAll(setupSodium);
 afterAll(teardownSodium);
 
@@ -83,7 +85,7 @@ describe("resetPasswordViaRecoveryKey", () => {
 
     await expect(
       resetPasswordViaRecoveryKey({
-        displayKey: "not-a-valid-key",
+        displayKey: "not-a-valid-key" as RecoveryKeyDisplay,
         encryptedBackup,
         newPassword: "new-password",
         pwhashProfile: "mobile",

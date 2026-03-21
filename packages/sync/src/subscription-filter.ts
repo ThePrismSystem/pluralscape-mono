@@ -7,6 +7,7 @@ import type {
   ReplicationProfile,
   SubscriptionSet,
 } from "./replication-profiles.js";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 /**
  * Applies a replication profile to a manifest, producing a subscription set
@@ -15,7 +16,7 @@ import type {
 export function filterManifest(
   manifest: { readonly documents: readonly SyncManifestEntry[] },
   profile: ReplicationProfile,
-  localDocIds: readonly string[],
+  localDocIds: readonly SyncDocumentId[],
   nowMs?: number,
 ): SubscriptionSet {
   switch (profile.profileType) {
@@ -34,7 +35,7 @@ export function filterManifest(
 
 function filterOwnerFull(
   documents: readonly SyncManifestEntry[],
-  localDocIds: readonly string[],
+  localDocIds: readonly SyncDocumentId[],
 ): SubscriptionSet {
   const active: SyncManifestEntry[] = [];
   const available: SyncManifestEntry[] = [];
@@ -55,7 +56,7 @@ function filterOwnerFull(
 function filterOwnerLite(
   documents: readonly SyncManifestEntry[],
   profile: OwnerLiteProfile,
-  localDocIds: readonly string[],
+  localDocIds: readonly SyncDocumentId[],
   nowMs?: number,
 ): SubscriptionSet {
   const now = nowMs ?? Date.now();
@@ -130,7 +131,7 @@ function filterOwnerLite(
 function filterFriend(
   documents: readonly SyncManifestEntry[],
   profile: FriendProfile,
-  localDocIds: readonly string[],
+  localDocIds: readonly SyncDocumentId[],
 ): SubscriptionSet {
   const grantedBuckets = new Set(profile.grantedBucketIds);
 

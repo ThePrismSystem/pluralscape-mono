@@ -1,4 +1,4 @@
-import type { BlobId, SystemId } from "./ids.js";
+import type { BlobId, ChecksumHex, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Archived } from "./utility.js";
 
@@ -26,7 +26,7 @@ export interface BlobMetadata {
   readonly purpose: BlobPurpose;
   readonly mimeType: string;
   readonly sizeBytes: number;
-  readonly checksum: string;
+  readonly checksum: ChecksumHex;
   readonly uploadedAt: UnixMillis;
   /** Links this blob as a thumbnail of another blob. Null if not a thumbnail. */
   readonly thumbnailOfBlobId: BlobId | null;

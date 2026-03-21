@@ -24,6 +24,8 @@ import { createSystemCoreDocument } from "../factories/document-factory.js";
 import { EncryptedRelay } from "../relay.js";
 import { EncryptedSyncSession } from "../sync-session.js";
 
+import { asSyncDocId } from "./test-crypto-helpers.js";
+
 import type { SystemCoreDocument } from "../schemas/system-core.js";
 import type { BucketKeyCache, KdfMasterKey, SodiumAdapter, SignKeypair } from "@pluralscape/crypto";
 
@@ -67,8 +69,8 @@ describe("performance", () => {
         sodium,
       });
       try {
-        const docId = "system-core-sys_perf1";
-        const keys = resolver.resolveKeys(docId);
+        const testDocId = asSyncDocId("system-core-sys_perf1");
+        const keys = resolver.resolveKeys(testDocId);
         const relay = new EncryptedRelay();
 
         // Both sessions must start from the same base document (Automerge.clone).
@@ -80,7 +82,7 @@ describe("performance", () => {
         const producer = new EncryptedSyncSession<SystemCoreDocument>({
           doc: Automerge.clone(base),
           keys,
-          documentId: docId,
+          documentId: testDocId,
           sodium,
         });
 
@@ -111,11 +113,11 @@ describe("performance", () => {
         const consumer = new EncryptedSyncSession<SystemCoreDocument>({
           doc: Automerge.clone(base),
           keys,
-          documentId: docId,
+          documentId: testDocId,
           sodium,
         });
 
-        const result = await relay.getEnvelopesSince(docId, 0);
+        const result = await relay.getEnvelopesSince(testDocId, 0);
         const start = Date.now();
         consumer.applyEncryptedChanges(result.envelopes);
         const elapsed = Date.now() - start;
@@ -139,15 +141,15 @@ describe("performance", () => {
     // Verify that a snapshot is significantly smaller than the raw change log.
     const resolver = DocumentKeyResolver.create({ masterKey, signingKeys, bucketKeyCache, sodium });
     try {
-      const docId = "system-core-sys_perf2";
-      const keys = resolver.resolveKeys(docId);
+      const testDocId = asSyncDocId("system-core-sys_perf2");
+      const keys = resolver.resolveKeys(testDocId);
       const relay = new EncryptedRelay();
 
       const N = 200; // Smaller set for size test
       const session = new EncryptedSyncSession<SystemCoreDocument>({
         doc: Automerge.clone(createSystemCoreDocument()),
         keys,
-        documentId: docId,
+        documentId: testDocId,
         sodium,
       });
 
@@ -176,7 +178,7 @@ describe("performance", () => {
 
       // Snapshot is a single compressed representation of current state
       const snapshotEnvelope = session.createSnapshot(N);
-      const changeResult = await relay.getEnvelopesSince(docId, 0);
+      const changeResult = await relay.getEnvelopesSince(testDocId, 0);
 
       const totalChangesBytes = changeResult.envelopes.reduce(
         (acc, e) => acc + e.ciphertext.length,

@@ -16,9 +16,17 @@ import {
 import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
 import { encryptChange, encryptSnapshot } from "@pluralscape/sync";
 
+import { DUMMY_PLAINTEXT } from "./fixture.constants.js";
+
 import type { SodiumAdapter } from "@pluralscape/crypto";
 import type { DocumentKeys } from "@pluralscape/sync";
+import type { SyncDocumentId } from "@pluralscape/types";
 import type { T1EncryptedBlob } from "@pluralscape/types";
+
+/** Cast a plain string to SyncDocumentId for use in tests. */
+export function asSyncDocId(id: string): SyncDocumentId {
+  return id as SyncDocumentId;
+}
 
 let initialized = false;
 let testMasterKey: ReturnType<typeof generateMasterKey>;
@@ -95,12 +103,12 @@ function toBase64url(bytes: Uint8Array): string {
  * signature over the AEAD ciphertext.
  */
 export async function makeSignedChange(
-  docId: string,
+  docId: SyncDocumentId,
   ctx?: SyncCryptoContext,
   plaintext?: Uint8Array,
 ): Promise<WireChangePayload> {
   const { sodium, keys } = ctx ?? (await createSyncCryptoContext());
-  const data = plaintext ?? new Uint8Array([1, 2, 3, 4]);
+  const data = plaintext ?? DUMMY_PLAINTEXT;
   const envelope = encryptChange(data, docId, keys, sodium);
 
   return {
@@ -126,13 +134,13 @@ export interface WireSnapshotPayload {
  * Create a properly signed wire-format snapshot envelope.
  */
 export async function makeSignedSnapshot(
-  docId: string,
+  docId: SyncDocumentId,
   snapshotVersion: number,
   ctx?: SyncCryptoContext,
   plaintext?: Uint8Array,
 ): Promise<WireSnapshotPayload> {
   const { sodium, keys } = ctx ?? (await createSyncCryptoContext());
-  const data = plaintext ?? new Uint8Array([1, 2, 3, 4]);
+  const data = plaintext ?? DUMMY_PLAINTEXT;
   const envelope = encryptSnapshot(data, docId, snapshotVersion, keys, sodium);
 
   return {

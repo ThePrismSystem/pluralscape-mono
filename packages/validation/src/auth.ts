@@ -6,6 +6,8 @@ import {
   MAX_RECOVERY_KEY_LENGTH,
 } from "./validation.constants.js";
 
+import type { RecoveryKeyDisplay } from "@pluralscape/types";
+
 export const LoginCredentialsSchema = z
   .object({
     email: z.email(),
@@ -47,7 +49,11 @@ export const RegenerateRecoveryKeySchema = z
 export const PasswordResetViaRecoveryKeySchema = z
   .object({
     email: z.email(),
-    recoveryKey: z.string().min(1).max(MAX_RECOVERY_KEY_LENGTH),
+    recoveryKey: z
+      .string()
+      .min(1)
+      .max(MAX_RECOVERY_KEY_LENGTH)
+      .transform((s) => s as RecoveryKeyDisplay),
     newPassword: z.string().min(AUTH_MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
   })
   .readonly();

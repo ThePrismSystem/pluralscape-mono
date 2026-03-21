@@ -8,7 +8,7 @@ import type {
   BlobUploadRequest,
   EncryptionTier,
 } from "../blob.js";
-import type { BlobId, SystemId } from "../ids.js";
+import type { BlobId, ChecksumHex, SystemId } from "../ids.js";
 import type { UnixMillis } from "../timestamps.js";
 
 describe("BlobPurpose", () => {
@@ -66,7 +66,7 @@ describe("BlobMetadata", () => {
     expectTypeOf<BlobMetadata["purpose"]>().toEqualTypeOf<BlobPurpose>();
     expectTypeOf<BlobMetadata["mimeType"]>().toBeString();
     expectTypeOf<BlobMetadata["sizeBytes"]>().toEqualTypeOf<number>();
-    expectTypeOf<BlobMetadata["checksum"]>().toBeString();
+    expectTypeOf<BlobMetadata["checksum"]>().toEqualTypeOf<ChecksumHex>();
     expectTypeOf<BlobMetadata["uploadedAt"]>().toEqualTypeOf<UnixMillis>();
     expectTypeOf<BlobMetadata["thumbnailOfBlobId"]>().toEqualTypeOf<BlobId | null>();
   });

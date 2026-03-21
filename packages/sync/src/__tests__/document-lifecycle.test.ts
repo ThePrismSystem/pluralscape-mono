@@ -18,8 +18,11 @@ import {
   TIME_SPLIT_CONFIGS,
 } from "../types.js";
 
+import { asSyncDocId } from "./test-crypto-helpers.js";
+
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -42,7 +45,7 @@ function makeKeys(): DocumentKeys {
 function makeSessions<T>(
   base: Automerge.Doc<T>,
   keys: DocumentKeys,
-  docId: string,
+  docId: SyncDocumentId,
 ): [EncryptedSyncSession<T>, EncryptedSyncSession<T>] {
   return [
     new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
@@ -64,7 +67,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-lc-001",
+      documentId: asSyncDocId("doc-lc-001"),
       sodium,
     });
 
@@ -99,7 +102,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-lc-size",
+      documentId: asSyncDocId("doc-lc-size"),
       sodium,
     });
 
@@ -130,7 +133,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-lc-archive",
+      documentId: asSyncDocId("doc-lc-archive"),
       sodium,
     });
 
@@ -164,7 +167,7 @@ describe("Compaction: snapshot roundtrip", () => {
 
   it("concurrent compaction: higher snapshotVersion wins", () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-lc-concurrent");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-lc-concurrent"));
 
     // Both sessions produce changes independently
     sessionA.change((d) => {
@@ -224,7 +227,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-lc-roundtrip",
+      documentId: asSyncDocId("doc-lc-roundtrip"),
       sodium,
     });
 
@@ -267,7 +270,7 @@ describe("Compaction: snapshot roundtrip", () => {
       sodium,
       0,
     );
-    const _r1 = await relay.getEnvelopesSince("doc-lc-roundtrip", 0);
+    const _r1 = await relay.getEnvelopesSince(asSyncDocId("doc-lc-roundtrip"), 0);
     anotherSession.applyEncryptedChanges(_r1.envelopes);
 
     // Both sessions agree on the post-snapshot state
@@ -281,7 +284,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-lc-mono",
+      documentId: asSyncDocId("doc-lc-mono"),
       sodium,
     });
 
@@ -320,7 +323,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys: keys2,
-      documentId: "doc-lc-seq",
+      documentId: asSyncDocId("doc-lc-seq"),
       sodium,
     });
 
@@ -396,13 +399,13 @@ describe("Time-split configuration", () => {
     const sessionQ1 = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys: keys1,
-      documentId: "fronting-sys_abc-2026-Q1",
+      documentId: asSyncDocId("fronting-sys_abc-2026-Q1"),
       sodium,
     });
     const sessionQ2 = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys: keys2,
-      documentId: "fronting-sys_abc-2026-Q2",
+      documentId: asSyncDocId("fronting-sys_abc-2026-Q2"),
       sodium,
     });
 
@@ -443,13 +446,13 @@ describe("Time-split configuration", () => {
     const sessionQ1 = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys: keys1,
-      documentId: "fronting-sys_1-2025-Q4",
+      documentId: asSyncDocId("fronting-sys_1-2025-Q4"),
       sodium,
     });
     const sessionQ2 = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys: keys2,
-      documentId: "fronting-sys_1-2026-Q1",
+      documentId: asSyncDocId("fronting-sys_1-2026-Q1"),
       sodium,
     });
 
@@ -516,7 +519,7 @@ describe("Purging: post-compaction state", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-purge-001",
+      documentId: asSyncDocId("doc-purge-001"),
       sodium,
     });
 
@@ -554,7 +557,7 @@ describe("Purging: post-compaction state", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-purge-002",
+      documentId: asSyncDocId("doc-purge-002"),
       sodium,
     });
 
@@ -588,7 +591,7 @@ describe("Purging: post-compaction state", () => {
     // Restore from snapshot and apply post-snapshot changes (simulates purge + recovery).
     // lastSyncedSeq=0 because this fresh relay only has the post-snapshot change at seq=1.
     const restored = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium, 0);
-    const _r2 = await relay.getEnvelopesSince("doc-purge-002", 0);
+    const _r2 = await relay.getEnvelopesSince(asSyncDocId("doc-purge-002"), 0);
     restored.applyEncryptedChanges(_r2.envelopes);
 
     expect(restored.document.switches).toHaveLength(4);
@@ -601,7 +604,7 @@ describe("Purging: post-compaction state", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-purge-003",
+      documentId: asSyncDocId("doc-purge-003"),
       sodium,
     });
 
@@ -631,7 +634,7 @@ describe("Purging: post-compaction state", () => {
     await relay.submit(env2);
 
     // After "purge" (seq <= 1 removed), only env2 (seq 2) survives
-    const _changesAfterPurgePg = await relay.getEnvelopesSince("doc-purge-003", 1);
+    const _changesAfterPurgePg = await relay.getEnvelopesSince(asSyncDocId("doc-purge-003"), 1);
     const changesAfterPurge = _changesAfterPurgePg.envelopes;
     expect(changesAfterPurge).toHaveLength(1);
     expect(changesAfterPurge[0]?.seq).toBe(2);
@@ -643,7 +646,7 @@ describe("Purging: post-compaction state", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-purge-full",
+      documentId: asSyncDocId("doc-purge-full"),
       sodium,
     });
 
@@ -681,7 +684,7 @@ describe("Purging: post-compaction state", () => {
     // Simulate recovery from snapshot
     const recovered = EncryptedSyncSession.fromSnapshot<typeof base>(snap, keys, sodium, 1);
     // Apply only changes after snapshotVersion=1
-    const _postSnapshotChangesPg = await relay.getEnvelopesSince("doc-purge-full", 1);
+    const _postSnapshotChangesPg = await relay.getEnvelopesSince(asSyncDocId("doc-purge-full"), 1);
     const postSnapshotChanges = _postSnapshotChangesPg.envelopes;
     recovered.applyEncryptedChanges(postSnapshotChanges);
 
@@ -693,7 +696,11 @@ describe("Purging: post-compaction state", () => {
 
 describe("Storage budget", () => {
   it("StorageBudgetExceededError has correct type and fields", () => {
-    const err = new StorageBudgetExceededError("doc-budget-test", 600_000_000, 524_288_000);
+    const err = new StorageBudgetExceededError(
+      asSyncDocId("doc-budget-test"),
+      600_000_000,
+      524_288_000,
+    );
     expect(err).toBeInstanceOf(Error);
     expect(err).toBeInstanceOf(StorageBudgetExceededError);
     expect(err.name).toBe("StorageBudgetExceededError");
@@ -737,7 +744,7 @@ describe("Archive: cold document behavior", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "fronting-sys_1-2024-Q4",
+      documentId: asSyncDocId("fronting-sys_1-2024-Q4"),
       sodium,
     });
 
@@ -769,7 +776,7 @@ describe("Archive: cold document behavior", () => {
   it("on-demand loaded document has correct data after sync", async () => {
     const base = createSystemCoreDocument();
     const relay = new EncryptedRelay();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-archive-ondemand");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-archive-ondemand"));
 
     const env = sessionA.change((d) => {
       d.members["mem_history"] = {

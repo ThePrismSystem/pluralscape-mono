@@ -2,7 +2,11 @@ import { DocumentNotFoundError, SnapshotVersionConflictError } from "@pluralscap
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PgSyncRelayService } from "../../services/sync-relay.service.js";
-import { makeEnvelope, makeSnapshotEnvelope } from "../helpers/crypto-test-fixtures.js";
+import {
+  asSyncDocId,
+  makeEnvelope,
+  makeSnapshotEnvelope,
+} from "../helpers/crypto-test-fixtures.js";
 import { mockDb } from "../helpers/mock-db.js";
 
 import type { SystemId } from "@pluralscape/types";
@@ -22,7 +26,7 @@ describe("PgSyncRelayService", () => {
       // INSERT .values().onConflictDoNothing().returning() -> inserted row
       chain.returning.mockResolvedValueOnce([{ seq: 5 }]);
 
-      const envelope = makeEnvelope("doc-1");
+      const envelope = makeEnvelope(asSyncDocId("doc-1"));
       const seq = await service.submit(envelope);
 
       expect(seq).toBe(5);
@@ -35,7 +39,7 @@ describe("PgSyncRelayService", () => {
       // UPDATE returning (no rows — document not found)
       chain.returning.mockResolvedValueOnce([]);
 
-      await expect(service.submit(makeEnvelope("missing-doc"))).rejects.toThrow(
+      await expect(service.submit(makeEnvelope(asSyncDocId("missing-doc")))).rejects.toThrow(
         DocumentNotFoundError,
       );
     });
@@ -58,7 +62,7 @@ describe("PgSyncRelayService", () => {
       // 2. insert .returning() -> [] (dedup hit, ON CONFLICT DO NOTHING)
       chain.returning.mockResolvedValueOnce([{ lastSeq: 4 }]).mockResolvedValueOnce([]);
 
-      const seq = await service.submit(makeEnvelope("doc-1"));
+      const seq = await service.submit(makeEnvelope(asSyncDocId("doc-1")));
 
       expect(seq).toBe(3);
     });
@@ -77,7 +81,7 @@ describe("PgSyncRelayService", () => {
       chain.where.mockResolvedValueOnce([]);
 
       try {
-        await service.submit(makeEnvelope("doc-dedup-missing"));
+        await service.submit(makeEnvelope(asSyncDocId("doc-dedup-missing")));
         expect.unreachable("Should have thrown");
       } catch (err) {
         expect(err).toBeInstanceOf(Error);
@@ -105,7 +109,7 @@ describe("PgSyncRelayService", () => {
 
       chain.limit.mockResolvedValueOnce([row]);
 
-      const result = await service.getEnvelopesSince("doc-1", 1);
+      const result = await service.getEnvelopesSince(asSyncDocId("doc-1"), 1);
 
       expect(result.envelopes).toHaveLength(1);
       expect(result.envelopes[0]?.signature).toEqual(row.signature);
@@ -121,7 +125,7 @@ describe("PgSyncRelayService", () => {
 
       chain.limit.mockResolvedValueOnce([]);
 
-      const result = await service.getEnvelopesSince("doc-1", 0);
+      const result = await service.getEnvelopesSince(asSyncDocId("doc-1"), 0);
 
       expect(result.envelopes).toEqual([]);
       expect(result.hasMore).toBe(false);
@@ -145,7 +149,7 @@ describe("PgSyncRelayService", () => {
 
       chain.limit.mockResolvedValueOnce(rows);
 
-      const result = await service.getEnvelopesSince("doc-1", 0, 2);
+      const result = await service.getEnvelopesSince(asSyncDocId("doc-1"), 0, 2);
 
       expect(result.envelopes).toHaveLength(2);
       expect(result.hasMore).toBe(true);
@@ -165,7 +169,9 @@ describe("PgSyncRelayService", () => {
       const onConflictDoUpdate = vi.fn().mockResolvedValueOnce(undefined);
       chain.values.mockReturnValueOnce({ onConflictDoUpdate });
 
-      await expect(service.submitSnapshot(makeSnapshotEnvelope("doc-1", 2))).resolves.not.toThrow();
+      await expect(
+        service.submitSnapshot(makeSnapshotEnvelope(asSyncDocId("doc-1"), 2)),
+      ).resolves.not.toThrow();
     });
 
     it("throws VERSION_CONFLICT when not newer", async () => {
@@ -178,9 +184,9 @@ describe("PgSyncRelayService", () => {
       // SELECT finds doc with higher version
       chain.where.mockResolvedValueOnce([{ snapshotVersion: 5 }]);
 
-      await expect(service.submitSnapshot(makeSnapshotEnvelope("doc-1", 3))).rejects.toThrow(
-        SnapshotVersionConflictError,
-      );
+      await expect(
+        service.submitSnapshot(makeSnapshotEnvelope(asSyncDocId("doc-1"), 3)),
+      ).rejects.toThrow(SnapshotVersionConflictError);
     });
 
     it("throws DocumentNotFoundError when document not found", async () => {
@@ -193,9 +199,9 @@ describe("PgSyncRelayService", () => {
       // SELECT returns empty
       chain.where.mockResolvedValueOnce([]);
 
-      await expect(service.submitSnapshot(makeSnapshotEnvelope("missing", 1))).rejects.toThrow(
-        DocumentNotFoundError,
-      );
+      await expect(
+        service.submitSnapshot(makeSnapshotEnvelope(asSyncDocId("missing"), 1)),
+      ).rejects.toThrow(DocumentNotFoundError);
     });
   });
 
@@ -216,7 +222,7 @@ describe("PgSyncRelayService", () => {
 
       chain.where.mockResolvedValueOnce([row]);
 
-      const result = await service.getLatestSnapshot("doc-1");
+      const result = await service.getLatestSnapshot(asSyncDocId("doc-1"));
 
       expect(result).not.toBeNull();
       expect(result?.signature).toEqual(row.signature);
@@ -230,7 +236,7 @@ describe("PgSyncRelayService", () => {
 
       chain.where.mockResolvedValueOnce([]);
 
-      const result = await service.getLatestSnapshot("doc-1");
+      const result = await service.getLatestSnapshot(asSyncDocId("doc-1"));
 
       expect(result).toBeNull();
     });

@@ -3,6 +3,7 @@ import { assertEnvelopeBlobs, toUint8Array } from "./sqlite-utils.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SqliteDriver, SqliteStatement } from "./sqlite-driver.js";
 import type { SyncStorageAdapter } from "./storage-adapter.js";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 interface SnapshotRow {
   document_id: string;
@@ -50,7 +51,7 @@ CREATE TABLE IF NOT EXISTS sync_local_changes (
 function rowToEnvelope(row: ChangeRow): EncryptedChangeEnvelope {
   const blobs = assertEnvelopeBlobs(row);
   return {
-    documentId: row.document_id,
+    documentId: row.document_id as SyncDocumentId,
     seq: row.seq,
     ciphertext: toUint8Array(row.ciphertext),
     ...blobs,
@@ -60,7 +61,7 @@ function rowToEnvelope(row: ChangeRow): EncryptedChangeEnvelope {
 function rowToSnapshot(row: SnapshotRow): EncryptedSnapshotEnvelope {
   const blobs = assertEnvelopeBlobs(row);
   return {
-    documentId: row.document_id,
+    documentId: row.document_id as SyncDocumentId,
     snapshotVersion: row.snapshot_version,
     ciphertext: toUint8Array(row.ciphertext),
     ...blobs,
@@ -120,12 +121,12 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
     };
   }
 
-  loadSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
+  loadSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null> {
     const row = this.stmts.loadSnapshot.get(documentId);
     return Promise.resolve(row ? rowToSnapshot(row) : null);
   }
 
-  saveSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
+  saveSnapshot(documentId: SyncDocumentId, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
     this.stmts.saveSnapshot.run(
       documentId,
       snapshot.snapshotVersion,
@@ -138,14 +139,14 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
   }
 
   loadChangesSince(
-    documentId: string,
+    documentId: SyncDocumentId,
     sinceSeq: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
     const rows = this.stmts.loadChanges.all(documentId, sinceSeq);
     return Promise.resolve(rows.map(rowToEnvelope));
   }
 
-  appendChange(documentId: string, change: EncryptedChangeEnvelope): Promise<void> {
+  appendChange(documentId: SyncDocumentId, change: EncryptedChangeEnvelope): Promise<void> {
     this.stmts.appendChange.run(
       documentId,
       change.seq,
@@ -157,7 +158,10 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
     return Promise.resolve();
   }
 
-  appendChanges(documentId: string, changes: readonly EncryptedChangeEnvelope[]): Promise<void> {
+  appendChanges(
+    documentId: SyncDocumentId,
+    changes: readonly EncryptedChangeEnvelope[],
+  ): Promise<void> {
     if (changes.length === 0) return Promise.resolve();
     this.driver.transaction(() => {
       for (const change of changes) {
@@ -174,17 +178,17 @@ export class SqliteStorageAdapter implements SyncStorageAdapter {
     return Promise.resolve();
   }
 
-  pruneChangesBeforeSnapshot(documentId: string, snapshotVersion: number): Promise<void> {
+  pruneChangesBeforeSnapshot(documentId: SyncDocumentId, snapshotVersion: number): Promise<void> {
     this.stmts.pruneChanges.run(documentId, snapshotVersion);
     return Promise.resolve();
   }
 
-  listDocuments(): Promise<readonly string[]> {
+  listDocuments(): Promise<readonly SyncDocumentId[]> {
     const rows = this.stmts.listDocs.all();
-    return Promise.resolve(rows.map((r) => r.document_id));
+    return Promise.resolve(rows.map((r) => r.document_id as SyncDocumentId));
   }
 
-  deleteDocument(documentId: string): Promise<void> {
+  deleteDocument(documentId: SyncDocumentId): Promise<void> {
     this.driver.transaction(() => {
       this.stmts.deleteChanges.run(documentId);
       this.stmts.deleteSnapshots.run(documentId);

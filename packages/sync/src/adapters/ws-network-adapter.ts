@@ -11,7 +11,7 @@ import {
 import type { ClientMessage, ServerMessage, SyncTransport } from "../protocol.js";
 import type { EncryptedChangeEnvelope, EncryptedSnapshotEnvelope } from "../types.js";
 import type { SyncManifest, SyncNetworkAdapter, SyncSubscription } from "./network-adapter.js";
-import type { Logger } from "@pluralscape/types";
+import type { Logger, SyncDocumentId, SystemId } from "@pluralscape/types";
 
 /** Distributive Omit that preserves union members. */
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
@@ -65,7 +65,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   }
 
   async submitChange(
-    documentId: string,
+    documentId: SyncDocumentId,
     change: Omit<EncryptedChangeEnvelope, "seq">,
   ): Promise<EncryptedChangeEnvelope> {
     const response = await this.request({
@@ -82,7 +82,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   }
 
   async fetchChangesSince(
-    documentId: string,
+    documentId: SyncDocumentId,
     sinceSeq: number,
   ): Promise<readonly EncryptedChangeEnvelope[]> {
     const response = await this.request({
@@ -98,7 +98,10 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     return changesResp.changes;
   }
 
-  async submitSnapshot(documentId: string, snapshot: EncryptedSnapshotEnvelope): Promise<void> {
+  async submitSnapshot(
+    documentId: SyncDocumentId,
+    snapshot: EncryptedSnapshotEnvelope,
+  ): Promise<void> {
     const response = await this.request({
       type: "SubmitSnapshotRequest",
       docId: documentId,
@@ -115,7 +118,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     }
   }
 
-  async fetchLatestSnapshot(documentId: string): Promise<EncryptedSnapshotEnvelope | null> {
+  async fetchLatestSnapshot(documentId: SyncDocumentId): Promise<EncryptedSnapshotEnvelope | null> {
     const response = await this.request({
       type: "FetchSnapshotRequest",
       docId: documentId,
@@ -126,7 +129,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
   }
 
   subscribe(
-    documentId: string,
+    documentId: SyncDocumentId,
     onChanges: (changes: readonly EncryptedChangeEnvelope[]) => void,
   ): SyncSubscription {
     let callbacks = this.subscriptions.get(documentId);
@@ -172,7 +175,7 @@ export class WsNetworkAdapter implements SyncNetworkAdapter {
     };
   }
 
-  async fetchManifest(systemId: string): Promise<SyncManifest> {
+  async fetchManifest(systemId: SystemId): Promise<SyncManifest> {
     const response = await this.request({
       type: "ManifestRequest",
       systemId,

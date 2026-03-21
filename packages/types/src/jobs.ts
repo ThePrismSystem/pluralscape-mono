@@ -1,4 +1,4 @@
-import type { JobId, SystemId } from "./ids.js";
+import type { JobId, SyncDocumentId, SystemId } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 
 /** The kind of background job. */
@@ -44,7 +44,7 @@ export interface JobPayloadMap {
   "sync-push": Record<string, unknown>;
   "sync-pull": Record<string, unknown>;
   "blob-upload": Record<string, unknown>;
-  "blob-cleanup": Record<string, unknown>;
+  "blob-cleanup": Record<string, never>;
   "export-generate": Record<string, unknown>;
   "import-process": Record<string, unknown>;
   "webhook-deliver": Record<string, unknown>;
@@ -53,14 +53,14 @@ export interface JobPayloadMap {
   "account-purge": Record<string, unknown>;
   "bucket-key-rotation": Record<string, unknown>;
   "report-generate": Record<string, unknown>;
-  "sync-queue-cleanup": Record<string, unknown>;
-  "audit-log-cleanup": Record<string, unknown>;
+  "sync-queue-cleanup": Record<string, never>;
+  "audit-log-cleanup": Record<string, never>;
   "partition-maintenance": Record<string, unknown>;
   "sync-compaction": {
-    readonly documentId: string;
-    readonly systemId: string;
+    readonly documentId: SyncDocumentId;
+    readonly systemId: SystemId;
   };
-  "device-transfer-cleanup": Record<string, unknown>;
+  "device-transfer-cleanup": Record<string, never>;
 }
 
 /** Result of a completed or failed job. */

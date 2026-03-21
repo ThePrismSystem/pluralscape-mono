@@ -12,7 +12,7 @@ import type { SyncStorageAdapter } from "../adapters/storage-adapter.js";
 import type { SyncRelayService } from "../relay-service.js";
 import type { EncryptedSyncSession } from "../sync-session.js";
 import type { CompactionConfig, StorageBudget } from "../types.js";
-import type { Logger } from "@pluralscape/types";
+import type { Logger, SyncDocumentId } from "@pluralscape/types";
 
 /** Why a compaction was performed. */
 export type CompactionReason = "change-threshold" | "size-threshold" | "explicit";
@@ -22,7 +22,7 @@ export type CompactionSkipReason = "not-eligible" | "storage-budget-exceeded";
 
 /** Input for the compaction handler. */
 export interface CompactionInput {
-  readonly documentId: string;
+  readonly documentId: SyncDocumentId;
   readonly session: EncryptedSyncSession<unknown>;
   readonly changesSinceSnapshot: number;
   readonly currentSizeBytes: number;

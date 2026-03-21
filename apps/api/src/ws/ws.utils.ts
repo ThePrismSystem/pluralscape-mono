@@ -5,6 +5,7 @@
  * patterns duplicated across multiple modules.
  */
 import type { SyncError } from "@pluralscape/sync";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 /** Format an unknown error to a loggable string (includes stack trace when available). */
 export function formatError(err: unknown): string {
@@ -21,7 +22,7 @@ export function makeSyncError(
   code: SyncError["code"],
   message: string,
   correlationId: string | null,
-  docId: string | null = null,
+  docId: SyncDocumentId | null = null,
 ): SyncError {
   return { type: "SyncError", correlationId, code, message, docId };
 }

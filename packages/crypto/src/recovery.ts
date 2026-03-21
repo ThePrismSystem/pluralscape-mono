@@ -5,11 +5,12 @@ import { assertAeadKey, assertKdfMasterKey } from "./validation.js";
 
 import type { EncryptedPayload } from "./symmetric.js";
 import type { KdfMasterKey } from "./types.js";
+import type { RecoveryKeyDisplay } from "@pluralscape/types";
 
 /** Result of generating a recovery key. */
 export interface RecoveryKeyResult {
   /** Human-readable recovery key (13 groups of 4 base32 chars, e.g. ABCD-EFGH-...). */
-  readonly displayKey: string;
+  readonly displayKey: RecoveryKeyDisplay;
   /** The master key encrypted under the recovery key bytes. */
   readonly encryptedMasterKey: EncryptedPayload;
 }
@@ -99,6 +100,18 @@ export function isValidRecoveryKeyFormat(displayKey: string): boolean {
   return RECOVERY_KEY_PATTERN.test(displayKey);
 }
 
+/**
+ * Validate and cast a string to a branded RecoveryKeyDisplay.
+ * Throws if the input does not match the expected recovery key format
+ * (13 groups of 4 base32 characters separated by dashes).
+ */
+export function toRecoveryKeyDisplay(key: string): RecoveryKeyDisplay {
+  if (!isValidRecoveryKeyFormat(key)) {
+    throw new InvalidInputError("Invalid recovery key format");
+  }
+  return key as RecoveryKeyDisplay;
+}
+
 // ── Public API ─────────────────────────────────────────────────────
 
 /**
@@ -118,7 +131,7 @@ export function generateRecoveryKey(masterKey: KdfMasterKey): RecoveryKeyResult 
     for (let i = 0; i < encoded.length; i += RECOVERY_KEY_GROUP_SIZE) {
       groups.push(encoded.slice(i, i + RECOVERY_KEY_GROUP_SIZE));
     }
-    const displayKey = groups.join("-");
+    const displayKey = groups.join("-") as RecoveryKeyDisplay;
     assertAeadKey(recoveryKeyBytes);
     const encryptedMasterKey = encrypt(masterKey, recoveryKeyBytes);
     return { displayKey, encryptedMasterKey };
@@ -135,7 +148,7 @@ export function generateRecoveryKey(masterKey: KdfMasterKey): RecoveryKeyResult 
  * bad format, DecryptionFailedError on wrong key or tampered blob.
  */
 export function recoverMasterKey(
-  displayKey: string,
+  displayKey: RecoveryKeyDisplay,
   encryptedMasterKey: EncryptedPayload,
 ): KdfMasterKey {
   if (!isValidRecoveryKeyFormat(displayKey)) {

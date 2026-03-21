@@ -9,6 +9,7 @@
  * the end-to-end flow as a single cohesive scenario.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
+import { asSyncDocId } from "../../fixtures/crypto.fixture.js";
 import { createAuthenticatedWsClient, makeSignedChange } from "../../fixtures/ws-sync.fixture.js";
 
 import type { ServerMessage } from "@pluralscape/sync";
@@ -38,7 +39,7 @@ test.describe("WebSocket sync vertical slice", () => {
       // Each connection gets a unique sync session
       expect(client1.syncSessionId).not.toBe(client2.syncSessionId);
 
-      const docId = `e2e-vertical-${crypto.randomUUID()}`;
+      const docId = asSyncDocId(`e2e-vertical-${crypto.randomUUID()}`);
 
       // Both subscribe to the same document
       const sub1 = await client1.ws.subscribe([
@@ -86,7 +87,7 @@ test.describe("WebSocket sync vertical slice", () => {
     const client2 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
 
     try {
-      const docId = `e2e-unsub-${crypto.randomUUID()}`;
+      const docId = asSyncDocId(`e2e-unsub-${crypto.randomUUID()}`);
 
       // Both subscribe
       await client1.ws.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
@@ -125,7 +126,7 @@ test.describe("WebSocket sync vertical slice", () => {
   }) => {
     const client1 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
 
-    const docId = `e2e-catchup-${crypto.randomUUID()}`;
+    const docId = asSyncDocId(`e2e-catchup-${crypto.randomUUID()}`);
 
     try {
       // Subscribe and submit a change
@@ -163,7 +164,7 @@ test.describe("WebSocket sync vertical slice", () => {
     const client2 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
     const client3 = await createAuthenticatedWsClient(registeredAccount.sessionToken, request);
 
-    const docId = `e2e-disconnect-${crypto.randomUUID()}`;
+    const docId = asSyncDocId(`e2e-disconnect-${crypto.randomUUID()}`);
 
     try {
       // All three subscribe

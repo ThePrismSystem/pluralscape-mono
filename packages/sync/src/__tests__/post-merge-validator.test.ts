@@ -32,9 +32,12 @@ import { EncryptedRelay } from "../relay.js";
 import { ENTITY_CRDT_STRATEGIES } from "../strategies/crdt-strategies.js";
 import { EncryptedSyncSession, syncThroughRelay } from "../sync-session.js";
 
+import { asSyncDocId } from "./test-crypto-helpers.js";
+
 import type { CrdtGroup, CrdtSubsystem, CrdtInnerWorldRegion } from "../schemas/system-core.js";
 import type { DocumentKeys } from "../types.js";
 import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { SyncDocumentId } from "@pluralscape/types";
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -57,7 +60,7 @@ function makeKeys(): DocumentKeys {
 function makeSessions<T>(
   base: Automerge.Doc<T>,
   keys: DocumentKeys,
-  docId: string,
+  docId: SyncDocumentId,
 ): [EncryptedSyncSession<T>, EncryptedSyncSession<T>] {
   return [
     new EncryptedSyncSession({ doc: Automerge.clone(base), keys, documentId: docId, sodium }),
@@ -162,7 +165,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
 
   it("re-stamps archived = true when entity is archived post-merge to ensure tombstone wins future merges", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-tomb-enforce");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-tomb-enforce"));
 
     // Seed an active member
     const seedEnv = sessionA.change((d) => {
@@ -184,7 +187,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
       };
     });
     await relay.submit(seedEnv);
-    const _r1 = await relay.getEnvelopesSince("doc-tomb-enforce", 0);
+    const _r1 = await relay.getEnvelopesSince(asSyncDocId("doc-tomb-enforce"), 0);
     sessionB.applyEncryptedChanges(_r1.envelopes);
 
     // A archives. B makes an unrelated edit concurrently (does not un-archive).
@@ -225,7 +228,7 @@ describe("PostMergeValidator: enforceTombstones", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-tomb-no-stamp",
+      documentId: asSyncDocId("doc-tomb-no-stamp"),
       sodium,
     });
 
@@ -268,14 +271,14 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
 
   it("breaks a group cycle by nulling parent of lowest-ID entity", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-cycle-fix");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-cycle-fix"));
 
     const seedEnv = sessionA.change((d) => {
       d.groups["groupA"] = makeGroup("groupA", 1);
       d.groups["groupB"] = makeGroup("groupB", 2);
     });
     await relay.submit(seedEnv);
-    const _r2 = await relay.getEnvelopesSince("doc-cycle-fix", 0);
+    const _r2 = await relay.getEnvelopesSince(asSyncDocId("doc-cycle-fix"), 0);
     sessionB.applyEncryptedChanges(_r2.envelopes);
 
     // Create mutual parent cycle
@@ -304,14 +307,14 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
 
   it("breaks subsystem cycles", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-ss-cycle");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-ss-cycle"));
 
     const seedEnv = sessionA.change((d) => {
       d.subsystems["ss_a"] = makeSubsystem("ss_a");
       d.subsystems["ss_b"] = makeSubsystem("ss_b");
     });
     await relay.submit(seedEnv);
-    const _r3 = await relay.getEnvelopesSince("doc-ss-cycle", 0);
+    const _r3 = await relay.getEnvelopesSince(asSyncDocId("doc-ss-cycle"), 0);
     sessionB.applyEncryptedChanges(_r3.envelopes);
 
     const envA = sessionA.change((d) => {
@@ -336,14 +339,14 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
 
   it("breaks innerworld region cycles", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-rg-cycle");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-rg-cycle"));
 
     const seedEnv = sessionA.change((d) => {
       d.innerWorldRegions["rg_a"] = makeRegion("rg_a");
       d.innerWorldRegions["rg_b"] = makeRegion("rg_b");
     });
     await relay.submit(seedEnv);
-    const _r4 = await relay.getEnvelopesSince("doc-rg-cycle", 0);
+    const _r4 = await relay.getEnvelopesSince(asSyncDocId("doc-rg-cycle"), 0);
     sessionB.applyEncryptedChanges(_r4.envelopes);
 
     const envA = sessionA.change((d) => {
@@ -367,7 +370,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
 
   it("breaks a 3-node group cycle (A->B->C->A) by nulling parent of lowest-ID entity", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-3-cycle");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-3-cycle"));
 
     const seedEnv = sessionA.change((d) => {
       d.groups["grpA"] = makeGroup("grpA", 1);
@@ -375,7 +378,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
       d.groups["grpC"] = makeGroup("grpC", 3);
     });
     await relay.submit(seedEnv);
-    const seedResult = await relay.getEnvelopesSince("doc-3-cycle", 0);
+    const seedResult = await relay.getEnvelopesSince(asSyncDocId("doc-3-cycle"), 0);
     sessionB.applyEncryptedChanges(seedResult.envelopes);
 
     // A sets grpA->grpB, grpB->grpC. B sets grpC->grpA. After merge: A->B->C->A cycle.
@@ -409,7 +412,7 @@ describe("PostMergeValidator: detectHierarchyCycles", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-no-cycle",
+      documentId: asSyncDocId("doc-no-cycle"),
       sodium,
     });
 
@@ -437,7 +440,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-sort-norm",
+      documentId: asSyncDocId("doc-sort-norm"),
       sodium,
     });
 
@@ -462,7 +465,7 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-sort-ok",
+      documentId: asSyncDocId("doc-sort-ok"),
       sodium,
     });
 
@@ -489,7 +492,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
 
   it("sets dismissed = false when respondedByMemberId is set and dismissed is true", async () => {
     const base = createFrontingDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-checkin-norm");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-checkin-norm"));
 
     const seedEnv = sessionA.change((d) => {
       d.checkInRecords["cr_1"] = {
@@ -506,7 +509,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
       };
     });
     await relay.submit(seedEnv);
-    const _r5 = await relay.getEnvelopesSince("doc-checkin-norm", 0);
+    const _r5 = await relay.getEnvelopesSince(asSyncDocId("doc-checkin-norm"), 0);
     sessionB.applyEncryptedChanges(_r5.envelopes);
 
     // A responds, B dismisses concurrently
@@ -541,7 +544,7 @@ describe("PostMergeValidator: normalizeCheckInRecord", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-checkin-ok",
+      documentId: asSyncDocId("doc-checkin-ok"),
       sodium,
     });
 
@@ -578,7 +581,7 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
 
   it("re-stamps accepted when status reverted to pending from accepted", async () => {
     const base = createPrivacyConfigDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-friend-norm");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-friend-norm"));
 
     // Seed with accepted status and assigned buckets (evidence of prior acceptance)
     const seedEnv = sessionA.change((d) => {
@@ -597,7 +600,7 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
       d.friendConnections["fc_1"].assignedBuckets["bkt_1"] = true;
     });
     await relay.submit(seedEnv);
-    const _r6 = await relay.getEnvelopesSince("doc-friend-norm", 0);
+    const _r6 = await relay.getEnvelopesSince(asSyncDocId("doc-friend-norm"), 0);
     sessionB.applyEncryptedChanges(_r6.envelopes);
 
     // B sets status to pending while A keeps accepted
@@ -631,7 +634,7 @@ describe("PostMergeValidator: normalizeFriendConnection", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-friend-ok",
+      documentId: asSyncDocId("doc-friend-ok"),
       sodium,
     });
 
@@ -670,7 +673,7 @@ describe("runAllValidations (module-level function)", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-all-valid",
+      documentId: asSyncDocId("doc-all-valid"),
       sodium,
     });
 
@@ -691,7 +694,7 @@ describe("runAllValidations (module-level function)", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-all-with-issues",
+      documentId: asSyncDocId("doc-all-with-issues"),
       sodium,
     });
 
@@ -728,7 +731,7 @@ describe("runAllValidations (module-level function)", () => {
 
   it("includes cycle break and sort order notifications in result.notifications", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-notif-test");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-notif-test"));
 
     const seedEnv = sessionA.change((d) => {
       d.groups["grpA"] = makeGroup("grpA", 5);
@@ -736,7 +739,7 @@ describe("runAllValidations (module-level function)", () => {
       d.groups["grpC"] = makeGroup("grpC", 3);
     });
     await relay.submit(seedEnv);
-    const _r7 = await relay.getEnvelopesSince("doc-notif-test", 0);
+    const _r7 = await relay.getEnvelopesSince(asSyncDocId("doc-notif-test"), 0);
     sessionB.applyEncryptedChanges(_r7.envelopes);
 
     const envA = sessionA.change((d) => {
@@ -775,7 +778,7 @@ describe("runAllValidations (module-level function)", () => {
 
   it("handles both sort order ties and parent cycles in same run", async () => {
     const base = createSystemCoreDocument();
-    const [sessionA, sessionB] = makeSessions(base, keys, "doc-multi-validator");
+    const [sessionA, sessionB] = makeSessions(base, keys, asSyncDocId("doc-multi-validator"));
 
     // Seed groups with sort order ties and potential cycle
     const seedEnv = sessionA.change((d) => {
@@ -784,7 +787,7 @@ describe("runAllValidations (module-level function)", () => {
       d.groups["grpC"] = makeGroup("grpC", 3);
     });
     await relay.submit(seedEnv);
-    const _r8 = await relay.getEnvelopesSince("doc-multi-validator", 0);
+    const _r8 = await relay.getEnvelopesSince(asSyncDocId("doc-multi-validator"), 0);
     sessionB.applyEncryptedChanges(_r8.envelopes);
 
     // Create a cycle between grpA and grpC
@@ -814,7 +817,7 @@ describe("runAllValidations (module-level function)", () => {
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
       keys,
-      documentId: "doc-onerror-test",
+      documentId: asSyncDocId("doc-onerror-test"),
       sodium,
     });
 
