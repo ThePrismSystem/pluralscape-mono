@@ -112,7 +112,7 @@ describe("WsNetworkAdapter", () => {
         received.push([...changes]);
       });
 
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
 
       // Trigger a change that causes a DocumentUpdate
       await adapter.submitChange(docId, mockChangeWithoutSeq(docId));
@@ -133,7 +133,7 @@ describe("WsNetworkAdapter", () => {
         throw new Error("subscriber error");
       });
 
-      relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit(mockChangeWithoutSeq(docId));
       await adapter.submitChange(docId, mockChangeWithoutSeq(docId));
       await vi.waitFor(() => {
         expect(warnFn).toHaveBeenCalledWith(
@@ -305,8 +305,8 @@ describe("WsNetworkAdapter", () => {
       const adapter = new WsNetworkAdapter(transport);
       const docId = crypto.randomUUID();
 
-      relay.submit(mockChangeWithoutSeq(docId));
-      relay.submit({ ...mockChangeWithoutSeq(docId), nonce: nonce(0x11) });
+      await relay.submit(mockChangeWithoutSeq(docId));
+      await relay.submit({ ...mockChangeWithoutSeq(docId), nonce: nonce(0x11) });
 
       await adapter.fetchChangesSince(docId, 0);
 
