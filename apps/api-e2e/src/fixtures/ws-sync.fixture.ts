@@ -7,17 +7,18 @@
  *
  * Also re-exports SyncWsClient for tests that need lower-level control.
  */
-import { SyncWsClient } from "./ws.fixture.js";
+import { SyncWsClient, base64urlOfLength } from "./ws.fixture.js";
 
+import type { WireChangePayload } from "./ws.fixture.js";
 import type { APIRequestContext } from "@playwright/test";
 import type { ServerMessage } from "@pluralscape/sync";
 
-
-export { SyncWsClient } from "./ws.fixture.js";
+export { SyncWsClient, base64urlOfLength } from "./ws.fixture.js";
+export type { WireChangePayload } from "./ws.fixture.js";
 
 interface AuthenticatedWsClient {
   /** The connected and authenticated WebSocket client. */
-  client: SyncWsClient;
+  ws: SyncWsClient;
   /** The system ID used during authentication. */
   systemId: string;
   /** The sync session ID returned by the server. */
@@ -29,7 +30,7 @@ interface AuthenticatedWsClient {
 /**
  * Create a WS client that is already connected and authenticated.
  *
- * The caller is responsible for closing the client via `client.close()`.
+ * The caller is responsible for closing the client via `ws.close()`.
  *
  * @param sessionToken - Session token from a registered account
  * @param request - Playwright APIRequestContext for fetching the system ID
@@ -51,27 +52,26 @@ export async function createAuthenticatedWsClient(
     throw new Error("No system found for account");
   }
 
-  // Connect and authenticate
+  // Connect and authenticate — close on any failure to prevent WS leak
   const client = new SyncWsClient();
-  await client.connect();
+  try {
+    await client.connect();
 
-  const response: ServerMessage = await client.authenticate(sessionToken, systemId);
-  if (response.type !== "AuthenticateResponse") {
+    const response: ServerMessage = await client.authenticate(sessionToken, systemId);
+    if (response.type !== "AuthenticateResponse") {
+      throw new Error(`Authentication failed: ${JSON.stringify(response)}`);
+    }
+
+    return {
+      ws: client,
+      systemId,
+      syncSessionId: response.syncSessionId,
+      sessionToken,
+    };
+  } catch (err) {
     client.close();
-    throw new Error(`Authentication failed: ${JSON.stringify(response)}`);
+    throw err;
   }
-
-  return {
-    client,
-    systemId,
-    syncSessionId: response.syncSessionId,
-    sessionToken,
-  };
-}
-
-/** Generate a base64url string that decodes to exactly `n` bytes of the given fill value. */
-export function base64urlOfLength(n: number, fill = 0): string {
-  return Buffer.from(new Uint8Array(n).fill(fill)).toString("base64url");
 }
 
 /** Byte length constants for building wire-format test changes. */
@@ -92,16 +92,7 @@ const FILL_PUBLIC_KEY = 4;
  * Build a wire-format change object for submitting via WebSocket.
  * Each field uses a distinct fill byte for easy identification in test assertions.
  */
-export function makeTestChange(
-  docId: string,
-  fillOffset = 0,
-): {
-  ciphertext: string;
-  nonce: string;
-  signature: string;
-  authorPublicKey: string;
-  documentId: string;
-} {
+export function makeTestChange(docId: string, fillOffset = 0): WireChangePayload {
   return {
     ciphertext: base64urlOfLength(WIRE_FORMAT.CIPHERTEXT_BYTES, FILL_CIPHERTEXT + fillOffset),
     nonce: base64urlOfLength(WIRE_FORMAT.NONCE_BYTES, FILL_NONCE + fillOffset),
