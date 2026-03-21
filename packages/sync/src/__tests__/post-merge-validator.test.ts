@@ -594,7 +594,7 @@ describe("PostMergeValidator: runAllValidations", () => {
     relay = new EncryptedRelay();
   });
 
-  it("returns aggregate results from all validators", () => {
+  it("returns aggregate results from all validators including notifications", () => {
     const base = createSystemCoreDocument();
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
@@ -613,9 +613,10 @@ describe("PostMergeValidator: runAllValidations", () => {
     expect(result.friendConnectionNormalizations).toBe(0);
     expect(result.tombstoneNotifications).toHaveLength(0);
     expect(result.correctionEnvelopes).toHaveLength(0);
+    expect(result.notifications).toHaveLength(0);
   });
 
-  it("returns tombstoneNotifications and correctionEnvelopes when issues exist", () => {
+  it("returns tombstoneNotifications, correctionEnvelopes, and notifications when issues exist", () => {
     const base = createSystemCoreDocument();
     const session = new EncryptedSyncSession({
       doc: Automerge.clone(base),
@@ -649,6 +650,58 @@ describe("PostMergeValidator: runAllValidations", () => {
 
     expect(result.tombstoneNotifications.length).toBeGreaterThan(0);
     expect(result.correctionEnvelopes.length).toBeGreaterThan(0);
+    // notifications should include tombstone notifications
+    expect(result.notifications.length).toBeGreaterThan(0);
+    expect(result.notifications).toEqual(
+      expect.arrayContaining([expect.objectContaining({ resolution: "lww-field" })]),
+    );
+  });
+
+  it("includes cycle break and sort order notifications in result.notifications", () => {
+    const base = createSystemCoreDocument();
+    const [sessionA, sessionB] = makeSessions(base, keys, "doc-notif-test");
+
+    const seedEnv = sessionA.change((d) => {
+      d.groups["grpA"] = makeGroup("grpA", 5);
+      d.groups["grpB"] = makeGroup("grpB", 5);
+      d.groups["grpC"] = makeGroup("grpC", 3);
+    });
+    relay.submit(seedEnv);
+    sessionB.applyEncryptedChanges(relay.getEnvelopesSince("doc-notif-test", 0));
+
+    const envA = sessionA.change((d) => {
+      const g = d.groups["grpA"];
+      if (g) g.parentGroupId = s("grpC");
+    });
+    const envB = sessionB.change((d) => {
+      const g = d.groups["grpC"];
+      if (g) g.parentGroupId = s("grpA");
+    });
+
+    relay.submit(envA);
+    relay.submit(envB);
+    syncThroughRelay([sessionA, sessionB], relay);
+
+    const validator = new PostMergeValidator();
+    const result = validator.runAllValidations(sessionA);
+
+    // notifications should include both cycle and sort order entries
+    const cycleNotifications = result.notifications.filter(
+      (n) => n.resolution === "post-merge-cycle",
+    );
+    const sortNotifications = result.notifications.filter(
+      (n) => n.resolution === "post-merge-sort-normalize",
+    );
+
+    expect(cycleNotifications.length).toBeGreaterThan(0);
+    expect(sortNotifications.length).toBeGreaterThan(0);
+
+    // The total notifications count should match what was previously computed in SyncEngine
+    expect(result.notifications.length).toBe(
+      result.tombstoneNotifications.length +
+        result.cycleBreaks.length +
+        result.sortOrderPatches.length,
+    );
   });
 
   it("handles both sort order ties and parent cycles in same run", () => {

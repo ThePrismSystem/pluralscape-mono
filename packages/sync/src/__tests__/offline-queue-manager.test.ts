@@ -203,6 +203,50 @@ describe("OfflineQueueManager", () => {
     expect(submitChange).toHaveBeenCalledTimes(3);
   });
 
+  it("processes multiple documents concurrently", async () => {
+    // Create entries for 4 different documents
+    const entries = [
+      makeEntry("e1", "doc_a", 1000),
+      makeEntry("e2", "doc_b", 1000),
+      makeEntry("e3", "doc_c", 1000),
+      makeEntry("e4", "doc_d", 1000),
+    ];
+
+    const documentsInFlight = new Set<string>();
+    let maxConcurrentDocs = 0;
+
+    const submitChange = vi
+      .fn()
+      .mockImplementation((docId: string, change: Omit<EncryptedChangeEnvelope, "seq">) => {
+        documentsInFlight.add(docId);
+        maxConcurrentDocs = Math.max(maxConcurrentDocs, documentsInFlight.size);
+        return new Promise<EncryptedChangeEnvelope>((resolve) => {
+          // Simulate async work to allow concurrency to be observed
+          setTimeout(() => {
+            documentsInFlight.delete(docId);
+            resolve({ ...change, seq: 1 } as EncryptedChangeEnvelope);
+          }, 10);
+        });
+      });
+
+    const networkAdapter = mockNetworkAdapter({ submitChange });
+
+    const manager = new OfflineQueueManager({
+      offlineQueueAdapter: mockOfflineQueueAdapter(entries),
+      networkAdapter,
+      storageAdapter: mockStorageAdapter(),
+      onError: vi.fn(),
+    });
+
+    const result = await manager.replay();
+
+    expect(result.replayed).toBe(4);
+    expect(result.failed).toBe(0);
+    expect(result.skipped).toBe(0);
+    // With 4 docs and concurrency limit of 3, we should see at least 2 concurrent
+    expect(maxConcurrentDocs).toBeGreaterThan(1);
+  });
+
   it("persists changes locally after successful replay", async () => {
     const entries = [makeEntry("e1", "doc_a", 1000)];
 

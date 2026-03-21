@@ -54,16 +54,7 @@ export class SyncEngine {
   private readonly subscriptions: Array<{ unsubscribe(): void }> = [];
   private readonly documentQueues = new Map<string, Promise<void>>();
 
-  private readonly networkAdapter: SyncNetworkAdapter;
-  private readonly storageAdapter: SyncStorageAdapter;
-  private readonly keyResolver: DocumentKeyResolver;
-  private readonly sodium: SodiumAdapter;
-  private readonly profile: ReplicationProfile;
-  private readonly systemId: string;
-  private readonly onError: (message: string, error: unknown) => void;
-  private readonly onConflict?: (notification: ConflictNotification) => void;
-  private readonly conflictPersistenceAdapter?: ConflictPersistenceAdapter;
-  private readonly offlineQueueAdapter?: OfflineQueueAdapter;
+  private readonly config: SyncEngineConfig;
   private readonly postMergeValidator = new PostMergeValidator();
   private readonly offlineQueueManager?: OfflineQueueManager;
   private failedConflictPersistence: Array<{
@@ -72,16 +63,7 @@ export class SyncEngine {
   }> = [];
 
   constructor(config: SyncEngineConfig) {
-    this.networkAdapter = config.networkAdapter;
-    this.storageAdapter = config.storageAdapter;
-    this.keyResolver = config.keyResolver;
-    this.sodium = config.sodium;
-    this.profile = config.profile;
-    this.systemId = config.systemId;
-    this.onError = config.onError;
-    this.onConflict = config.onConflict;
-    this.conflictPersistenceAdapter = config.conflictPersistenceAdapter;
-    this.offlineQueueAdapter = config.offlineQueueAdapter;
+    this.config = config;
 
     if (config.offlineQueueAdapter) {
       this.offlineQueueManager = new OfflineQueueManager({
@@ -101,15 +83,15 @@ export class SyncEngine {
    */
   async bootstrap(): Promise<void> {
     // 1. Fetch manifest and local doc list
-    const manifest = await this.networkAdapter.fetchManifest(this.systemId);
-    const localDocIds = await this.storageAdapter.listDocuments();
+    const manifest = await this.config.networkAdapter.fetchManifest(this.config.systemId);
+    const localDocIds = await this.config.storageAdapter.listDocuments();
 
     // 2. Apply replication profile filter
-    const subscriptionSet = filterManifest(manifest, this.profile, localDocIds);
+    const subscriptionSet = filterManifest(manifest, this.config.profile, localDocIds);
 
     // 3. Evict stale local docs
     for (const docId of subscriptionSet.evict) {
-      await this.storageAdapter.deleteDocument(docId);
+      await this.config.storageAdapter.deleteDocument(docId);
     }
 
     // 4. Hydrate each active document with bounded concurrency
@@ -124,7 +106,10 @@ export class SyncEngine {
       const result = results[i];
       if (result?.status === "rejected") {
         const entry = subscriptionSet.active[i];
-        this.onError(`Failed to hydrate document ${entry?.docId ?? "unknown"}`, result.reason);
+        this.config.onError(
+          `Failed to hydrate document ${entry?.docId ?? "unknown"}`,
+          result.reason,
+        );
       }
     }
 
@@ -132,11 +117,11 @@ export class SyncEngine {
     for (const entry of subscriptionSet.active) {
       const session = this.sessions.get(entry.docId);
       if (!session) continue; // Skip failed hydrations
-      const sub = this.networkAdapter.subscribe(entry.docId, (changes) => {
+      const sub = this.config.networkAdapter.subscribe(entry.docId, (changes) => {
         this.enqueueDocumentOperation(entry.docId, () =>
           this.applyIncomingChanges(entry.docId, changes),
         ).catch((err: unknown) => {
-          this.onError(`Error handling incoming changes for ${entry.docId}`, err);
+          this.config.onError(`Error handling incoming changes for ${entry.docId}`, err);
         });
       });
       this.subscriptions.push(sub);
@@ -159,7 +144,10 @@ export class SyncEngine {
       // Load newly-persisted changes into in-memory sessions
       if (result.replayed > 0) {
         for (const [docId, session] of this.sessions) {
-          const changes = await this.storageAdapter.loadChangesSince(docId, session.lastSyncedSeq);
+          const changes = await this.config.storageAdapter.loadChangesSince(
+            docId,
+            session.lastSyncedSeq,
+          );
           if (changes.length > 0) {
             session.applyEncryptedChanges(changes);
           }
@@ -167,13 +155,13 @@ export class SyncEngine {
       }
 
       if (result.failed > 0) {
-        this.onError(
+        this.config.onError(
           `Offline queue replay completed with failures: ${String(result.failed)} failed, ${String(result.skipped)} skipped`,
           null,
         );
       }
     } catch (error) {
-      this.onError("Offline queue replay failed", error);
+      this.config.onError("Offline queue replay failed", error);
     }
   }
 
@@ -226,18 +214,18 @@ export class SyncEngine {
 
       // Phase 1: Enqueue locally if offline queue adapter is configured
       let queueEntryId: string | undefined;
-      if (this.offlineQueueAdapter) {
-        queueEntryId = await this.offlineQueueAdapter.enqueue(docId, envelope);
+      if (this.config.offlineQueueAdapter) {
+        queueEntryId = await this.config.offlineQueueAdapter.enqueue(docId, envelope);
       }
 
       // Phase 2: Submit to server
-      const sequenced = await this.networkAdapter.submitChange(docId, envelope);
+      const sequenced = await this.config.networkAdapter.submitChange(docId, envelope);
 
       // Phase 3: On success, persist locally and mark synced
-      await this.storageAdapter.appendChange(docId, sequenced);
+      await this.config.storageAdapter.appendChange(docId, sequenced);
 
-      if (this.offlineQueueAdapter && queueEntryId !== undefined) {
-        await this.offlineQueueAdapter.markSynced(queueEntryId, sequenced.seq);
+      if (this.config.offlineQueueAdapter && queueEntryId !== undefined) {
+        await this.config.offlineQueueAdapter.markSynced(queueEntryId, sequenced.seq);
       }
 
       // Update sync state
@@ -268,7 +256,7 @@ export class SyncEngine {
       try {
         sub.unsubscribe();
       } catch (error) {
-        this.onError("Failed to unsubscribe during dispose", error);
+        this.config.onError("Failed to unsubscribe during dispose", error);
       }
     }
     this.subscriptions.length = 0;
@@ -276,14 +264,14 @@ export class SyncEngine {
     this.syncStates.clear();
     this.documentQueues.clear();
     try {
-      (this.networkAdapter as { close?(): void }).close?.();
+      (this.config.networkAdapter as { close?(): void }).close?.();
     } catch (error) {
-      this.onError("Failed to close network adapter during dispose", error);
+      this.config.onError("Failed to close network adapter during dispose", error);
     }
     try {
-      (this.storageAdapter as { close?(): void }).close?.();
+      (this.config.storageAdapter as { close?(): void }).close?.();
     } catch (error) {
-      this.onError("Failed to close storage adapter during dispose", error);
+      this.config.onError("Failed to close storage adapter during dispose", error);
     }
   }
 
@@ -337,24 +325,24 @@ export class SyncEngine {
     docId: string,
     changes: readonly EncryptedChangeEnvelope[],
   ): Promise<void> {
-    if (this.storageAdapter.appendChanges) {
-      await this.storageAdapter.appendChanges(docId, changes);
+    if (this.config.storageAdapter.appendChanges) {
+      await this.config.storageAdapter.appendChanges(docId, changes);
     } else {
       for (const change of changes) {
-        await this.storageAdapter.appendChange(docId, change);
+        await this.config.storageAdapter.appendChange(docId, change);
       }
     }
   }
 
   private async hydrateDocument(docId: string, docType: SyncDocumentType): Promise<void> {
-    const keys = this.keyResolver.resolveKeys(docId);
+    const keys = this.config.keyResolver.resolveKeys(docId);
 
     // Try loading from local storage first
-    const localSnapshot = await this.storageAdapter.loadSnapshot(docId);
-    const localChanges = await this.storageAdapter.loadChangesSince(docId, 0);
+    const localSnapshot = await this.config.storageAdapter.loadSnapshot(docId);
+    const localChanges = await this.config.storageAdapter.loadChangesSince(docId, 0);
 
     // Try fetching from server
-    const serverSnapshot = await this.networkAdapter.fetchLatestSnapshot(docId);
+    const serverSnapshot = await this.config.networkAdapter.fetchLatestSnapshot(docId);
     const serverSnapshotSeq = serverSnapshot?.snapshotVersion ?? 0;
     const localSnapshotSeq = localSnapshot?.snapshotVersion ?? 0;
 
@@ -364,11 +352,11 @@ export class SyncEngine {
     let session: EncryptedSyncSession<unknown>;
 
     if (snapshot) {
-      session = EncryptedSyncSession.fromSnapshot(snapshot, keys, this.sodium);
+      session = EncryptedSyncSession.fromSnapshot(snapshot, keys, this.config.sodium);
 
       // Persist server snapshot locally if newer
       if (serverSnapshot && serverSnapshotSeq > localSnapshotSeq) {
-        await this.storageAdapter.saveSnapshot(docId, serverSnapshot);
+        await this.config.storageAdapter.saveSnapshot(docId, serverSnapshot);
       }
     } else {
       // Fresh document — create empty
@@ -376,7 +364,7 @@ export class SyncEngine {
         doc: createDocument(docType) as Record<string, unknown>,
         keys,
         documentId: docId,
-        sodium: this.sodium,
+        sodium: this.config.sodium,
       });
     }
 
@@ -389,7 +377,10 @@ export class SyncEngine {
     }
 
     // Fetch server changes since last known seq
-    const changes = await this.networkAdapter.fetchChangesSince(docId, session.lastSyncedSeq);
+    const changes = await this.config.networkAdapter.fetchChangesSince(
+      docId,
+      session.lastSyncedSeq,
+    );
     if (changes.length > 0) {
       session.applyEncryptedChanges(changes);
 
@@ -412,69 +403,25 @@ export class SyncEngine {
     docId: string,
     session: EncryptedSyncSession<unknown>,
   ): Promise<void> {
-    const notifications: ConflictNotification[] = [];
-    const now = Date.now();
+    let notifications: readonly ConflictNotification[] = [];
     let correctionEnvelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[] = [];
 
-    // Run each validator independently so partial failures don't block others
+    // Run validations — notification construction is handled by PostMergeValidator
     try {
       const result = this.postMergeValidator.runAllValidations(session);
       correctionEnvelopes = result.correctionEnvelopes;
-
-      // Collect tombstone notifications
-      notifications.push(...result.tombstoneNotifications);
-
-      for (const cycleBreak of result.cycleBreaks) {
-        notifications.push({
-          entityType: "hierarchy",
-          entityId: cycleBreak.entityId,
-          fieldName: "parentId",
-          resolution: "post-merge-cycle",
-          detectedAt: now,
-          summary: `Cycle broken: nulled parent of ${cycleBreak.entityId} (was ${cycleBreak.formerParentId})`,
-        });
-      }
-      for (const patch of result.sortOrderPatches) {
-        notifications.push({
-          entityType: "sortable",
-          entityId: patch.entityId,
-          fieldName: "sortOrder",
-          resolution: "post-merge-sort-normalize",
-          detectedAt: now,
-          summary: `Sort order normalized: ${patch.entityId} → ${String(patch.newSortOrder)}`,
-        });
-      }
-      if (result.checkInNormalizations > 0) {
-        notifications.push({
-          entityType: "check-in-record",
-          entityId: "batch",
-          fieldName: "dismissed",
-          resolution: "post-merge-checkin-normalize",
-          detectedAt: now,
-          summary: `Normalized ${String(result.checkInNormalizations)} check-in record(s)`,
-        });
-      }
-      if (result.friendConnectionNormalizations > 0) {
-        notifications.push({
-          entityType: "friend-connection",
-          entityId: "batch",
-          fieldName: "status",
-          resolution: "post-merge-friend-status",
-          detectedAt: now,
-          summary: `Normalized ${String(result.friendConnectionNormalizations)} friend connection(s)`,
-        });
-      }
+      notifications = result.notifications;
     } catch (error) {
-      this.onError("Post-merge validation failed", error);
+      this.config.onError("Post-merge validation failed", error);
     }
 
     // Submit correction envelopes to server and persist locally
     await this.submitCorrectionEnvelopes(docId, correctionEnvelopes);
 
     // Fire onConflict callbacks
-    if (this.onConflict) {
+    if (this.config.onConflict) {
       for (const notification of notifications) {
-        this.onConflict(notification);
+        this.config.onConflict(notification);
       }
     }
 
@@ -482,16 +429,22 @@ export class SyncEngine {
     await this.persistConflicts(docId, notifications);
   }
 
-  private async submitCorrectionEnvelopes(
+  protected async submitCorrectionEnvelopes(
     docId: string,
     envelopes: readonly Omit<EncryptedChangeEnvelope, "seq">[],
   ): Promise<void> {
-    for (const envelope of envelopes) {
-      try {
-        const sequenced = await this.networkAdapter.submitChange(docId, envelope);
-        await this.storageAdapter.appendChange(docId, sequenced);
-      } catch (error) {
-        this.onError(`Failed to submit correction envelope for ${docId}`, error);
+    if (envelopes.length === 0) return;
+
+    const results = await Promise.allSettled(
+      envelopes.map(async (envelope) => {
+        const sequenced = await this.config.networkAdapter.submitChange(docId, envelope);
+        await this.config.storageAdapter.appendChange(docId, sequenced);
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        this.config.onError(`Failed to submit correction envelope for ${docId}`, result.reason);
       }
     }
   }
@@ -500,7 +453,7 @@ export class SyncEngine {
     docId: string,
     notifications: readonly ConflictNotification[],
   ): Promise<void> {
-    if (!this.conflictPersistenceAdapter) return;
+    if (!this.config.conflictPersistenceAdapter) return;
 
     // Include previously failed attempts
     const retryBatch = [...this.failedConflictPersistence];
@@ -512,9 +465,12 @@ export class SyncEngine {
 
     for (const batch of retryBatch) {
       try {
-        await this.conflictPersistenceAdapter.saveConflicts(batch.documentId, batch.notifications);
+        await this.config.conflictPersistenceAdapter.saveConflicts(
+          batch.documentId,
+          batch.notifications,
+        );
       } catch (error) {
-        this.onError("Failed to persist conflict records", error);
+        this.config.onError("Failed to persist conflict records", error);
         this.failedConflictPersistence.push(batch);
       }
     }
