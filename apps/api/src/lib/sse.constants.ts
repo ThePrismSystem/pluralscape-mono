@@ -6,6 +6,14 @@
 /** Heartbeat interval in milliseconds (30 seconds). */
 export const SSE_HEARTBEAT_INTERVAL_MS = 30_000;
 
+/**
+ * HTTP idle timeout in seconds for Bun.serve().
+ *
+ * Bun's default is 10 seconds, which closes SSE connections before the first
+ * heartbeat (30s). This must be longer than SSE_HEARTBEAT_INTERVAL_MS / 1000.
+ */
+export const HTTP_IDLE_TIMEOUT_SECONDS = 60;
+
 /** Maximum number of events retained in the replay ring buffer. */
 export const SSE_REPLAY_BUFFER_SIZE = 100;
 

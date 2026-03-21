@@ -81,6 +81,11 @@ notificationsRoutes.get("/stream", (c) => {
     let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 
     try {
+      // Send an immediate heartbeat to flush response headers to the client.
+      // Without this, Bun buffers the headers until the first write, causing
+      // SSE clients to hang until the first periodic heartbeat (30s).
+      await stream.write(": heartbeat\n\n");
+
       // Replay missed events if reconnecting with Last-Event-ID
       if (lastEventId) {
         const missed = state.buffer.since(lastEventId);

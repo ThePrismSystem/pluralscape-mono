@@ -8,18 +8,6 @@ import { SYNC_PROTOCOL_VERSION } from "@pluralscape/sync";
 
 import type { ClientMessage, ServerMessage } from "@pluralscape/sync";
 
-/** Byte lengths for crypto fields in wire format test data. */
-const CIPHERTEXT_TEST_BYTES = 32;
-const NONCE_BYTES = 24;
-const SIGNATURE_BYTES = 64;
-const PUBLIC_KEY_BYTES = 32;
-
-/** Distinct fill byte values so each field is distinguishable in tests. */
-const FILL_CIPHERTEXT = 1;
-const FILL_NONCE = 2;
-const FILL_SIGNATURE = 3;
-const FILL_PUBLIC_KEY = 4;
-
 const E2E_PORT = 10_099;
 const WS_URL = `ws://localhost:${String(E2E_PORT)}/v1/sync/ws`;
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -162,20 +150,23 @@ export class SyncWsClient {
   }
 
   /** Send SubmitSnapshotRequest (wire format with base64url strings) and wait for response. */
-  async submitSnapshot(docId: string, snapshotVersion: number): Promise<ServerMessage> {
+  async submitSnapshot(
+    docId: string,
+    snapshot: {
+      ciphertext: string;
+      nonce: string;
+      signature: string;
+      authorPublicKey: string;
+      documentId: string;
+      snapshotVersion: number;
+    },
+  ): Promise<ServerMessage> {
     this.sendRaw(
       JSON.stringify({
         type: "SubmitSnapshotRequest",
         correlationId: null,
         docId,
-        snapshot: {
-          ciphertext: base64urlOfLength(CIPHERTEXT_TEST_BYTES, FILL_CIPHERTEXT),
-          nonce: base64urlOfLength(NONCE_BYTES, FILL_NONCE),
-          signature: base64urlOfLength(SIGNATURE_BYTES, FILL_SIGNATURE),
-          authorPublicKey: base64urlOfLength(PUBLIC_KEY_BYTES, FILL_PUBLIC_KEY),
-          documentId: docId,
-          snapshotVersion,
-        },
+        snapshot,
       }),
     );
     return this.waitForMessage(null);

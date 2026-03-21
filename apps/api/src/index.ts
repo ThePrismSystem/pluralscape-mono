@@ -160,8 +160,10 @@ async function start(): Promise<void> {
   let httpServer: { stop(): Promise<void> | void } | null = null;
 
   if (typeof Bun !== "undefined") {
+    const { HTTP_IDLE_TIMEOUT_SECONDS } = await import("./lib/sse.constants.js");
     httpServer = Bun.serve({
       port,
+      idleTimeout: HTTP_IDLE_TIMEOUT_SECONDS,
       fetch: app.fetch,
       websocket: {
         ...websocket,

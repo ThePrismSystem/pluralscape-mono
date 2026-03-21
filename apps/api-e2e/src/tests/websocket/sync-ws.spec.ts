@@ -5,14 +5,10 @@
  * The server is spawned by Playwright's globalSetup on port 10099.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
+import { makeSignedChange, makeSignedSnapshot } from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { SnapshotAccepted, SubscribeResponse, SyncError } from "@pluralscape/sync";
-
-/** Generate a base64url string that decodes to exactly `n` bytes. */
-function base64urlOfLength(n: number, fill = 0): string {
-  return Buffer.from(new Uint8Array(n).fill(fill)).toString("base64url");
-}
 
 test.describe("WebSocket sync server", () => {
   test("authenticates successfully with valid session token", async ({
@@ -102,14 +98,8 @@ test.describe("WebSocket sync server", () => {
 
       await ws2.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
-      // ws1 submits a change with correct byte lengths
-      const change = {
-        ciphertext: base64urlOfLength(32, 1),
-        nonce: base64urlOfLength(24, 2),
-        signature: base64urlOfLength(64, 3),
-        authorPublicKey: base64urlOfLength(32, 4),
-        documentId: docId,
-      };
+      // ws1 submits a properly signed change
+      const change = await makeSignedChange(docId);
       const accepted = await ws1.submitChange(docId, change);
       expect(accepted.type).toBe("ChangeAccepted");
 
@@ -215,7 +205,8 @@ test.describe("WebSocket sync server", () => {
       await ws.authenticate(registeredAccount.sessionToken, systemId);
 
       const docId = `e2e-snap-${crypto.randomUUID()}`;
-      const response = await ws.submitSnapshot(docId, 1);
+      const snapshot = await makeSignedSnapshot(docId, 1);
+      const response = await ws.submitSnapshot(docId, snapshot);
 
       expect(response.type).toBe("SnapshotAccepted");
       expect((response as SnapshotAccepted).docId).toBe(docId);

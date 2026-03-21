@@ -7,14 +7,14 @@
  *
  * Also re-exports SyncWsClient for tests that need lower-level control.
  */
-import { SyncWsClient, base64urlOfLength } from "./ws.fixture.js";
+import { SyncWsClient } from "./ws.fixture.js";
 
-import type { WireChangePayload } from "./ws.fixture.js";
 import type { APIRequestContext } from "@playwright/test";
 import type { ServerMessage } from "@pluralscape/sync";
 
-export { SyncWsClient, base64urlOfLength } from "./ws.fixture.js";
-export type { WireChangePayload } from "./ws.fixture.js";
+export { SyncWsClient } from "./ws.fixture.js";
+export { createSyncCryptoContext, makeSignedChange, makeSignedSnapshot } from "./crypto.fixture.js";
+export type { WireChangePayload, WireSnapshotPayload, SyncCryptoContext } from "./crypto.fixture.js";
 
 interface AuthenticatedWsClient {
   /** The connected and authenticated WebSocket client. */
@@ -74,30 +74,3 @@ export async function createAuthenticatedWsClient(
   }
 }
 
-/** Byte length constants for building wire-format test changes. */
-export const WIRE_FORMAT = {
-  CIPHERTEXT_BYTES: 32,
-  NONCE_BYTES: 24,
-  SIGNATURE_BYTES: 64,
-  PUBLIC_KEY_BYTES: 32,
-} as const;
-
-/** Distinct fill byte offsets so each field is distinguishable in tests. */
-const FILL_CIPHERTEXT = 1;
-const FILL_NONCE = 2;
-const FILL_SIGNATURE = 3;
-const FILL_PUBLIC_KEY = 4;
-
-/**
- * Build a wire-format change object for submitting via WebSocket.
- * Each field uses a distinct fill byte for easy identification in test assertions.
- */
-export function makeTestChange(docId: string, fillOffset = 0): WireChangePayload {
-  return {
-    ciphertext: base64urlOfLength(WIRE_FORMAT.CIPHERTEXT_BYTES, FILL_CIPHERTEXT + fillOffset),
-    nonce: base64urlOfLength(WIRE_FORMAT.NONCE_BYTES, FILL_NONCE + fillOffset),
-    signature: base64urlOfLength(WIRE_FORMAT.SIGNATURE_BYTES, FILL_SIGNATURE + fillOffset),
-    authorPublicKey: base64urlOfLength(WIRE_FORMAT.PUBLIC_KEY_BYTES, FILL_PUBLIC_KEY + fillOffset),
-    documentId: docId,
-  };
-}

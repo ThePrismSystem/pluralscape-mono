@@ -2,7 +2,8 @@
  * Crypto helpers for E2E tests.
  *
  * Provides functions to encrypt/decrypt member data using a test master key,
- * exercising the same codepath a real client would use.
+ * and to create properly signed sync envelopes that pass server-side
+ * signature verification.
  */
 import {
   decryptTier1,
@@ -12,7 +13,11 @@ import {
   serializeEncryptedBlob,
   deserializeEncryptedBlob,
 } from "@pluralscape/crypto";
+import { WasmSodiumAdapter } from "@pluralscape/crypto/wasm";
+import { encryptChange, encryptSnapshot } from "@pluralscape/sync";
 
+import type { SodiumAdapter } from "@pluralscape/crypto";
+import type { DocumentKeys } from "@pluralscape/sync";
 import type { T1EncryptedBlob } from "@pluralscape/types";
 
 let initialized = false;
@@ -38,4 +43,104 @@ export function decryptFromApi(base64Data: string): unknown {
   const binary = Buffer.from(base64Data, "base64");
   const blob = deserializeEncryptedBlob(new Uint8Array(binary));
   return decryptTier1(blob as T1EncryptedBlob, testMasterKey);
+}
+
+// ── Sync envelope signing ──────────────────────────────────────────
+
+export interface SyncCryptoContext {
+  sodium: SodiumAdapter;
+  keys: DocumentKeys;
+}
+
+let sharedSodium: SodiumAdapter | null = null;
+
+async function getOrInitSodium(): Promise<SodiumAdapter> {
+  if (!sharedSodium) {
+    const adapter = new WasmSodiumAdapter();
+    await adapter.init();
+    sharedSodium = adapter;
+  }
+  return sharedSodium;
+}
+
+/** Create a crypto context with fresh signing and encryption keys. */
+export async function createSyncCryptoContext(): Promise<SyncCryptoContext> {
+  const sodium = await getOrInitSodium();
+  return {
+    sodium,
+    keys: {
+      encryptionKey: sodium.aeadKeygen(),
+      signingKeys: sodium.signKeypair(),
+    },
+  };
+}
+
+/** Wire-format change payload with base64url-encoded binary fields. */
+export interface WireChangePayload {
+  ciphertext: string;
+  nonce: string;
+  signature: string;
+  authorPublicKey: string;
+  documentId: string;
+}
+
+function toBase64url(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString("base64url");
+}
+
+/**
+ * Create a properly signed wire-format change envelope.
+ *
+ * Uses encryptChange from @pluralscape/sync to produce a real Ed25519
+ * signature over the AEAD ciphertext.
+ */
+export async function makeSignedChange(
+  docId: string,
+  ctx?: SyncCryptoContext,
+  plaintext?: Uint8Array,
+): Promise<WireChangePayload> {
+  const { sodium, keys } = ctx ?? (await createSyncCryptoContext());
+  const data = plaintext ?? new Uint8Array([1, 2, 3, 4]);
+  const envelope = encryptChange(data, docId, keys, sodium);
+
+  return {
+    ciphertext: toBase64url(envelope.ciphertext),
+    nonce: toBase64url(envelope.nonce),
+    signature: toBase64url(envelope.signature),
+    authorPublicKey: toBase64url(envelope.authorPublicKey),
+    documentId: docId,
+  };
+}
+
+/** Wire-format snapshot payload with base64url-encoded binary fields. */
+export interface WireSnapshotPayload {
+  ciphertext: string;
+  nonce: string;
+  signature: string;
+  authorPublicKey: string;
+  documentId: string;
+  snapshotVersion: number;
+}
+
+/**
+ * Create a properly signed wire-format snapshot envelope.
+ */
+export async function makeSignedSnapshot(
+  docId: string,
+  snapshotVersion: number,
+  ctx?: SyncCryptoContext,
+  plaintext?: Uint8Array,
+): Promise<WireSnapshotPayload> {
+  const { sodium, keys } = ctx ?? (await createSyncCryptoContext());
+  const data = plaintext ?? new Uint8Array([1, 2, 3, 4]);
+  const envelope = encryptSnapshot(data, docId, snapshotVersion, keys, sodium);
+
+  return {
+    ciphertext: toBase64url(envelope.ciphertext),
+    nonce: toBase64url(envelope.nonce),
+    signature: toBase64url(envelope.signature),
+    authorPublicKey: toBase64url(envelope.authorPublicKey),
+    documentId: docId,
+    snapshotVersion,
+  };
 }

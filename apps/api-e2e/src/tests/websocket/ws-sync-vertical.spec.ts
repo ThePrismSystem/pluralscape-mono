@@ -9,7 +9,7 @@
  * the end-to-end flow as a single cohesive scenario.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
-import { createAuthenticatedWsClient, makeTestChange } from "../../fixtures/ws-sync.fixture.js";
+import { createAuthenticatedWsClient, makeSignedChange } from "../../fixtures/ws-sync.fixture.js";
 
 import type { ServerMessage } from "@pluralscape/sync";
 
@@ -52,8 +52,8 @@ test.describe("WebSocket sync vertical slice", () => {
       ]);
       assertMessageType(sub2, "SubscribeResponse");
 
-      // Client 1 submits a change
-      const change = makeTestChange(docId);
+      // Client 1 submits a properly signed change
+      const change = await makeSignedChange(docId);
       const accepted = await client1.ws.submitChange(docId, change);
       assertMessageType(accepted, "ChangeAccepted");
       expect(accepted.assignedSeq).toBe(1);
@@ -107,7 +107,7 @@ test.describe("WebSocket sync vertical slice", () => {
       ]);
 
       // Client 1 submits a change
-      const change = makeTestChange(docId, 10);
+      const change = await makeSignedChange(docId);
       const accepted = await client1.ws.submitChange(docId, change);
       assertMessageType(accepted, "ChangeAccepted");
 
@@ -131,7 +131,7 @@ test.describe("WebSocket sync vertical slice", () => {
       // Subscribe and submit a change
       await client1.ws.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
-      const change = makeTestChange(docId);
+      const change = await makeSignedChange(docId);
       const accepted = await client1.ws.submitChange(docId, change);
       assertMessageType(accepted, "ChangeAccepted");
     } finally {
@@ -175,7 +175,7 @@ test.describe("WebSocket sync vertical slice", () => {
       client2.ws.close();
 
       // Client 1 submits a change
-      const change = makeTestChange(docId, 20);
+      const change = await makeSignedChange(docId);
       const accepted = await client1.ws.submitChange(docId, change);
       assertMessageType(accepted, "ChangeAccepted");
 

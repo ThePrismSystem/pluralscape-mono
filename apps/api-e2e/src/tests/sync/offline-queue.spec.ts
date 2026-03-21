@@ -5,7 +5,7 @@
  * through the real WebSocket sync server.
  */
 import { test, expect } from "../../fixtures/auth.fixture.js";
-import { makeTestChange } from "../../fixtures/ws-sync.fixture.js";
+import { makeSignedChange } from "../../fixtures/crypto.fixture.js";
 import { SyncWsClient } from "../../fixtures/ws.fixture.js";
 
 import type { ChangeAccepted } from "@pluralscape/sync";
@@ -31,7 +31,7 @@ test.describe("Sync offline queue E2E", () => {
       await ws1.authenticate(registeredAccount.sessionToken, systemId);
       await ws1.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
-      const change = makeTestChange(docId);
+      const change = await makeSignedChange(docId);
       const accepted = await ws1.submitChange(docId, change);
       expect(accepted.type).toBe("ChangeAccepted");
       expect((accepted as ChangeAccepted).assignedSeq).toBe(1);
@@ -80,7 +80,7 @@ test.describe("Sync offline queue E2E", () => {
       await ws.subscribe([{ docId, lastSyncedSeq: 0, lastSnapshotVersion: 0 }]);
 
       // Submit the same change twice (same nonce + authorPublicKey + documentId)
-      const change = makeTestChange(docId, 49);
+      const change = await makeSignedChange(docId);
 
       const accepted1 = await ws.submitChange(docId, change);
       expect(accepted1.type).toBe("ChangeAccepted");
