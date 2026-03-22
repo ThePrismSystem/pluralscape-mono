@@ -293,6 +293,7 @@ describe("SyncEngine edge cases", () => {
         sortOrderPatches: [],
         checkInNormalizations: 0,
         friendConnectionNormalizations: 0,
+        frontingSessionNormalizations: 0,
         correctionEnvelopes: [],
         notifications: [fakeNotification],
         errors: [],
