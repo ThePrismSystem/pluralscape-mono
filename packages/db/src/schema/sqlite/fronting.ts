@@ -9,8 +9,6 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.sqlite.js";
-import { enumCheck } from "../../helpers/check.js";
-import { FRONTING_TYPES } from "../../helpers/enums.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -49,10 +47,6 @@ export const frontingSessions = sqliteTable(
     startTime: sqliteTimestamp("start_time").notNull(),
     endTime: sqliteTimestamp("end_time"),
     memberId: text("member_id"),
-    frontingType: text("fronting_type")
-      .notNull()
-      .default("fronting")
-      .$type<ServerFrontingSession["frontingType"]>(),
     customFrontId: text("custom_front_id"),
     linkedStructure:
       sqliteJson("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
@@ -65,7 +59,6 @@ export const frontingSessions = sqliteTable(
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
-    index("fronting_sessions_system_type_start_idx").on(t.systemId, t.frontingType, t.startTime),
     index("fronting_sessions_active_idx")
       .on(t.systemId)
       .where(sql`${t.endTime} IS NULL`),
@@ -74,7 +67,6 @@ export const frontingSessions = sqliteTable(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
-    check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.memberId, t.systemId],
@@ -94,35 +86,6 @@ export const frontingSessions = sqliteTable(
       "fronting_sessions_subject_check",
       sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,
     ),
-  ],
-);
-
-// Switches are archivable to support data correction (e.g., mistakenly recorded switches).
-// Archived switches are excluded from display but preserved for audit integrity.
-export const switches = sqliteTable(
-  "switches",
-  {
-    id: text("id").primaryKey(),
-    systemId: text("system_id")
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    timestamp: sqliteTimestamp("timestamp").notNull(),
-    /**
-     * T3 plaintext: member IDs are opaque tokens (see tier map at encryption.ts:626).
-     * Known limitation: JSON arrays cannot have FK constraints — cross-system
-     * member ID validation is enforced at the application layer.
-     */
-    memberIds: sqliteJson("member_ids").notNull().$type<readonly [string, ...string[]]>(),
-    createdAt: sqliteTimestamp("created_at").notNull(),
-    ...versioned(),
-    ...archivable(),
-  },
-  (t) => [
-    index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
-    index("switches_system_archived_idx").on(t.systemId, t.archived),
-    check("switches_member_ids_check", sql`json_array_length(${t.memberIds}) >= 1`),
-    versionCheckFor("switches", t.version),
-    archivableConsistencyCheckFor("switches", t.archived, t.archivedAt),
   ],
 );
 
@@ -158,8 +121,6 @@ export const frontingComments = sqliteTable(
 
 export type FrontingSessionRow = InferSelectModel<typeof frontingSessions>;
 export type NewFrontingSession = InferInsertModel<typeof frontingSessions>;
-export type SwitchRow = InferSelectModel<typeof switches>;
-export type NewSwitch = InferInsertModel<typeof switches>;
 export type CustomFrontRow = InferSelectModel<typeof customFronts>;
 export type NewCustomFront = InferInsertModel<typeof customFronts>;
 export type FrontingCommentRow = InferSelectModel<typeof frontingComments>;

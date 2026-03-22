@@ -290,7 +290,6 @@ export const SQLITE_DDL = {
       start_time INTEGER NOT NULL,
       end_time INTEGER,
       member_id TEXT,
-      fronting_type TEXT NOT NULL DEFAULT 'fronting' CHECK (fronting_type IN ('fronting', 'co-conscious')),
       custom_front_id TEXT,
       linked_structure TEXT,
       encrypted_data BLOB NOT NULL,
@@ -312,27 +311,8 @@ export const SQLITE_DDL = {
     CREATE INDEX fronting_sessions_system_start_idx ON fronting_sessions (system_id, start_time);
     CREATE INDEX fronting_sessions_system_member_start_idx ON fronting_sessions (system_id, member_id, start_time);
     CREATE INDEX fronting_sessions_system_end_idx ON fronting_sessions (system_id, end_time);
-    CREATE INDEX fronting_sessions_system_type_start_idx ON fronting_sessions (system_id, fronting_type, start_time);
     CREATE INDEX fronting_sessions_active_idx ON fronting_sessions (system_id) WHERE end_time IS NULL;
     CREATE INDEX fronting_sessions_system_archived_idx ON fronting_sessions (system_id, archived)
-  `,
-  switches: `
-    CREATE TABLE switches (
-      id TEXT PRIMARY KEY,
-      system_id TEXT NOT NULL REFERENCES systems(id) ON DELETE CASCADE,
-      timestamp INTEGER NOT NULL,
-      member_ids TEXT NOT NULL CHECK (json_array_length(member_ids) >= 1),
-      created_at INTEGER NOT NULL,
-      version INTEGER NOT NULL DEFAULT 1,
-      archived INTEGER NOT NULL DEFAULT 0,
-      archived_at INTEGER,
-      CHECK (version >= 1),
-      CHECK ((archived = true) = (archived_at IS NOT NULL))
-    )
-  `,
-  switchesIndexes: `
-    CREATE INDEX switches_system_timestamp_idx ON switches (system_id, timestamp);
-    CREATE INDEX switches_system_archived_idx ON switches (system_id, archived)
   `,
   customFronts: `
     CREATE TABLE custom_fronts (
@@ -1129,7 +1109,7 @@ export const SQLITE_DDL = {
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
       FOREIGN KEY (webhook_id, system_id) REFERENCES webhook_configs(id, system_id) ON DELETE CASCADE,
-      CHECK (event_type IS NULL OR event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+      CHECK (event_type IS NULL OR event_type IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
       CHECK (status IS NULL OR status IN ('pending', 'success', 'failed')),
       CHECK (attempt_count >= 0),
       CHECK (http_status IS NULL OR (http_status >= 100 AND http_status <= 599)),
@@ -1531,8 +1511,6 @@ export function createSqliteFrontingTables(client: InstanceType<typeof Database>
   client.exec(SQLITE_DDL.customFrontsIndexes);
   client.exec(SQLITE_DDL.frontingSessions);
   client.exec(SQLITE_DDL.frontingSessionsIndexes);
-  client.exec(SQLITE_DDL.switches);
-  client.exec(SQLITE_DDL.switchesIndexes);
   client.exec(SQLITE_DDL.frontingComments);
   client.exec(SQLITE_DDL.frontingCommentsIndexes);
 }

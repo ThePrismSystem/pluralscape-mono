@@ -30,7 +30,6 @@ describe("WebhookEventType", () => {
   it("accepts valid event types", () => {
     assertType<WebhookEventType>("member.created");
     assertType<WebhookEventType>("fronting.started");
-    assertType<WebhookEventType>("switch.recorded");
   });
 
   it("rejects invalid event types", () => {
@@ -46,7 +45,6 @@ describe("WebhookEventType", () => {
         case "member.archived":
         case "fronting.started":
         case "fronting.ended":
-        case "switch.recorded":
         case "group.created":
         case "group.updated":
         case "note.created":

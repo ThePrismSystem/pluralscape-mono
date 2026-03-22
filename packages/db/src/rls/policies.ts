@@ -120,7 +120,6 @@ export const RLS_TABLE_POLICIES = {
   members: "system",
   member_photos: "system",
   fronting_sessions: "system",
-  switches: "system",
   custom_fronts: "system",
   fronting_reports: "system",
   fronting_comments: "system",

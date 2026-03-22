@@ -117,7 +117,6 @@ export function createFrontingDocument(): Automerge.Doc<FrontingDocument> {
   return fromDoc<FrontingDocument>({
     sessions: {},
     comments: {},
-    switches: [],
     checkInRecords: {},
   });
 }

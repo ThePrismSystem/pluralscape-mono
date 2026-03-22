@@ -34,12 +34,7 @@ import {
   fieldDefinitions,
   fieldValues,
 } from "../../schema/pg/custom-fields.js";
-import {
-  customFronts,
-  frontingComments,
-  frontingSessions,
-  switches,
-} from "../../schema/pg/fronting.js";
+import { customFronts, frontingComments, frontingSessions } from "../../schema/pg/fronting.js";
 import { groupMemberships, groups } from "../../schema/pg/groups.js";
 import { accountPurgeRequests, exportRequests, importJobs } from "../../schema/pg/import-export.js";
 import {
@@ -167,8 +162,6 @@ export const PG_DDL = {
   // --- Fronting ---
   frontingSessions: pgTableToCreateDDL(frontingSessions),
   frontingSessionsIndexes: indexDDL(frontingSessions),
-  switches: pgTableToCreateDDL(switches),
-  switchesIndexes: indexDDL(switches),
   customFronts: pgTableToCreateDDL(customFronts),
   customFrontsIndexes: indexDDL(customFronts),
   frontingComments: pgTableToCreateDDL(frontingComments),
@@ -430,8 +423,6 @@ export async function createPgFrontingTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.customFrontsIndexes);
   await pgExec(client, PG_DDL.frontingSessions);
   await pgExec(client, PG_DDL.frontingSessionsIndexes);
-  await pgExec(client, PG_DDL.switches);
-  await pgExec(client, PG_DDL.switchesIndexes);
   await pgExec(client, PG_DDL.frontingComments);
   await pgExec(client, PG_DDL.frontingCommentsIndexes);
 }
@@ -773,8 +764,6 @@ export async function createPgAllTables(client: PGlite): Promise<void> {
   await pgExec(client, PG_DDL.frontingSessionsIndexes);
   await pgExec(client, PG_DDL.frontingComments);
   await pgExec(client, PG_DDL.frontingCommentsIndexes);
-  await pgExec(client, PG_DDL.switches);
-  await pgExec(client, PG_DDL.switchesIndexes);
   await pgExec(client, PG_DDL.frontingReports);
   await pgExec(client, PG_DDL.frontingReportsIndexes);
   // Structure

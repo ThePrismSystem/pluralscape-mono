@@ -78,7 +78,6 @@ function makeFrontingDoc(): Automerge.Doc<FrontingDocument> {
   return fromDoc<FrontingDocument>({
     sessions: {},
     comments: {},
-    switches: [],
     checkInRecords: {},
   });
 }
@@ -287,7 +286,6 @@ describe("FrontingDocument schema", () => {
   it("initializes with empty collections", () => {
     const doc = makeFrontingDoc();
     expect(Object.keys(doc.sessions)).toHaveLength(0);
-    expect(doc.switches).toHaveLength(0);
     expect(Object.keys(doc.checkInRecords)).toHaveLength(0);
   });
 
@@ -300,12 +298,12 @@ describe("FrontingDocument schema", () => {
         memberId: s("mem_1"),
         startTime: 1000,
         endTime: null,
-        frontingType: s("fronting"),
         comment: null,
         customFrontId: null,
         linkedStructure: null,
         positionality: null,
         outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
         createdAt: 1000,
         updatedAt: 1000,
@@ -323,19 +321,48 @@ describe("FrontingDocument schema", () => {
     expect(doc.sessions["fs_1"]?.endTime).toBe(2000);
   });
 
-  it("appends switches to the append-only list", () => {
+  it("sets and updates outtrigger and outtriggerSentiment fields", () => {
     let doc = makeFrontingDoc();
     doc = Automerge.change(doc, (d) => {
-      d.switches.push({
-        id: s("sw_1"),
+      d.sessions["fs_ot"] = {
+        id: s("fs_ot"),
         systemId: s("sys_test"),
-        memberIds: s('["mem_1","mem_2"]'),
-        timestamp: 1000,
+        memberId: s("mem_1"),
+        startTime: 3000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
-      });
+        createdAt: 3000,
+        updatedAt: 3000,
+      };
     });
-    expect(doc.switches).toHaveLength(1);
-    expect(doc.switches[0]?.memberIds.val).toBe('["mem_1","mem_2"]');
+    expect(doc.sessions["fs_ot"]?.outtrigger).toBeNull();
+    expect(doc.sessions["fs_ot"]?.outtriggerSentiment).toBeNull();
+
+    doc = Automerge.change(doc, (d) => {
+      const session = d.sessions["fs_ot"];
+      if (session) {
+        session.outtrigger = s("stress from work");
+        session.outtriggerSentiment = s("negative");
+        session.updatedAt = 3500;
+      }
+    });
+    expect(doc.sessions["fs_ot"]?.outtrigger?.val).toBe("stress from work");
+    expect(doc.sessions["fs_ot"]?.outtriggerSentiment?.val).toBe("negative");
+
+    doc = Automerge.change(doc, (d) => {
+      const session = d.sessions["fs_ot"];
+      if (session) {
+        session.outtriggerSentiment = s("neutral");
+        session.updatedAt = 4000;
+      }
+    });
+    expect(doc.sessions["fs_ot"]?.outtriggerSentiment?.val).toBe("neutral");
   });
 
   it("adds and responds to a check-in record (mutable fields)", () => {
@@ -368,21 +395,37 @@ describe("FrontingDocument schema", () => {
     expect(doc.checkInRecords["cr_1"]?.respondedAt).toBe(1100);
   });
 
-  it("saves and loads via binary serialization", () => {
+  it("saves and loads via binary serialization with session data", () => {
     let doc = makeFrontingDoc();
     doc = Automerge.change(doc, (d) => {
-      d.switches.push({
-        id: s("sw_1"),
+      d.sessions["fs_rt"] = {
+        id: s("fs_rt"),
         systemId: s("sys_test"),
-        memberIds: s('["mem_1"]'),
-        timestamp: 9999,
+        memberId: s("mem_1"),
+        startTime: 5000,
+        endTime: 6000,
+        comment: s("round-trip test"),
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: s("felt triggered by noise"),
+        outtriggerSentiment: s("negative"),
         archived: false,
-      });
+        createdAt: 5000,
+        updatedAt: 6000,
+      };
     });
     const bytes = Automerge.save(doc);
     const loaded = Automerge.load<FrontingDocument>(bytes);
-    expect(loaded.switches).toHaveLength(1);
-    expect(loaded.switches[0]?.timestamp).toBe(9999);
+    expect(Object.keys(loaded.sessions)).toHaveLength(1);
+    const session = loaded.sessions["fs_rt"];
+    expect(session?.id.val).toBe("fs_rt");
+    expect(session?.startTime).toBe(5000);
+    expect(session?.endTime).toBe(6000);
+    expect(session?.comment?.val).toBe("round-trip test");
+    expect(session?.outtrigger?.val).toBe("felt triggered by noise");
+    expect(session?.outtriggerSentiment?.val).toBe("negative");
+    expect(Object.keys(loaded.checkInRecords)).toHaveLength(0);
   });
 });
 

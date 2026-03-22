@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9409dac3-f520-4d52-bf87-4488ac9bee18",
+  "id": "a7feda88-b6fc-4a5a-91e0-d5e233caa2d6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -3106,14 +3106,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "fronting_type": {
-          "name": "fronting_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'fronting'"
-        },
         "custom_front_id": {
           "name": "custom_front_id",
           "type": "text",
@@ -3189,11 +3181,6 @@
           "columns": ["system_id", "end_time"],
           "isUnique": false
         },
-        "fronting_sessions_system_type_start_idx": {
-          "name": "fronting_sessions_system_type_start_idx",
-          "columns": ["system_id", "fronting_type", "start_time"],
-          "isUnique": false
-        },
         "fronting_sessions_active_idx": {
           "name": "fronting_sessions_active_idx",
           "columns": ["system_id"],
@@ -3246,10 +3233,6 @@
         "fronting_sessions_end_time_check": {
           "name": "fronting_sessions_end_time_check",
           "value": "\"fronting_sessions\".\"end_time\" IS NULL OR \"fronting_sessions\".\"end_time\" > \"fronting_sessions\".\"start_time\""
-        },
-        "fronting_sessions_fronting_type_check": {
-          "name": "fronting_sessions_fronting_type_check",
-          "value": "\"fronting_sessions\".\"fronting_type\" IS NULL OR \"fronting_sessions\".\"fronting_type\" IN ('fronting', 'co-conscious')"
         },
         "fronting_sessions_version_check": {
           "name": "fronting_sessions_version_check",
@@ -6839,108 +6822,6 @@
         }
       }
     },
-    "switches": {
-      "name": "switches",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "timestamp": {
-          "name": "timestamp",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "member_ids": {
-          "name": "member_ids",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 1
-        },
-        "archived": {
-          "name": "archived",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "archived_at": {
-          "name": "archived_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "switches_system_timestamp_idx": {
-          "name": "switches_system_timestamp_idx",
-          "columns": ["system_id", "timestamp"],
-          "isUnique": false
-        },
-        "switches_system_archived_idx": {
-          "name": "switches_system_archived_idx",
-          "columns": ["system_id", "archived"],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "switches_system_id_systems_id_fk": {
-          "name": "switches_system_id_systems_id_fk",
-          "tableFrom": "switches",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "switches_member_ids_check": {
-          "name": "switches_member_ids_check",
-          "value": "json_array_length(\"switches\".\"member_ids\") >= 1"
-        },
-        "switches_version_check": {
-          "name": "switches_version_check",
-          "value": "\"switches\".\"version\" >= 1"
-        },
-        "switches_archived_consistency_check": {
-          "name": "switches_archived_consistency_check",
-          "value": "(\"switches\".\"archived\" = true) = (\"switches\".\"archived_at\" IS NOT NULL)"
-        }
-      }
-    },
     "sync_changes": {
       "name": "sync_changes",
       "columns": {
@@ -8021,7 +7902,7 @@
       "checkConstraints": {
         "webhook_deliveries_event_type_check": {
           "name": "webhook_deliveries_event_type_check",
-          "value": "\"webhook_deliveries\".\"event_type\" IS NULL OR \"webhook_deliveries\".\"event_type\" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')"
+          "value": "\"webhook_deliveries\".\"event_type\" IS NULL OR \"webhook_deliveries\".\"event_type\" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')"
         },
         "webhook_deliveries_status_check": {
           "name": "webhook_deliveries_status_check",

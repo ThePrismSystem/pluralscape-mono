@@ -1,5 +1,5 @@
 {
-  "id": "c77a03a0-9836-4d9c-84d2-634f56e9bfd6",
+  "id": "8f131082-498a-4c40-b7d3-f8a8252646a3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -3837,13 +3837,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "fronting_type": {
-          "name": "fronting_type",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'fronting'"
-        },
         "custom_front_id": {
           "name": "custom_front_id",
           "type": "varchar(50)",
@@ -3965,33 +3958,6 @@
           "method": "btree",
           "with": {}
         },
-        "fronting_sessions_system_type_start_idx": {
-          "name": "fronting_sessions_system_type_start_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "fronting_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "start_time",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "fronting_sessions_active_idx": {
           "name": "fronting_sessions_active_idx",
           "columns": [
@@ -4077,10 +4043,6 @@
         "fronting_sessions_end_time_check": {
           "name": "fronting_sessions_end_time_check",
           "value": "\"fronting_sessions\".\"end_time\" IS NULL OR \"fronting_sessions\".\"end_time\" > \"fronting_sessions\".\"start_time\""
-        },
-        "fronting_sessions_fronting_type_check": {
-          "name": "fronting_sessions_fronting_type_check",
-          "value": "\"fronting_sessions\".\"fronting_type\" IS NULL OR \"fronting_sessions\".\"fronting_type\" IN ('fronting', 'co-conscious')"
         },
         "fronting_sessions_version_check": {
           "name": "fronting_sessions_version_check",
@@ -8061,140 +8023,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.switches": {
-      "name": "switches",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "system_id": {
-          "name": "system_id",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "timestamp": {
-          "name": "timestamp",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "member_ids": {
-          "name": "member_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "archived_at": {
-          "name": "archived_at",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "switches_system_timestamp_idx": {
-          "name": "switches_system_timestamp_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "timestamp",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "switches_system_archived_idx": {
-          "name": "switches_system_archived_idx",
-          "columns": [
-            {
-              "expression": "system_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "archived",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "switches_system_id_systems_id_fk": {
-          "name": "switches_system_id_systems_id_fk",
-          "tableFrom": "switches",
-          "tableTo": "systems",
-          "columnsFrom": ["system_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "switches_id_timestamp_pk": {
-          "name": "switches_id_timestamp_pk",
-          "columns": ["id", "timestamp"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "switches_member_ids_check": {
-          "name": "switches_member_ids_check",
-          "value": "jsonb_array_length(\"switches\".\"member_ids\") >= 1"
-        },
-        "switches_version_check": {
-          "name": "switches_version_check",
-          "value": "\"switches\".\"version\" >= 1"
-        },
-        "switches_archived_consistency_check": {
-          "name": "switches_archived_consistency_check",
-          "value": "(\"switches\".\"archived\" = true) = (\"switches\".\"archived_at\" IS NOT NULL)"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.sync_changes": {
       "name": "sync_changes",
       "schema": "",
@@ -9426,7 +9254,7 @@
       "checkConstraints": {
         "webhook_deliveries_event_type_check": {
           "name": "webhook_deliveries_event_type_check",
-          "value": "\"webhook_deliveries\".\"event_type\" IS NULL OR \"webhook_deliveries\".\"event_type\" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')"
+          "value": "\"webhook_deliveries\".\"event_type\" IS NULL OR \"webhook_deliveries\".\"event_type\" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')"
         },
         "webhook_deliveries_status_check": {
           "name": "webhook_deliveries_status_check",

@@ -20,7 +20,6 @@ import {
   EXPORT_REQUEST_STATUSES,
   FRIEND_CONNECTION_STATUSES,
   FRONTING_REPORT_FORMATS,
-  FRONTING_TYPES,
   IMPORT_JOB_STATUSES,
   IMPORT_SOURCES,
   JOB_STATUSES,
@@ -60,10 +59,6 @@ describe("enum arrays", () => {
       "partially-elaborated",
       "highly-elaborated",
     ]);
-  });
-
-  it("FRONTING_TYPES matches FrontingType union", () => {
-    expect(FRONTING_TYPES).toEqual(["fronting", "co-conscious"]);
   });
 
   it("RELATIONSHIP_TYPES matches RelationshipType union", () => {
@@ -150,7 +145,7 @@ describe("enum arrays", () => {
   });
 
   it("WEBHOOK_EVENT_TYPES matches WebhookEventType union", () => {
-    expect(WEBHOOK_EVENT_TYPES).toHaveLength(16);
+    expect(WEBHOOK_EVENT_TYPES).toHaveLength(15);
     expect(WEBHOOK_EVENT_TYPES).toContain("member.created");
     expect(WEBHOOK_EVENT_TYPES).toContain("custom-front.changed");
   });
@@ -215,7 +210,7 @@ describe("enum arrays", () => {
   });
 
   it("ENTITY_TYPES matches EntityType union", () => {
-    expect(ENTITY_TYPES).toHaveLength(60);
+    expect(ENTITY_TYPES).toHaveLength(59);
     expect(ENTITY_TYPES).toContain("member");
     expect(ENTITY_TYPES).toContain("system");
     expect(ENTITY_TYPES).toContain("fronting-report");
@@ -275,7 +270,6 @@ describe("enum arrays", () => {
 
   it("all arrays have correct element counts", () => {
     expect(KNOWN_SATURATION_LEVELS).toHaveLength(4);
-    expect(FRONTING_TYPES).toHaveLength(2);
     expect(RELATIONSHIP_TYPES).toHaveLength(10);
     expect(LAYER_ACCESS_TYPES).toHaveLength(2);
     expect(FRIEND_CONNECTION_STATUSES).toHaveLength(4);
@@ -292,7 +286,7 @@ describe("enum arrays", () => {
     expect(PK_SYNC_DIRECTIONS).toHaveLength(3);
     expect(DEVICE_TOKEN_PLATFORMS).toHaveLength(3);
     expect(NOTIFICATION_EVENT_TYPES).toHaveLength(6);
-    expect(WEBHOOK_EVENT_TYPES).toHaveLength(16);
+    expect(WEBHOOK_EVENT_TYPES).toHaveLength(15);
     expect(WEBHOOK_DELIVERY_STATUSES).toHaveLength(3);
     expect(BLOB_PURPOSES).toHaveLength(6);
     expect(IMPORT_SOURCES).toHaveLength(3);
@@ -303,7 +297,7 @@ describe("enum arrays", () => {
     expect(SEARCHABLE_ENTITY_TYPES).toHaveLength(9);
     expect(JOB_TYPES).toHaveLength(15);
     expect(JOB_STATUSES).toHaveLength(5);
-    expect(ENTITY_TYPES).toHaveLength(60);
+    expect(ENTITY_TYPES).toHaveLength(59);
     expect(FRONTING_REPORT_FORMATS).toHaveLength(2);
     expect(DISCOVERY_STATUSES).toHaveLength(3);
     expect(ROTATION_STATES).toHaveLength(5);

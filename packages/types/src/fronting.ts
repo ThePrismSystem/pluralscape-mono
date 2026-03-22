@@ -4,14 +4,10 @@ import type {
   FrontingSessionId,
   HexColor,
   MemberId,
-  SwitchId,
   SystemId,
 } from "./ids.js";
 import type { UnixMillis } from "./timestamps.js";
 import type { Archived, AuditMetadata, EntityReference } from "./utility.js";
-
-/** Whether a member is fully fronting or co-conscious. */
-export type FrontingType = "fronting" | "co-conscious";
 
 /** Sentiment classification for an outtrigger reason. */
 export type OuttriggerSentiment = "negative" | "neutral" | "positive";
@@ -22,7 +18,6 @@ interface FrontingSessionBase extends AuditMetadata {
   readonly systemId: SystemId;
   readonly memberId: MemberId;
   readonly startTime: UnixMillis;
-  readonly frontingType: FrontingType;
   /** Free-text status comment on this session. Max 50 characters (runtime enforced). SP-compatible. */
   readonly comment: string | null;
   readonly customFrontId: CustomFrontId | null;
@@ -30,11 +25,10 @@ interface FrontingSessionBase extends AuditMetadata {
   readonly linkedStructure: EntityReference<"subsystem" | "side-system" | "layer"> | null;
   /** Free-text description of fronting positionality (e.g. close vs far, height). */
   readonly positionality: string | null;
-  /** Outtrigger data — what caused the switch. Stored in T1 encrypted blob. */
-  readonly outtrigger: {
-    readonly reason: string;
-    readonly sentiment: OuttriggerSentiment;
-  } | null;
+  /** Free-text reason describing what caused the fronting change. Stored in T1 encrypted blob. */
+  readonly outtrigger: string | null;
+  /** Sentiment classification for the outtrigger reason. Stored in T1 encrypted blob. */
+  readonly outtriggerSentiment: OuttriggerSentiment | null;
   readonly archived: false;
 }
 
@@ -66,18 +60,6 @@ export type FrontingSession = ActiveFrontingSession | CompletedFrontingSession;
 
 /** An archived fronting session. */
 export type ArchivedFrontingSession = Archived<FrontingSession>;
-
-/** An event recording a switch between members. */
-export interface Switch {
-  readonly id: SwitchId;
-  readonly systemId: SystemId;
-  readonly memberIds: readonly [MemberId, ...MemberId[]];
-  readonly timestamp: UnixMillis;
-  readonly archived: false;
-}
-
-/** An archived switch. */
-export type ArchivedSwitch = Archived<Switch>;
 
 /** A user-defined abstract cognitive state logged like a member. */
 export interface CustomFront extends AuditMetadata {

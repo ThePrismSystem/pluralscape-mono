@@ -44,7 +44,6 @@ export type {
   SystemSettingsId,
   PollOptionId,
   MemberPhotoId,
-  SwitchId,
   AuthKeyId,
   RecoveryKeyId,
   DeviceTransferRequestId,
@@ -136,7 +135,6 @@ export type {
 
 // ── Fronting ────────────────────────────────────────────────────────
 export type {
-  FrontingType,
   OuttriggerSentiment,
   ActiveFrontingSession,
   CompletedFrontingSession,
@@ -144,8 +142,6 @@ export type {
   ArchivedFrontingSession,
   FrontingComment,
   ArchivedFrontingComment,
-  Switch,
-  ArchivedSwitch,
   CustomFront,
   ArchivedCustomFront,
   CoFrontState,
@@ -313,7 +309,6 @@ export type {
   PKBridgeConfig,
   PKMemberMapping,
   PKGroupMapping,
-  PKSwitchMapping,
   PKEntityMapping,
   PKSyncState,
   PKSyncError,

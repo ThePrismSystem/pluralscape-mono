@@ -163,12 +163,12 @@ describe("splitDocument", () => {
         memberId: new Automerge.ImmutableString("mem_a"),
         startTime: 1000,
         endTime: null,
-        frontingType: new Automerge.ImmutableString("fronting"),
         comment: null,
         customFrontId: null,
         linkedStructure: null,
         positionality: null,
         outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
         createdAt: 1000,
         updatedAt: 1000,
@@ -179,12 +179,12 @@ describe("splitDocument", () => {
         memberId: new Automerge.ImmutableString("mem_b"),
         startTime: 500,
         endTime: 900,
-        frontingType: new Automerge.ImmutableString("fronting"),
         comment: null,
         customFrontId: null,
         linkedStructure: null,
         positionality: null,
         outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
         createdAt: 500,
         updatedAt: 900,
@@ -210,7 +210,7 @@ describe("splitDocument", () => {
 
   it("throws if fronting docId is paired with a non-fronting document shape", () => {
     const keys = makeKeys(sodium);
-    const wrongDoc = Automerge.from({ sessions: {}, switches: [] });
+    const wrongDoc = Automerge.from({ sessions: {} });
     const session = new EncryptedSyncSession({
       doc: wrongDoc,
       keys,
@@ -233,12 +233,12 @@ describe("splitDocument", () => {
         memberId: new Automerge.ImmutableString("mem_a"),
         startTime: 1000,
         endTime: null,
-        frontingType: new Automerge.ImmutableString("fronting"),
         comment: null,
         customFrontId: null,
         linkedStructure: null,
         positionality: null,
         outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
         createdAt: 1000,
         updatedAt: 1000,

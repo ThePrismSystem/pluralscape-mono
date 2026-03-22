@@ -50,7 +50,6 @@ export type NotificationConfigId = Brand<string, "NotificationConfigId">;
 export type SystemSettingsId = Brand<string, "SystemSettingsId">;
 export type PollOptionId = Brand<string, "PollOptionId">;
 export type MemberPhotoId = Brand<string, "MemberPhotoId">;
-export type SwitchId = Brand<string, "SwitchId">;
 export type AuthKeyId = Brand<string, "AuthKeyId">;
 export type RecoveryKeyId = Brand<string, "RecoveryKeyId">;
 export type DeviceTransferRequestId = Brand<string, "DeviceTransferRequestId">;
@@ -132,7 +131,6 @@ export const ID_PREFIXES = {
   systemSettings: "sset_",
   pollOption: "po_",
   memberPhoto: "mp_",
-  switch: "sw_",
   authKey: "auk_",
   recoveryKey: "rk_",
   deviceTransferRequest: "dtr_",
@@ -201,7 +199,6 @@ export interface IdPrefixBrandMap {
   sset_: "SystemSettingsId";
   po_: "PollOptionId";
   mp_: "MemberPhotoId";
-  sw_: "SwitchId";
   auk_: "AuthKeyId";
   rk_: "RecoveryKeyId";
   dtr_: "DeviceTransferRequestId";
@@ -271,7 +268,6 @@ export type EntityType =
   | "system-settings"
   | "poll-option"
   | "member-photo"
-  | "switch"
   | "auth-key"
   | "recovery-key"
   | "device-transfer-request"

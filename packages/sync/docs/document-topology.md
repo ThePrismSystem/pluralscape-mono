@@ -56,7 +56,7 @@ Contains the structural definition of a system — entities that are bounded by 
 
 **Encryption key:** Master key
 **Naming:** `fronting-{systemId}` (splits to `fronting-{systemId}-{YYYY-QN}`)
-**CRDT strategy:** Append-only list for sessions/switches, LWW for session end times
+**CRDT strategy:** Append-lww maps for sessions and check-in records, LWW for session end times
 
 Contains all fronting activity — the highest-frequency write path in the application.
 
@@ -65,10 +65,9 @@ Contains all fronting activity — the highest-frequency write path in the appli
 | Entity          | CRDT Type    | Notes                                                                                      |
 | --------------- | ------------ | ------------------------------------------------------------------------------------------ |
 | FrontingSession | Append + LWW | created on switch-in, endTime updated on switch-out                                        |
-| Switch          | Append-only  | immutable switch events                                                                    |
 | CheckInRecord   | Append + LWW | check-in record with mutable response fields (respondedByMemberId, respondedAt, dismissed) |
 
-**Growth pattern:** Append-only, unbounded. A system averaging 5 switches/day produces ~1,825 entries/year. High-frequency systems may produce 20+/day.
+**Growth pattern:** Append-only, unbounded. A system averaging 5 fronting sessions/day produces ~1,825 entries/year. High-frequency systems may produce 20+/day.
 
 **Time-based splitting:** When the document exceeds 5 MB, split by calendar quarter. Historical quarters become read-only (no new appends). The current quarter's document is the active write target. Naming convention: `fronting-{systemId}-2026-Q1`.
 
@@ -191,7 +190,6 @@ Every entity type from `packages/types/src/ids.ts` is listed below with its docu
 | `innerworld-region`   | `system-core`        | Master   | LWW map                                                                                 |
 | `timer`               | `system-core`        | Master   | LWW map                                                                                 |
 | `fronting-session`    | `fronting`           | Master   | Append + LWW                                                                            |
-| `switch`              | `fronting`           | Master   | Append-only                                                                             |
 | `check-in-record`     | `fronting`           | Master   | Append + LWW (map keyed by ID; respondedByMemberId, respondedAt, dismissed are mutable) |
 | `channel`             | `chat-{channelId}`   | Master   | LWW map                                                                                 |
 | `message`             | `chat-{channelId}`   | Master   | Append-only                                                                             |

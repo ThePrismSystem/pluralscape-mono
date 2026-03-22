@@ -20,7 +20,6 @@ import type {
   ExportFormat,
   ExportRequestStatus,
   FriendConnectionStatus,
-  FrontingType,
   ImportJobStatus,
   ImportSource,
   JobStatus,
@@ -52,10 +51,6 @@ export const KNOWN_SATURATION_LEVELS = [
   "partially-elaborated",
   "highly-elaborated",
 ] as const satisfies readonly KnownSaturationLevel[];
-export const FRONTING_TYPES = [
-  "fronting",
-  "co-conscious",
-] as const satisfies readonly FrontingType[];
 export const RELATIONSHIP_TYPES = [
   "split-from",
   "fused-from",
@@ -295,7 +290,6 @@ export const WEBHOOK_EVENT_TYPES = [
   "member.archived",
   "fronting.started",
   "fronting.ended",
-  "switch.recorded",
   "group.created",
   "group.updated",
   "note.created",
@@ -435,7 +429,6 @@ export const ENTITY_TYPES = [
   "system-settings",
   "poll-option",
   "member-photo",
-  "switch",
   "auth-key",
   "recovery-key",
   "device-transfer-request",

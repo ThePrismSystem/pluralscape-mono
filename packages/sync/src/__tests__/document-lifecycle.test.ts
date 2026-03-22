@@ -109,13 +109,22 @@ describe("Compaction: snapshot roundtrip", () => {
     // Produce many changes to build up history
     for (let i = 0; i < 50; i++) {
       session.change((d) => {
-        d.switches.push({
-          id: s(`sw_${i.toString()}`),
+        d.sessions[`fs_${i.toString()}`] = {
+          id: s(`fs_${i.toString()}`),
           systemId: s("sys_1"),
-          memberIds: s('["mem_1"]'),
-          timestamp: 1000 + i,
+          memberId: s("mem_1"),
+          startTime: 1000 + i,
+          endTime: null,
+          comment: null,
+          customFrontId: null,
+          linkedStructure: null,
+          positionality: null,
+          outtrigger: null,
+          outtriggerSentiment: null,
           archived: false,
-        });
+          createdAt: 1000 + i,
+          updatedAt: 1000 + i,
+        };
       });
     }
 
@@ -123,7 +132,7 @@ describe("Compaction: snapshot roundtrip", () => {
     const restored = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium);
 
     // After snapshot, the restored document has the same state
-    expect(restored.document.switches).toHaveLength(50);
+    expect(Object.keys(restored.document.sessions)).toHaveLength(50);
     // Snapshot ciphertext is finite and reasonable (just sanity check)
     expect(snapshot.ciphertext.byteLength).toBeGreaterThan(0);
   });
@@ -234,13 +243,22 @@ describe("Compaction: snapshot roundtrip", () => {
     // Pre-snapshot changes
     for (let i = 0; i < 5; i++) {
       session.change((d) => {
-        d.switches.push({
-          id: s(`sw_pre_${i.toString()}`),
+        d.sessions[`fs_pre_${i.toString()}`] = {
+          id: s(`fs_pre_${i.toString()}`),
           systemId: s("sys_1"),
-          memberIds: s('["mem_1"]'),
-          timestamp: 1000 + i,
+          memberId: s("mem_1"),
+          startTime: 1000 + i,
+          endTime: null,
+          comment: null,
+          customFrontId: null,
+          linkedStructure: null,
+          positionality: null,
+          outtrigger: null,
+          outtriggerSentiment: null,
           archived: false,
-        });
+          createdAt: 1000 + i,
+          updatedAt: 1000 + i,
+        };
       });
     }
 
@@ -251,13 +269,22 @@ describe("Compaction: snapshot roundtrip", () => {
     const newSession = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys, sodium, 1);
 
     const postChange = newSession.change((d) => {
-      d.switches.push({
-        id: s("sw_post_1"),
+      d.sessions["fs_post_1"] = {
+        id: s("fs_post_1"),
         systemId: s("sys_1"),
-        memberIds: s('["mem_2"]'),
-        timestamp: 2000,
+        memberId: s("mem_2"),
+        startTime: 2000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
-      });
+        createdAt: 2000,
+        updatedAt: 2000,
+      };
     });
     await relay.submit(postChange);
 
@@ -274,8 +301,8 @@ describe("Compaction: snapshot roundtrip", () => {
     anotherSession.applyEncryptedChanges(_r1.envelopes);
 
     // Both sessions agree on the post-snapshot state
-    expect(newSession.document.switches).toHaveLength(6);
-    expect(anotherSession.document.switches).toHaveLength(6);
+    expect(Object.keys(newSession.document.sessions)).toHaveLength(6);
+    expect(Object.keys(anotherSession.document.sessions)).toHaveLength(6);
     expect(newSession.document).toEqual(anotherSession.document);
   });
 
@@ -328,13 +355,22 @@ describe("Compaction: snapshot roundtrip", () => {
     });
 
     const env1 = session.change((d) => {
-      d.switches.push({
-        id: s("sw_1"),
+      d.sessions["fs_1"] = {
+        id: s("fs_1"),
         systemId: s("sys_1"),
-        memberIds: s('["mem_1"]'),
-        timestamp: 1000,
+        memberId: s("mem_1"),
+        startTime: 1000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
-      });
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
     });
     await relay.submit(env1);
 
@@ -342,7 +378,7 @@ describe("Compaction: snapshot roundtrip", () => {
     // Restore with lastSyncedSeq = 1 so incremental sync knows to start from seq 2
     const restored = EncryptedSyncSession.fromSnapshot<typeof base>(snapshot, keys2, sodium, 1);
     expect(restored.lastSyncedSeq).toBe(1);
-    expect(restored.document.switches).toHaveLength(1);
+    expect(Object.keys(restored.document.sessions)).toHaveLength(1);
   });
 });
 
@@ -411,31 +447,49 @@ describe("Time-split configuration", () => {
 
     // Q1 has a historical session
     sessionQ1.change((d) => {
-      d.switches.push({
-        id: s("sw_q1"),
+      d.sessions["fs_q1"] = {
+        id: s("fs_q1"),
         systemId: s("sys_abc"),
-        memberIds: s('["mem_1"]'),
-        timestamp: 1_740_000_000,
+        memberId: s("mem_1"),
+        startTime: 1_740_000_000,
+        endTime: 1_740_001_000,
+        comment: null,
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
-      });
+        createdAt: 1_740_000_000,
+        updatedAt: 1_740_001_000,
+      };
     });
 
     // Q2 has a new session
     sessionQ2.change((d) => {
-      d.switches.push({
-        id: s("sw_q2"),
+      d.sessions["fs_q2"] = {
+        id: s("fs_q2"),
         systemId: s("sys_abc"),
-        memberIds: s('["mem_1"]'),
-        timestamp: 1_750_000_000,
+        memberId: s("mem_1"),
+        startTime: 1_750_000_000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
-      });
+        createdAt: 1_750_000_000,
+        updatedAt: 1_750_000_000,
+      };
     });
 
     // Each period doc is independent
-    expect(sessionQ1.document.switches).toHaveLength(1);
-    expect(sessionQ2.document.switches).toHaveLength(1);
-    expect(sessionQ1.document.switches[0]?.id.val).toBe("sw_q1");
-    expect(sessionQ2.document.switches[0]?.id.val).toBe("sw_q2");
+    expect(Object.keys(sessionQ1.document.sessions)).toHaveLength(1);
+    expect(Object.keys(sessionQ2.document.sessions)).toHaveLength(1);
+    expect(sessionQ1.document.sessions["fs_q1"]?.id.val).toBe("fs_q1");
+    expect(sessionQ2.document.sessions["fs_q2"]?.id.val).toBe("fs_q2");
   });
 
   it("cross-split query: concatenate and sort fronting sessions from multiple periods", () => {
@@ -463,12 +517,12 @@ describe("Time-split configuration", () => {
         memberId: s("mem_1"),
         startTime: 1_000,
         endTime: 2_000,
-        frontingType: s("fronting"),
         comment: null,
         customFrontId: null,
         linkedStructure: null,
         positionality: null,
         outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
         createdAt: 1_000,
         updatedAt: 2_000,
@@ -482,12 +536,12 @@ describe("Time-split configuration", () => {
         memberId: s("mem_1"),
         startTime: 3_000,
         endTime: 4_000,
-        frontingType: s("fronting"),
         comment: null,
         customFrontId: null,
         linkedStructure: null,
         positionality: null,
         outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
         createdAt: 3_000,
         updatedAt: 4_000,
@@ -564,13 +618,22 @@ describe("Purging: post-compaction state", () => {
     // Pre-snapshot changes
     for (let i = 0; i < 3; i++) {
       session.change((d) => {
-        d.switches.push({
-          id: s(`sw_pre_${i.toString()}`),
+        d.sessions[`fs_pre_${i.toString()}`] = {
+          id: s(`fs_pre_${i.toString()}`),
           systemId: s("sys_1"),
-          memberIds: s('["mem_1"]'),
-          timestamp: 1000 + i,
+          memberId: s("mem_1"),
+          startTime: 1000 + i,
+          endTime: null,
+          comment: null,
+          customFrontId: null,
+          linkedStructure: null,
+          positionality: null,
+          outtrigger: null,
+          outtriggerSentiment: null,
           archived: false,
-        });
+          createdAt: 1000 + i,
+          updatedAt: 1000 + i,
+        };
       });
     }
 
@@ -578,13 +641,22 @@ describe("Purging: post-compaction state", () => {
 
     // Post-snapshot changes
     const postChange = session.change((d) => {
-      d.switches.push({
-        id: s("sw_post"),
+      d.sessions["fs_post"] = {
+        id: s("fs_post"),
         systemId: s("sys_1"),
-        memberIds: s('["mem_2"]'),
-        timestamp: 2000,
+        memberId: s("mem_2"),
+        startTime: 2000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
-      });
+        createdAt: 2000,
+        updatedAt: 2000,
+      };
     });
     await relay.submit(postChange);
 
@@ -594,8 +666,8 @@ describe("Purging: post-compaction state", () => {
     const _r2 = await relay.getEnvelopesSince(asSyncDocId("doc-purge-002"), 0);
     restored.applyEncryptedChanges(_r2.envelopes);
 
-    expect(restored.document.switches).toHaveLength(4);
-    expect(restored.document.switches.map((s_) => s_.id.val)).toContain("sw_post");
+    expect(Object.keys(restored.document.sessions)).toHaveLength(4);
+    expect(Object.keys(restored.document.sessions)).toContain("fs_post");
   });
 
   it("changes with seq > snapshotVersion survive purge", async () => {
@@ -609,13 +681,22 @@ describe("Purging: post-compaction state", () => {
     });
 
     const env1 = session.change((d) => {
-      d.switches.push({
-        id: s("sw_1"),
+      d.sessions["fs_1"] = {
+        id: s("fs_1"),
         systemId: s("sys_1"),
-        memberIds: s('["mem_1"]'),
-        timestamp: 1000,
+        memberId: s("mem_1"),
+        startTime: 1000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
-      });
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
     });
     await relay.submit(env1);
 
@@ -623,13 +704,22 @@ describe("Purging: post-compaction state", () => {
     session.createSnapshot(1);
 
     const env2 = session.change((d) => {
-      d.switches.push({
-        id: s("sw_2"),
+      d.sessions["fs_2"] = {
+        id: s("fs_2"),
         systemId: s("sys_1"),
-        memberIds: s('["mem_2"]'),
-        timestamp: 2000,
+        memberId: s("mem_2"),
+        startTime: 2000,
+        endTime: null,
+        comment: null,
+        customFrontId: null,
+        linkedStructure: null,
+        positionality: null,
+        outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
-      });
+        createdAt: 2000,
+        updatedAt: 2000,
+      };
     });
     await relay.submit(env2);
 
@@ -756,12 +846,12 @@ describe("Archive: cold document behavior", () => {
         memberId: s("mem_1"),
         startTime: 1_000,
         endTime: 2_000,
-        frontingType: s("fronting"),
         comment: null,
         customFrontId: null,
         linkedStructure: null,
         positionality: null,
         outtrigger: null,
+        outtriggerSentiment: null,
         archived: false,
         createdAt: 1_000,
         updatedAt: 2_000,

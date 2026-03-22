@@ -187,7 +187,6 @@ describe("RLS_TABLE_POLICIES", () => {
       ["channels", "system"],
       ["buckets", "system"],
       ["fronting_sessions", "system"],
-      ["switches", "system"],
       ["fronting_reports", "system"],
       ["groups", "system"],
       ["journal_entries", "system"],

@@ -18,9 +18,7 @@ import {
   versioned,
   versionCheckFor,
 } from "../../helpers/audit.pg.js";
-import { enumCheck } from "../../helpers/check.js";
-import { ENUM_MAX_LENGTH, ID_MAX_LENGTH } from "../../helpers/db.constants.js";
-import { FRONTING_TYPES } from "../../helpers/enums.js";
+import { ID_MAX_LENGTH } from "../../helpers/db.constants.js";
 
 import { members } from "./members.js";
 import { systems } from "./systems.js";
@@ -61,10 +59,6 @@ export const frontingSessions = pgTable(
     startTime: pgTimestamp("start_time").notNull(),
     endTime: pgTimestamp("end_time"),
     memberId: varchar("member_id", { length: ID_MAX_LENGTH }),
-    frontingType: varchar("fronting_type", { length: ENUM_MAX_LENGTH })
-      .notNull()
-      .default("fronting")
-      .$type<ServerFrontingSession["frontingType"]>(),
     customFrontId: varchar("custom_front_id", { length: ID_MAX_LENGTH }),
     linkedStructure: jsonb("linked_structure").$type<ServerFrontingSession["linkedStructure"]>(),
     encryptedData: pgEncryptedBlob("encrypted_data").notNull(),
@@ -79,7 +73,6 @@ export const frontingSessions = pgTable(
     index("fronting_sessions_system_start_idx").on(t.systemId, t.startTime),
     index("fronting_sessions_system_member_start_idx").on(t.systemId, t.memberId, t.startTime),
     index("fronting_sessions_system_end_idx").on(t.systemId, t.endTime),
-    index("fronting_sessions_system_type_start_idx").on(t.systemId, t.frontingType, t.startTime),
     index("fronting_sessions_active_idx")
       .on(t.systemId)
       .where(sql`${t.endTime} IS NULL`),
@@ -88,7 +81,6 @@ export const frontingSessions = pgTable(
       "fronting_sessions_end_time_check",
       sql`${t.endTime} IS NULL OR ${t.endTime} > ${t.startTime}`,
     ),
-    check("fronting_sessions_fronting_type_check", enumCheck(t.frontingType, FRONTING_TYPES)),
     unique("fronting_sessions_id_system_id_unique").on(t.id, t.systemId, t.startTime),
     foreignKey({
       columns: [t.memberId, t.systemId],
@@ -111,40 +103,6 @@ export const frontingSessions = pgTable(
       "fronting_sessions_subject_check",
       sql`${t.memberId} IS NOT NULL OR ${t.customFrontId} IS NOT NULL`,
     ),
-  ],
-);
-
-// Switches are archivable to support data correction (e.g., mistakenly recorded switches).
-// Archived switches are excluded from display but preserved for audit integrity.
-
-// NOTE: The production migration adds PARTITION BY RANGE ("timestamp") which Drizzle
-// cannot express. Running drizzle-kit generate for this table requires manual verification.
-// See migration 0014 for details.
-export const switches = pgTable(
-  "switches",
-  {
-    id: varchar("id", { length: ID_MAX_LENGTH }).notNull(),
-    systemId: varchar("system_id", { length: ID_MAX_LENGTH })
-      .notNull()
-      .references(() => systems.id, { onDelete: "cascade" }),
-    timestamp: pgTimestamp("timestamp").notNull(),
-    /**
-     * T3 plaintext: member IDs are opaque tokens (see tier map at encryption.ts:626).
-     * Known limitation: JSONB arrays cannot have FK constraints — cross-system
-     * member ID validation is enforced at the application layer.
-     */
-    memberIds: jsonb("member_ids").notNull().$type<readonly [string, ...string[]]>(),
-    createdAt: pgTimestamp("created_at").notNull(),
-    ...versioned(),
-    ...archivable(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.id, t.timestamp] }),
-    index("switches_system_timestamp_idx").on(t.systemId, t.timestamp),
-    index("switches_system_archived_idx").on(t.systemId, t.archived),
-    check("switches_member_ids_check", sql`jsonb_array_length(${t.memberIds}) >= 1`),
-    versionCheckFor("switches", t.version),
-    archivableConsistencyCheckFor("switches", t.archived, t.archivedAt),
   ],
 );
 
@@ -183,8 +141,6 @@ export const frontingComments = pgTable(
 
 export type FrontingSessionRow = InferSelectModel<typeof frontingSessions>;
 export type NewFrontingSession = InferInsertModel<typeof frontingSessions>;
-export type SwitchRow = InferSelectModel<typeof switches>;
-export type NewSwitch = InferInsertModel<typeof switches>;
 export type CustomFrontRow = InferSelectModel<typeof customFronts>;
 export type NewCustomFront = InferInsertModel<typeof customFronts>;
 export type FrontingCommentRow = InferSelectModel<typeof frontingComments>;

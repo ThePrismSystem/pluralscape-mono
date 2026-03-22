@@ -495,7 +495,6 @@ CREATE TABLE `fronting_sessions` (
 	`start_time` integer NOT NULL,
 	`end_time` integer,
 	`member_id` text,
-	`fronting_type` text DEFAULT 'fronting' NOT NULL,
 	`custom_front_id` text,
 	`linked_structure` text,
 	`encrypted_data` blob NOT NULL,
@@ -508,7 +507,6 @@ CREATE TABLE `fronting_sessions` (
 	FOREIGN KEY (`member_id`,`system_id`) REFERENCES `members`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
 	FOREIGN KEY (`custom_front_id`) REFERENCES `custom_fronts`(`id`) ON UPDATE no action ON DELETE restrict,
 	CONSTRAINT "fronting_sessions_end_time_check" CHECK("fronting_sessions"."end_time" IS NULL OR "fronting_sessions"."end_time" > "fronting_sessions"."start_time"),
-	CONSTRAINT "fronting_sessions_fronting_type_check" CHECK("fronting_sessions"."fronting_type" IS NULL OR "fronting_sessions"."fronting_type" IN ('fronting', 'co-conscious')),
 	CONSTRAINT "fronting_sessions_version_check" CHECK("fronting_sessions"."version" >= 1),
 	CONSTRAINT "fronting_sessions_archived_consistency_check" CHECK(("fronting_sessions"."archived" = true) = ("fronting_sessions"."archived_at" IS NOT NULL)),
 	CONSTRAINT "fronting_sessions_subject_check" CHECK("fronting_sessions"."member_id" IS NOT NULL OR "fronting_sessions"."custom_front_id" IS NOT NULL)
@@ -517,7 +515,6 @@ CREATE TABLE `fronting_sessions` (
 CREATE INDEX `fronting_sessions_system_start_idx` ON `fronting_sessions` (`system_id`,`start_time`);--> statement-breakpoint
 CREATE INDEX `fronting_sessions_system_member_start_idx` ON `fronting_sessions` (`system_id`,`member_id`,`start_time`);--> statement-breakpoint
 CREATE INDEX `fronting_sessions_system_end_idx` ON `fronting_sessions` (`system_id`,`end_time`);--> statement-breakpoint
-CREATE INDEX `fronting_sessions_system_type_start_idx` ON `fronting_sessions` (`system_id`,`fronting_type`,`start_time`);--> statement-breakpoint
 CREATE INDEX `fronting_sessions_active_idx` ON `fronting_sessions` (`system_id`) WHERE "fronting_sessions"."end_time" IS NULL;--> statement-breakpoint
 CREATE INDEX `fronting_sessions_system_archived_idx` ON `fronting_sessions` (`system_id`,`archived`);--> statement-breakpoint
 CREATE UNIQUE INDEX `fronting_sessions_id_system_id_unique` ON `fronting_sessions` (`id`,`system_id`);--> statement-breakpoint
@@ -1089,23 +1086,6 @@ CREATE TABLE `subsystems` (
 --> statement-breakpoint
 CREATE INDEX `subsystems_system_archived_idx` ON `subsystems` (`system_id`,`archived`);--> statement-breakpoint
 CREATE UNIQUE INDEX `subsystems_id_system_id_unique` ON `subsystems` (`id`,`system_id`);--> statement-breakpoint
-CREATE TABLE `switches` (
-	`id` text PRIMARY KEY NOT NULL,
-	`system_id` text NOT NULL,
-	`timestamp` integer NOT NULL,
-	`member_ids` text NOT NULL,
-	`created_at` integer NOT NULL,
-	`version` integer DEFAULT 1 NOT NULL,
-	`archived` integer DEFAULT false NOT NULL,
-	`archived_at` integer,
-	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
-	CONSTRAINT "switches_member_ids_check" CHECK(json_array_length("switches"."member_ids") >= 1),
-	CONSTRAINT "switches_version_check" CHECK("switches"."version" >= 1),
-	CONSTRAINT "switches_archived_consistency_check" CHECK(("switches"."archived" = true) = ("switches"."archived_at" IS NOT NULL))
-);
---> statement-breakpoint
-CREATE INDEX `switches_system_timestamp_idx` ON `switches` (`system_id`,`timestamp`);--> statement-breakpoint
-CREATE INDEX `switches_system_archived_idx` ON `switches` (`system_id`,`archived`);--> statement-breakpoint
 CREATE TABLE `sync_changes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`document_id` text NOT NULL,
@@ -1287,7 +1267,7 @@ CREATE TABLE `webhook_deliveries` (
 	`archived_at` integer,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`webhook_id`,`system_id`) REFERENCES `webhook_configs`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	CONSTRAINT "webhook_deliveries_event_type_check" CHECK("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'switch.recorded', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
+	CONSTRAINT "webhook_deliveries_event_type_check" CHECK("webhook_deliveries"."event_type" IS NULL OR "webhook_deliveries"."event_type" IN ('member.created', 'member.updated', 'member.archived', 'fronting.started', 'fronting.ended', 'group.created', 'group.updated', 'note.created', 'note.updated', 'chat.message-sent', 'poll.created', 'poll.closed', 'acknowledgement.requested', 'lifecycle.event-recorded', 'custom-front.changed')),
 	CONSTRAINT "webhook_deliveries_status_check" CHECK("webhook_deliveries"."status" IS NULL OR "webhook_deliveries"."status" IN ('pending', 'success', 'failed')),
 	CONSTRAINT "webhook_deliveries_attempt_count_check" CHECK("webhook_deliveries"."attempt_count" >= 0),
 	CONSTRAINT "webhook_deliveries_http_status_check" CHECK("webhook_deliveries"."http_status" IS NULL OR ("webhook_deliveries"."http_status" >= 100 AND "webhook_deliveries"."http_status" <= 599)),

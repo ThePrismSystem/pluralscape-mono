@@ -1,13 +1,12 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import type { EncryptedString } from "../encryption.js";
-import type { GroupId, MemberId, PKBridgeConfigId, SwitchId, SystemId } from "../ids.js";
+import type { GroupId, MemberId, PKBridgeConfigId, SystemId } from "../ids.js";
 import type {
   PKBridgeConfig,
   PKEntityMapping,
   PKGroupMapping,
   PKMemberMapping,
-  PKSwitchMapping,
   PKSyncableEntityType,
   PKSyncDirection,
   PKSyncError,
@@ -81,7 +80,6 @@ describe("PKSyncableEntityType", () => {
   it("accepts valid entity types", () => {
     assertType<PKSyncableEntityType>("member");
     assertType<PKSyncableEntityType>("group");
-    assertType<PKSyncableEntityType>("switch");
   });
 
   it("rejects invalid entity types", () => {
@@ -94,7 +92,6 @@ describe("PKSyncableEntityType", () => {
       switch (type) {
         case "member":
         case "group":
-        case "switch":
           return type;
         default: {
           const _exhaustive: never = type;
@@ -167,10 +164,6 @@ describe("PKEntityMapping", () => {
           expectTypeOf(mapping).toEqualTypeOf<PKGroupMapping>();
           expectTypeOf(mapping.psEntityId).toEqualTypeOf<GroupId>();
           return "group";
-        case "switch":
-          expectTypeOf(mapping).toEqualTypeOf<PKSwitchMapping>();
-          expectTypeOf(mapping.psEntityId).toEqualTypeOf<SwitchId>();
-          return "switch";
         default: {
           const _exhaustive: never = mapping;
           return _exhaustive;

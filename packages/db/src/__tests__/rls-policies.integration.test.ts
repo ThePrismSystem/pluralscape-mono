@@ -113,7 +113,6 @@ describe("RLS policy SQL generation", () => {
       "channels",
       "buckets",
       "fronting_sessions",
-      "switches",
       "groups",
       "journal_entries",
       "api_keys",

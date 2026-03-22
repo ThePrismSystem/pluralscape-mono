@@ -12,7 +12,6 @@ describe("PARTITIONED_TABLES", () => {
     expect(PARTITIONED_TABLES).toContain("messages");
     expect(PARTITIONED_TABLES).toContain("audit_log");
     expect(PARTITIONED_TABLES).toContain("fronting_sessions");
-    expect(PARTITIONED_TABLES).toContain("switches");
   });
 });
 
@@ -55,7 +54,7 @@ describe("parsePartitionDate", () => {
       [2026, 6],
       [2027, 12],
     ];
-    for (const table of ["messages", "audit_log", "fronting_sessions", "switches"] as const) {
+    for (const table of ["messages", "audit_log", "fronting_sessions"] as const) {
       for (const [year, month] of cases) {
         const name = formatPartitionName(table, year, month);
         expect(parsePartitionDate(name)).toEqual({ year, month });

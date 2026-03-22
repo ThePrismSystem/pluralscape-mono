@@ -14,15 +14,15 @@ export interface CrdtFrontingSession extends CrdtAuditFields {
   startTime: number;
   /** LWW — set on switch-out. Null while session is active. */
   endTime: number | null;
-  /** FrontingType string: "fronting" | "co-conscious" */
-  frontingType: CrdtString;
   comment: CrdtOptionalString;
   customFrontId: CrdtOptionalString;
   /** JSON-serialized EntityReference<"subsystem"|"side-system"|"layer"> | null */
   linkedStructure: CrdtOptionalString;
   positionality: CrdtOptionalString;
-  /** JSON-serialized outtrigger object | null */
+  /** Free-text outtrigger reason | null */
   outtrigger: CrdtOptionalString;
+  /** OuttriggerSentiment string: "positive" | "neutral" | "negative" | null */
+  outtriggerSentiment: CrdtOptionalString;
   archived: boolean;
 }
 
@@ -35,21 +35,6 @@ export interface CrdtFrontingComment extends CrdtAuditFields {
   systemId: CrdtString;
   memberId: CrdtString;
   content: CrdtString;
-  archived: boolean;
-}
-
-// ── switch ───────────────────────────────────────────────────────────
-
-/**
- * CRDT representation of a Switch (append-only list element).
- * Immutable once appended — records the moment control transfers.
- */
-export interface CrdtSwitch {
-  id: CrdtString;
-  systemId: CrdtString;
-  /** JSON-serialized [MemberId, ...MemberId[]] */
-  memberIds: CrdtString;
-  timestamp: number;
   archived: boolean;
 }
 
@@ -94,8 +79,6 @@ export interface FrontingDocument {
   sessions: Record<string, CrdtFrontingSession>;
   /** LWW map keyed by FrontingCommentId. */
   comments: Record<string, CrdtFrontingComment>;
-  /** Append-only list of switch events. Immutable once appended. */
-  switches: CrdtSwitch[];
   /** Append-lww map: records are added by ID assignment; response fields are mutable. */
   checkInRecords: Record<string, CrdtCheckInRecord>;
 }

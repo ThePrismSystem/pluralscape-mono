@@ -4,12 +4,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { accounts } from "../schema/pg/auth.js";
-import {
-  customFronts,
-  frontingComments,
-  frontingSessions,
-  switches,
-} from "../schema/pg/fronting.js";
+import { customFronts, frontingComments, frontingSessions } from "../schema/pg/fronting.js";
 import { members } from "../schema/pg/members.js";
 import { systems } from "../schema/pg/systems.js";
 
@@ -28,7 +23,6 @@ const schema = {
   systems,
   members,
   frontingSessions,
-  switches,
   customFronts,
   frontingComments,
 };
@@ -83,7 +77,6 @@ describe("PG fronting schema", () => {
 
   afterEach(async () => {
     await db.delete(frontingComments);
-    await db.delete(switches);
     await db.delete(frontingSessions);
     await db.delete(customFronts);
   });
@@ -323,14 +316,12 @@ describe("PG fronting schema", () => {
         createdAt: now,
         updatedAt: now,
         memberId,
-        frontingType: "fronting",
         customFrontId: cfId,
         linkedStructure: { entityType: "subsystem", entityId: "r-1" },
       });
 
       const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
       expect(rows[0]?.memberId).toBe(memberId);
-      expect(rows[0]?.frontingType).toBe("fronting");
       expect(rows[0]?.customFrontId).toBe(cfId);
       expect(rows[0]?.linkedStructure).toEqual({ entityType: "subsystem", entityId: "r-1" });
     });
@@ -354,7 +345,6 @@ describe("PG fronting schema", () => {
 
       const rows = await db.select().from(frontingSessions).where(eq(frontingSessions.id, id));
       expect(rows[0]?.memberId).toBeNull();
-      expect(rows[0]?.frontingType).toBe("fronting");
       expect(rows[0]?.customFrontId).toBe(customFrontId);
       expect(rows[0]?.linkedStructure).toBeNull();
     });
@@ -441,26 +431,6 @@ describe("PG fronting schema", () => {
           updatedAt: now,
         }),
       ).rejects.toThrow();
-    });
-
-    it("rejects invalid frontingType via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const memberId = await insertMember(systemId);
-      const now = Date.now();
-
-      await expect(
-        db.insert(frontingSessions).values({
-          id: crypto.randomUUID(),
-          systemId,
-          startTime: now,
-          memberId,
-          encryptedData: testBlob(new Uint8Array([1])),
-          createdAt: now,
-          updatedAt: now,
-          frontingType: "invalid" as "fronting",
-        }),
-      ).rejects.toThrow(/check|constraint|failed query/i);
     });
 
     it("rejects version < 1 via CHECK constraint", async () => {
@@ -585,215 +555,6 @@ describe("PG fronting schema", () => {
         client.query(
           "INSERT INTO fronting_sessions (id, system_id, start_time, member_id, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, $4, '\\x0102'::bytea, $5, $6, 1, false, $7)",
           [crypto.randomUUID(), systemId, now, memberId, now, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-  });
-
-  describe("switches", () => {
-    it("inserts with memberIds and round-trips the array", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-      const memberIds = ["mem_test1", "mem_test2"] as const;
-
-      await db.insert(switches).values({
-        id,
-        systemId,
-        timestamp: now,
-        memberIds,
-        createdAt: now,
-      });
-
-      const rows = await db.select().from(switches).where(eq(switches.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.memberIds).toEqual(memberIds);
-      expect(rows[0]?.systemId).toBe(systemId);
-      expect(rows[0]?.timestamp).toBe(now);
-    });
-
-    it("cascades on system deletion", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(switches).values({
-        id,
-        systemId,
-        timestamp: now,
-        memberIds: ["mem_test1", "mem_test2"],
-        createdAt: now,
-      });
-
-      await db.delete(systems).where(eq(systems.id, systemId));
-      const rows = await db.select().from(switches).where(eq(switches.id, id));
-      expect(rows).toHaveLength(0);
-    });
-
-    it("rejects nonexistent systemId FK", async () => {
-      const now = Date.now();
-      await expect(
-        db.insert(switches).values({
-          id: crypto.randomUUID(),
-          systemId: "nonexistent",
-          timestamp: now,
-          memberIds: ["mem_test1", "mem_test2"],
-          createdAt: now,
-        }),
-      ).rejects.toThrow();
-    });
-
-    it("rejects empty memberIds array via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          "INSERT INTO switches (id, system_id, timestamp, member_ids, created_at) VALUES ($1, $2, $3, '[]'::jsonb, $4)",
-          [crypto.randomUUID(), systemId, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-
-    it("accepts single-element memberIds array (minimum valid)", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(switches).values({
-        id,
-        systemId,
-        timestamp: now,
-        memberIds: ["mem_single"],
-        createdAt: now,
-      });
-
-      const rows = await db.select().from(switches).where(eq(switches.id, id));
-      expect(rows).toHaveLength(1);
-      expect(rows[0]?.memberIds).toEqual(["mem_single"]);
-    });
-
-    it("defaults version to 1", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(switches).values({
-        id,
-        systemId,
-        timestamp: now,
-        memberIds: ["mem_test1"],
-        createdAt: now,
-      });
-
-      const rows = await db.select().from(switches).where(eq(switches.id, id));
-      expect(rows[0]?.version).toBe(1);
-    });
-
-    it("rejects version < 1 via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version) VALUES ($1, $2, $3, '["m1"]'::jsonb, $4, 0)`,
-          [crypto.randomUUID(), systemId, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-
-    it("defaults archived to false and archivedAt to null", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(switches).values({
-        id,
-        systemId,
-        timestamp: now,
-        memberIds: ["mem_test1"],
-        createdAt: now,
-      });
-
-      const rows = await db.select().from(switches).where(eq(switches.id, id));
-      expect(rows[0]?.archived).toBe(false);
-      expect(rows[0]?.archivedAt).toBeNull();
-    });
-
-    it("round-trips archived: true with archivedAt timestamp", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(switches).values({
-        id,
-        systemId,
-        timestamp: now,
-        memberIds: ["mem_test1"],
-        createdAt: now,
-        archived: true,
-        archivedAt: now,
-      });
-
-      const rows = await db.select().from(switches).where(eq(switches.id, id));
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(now);
-    });
-
-    it("updates archived from false to true", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const id = crypto.randomUUID();
-      const now = Date.now();
-
-      await db.insert(switches).values({
-        id,
-        systemId,
-        timestamp: now,
-        memberIds: ["mem_test1"],
-        createdAt: now,
-      });
-
-      const updateNow = Date.now();
-      await db
-        .update(switches)
-        .set({ archived: true, archivedAt: updateNow })
-        .where(eq(switches.id, id));
-      const rows = await db.select().from(switches).where(eq(switches.id, id));
-      expect(rows[0]?.archived).toBe(true);
-      expect(rows[0]?.archivedAt).toBe(updateNow);
-    });
-
-    it("rejects archived=true with archivedAt=null via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version, archived, archived_at) VALUES ($1, $2, $3, '["m1"]'::jsonb, $4, 1, true, NULL)`,
-          [crypto.randomUUID(), systemId, now, now],
-        ),
-      ).rejects.toThrow(/check|constraint/i);
-    });
-
-    it("rejects archived=false with archivedAt set via CHECK constraint", async () => {
-      const accountId = await insertAccount();
-      const systemId = await insertSystem(accountId);
-      const now = Date.now();
-
-      await expect(
-        client.query(
-          `INSERT INTO switches (id, system_id, timestamp, member_ids, created_at, version, archived, archived_at) VALUES ($1, $2, $3, '["m1"]'::jsonb, $4, 1, false, $5)`,
-          [crypto.randomUUID(), systemId, now, now, now],
         ),
       ).rejects.toThrow(/check|constraint/i);
     });
