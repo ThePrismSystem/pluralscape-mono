@@ -3,9 +3,12 @@
 title: Active fronting query endpoint
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-22T11:48:57Z
-updated_at: 2026-03-22T11:48:57Z
+updated_at: 2026-03-22T12:50:41Z
 parent: api-5pvc
+blocked_by:
+  - api-vuhs
 ---
 
 Specialized read-only endpoint for querying current fronters and co-fronting state.

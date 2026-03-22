@@ -3,9 +3,12 @@
 title: Fronting comment CRUD
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-22T11:48:53Z
-updated_at: 2026-03-22T11:48:53Z
+updated_at: 2026-03-22T12:52:27Z
 parent: api-5pvc
+blocked_by:
+  - api-vuhs
 ---
 
 Service, routes, and tests for fronting comments nested under sessions.
@@ -25,4 +28,4 @@ Service, routes, and tests for fronting comments nested under sessions.
 
 - Update `fronting_comments` table: add `custom_front_id` and `structure_entity_id` columns with RESTRICT FKs
 - Add author CHECK constraint (at least one of member_id, custom_front_id, structure_entity_id must be set)
-- Remove `session_start_time` denormalization
+- Retain `session_start_time` in DB — required for FK into partitioned `fronting_sessions` table (Postgres requires partition key in FK references; see ADR 019). Service resolves `start_time` from the parent session on create; API responses omit it

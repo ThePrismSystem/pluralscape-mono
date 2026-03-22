@@ -3,9 +3,12 @@
 title: Co-fronting analytics
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-22T11:49:51Z
-updated_at: 2026-03-22T11:49:51Z
+updated_at: 2026-03-22T12:50:47Z
 parent: api-8sel
+blocked_by:
+  - api-xfh9
 ---
 
 Overlap detection and pair analysis for co-fronting statistics.

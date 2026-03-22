@@ -3,9 +3,12 @@
 title: Timer scheduling worker
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-22T11:49:16Z
-updated_at: 2026-03-22T11:49:16Z
+updated_at: 2026-03-22T12:50:43Z
 parent: api-2z82
+blocked_by:
+  - api-qd1b
 ---
 
 BullMQ repeatable job that creates check-in records on schedule.

@@ -3,9 +3,12 @@
 title: CRDT sync strategies for fronting
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-22T11:49:00Z
-updated_at: 2026-03-22T11:49:00Z
+updated_at: 2026-03-22T12:50:41Z
 parent: api-5pvc
+blocked_by:
+  - api-vuhs
 ---
 
 Register CRDT strategies for fronting sessions and comments.

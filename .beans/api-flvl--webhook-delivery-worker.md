@@ -3,9 +3,12 @@
 title: Webhook delivery worker
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-22T11:49:37Z
-updated_at: 2026-03-22T11:49:37Z
+updated_at: 2026-03-22T12:50:45Z
 parent: api-i8ln
+blocked_by:
+  - api-xjt6
 ---
 
 BullMQ job that processes pending webhook deliveries.

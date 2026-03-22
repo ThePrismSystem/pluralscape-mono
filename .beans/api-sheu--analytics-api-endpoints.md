@@ -3,9 +3,12 @@
 title: Analytics API endpoints
 status: todo
 type: task
+priority: normal
 created_at: 2026-03-22T11:49:55Z
-updated_at: 2026-03-22T11:49:55Z
+updated_at: 2026-03-22T12:50:47Z
 parent: api-8sel
+blocked_by:
+  - api-xfh9
 ---
 
 Read-only REST endpoints exposing analytics computations + report storage CRUD.
