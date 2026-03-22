@@ -1,0 +1,19 @@
+---
+# sync-8ni9
+title: CRDT sync strategies for fronting
+status: todo
+type: task
+created_at: 2026-03-22T11:49:00Z
+updated_at: 2026-03-22T11:49:00Z
+parent: api-5pvc
+---
+
+Register CRDT strategies for fronting sessions and comments.
+
+## Acceptance Criteria
+
+- [ ] Fronting session strategy: LWW-Map in `system-core` document, keyed by session ID
+- [ ] Fronting comment strategy: LWW-Map in `system-core` document
+- [ ] Conflict resolution: LWW per-field for sessions and comments
+- [ ] Post-merge validation: sessions validate subject constraint, end_time > start_time
+- [ ] Tests for merge conflict scenarios

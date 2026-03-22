@@ -5,11 +5,11 @@ status: todo
 type: epic
 priority: normal
 created_at: 2026-03-08T12:15:47Z
-updated_at: 2026-03-17T03:26:02Z
+updated_at: 2026-03-22T11:48:12Z
 parent: ps-mmpz
 ---
 
-Start/end/switch, co-fronting vs co-conscious, subsystem-level fronting, retroactive edits, comments, custom front status text
+Start/end sessions, co-fronting as parallel timelines, structure entity fronting, retroactive edits, comments, custom front status text, active fronting queries
 
 ### Deletion pattern
 
