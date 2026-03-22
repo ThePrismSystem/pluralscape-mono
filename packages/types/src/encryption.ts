@@ -349,7 +349,7 @@ export type ClientFieldDefinition = FieldDefinition;
 export interface ServerFieldValue extends AuditMetadata {
   readonly id: FieldValueId;
   readonly fieldDefinitionId: FieldDefinitionId;
-  readonly memberId: MemberId;
+  readonly memberId: MemberId | null;
   readonly structureEntityId: SystemStructureEntityId | null;
   readonly groupId: GroupId | null;
   readonly encryptedData: EncryptedBlob;

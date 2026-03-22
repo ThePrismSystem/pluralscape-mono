@@ -16,8 +16,10 @@ import type {
   EncryptedBlob,
   FieldDefinitionId,
   FieldValueId,
+  GroupId,
   MemberId,
   SystemId,
+  SystemStructureEntityId,
   UnixMillis,
 } from "@pluralscape/types";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -31,7 +33,9 @@ const MAX_ENCRYPTED_FIELD_VALUE_BYTES = 16_384;
 export interface FieldValueResult {
   readonly id: FieldValueId;
   readonly fieldDefinitionId: FieldDefinitionId;
-  readonly memberId: MemberId;
+  readonly memberId: MemberId | null;
+  readonly structureEntityId: SystemStructureEntityId | null;
+  readonly groupId: GroupId | null;
   readonly systemId: SystemId;
   readonly encryptedData: string;
   readonly version: number;
@@ -45,20 +49,20 @@ function toFieldValueResult(row: {
   id: string;
   fieldDefinitionId: string;
   memberId: string | null;
+  structureEntityId: string | null;
+  groupId: string | null;
   systemId: string;
   encryptedData: EncryptedBlob;
   version: number;
   createdAt: number;
   updatedAt: number;
 }): FieldValueResult {
-  if (row.memberId === null) {
-    throw new Error("Unexpected null memberId in member-scoped field value query");
-  }
-
   return {
     id: row.id as FieldValueId,
     fieldDefinitionId: row.fieldDefinitionId as FieldDefinitionId,
-    memberId: row.memberId as MemberId,
+    memberId: row.memberId as MemberId | null,
+    structureEntityId: row.structureEntityId as SystemStructureEntityId | null,
+    groupId: row.groupId as GroupId | null,
     systemId: row.systemId as SystemId,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,

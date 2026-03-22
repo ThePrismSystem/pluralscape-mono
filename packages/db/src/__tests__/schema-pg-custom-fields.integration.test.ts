@@ -6,10 +6,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/pg/auth.js";
 import {
   fieldBucketVisibility,
+  fieldDefinitionScopes,
   fieldDefinitions,
   fieldValues,
 } from "../schema/pg/custom-fields.js";
+import { groups } from "../schema/pg/groups.js";
 import { buckets } from "../schema/pg/privacy.js";
+import { systemStructureEntities, systemStructureEntityTypes } from "../schema/pg/structure.js";
 import { systems } from "../schema/pg/systems.js";
 
 import {
@@ -26,7 +29,11 @@ const schema = {
   accounts,
   systems,
   buckets,
+  groups,
+  systemStructureEntityTypes,
+  systemStructureEntities,
   fieldDefinitions,
+  fieldDefinitionScopes,
   fieldValues,
   fieldBucketVisibility,
 };
@@ -695,6 +702,423 @@ describe("PG custom fields schema", () => {
       expect(rows.map((r) => r.fieldDefinitionId).sort()).toEqual(
         [fieldDefId1, fieldDefId2].sort(),
       );
+    });
+  });
+
+  describe("field_definition_scopes", () => {
+    afterEach(async () => {
+      await db.delete(fieldDefinitionScopes);
+    });
+
+    async function insertEntityType(systemId: string, id = crypto.randomUUID()): Promise<string> {
+      const now = Date.now();
+      await db.insert(systemStructureEntityTypes).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      return id;
+    }
+
+    it("inserts and round-trips a member scope", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(fieldDefinitionScopes).values({
+        id,
+        fieldDefinitionId: fieldDefId,
+        scopeType: "member",
+        systemId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(fieldDefinitionScopes)
+        .where(eq(fieldDefinitionScopes.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.fieldDefinitionId).toBe(fieldDefId);
+      expect(rows[0]?.scopeType).toBe("member");
+      expect(rows[0]?.scopeEntityTypeId).toBeNull();
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("rejects nonexistent field_definition_id FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(fieldDefinitionScopes).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: "nonexistent",
+          scopeType: "member",
+          systemId,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent scope_entity_type_id FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(fieldDefinitionScopes).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          scopeType: "structure-entity-type",
+          scopeEntityTypeId: "nonexistent",
+          systemId,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects invalid scope_type via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO field_definition_scopes (id, field_definition_id, scope_type, system_id, created_at, updated_at, version) VALUES ($1, $2, 'invalid-scope', $3, $4, $5, 1)",
+          [crypto.randomUUID(), fieldDefId, systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects non-null scope_entity_type_id with scope_type != structure-entity-type", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const entityTypeId = await insertEntityType(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO field_definition_scopes (id, field_definition_id, scope_type, scope_entity_type_id, system_id, created_at, updated_at, version) VALUES ($1, $2, 'member', $3, $4, $5, $6, 1)",
+          [crypto.randomUUID(), fieldDefId, entityTypeId, systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects duplicate (field_definition_id, scope_type, NULL scope_entity_type_id)", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await db.insert(fieldDefinitionScopes).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        scopeType: "member",
+        systemId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(fieldDefinitionScopes).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          scopeType: "member",
+          systemId,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects version 0 via CHECK constraint", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO field_definition_scopes (id, field_definition_id, scope_type, system_id, created_at, updated_at, version) VALUES ($1, $2, 'member', $3, $4, $5, 0)",
+          [crypto.randomUUID(), fieldDefId, systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(fieldDefinitionScopes).values({
+        id,
+        fieldDefinitionId: fieldDefId,
+        scopeType: "member",
+        systemId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(systems).where(eq(systems.id, systemId));
+      const rows = await db
+        .select()
+        .from(fieldDefinitionScopes)
+        .where(eq(fieldDefinitionScopes.id, id));
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  describe("field_values — structureEntityId and groupId columns", () => {
+    async function insertEntityType(systemId: string, id = crypto.randomUUID()): Promise<string> {
+      const now = Date.now();
+      await db.insert(systemStructureEntityTypes).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      return id;
+    }
+
+    async function insertEntity(
+      systemId: string,
+      entityTypeId: string,
+      id = crypto.randomUUID(),
+    ): Promise<string> {
+      const now = Date.now();
+      await db.insert(systemStructureEntities).values({
+        id,
+        systemId,
+        entityTypeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      return id;
+    }
+
+    async function insertGroup(systemId: string, id = crypto.randomUUID()): Promise<string> {
+      const now = Date.now();
+      await db.insert(groups).values({
+        id,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      return id;
+    }
+
+    it("field value with structureEntityId only succeeds", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const entityTypeId = await insertEntityType(systemId);
+      const entityId = await insertEntity(systemId, entityTypeId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id,
+        fieldDefinitionId: fieldDefId,
+        structureEntityId: entityId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(fieldValues).where(eq(fieldValues.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.structureEntityId).toBe(entityId);
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.groupId).toBeNull();
+    });
+
+    it("field value with groupId only succeeds", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const groupId = await insertGroup(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id,
+        fieldDefinitionId: fieldDefId,
+        groupId,
+        systemId,
+        encryptedData: testBlob(new Uint8Array([1])),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const rows = await db.select().from(fieldValues).where(eq(fieldValues.id, id));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.groupId).toBe(groupId);
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.structureEntityId).toBeNull();
+    });
+
+    it("rejects memberId + structureEntityId both set via subject_exclusivity_check", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const memberId = await pgInsertMember(db, systemId);
+      const entityTypeId = await insertEntityType(systemId);
+      const entityId = await insertEntity(systemId, entityTypeId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(fieldValues).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          memberId,
+          structureEntityId: entityId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects memberId + groupId both set via subject_exclusivity_check", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const memberId = await pgInsertMember(db, systemId);
+      const groupId = await insertGroup(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(fieldValues).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          memberId,
+          groupId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent structureEntityId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(fieldValues).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          structureEntityId: "nonexistent",
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects nonexistent groupId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      await expect(
+        db.insert(fieldValues).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          groupId: "nonexistent",
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects duplicate (fieldDefinitionId, structureEntityId) via definition_entity_uniq", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const entityTypeId = await insertEntityType(systemId);
+      const entityId = await insertEntity(systemId, entityTypeId);
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        structureEntityId: entityId,
+        systemId,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(fieldValues).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          structureEntityId: entityId,
+          systemId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("rejects duplicate (fieldDefinitionId, groupId) via definition_group_uniq", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const fieldDefId = await insertFieldDefinition(systemId);
+      const groupId = await insertGroup(systemId);
+      const now = Date.now();
+
+      await db.insert(fieldValues).values({
+        id: crypto.randomUUID(),
+        fieldDefinitionId: fieldDefId,
+        groupId,
+        systemId,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(fieldValues).values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          groupId,
+          systemId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        }),
+      ).rejects.toThrow();
     });
   });
 });

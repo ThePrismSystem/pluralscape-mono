@@ -73,6 +73,8 @@ export const fieldValues = sqliteTable(
   (t) => [
     index("field_values_definition_system_idx").on(t.fieldDefinitionId, t.systemId),
     index("field_values_system_member_idx").on(t.systemId, t.memberId),
+    index("field_values_system_entity_idx").on(t.systemId, t.structureEntityId),
+    index("field_values_system_group_idx").on(t.systemId, t.groupId),
     foreignKey({
       columns: [t.fieldDefinitionId, t.systemId],
       foreignColumns: [fieldDefinitions.id, fieldDefinitions.systemId],
@@ -162,11 +164,15 @@ export const fieldDefinitionScopes = sqliteTable(
       "field_definition_scopes_entity_type_check",
       sql`${t.scopeEntityTypeId} IS NULL OR ${t.scopeType} = 'structure-entity-type'`,
     ),
+    index("field_definition_scopes_system_id_idx").on(t.systemId),
     unique("field_definition_scopes_definition_scope_uniq").on(
       t.fieldDefinitionId,
       t.scopeType,
       t.scopeEntityTypeId,
     ),
+    uniqueIndex("field_definition_scopes_definition_scope_null_uniq")
+      .on(t.fieldDefinitionId, t.scopeType)
+      .where(sql`${t.scopeEntityTypeId} IS NULL`),
     versionCheckFor("field_definition_scopes", t.version),
   ],
 );

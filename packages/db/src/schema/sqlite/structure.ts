@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   check,
   foreignKey,
@@ -94,7 +95,7 @@ export const systemStructureEntities = sqliteTable(
   },
   (t) => [
     index("system_structure_entities_system_archived_idx").on(t.systemId, t.archived),
-    index("system_structure_entities_entity_type_id_idx").on(t.entityTypeId),
+    index("system_structure_entities_entity_type_id_idx").on(t.systemId, t.entityTypeId),
     unique("system_structure_entities_id_system_id_unique").on(t.id, t.systemId),
     foreignKey({
       columns: [t.entityTypeId, t.systemId],
@@ -183,6 +184,10 @@ export const systemStructureEntityAssociations = sqliteTable(
       columns: [t.targetEntityId, t.systemId],
       foreignColumns: [systemStructureEntities.id, systemStructureEntities.systemId],
     }).onDelete("restrict"),
+    check(
+      "system_structure_entity_associations_no_self_link",
+      sql`${t.sourceEntityId} <> ${t.targetEntityId}`,
+    ),
   ],
 );
 

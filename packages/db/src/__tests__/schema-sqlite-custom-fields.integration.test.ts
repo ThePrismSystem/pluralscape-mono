@@ -6,10 +6,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { accounts } from "../schema/sqlite/auth.js";
 import {
   fieldBucketVisibility,
+  fieldDefinitionScopes,
   fieldDefinitions,
   fieldValues,
 } from "../schema/sqlite/custom-fields.js";
+import { groups } from "../schema/sqlite/groups.js";
 import { buckets } from "../schema/sqlite/privacy.js";
+import { systemStructureEntities, systemStructureEntityTypes } from "../schema/sqlite/structure.js";
 import { systems } from "../schema/sqlite/systems.js";
 
 import {
@@ -26,7 +29,11 @@ const schema = {
   accounts,
   systems,
   buckets,
+  groups,
+  systemStructureEntityTypes,
+  systemStructureEntities,
   fieldDefinitions,
+  fieldDefinitionScopes,
   fieldValues,
   fieldBucketVisibility,
 };
@@ -770,6 +777,477 @@ describe("SQLite custom fields schema", () => {
       expect(rows.map((r) => r.fieldDefinitionId).sort()).toEqual(
         [fieldDefId1, fieldDefId2].sort(),
       );
+    });
+  });
+
+  describe("field_definition_scopes", () => {
+    afterEach(() => {
+      db.delete(fieldDefinitionScopes).run();
+    });
+
+    function insertEntityType(systemId: string, id = crypto.randomUUID()): string {
+      const now = Date.now();
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      return id;
+    }
+
+    it("inserts and round-trips a member scope", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldDefinitionScopes)
+        .values({
+          id,
+          fieldDefinitionId: fieldDefId,
+          scopeType: "member",
+          systemId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(fieldDefinitionScopes)
+        .where(eq(fieldDefinitionScopes.id, id))
+        .all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.fieldDefinitionId).toBe(fieldDefId);
+      expect(rows[0]?.scopeType).toBe("member");
+      expect(rows[0]?.scopeEntityTypeId).toBeNull();
+      expect(rows[0]?.version).toBe(1);
+    });
+
+    it("rejects nonexistent field_definition_id FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldDefinitionScopes)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: "nonexistent",
+            scopeType: "member",
+            systemId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects nonexistent scope_entity_type_id FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldDefinitionScopes)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            scopeType: "structure-entity-type",
+            scopeEntityTypeId: "nonexistent",
+            systemId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects invalid scope_type via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO field_definition_scopes (id, field_definition_id, scope_type, system_id, created_at, updated_at, version) VALUES (?, ?, 'invalid-scope', ?, ?, ?, 1)",
+          )
+          .run(crypto.randomUUID(), fieldDefId, systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects non-null scope_entity_type_id with scope_type != structure-entity-type", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const entityTypeId = insertEntityType(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO field_definition_scopes (id, field_definition_id, scope_type, scope_entity_type_id, system_id, created_at, updated_at, version) VALUES (?, ?, 'member', ?, ?, ?, ?, 1)",
+          )
+          .run(crypto.randomUUID(), fieldDefId, entityTypeId, systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects duplicate (field_definition_id, scope_type, NULL scope_entity_type_id)", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      db.insert(fieldDefinitionScopes)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          scopeType: "member",
+          systemId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(fieldDefinitionScopes)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            scopeType: "member",
+            systemId,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("rejects version 0 via CHECK constraint", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            "INSERT INTO field_definition_scopes (id, field_definition_id, scope_type, system_id, created_at, updated_at, version) VALUES (?, ?, 'member', ?, ?, ?, 0)",
+          )
+          .run(crypto.randomUUID(), fieldDefId, systemId, now, now),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldDefinitionScopes)
+        .values({
+          id,
+          fieldDefinitionId: fieldDefId,
+          scopeType: "member",
+          systemId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db
+        .select()
+        .from(fieldDefinitionScopes)
+        .where(eq(fieldDefinitionScopes.id, id))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
+  });
+
+  describe("field_values — structureEntityId and groupId columns", () => {
+    function insertEntityType(systemId: string, id = crypto.randomUUID()): string {
+      const now = Date.now();
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      return id;
+    }
+
+    function insertEntity(
+      systemId: string,
+      entityTypeId: string,
+      id = crypto.randomUUID(),
+    ): string {
+      const now = Date.now();
+      db.insert(systemStructureEntities)
+        .values({
+          id,
+          systemId,
+          entityTypeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      return id;
+    }
+
+    function insertGroup(systemId: string, id = crypto.randomUUID()): string {
+      const now = Date.now();
+      db.insert(groups)
+        .values({
+          id,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      return id;
+    }
+
+    it("field value with structureEntityId only succeeds", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const entityTypeId = insertEntityType(systemId);
+      const entityId = insertEntity(systemId, entityTypeId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id,
+          fieldDefinitionId: fieldDefId,
+          structureEntityId: entityId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(fieldValues).where(eq(fieldValues.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.structureEntityId).toBe(entityId);
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.groupId).toBeNull();
+    });
+
+    it("field value with groupId only succeeds", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const groupId = insertGroup(systemId);
+      const id = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id,
+          fieldDefinitionId: fieldDefId,
+          groupId,
+          systemId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(fieldValues).where(eq(fieldValues.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.groupId).toBe(groupId);
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.structureEntityId).toBeNull();
+    });
+
+    it("rejects memberId + structureEntityId both set via subject_exclusivity_check", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const memberId = sqliteInsertMember(db, systemId);
+      const entityTypeId = insertEntityType(systemId);
+      const entityId = insertEntity(systemId, entityTypeId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            memberId,
+            structureEntityId: entityId,
+            systemId,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects memberId + groupId both set via subject_exclusivity_check", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const memberId = sqliteInsertMember(db, systemId);
+      const groupId = insertGroup(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            memberId,
+            groupId,
+            systemId,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/CHECK|constraint/i);
+    });
+
+    it("rejects nonexistent structureEntityId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            structureEntityId: "nonexistent",
+            systemId,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects nonexistent groupId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            groupId: "nonexistent",
+            systemId,
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects duplicate (fieldDefinitionId, structureEntityId) via definition_entity_uniq", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const entityTypeId = insertEntityType(systemId);
+      const entityId = insertEntity(systemId, entityTypeId);
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          structureEntityId: entityId,
+          systemId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            structureEntityId: entityId,
+            systemId,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
+    });
+
+    it("rejects duplicate (fieldDefinitionId, groupId) via definition_group_uniq", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const fieldDefId = insertFieldDefinition(systemId);
+      const groupId = insertGroup(systemId);
+      const now = Date.now();
+
+      db.insert(fieldValues)
+        .values({
+          id: crypto.randomUUID(),
+          fieldDefinitionId: fieldDefId,
+          groupId,
+          systemId,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(fieldValues)
+          .values({
+            id: crypto.randomUUID(),
+            fieldDefinitionId: fieldDefId,
+            groupId,
+            systemId,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/UNIQUE|constraint/i);
     });
   });
 });

@@ -534,6 +534,51 @@ describe("SQLite structure schema", () => {
         .all();
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects archived=true with null archivedAt", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, archived, archived_at)
+             VALUES (?, ?, 0, X'0102', ?, ?, 1, NULL)`,
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with non-null archivedAt", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, archived, archived_at)
+             VALUES (?, ?, 0, X'0102', ?, ?, 0, ?)`,
+          )
+          .run(crypto.randomUUID(), systemId, now, now, now),
+      ).toThrow(/check|constraint/i);
+    });
+
+    it("rejects version 0", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version)
+             VALUES (?, ?, 0, X'0102', ?, ?, 0)`,
+          )
+          .run(crypto.randomUUID(), systemId, now, now),
+      ).toThrow(/check|constraint/i);
+    });
   });
 
   // ── Structure Entities ─────────────────────────────────────────────
@@ -675,6 +720,125 @@ describe("SQLite structure schema", () => {
         .all();
       expect(rows[0]?.version).toBe(1);
     });
+
+    it("rejects archived=true with null archivedAt", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO system_structure_entities (id, system_id, entity_type_id, sort_order, encrypted_data, created_at, updated_at, archived, archived_at)
+             VALUES (?, ?, ?, 0, X'0102', ?, ?, 1, NULL)`,
+          )
+          .run(crypto.randomUUID(), systemId, typeId, now, now),
+      ).toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with non-null archivedAt", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO system_structure_entities (id, system_id, entity_type_id, sort_order, encrypted_data, created_at, updated_at, archived, archived_at)
+             VALUES (?, ?, ?, 0, X'0102', ?, ?, 0, ?)`,
+          )
+          .run(crypto.randomUUID(), systemId, typeId, now, now, now),
+      ).toThrow(/check|constraint/i);
+    });
+
+    it("rejects version 0", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO system_structure_entities (id, system_id, entity_type_id, sort_order, encrypted_data, created_at, updated_at, version)
+             VALUES (?, ?, ?, 0, X'0102', ?, ?, 0)`,
+          )
+          .run(crypto.randomUUID(), systemId, typeId, now, now),
+      ).toThrow(/check|constraint/i);
+    });
+
+    it("cascades on system deletion", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values({
+          id: entityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      db.delete(systems).where(eq(systems.id, systemId)).run();
+      const rows = db
+        .select()
+        .from(systemStructureEntities)
+        .where(eq(systemStructureEntities.id, entityId))
+        .all();
+      expect(rows).toHaveLength(0);
+    });
   });
 
   // ── Structure Entity Links ─────────────────────────────────────────
@@ -777,6 +941,171 @@ describe("SQLite structure schema", () => {
 
       expect(() =>
         db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, entityId)).run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("round-trips parentEntityId", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const parentEntityId = crypto.randomUUID();
+      const childEntityId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values([
+          {
+            id: parentEntityId,
+            systemId,
+            entityTypeId: typeId,
+            sortOrder: 0,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: childEntityId,
+            systemId,
+            entityTypeId: typeId,
+            sortOrder: 1,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run();
+
+      const linkId = crypto.randomUUID();
+      db.insert(systemStructureEntityLinks)
+        .values({
+          id: linkId,
+          systemId,
+          entityId: childEntityId,
+          parentEntityId,
+          sortOrder: 0,
+          createdAt: now,
+        })
+        .run();
+
+      const rows = db
+        .select()
+        .from(systemStructureEntityLinks)
+        .where(eq(systemStructureEntityLinks.id, linkId))
+        .all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.parentEntityId).toBe(parentEntityId);
+    });
+
+    it("rejects nonexistent parentEntityId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values({
+          id: entityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .insert(systemStructureEntityLinks)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            entityId,
+            parentEntityId: "nonexistent",
+            sortOrder: 0,
+            createdAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("restricts deletion of parent entity with dependent link", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const parentEntityId = crypto.randomUUID();
+      const childEntityId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values([
+          {
+            id: parentEntityId,
+            systemId,
+            entityTypeId: typeId,
+            sortOrder: 0,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          },
+          {
+            id: childEntityId,
+            systemId,
+            entityTypeId: typeId,
+            sortOrder: 1,
+            encryptedData: testBlob(),
+            createdAt: now,
+            updatedAt: now,
+          },
+        ])
+        .run();
+      db.insert(systemStructureEntityLinks)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityId: childEntityId,
+          parentEntityId,
+          sortOrder: 0,
+          createdAt: now,
+        })
+        .run();
+
+      expect(() =>
+        db
+          .delete(systemStructureEntities)
+          .where(eq(systemStructureEntities.id, parentEntityId))
+          .run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
     });
   });
@@ -1060,6 +1389,45 @@ describe("SQLite structure schema", () => {
       expect(() =>
         db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, entityId1)).run(),
       ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("rejects self-referential association", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      db.insert(systemStructureEntityTypes)
+        .values({
+          id: typeId,
+          systemId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+      db.insert(systemStructureEntities)
+        .values({
+          id: entityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client
+          .prepare(
+            `INSERT INTO system_structure_entity_associations (id, system_id, source_entity_id, target_entity_id, created_at)
+             VALUES (?, ?, ?, ?, ?)`,
+          )
+          .run(crypto.randomUUID(), systemId, entityId, entityId, now),
+      ).toThrow(/check|constraint/i);
     });
   });
 });

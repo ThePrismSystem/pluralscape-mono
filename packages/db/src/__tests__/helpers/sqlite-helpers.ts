@@ -307,7 +307,7 @@ export const SQLITE_DDL = {
       FOREIGN KEY (custom_front_id) REFERENCES custom_fronts(id) ON DELETE SET NULL,
       FOREIGN KEY (structure_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
       CHECK (version >= 1),
-      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL),
+      CHECK (member_id IS NOT NULL OR custom_front_id IS NOT NULL OR structure_entity_id IS NOT NULL),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
   `,
@@ -329,6 +329,7 @@ export const SQLITE_DDL = {
       version INTEGER NOT NULL DEFAULT 1,
       archived INTEGER NOT NULL DEFAULT 0,
       archived_at INTEGER,
+      UNIQUE (id, system_id),
       CHECK (version >= 1),
       CHECK ((archived = true) = (archived_at IS NOT NULL))
     )
@@ -421,7 +422,7 @@ export const SQLITE_DDL = {
   `,
   systemStructureEntitiesIndexes: `
     CREATE INDEX system_structure_entities_system_archived_idx ON system_structure_entities (system_id, archived);
-    CREATE INDEX system_structure_entities_entity_type_id_idx ON system_structure_entities (entity_type_id)
+    CREATE INDEX system_structure_entities_entity_type_id_idx ON system_structure_entities (system_id, entity_type_id)
   `,
   systemStructureEntityLinks: `
     CREATE TABLE system_structure_entity_links (
@@ -466,7 +467,8 @@ export const SQLITE_DDL = {
       created_at INTEGER NOT NULL,
       UNIQUE (source_entity_id, target_entity_id),
       FOREIGN KEY (source_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
-      FOREIGN KEY (target_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT
+      FOREIGN KEY (target_entity_id, system_id) REFERENCES system_structure_entities(id, system_id) ON DELETE RESTRICT,
+      CHECK (source_entity_id <> target_entity_id)
     )
   `,
   systemStructureEntityAssociationsIndexes: `
@@ -519,6 +521,8 @@ export const SQLITE_DDL = {
   fieldValuesIndexes: `
     CREATE INDEX field_values_definition_system_idx ON field_values (field_definition_id, system_id);
     CREATE INDEX field_values_system_member_idx ON field_values (system_id, member_id);
+    CREATE INDEX field_values_system_entity_idx ON field_values (system_id, structure_entity_id);
+    CREATE INDEX field_values_system_group_idx ON field_values (system_id, group_id);
     CREATE UNIQUE INDEX field_values_definition_member_uniq ON field_values (field_definition_id, member_id) WHERE member_id IS NOT NULL;
     CREATE UNIQUE INDEX field_values_definition_entity_uniq ON field_values (field_definition_id, structure_entity_id) WHERE structure_entity_id IS NOT NULL;
     CREATE UNIQUE INDEX field_values_definition_group_uniq ON field_values (field_definition_id, group_id) WHERE group_id IS NOT NULL;
@@ -555,7 +559,9 @@ export const SQLITE_DDL = {
     )
   `,
   fieldDefinitionScopesIndexes: `
-    CREATE INDEX field_definition_scopes_field_definition_id_idx ON field_definition_scopes (field_definition_id)
+    CREATE INDEX field_definition_scopes_field_definition_id_idx ON field_definition_scopes (field_definition_id);
+    CREATE INDEX field_definition_scopes_system_id_idx ON field_definition_scopes (system_id);
+    CREATE UNIQUE INDEX field_definition_scopes_definition_scope_null_uniq ON field_definition_scopes (field_definition_id, scope_type) WHERE scope_entity_type_id IS NULL
   `,
   // Nomenclature Settings
   nomenclatureSettings: `

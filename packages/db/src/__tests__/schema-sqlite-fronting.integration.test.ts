@@ -561,6 +561,100 @@ describe("SQLite fronting schema", () => {
       expect(rows[0]?.archived).toBe(true);
       expect(rows[0]?.archivedAt).toBe(now);
     });
+
+    it("accepts fronting session with only structureEntityId", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const entityTypeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+
+      client
+        .prepare(
+          "INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES (?, ?, 0, X'0102', ?, ?, 1, 0)",
+        )
+        .run(entityTypeId, systemId, now, now);
+      client
+        .prepare(
+          "INSERT INTO system_structure_entities (id, system_id, entity_type_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES (?, ?, ?, 0, X'0102', ?, ?, 1, 0)",
+        )
+        .run(entityId, systemId, entityTypeId, now, now);
+
+      const id = crypto.randomUUID();
+      db.insert(frontingSessions)
+        .values({
+          id,
+          systemId,
+          startTime: now,
+          structureEntityId: entityId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      const rows = db.select().from(frontingSessions).where(eq(frontingSessions.id, id)).all();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.memberId).toBeNull();
+      expect(rows[0]?.customFrontId).toBeNull();
+      expect(rows[0]?.structureEntityId).toBe(entityId);
+    });
+
+    it("rejects nonexistent structureEntityId FK", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+
+      expect(() =>
+        db
+          .insert(frontingSessions)
+          .values({
+            id: crypto.randomUUID(),
+            systemId,
+            startTime: now,
+            structureEntityId: "nonexistent",
+            encryptedData: testBlob(new Uint8Array([1])),
+            createdAt: now,
+            updatedAt: now,
+          })
+          .run(),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
+
+    it("restricts deletion of structure entity with dependent fronting session", () => {
+      const accountId = insertAccount();
+      const systemId = insertSystem(accountId);
+      const now = Date.now();
+      const entityTypeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+
+      client
+        .prepare(
+          "INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES (?, ?, 0, X'0102', ?, ?, 1, 0)",
+        )
+        .run(entityTypeId, systemId, now, now);
+      client
+        .prepare(
+          "INSERT INTO system_structure_entities (id, system_id, entity_type_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES (?, ?, ?, 0, X'0102', ?, ?, 1, 0)",
+        )
+        .run(entityId, systemId, entityTypeId, now, now);
+
+      db.insert(frontingSessions)
+        .values({
+          id: crypto.randomUUID(),
+          systemId,
+          startTime: now,
+          structureEntityId: entityId,
+          encryptedData: testBlob(new Uint8Array([1])),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+
+      expect(() =>
+        client.prepare("DELETE FROM system_structure_entities WHERE id = ?").run(entityId),
+      ).toThrow(/FOREIGN KEY|constraint/i);
+    });
   });
 
   describe("custom_fronts", () => {

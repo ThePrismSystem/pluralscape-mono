@@ -1,5 +1,5 @@
 {
-  "id": "794afa67-4b94-4a4f-a4d5-530188c756d4",
+  "id": "619de438-94e1-4987-8e35-ee6dcba37ba8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2781,6 +2781,43 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "field_definition_scopes_system_id_idx": {
+          "name": "field_definition_scopes_system_id_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "field_definition_scopes_definition_scope_null_uniq": {
+          "name": "field_definition_scopes_definition_scope_null_uniq",
+          "columns": [
+            {
+              "expression": "field_definition_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scope_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"field_definition_scopes\".\"scope_entity_type_id\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2816,7 +2853,7 @@
       "uniqueConstraints": {
         "field_definition_scopes_definition_scope_uniq": {
           "name": "field_definition_scopes_definition_scope_uniq",
-          "nullsNotDistinct": false,
+          "nullsNotDistinct": true,
           "columns": ["field_definition_id", "scope_type", "scope_entity_type_id"]
         }
       },
@@ -3070,6 +3107,48 @@
             },
             {
               "expression": "member_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "field_values_system_entity_idx": {
+          "name": "field_values_system_entity_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "structure_entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "field_values_system_group_idx": {
+          "name": "field_values_system_group_idx",
+          "columns": [
+            {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "group_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7906,6 +7985,12 @@
           "name": "system_structure_entities_entity_type_id_idx",
           "columns": [
             {
+              "expression": "system_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
               "expression": "entity_type_id",
               "isExpression": false,
               "asc": true,
@@ -8079,7 +8164,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "system_structure_entity_associations_no_self_link": {
+          "name": "system_structure_entity_associations_no_self_link",
+          "value": "\"system_structure_entity_associations\".\"source_entity_id\" <> \"system_structure_entity_associations\".\"target_entity_id\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.system_structure_entity_links": {

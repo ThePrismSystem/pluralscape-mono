@@ -291,7 +291,7 @@ CREATE TABLE "field_definition_scopes" (
 	"created_at" timestamptz NOT NULL,
 	"updated_at" timestamptz NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
-	CONSTRAINT "field_definition_scopes_definition_scope_uniq" UNIQUE("field_definition_id","scope_type","scope_entity_type_id"),
+	CONSTRAINT "field_definition_scopes_definition_scope_uniq" UNIQUE NULLS NOT DISTINCT("field_definition_id","scope_type","scope_entity_type_id"),
 	CONSTRAINT "field_definition_scopes_scope_type_check" CHECK ("field_definition_scopes"."scope_type" IS NULL OR "field_definition_scopes"."scope_type" IN ('system', 'member', 'group', 'structure-entity-type')),
 	CONSTRAINT "field_definition_scopes_entity_type_check" CHECK ("field_definition_scopes"."scope_entity_type_id" IS NULL OR "field_definition_scopes"."scope_type" = 'structure-entity-type'),
 	CONSTRAINT "field_definition_scopes_version_check" CHECK ("field_definition_scopes"."version" >= 1)
@@ -842,7 +842,8 @@ CREATE TABLE "system_structure_entity_associations" (
 	"source_entity_id" varchar(50) NOT NULL,
 	"target_entity_id" varchar(50) NOT NULL,
 	"created_at" timestamptz NOT NULL,
-	CONSTRAINT "system_structure_entity_associations_uniq" UNIQUE("source_entity_id","target_entity_id")
+	CONSTRAINT "system_structure_entity_associations_uniq" UNIQUE("source_entity_id","target_entity_id"),
+	CONSTRAINT "system_structure_entity_associations_no_self_link" CHECK ("system_structure_entity_associations"."source_entity_id" <> "system_structure_entity_associations"."target_entity_id")
 );
 --> statement-breakpoint
 CREATE TABLE "system_structure_entity_links" (
@@ -1134,9 +1135,13 @@ CREATE INDEX "export_requests_system_id_idx" ON "export_requests" USING btree ("
 CREATE INDEX "field_bucket_visibility_bucket_id_idx" ON "field_bucket_visibility" USING btree ("bucket_id");--> statement-breakpoint
 CREATE INDEX "field_bucket_visibility_system_id_idx" ON "field_bucket_visibility" USING btree ("system_id");--> statement-breakpoint
 CREATE INDEX "field_definition_scopes_field_definition_id_idx" ON "field_definition_scopes" USING btree ("field_definition_id");--> statement-breakpoint
+CREATE INDEX "field_definition_scopes_system_id_idx" ON "field_definition_scopes" USING btree ("system_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "field_definition_scopes_definition_scope_null_uniq" ON "field_definition_scopes" USING btree ("field_definition_id","scope_type") WHERE "field_definition_scopes"."scope_entity_type_id" IS NULL;--> statement-breakpoint
 CREATE INDEX "field_definitions_system_archived_idx" ON "field_definitions" USING btree ("system_id","archived");--> statement-breakpoint
 CREATE INDEX "field_values_definition_system_idx" ON "field_values" USING btree ("field_definition_id","system_id");--> statement-breakpoint
 CREATE INDEX "field_values_system_member_idx" ON "field_values" USING btree ("system_id","member_id");--> statement-breakpoint
+CREATE INDEX "field_values_system_entity_idx" ON "field_values" USING btree ("system_id","structure_entity_id");--> statement-breakpoint
+CREATE INDEX "field_values_system_group_idx" ON "field_values" USING btree ("system_id","group_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "field_values_definition_member_uniq" ON "field_values" USING btree ("field_definition_id","member_id") WHERE "field_values"."member_id" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "field_values_definition_entity_uniq" ON "field_values" USING btree ("field_definition_id","structure_entity_id") WHERE "field_values"."structure_entity_id" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "field_values_definition_group_uniq" ON "field_values" USING btree ("field_definition_id","group_id") WHERE "field_values"."group_id" IS NOT NULL;--> statement-breakpoint
@@ -1209,7 +1214,7 @@ CREATE INDEX "sync_documents_system_id_idx" ON "sync_documents" USING btree ("sy
 CREATE INDEX "sync_documents_system_id_doc_type_idx" ON "sync_documents" USING btree ("system_id","doc_type");--> statement-breakpoint
 CREATE INDEX "system_snapshots_system_created_idx" ON "system_snapshots" USING btree ("system_id","created_at");--> statement-breakpoint
 CREATE INDEX "system_structure_entities_system_archived_idx" ON "system_structure_entities" USING btree ("system_id","archived");--> statement-breakpoint
-CREATE INDEX "system_structure_entities_entity_type_id_idx" ON "system_structure_entities" USING btree ("entity_type_id");--> statement-breakpoint
+CREATE INDEX "system_structure_entities_entity_type_id_idx" ON "system_structure_entities" USING btree ("system_id","entity_type_id");--> statement-breakpoint
 CREATE INDEX "system_structure_entity_associations_source_idx" ON "system_structure_entity_associations" USING btree ("source_entity_id");--> statement-breakpoint
 CREATE INDEX "system_structure_entity_associations_target_idx" ON "system_structure_entity_associations" USING btree ("target_entity_id");--> statement-breakpoint
 CREATE INDEX "system_structure_entity_associations_system_id_idx" ON "system_structure_entity_associations" USING btree ("system_id");--> statement-breakpoint

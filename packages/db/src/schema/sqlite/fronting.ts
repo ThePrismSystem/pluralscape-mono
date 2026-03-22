@@ -30,6 +30,7 @@ export const customFronts = sqliteTable(
   },
   (t) => [
     index("custom_fronts_system_archived_idx").on(t.systemId, t.archived),
+    unique("custom_fronts_id_system_id_unique").on(t.id, t.systemId),
     versionCheckFor("custom_fronts", t.version),
     archivableConsistencyCheckFor("custom_fronts", t.archived, t.archivedAt),
   ],

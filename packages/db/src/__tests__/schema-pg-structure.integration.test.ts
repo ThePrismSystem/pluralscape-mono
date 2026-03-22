@@ -515,6 +515,45 @@ describe("PG structure schema", () => {
         .where(eq(systemStructureEntityTypes.id, id));
       expect(rows).toHaveLength(0);
     });
+
+    it("rejects archived=true with null archivedAt", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with non-null archivedAt", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 1, false, $5)",
+          [crypto.randomUUID(), systemId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects version 0", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const now = Date.now();
+
+      await expect(
+        client.query(
+          "INSERT INTO system_structure_entity_types (id, system_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES ($1, $2, 0, '\\x0102'::bytea, $3, $4, 0, false)",
+          [crypto.randomUUID(), systemId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
   });
 
   // ── Structure Entities ─────────────────────────────────────────────
@@ -670,6 +709,108 @@ describe("PG structure schema", () => {
         .where(eq(systemStructureEntities.id, entityId));
       expect(rows[0]?.version).toBe(1);
     });
+
+    it("rejects archived=true with null archivedAt", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        client.query(
+          "INSERT INTO system_structure_entities (id, system_id, entity_type_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, 0, '\\x0102'::bytea, $4, $5, 1, true, NULL)",
+          [crypto.randomUUID(), systemId, typeId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects archived=false with non-null archivedAt", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        client.query(
+          "INSERT INTO system_structure_entities (id, system_id, entity_type_id, sort_order, encrypted_data, created_at, updated_at, version, archived, archived_at) VALUES ($1, $2, $3, 0, '\\x0102'::bytea, $4, $5, 1, false, $6)",
+          [crypto.randomUUID(), systemId, typeId, now, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("rejects version 0", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        client.query(
+          "INSERT INTO system_structure_entities (id, system_id, entity_type_id, sort_order, encrypted_data, created_at, updated_at, version, archived) VALUES ($1, $2, $3, 0, '\\x0102'::bytea, $4, $5, 0, false)",
+          [crypto.randomUUID(), systemId, typeId, now, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
+    });
+
+    it("cascades on system deletion", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await db.delete(systems).where(eq(systems.id, systemId));
+      const rows = await db
+        .select()
+        .from(systemStructureEntities)
+        .where(eq(systemStructureEntities.id, entityId));
+      expect(rows).toHaveLength(0);
+    });
   });
 
   // ── Structure Entity Links ─────────────────────────────────────────
@@ -768,6 +909,149 @@ describe("PG structure schema", () => {
 
       await expect(
         db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, entityId)),
+      ).rejects.toThrow();
+    });
+
+    it("round-trips parentEntityId", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const parentEntityId = crypto.randomUUID();
+      const childEntityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values([
+        {
+          id: parentEntityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: childEntityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 1,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+
+      const linkId = crypto.randomUUID();
+      await db.insert(systemStructureEntityLinks).values({
+        id: linkId,
+        systemId,
+        entityId: childEntityId,
+        parentEntityId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      const rows = await db
+        .select()
+        .from(systemStructureEntityLinks)
+        .where(eq(systemStructureEntityLinks.id, linkId));
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.parentEntityId).toBe(parentEntityId);
+      expect(rows[0]?.entityId).toBe(childEntityId);
+    });
+
+    it("rejects nonexistent parentEntityId FK", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        db.insert(systemStructureEntityLinks).values({
+          id: crypto.randomUUID(),
+          systemId,
+          entityId,
+          parentEntityId: "nonexistent",
+          sortOrder: 0,
+          createdAt: now,
+        }),
+      ).rejects.toThrow();
+    });
+
+    it("restricts deletion of parent entity with dependent link", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const parentEntityId = crypto.randomUUID();
+      const childEntityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values([
+        {
+          id: parentEntityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 0,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        {
+          id: childEntityId,
+          systemId,
+          entityTypeId: typeId,
+          sortOrder: 1,
+          encryptedData: testBlob(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+      await db.insert(systemStructureEntityLinks).values({
+        id: crypto.randomUUID(),
+        systemId,
+        entityId: childEntityId,
+        parentEntityId,
+        sortOrder: 0,
+        createdAt: now,
+      });
+
+      await expect(
+        db.delete(systemStructureEntities).where(eq(systemStructureEntities.id, parentEntityId)),
       ).rejects.toThrow();
     });
   });
@@ -966,6 +1250,39 @@ describe("PG structure schema", () => {
           createdAt: now,
         }),
       ).rejects.toThrow();
+    });
+
+    it("rejects self-referential association", async () => {
+      const accountId = await insertAccount();
+      const systemId = await insertSystem(accountId);
+      const typeId = crypto.randomUUID();
+      const entityId = crypto.randomUUID();
+      const now = Date.now();
+
+      await db.insert(systemStructureEntityTypes).values({
+        id: typeId,
+        systemId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+      await db.insert(systemStructureEntities).values({
+        id: entityId,
+        systemId,
+        entityTypeId: typeId,
+        sortOrder: 0,
+        encryptedData: testBlob(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await expect(
+        client.query(
+          "INSERT INTO system_structure_entity_associations (id, system_id, source_entity_id, target_entity_id, created_at) VALUES ($1, $2, $3, $3, $4)",
+          [crypto.randomUUID(), systemId, entityId, now],
+        ),
+      ).rejects.toThrow(/check|constraint/i);
     });
 
     it("prevents deletion of entity with dependent associations (RESTRICT)", async () => {

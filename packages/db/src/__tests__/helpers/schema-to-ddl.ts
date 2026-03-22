@@ -120,7 +120,8 @@ export function pgTableToCreateDDL(table: PgTable): string {
   // Unique constraints
   for (const uc of config.uniqueConstraints) {
     const cols = uc.columns.map((c) => `"${c.name}"`).join(", ");
-    lines.push(`UNIQUE (${cols})`);
+    const nullsClause = uc.nullsNotDistinct ? " NULLS NOT DISTINCT" : "";
+    lines.push(`UNIQUE${nullsClause} (${cols})`);
   }
 
   // CHECK constraints

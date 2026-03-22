@@ -47,6 +47,8 @@ const FIELD_VALUE_RESULT = {
   id: "fv_550e8400-e29b-41d4-a716-446655440000" as never,
   fieldDefinitionId: FLD_DEF_ID as never,
   memberId: MEM_ID as never,
+  structureEntityId: null,
+  groupId: null,
   systemId: SYS_ID as never,
   encryptedData: "dGVzdA==",
   version: 1,

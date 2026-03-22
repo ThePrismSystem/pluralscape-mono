@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ef1989c0-c417-435f-bd7d-f672515e85dc",
+  "id": "c864d194-fa70-4be1-b935-cfcaf78bb035",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "account_purge_requests": {
@@ -1742,6 +1742,11 @@
           "name": "custom_fronts_system_archived_idx",
           "columns": ["system_id", "archived"],
           "isUnique": false
+        },
+        "custom_fronts_id_system_id_unique": {
+          "name": "custom_fronts_id_system_id_unique",
+          "columns": ["id", "system_id"],
+          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -2277,6 +2282,17 @@
           "columns": ["field_definition_id"],
           "isUnique": false
         },
+        "field_definition_scopes_system_id_idx": {
+          "name": "field_definition_scopes_system_id_idx",
+          "columns": ["system_id"],
+          "isUnique": false
+        },
+        "field_definition_scopes_definition_scope_null_uniq": {
+          "name": "field_definition_scopes_definition_scope_null_uniq",
+          "columns": ["field_definition_id", "scope_type"],
+          "isUnique": true,
+          "where": "\"field_definition_scopes\".\"scope_entity_type_id\" IS NULL"
+        },
         "field_definition_scopes_definition_scope_uniq": {
           "name": "field_definition_scopes_definition_scope_uniq",
           "columns": ["field_definition_id", "scope_type", "scope_entity_type_id"],
@@ -2538,6 +2554,16 @@
         "field_values_system_member_idx": {
           "name": "field_values_system_member_idx",
           "columns": ["system_id", "member_id"],
+          "isUnique": false
+        },
+        "field_values_system_entity_idx": {
+          "name": "field_values_system_entity_idx",
+          "columns": ["system_id", "structure_entity_id"],
+          "isUnique": false
+        },
+        "field_values_system_group_idx": {
+          "name": "field_values_system_group_idx",
+          "columns": ["system_id", "group_id"],
           "isUnique": false
         },
         "field_values_definition_member_uniq": {
@@ -6737,7 +6763,7 @@
         },
         "system_structure_entities_entity_type_id_idx": {
           "name": "system_structure_entities_entity_type_id_idx",
-          "columns": ["entity_type_id"],
+          "columns": ["system_id", "entity_type_id"],
           "isUnique": false
         },
         "system_structure_entities_id_system_id_unique": {
@@ -6871,7 +6897,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "system_structure_entity_associations_no_self_link": {
+          "name": "system_structure_entity_associations_no_self_link",
+          "value": "\"system_structure_entity_associations\".\"source_entity_id\" <> \"system_structure_entity_associations\".\"target_entity_id\""
+        }
+      }
     },
     "system_structure_entity_links": {
       "name": "system_structure_entity_links",

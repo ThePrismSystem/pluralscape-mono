@@ -630,11 +630,11 @@ describe("deleteMember", () => {
     //    where() must return chain so .limit() can be called
     chain.where.mockReturnValueOnce(chain);
     chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
-    // 2-11. Ten COUNT queries, each: tx.select({ count }).from(table).where() → terminal
-    for (let i = 0; i < 10; i++) {
+    // 2-12. Eleven COUNT queries, each: tx.select({ count }).from(table).where() → terminal
+    for (let i = 0; i < 11; i++) {
       chain.where.mockResolvedValueOnce([{ count: 0 }]);
     }
-    // 12. tx.delete(members).where() → chain (no return value needed)
+    // 13. tx.delete(members).where() → chain (no return value needed)
 
     await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
 
@@ -661,7 +661,7 @@ describe("deleteMember", () => {
     chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
     // photoCount = 3, all others = 0
     chain.where.mockResolvedValueOnce([{ count: 3 }]); // photos
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 10; i++) {
       chain.where.mockResolvedValueOnce([{ count: 0 }]);
     }
 
@@ -680,7 +680,7 @@ describe("deleteMember", () => {
     chain.where.mockReturnValueOnce(chain);
     chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
     // photos=2, fieldValues=5, groupMemberships=0, frontingSessions=1,
-    // relationships=0, notes=3, frontingComments=0, checkInRecords=0, polls=0, acknowledgements=0
+    // relationships=0, notes=3, frontingComments=0, checkInRecords=0, polls=0, acknowledgements=0, structureEntityMemberLinks=0
     chain.where
       .mockResolvedValueOnce([{ count: 2 }]) // photos
       .mockResolvedValueOnce([{ count: 5 }]) // fieldValues
@@ -691,7 +691,8 @@ describe("deleteMember", () => {
       .mockResolvedValueOnce([{ count: 0 }]) // frontingComments
       .mockResolvedValueOnce([{ count: 0 }]) // checkInRecords
       .mockResolvedValueOnce([{ count: 0 }]) // polls
-      .mockResolvedValueOnce([{ count: 0 }]); // acknowledgements
+      .mockResolvedValueOnce([{ count: 0 }]) // acknowledgements
+      .mockResolvedValueOnce([{ count: 0 }]); // structureEntityMemberLinks
 
     try {
       await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
@@ -731,7 +732,8 @@ describe("deleteMember", () => {
       .mockResolvedValueOnce([{ count: 0 }]) // frontingComments
       .mockResolvedValueOnce([{ count: 0 }]) // checkInRecords
       .mockResolvedValueOnce([{ count: 0 }]) // polls
-      .mockResolvedValueOnce([{ count: 0 }]); // acknowledgements
+      .mockResolvedValueOnce([{ count: 0 }]) // acknowledgements
+      .mockResolvedValueOnce([{ count: 0 }]); // structureEntityMemberLinks
 
     try {
       await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);
@@ -765,11 +767,12 @@ describe("deleteMember", () => {
     // Find member: where() chains to .limit()
     chain.where.mockReturnValueOnce(chain);
     chain.limit.mockResolvedValueOnce([{ id: "mem_test-member" }]);
-    // All zero except acknowledgements (last table)
+    // All zero except acknowledgements
     for (let i = 0; i < 9; i++) {
       chain.where.mockResolvedValueOnce([{ count: 0 }]);
     }
     chain.where.mockResolvedValueOnce([{ count: 4 }]); // acknowledgements
+    chain.where.mockResolvedValueOnce([{ count: 0 }]); // structureEntityMemberLinks
 
     try {
       await deleteMember(db, SYSTEM_ID, MEMBER_ID, AUTH, mockAudit);

@@ -282,6 +282,7 @@ CREATE TABLE `custom_fronts` (
 );
 --> statement-breakpoint
 CREATE INDEX `custom_fronts_system_archived_idx` ON `custom_fronts` (`system_id`,`archived`);--> statement-breakpoint
+CREATE UNIQUE INDEX `custom_fronts_id_system_id_unique` ON `custom_fronts` (`id`,`system_id`);--> statement-breakpoint
 CREATE TABLE `device_tokens` (
 	`id` text PRIMARY KEY NOT NULL,
 	`account_id` text NOT NULL,
@@ -370,6 +371,8 @@ CREATE TABLE `field_definition_scopes` (
 );
 --> statement-breakpoint
 CREATE INDEX `field_definition_scopes_field_definition_id_idx` ON `field_definition_scopes` (`field_definition_id`);--> statement-breakpoint
+CREATE INDEX `field_definition_scopes_system_id_idx` ON `field_definition_scopes` (`system_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `field_definition_scopes_definition_scope_null_uniq` ON `field_definition_scopes` (`field_definition_id`,`scope_type`) WHERE "field_definition_scopes"."scope_entity_type_id" IS NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX `field_definition_scopes_definition_scope_uniq` ON `field_definition_scopes` (`field_definition_id`,`scope_type`,`scope_entity_type_id`);--> statement-breakpoint
 CREATE TABLE `field_definitions` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -413,6 +416,8 @@ CREATE TABLE `field_values` (
 --> statement-breakpoint
 CREATE INDEX `field_values_definition_system_idx` ON `field_values` (`field_definition_id`,`system_id`);--> statement-breakpoint
 CREATE INDEX `field_values_system_member_idx` ON `field_values` (`system_id`,`member_id`);--> statement-breakpoint
+CREATE INDEX `field_values_system_entity_idx` ON `field_values` (`system_id`,`structure_entity_id`);--> statement-breakpoint
+CREATE INDEX `field_values_system_group_idx` ON `field_values` (`system_id`,`group_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `field_values_definition_member_uniq` ON `field_values` (`field_definition_id`,`member_id`) WHERE "field_values"."member_id" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX `field_values_definition_entity_uniq` ON `field_values` (`field_definition_id`,`structure_entity_id`) WHERE "field_values"."structure_entity_id" IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX `field_values_definition_group_uniq` ON `field_values` (`field_definition_id`,`group_id`) WHERE "field_values"."group_id" IS NOT NULL;--> statement-breakpoint
@@ -1079,7 +1084,7 @@ CREATE TABLE `system_structure_entities` (
 );
 --> statement-breakpoint
 CREATE INDEX `system_structure_entities_system_archived_idx` ON `system_structure_entities` (`system_id`,`archived`);--> statement-breakpoint
-CREATE INDEX `system_structure_entities_entity_type_id_idx` ON `system_structure_entities` (`entity_type_id`);--> statement-breakpoint
+CREATE INDEX `system_structure_entities_entity_type_id_idx` ON `system_structure_entities` (`system_id`,`entity_type_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `system_structure_entities_id_system_id_unique` ON `system_structure_entities` (`id`,`system_id`);--> statement-breakpoint
 CREATE TABLE `system_structure_entity_associations` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -1089,7 +1094,8 @@ CREATE TABLE `system_structure_entity_associations` (
 	`created_at` integer NOT NULL,
 	FOREIGN KEY (`system_id`) REFERENCES `systems`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`source_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
-	FOREIGN KEY (`target_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict
+	FOREIGN KEY (`target_entity_id`,`system_id`) REFERENCES `system_structure_entities`(`id`,`system_id`) ON UPDATE no action ON DELETE restrict,
+	CONSTRAINT "system_structure_entity_associations_no_self_link" CHECK("system_structure_entity_associations"."source_entity_id" <> "system_structure_entity_associations"."target_entity_id")
 );
 --> statement-breakpoint
 CREATE INDEX `system_structure_entity_associations_source_idx` ON `system_structure_entity_associations` (`source_entity_id`);--> statement-breakpoint

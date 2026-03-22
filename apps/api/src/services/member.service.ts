@@ -541,6 +541,7 @@ export async function deleteMember(
       [checkInCount],
       [pollCount],
       [ackCount],
+      [entityMemberLinkCount],
     ] = await Promise.all([
       tx
         .select({ count: count() })
@@ -583,6 +584,15 @@ export async function deleteMember(
         .select({ count: count() })
         .from(acknowledgements)
         .where(eq(acknowledgements.createdByMemberId, memberId)),
+      tx
+        .select({ count: count() })
+        .from(systemStructureEntityMemberLinks)
+        .where(
+          and(
+            eq(systemStructureEntityMemberLinks.memberId, memberId),
+            eq(systemStructureEntityMemberLinks.systemId, systemId),
+          ),
+        ),
     ]);
 
     if (
@@ -595,7 +605,8 @@ export async function deleteMember(
       !frontingCommentCount ||
       !checkInCount ||
       !pollCount ||
-      !ackCount
+      !ackCount ||
+      !entityMemberLinkCount
     ) {
       throw new Error("Unexpected: count query returned no rows");
     }
@@ -610,7 +621,8 @@ export async function deleteMember(
       | "frontingComments"
       | "checkInRecords"
       | "polls"
-      | "acknowledgements";
+      | "acknowledgements"
+      | "structureEntityMemberLinks";
 
     const dependents: { type: MemberDependentType; count: number }[] = [];
     if (photoCount.count > 0) dependents.push({ type: "photos", count: photoCount.count });
@@ -629,6 +641,11 @@ export async function deleteMember(
       dependents.push({ type: "checkInRecords", count: checkInCount.count });
     if (pollCount.count > 0) dependents.push({ type: "polls", count: pollCount.count });
     if (ackCount.count > 0) dependents.push({ type: "acknowledgements", count: ackCount.count });
+    if (entityMemberLinkCount.count > 0)
+      dependents.push({
+        type: "structureEntityMemberLinks",
+        count: entityMemberLinkCount.count,
+      });
 
     if (dependents.length > 0) {
       throw new ApiHttpError(
@@ -662,7 +679,7 @@ export interface MemberMembershipsResult {
   }>;
   readonly structureEntities: ReadonlyArray<{
     readonly id: string;
-    readonly entityId: string | null;
+    readonly parentEntityId: string | null;
     readonly memberId: MemberId;
     readonly systemId: SystemId;
     readonly createdAt: UnixMillis;
@@ -716,7 +733,7 @@ export async function listAllMemberMemberships(
     })),
     structureEntities: entityMemberRows.map((r) => ({
       id: r.id,
-      entityId: r.parentEntityId,
+      parentEntityId: r.parentEntityId,
       memberId: r.memberId as MemberId,
       systemId: r.systemId as SystemId,
       createdAt: toUnixMillis(r.createdAt),
