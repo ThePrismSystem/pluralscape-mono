@@ -458,6 +458,123 @@ describe("PostMergeValidator: normalizeSortOrder", () => {
     const { patches } = normalizeSortOrder(session);
     expect(patches).toHaveLength(0);
   });
+
+  it("does not renumber entities under different parents with same sortOrder", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-sort-parent-scope"),
+      sodium,
+    });
+
+    session.change((d) => {
+      // Two links under different parents, both sortOrder 1 — no tie within each group
+      d.structureEntityLinks["stel_a"] = {
+        id: s("stel_a"),
+        systemId: s("sys_1"),
+        entityId: s("ste_a"),
+        parentEntityId: s("parent_1"),
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.structureEntityLinks["stel_b"] = {
+        id: s("stel_b"),
+        systemId: s("sys_1"),
+        entityId: s("ste_b"),
+        parentEntityId: s("parent_2"),
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { patches } = normalizeSortOrder(session);
+    expect(patches).toHaveLength(0);
+  });
+
+  it("renumbers tied siblings under same parent", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-sort-same-parent"),
+      sodium,
+    });
+
+    session.change((d) => {
+      d.structureEntityLinks["stel_a"] = {
+        id: s("stel_a"),
+        systemId: s("sys_1"),
+        entityId: s("ste_a"),
+        parentEntityId: s("parent_1"),
+        sortOrder: 5,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      d.structureEntityLinks["stel_b"] = {
+        id: s("stel_b"),
+        systemId: s("sys_1"),
+        entityId: s("ste_b"),
+        parentEntityId: s("parent_1"),
+        sortOrder: 5,
+        archived: false,
+        createdAt: 2000,
+        updatedAt: 2000,
+      };
+    });
+
+    const { patches } = normalizeSortOrder(session);
+    expect(patches.length).toBeGreaterThan(0);
+
+    // After normalization, sort orders should be unique within the parent group
+    const linkA = session.document.structureEntityLinks["stel_a"];
+    const linkB = session.document.structureEntityLinks["stel_b"];
+    expect(linkA?.sortOrder).not.toBe(linkB?.sortOrder);
+  });
+
+  it("handles null parentEntityId group independently", () => {
+    const base = createSystemCoreDocument();
+    const session = new EncryptedSyncSession({
+      doc: Automerge.clone(base),
+      keys,
+      documentId: asSyncDocId("doc-sort-null-parent"),
+      sodium,
+    });
+
+    session.change((d) => {
+      // Root-level link (null parent)
+      d.structureEntityLinks["stel_root"] = {
+        id: s("stel_root"),
+        systemId: s("sys_1"),
+        entityId: s("ste_root"),
+        parentEntityId: null,
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+      // Child under a parent with same sortOrder as root — no conflict across groups
+      d.structureEntityLinks["stel_child"] = {
+        id: s("stel_child"),
+        systemId: s("sys_1"),
+        entityId: s("ste_child"),
+        parentEntityId: s("parent_1"),
+        sortOrder: 1,
+        archived: false,
+        createdAt: 1000,
+        updatedAt: 1000,
+      };
+    });
+
+    const { patches } = normalizeSortOrder(session);
+    // No ties within either group (each group has exactly one entity)
+    expect(patches).toHaveLength(0);
+  });
 });
 
 // ── Task 2: CheckInRecord normalization ───────────────────────────────

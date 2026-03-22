@@ -31,22 +31,24 @@ Contains the structural definition of a system — entities that are bounded by 
 
 **Entities:**
 
-| Entity           | CRDT Type              | Notes                                     |
-| ---------------- | ---------------------- | ----------------------------------------- |
-| Member           | LWW map                | name, pronouns, description, colors, etc. |
-| MemberPhoto      | LWW map                | photo reference metadata                  |
-| Group            | LWW map + ordered list | group hierarchy via parentGroupId         |
-| Subsystem        | LWW map                | nested via parentSubsystemId              |
-| Relationship     | LWW map                | links between members                     |
-| CustomFront      | LWW map                | abstract cognitive states                 |
-| FieldDefinition  | LWW map                | custom field schemas                      |
-| FieldValue       | LWW map                | per-member custom field values            |
-| SystemSettings   | LWW map                | system-wide configuration                 |
-| SideSystem       | LWW map                | linked side systems                       |
-| Layer            | LWW map                | visual/organizational layers              |
-| InnerWorldEntity | LWW map                | innerworld entities                       |
-| InnerWorldRegion | LWW map                | innerworld regions                        |
-| Timer            | LWW map                | reminder/countdown timers                 |
+| Entity                     | CRDT Type              | Notes                                                      |
+| -------------------------- | ---------------------- | ---------------------------------------------------------- |
+| Member                     | LWW map                | name, pronouns, description, colors, etc.                  |
+| MemberPhoto                | LWW map                | photo reference metadata                                   |
+| Group                      | LWW map + ordered list | group hierarchy via parentGroupId                          |
+| StructureEntityType        | LWW map                | user-defined structure type definitions                    |
+| StructureEntity            | LWW map                | instances of structure entity types                        |
+| StructureEntityLink        | LWW map                | parent-child hierarchy; archived, sortOrder mutable        |
+| StructureEntityMemberLink  | LWW map                | members placed under entities; archived, sortOrder mutable |
+| StructureEntityAssociation | LWW map                | many-to-many cross-type; archived mutable                  |
+| Relationship               | LWW map                | links between members                                      |
+| CustomFront                | LWW map                | abstract cognitive states                                  |
+| FieldDefinition            | LWW map                | custom field schemas with scoped targets                   |
+| FieldValue                 | LWW map                | exactly one of memberId/structureEntityId/groupId          |
+| SystemSettings             | LWW map                | system-wide configuration                                  |
+| InnerWorldEntity           | LWW map                | innerworld entities                                        |
+| InnerWorldRegion           | LWW map                | innerworld regions                                         |
+| Timer                      | LWW map                | reminder/countdown timers                                  |
 
 **Growth pattern:** Bounded by entity count. Even polyfragmented systems (500+ members) produce a document well within Automerge's efficient range.
 
@@ -172,40 +174,42 @@ Every entity type from `packages/types/src/ids.ts` is listed below with its docu
 
 ### Synced Entities
 
-| Entity Type           | Document             | Key Type | CRDT Strategy                                                                           |
-| --------------------- | -------------------- | -------- | --------------------------------------------------------------------------------------- |
-| `system`              | `system-core`        | Master   | LWW map                                                                                 |
-| `member`              | `system-core`        | Master   | LWW map                                                                                 |
-| `member-photo`        | `system-core`        | Master   | LWW map                                                                                 |
-| `group`               | `system-core`        | Master   | LWW map + ordered list                                                                  |
-| `subsystem`           | `system-core`        | Master   | LWW map                                                                                 |
-| `relationship`        | `system-core`        | Master   | LWW map                                                                                 |
-| `custom-front`        | `system-core`        | Master   | LWW map                                                                                 |
-| `field-definition`    | `system-core`        | Master   | LWW map                                                                                 |
-| `field-value`         | `system-core`        | Master   | LWW map                                                                                 |
-| `system-settings`     | `system-core`        | Master   | LWW map                                                                                 |
-| `side-system`         | `system-core`        | Master   | LWW map                                                                                 |
-| `layer`               | `system-core`        | Master   | LWW map                                                                                 |
-| `innerworld-entity`   | `system-core`        | Master   | LWW map                                                                                 |
-| `innerworld-region`   | `system-core`        | Master   | LWW map                                                                                 |
-| `timer`               | `system-core`        | Master   | LWW map                                                                                 |
-| `fronting-session`    | `fronting`           | Master   | Append + LWW                                                                            |
-| `check-in-record`     | `fronting`           | Master   | Append + LWW (map keyed by ID; respondedByMemberId, respondedAt, dismissed are mutable) |
-| `channel`             | `chat-{channelId}`   | Master   | LWW map                                                                                 |
-| `message`             | `chat-{channelId}`   | Master   | Append-only                                                                             |
-| `board-message`       | `chat-{channelId}`   | Master   | Append + LWW (map keyed by ID; pinned and sortOrder are mutable)                        |
-| `poll`                | `chat-{channelId}`   | Master   | LWW map                                                                                 |
-| `poll-option`         | `chat-{channelId}`   | Master   | LWW map                                                                                 |
-| `poll-vote`           | `chat-{channelId}`   | Master   | Append-only                                                                             |
-| `acknowledgement`     | `chat-{channelId}`   | Master   | Append + LWW (map keyed by ID; confirmed, confirmedAt, archived are mutable)            |
-| `journal-entry`       | `journal`            | Master   | Append + LWW                                                                            |
-| `wiki-page`           | `journal`            | Master   | LWW map                                                                                 |
-| `note`                | `journal`            | Master   | LWW map                                                                                 |
-| `blob`                | `journal` (ref only) | Master   | LWW map (metadata only — binary stored in S3/MinIO per ADR 009)                         |
-| `bucket` (definition) | `privacy-config`     | Master   | LWW map                                                                                 |
-| `friend-connection`   | `privacy-config`     | Master   | LWW map                                                                                 |
-| `friend-code`         | `privacy-config`     | Master   | LWW map                                                                                 |
-| `key-grant`           | `privacy-config`     | Master   | Append + LWW                                                                            |
+| Entity Type                    | Document             | Key Type | CRDT Strategy                                                                           |
+| ------------------------------ | -------------------- | -------- | --------------------------------------------------------------------------------------- |
+| `system`                       | `system-core`        | Master   | LWW map                                                                                 |
+| `member`                       | `system-core`        | Master   | LWW map                                                                                 |
+| `member-photo`                 | `system-core`        | Master   | LWW map                                                                                 |
+| `group`                        | `system-core`        | Master   | LWW map + ordered list                                                                  |
+| `structure-entity-type`        | `system-core`        | Master   | LWW map                                                                                 |
+| `structure-entity`             | `system-core`        | Master   | LWW map                                                                                 |
+| `structure-entity-link`        | `system-core`        | Master   | LWW map (sortOrder, parentEntityId, archived mutable; entityId immutable)               |
+| `structure-entity-member-link` | `system-core`        | Master   | LWW map (sortOrder, parentEntityId, archived mutable; memberId immutable)               |
+| `structure-entity-association` | `system-core`        | Master   | LWW map (archived mutable; sourceEntityId, targetEntityId immutable)                    |
+| `relationship`                 | `system-core`        | Master   | LWW map                                                                                 |
+| `custom-front`                 | `system-core`        | Master   | LWW map                                                                                 |
+| `field-definition`             | `system-core`        | Master   | LWW map                                                                                 |
+| `field-value`                  | `system-core`        | Master   | LWW map                                                                                 |
+| `system-settings`              | `system-core`        | Master   | LWW map                                                                                 |
+| `innerworld-entity`            | `system-core`        | Master   | LWW map                                                                                 |
+| `innerworld-region`            | `system-core`        | Master   | LWW map                                                                                 |
+| `timer`                        | `system-core`        | Master   | LWW map                                                                                 |
+| `fronting-session`             | `fronting`           | Master   | Append + LWW                                                                            |
+| `check-in-record`              | `fronting`           | Master   | Append + LWW (map keyed by ID; respondedByMemberId, respondedAt, dismissed are mutable) |
+| `channel`                      | `chat-{channelId}`   | Master   | LWW map                                                                                 |
+| `message`                      | `chat-{channelId}`   | Master   | Append-only                                                                             |
+| `board-message`                | `chat-{channelId}`   | Master   | Append + LWW (map keyed by ID; pinned and sortOrder are mutable)                        |
+| `poll`                         | `chat-{channelId}`   | Master   | LWW map                                                                                 |
+| `poll-option`                  | `chat-{channelId}`   | Master   | LWW map                                                                                 |
+| `poll-vote`                    | `chat-{channelId}`   | Master   | Append-only                                                                             |
+| `acknowledgement`              | `chat-{channelId}`   | Master   | Append + LWW (map keyed by ID; confirmed, confirmedAt, archived are mutable)            |
+| `journal-entry`                | `journal`            | Master   | Append + LWW                                                                            |
+| `wiki-page`                    | `journal`            | Master   | LWW map                                                                                 |
+| `note`                         | `journal`            | Master   | LWW map                                                                                 |
+| `blob`                         | `journal` (ref only) | Master   | LWW map (metadata only — binary stored in S3/MinIO per ADR 009)                         |
+| `bucket` (definition)          | `privacy-config`     | Master   | LWW map                                                                                 |
+| `friend-connection`            | `privacy-config`     | Master   | LWW map                                                                                 |
+| `friend-code`                  | `privacy-config`     | Master   | LWW map                                                                                 |
+| `key-grant`                    | `privacy-config`     | Master   | Append + LWW                                                                            |
 
 Blob metadata (MIME type, size, encryption info) lives in the `journal` document as a synced LWW map entry. The actual binary content is stored externally in S3/MinIO (see ADR 009). `BlobId` references appear as foreign keys across multiple documents: `system-core` (member photos), `chat-{channelId}` (message attachments), and `journal` (entry attachments).
 

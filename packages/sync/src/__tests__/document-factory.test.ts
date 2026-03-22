@@ -48,6 +48,9 @@ describe("Document factories", () => {
         "groups",
         "structureEntityTypes",
         "structureEntities",
+        "structureEntityLinks",
+        "structureEntityMemberLinks",
+        "structureEntityAssociations",
         "relationships",
         "customFronts",
         "fieldDefinitions",
@@ -60,16 +63,9 @@ describe("Document factories", () => {
       }
     });
 
-    it("all junction maps are initially empty", () => {
+    it("junction map groupMemberships is initially empty", () => {
       const doc = createSystemCoreDocument();
-      for (const key of [
-        "groupMemberships",
-        "structureEntityLinks",
-        "structureEntityMemberLinks",
-        "structureEntityAssociations",
-      ] as const) {
-        expect(Object.keys(doc[key])).toHaveLength(0);
-      }
+      expect(Object.keys(doc.groupMemberships)).toHaveLength(0);
     });
 
     it("lifecycle events list is initially empty", () => {

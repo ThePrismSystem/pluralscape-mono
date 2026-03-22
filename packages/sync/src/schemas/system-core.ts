@@ -123,6 +123,41 @@ export interface CrdtStructureEntity extends CrdtAuditFields {
   archived: boolean;
 }
 
+/**
+ * Shared base for structure entity link CRDT types.
+ * Both link types share parentEntityId-based hierarchy, sortOrder, and lifecycle fields.
+ */
+interface CrdtStructureEntityLinkBase extends CrdtAuditFields {
+  id: CrdtString;
+  systemId: CrdtString;
+  /**
+   * The parent entity this link is placed under.
+   * Null for entities/members at the root level of the structure hierarchy.
+   */
+  parentEntityId: CrdtOptionalString;
+  sortOrder: number;
+  archived: boolean;
+}
+
+/** CRDT representation of a StructureEntityLink (LWW map, keyed by SystemStructureEntityLinkId). */
+export interface CrdtStructureEntityLink extends CrdtStructureEntityLinkBase {
+  entityId: CrdtString;
+}
+
+/** CRDT representation of a StructureEntityMemberLink (LWW map, keyed by SystemStructureEntityMemberLinkId). */
+export interface CrdtStructureEntityMemberLink extends CrdtStructureEntityLinkBase {
+  memberId: CrdtString;
+}
+
+/** CRDT representation of a StructureEntityAssociation (LWW map, keyed by SystemStructureEntityAssociationId). */
+export interface CrdtStructureEntityAssociation extends CrdtAuditFields {
+  id: CrdtString;
+  systemId: CrdtString;
+  sourceEntityId: CrdtString;
+  targetEntityId: CrdtString;
+  archived: boolean;
+}
+
 /** CRDT representation of a Relationship (LWW map, keyed by RelationshipId). */
 export interface CrdtRelationship {
   id: CrdtString;
@@ -164,17 +199,28 @@ export interface CrdtFieldDefinition extends CrdtAuditFields {
   options: CrdtOptionalString;
   required: boolean;
   sortOrder: number;
+  /** JSON-serialized FieldDefinitionScope[] */
+  scopes: CrdtString;
   archived: boolean;
 }
 
+/**
+ * Discriminated owner fields for CrdtFieldValue.
+ * Exactly one of the three owner fields must be non-null.
+ */
+export type CrdtFieldValueOwner =
+  | { memberId: CrdtString; structureEntityId: null; groupId: null }
+  | { memberId: null; structureEntityId: CrdtString; groupId: null }
+  | { memberId: null; structureEntityId: null; groupId: CrdtString };
+
 /** CRDT representation of a FieldValue (LWW map, keyed by FieldValueId). */
-export interface CrdtFieldValue extends CrdtAuditFields {
-  id: CrdtString;
-  fieldDefinitionId: CrdtString;
-  memberId: CrdtString;
-  /** JSON-serialized FieldValueUnion */
-  value: CrdtString;
-}
+export type CrdtFieldValue = CrdtAuditFields &
+  CrdtFieldValueOwner & {
+    id: CrdtString;
+    fieldDefinitionId: CrdtString;
+    /** JSON-serialized FieldValueUnion */
+    value: CrdtString;
+  };
 
 // ── innerworld ───────────────────────────────────────────────────────
 
@@ -288,18 +334,17 @@ export interface SystemCoreDocument {
   innerWorldRegions: Record<string, CrdtInnerWorldRegion>;
   timers: Record<string, CrdtTimer>;
 
+  // Entity link maps (keyed by link entity ID) — LWW per field
+  structureEntityLinks: Record<string, CrdtStructureEntityLink>;
+  structureEntityMemberLinks: Record<string, CrdtStructureEntityMemberLink>;
+  structureEntityAssociations: Record<string, CrdtStructureEntityAssociation>;
+
   /**
    * Junction maps (compound key "{id1}_{id2}" → true).
    * Add-wins semantics: concurrent add+remove results in the junction being present.
    */
   /** Key format: "{groupId}_{memberId}" */
   groupMemberships: Record<string, true>;
-  /** Key format: "{entityId}_{parentEntityId}" */
-  structureEntityLinks: Record<string, true>;
-  /** Key format: "{entityId}_{memberId}" */
-  structureEntityMemberLinks: Record<string, true>;
-  /** Key format: "{sourceEntityId}_{targetEntityId}" */
-  structureEntityAssociations: Record<string, true>;
 
   /** Append-only lifecycle event log */
   lifecycleEvents: CrdtLifecycleEvent[];

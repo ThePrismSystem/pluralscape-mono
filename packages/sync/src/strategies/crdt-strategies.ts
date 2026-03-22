@@ -31,8 +31,17 @@ export interface CrdtStrategy {
   readonly fieldName: string;
   /** Parent reference field name, if this entity participates in hierarchy cycle detection. */
   readonly parentField?: string;
-  /** Whether this entity has a sortOrder field that needs tie-breaking normalization. */
+  /**
+   * Whether this entity has a `sortOrder` field that participates in
+   * post-merge tie-breaking normalization.
+   */
   readonly hasSortOrder?: boolean;
+  /**
+   * Field name to group by for parent-scoped sort normalization.
+   * When set, entities are partitioned by this field's value before tie
+   * detection — siblings under different parents maintain independent orderings.
+   */
+  readonly sortGroupField?: string;
 }
 
 /**
@@ -112,7 +121,7 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "fieldDefinitions",
     hasSortOrder: true,
     mutationSemantics:
-      "LWW per field — name, description, fieldType, options, required, sortOrder, archived",
+      "LWW per field — name, description, fieldType, options, required, sortOrder, scopes, archived",
   },
   "field-value": {
     storageType: "lww-map",
@@ -148,6 +157,32 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "lifecycleEvents",
     mutationSemantics: "Immutable once appended — append-only list in system-core document",
   },
+  // Structure entity links (system-core)
+  "structure-entity-link": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "structureEntityLinks",
+    hasSortOrder: true,
+    sortGroupField: "parentEntityId",
+    mutationSemantics:
+      "LWW per field — sortOrder, parentEntityId, archived mutable; entityId, systemId immutable after creation",
+  },
+  "structure-entity-member-link": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "structureEntityMemberLinks",
+    hasSortOrder: true,
+    sortGroupField: "parentEntityId",
+    mutationSemantics:
+      "LWW per field — sortOrder, parentEntityId, archived mutable; memberId, systemId immutable after creation",
+  },
+  "structure-entity-association": {
+    storageType: "lww-map",
+    document: "system-core",
+    fieldName: "structureEntityAssociations",
+    mutationSemantics:
+      "LWW per field — archived mutable; sourceEntityId, targetEntityId, systemId immutable after creation",
+  },
   // Junctions (system-core)
   "group-membership": {
     storageType: "junction-map",
@@ -155,24 +190,6 @@ export const ENTITY_CRDT_STRATEGIES = {
     fieldName: "groupMemberships",
     mutationSemantics:
       "Add-wins — compound key {groupId}_{memberId} mapped to true; concurrent add+remove preserves the junction",
-  },
-  "structure-entity-link": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "structureEntityLinks",
-    mutationSemantics: "Add-wins — compound key {entityId}_{parentEntityId} mapped to true",
-  },
-  "structure-entity-member-link": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "structureEntityMemberLinks",
-    mutationSemantics: "Add-wins — compound key {entityId}_{memberId} mapped to true",
-  },
-  "structure-entity-association": {
-    storageType: "junction-map",
-    document: "system-core",
-    fieldName: "structureEntityAssociations",
-    mutationSemantics: "Add-wins — compound key {sourceEntityId}_{targetEntityId} mapped to true",
   },
 
   // ── fronting document ────────────────────────────────────────────

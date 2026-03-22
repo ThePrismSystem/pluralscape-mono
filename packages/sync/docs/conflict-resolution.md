@@ -45,38 +45,40 @@ Rationale:
 
 ### system-core Document Entities
 
-| Entity              | Storage Type    | Mutable Fields After Creation                                                                                                                        | Notes                                                             |
-| ------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `system`            | `singleton-lww` | name, displayName, description, avatarSource                                                                                                         | Profile data; LWW per field                                       |
-| `member`            | `lww-map`       | name, pronouns, description, avatarSource, colors, saturationLevel, tags, suppressFriendFrontNotification, boardMessageNotificationOnFront, archived | All profile fields LWW                                            |
-| `member-photo`      | `lww-map`       | imageSource, sortOrder, caption, archived                                                                                                            | Photo metadata only; binary in blob storage                       |
-| `group`             | `lww-map`       | name, description, parentGroupId, imageSource, color, emoji, sortOrder, archived                                                                     | Hierarchy via `parentGroupId`                                     |
-| `subsystem`         | `lww-map`       | name, description, parentSubsystemId, architectureType, hasCore, discoveryStatus, visual fields, archived                                            | Hierarchy via `parentSubsystemId`                                 |
-| `side-system`       | `lww-map`       | name, description, visual fields, archived                                                                                                           |                                                                   |
-| `layer`             | `lww-map`       | name, description, accessType, gatekeeperMemberIds, visual fields, archived                                                                          | `gatekeeperMemberIds` serialized as ImmutableString (JSON)        |
-| `relationship`      | `lww-map`       | type, label, bidirectional, archived                                                                                                                 |                                                                   |
-| `custom-front`      | `lww-map`       | name, description, color, emoji, archived                                                                                                            |                                                                   |
-| `field-definition`  | `lww-map`       | name, description, fieldType, options, required, sortOrder, archived                                                                                 |                                                                   |
-| `field-value`       | `lww-map`       | value, updatedAt                                                                                                                                     | Keyed by fieldValueId; `value` is JSON-serialized FieldValueUnion |
-| `system-settings`   | `singleton-lww` | all fields                                                                                                                                           | LWW per field on the settings singleton                           |
-| `innerworld-entity` | `lww-map`       | positionX, positionY, visual, regionId, entity-specific fields, archived                                                                             | Flattened from discriminated union                                |
-| `innerworld-region` | `lww-map`       | name, description, parentRegionId, visual, boundaryData, accessType, gatekeeperMemberIds, archived                                                   |                                                                   |
-| `timer`             | `lww-map`       | intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, promptText, enabled, archived                                                              |                                                                   |
-| `lifecycle-event`   | `append-only`   | (none — immutable)                                                                                                                                   | List in system-core document                                      |
+| Entity                         | Storage Type    | Mutable Fields After Creation                                                                                                                        | Notes                                                                   |
+| ------------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `system`                       | `singleton-lww` | name, displayName, description, avatarSource                                                                                                         | Profile data; LWW per field                                             |
+| `member`                       | `lww-map`       | name, pronouns, description, avatarSource, colors, saturationLevel, tags, suppressFriendFrontNotification, boardMessageNotificationOnFront, archived | All profile fields LWW                                                  |
+| `member-photo`                 | `lww-map`       | imageSource, sortOrder, caption, archived                                                                                                            | Photo metadata only; binary in blob storage                             |
+| `group`                        | `lww-map`       | name, description, parentGroupId, imageSource, color, emoji, sortOrder, archived                                                                     | Hierarchy via `parentGroupId`                                           |
+| `structure-entity-type`        | `lww-map`       | name, description, color, imageSource, emoji, sortOrder, archived                                                                                    | User-defined structure type definitions                                 |
+| `structure-entity`             | `lww-map`       | name, description, entityTypeId, color, imageSource, emoji, sortOrder, archived                                                                      | Instances of structure entity types                                     |
+| `structure-entity-link`        | `lww-map`       | sortOrder, parentEntityId, archived mutable; entityId immutable                                                                                      | Parent-child hierarchy; null parentEntityId = root                      |
+| `structure-entity-member-link` | `lww-map`       | sortOrder, parentEntityId, archived mutable; memberId immutable                                                                                      | Members placed under entities; null = root                              |
+| `structure-entity-association` | `lww-map`       | archived mutable; sourceEntityId, targetEntityId immutable                                                                                           | Many-to-many cross-type relationships                                   |
+| `relationship`                 | `lww-map`       | type, label, bidirectional, archived                                                                                                                 |                                                                         |
+| `custom-front`                 | `lww-map`       | name, description, color, emoji, archived                                                                                                            |                                                                         |
+| `field-definition`             | `lww-map`       | name, description, fieldType, options, required, sortOrder, scopes, archived                                                                         | `scopes` is JSON-serialized FieldDefinitionScope[]                      |
+| `field-value`                  | `lww-map`       | value, updatedAt                                                                                                                                     | Exactly one of memberId, structureEntityId, or groupId must be non-null |
+| `system-settings`              | `singleton-lww` | all fields                                                                                                                                           | LWW per field on the settings singleton                                 |
+| `innerworld-entity`            | `lww-map`       | positionX, positionY, visual, regionId, entity-specific fields, archived                                                                             | Flattened from discriminated union                                      |
+| `innerworld-region`            | `lww-map`       | name, description, parentRegionId, visual, boundaryData, accessType, gatekeeperMemberIds, archived                                                   |                                                                         |
+| `timer`                        | `lww-map`       | intervalMinutes, wakingHoursOnly, wakingStart, wakingEnd, promptText, enabled, archived                                                              |                                                                         |
+| `lifecycle-event`              | `append-only`   | (none — immutable)                                                                                                                                   | List in system-core document                                            |
+
+#### Structure Entity Link Semantic Note
+
+Structure entity links (`structure-entity-link`, `structure-entity-member-link`, `structure-entity-association`) were upgraded from add-wins junction maps to full LWW-map entities. This changes the conflict semantics: under junction add-wins, a concurrent add+remove preserved the entry; under LWW-map, a concurrent delete+field-edit results in the entry being removed (delete wins). This is the correct behavior for link entities — if one device removes a link while another edits its sort order, the removal should take precedence.
+
+`structure-entity-link.parentEntityId` does **not** participate in hierarchy cycle detection. Unlike `group.parentGroupId` (where a group's parent is another group, creating potential self-referencing cycles), a link's `parentEntityId` points to a `StructureEntity`, not to another link. The hierarchy is expressed through link records — cycles in the entity hierarchy must be prevented at the application layer when creating links.
 
 #### system-core Junction Maps
 
 Junctions use compound keys (`{parentId}_{childId}`) mapped to `true`. Add-wins: concurrent add+remove results in the junction being present.
 
-| Junction                     | Key Format                     | Notes                         |
-| ---------------------------- | ------------------------------ | ----------------------------- |
-| `group-membership`           | `{groupId}_{memberId}`         | Member belongs to group       |
-| `subsystem-membership`       | `{subsystemId}_{memberId}`     | Member belongs to subsystem   |
-| `side-system-membership`     | `{sideSystemId}_{memberId}`    | Member belongs to side system |
-| `layer-membership`           | `{layerId}_{memberId}`         | Member belongs to layer       |
-| `subsystem-layer-link`       | `{subsystemId}_{layerId}`      | Cross-structure relationship  |
-| `subsystem-side-system-link` | `{subsystemId}_{sideSystemId}` | Cross-structure relationship  |
-| `side-system-layer-link`     | `{sideSystemId}_{layerId}`     | Cross-structure relationship  |
+| Junction           | Key Format             | Notes                   |
+| ------------------ | ---------------------- | ----------------------- |
+| `group-membership` | `{groupId}_{memberId}` | Member belongs to group |
 
 ---
 
@@ -156,9 +158,11 @@ SystemCoreDocument {
   members: Record<id, CrdtMember>
   memberPhotos: Record<id, CrdtMemberPhoto>
   groups: Record<id, CrdtGroup>
-  subsystems: Record<id, CrdtSubsystem>
-  sideSystems: Record<id, CrdtSideSystem>
-  layers: Record<id, CrdtLayer>
+  structureEntityTypes: Record<id, CrdtStructureEntityType>
+  structureEntities: Record<id, CrdtStructureEntity>
+  structureEntityLinks: Record<id, CrdtStructureEntityLink>         // lww-map
+  structureEntityMemberLinks: Record<id, CrdtStructureEntityMemberLink> // lww-map
+  structureEntityAssociations: Record<id, CrdtStructureEntityAssociation> // lww-map
   relationships: Record<id, CrdtRelationship>
   customFronts: Record<id, CrdtCustomFront>
   fieldDefinitions: Record<id, CrdtFieldDefinition>
@@ -168,12 +172,6 @@ SystemCoreDocument {
   timers: Record<id, CrdtTimer>
   lifecycleEvents: CrdtLifecycleEvent[]               // append-only
   groupMemberships: Record<"gid_mid", true>            // junction add-wins
-  subsystemMemberships: Record<"ssid_mid", true>
-  sideSystemMemberships: Record<"sid_mid", true>
-  layerMemberships: Record<"lid_mid", true>
-  subsystemLayerLinks: Record<"ssid_lid", true>
-  subsystemSideSystemLinks: Record<"ssid_sid", true>
-  sideSystemLayerLinks: Record<"sid_lid", true>
 }
 ```
 
@@ -229,14 +227,14 @@ PrivacyConfigDocument {
 
 The table below summarizes the dominant merge profile for each document type. Individual entity strategies are detailed in the per-entity tables above.
 
-| Document type    | Dominant merge profile                   | Key characteristics                                                                                                                                                                         |
-| ---------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `system-core`    | LWW maps + junction add-wins             | All entity maps are LWW per field; junctions are `Record<string, true>` (add-wins). Post-merge cycle detection required for group/subsystem/innerworld-region hierarchies.                  |
-| `fronting`       | Append-lww maps                          | `sessions` and `checkInRecords` are append-lww. Time-split by month eliminates merge conflicts for historical periods.                                                                      |
-| `chat`           | Primarily append-only; LWW metadata      | `messages[]` and `votes[]` are append-only. Edit chains resolved at application layer via `editOf` links. Time-split by month. Board messages use append-lww for `pinned`/`sortOrder`.      |
-| `journal`        | Append-lww entries + LWW wiki/notes      | Journal entries mutable after creation (title, blocks, tags). Wiki pages and notes are fully LWW.                                                                                           |
-| `privacy-config` | LWW maps; security-critical revocation   | Key grants are append-lww; `revokedAt` is the only mutable field. Any revocation wins — idempotent from a security perspective. `assignedBuckets` nested map uses add-wins.                 |
-| `bucket`         | Read-only projections; owner writes only | Bucket documents are derived projections from master-key documents, filtered by `BucketVisibilityScope`. Friends never write to bucket documents — no merge conflicts from the friend side. |
+| Document type    | Dominant merge profile                   | Key characteristics                                                                                                                                                                                                         |
+| ---------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `system-core`    | LWW maps + junction add-wins             | All entity maps are LWW per field; `groupMemberships` is add-wins junction. Structure entity links/member-links/associations are LWW maps. Post-merge cycle detection required for group and innerworld-region hierarchies. |
+| `fronting`       | Append-lww maps                          | `sessions` and `checkInRecords` are append-lww. Time-split by month eliminates merge conflicts for historical periods.                                                                                                      |
+| `chat`           | Primarily append-only; LWW metadata      | `messages[]` and `votes[]` are append-only. Edit chains resolved at application layer via `editOf` links. Time-split by month. Board messages use append-lww for `pinned`/`sortOrder`.                                      |
+| `journal`        | Append-lww entries + LWW wiki/notes      | Journal entries mutable after creation (title, blocks, tags). Wiki pages and notes are fully LWW.                                                                                                                           |
+| `privacy-config` | LWW maps; security-critical revocation   | Key grants are append-lww; `revokedAt` is the only mutable field. Any revocation wins — idempotent from a security perspective. `assignedBuckets` nested map uses add-wins.                                                 |
+| `bucket`         | Read-only projections; owner writes only | Bucket documents are derived projections from master-key documents, filtered by `BucketVisibilityScope`. Friends never write to bucket documents — no merge conflicts from the friend side.                                 |
 
 ---
 
@@ -296,7 +294,7 @@ The table below summarizes the dominant merge profile for each document type. In
 - **Detection strategy:** DFS traversal starting from each root; any node visited twice indicates a cycle
 - **Resolution:** break the cycle by setting the parentGroupId of the most-recently-updated node to null (making it a root group)
 
-A similar scenario applies to `subsystem.parentSubsystemId` and `innerWorldRegion.parentRegionId`.
+A similar scenario applies to `innerWorldRegion.parentRegionId`.
 
 ---
 
@@ -441,14 +439,13 @@ Conflict notifications are informational messages generated client-side when con
 
 The following validations must run client-side after merging any CRDT changes:
 
-| Rule                                 | Trigger                                                       | Action                                                                    |
-| ------------------------------------ | ------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Cycle detection (groups)             | Any `group.parentGroupId` change                              | DFS from each root; break cycles by nullifying most-recently-updated node |
-| Cycle detection (subsystems)         | Any `subsystem.parentSubsystemId` change                      | Same as above                                                             |
-| Cycle detection (innerworld regions) | Any `innerWorldRegion.parentRegionId` change                  | Same as above                                                             |
-| Sort order normalization             | Any `sortOrder` change on groups, board messages              | Re-number ascending to eliminate ties                                     |
-| CheckInRecord normalization          | Any `checkInRecord.respondedByMemberId` or `dismissed` change | If respondedByMemberId non-null → dismissed = false                       |
-| FriendConnection status coherence    | Any `friendConnection.status` change                          | If status = "removed" or "blocked" → clear assignedBuckets                |
+| Rule                                 | Trigger                                                                                                                                                                      | Action                                                                                                               |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Cycle detection (groups)             | Any `group.parentGroupId` change                                                                                                                                             | DFS from each root; break cycles by nullifying most-recently-updated node                                            |
+| Cycle detection (innerworld regions) | Any `innerWorldRegion.parentRegionId` change                                                                                                                                 | Same as above                                                                                                        |
+| Sort order normalization             | Any `sortOrder` change on member-photo, group, structure-entity-type, structure-entity, structure-entity-link, structure-entity-member-link, field-definition, board-message | Re-number ascending to eliminate ties. Link types use parent-scoped normalization (partitioned by `parentEntityId`). |
+| CheckInRecord normalization          | Any `checkInRecord.respondedByMemberId` or `dismissed` change                                                                                                                | If respondedByMemberId non-null → dismissed = false                                                                  |
+| FriendConnection status coherence    | Any `friendConnection.status` change                                                                                                                                         | If status = "removed" or "blocked" → clear assignedBuckets                                                           |
 
 ### Validation Function Signatures
 
@@ -456,7 +453,7 @@ The following functions define the contract for post-merge validation. Each acce
 
 | Function                                                 | Input                                     | Output                        | Notes                                                                           |
 | -------------------------------------------------------- | ----------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------- |
-| `detectHierarchyCycles(entities) => CycleBreak[]`        | `Record<string, { parentId, updatedAt }>` | Array of cycle breaks         | Shared for groups, subsystems, and innerworld regions — same DFS algorithm      |
+| `detectHierarchyCycles(entities) => CycleBreak[]`        | `Record<string, { parentId, updatedAt }>` | Array of cycle breaks         | Shared for groups and innerworld regions — same DFS algorithm                   |
 | `normalizeSortOrder(entities) => SortOrderPatch[]`       | `Record<string, { sortOrder }>`           | Array of re-numbering patches | Eliminates ties by re-numbering ascending; stable sort preserves non-tied order |
 | `normalizeCheckInRecord(record) => patch \| null`        | Single `CrdtCheckInRecord`                | Correction patch or null      | If `respondedByMemberId` is non-null, sets `dismissed = false`                  |
 | `normalizeFriendConnection(connection) => patch \| null` | Single `CrdtFriendConnection`             | Correction patch or null      | If `status` is "removed" or "blocked", clears `assignedBuckets`                 |
