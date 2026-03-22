@@ -16,10 +16,15 @@ restoreRoute.use("*", createCategoryRateLimiter("write"));
 restoreRoute.post("/:commentId/restore", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
+  const sessionId = requireIdParam(
+    c.req.param("sessionId"),
+    "sessionId",
+    ID_PREFIXES.frontingSession,
+  );
   const commentId = parseIdParam(c.req.param("commentId"), ID_PREFIXES.frontingComment);
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
-  const result = await restoreFrontingComment(db, systemId, commentId, auth, audit);
+  const result = await restoreFrontingComment(db, systemId, sessionId, commentId, auth, audit);
   return c.json(result);
 });

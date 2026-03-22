@@ -4,15 +4,15 @@ import {
   CreateFrontingCommentBodySchema,
   UpdateFrontingCommentBodySchema,
 } from "@pluralscape/validation";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, desc, eq, lt, sql } from "drizzle-orm";
 
-import { HTTP_NOT_FOUND } from "../http.constants.js";
+import { HTTP_BAD_REQUEST, HTTP_NOT_FOUND } from "../http.constants.js";
 import { ApiHttpError } from "../lib/api-error.js";
 import { encryptedBlobToBase64, parseAndValidateBlob } from "../lib/encrypted-blob.js";
-import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { validateSubjectIds } from "../lib/validate-subject-ids.js";
 import {
   DEFAULT_PAGE_LIMIT,
   MAX_ENCRYPTED_DATA_BYTES,
@@ -71,9 +71,9 @@ function toFrontingCommentResult(row: {
     id: row.id as FrontingCommentId,
     frontingSessionId: row.frontingSessionId as FrontingSessionId,
     systemId: row.systemId as SystemId,
-    memberId: (row.memberId as MemberId | null) ?? null,
-    customFrontId: (row.customFrontId as CustomFrontId | null) ?? null,
-    structureEntityId: (row.structureEntityId as SystemStructureEntityId | null) ?? null,
+    memberId: row.memberId as MemberId | null,
+    customFrontId: row.customFrontId as CustomFrontId | null,
+    structureEntityId: row.structureEntityId as SystemStructureEntityId | null,
     encryptedData: encryptedBlobToBase64(row.encryptedData),
     version: row.version,
     archived: row.archived,
@@ -93,19 +93,21 @@ async function resolveSessionStartTime(
   systemId: SystemId,
 ): Promise<number> {
   const [session] = await tx
-    .select({ startTime: frontingSessions.startTime })
+    .select({ startTime: frontingSessions.startTime, archived: frontingSessions.archived })
     .from(frontingSessions)
-    .where(
-      and(
-        eq(frontingSessions.id, sessionId),
-        eq(frontingSessions.systemId, systemId),
-        eq(frontingSessions.archived, false),
-      ),
-    )
+    .where(and(eq(frontingSessions.id, sessionId), eq(frontingSessions.systemId, systemId)))
     .limit(1);
 
   if (!session) {
     throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
+  }
+
+  if (session.archived) {
+    throw new ApiHttpError(
+      HTTP_BAD_REQUEST,
+      "SESSION_ARCHIVED",
+      "Cannot add comments to an archived session",
+    );
   }
 
   return session.startTime;
@@ -134,6 +136,7 @@ export async function createFrontingComment(
 
   return db.transaction(async (tx) => {
     const sessionStartTime = await resolveSessionStartTime(tx, sessionId, systemId);
+    await validateSubjectIds(tx, systemId, parsed);
 
     const [row] = await tx
       .insert(frontingComments)
@@ -194,7 +197,7 @@ export async function listFrontingComments(
     .select()
     .from(frontingComments)
     .where(and(...conditions))
-    .orderBy(frontingComments.createdAt, frontingComments.id)
+    .orderBy(desc(frontingComments.createdAt), desc(frontingComments.id))
     .limit(effectiveLimit + 1);
 
   return buildPaginatedResult(rows, effectiveLimit, toFrontingCommentResult);
@@ -205,6 +208,7 @@ export async function listFrontingComments(
 export async function getFrontingComment(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  sessionId: FrontingSessionId,
   commentId: FrontingCommentId,
   auth: AuthContext,
 ): Promise<FrontingCommentResult> {
@@ -217,6 +221,7 @@ export async function getFrontingComment(
       and(
         eq(frontingComments.id, commentId),
         eq(frontingComments.systemId, systemId),
+        eq(frontingComments.frontingSessionId, sessionId),
         eq(frontingComments.archived, false),
       ),
     )
@@ -234,6 +239,7 @@ export async function getFrontingComment(
 export async function updateFrontingComment(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  sessionId: FrontingSessionId,
   commentId: FrontingCommentId,
   params: unknown,
   auth: AuthContext,
@@ -261,6 +267,7 @@ export async function updateFrontingComment(
         and(
           eq(frontingComments.id, commentId),
           eq(frontingComments.systemId, systemId),
+          eq(frontingComments.frontingSessionId, sessionId),
           eq(frontingComments.version, version),
           eq(frontingComments.archived, false),
         ),
@@ -277,6 +284,7 @@ export async function updateFrontingComment(
             and(
               eq(frontingComments.id, commentId),
               eq(frontingComments.systemId, systemId),
+              eq(frontingComments.frontingSessionId, sessionId),
               eq(frontingComments.archived, false),
             ),
           )
@@ -302,6 +310,7 @@ export async function updateFrontingComment(
 export async function deleteFrontingComment(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  sessionId: FrontingSessionId,
   commentId: FrontingCommentId,
   auth: AuthContext,
   audit: AuditWriter,
@@ -316,6 +325,7 @@ export async function deleteFrontingComment(
         and(
           eq(frontingComments.id, commentId),
           eq(frontingComments.systemId, systemId),
+          eq(frontingComments.frontingSessionId, sessionId),
           eq(frontingComments.archived, false),
         ),
       )
@@ -334,28 +344,60 @@ export async function deleteFrontingComment(
 
     await tx
       .delete(frontingComments)
-      .where(and(eq(frontingComments.id, commentId), eq(frontingComments.systemId, systemId)));
+      .where(
+        and(
+          eq(frontingComments.id, commentId),
+          eq(frontingComments.systemId, systemId),
+          eq(frontingComments.frontingSessionId, sessionId),
+        ),
+      );
   });
 }
 
 // ── ARCHIVE ─────────────────────────────────────────────────────────
 
-const FRONTING_COMMENT_LIFECYCLE = {
-  table: frontingComments,
-  columns: frontingComments,
-  entityName: "Fronting comment",
-  archiveEvent: "fronting-comment.archived" as const,
-  restoreEvent: "fronting-comment.restored" as const,
-};
-
 export async function archiveFrontingComment(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  sessionId: FrontingSessionId,
   commentId: FrontingCommentId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<void> {
-  await archiveEntity(db, systemId, commentId, auth, audit, FRONTING_COMMENT_LIFECYCLE);
+  assertSystemOwnership(systemId, auth);
+
+  const timestamp = now();
+
+  await db.transaction(async (tx) => {
+    const updated = await tx
+      .update(frontingComments)
+      .set({
+        archived: true,
+        archivedAt: timestamp,
+        updatedAt: timestamp,
+        version: sql`${frontingComments.version} + 1`,
+      })
+      .where(
+        and(
+          eq(frontingComments.id, commentId),
+          eq(frontingComments.systemId, systemId),
+          eq(frontingComments.frontingSessionId, sessionId),
+          eq(frontingComments.archived, false),
+        ),
+      )
+      .returning({ id: frontingComments.id });
+
+    if (updated.length === 0) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting comment not found");
+    }
+
+    await audit(tx, {
+      eventType: "fronting-comment.archived",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Fronting comment archived",
+      systemId,
+    });
+  });
 }
 
 // ── RESTORE ─────────────────────────────────────────────────────────
@@ -363,11 +405,46 @@ export async function archiveFrontingComment(
 export async function restoreFrontingComment(
   db: PostgresJsDatabase,
   systemId: SystemId,
+  sessionId: FrontingSessionId,
   commentId: FrontingCommentId,
   auth: AuthContext,
   audit: AuditWriter,
 ): Promise<FrontingCommentResult> {
-  return restoreEntity(db, systemId, commentId, auth, audit, FRONTING_COMMENT_LIFECYCLE, (row) =>
-    toFrontingCommentResult(row as typeof frontingComments.$inferSelect),
-  );
+  assertSystemOwnership(systemId, auth);
+
+  const timestamp = now();
+
+  return db.transaction(async (tx) => {
+    const updated = await tx
+      .update(frontingComments)
+      .set({
+        archived: false,
+        archivedAt: null,
+        updatedAt: timestamp,
+        version: sql`${frontingComments.version} + 1`,
+      })
+      .where(
+        and(
+          eq(frontingComments.id, commentId),
+          eq(frontingComments.systemId, systemId),
+          eq(frontingComments.frontingSessionId, sessionId),
+          eq(frontingComments.archived, true),
+        ),
+      )
+      .returning();
+
+    const row = updated[0];
+    if (!row) {
+      throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Archived fronting comment not found");
+    }
+
+    await audit(tx, {
+      eventType: "fronting-comment.restored",
+      actor: { kind: "account", id: auth.accountId },
+      detail: "Fronting comment restored",
+      systemId,
+    });
+
+    return toFrontingCommentResult(row);
+  });
 }

@@ -1,23 +1,7 @@
 import { z } from "zod/v4";
 
+import { optionalBrandedId, requireSubject, REQUIRE_SUBJECT_MESSAGE } from "./branded-id.js";
 import { MAX_ENCRYPTED_DATA_SIZE } from "./validation.constants.js";
-
-import type { Brand, IdPrefixBrandMap } from "@pluralscape/types";
-
-// ── Branded ID helpers ──────────────────────────────────────────
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
-function optionalBrandedId<P extends keyof IdPrefixBrandMap>(
-  prefix: P,
-): z.ZodType<Brand<string, IdPrefixBrandMap[P]> | undefined> {
-  return z
-    .custom<Brand<string, IdPrefixBrandMap[P]>>((val) => {
-      if (typeof val !== "string") return false;
-      return val.startsWith(prefix) && UUID_REGEX.test(val.slice(prefix.length));
-    }, `Expected a valid ${prefix}<uuid> identifier`)
-    .optional();
-}
 
 // ── Create ──────────────────────────────────────────────────────
 
@@ -28,10 +12,7 @@ export const CreateFrontingCommentBodySchema = z
     customFrontId: optionalBrandedId("cf_"),
     structureEntityId: optionalBrandedId("ste_"),
   })
-  .refine(
-    (data) => Boolean(data.memberId ?? data.customFrontId ?? data.structureEntityId),
-    "At least one of memberId, customFrontId, or structureEntityId is required",
-  );
+  .refine(requireSubject, REQUIRE_SUBJECT_MESSAGE);
 
 // ── Update ──────────────────────────────────────────────────────
 

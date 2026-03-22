@@ -119,6 +119,17 @@ describe("POST .../fronting-sessions/:sessionId/comments", () => {
 
     expect(res.status).toBe(404);
   });
+
+  it("returns 400 on malformed JSON body", async () => {
+    const app = createApp();
+    const res = await app.request(BASE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{invalid-json",
+    });
+
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET .../fronting-sessions/:sessionId/comments", () => {
@@ -193,6 +204,20 @@ describe("PUT .../comments/:commentId", () => {
     const body = (await res.json()) as { version: number };
     expect(body.version).toBe(2);
   });
+
+  it("returns 409 on version conflict", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(updateFrontingComment).mockRejectedValueOnce(
+      new ApiHttpError(409, "CONFLICT", "Version conflict"),
+    );
+
+    const app = createApp();
+    const res = await putJSON(app, COMMENT_URL, { encryptedData: "dGVzdA==", version: 1 });
+
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("CONFLICT");
+  });
 });
 
 describe("DELETE .../comments/:commentId", () => {
@@ -211,6 +236,20 @@ describe("DELETE .../comments/:commentId", () => {
 
     expect(res.status).toBe(204);
   });
+
+  it("returns 404 when comment not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(deleteFrontingComment).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Fronting comment not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(COMMENT_URL, { method: "DELETE" });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
+  });
 });
 
 describe("POST .../comments/:commentId/archive", () => {
@@ -228,6 +267,20 @@ describe("POST .../comments/:commentId/archive", () => {
     const res = await app.request(`${COMMENT_URL}/archive`, { method: "POST" });
 
     expect(res.status).toBe(204);
+  });
+
+  it("returns 404 when comment not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(archiveFrontingComment).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Fronting comment not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(`${COMMENT_URL}/archive`, { method: "POST" });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
   });
 });
 
@@ -248,5 +301,19 @@ describe("POST .../comments/:commentId/restore", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { id: string };
     expect(body.id).toBe("fcom_770e8400-e29b-41d4-a716-446655440000");
+  });
+
+  it("returns 404 when archived comment not found", async () => {
+    const { ApiHttpError } = await import("../../../lib/api-error.js");
+    vi.mocked(restoreFrontingComment).mockRejectedValueOnce(
+      new ApiHttpError(404, "NOT_FOUND", "Archived fronting comment not found"),
+    );
+
+    const app = createApp();
+    const res = await app.request(`${COMMENT_URL}/restore`, { method: "POST" });
+
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as ApiErrorResponse;
+    expect(body.error.code).toBe("NOT_FOUND");
   });
 });

@@ -19,8 +19,10 @@ import { archiveEntity, restoreEntity } from "../lib/entity-lifecycle.js";
 import { assertOccUpdated } from "../lib/occ-update.js";
 import { buildPaginatedResult } from "../lib/pagination.js";
 import { assertSystemOwnership } from "../lib/system-ownership.js";
+import { validateSubjectIds } from "../lib/validate-subject-ids.js";
 import {
   DEFAULT_PAGE_LIMIT,
+  MAX_ACTIVE_SESSIONS,
   MAX_ENCRYPTED_DATA_BYTES,
   MAX_PAGE_LIMIT,
 } from "../service.constants.js";
@@ -63,8 +65,8 @@ export interface FrontingSessionListOptions {
   readonly memberId?: MemberId;
   readonly customFrontId?: CustomFrontId;
   readonly structureEntityId?: SystemStructureEntityId;
-  readonly startAfter?: number;
-  readonly startBefore?: number;
+  readonly startFrom?: number;
+  readonly startUntil?: number;
   readonly activeOnly?: boolean;
   readonly includeArchived?: boolean;
 }
@@ -89,9 +91,9 @@ function toFrontingSessionResult(row: {
   return {
     id: row.id as FrontingSessionId,
     systemId: row.systemId as SystemId,
-    memberId: (row.memberId as MemberId | null) ?? null,
-    customFrontId: (row.customFrontId as CustomFrontId | null) ?? null,
-    structureEntityId: (row.structureEntityId as SystemStructureEntityId | null) ?? null,
+    memberId: row.memberId as MemberId | null,
+    customFrontId: row.customFrontId as CustomFrontId | null,
+    structureEntityId: row.structureEntityId as SystemStructureEntityId | null,
     startTime: toUnixMillis(row.startTime),
     endTime: toUnixMillisOrNull(row.endTime),
     encryptedData: encryptedBlobToBase64(row.encryptedData),
@@ -124,6 +126,8 @@ export async function createFrontingSession(
   const timestamp = now();
 
   return db.transaction(async (tx) => {
+    await validateSubjectIds(tx, systemId, parsed);
+
     const [row] = await tx
       .insert(frontingSessions)
       .values({
@@ -184,12 +188,12 @@ export async function listFrontingSessions(
     conditions.push(eq(frontingSessions.structureEntityId, opts.structureEntityId));
   }
 
-  if (opts.startAfter !== undefined) {
-    conditions.push(gte(frontingSessions.startTime, opts.startAfter));
+  if (opts.startFrom !== undefined) {
+    conditions.push(gte(frontingSessions.startTime, opts.startFrom));
   }
 
-  if (opts.startBefore !== undefined) {
-    conditions.push(lte(frontingSessions.startTime, opts.startBefore));
+  if (opts.startUntil !== undefined) {
+    conditions.push(lte(frontingSessions.startTime, opts.startUntil));
   }
 
   if (opts.activeOnly) {
@@ -197,8 +201,6 @@ export async function listFrontingSessions(
   }
 
   if (opts.cursor) {
-    // Cursor-based pagination: skip rows already seen.
-    // Uses (startTime DESC, id DESC) ordering — cursor encodes the last-seen id.
     conditions.push(lt(frontingSessions.id, opts.cursor));
   }
 
@@ -206,7 +208,7 @@ export async function listFrontingSessions(
     .select()
     .from(frontingSessions)
     .where(and(...conditions))
-    .orderBy(desc(frontingSessions.startTime), desc(frontingSessions.id))
+    .orderBy(desc(frontingSessions.id))
     .limit(effectiveLimit + 1);
 
   return buildPaginatedResult(rows, effectiveLimit, toFrontingSessionResult);
@@ -329,9 +331,13 @@ export async function endFrontingSession(
   const timestamp = now();
 
   return db.transaction(async (tx) => {
-    // Read current session to validate endTime > startTime
+    // Read current session to validate state and endTime > startTime
     const [current] = await tx
-      .select({ id: frontingSessions.id, startTime: frontingSessions.startTime })
+      .select({
+        id: frontingSessions.id,
+        startTime: frontingSessions.startTime,
+        endTime: frontingSessions.endTime,
+      })
       .from(frontingSessions)
       .where(
         and(
@@ -344,6 +350,10 @@ export async function endFrontingSession(
 
     if (!current) {
       throw new ApiHttpError(HTTP_NOT_FOUND, "NOT_FOUND", "Fronting session not found");
+    }
+
+    if (current.endTime !== null) {
+      throw new ApiHttpError(HTTP_BAD_REQUEST, "ALREADY_ENDED", "Session already ended");
     }
 
     if (endTime <= current.startTime) {
@@ -365,8 +375,10 @@ export async function endFrontingSession(
         and(
           eq(frontingSessions.id, sessionId),
           eq(frontingSessions.systemId, systemId),
+          eq(frontingSessions.startTime, current.startTime),
           eq(frontingSessions.version, version),
           eq(frontingSessions.archived, false),
+          isNull(frontingSessions.endTime),
         ),
       )
       .returning();
@@ -414,7 +426,7 @@ export async function deleteFrontingSession(
 
   await db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({ id: frontingSessions.id })
+      .select({ id: frontingSessions.id, startTime: frontingSessions.startTime })
       .from(frontingSessions)
       .where(
         and(
@@ -456,7 +468,13 @@ export async function deleteFrontingSession(
 
     await tx
       .delete(frontingSessions)
-      .where(and(eq(frontingSessions.id, sessionId), eq(frontingSessions.systemId, systemId)));
+      .where(
+        and(
+          eq(frontingSessions.id, sessionId),
+          eq(frontingSessions.systemId, systemId),
+          eq(frontingSessions.startTime, existing.startTime),
+        ),
+      );
   });
 }
 
@@ -519,7 +537,8 @@ export async function getActiveFronting(
         eq(frontingSessions.archived, false),
       ),
     )
-    .orderBy(desc(frontingSessions.startTime));
+    .orderBy(desc(frontingSessions.startTime))
+    .limit(MAX_ACTIVE_SESSIONS);
 
   const sessions = rows.map(toFrontingSessionResult);
 

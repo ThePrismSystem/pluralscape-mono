@@ -147,7 +147,7 @@ export interface ServerFrontingSession extends AuditMetadata {
   readonly customFrontId: CustomFrontId | null;
   readonly structureEntityId: SystemStructureEntityId | null;
   readonly archived: boolean;
-  readonly encryptedData: EncryptedBlob | null;
+  readonly encryptedData: EncryptedBlob;
 }
 
 /** Client-side fronting session — flat decrypted fields. */

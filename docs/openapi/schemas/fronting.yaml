@@ -77,3 +77,88 @@ EndFrontingSessionRequest:
     version:
       type: integer
       minimum: 1
+
+ActiveFrontingResponse:
+  description: |
+    The current active fronting state for a system. Contains all sessions with
+    no end time, a co-fronting flag, and a map of subject entity IDs to their
+    encrypted entity blobs for client-side decryption.
+  type: object
+  required: [sessions, isCofronting, entityMemberMap]
+  properties:
+    sessions:
+      type: array
+      items:
+        $ref: "./fronting.yaml#/FrontingSessionResponse"
+      description: All currently active fronting sessions (no end time)
+    isCofronting:
+      type: boolean
+      description: "True if more than one session is currently active"
+    entityMemberMap:
+      type: object
+      additionalProperties:
+        type: object
+      description: |
+        Map of subject entity IDs (memberId, customFrontId, or structureEntityId)
+        to their corresponding encrypted entity response objects. Populated for
+        all subjects referenced by the active sessions.
+
+FrontingCommentResponse:
+  description: |
+    A comment attached to a fronting session. Extends EncryptedEntity with the
+    parent session ID and the authoring subject (member, custom front, or
+    structure entity).
+  allOf:
+    - $ref: "./common.yaml#/EncryptedEntity"
+    - type: object
+      required: [frontingSessionId]
+      properties:
+        frontingSessionId:
+          type: string
+          description: "ID of the parent fronting session (fs_ prefix)"
+        memberId:
+          type: string
+          nullable: true
+          description: "Authoring member ID (mem_ prefix), if set"
+        customFrontId:
+          type: string
+          nullable: true
+          description: "Authoring custom front ID (cf_ prefix), if set"
+        structureEntityId:
+          type: string
+          nullable: true
+          description: "Authoring structure entity ID (ste_ prefix), if set"
+
+CreateFrontingCommentRequest:
+  type: object
+  required: [encryptedData]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted comment content"
+    memberId:
+      type: string
+      description: "Authoring member ID (mem_ prefix). At least one subject required."
+    customFrontId:
+      type: string
+      description: "Authoring custom front ID (cf_ prefix)"
+    structureEntityId:
+      type: string
+      description: "Authoring structure entity ID (ste_ prefix)"
+
+UpdateFrontingCommentRequest:
+  type: object
+  required: [encryptedData, version]
+  properties:
+    encryptedData:
+      type: string
+      contentEncoding: base64
+      minLength: 1
+      maxLength: 87382
+      description: "T1-encrypted comment content"
+    version:
+      type: integer
+      minimum: 1

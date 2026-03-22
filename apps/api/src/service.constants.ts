@@ -26,3 +26,6 @@ export const MAX_PAGE_LIMIT = 100;
  * See also: `docs/api-limits.md`
  */
 export const MAX_ANCESTOR_DEPTH = 50;
+
+/** Maximum number of active fronting sessions returned by the active fronting query. */
+export const MAX_ACTIVE_SESSIONS = 200;

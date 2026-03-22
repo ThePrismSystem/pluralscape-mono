@@ -1,8 +1,7 @@
 import { z } from "zod/v4";
 
+import { brandedIdQueryParam } from "./branded-id.js";
 import { LIFECYCLE_EVENT_TYPES } from "./lifecycle-event.js";
-
-import type { Brand, IdPrefixBrandMap } from "@pluralscape/types";
 
 // ── Boolean query param ─────────────────────────────────────────
 
@@ -14,26 +13,6 @@ export const booleanQueryParam = z
   .enum(["true", "false"])
   .optional()
   .transform((v) => v === "true");
-
-// ── Branded ID query params ─────────────────────────────────────
-
-/** UUID pattern (lowercase hex, 8-4-4-4-12, any version). */
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-
-/**
- * Creates a Zod schema for a branded ID query parameter.
- * Validates that the value starts with the expected prefix followed by a valid UUID.
- * Uses z.custom to produce the correct branded output type (same approach as brandedString).
- * Chain `.optional()` at the call site if the parameter is optional.
- */
-function brandedIdQueryParam<P extends keyof IdPrefixBrandMap>(
-  prefix: P,
-): z.ZodType<Brand<string, IdPrefixBrandMap[P]>> {
-  return z.custom<Brand<string, IdPrefixBrandMap[P]>>((val) => {
-    if (typeof val !== "string") return false;
-    return val.startsWith(prefix) && UUID_REGEX.test(val.slice(prefix.length));
-  }, `Expected a valid ${prefix}<uuid> identifier`);
-}
 
 // ── Lifecycle event query schema ────────────────────────────────
 

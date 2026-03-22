@@ -18,10 +18,15 @@ updateRoute.put("/:commentId", async (c) => {
   const body = await parseJsonBody(c);
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
+  const sessionId = requireIdParam(
+    c.req.param("sessionId"),
+    "sessionId",
+    ID_PREFIXES.frontingSession,
+  );
   const commentId = parseIdParam(c.req.param("commentId"), ID_PREFIXES.frontingComment);
   const audit = createAuditWriter(c, auth);
 
   const db = await getDb();
-  const result = await updateFrontingComment(db, systemId, commentId, body, auth, audit);
+  const result = await updateFrontingComment(db, systemId, sessionId, commentId, body, auth, audit);
   return c.json(result);
 });

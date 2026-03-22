@@ -15,9 +15,14 @@ getRoute.use("*", createCategoryRateLimiter("readDefault"));
 getRoute.get("/:commentId", async (c) => {
   const auth = c.get("auth");
   const systemId = requireIdParam(c.req.param("systemId"), "systemId", ID_PREFIXES.system);
+  const sessionId = requireIdParam(
+    c.req.param("sessionId"),
+    "sessionId",
+    ID_PREFIXES.frontingSession,
+  );
   const commentId = parseIdParam(c.req.param("commentId"), ID_PREFIXES.frontingComment);
 
   const db = await getDb();
-  const result = await getFrontingComment(db, systemId, commentId, auth);
+  const result = await getFrontingComment(db, systemId, sessionId, commentId, auth);
   return c.json(result);
 });

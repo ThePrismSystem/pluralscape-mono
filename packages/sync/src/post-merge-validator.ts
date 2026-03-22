@@ -659,7 +659,7 @@ export function runAllValidations(
     }
   }
 
-  if ("sessions" in doc) {
+  if ("sessions" in doc && "comments" in doc && "checkInRecords" in doc) {
     try {
       const frontingResult = normalizeFrontingSessions(session);
       frontingSessionNormalizations = frontingResult.count;

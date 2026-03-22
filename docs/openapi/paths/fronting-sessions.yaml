@@ -30,13 +30,13 @@
         schema:
           type: string
         description: Filter by structure entity ID
-      - name: startAfter
+      - name: startFrom
         in: query
         schema:
           type: integer
           format: int64
         description: Filter sessions starting at or after this Unix timestamp (ms)
-      - name: startBefore
+      - name: startUntil
         in: query
         schema:
           type: integer
@@ -61,6 +61,13 @@
           application/json:
             schema:
               allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
                 - $ref: "../schemas/common.yaml#/PaginationMeta"
       "401":
         $ref: "../openapi.yaml#/components/responses/Unauthenticated"
@@ -74,7 +81,7 @@
       Starts a new fronting session. At least one subject (memberId, customFrontId,
       or structureEntityId) is required. Retroactive startTime values are allowed.
 
-      Rate limit: 30 req/min (writeDefault)
+      Rate limit: 30 req/min (write)
     security:
       - bearerAuth: []
     parameters:
@@ -104,6 +111,10 @@
     operationId: getFrontingSession
     tags: [Fronting Sessions]
     summary: Get a fronting session
+    description: |
+      Returns a single fronting session by ID.
+
+      Rate limit: 60 req/min (readDefault)
     security:
       - bearerAuth: []
     parameters:
@@ -111,8 +122,10 @@
       - name: sessionId
         in: path
         required: true
+        description: Fronting session ID (fs_ prefix)
         schema:
           type: string
+          pattern: ^fs_
     responses:
       "200":
         description: Fronting session
@@ -120,8 +133,12 @@
           application/json:
             schema:
               $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
       "404":
         $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
   put:
     operationId: updateFrontingSession
     tags: [Fronting Sessions]
@@ -129,6 +146,8 @@
     description: |
       Updates the encrypted data of a fronting session. Subject fields are
       immutable after creation. Requires version for OCC.
+
+      Rate limit: 30 req/min (write)
     security:
       - bearerAuth: []
     parameters:
@@ -136,8 +155,10 @@
       - name: sessionId
         in: path
         required: true
+        description: Fronting session ID (fs_ prefix)
         schema:
           type: string
+          pattern: ^fs_
     requestBody:
       required: true
       content:
@@ -151,8 +172,16 @@
           application/json:
             schema:
               $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
       "409":
-        description: Version conflict
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
   delete:
     operationId: deleteFrontingSession
     tags: [Fronting Sessions]
@@ -160,6 +189,8 @@
     description: |
       Permanently deletes a fronting session. Returns 409 if the session has
       dependent comments. Use archive instead for reversible removal.
+
+      Rate limit: 30 req/min (write)
     security:
       - bearerAuth: []
     parameters:
@@ -167,13 +198,21 @@
       - name: sessionId
         in: path
         required: true
+        description: Fronting session ID (fs_ prefix)
         schema:
           type: string
+          pattern: ^fs_
     responses:
       "204":
-        description: Deleted
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
       "409":
-        description: Session has dependent comments (HAS_DEPENDENTS)
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
 
 /systems/{systemId}/fronting-sessions/{sessionId}/end:
   post:
@@ -183,6 +222,8 @@
     description: |
       Sets the endTime on an active session. endTime must be after startTime.
       Requires version for OCC.
+
+      Rate limit: 30 req/min (write)
     security:
       - bearerAuth: []
     parameters:
@@ -190,8 +231,10 @@
       - name: sessionId
         in: path
         required: true
+        description: Fronting session ID (fs_ prefix)
         schema:
           type: string
+          pattern: ^fs_
     requestBody:
       required: true
       content:
@@ -206,13 +249,27 @@
             schema:
               $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
       "400":
-        description: endTime must be after startTime
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
 
 /systems/{systemId}/fronting-sessions/{sessionId}/archive:
   post:
     operationId: archiveFrontingSession
     tags: [Fronting Sessions]
     summary: Archive a fronting session
+    description: |
+      Marks a fronting session as archived. Archived sessions are hidden from
+      default list responses but remain accessible. Archival is always permitted
+      regardless of dependents.
+
+      Rate limit: 30 req/min (write)
     security:
       - bearerAuth: []
     parameters:
@@ -220,17 +277,34 @@
       - name: sessionId
         in: path
         required: true
+        description: Fronting session ID (fs_ prefix)
         schema:
           type: string
+          pattern: ^fs_
     responses:
-      "204":
-        description: Archived
+      "200":
+        description: Fronting session archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
 
 /systems/{systemId}/fronting-sessions/{sessionId}/restore:
   post:
     operationId: restoreFrontingSession
     tags: [Fronting Sessions]
     summary: Restore an archived fronting session
+    description: |
+      Removes the archived flag from a fronting session, making it visible in
+      default list responses again.
+
+      Rate limit: 30 req/min (write)
     security:
       - bearerAuth: []
     parameters:
@@ -238,8 +312,10 @@
       - name: sessionId
         in: path
         required: true
+        description: Fronting session ID (fs_ prefix)
         schema:
           type: string
+          pattern: ^fs_
     responses:
       "200":
         description: Restored fronting session
@@ -247,3 +323,337 @@
           application/json:
             schema:
               $ref: "../schemas/fronting.yaml#/FrontingSessionResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fronting/active:
+  get:
+    operationId: getActiveFronting
+    tags: [Fronting Sessions]
+    summary: Get active fronting state
+    description: |
+      Returns all currently active (no end time) fronting sessions for the system,
+      along with a convenience flag indicating whether multiple members are
+      co-fronting and a map of entity IDs to their member/custom front data.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+    responses:
+      "200":
+        description: Active fronting state
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/ActiveFrontingResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fronting-sessions/{sessionId}/comments:
+  get:
+    operationId: listFrontingComments
+    tags: [Fronting Comments]
+    summary: List comments on a fronting session
+    description: |
+      Returns a paginated list of comments attached to the specified fronting session,
+      ordered by creation time descending.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        description: Fronting session ID (fs_ prefix)
+        schema:
+          type: string
+          pattern: ^fs_
+      - $ref: "../openapi.yaml#/components/parameters/Cursor"
+      - $ref: "../openapi.yaml#/components/parameters/Limit"
+      - name: includeArchived
+        in: query
+        schema:
+          type: string
+          enum: ["true", "false"]
+        description: If true, include archived comments in the response
+    responses:
+      "200":
+        description: Paginated fronting comment list
+        content:
+          application/json:
+            schema:
+              allOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: "../schemas/fronting.yaml#/FrontingCommentResponse"
+                - $ref: "../schemas/common.yaml#/PaginationMeta"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  post:
+    operationId: createFrontingComment
+    tags: [Fronting Comments]
+    summary: Create a comment on a fronting session
+    description: |
+      Adds a new comment to the specified fronting session. At least one subject
+      (memberId, customFrontId, or structureEntityId) is required to identify
+      the authoring headmate. Returns 400 if the session is archived.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        description: Fronting session ID (fs_ prefix)
+        schema:
+          type: string
+          pattern: ^fs_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fronting.yaml#/CreateFrontingCommentRequest"
+    responses:
+      "201":
+        description: Comment created
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingCommentResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}:
+  get:
+    operationId: getFrontingComment
+    tags: [Fronting Comments]
+    summary: Get a fronting comment
+    description: |
+      Returns a single fronting session comment by ID.
+
+      Rate limit: 60 req/min (readDefault)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        description: Fronting session ID (fs_ prefix)
+        schema:
+          type: string
+          pattern: ^fs_
+      - name: commentId
+        in: path
+        required: true
+        description: Fronting comment ID (fsc_ prefix)
+        schema:
+          type: string
+          pattern: ^fsc_
+    responses:
+      "200":
+        description: Fronting comment
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingCommentResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  put:
+    operationId: updateFrontingComment
+    tags: [Fronting Comments]
+    summary: Update a fronting comment
+    description: |
+      Updates the encrypted data of a fronting comment. Requires version for OCC.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        description: Fronting session ID (fs_ prefix)
+        schema:
+          type: string
+          pattern: ^fs_
+      - name: commentId
+        in: path
+        required: true
+        description: Fronting comment ID (fsc_ prefix)
+        schema:
+          type: string
+          pattern: ^fsc_
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../schemas/fronting.yaml#/UpdateFrontingCommentRequest"
+    responses:
+      "200":
+        description: Updated fronting comment
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingCommentResponse"
+      "400":
+        $ref: "../openapi.yaml#/components/responses/ValidationError"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "409":
+        $ref: "../openapi.yaml#/components/responses/Conflict"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+  delete:
+    operationId: deleteFrontingComment
+    tags: [Fronting Comments]
+    summary: Delete a fronting comment
+    description: |
+      Permanently deletes a fronting comment. This action is irreversible.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        description: Fronting session ID (fs_ prefix)
+        schema:
+          type: string
+          pattern: ^fs_
+      - name: commentId
+        in: path
+        required: true
+        description: Fronting comment ID (fsc_ prefix)
+        schema:
+          type: string
+          pattern: ^fsc_
+    responses:
+      "204":
+        $ref: "../openapi.yaml#/components/responses/NoContent"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}/archive:
+  post:
+    operationId: archiveFrontingComment
+    tags: [Fronting Comments]
+    summary: Archive a fronting comment
+    description: |
+      Marks a fronting comment as archived. Archival is always permitted.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        description: Fronting session ID (fs_ prefix)
+        schema:
+          type: string
+          pattern: ^fs_
+      - name: commentId
+        in: path
+        required: true
+        description: Fronting comment ID (fsc_ prefix)
+        schema:
+          type: string
+          pattern: ^fsc_
+    responses:
+      "200":
+        description: Fronting comment archived
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingCommentResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
+
+/systems/{systemId}/fronting-sessions/{sessionId}/comments/{commentId}/restore:
+  post:
+    operationId: restoreFrontingComment
+    tags: [Fronting Comments]
+    summary: Restore an archived fronting comment
+    description: |
+      Removes the archived flag from a fronting comment, making it visible in
+      default list responses again.
+
+      Rate limit: 30 req/min (write)
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: "../openapi.yaml#/components/parameters/SystemId"
+      - name: sessionId
+        in: path
+        required: true
+        description: Fronting session ID (fs_ prefix)
+        schema:
+          type: string
+          pattern: ^fs_
+      - name: commentId
+        in: path
+        required: true
+        description: Fronting comment ID (fsc_ prefix)
+        schema:
+          type: string
+          pattern: ^fsc_
+    responses:
+      "200":
+        description: Fronting comment restored
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/fronting.yaml#/FrontingCommentResponse"
+      "401":
+        $ref: "../openapi.yaml#/components/responses/Unauthenticated"
+      "404":
+        $ref: "../openapi.yaml#/components/responses/NotFound"
+      "429":
+        $ref: "../openapi.yaml#/components/responses/RateLimited"
